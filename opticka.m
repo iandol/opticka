@@ -63,6 +63,7 @@ classdef opticka < optickaCore
 				me.parseArgs(varargin, me.allowedProperties);
 			end
 			if me.cloning == false
+				addOptickaToPath;
 				me.initialiseUI;
 			end
 		end
@@ -365,7 +366,7 @@ classdef opticka < optickaCore
 			
 			me.r.screen.blend = me.gv(me.h.OKOpenGLBlending);
 			
-			value = me.gv(me.h.OKUseGamma);
+			value = me.gp(me.h.OKUseGamma);
 			if isprop(me.r.screen,'gammaTable') && isa(me.r.screen.gammaTable,'calibrateLuminance') && ~isempty(me.r.screen.gammaTable)
 				me.r.screen.gammaTable.choice = value - 1;
 			end
@@ -663,13 +664,13 @@ classdef opticka < optickaCore
 					me.r.task.nVar(revertN+1).values = eval(s);
 				end
 				me.r.task.nVar(revertN+1).stimulus = me.gn(me.h.OKVariableStimuli);
-				offset = me.gn(me.h.OKVariableOffset);
+				offset = eval(['{' me.h.OKVariableOffset.Value '}']);
 				if isempty(offset)
 					me.r.task.nVar(revertN+1).offsetstimulus = [];
 					me.r.task.nVar(revertN+1).offsetvalue = [];
 				else
-					me.r.task.nVar(revertN+1).offsetstimulus = offset(1);
-					me.r.task.nVar(revertN+1).offsetvalue = offset(2);
+					me.r.task.nVar(revertN+1).offsetstimulus = offset{1};
+					me.r.task.nVar(revertN+1).offsetvalue = offset{2};
 				end
 				try 
 					me.r.task.randomiseStimuli;
@@ -727,7 +728,11 @@ classdef opticka < optickaCore
 				str = num2str(me.r.task.nVar(pos).stimulus);
 				str = regexprep(str,'\s+',' ');
 				set(me.h.OKVariableStimuli, 'Value', str);
-				str=[num2str(me.r.task.nVar(pos).offsetstimulus) ';' num2str(me.r.task.nVar(pos).offsetvalue)];
+				if isnumeric(me.r.task.nVar(pos).offsetvalue)
+					str=[num2str(me.r.task.nVar(pos).offsetstimulus) '; ' num2str(me.r.task.nVar(pos).offsetvalue)];
+				else
+					str=[num2str(me.r.task.nVar(pos).offsetstimulus) '; ''' me.r.task.nVar(pos).offsetvalue ''''];
+				end
 				set(me.h.OKVariableOffset,'Value',str);
 				me.deleteVariable
 			end
@@ -748,7 +753,7 @@ classdef opticka < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief loadPrefs Load prefs better left local to the machine
+		%> @brief loadPrefs Load calibration file, better that this is manual...
 		%> 
 		% ===================================================================
 		function loadCalibration(me)
@@ -762,19 +767,20 @@ classdef opticka < optickaCore
 			end
 			if max(ftime) > 0
 				[~,idx]=max(ftime);
-				tmp = load([me.paths.calibration filesep d(idx).name]);
-				if isstruct(tmp)
-					fn = fieldnames(tmp);
-					tmp = tmp.(fn{1});
-				end
-				if isa(tmp,'calibrateLuminance')
-					tmp.filename = [me.paths.calibration filesep d(idx).name];
-					if isa(me.r,'runExperiment') && isa(me.r.screen,'screenManager')
-						me.r.screen.gammaTable = tmp;
-						me.h.OKUseGamma.Items = {'None'; 'Gamma'; me.r.screen.gammaTable.analysisMethods};
-						me.r.screen.gammaTable.choice = 2;
-					end
-				end
+				disp(['===>>> Opticka has found a potential calibration file: ' [me.paths.calibration filesep d(idx).name]]);
+				%tmp = load([me.paths.calibration filesep d(idx).name]);
+				%if isstruct(tmp)
+				%	fn = fieldnames(tmp);
+				%	tmp = tmp.(fn{1});
+				%end
+				%if isa(tmp,'calibrateLuminance')
+				%	tmp.filename = [me.paths.calibration filesep d(idx).name];
+				%	if isa(me.r,'runExperiment') && isa(me.r.screen,'screenManager')
+				%		me.r.screen.gammaTable = tmp;
+				%		me.h.OKUseGamma.Items =[ {'None'}; {'Gamma'}; me.r.screen.gammaTable.analysisMethods{:}']';
+				%		me.r.screen.gammaTable.choice = 2;
+				%	end
+				%end
 			end
 		end
 		

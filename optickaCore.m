@@ -86,7 +86,6 @@ classdef optickaCore < handle
 			if nargin>0
 				me.parseArgs(args,me.allowedProperties);
 			end
-			try if exist('metaStimulus','file') == 0; addoptickapaths; end; end
 			me.mversion = str2double(regexp(version,'(?<ver>^\d\.\d[\d]?)','match','once'));
 			setPaths(me)
 		end
@@ -465,6 +464,10 @@ classdef optickaCore < handle
 				me.paths.home = 'C:';
 			end
 			me.paths.parent = [me.paths.home filesep 'MatlabFiles'];
+			if ~isfolder(me.paths.parent)
+				status = mkdir(me.paths.parent);
+				if status == 0;warning('Could not create MatlabFiles folder');end
+			end
 			me.paths.savedData = [me.paths.parent filesep 'SavedData'];
 			if ~isfolder(me.paths.savedData)
 				status = mkdir(me.paths.savedData);

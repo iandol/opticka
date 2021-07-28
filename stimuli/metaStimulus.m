@@ -16,32 +16,33 @@ classdef metaStimulus < optickaCore
 	%--------------------PUBLIC PROPERTIES----------%
 	properties 
 		%>cell array of opticka stimuli to manage
-		stimuli = {}
+		stimuli cell		= {}
 		%> do we draw the mask stimuli instead?
-		showMask = false
+		showMask			= false
 		%>mask stimuli
-		maskStimuli = {}
+		maskStimuli			= {}
 		%> screenManager handle
 		screen
 		%> verbose?
-		verbose = false
+		verbose				= false
 		%> choice allows to call only 1 stimulus in the group
-		choice = []
-		%>which of the stimuli should fixation follow?
-		fixationChoice = []
+		choice				= []
+		%> which stimuli should fixation follow, see getFixationPositions()
+		fixationChoice		= []
+		%> which stimuli should exclusion follow, see getExclusionPositions()
+		exclusionChoice		= []
 		%> randomisation table to apply to a stimulus
-		stimulusTable = []
+		stimulusTable		= []
 		%> choice for table
-		tableChoice = []
+		tableChoice			= []
 		%> control table for keyboard changes
-		controlTable = []
+		controlTable		= []
 		%> show subsets of stimuli?
-		stimulusSets = []
+		stimulusSets		= []
 		%> which set of stimuli to display
-		setChoice = 0;
-		%>
-		flashRate = 0.25
-		%>
+		setChoice			= 0;
+		%> currently unused
+		flashRate			= 0.25
 	end
 	
 	%--------------------DEPENDENT PROPERTIES----------%
@@ -55,17 +56,19 @@ classdef metaStimulus < optickaCore
 	%--------------------VISIBLE PROPERTIES----------%
 	properties (SetAccess = private, GetAccess = public) 
 		%> stimulus family
-		family = 'meta'
+		family				= 'meta'
 		%> structure holding positions for each stimulus
-		stimulusPositions = []
+		stimulusPositions	= []
 		%> used for optional logging for update times
-		updateLog = []
+		updateLog			= []
 	end
 	
 	%--------------------VISIBLE PROPERTIES----------%
 	properties (SetAccess = private, GetAccess = public, Transient = true)
-		lastXPosition = 0
-		lastYPosition = 0
+		lastXPosition		= 0
+		lastYPosition		= 0
+		lastXExclusion		= []
+		lastYExclusion		= []
 	end
 	
 	%--------------------PRIVATE PROPERTIES----------%
@@ -74,7 +77,7 @@ classdef metaStimulus < optickaCore
 		n_
 		nMask_
 		%> allowed properties passed to object upon construction
-		allowedProperties = 'showMask|maskStimuli|verbose|stimuli|screen|choice'
+		allowedProperties = 'setChoice|stimulusSets|controlTable|showMask|maskStimuli|verbose|stimuli|screen|choice|fixationChoice|exclusionChoice|stimulusTable|tableChoice'
 		sM
 	end
 	
@@ -92,8 +95,9 @@ classdef metaStimulus < optickaCore
 		%> @return instance of class.
 		% ===================================================================
 		function me = metaStimulus(varargin)
-			if nargin == 0; varargin.name = 'metaStimulus';end
-			if nargin>0; me.parseArgs(varargin,me.allowedProperties); end
+			args = optickaCore.addDefaults(varargin,struct('name','metaStimulus'));
+			me=me@optickaCore(args); %superclass constructor
+			me.parseArgs(args,me.allowedProperties);
 		end
 		
 		% ===================================================================
@@ -200,7 +204,7 @@ classdef metaStimulus < optickaCore
 				
 				animate(me.stimuli{me.choice});
 				
-			elseif me.showMask == true && me.nMask_ > 0 %draw mask instead
+			elseif me.showMask == true && me.nMask_ > 0 %animate mask instead
 				
 				for i = 1:me.nMask_
 					animate(me.maskStimuli{i});
@@ -326,13 +330,30 @@ classdef metaStimulus < optickaCore
 		function [x,y] = getFixationPositions(me)
 			x = 0; y = 0;
 			if ~isempty(me.fixationChoice)
-				x=zeros(length(me.fixationChoice)); y = x;
+				x=zeros(length(me.fixationChoice),1); y = x;
 				for i=1:length(me.fixationChoice)
 					x(i) = me.stimuli{me.fixationChoice(i)}.xPositionOut / me.screen.ppd;
 					y(i) = me.stimuli{me.fixationChoice(i)}.yPositionOut / me.screen.ppd;
-					me.lastXPosition = x;
-					me.lastYPosition = y;
 				end
+				me.lastXPosition = x;
+				me.lastYPosition = y;
+			end
+		end
+		
+		% ===================================================================
+		%> @brief Return the stimulus fixation position
+		%>s
+		% ===================================================================
+		function [x,y] = getExclusionPositions(me)
+			x = []; y = [];
+			if ~isempty(me.fixationChoice)
+				x=zeros(length(me.exclusionChoice),1); y = x;
+				for i=1:length(me.exclusionChoice)
+					x(i) = me.stimuli{me.exclusionChoice(i)}.xPositionOut / me.screen.ppd;
+					y(i) = me.stimuli{me.exclusionChoice(i)}.yPositionOut / me.screen.ppd;
+				end
+				me.lastXExclusion = x;
+				me.lastYExclusion = y;
 			end
 		end
 		

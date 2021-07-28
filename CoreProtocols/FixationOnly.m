@@ -9,23 +9,23 @@ tS.askForComments = false;
 tS.saveData = false; %we don't want to save any data
 me.useDataPixx = false; %make sure we don't trigger the plexon
 
-eL.isDummy = false; %use dummy or real eyelink?
-eL.sampleRate = 250;
-eL.remoteCalibration = true; %manual calibration
-eL.calibrationStyle = 'HV5'; % calibration style
-eL.recordData = false; % don't save EDF fileo
-eL.modify.calibrationtargetcolour = [1 1 0];
-eL.modify.calibrationtargetsize = 1;
-eL.modify.calibrationtargetwidth = 0.1;
-eL.modify.waitformodereadytime = 500;
-eL.modify.devicenumber = -1; % -1==use any keyboard
+eT.isDummy = false; %use dummy or real eyelink?
+eT.sampleRate = 250;
+eT.remoteCalibration = true; %manual calibration
+eT.calibrationStyle = 'HV5'; % calibration style
+eT.recordData = false; % don't save EDF fileo
+eT.modify.calibrationtargetcolour = [1 1 0];
+eT.modify.calibrationtargetsize = 1;
+eT.modify.calibrationtargetwidth = 0.1;
+eT.modify.waitformodereadytime = 500;
+eT.modify.devicenumber = -1; % -1==use any keyboard
 
-eL.fixation.X = 0;
-eL.fixation.Y = 0;
-eL.fixation.radius = 7;
-eL.fixation.initTime = 1.5;
-eL.fixation.time = 0.5;
-eL.fixation.strict = false;
+eT.fixation.X = 0;
+eT.fixation.Y = 0;
+eT.fixation.radius = 7;
+eT.fixation.initTime = 1.5;
+eT.fixation.time = 0.5;
+eT.fixation.strict = false;
 
 %randomise stimulus variables every trial?
 me.stimuli.choice = [];
@@ -54,7 +54,7 @@ showSet(me.stimuli);
 % io = digital I/O to recording system
 % s  = PTB screenManager
 % sM = State Machine
-% eL = eyetracker manager
+% eT = eyetracker manager
 % t  = task sequence (stimulusSequence class)
 % rM = Reward Manager (LabJack or Arduino TTL trigger to Crist reward system/Magstim)
 % bR = behavioural record plot (on screen GUI during task run)
@@ -62,13 +62,13 @@ showSet(me.stimuli);
 % tS = general struct to hold variables for this run
 
 %pause entry
-pauseEntryFcn = @()setOffline(eL);
+pauseEntryFcn = @()setOffline(eT);
 
 %prestim entry
-psEntryFcn = { @()setOffline(eL); ...
-	@()trackerDrawFixation(eL); ...
-	@()resetFixation(eL); ...
-	@()startRecording(eL)
+psEntryFcn = { @()setOffline(eT); ...
+	@()trackerDrawFixation(eT); ...
+	@()resetFixation(eT); ...
+	@()startRecording(eT)
 	};
 
 %prestimulus blank
@@ -77,7 +77,7 @@ prestimulusFcn = @()drawBackground(s);
 %exiting prestimulus state
 psExitFcn = { 
 	@()update(me.stimuli); ...
-	@()statusMessage(eL,'Showing Fixation Spot...'); ...
+	@()statusMessage(eT,'Showing Fixation Spot...'); ...
 };
 
 %what to run when we enter the stim presentation state
@@ -85,13 +85,13 @@ stimEntryFcn = {};
 
 %what to run when we are showing stimuli
 stimFcn = { @()draw(me.stimuli); ... 
-	%@()drawEyePosition(eL); ...
+	%@()drawEyePosition(eT); ...
 	@()finishDrawing(s); ...
 	@()animate(me.stimuli); ... % animate stimuli for subsequent draw
 	};
 
 %test we are maintaining fixation
-maintainFixFcn = {@()testSearchHoldFixation(eL,'correct','breakfix');};
+maintainFixFcn = {@()testSearchHoldFixation(eT,'correct','breakfix');};
 
 %as we exit stim presentation state
 stimExitFcn = {};
@@ -99,8 +99,8 @@ stimExitFcn = {};
 %if the subject is correct (small reward)
 correctEntryFcn = { 
 	@()timedTTL(rM,2,tS.rewardTime); ... 
-	@()updatePlot(bR, eL, sM); ...
-	@()statusMessage(eL,'Correct! :-)');
+	@()updatePlot(bR, eT, sM); ...
+	@()statusMessage(eT,'Correct! :-)');
 };
 
 %correct stimulus
@@ -110,18 +110,18 @@ correctFcn = { @()drawBackground(s); @()drawGreenSpot(s,1) };
 correctExitFcn = {};
 
 %break entry
-breakEntryFcn = { @()updatePlot(bR, eL, sM); ...
-	@()statusMessage(eL,'Broke Fixation :-(') };
+breakEntryFcn = { @()updatePlot(bR, eT, sM); ...
+	@()statusMessage(eT,'Broke Fixation :-(') };
 
 %break entry
-incorrectFcn = { @()updatePlot(bR, eL, sM); ...
-	@()statusMessage(eL,'Incorrect :-(') };
+incorrectFcn = { @()updatePlot(bR, eT, sM); ...
+	@()statusMessage(eT,'Incorrect :-(') };
 
 %our incorrect stimulus
 breakFcn =  { @()drawBackground(s)}; % @()drawGreenSpot(s,1) };
 
 %calibration function
-calibrateFcn = {@()trackerSetup(eL);};
+calibrateFcn = {@()trackerSetup(eT);};
 
 %flash function
 flashFcn = {@()flashScreen(s,0.25);};

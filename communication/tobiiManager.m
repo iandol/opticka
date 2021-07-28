@@ -401,6 +401,14 @@ classdef tobiiManager < optickaCore
 		%> @brief reset the fixation counters ready for a new trial
 		%>
 		% ===================================================================
+		function resetExclusionZones(me)
+			me.exclusionZone = [];
+		end
+		
+		% ===================================================================
+		%> @brief reset the fixation counters ready for a new trial
+		%>
+		% ===================================================================
 		function resetFixationTime(me)
 			me.fixStartTime		= 0;
 			me.fixLength		= 0;
@@ -776,6 +784,23 @@ classdef tobiiManager < optickaCore
 		end
 		
 		% ===================================================================
+		%> @brief Sinlge method to update the exclusion zones
+		%>
+		%> @param x x position in degrees
+		%> @param y y position in degrees
+		%> @param radius the radius of the exclusion zone
+		% ===================================================================
+		function updateExclusionZones(me,x,y,radius)
+			resetExclusionZones(me);
+			if exist('x','var') && exist('y','var') && ~isempty(x) && ~isempty(y)
+				if ~exist('radius','var'); radius = 5; end
+				for i = 1:length(x)
+					me.exclusionZone(i,:) = [x(i)-radius x(i)+radius y(i)-radius y(i)+radius];
+				end
+			end
+		end
+		
+		% ===================================================================
 		%> @brief isFixated tests for fixation and updates the fixLength time
 		%>
 		%> @return fixated boolean if we are fixated
@@ -927,13 +952,13 @@ classdef tobiiManager < optickaCore
 		function [out, window, exclusion] = testSearchHoldFixation(me, yesString, noString)
 			[fix, fixtime, searching, window, exclusion, initfail] = me.isFixated();
 			if exclusion
-				fprintf('-+-+-> Tobii:testSearchHoldFixation EXCLUSION ZONE ENTERED!\n')
-				out = 'EXCLUDED!'; window = [];
+				if me.verbose; fprintf('-+-+-> Tobii:testSearchHoldFixation EXCLUSION ZONE ENTERED!\n'); end
+				out = noString; window = [];
 				return
 			end
 			if initfail
 				if me.verbose; fprintf('-+-+-> Tobii:testSearchHoldFixation FIX INIT TIME FAILED!\n'); end
-				out = 'EXCLUDED!';
+				out = noString;
 				return
 			end
 			if searching
@@ -978,13 +1003,13 @@ classdef tobiiManager < optickaCore
 		function [out, window, exclusion] = testHoldFixation(me, yesString, noString)
 			[fix, fixtime, searching, window, exclusion, initfail] = me.isFixated();
 			if exclusion
-				fprintf('-+-+-> Tobii:testHoldFixation EXCLUSION ZONE ENTERED!\n')
-				out = 'EXCLUDED!'; window = [];
+				if me.verbose; fprintf('-+-+-> Tobii:testHoldFixation EXCLUSION ZONE ENTERED!\n'); end
+				out = noString; window = [];
 				return
 			end
 			if initfail
 				if me.verbose; fprintf('-+-+-> Tobii:testSearchHoldFixation FIX INIT TIME FAILED!\n'); end
-				out = 'EXCLUDED!';
+				out = noString;
 				return
 			end
 			if fix

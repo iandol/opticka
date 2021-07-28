@@ -27,7 +27,7 @@
 classdef eyelinkManager < optickaCore
 	
 	properties
-		%> fixation window:
+		%> fixation window in deg with 0,0 being the screen center:
 		%> if X and Y have multiple rows, assume each one is a different fixation window.
 		%> if radius has a single value, assume circular window
 		%> if radius has 2 values assume width x height rectangle
@@ -37,8 +37,7 @@ classdef eyelinkManager < optickaCore
 		%> failure, useful during training
 		fixation struct				= struct('X',0,'Y',0,'initTime',1,'time',1,...
 									'radius',1,'strict',true)
-		%> When using the test for eye position functions, 
-		%> exclusion zones where no eye movement allowed: [-degX +degX -degY +degY]
+		%> Use exclusion zones where no eye movement allowed: [-degX +degX -degY +degY]
 		%> Add rows to generate succesive exclusion zones.
 		exclusionZone double		= []
 		%> we can set an optional initial window that the subject must stay
@@ -207,12 +206,14 @@ classdef eyelinkManager < optickaCore
 				return
 			end
 			
-			try
-				Eyelink('Shutdown'); %just make sure link is closed
-			catch ME
-				getReport(ME)
-				warning('Problems with Eyelink initialise, make sure you install Eyelink Developer libraries!');
-				me.isDummy = true;
+			if ~me.isDummy
+				try
+					Eyelink('Shutdown'); %just make sure link is closed
+				catch ME
+					getReport(ME)
+					warning('Problems with Eyelink initialise, make sure you install Eyelink Developer libraries!');
+					me.isDummy = true;
+				end
 			end
 			me.screen = sM;
 			
@@ -351,6 +352,14 @@ classdef eyelinkManager < optickaCore
 			if me.verbose
 				fprintf('-+-+-> eyelinkManager:reset fixation: %i %i %i\n',me.fixLength,me.fixTotal,me.fixN);
 			end
+		end
+		
+		% ===================================================================
+		%> @brief reset the fixation counters ready for a new trial
+		%>
+		% ===================================================================
+		function resetExclusionZones(me)
+			me.exclusionZone = [];
 		end
 		
 		% ===================================================================
@@ -620,7 +629,7 @@ classdef eyelinkManager < optickaCore
 		%>
 		% ===================================================================
 		function updateFixationValues(me,x,y,inittime,fixtime,radius,strict)
-			resetFixation(me)
+			resetFixation(me);
 			if nargin > 1 && ~isempty(x)
 				if isinf(x)
 					me.fixation.X = me.screen.screenXOffset;
@@ -660,6 +669,23 @@ classdef eyelinkManager < optickaCore
 				fprintf('-+-+-> eyelinkManager:updateFixationValues: X=%g | Y=%g | IT=%s | FT=%s | R=%g | Strict=%i\n', ... 
 				me.fixation.X, me.fixation.Y, num2str(me.fixation.initTime), num2str(me.fixation.time), ...
 				me.fixation.radius,me.fixation.strict); 
+			end
+		end
+		
+		% ===================================================================
+		%> @brief Sinlge method to update the exclusion zones
+		%>
+		%> @param x x position in degrees
+		%> @param y y position in degrees
+		%> @param radius the radius of the exclusion zone
+		% ===================================================================
+		function updateExclusionZones(me,x,y,radius)
+			resetExclusionZones(me);
+			if exist('x','var') && exist('y','var') && ~isempty(x) && ~isempty(y)
+				if ~exist('radius','var'); radius = 5; end
+				for i = 1:length(x)
+					me.exclusionZone(i,:) = [x(i)-radius x(i)+radius y(i)-radius y(i)+radius];
+				end
 			end
 		end
 		
@@ -820,15 +846,15 @@ classdef eyelinkManager < optickaCore
 		function [out, window, exclusion] = testSearchHoldFixation(me, yesString, noString)
 			[fix, fixtime, searching, window, exclusion, initfail] = me.isFixated();
 			if exclusion
-				out = 'EXCLUDED!';
-				fprintf('-+-+-> Eyelink:testSearchHoldFixation EXCLUSION ZONE ENTERED time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
-						me.fixTotal, me.fixInitLength, me.fixLength, fix, fixtime, searching, exclusion, initfail);
+				out = noString;
+				if me.verbose; fprintf('-+-+-> Eyelink:testSearchHoldFixation EXCLUSION ZONE ENTERED time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
+						me.fixTotal, me.fixInitLength, me.fixLength, fix, fixtime, searching, exclusion, initfail); end
 				return;
 			end
 			if initfail
-				out = 'EXCLUDED!';
-				fprintf('-+-+-> Eyelink:testSearchHoldFixation FIX INIT TIME FAIL time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
-						me.fixTotal, me.fixInitLength, me.fixLength, fix, fixtime, searching, exclusion, initfail);
+				out = noString;
+				if me.verbose; fprintf('-+-+-> Eyelink:testSearchHoldFixation FIX INIT TIME FAIL time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
+						me.fixTotal, me.fixInitLength, me.fixLength, fix, fixtime, searching, exclusion, initfail); end
 				return
 			end
 			if searching
@@ -877,15 +903,15 @@ classdef eyelinkManager < optickaCore
 		function [out, window, exclusion] = testHoldFixation(me, yesString, noString)
 			[fix, fixtime, searching, window, exclusion, initfail] = me.isFixated();
 			if exclusion
-				out = 'EXCLUDED!';
-				fprintf('-+-+-> Eyelink:testHoldFixation EXCLUSION ZONE ENTERED time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
-						me.fixTotal, me.fixInitLength, me.fixLength, fix, fixtime, searching, exclusion, initfail);
+				out = noString;
+				if me.verbose; fprintf('-+-+-> Eyelink:testHoldFixation EXCLUSION ZONE ENTERED time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
+						me.fixTotal, me.fixInitLength, me.fixLength, fix, fixtime, searching, exclusion, initfail); end
 				return;
 			end
 			if initfail
-				out = 'EXCLUDED!';
-				fprintf('-+-+-> Eyelink:testHoldFixation FIX INIT TIME FAIL time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
-						me.fixTotal, me.fixInitLength, me.fixLength, fix, fixtime, searching, exclusion, initfail);
+				out = noString;
+				if me.verbose; fprintf('-+-+-> Eyelink:testHoldFixation FIX INIT TIME FAIL time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
+						me.fixTotal, me.fixInitLength, me.fixLength, fix, fixtime, searching, exclusion, initfail); end
 				return
 			end
 			if fix

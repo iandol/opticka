@@ -57,7 +57,7 @@ classdef calibrateLuminance < handle
 		%> methods list to fit to raw luminance values, first is always
 		%> gamma
 		analysisMethods cell = {'gamma';'pchipinterp';'cubicspline'}
-		%> which gamma model should opticka select: 1 is simple gamma,
+		%> which model should opticka select: 1 is simple gamma,
 		%> 2:n are the analysisMethods chosen; 2=pchipinterp
 		choice double = 2
 		%> Target (centered square that will be measured) size in pixels
@@ -79,8 +79,9 @@ classdef calibrateLuminance < handle
 	end
 	
 	properties (Hidden = true)
-		%keep spectrocal open 
+		%> keep spectrocal open 
 		keepOpen logical = false
+		%>
 		screenVals = []
 	end
 	
@@ -631,6 +632,7 @@ classdef calibrateLuminance < handle
 				[fittedmodel, gof, output] = fit(rampNorm',inputValuesNorm',g,fo);
 				me.displayGamma(loop) = fittedmodel.g;
 				me.gammaTable{1,loop} = ((([0:1/(me.tableLength-1):1]'))).^(1/fittedmodel.g);
+				me.salutation('Analyse','gammaTable 1 = simple fitted gamma');
 				
 				me.modelFit{1,loop}.method = 'Gamma';
 				me.modelFit{1,loop}.model = fittedmodel;
@@ -656,6 +658,7 @@ classdef calibrateLuminance < handle
 					g = fittedmodel([0:1/(me.tableLength-1):1]');
 					%g = me.normalize(g); %make sure we are from 0 to 1
 					me.gammaTable{i+1,loop} = g;
+					me.salutation('Analyse',sprintf('gammaTable %i = %s model',i+1,method));
 				end
 				
 			end
@@ -1079,7 +1082,7 @@ classdef calibrateLuminance < handle
 						PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
 						PsychImaging('AddTask', 'General', ['Enable' me.bitDepth 'ingPointFramebuffer']);
 						fprintf('\n---> screenManager: 32-bit internal / %s Output bit-depth\n', me.bitDepth);
-					case {'PeudoGray'}
+					case {'PseudoGray'}
 						PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
 						PsychImaging('AddTask', 'General', 'EnablePseudoGrayOutput');
 						fprintf('\n---> screenManager: Internal processing set to: %s\n', me.bitDepth);
@@ -1335,13 +1338,8 @@ classdef calibrateLuminance < handle
 					fprintf('--->>> calibrateLumiance: Making luminance-corrected Table from gammaTable: %i...\n',me.choice);
 					me.finalCLUT = repmat(me.gammaTable{me.choice,1},1,3);
 				end
-				len = size(me.finalCLUT,1);
-				me.finalCLUT(1,1) = 0;
-				me.finalCLUT(1,2) = 0;
-				me.finalCLUT(1,3) = 0;
-				me.finalCLUT(len,1) = 1;
-				me.finalCLUT(len,2) = 1;
-				me.finalCLUT(len,3) = 1;
+				me.finalCLUT(1,:) = 0;
+				me.finalCLUT(end,:) = 1;
 				disp('--->>> calibrateLumiance: finalCLUT generated...');
 			else
 				fprintf('--->>> calibrateLumiance: Making Linear Table...\n')

@@ -4,6 +4,7 @@
 %> This class takes a series of variables (contrast, angle etc) with
 %> a set of values and randomly interleves them into a pseudorandom variable
 %> list each of which has a unique index number. 
+
 % ========================================================================
 classdef taskSequence < optickaCore & dynamicprops
 	properties
@@ -199,7 +200,7 @@ classdef taskSequence < optickaCore & dynamicprops
 					me.minBlocks = 1;
 				end
 				if me.minBlocks > 255
-					warning('WARNING: You are exceeding the number of stimulus numbers in an 8bit strbed word!')
+					warning('WARNING: You are exceeding the number of stimulus numbers in an 8bit strobed word!')
 				end
 				
 				% ---- deal with block level variable randomisation

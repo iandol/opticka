@@ -96,6 +96,8 @@ classdef runExperiment < optickaCore
 		%> keep track of several task values
 		lastXPosition = 0
 		lastYPosition = 0
+		lastXExclusion = []
+		lastYExclusion = []
 		lastSize = 1
 		lastIndex = 0
 		%> what mode to run the Display++ digital I/O in? Plexon requires
@@ -172,7 +174,7 @@ classdef runExperiment < optickaCore
 	
 	%=======================================================================
 	methods %------------------PUBLIC METHODS
-		%=======================================================================
+	%=======================================================================
 		
 		% ===================================================================
 		%> @brief Class constructor
@@ -253,11 +255,11 @@ classdef runExperiment < optickaCore
 				% set up the eyelink interface
 				if me.useEyeLink
 					me.eyeTracker = eyelinkManager();
-					eL = me.eyeTracker;
-					eL.isDummy = me.dummyMode;
-					eL.saveFile = [me.paths.savedData pathsep me.savePrefix 'RUN.edf'];
-					initialise(eL, s);
-					setup(eL);
+					eT = me.eyeTracker;
+					eT.isDummy = me.dummyMode;
+					eT.saveFile = [me.paths.savedData pathsep me.savePrefix 'RUN.edf'];
+					initialise(eT, s);
+					setup(eT);
 				end
 				
 				me.initialiseTask(); %set up our task structure 
@@ -276,7 +278,7 @@ classdef runExperiment < optickaCore
 					io.setDIO([3,0,0],[3,0,0])%(Set HIGH FIO0->Pin 24), unpausing the omniplex
 				end
 				
-				if me.useEyeLink; startRecording(eL); end
+				if me.useEyeLink; startRecording(eT); end
 				
 				%------------------------------------------------------------
 				% lets draw 2 seconds worth of the stimuli we will be using
@@ -286,7 +288,7 @@ classdef runExperiment < optickaCore
 				% stimuli using 32bit computation buffers...
 				fprintf('\n===>>> Warming up the GPU and I/O systems... <<<===\n')
 				show(me.stimuli);
-				if me.useEyeLink; trackerClearScreen(eL); end
+				if me.useEyeLink; trackerClearScreen(eT); end
 				for i = 1:s.screenVals.fps*2
 					draw(me.stimuli);
 					drawBackground(s);
@@ -295,9 +297,9 @@ classdef runExperiment < optickaCore
 					animate(me.stimuli);
 					if ~mod(i,10); io.sendStrobe(255); end
 					if me.useEyeLink
-						getSample(eL); 
-						trackerDrawText(eL,'Warming Up System');
-						trackerMessage(eL,'Warmup test');
+						getSample(eT); 
+						trackerDrawText(eT,'Warming Up System');
+						trackerMessage(eT,'Warmup test');
 					end
 					flip(s);
 				end
@@ -474,7 +476,7 @@ classdef runExperiment < optickaCore
 				close(rM);
 				me.lJack=[];
 				me.io = [];
-				clear tL s tS bR rM eL io sM
+				clear tL s tS bR rM eT io sM
 				rethrow(ME)	
 			end
 		end
@@ -590,13 +592,13 @@ classdef runExperiment < optickaCore
 				else
 					me.eyeTracker		= eyelinkManager();
 				end
-				eL						= me.eyeTracker;
-				eL.verbose				= me.verbose;
-				eL.saveFile				= [me.paths.savedData filesep me.subjectName '-' me.savePrefix '.edf'];
+				eT						= me.eyeTracker;
+				eT.verbose				= me.verbose;
+				eT.saveFile				= [me.paths.savedData filesep me.subjectName '-' me.savePrefix '.edf'];
 				if ~me.useEyeLink && ~me.useTobii
-					eL.isDummy			= true;
+					eT.isDummy			= true;
 				else
-					eL.isDummy			= me.dummyMode;
+					eT.isDummy			= me.dummyMode;
 				end
 				
 				if isfield(tS,'rewardTime')
@@ -626,13 +628,10 @@ classdef runExperiment < optickaCore
 				end
 				
 				%-----set up the eyelink interface
-				if me.useEyeLink && ~me.dummyMode
+				if me.useEyeLink
 					fprintf('\n===>>> Handing over to eyelink for calibration & validation...\n')
-					initialise(eL, s);
-					setup(eL);
-					if ~eL.isConnected && ~eL.isDummy
-						warning('Eyelink is not connected and not in dummy mode, potential connection issue...')
-					end
+					initialise(eT, s);
+					setup(eT);
 				elseif me.useTobii
 					if length(Screen('Screens')) > 1 && s.screen - 1 >= 0
 						ss					= screenManager;
@@ -644,11 +643,14 @@ classdef runExperiment < optickaCore
 						ss.pixelsPerCm		= 30;
 					end
 					if exist('ss','var')
-						initialise(eL,s,ss);
+						initialise(eT,s,ss);
 					else
-						initialise(eL,s);
+						initialise(eT,s);
 					end
-					trackerSetup(eL); ShowCursor();
+					trackerSetup(eT); ShowCursor();
+					if ~eT.isConnected && ~eT.isDummy
+						warning('Eyetracker is not connected and not in dummy mode, potential connection issue...')
+					end
 				end
 
 				%--------get pre-run comments for this data collection
@@ -657,12 +659,12 @@ classdef runExperiment < optickaCore
 					if ~isempty(comment)
 						comment = comment{1};
 						me.comment = [me.name ':' comment];
-						bR.comment = me.comment; eL.comment = me.comment; sM.comment = me.comment; io.comment = me.comment; tL.comment = me.comment; tS.comment = me.comment;
+						bR.comment = me.comment; eT.comment = me.comment; sM.comment = me.comment; io.comment = me.comment; tL.comment = me.comment; tS.comment = me.comment;
 					end
 				end
 				
 				%-----set up our behavioural plot
-				createPlot(bR, eL);
+				createPlot(bR, eT);
 				drawnow; 
 				commandwindow;
 
@@ -674,7 +676,7 @@ classdef runExperiment < optickaCore
 				% stimuli using 32bit computation buffers...
 				fprintf('\n===>>> Warming up the GPU, Eyelink and I/O systems... <<<===\n')
 				show(me.stimuli);
-				if me.useEyeLink; trackerClearScreen(eL); end
+				if me.useEyeLink; trackerClearScreen(eT); end
 				for i = 1:s.screenVals.fps*1
 					draw(me.stimuli);
 					drawBackground(s);
@@ -684,9 +686,9 @@ classdef runExperiment < optickaCore
 					animate(me.stimuli);
 					if ~mod(i,10); io.sendStrobe(255); end
 					if me.useEyeLink || me.useTobii
-						getSample(eL); 
-						if i == 1; trackerDrawText(eL,'Warming Up System'); end
-						if i == 1; trackerMessage(eL,'Warmup test'); end
+						getSample(eT); 
+						if i == 1; trackerDrawText(eT,'Warming Up System'); end
+						if i == 1; trackerMessage(eT,'Warmup test'); end
 					end
 					flip(s);
 				end
@@ -759,8 +761,8 @@ classdef runExperiment < optickaCore
 				me.needSample				= false;
 				me.stopTask					= false;
 				tL.screenLog.beforeDisplay	= GetSecs;
-				tL.screenLog.trackerStartTime = getTrackerTime(eL);
-				tL.screenLog.trackerStartOffset = getTimeOffset(eL);
+				tL.screenLog.trackerStartTime = getTrackerTime(eT);
+				tL.screenLog.trackerStartOffset = getTimeOffset(eT);
 				tL.vbl(1)					= Screen('Flip', s.win);
 				tL.startTime				= tL.vbl(1);
 				
@@ -779,9 +781,9 @@ classdef runExperiment < optickaCore
 					
 					%------check eye position manually. REMEMBER eyelink will save the real eye data in
 					% the EDF this is just a backup wrapped in the PTB loop. 
-					if me.needSample; getSample(eL); end
+					if me.needSample; getSample(eT); end
 					if tS.recordEyePosition && me.useEyeLink
-						saveEyeInfo(me, sM, eL, tS);
+						saveEyeInfo(me, sM, eT, tS);
 					end
 					
 					%------Check keyboard for commands
@@ -792,12 +794,13 @@ classdef runExperiment < optickaCore
 					%----- FLIP: Show it at correct retrace: -----%
 					if me.doFlip
 						%------Display++ or DataPixx: I/O send strobe for this screen flip
+						%------needs to be sent prior to the flip
 						if me.sendStrobe && me.useDisplayPP
 							sendStrobe(io); me.sendStrobe = false;
 						elseif me.sendStrobe && me.useDataPixx
 							triggerStrobe(io); me.sendStrobe = false;
 						end
-						%------Do the actual flip
+						%------Do the actual Screen flip
 						nextvbl = tL.vbl(end) + me.screenVals.halfisi;
 						if me.logFrames == true
 							[tL.vbl(tS.totalTicks),tL.show(tS.totalTicks),tL.flip(tS.totalTicks),tL.miss(tS.totalTicks)] = Screen('Flip', s.win, nextvbl);
@@ -806,14 +809,14 @@ classdef runExperiment < optickaCore
 						else
 							tL.vbl = Screen('Flip', s.win, nextvbl);
 						end
-						%-----LabJack: I/O send strobe after this screen flip
+						%-----LabJack: I/O needs to send strobe immediately after this screen flip
 						if me.sendStrobe && me.useLabJackTStrobe
 							sendStrobe(io); me.sendStrobe = false;
 							%Eyelink('Message', sprintf('MSG:SYNCSTROBE value:%i @ vbl:%20.40g / totalTicks: %i', io.sendValue, tL.vbl(end), tS.totalTicks));
 						end
-						%----- Send Eyelink messages
-						if me.sendSyncTime % sends SYNCTIME message to eyelink
-							syncTime(eL);
+						%----- Send Eyetracker messages
+						if me.sendSyncTime % sends SYNCTIME message to eyetracker
+							syncTime(eT);
 							me.sendSyncTime = false;
 						end
 						%------Log stim / no stim condition
@@ -831,13 +834,13 @@ classdef runExperiment < optickaCore
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				
 				tL.screenLog.afterDisplay = GetSecs;
-				tL.screenLog.trackerEndTime = getTrackerTime(eL);
-				tL.screenLog.trackerEndOffset = getTimeOffset(eL);
+				tL.screenLog.trackerEndTime = getTrackerTime(eT);
+				tL.screenLog.trackerEndOffset = getTimeOffset(eT);
 				
 				show(me.stimuli); %make all stimuli visible again, useful for editing 
 				drawBackground(s);
-				trackerClearScreen(eL);
-				trackerDrawText(eL,['FINISHED TASK:' me.name]);
+				trackerClearScreen(eT);
+				trackerDrawText(eT,['FINISHED TASK:' me.name]);
 				Screen('Flip', s.win);
 				Priority(0);
 				ListenChar(0);
@@ -862,7 +865,7 @@ classdef runExperiment < optickaCore
 				close(s); %screen
 				close(aM);
 				close(io);
-				close(eL); % eyelink, should save the EDF for us we've already given it our name and folder
+				close(eT); % eyelink, should save the EDF for us we've already given it our name and folder
 				WaitSecs(0.25);
 				close(rM);
 				
@@ -883,7 +886,7 @@ classdef runExperiment < optickaCore
 						comment = comment{1};
 						me.comment = [me.comment ' | Final Comment: ' comment];
 						bR.comment = me.comment;
-						eL.comment = me.comment;
+						eT.comment = me.comment;
 						sM.comment = me.comment;
 						io.comment = me.comment;
 						tL.comment = me.comment;
@@ -906,7 +909,7 @@ classdef runExperiment < optickaCore
 				me.stateInfo = [];
 				if isa(me.stateMachine,'stateMachine'); me.stateMachine.reset; end
 				
-				clear rE tL s tS bR rM eL io sM	
+				clear rE tL s tS bR rM eT io sM	
 				
 			catch ME
 				me.isRunning = false;
@@ -929,13 +932,13 @@ classdef runExperiment < optickaCore
 				ShowCursor;
 				try close(s); end
 				try close(aM); end
-				try close(eL); end
+				try close(eT); end
 				me.eyeTracker = [];
 				me.behaviouralRecord = [];
 				try close(rM); end
 				me.lJack=[];
 				me.io = [];
-				clear tL s tS bR rM eL io sM
+				clear tL s tS bR rM eT io sM
 				rethrow(ME)
 			end
 
@@ -1044,29 +1047,54 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 		function updateFixationTarget(me, useTask, varargin)
 			if ~exist('useTask','var');	useTask = false; end
-			if useTask == false
-				updateFixationValues(me.eyeTracker, me.stimuli.lastXPosition, me.stimuli.lastYPosition)
-			else
+			if useTask 
 				[me.lastXPosition,me.lastYPosition] = getFixationPositions(me.stimuli);
 				updateFixationValues(me.eyeTracker, me.lastXPosition, me.lastYPosition, varargin);
+			else
+				updateFixationValues(me.eyeTracker, me.stimuli.lastXPosition, me.stimuli.lastYPosition);
 			end
 		end
 		
 		% ===================================================================
-		%> @brief checks the variable value of a stimulus (e.g. its angle) and then sets a fixation target based on
-		%> that value, so you can use two test stimuli and set the target to one of them in a
-		%> forced choice paradigm.
+		%> @brief updates eyelink with stimuli position
 		%>
 		%> @param
 		% ===================================================================
-		function updateConditionalFixationTarget(me, stimulus, variable, mapping, varargin)
-			stimuluschoice = [];
-			try
-				value = me.stimuli{stimulus}.([variable 'Out']); %get our value
-				stimuluschoice = mapping(2,mapping(1,:)==value);
+		function updateExclusionZones(me, useTask, radius)
+			if ~exist('useTask','var');	useTask = false; end
+			if useTask 
+				[me.lastXExclusion,me.lastYExclusion] = getExclusionPositions(me.stimuli);
+				updateExclusionZones(me.eyeTracker, me.lastXExclusion, me.lastYExclusion, radius);
+			else 
+				updateExclusionZones(me.eyeTracker, me.stimuli.lastXExclusion, me.stimuli.lastYExclusion);
 			end
-			if ~isempty(stimuluschoice)
-				me.stimuli.fixationChoice = stimuluschoice;
+		end
+		
+		
+		% ===================================================================
+		%> @brief checks the variable value of a stimulus (e.g. its angle) and then sets a fixation target based on
+		%> that value, so you can use multiple test stimuli and set the target to one of them in a
+		%> forced choice paradigm that matches the variable value
+		%>
+		%> @param stimulus	which stimulus or stimuli to check
+		%> @param variable	which variable to check
+		%> @param value		which value to check for
+		%> @param varargin	additional parameters to set the fixation window
+		% ===================================================================
+		function updateConditionalFixationTarget(me, stimulus, variable, value, varargin)
+			selected = [];
+			try
+				for i = stimulus
+					thisValue = me.stimuli{stimulus}.([variable 'Out']); %get our value
+					if ischar(value)
+						if strcmpi(thisValue,value); selected = [selected i]; end
+					elseif isnumeric(value)
+						if all(thisValue == value); selected = [selected i]; end
+					end
+				end
+			end
+			if ~isempty(selected)
+				me.stimuli.fixationChoice = selected;
 				[me.lastXPosition,me.lastYPosition] = getFixationPositions(me.stimuli);
 				updateFixationValues(me.eyeTracker, me.lastXPosition, me.lastYPosition, varargin);
 			end
@@ -1246,6 +1274,16 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
+		%> @brief updateTask
+		%> runs the taskSequence.updateTask function
+		%> @param result an integer result, e.g. 1 = correct
+		% ===================================================================
+		function updateTask(me,result)
+			updateTask(me.task,result,GetSecs); %do this before getting index
+		end
+		
+		
+		% ===================================================================
 		%> @brief updateVariables
 		%> Updates the stimulus objects with the current variable set
 		%> @param index a single value
@@ -1300,8 +1338,17 @@ classdef runExperiment < optickaCore
 					offsetvalue = me.task.nVar(i).offsetvalue;
 
 					if ~isempty(offsetix)
+						if ischar(offsetvalue)
+							if strcmpi(offsetvalue,'invert')
+								val = -value;
+							else 
+								val = value;
+							end
+						else
+							val = value+offsetvalue;
+						end
 						ix = [ix offsetix];
-						[ovalueList{1,1:size(offsetix,2)}] = deal(value+offsetvalue);
+						[ovalueList{1,1:size(offsetix,2)}] = deal(val);
 						valueList = [valueList{:} ovalueList];
 					end
 
@@ -1740,7 +1787,7 @@ classdef runExperiment < optickaCore
 		%>
 		%> @param 
 		% ===================================================================
-		function tS = saveEyeInfo(me,sM,eL,tS)
+		function tS = saveEyeInfo(me,sM,eT,tS)
 			switch sM.currentName
 				case 'stimulus'
 					prefix = 'E';
@@ -1756,11 +1803,11 @@ classdef runExperiment < optickaCore
 			if ~strcmpi(prefix,'U')
 				uuid = [prefix sM.currentUUID];
 				if isfield(tS.eyePos, uuid)
-					tS.eyePos.(uuid).x(end+1) = eL.x;
-					tS.eyePos.(uuid).y(end+1) = eL.y;
+					tS.eyePos.(uuid).x(end+1) = eT.x;
+					tS.eyePos.(uuid).y(end+1) = eT.y;
 				else
-					tS.eyePos.(uuid).x = eL.x;
-					tS.eyePos.(uuid).y = eL.y;
+					tS.eyePos.(uuid).x = eT.x;
+					tS.eyePos.(uuid).y = eT.y;
 				end
 			end
 		end
