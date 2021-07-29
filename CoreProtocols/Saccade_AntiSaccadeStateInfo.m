@@ -22,14 +22,17 @@
 %==================================================================
 %---------------------------TASK SWITCH----------------------------
 tS.type						= 'antisaccade'; %will be be saccade or antisaccade block?
+tS.includeErrors			= true; %do we update the trial number even for incorrect saccades, if true then we call updateTask for both correct and incorrect, otherwise we only call updateTask() for correct responses
+CORRECT						= 1;
+BREAK						= -1;
 
 %==================================================================
 %----------------------General Settings----------------------------
 tS.useTask					= true; %==use stimulusSequence (randomised variable task object)
 tS.rewardTime				= 250; %==TTL time in milliseconds
 tS.rewardPin				= 11; %==Output pin, 2 by default with Arduino.
-tS.checkKeysDuringStimulus  = false; %==allow keyboard control? Slight drop in performance
-tS.recordEyePosition		= false; %==record eye position within PTB, **in addition** to the EDF?
+tS.checkKeysDuringStimulus  = true; %==allow keyboard control? Slight drop in performance
+tS.recordEyePosition		= true; %==record eye position within PTB, **in addition** to the EDF?
 tS.askForComments			= false; %==little UI requestor asks for comments before/after run
 tS.saveData					= true; %==save behavioural and eye movement data?
 tS.name						= 'saccade-antisaccade'; %==name of this protocol
@@ -46,7 +49,7 @@ rM.verbose					= false; %print out reward commands for debugging
 tS.fixX						= 0; % X position in degrees (screen center)
 tS.fixY						= 0; % X position in degrees (screen center)
 tS.firstFixInit				= 3; % time to search and enter fixation window
-tS.firstFixTime				= [0.55 1.25]; % time to maintain fixation within window
+tS.firstFixTime				= [0.5 1.25]; % time to maintain fixation within window
 tS.firstFixRadius			= 3; % radius in degrees
 tS.strict					= true; % do we forbid eye to enter-exit-reenter fixation window?
 tS.exclusionRadius			= 5; % radius of the exclusion zone...
@@ -55,13 +58,13 @@ me.lastYPosition			= tS.fixY;
 me.lastXExclusion			= [];
 me.lastYExclusion			= [];
 tS.targetFixInit			= 1; % time to find the target
-tS.targetFixTime			= 0.5; % to to maintain fixation on target 
+tS.targetFixTime			= 0.3; % to to maintain fixation on target 
 tS.targetRadius				= 8; %radius to fix within.
 
 %==================================================================
 %---------------------------Eyetracker setup-----------------------
 if me.useEyeLink
-	warning('Note this protocol is designed for use with Tobii eyetracker, beware')
+	warning('Note this protocol is optimised for the Tobii eyetracker, beware...')
 	eT.name 					= tS.name;
 	eT.sampleRate 				= 250; % sampling rate
 	eT.calibrationStyle 		= 'HV3'; % calibration style
@@ -187,7 +190,8 @@ fixEntryFcn = {
 	@()trackerClearScreen(eT); % blank the eyelink screen
 	@()trackerDrawFixation(eT); % draw the fixation window
 	@()needEyeSample(me,true); % make sure we start measuring eye position
-	@()edit(me.stimuli,3,'alphaOut',1); %dim fix spot
+	@()edit(me.stimuli,3,'alphaOut',0.5); 
+	@()edit(me.stimuli,3,'alpha2Out',1);
 	@()show(me.stimuli{3});
 	@()logRun(me,'INITFIX'); %fprintf current trial info to command window
 };
@@ -210,6 +214,7 @@ if strcmpi(tS.type,'saccade')
 		@()show(me.stimuli{1});
 		@()hide(me.stimuli{2});
 		@()edit(me.stimuli,3,'alphaOut',0); %dim fix spot
+		@()edit(me.stimuli,3,'alpha2Out',0.2); %dim fix spot
 		@()trackerMessage(eT,'END_FIX');
 	}; 
 else
@@ -220,6 +225,7 @@ else
 		@()hide(me.stimuli{1});
 		@()show(me.stimuli{2});
 		@()edit(me.stimuli,3,'alphaOut',0); %dim fix spot
+		@()edit(me.stimuli,3,'alpha2Out',0.2); %dim fix spot
 		@()trackerMessage(eT,'END_FIX');
 	}; 
 end
@@ -265,12 +271,11 @@ correctFcn = { };
 
 %when we exit the correct state
 correctExitFcn = {
-	@()resetFixation(eT); %reset the eyetracker fixation timers for a new trial
-	@()resetExclusionZones(eT); %reset the exclusion zones
 	@()updateVariables(me); %randomise our stimuli, and set strobe value too
-	@()updateTask(me,true); %make sure our taskSequence is moved to the next trial
+	@()updateTask(me,CORRECT); %make sure our taskSequence is moved to the next trial
 	@()update(me.stimuli); %update our stimuli ready for display
 	@()getStimulusPositions(me.stimuli); %make a struct the eT can use for drawing stim positions
+	@()resetExclusionZones(eT); %reset the exclusion zones
 	@()trackerClearScreen(eT); 
 	@()trackerDrawFixation(eT); %draw fixation window on eyelink computer
 	@()trackerDrawStimuli(eT,me.stimuli.stimulusPositions); %draw location of stimulus on eyelink
@@ -295,19 +300,34 @@ incEntryFcn = {
 %our incorrect stimulus
 incFcn = {};
 
-%incorrect / break exit
-incExitFcn = { 
-	@()resetFixation(eT); %reset the eyetracker fixation timers for a new trial
-	@()resetExclusionZones(eT); %reset the exclusion zones
-	@()updateVariables(me); %randomise our stimuli, don't run updateTask(t), and set strobe value too
-	@()update(me.stimuli); %update our stimuli ready for display
-	@()trackerClearScreen(eT); 
-	@()trackerDrawFixation(eT); %draw fixation window on eyelink computer
-	@()trackerDrawStimuli(eT); %draw location of stimulus on eyelink
-	@()checkTaskEnded(me); %check if task is finished
-	@()updatePlot(bR, eT, sM); %update our behavioural plot;
-	@()drawnow;
-};
+if tS.includeErrors
+	%incorrect / break exit
+	incExitFcn = { 
+		@()updateVariables(me); %randomise our stimuli, don't run updateTask(t), and set strobe value too
+		@()updateTask(me,BREAK); %make sure our taskSequence is moved to the next trial
+		@()update(me.stimuli); %update our stimuli ready for display
+		@()resetExclusionZones(eT); %reset the exclusion zones
+		@()trackerClearScreen(eT); 
+		@()trackerDrawFixation(eT); %draw fixation window on eyelink computer
+		@()trackerDrawStimuli(eT); %draw location of stimulus on eyelink
+		@()checkTaskEnded(me); %check if task is finished
+		@()updatePlot(bR, eT, sM); %update our behavioural plot;
+		@()drawnow;
+	};
+else
+	%incorrect / break exit
+	incExitFcn = { 
+		@()updateVariables(me); %randomise our stimuli, don't run updateTask(t), and set strobe value too
+		@()update(me.stimuli); %update our stimuli ready for display
+		@()resetExclusionZones(eT); %reset the exclusion zones
+		@()trackerClearScreen(eT); 
+		@()trackerDrawFixation(eT); %draw fixation window on eyelink computer
+		@()trackerDrawStimuli(eT); %draw location of stimulus on eyelink
+		@()checkTaskEnded(me); %check if task is finished
+		@()updatePlot(bR, eT, sM); %update our behavioural plot;
+		@()drawnow;
+	};
+end
 
 %break entry
 breakEntryFcn = {
@@ -315,11 +335,23 @@ breakEntryFcn = {
 	@()trackerClearScreen(eT);
 	@()trackerDrawText(eT,'Broke maintain fix! :-(');
 	@()trackerMessage(eT,'END_RT');
-	@()trackerMessage(eT,'TRIAL_RESULT -1');
+	@()trackerMessage(eT,['TRIAL_RESULT ' str2double(BREAK)]);
 	@()needEyeSample(me,false);
 	@()sendTTL(io,5);
 	@()hide(me.stimuli);
 	@()logRun(me,'BREAKFIX'); %fprintf current trial info
+};
+
+exclEntryFcn = {
+	@()beep(aM,400,0.5,1);
+	@()trackerClearScreen(eT);
+	@()trackerDrawText(eT,'Exclusion Zone entered! :-(');
+	@()trackerMessage(eT,'END_RT');
+	@()trackerMessage(eT,['TRIAL_RESULT ' str2double(BREAK)]);
+	@()needEyeSample(me,false);
+	@()sendTTL(io,5);
+	@()hide(me.stimuli);
+	@()logRun(me,'EXCLUSION'); %fprintf current trial info
 };
 
 %calibration function
@@ -354,6 +386,7 @@ stateInfoTmp = {
 'stimulus'  'incorrect'	5		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn;
 'incorrect'	'prefix'	3		incEntryFcn		incFcn			[]				incExitFcn;
 'breakfix'	'prefix'	tS.tOut	breakEntryFcn	incFcn			[]				incExitFcn;
+'exclusion'	'prefix'	tS.tOut	exclEntryFcn	incFcn			[]				incExitFcn;
 'correct'	'prefix'	0.5		correctEntryFcn	correctFcn		[]				correctExitFcn;
 'calibrate' 'pause'		0.5		calibrateFcn	[]				[]				[];
 'override'	'pause'		0.5		overrideFcn		[]				[]				[];

@@ -1279,7 +1279,13 @@ classdef runExperiment < optickaCore
 		%> @param result an integer result, e.g. 1 = correct
 		% ===================================================================
 		function updateTask(me,result)
-			updateTask(me.task,result,GetSecs); %do this before getting index
+			info = '';
+			if me.useEyeLink || me.useTobii
+				info = sprintf('isBlink = %i; isExclusion = %i; isFix = %i; isInitFail = %i; fixTotal = %g',...
+					me.eyeTracker.isBlink, me.eyeTracker.isExclusion, me.eyeTracker.isFix,...
+				me.eyeTracker.isInitFail, me.eyeTracker.fixTotal);
+			end
+			updateTask(me.task,result,GetSecs,info); %do this before getting index
 		end
 		
 		
