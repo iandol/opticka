@@ -1266,7 +1266,7 @@ classdef runExperiment < optickaCore
 			if ~exist('index','var') || isempty(index)
 				index = me.task.totalRuns;
 			end
-			if index > 0
+			if index > 0 && ~isempty(me.task.outIndex) && length(me.task.outIndex) >= index
 				trial = me.task.outIndex(index);
 			else
 				trial = -1;
@@ -1747,18 +1747,24 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 		function t = infoText(me)
 			if me.isRunTask; log = me.taskLog; else; log = me.runLog; end
+			if isempty(me.task.outValues)
+				t = sprintf('Time: %3.3f (%i) ',(log.vbl(end)-log.startTime), log.tick);
+				return
+			else
+				var = me.task.outIndex(me.task.totalRuns);
+			end
 			if me.logFrames == true && log.tick > 1
 				t=sprintf('B: %i | R: %i [%i/%i] | isBlank: %i | Time: %3.3f (%i) | V: %i |',...
 					me.task.thisBlock, me.task.thisRun,me.task.totalRuns,...
 					me.task.nRuns,me.task.isBlank, ...
 					(log.vbl(end)-log.startTime),...
-					log.tick,me.task.outIndex(me.task.totalRuns));
+					log.tick,var);
 			else
 				t=sprintf('B: %i | R: %i [%i/%i] | isBlank: %i | Time: %3.3f (%i) | V: %i |',...
 					me.task.thisBlock,me.task.thisRun,me.task.totalRuns,...
 					me.task.nRuns,me.task.isBlank, ...
 					(log.vbl(1)-log.startTime),log.tick,...
-					me.task.outIndex(me.task.totalRuns));
+					var);
 			end
 			for i=1:me.task.nVars
 				if iscell(me.task.outVars{me.task.thisBlock,i}(me.task.thisRun))
@@ -1782,9 +1788,14 @@ classdef runExperiment < optickaCore
 				if ~exist('tag','var')
 					tag='#';
 				end
-				fprintf('%s -- B: %i | R: %i [%i/%i] | TT: %i | Tick: %i | Time: %5.8g\n',tag,...
+				if isempty(me.task.outValues)
+					fprintf('Tick: %i | Time: %5.8g\n',tag,...
+					me.task.tick,me.task.timeNow-me.task.startTime);
+				else
+					fprintf('%s -- B: %i | R: %i [%i/%i] | TT: %i | Tick: %i | Time: %5.8g\n',tag,...
 					me.task.thisBlock,me.task.thisRun,me.task.totalRuns,me.task.nRuns,...
 					me.task.isBlank,me.task.tick,me.task.timeNow-me.task.startTime);
+				end
 			end
 		end
 		

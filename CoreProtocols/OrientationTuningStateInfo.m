@@ -24,7 +24,10 @@ tS.recordEyePosition		= false; %==record eye position within PTB, **in addition*
 tS.askForComments			= false; %==little UI requestor asks for comments before/after run
 tS.saveData					= true; %==save behavioural and eye movement data?
 tS.name						= 'orientation-tuning'; %==name of this protocol
-tS.tOut						= 5; %if wrong response, how long to time out before next trial
+tS.tOut						= 5; %==if wrong response, how long to time out in seconds before next trial
+CORRECT 					= 1; %==the code to send eyetracker for correct trials
+BREAKFIX 					= -1; %==the code to send eyetracker for break fix trials
+INCORRECT 					= -5; %==the code to send eyetracker for incorrect trials
 
 %==================================================================
 %------------Debug logging to command window-----------------
@@ -46,7 +49,7 @@ me.lastXPosition			= tS.fixX;
 me.lastYPosition			= tS.fixY;
 
 %==================================================================
-%------------------------Eyelink setup--------------------------
+%---------------------------Eyelink setup--------------------------
 me.useEyeLink				= true; % make sure we are using eyetracker
 eT.name 					= tS.name;
 eT.sampleRate 				= 250; % sampling rate
@@ -70,10 +73,10 @@ eT.modify.targetbeep 			= 1; % beep during calibration
 %Initialise the eyeLink object with X, Y, FixInitTime, FixTime, Radius, StrictFix
 eT.updateFixationValues(tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
 
-%==================================================================
-%----which states assigned as correct or break for online plot?----
-bR.correctStateName				= 'correct';
-bR.breakStateName				= 'breakfix';
+%======================================================================
+%---REGEX for which states assigned correct or break for online plot---
+bR.correctStateName				= '^correct';
+bR.breakStateName				= '^(breakfix|incorrect)';
 
 %==================================================================
 %--------------randomise stimulus variables every trial?-----------
@@ -95,7 +98,7 @@ bR.breakStateName				= 'breakfix';
 me.stimuli.choice 				= [];
 me.stimuli.stimulusTable 		= [];
 
-%==================================================================
+%=======================================================================
 %-------------allows using arrow keys to control variables?-------------
 % another option is to enable manual control of a table of variables
 % this is useful to probe RF properties or other features while still
@@ -138,18 +141,18 @@ pauseEntryFcn = {
 	@()needEyeSample(me,false); % no need to check eye position
 };
 
-%pause exit
+%--------------------pause exit
 pauseExitFcn = {
 	
 }; 
 
 prefixEntryFcn = { 
-	@()enableFlip(me); 
+	@()enableFlip(me); % start flipping the display
 };
 
 prefixFcn = {};
 
-%fixate entry
+%--------------------fixate entry
 fixEntryFcn = { 
 	@()updateFixationValues(eT,tS.fixX,tS.fixY,[],tS.firstFixTime); %reset fixation window
 	@()startRecording(eT); % start eyelink recording for this trial
@@ -164,17 +167,17 @@ fixEntryFcn = {
 	@()logRun(me,'INITFIX'); %fprintf current trial info to command window
 };
 
-%fix within
+%--------------------fix within
 fixFcn = {
 	@()draw(me.stimuli); %draw stimulus
 };
 
-%test we are fixated for a certain length of time
+%--------------------test we are fixated for a certain length of time
 inFixFcn = { 
 	@()testSearchHoldFixation(eT,'stimulus','incorrect')
 };
 
-%exit fixation phase
+%--------------------exit fixation phase
 fixExitFcn = { 
 	@()statusMessage(eT,'Show Stimulus...');
 	@()updateFixationValues(eT,[],[],[],tS.stimulusFixTime); %reset a maintained fixation of 1 second
@@ -182,35 +185,35 @@ fixExitFcn = {
     @()edfMessage(eT,'END_FIX');
 }; 
 
-%what to run when we enter the stim presentation state
+%--------------------what to run when we enter the stim presentation state
 stimEntryFcn = { 
 	@()doStrobe(me,true)
 };
 
-%what to run when we are showing stimuli
+%--------------------what to run when we are showing stimuli
 stimFcn =  { 
 	@()draw(me.stimuli);
 	@()finishDrawing(s);
 	@()animate(me.stimuli); % animate stimuli for subsequent draw
 };
 
-%test we are maintaining fixation
+%--------------------test we are maintaining fixation
 maintainFixFcn = {
 	@()testHoldFixation(eT,'correct','breakfix')
 };
 
-%as we exit stim presentation state
+%--------------------as we exit stim presentation state
 stimExitFcn = { 
 	@()sendStrobe(io,255);
 };
 
-%if the subject is correct (small reward)
+%--------------------if the subject is correct (small reward)
 correctEntryFcn = { 
 	@()timedTTL(rM, tS.rewardPin, tS.rewardTime); % send a reward TTL
 	@()beep(aM,2000); % correct beep
 	@()trackerDrawText(eT,'Correct! :-)');
 	@()edfMessage(eT,'END_RT');
-	@()edfMessage(eT,'TRIAL_RESULT 1');
+	@()edfMessage(eT,['TRIAL_RESULT ' num2str(CORRECT)]);
 	@()stopRecording(eT);
 	@()setOffline(eT); %set eyelink offline
 	@()needEyeSample(me,false); % no need to collect eye data until we start the next trial
@@ -219,10 +222,10 @@ correctEntryFcn = {
 	@()logRun(me,'CORRECT'); %fprintf current trial info
 };
 
-%correct stimulus
+%--------------------correct stimulus
 correctFcn = { };
 
-%when we exit the correct state
+%--------------------when we exit the correct state
 correctExitFcn = {
 	@()updateVariables(me); %randomise our stimuli, set strobe value too
 	@()updateTask(me.task, true); %update our task (stimulusSequence)
@@ -231,17 +234,18 @@ correctExitFcn = {
 	@()trackerClearScreen(eT); 
 	@()trackerDrawFixation(eT); %draw fixation window on eyelink computer
 	@()trackerDrawStimuli(eT,me.stimuli.stimulusPositions); %draw location of stimulus on eyelink
-	@()updatePlot(bR, eT, sM); %update our behavioural plot
 	@()checkTaskEnded(me); %check if task is finished
+	@()updatePlot(bR, eT, sM); %update our behavioural plot
+	@()drawnow;
 };
 
-%incorrect entry
+%--------------------incorrect entry
 incEntryFcn = { 
 	@()beep(aM,400,0.5,1);
-    @()trackerClearScreen(eT);
+	@()trackerClearScreen(eT);
 	@()trackerDrawText(eT,'Incorrect! :-(');
 	@()edfMessage(eT,'END_RT');
-	@()edfMessage(eT,'TRIAL_RESULT -5');
+	@()edfMessage(eT,['TRIAL_RESULT ' num2str(INCORRECT)]);
 	@()stopRecording(eT);
 	@()setOffline(eT); %set eyelink offline
 	@()needEyeSample(me,false);
@@ -250,27 +254,28 @@ incEntryFcn = {
 	@()logRun(me,'INCORRECT'); %fprintf current trial info
 }; 
 
-%our incorrect stimulus
+%--------------------our incorrect stimulus
 incFcn = {};
 
-%incorrect / break exit
+%--------------------incorrect / break exit
 incExitFcn = { 
 	@()updateVariables(me); %randomise our stimuli, set strobe value too
 	@()update(me.stimuli); %update our stimuli ready for display
-	@()updatePlot(bR, eT, sM); %update our behavioural plot;
 	@()trackerClearScreen(eT); 
 	@()trackerDrawFixation(eT); %draw fixation window on eyelink computer
 	@()trackerDrawStimuli(eT); %draw location of stimulus on eyelink
 	@()checkTaskEnded(me); %check if task is finished
+	@()updatePlot(bR, eT, sM); %update our behavioural plot;
+	@()drawnow;
 };
 
-%break entrystimulus'  'incorrect'	5		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn;
+%--------------------break entry
 breakEntryFcn = {
 	@()beep(aM,400,0.5,1);
 	@()trackerClearScreen(eT);
 	@()trackerDrawText(eT,'Broke maintain fix! :-(');
 	@()edfMessage(eT,'END_RT');
-	@()edfMessage(eT,'TRIAL_RESULT -1');
+	@()edfMessage(eT,['TRIAL_RESULT ' num2str(BREAKFIX)]);
 	@()stopRecording(eT);
 	@()setOffline(eT); %set eyelink offline
 	@()needEyeSample(me,false);
@@ -279,26 +284,36 @@ breakEntryFcn = {
 	@()logRun(me,'BREAKFIX'); %fprintf current trial info
 };
 
-%calibration function
-calibrateFcn = { 
+%--------------------calibration function
+calibrateFcn = {
+	@()drawBackground(s); %blank the display
 	@()setOffline(eT); 
 	@()rstop(io); 
 	@()trackerSetup(eT);  %enter tracker calibrate/validate setup mode
 };
 
-%debug override
+%--------------------drift correction function
+driftFcn = { 
+	@()drawBackground(s); %blank the display
+	@()stopRecording(eT); % stop eyelink recording data
+	@()setOffline(eT); % set eyelink offline
+	@()driftCorrection(eT) % enter drift correct
+};
+
+
+%--------------------debug override
 overrideFcn = { @()keyOverride(me) }; %a special mode which enters a matlab debug state so we can manually edit object values
 
-%screenflash
+%--------------------screenflash
 flashFcn = { @()flashScreen(s, 0.2) }; % fullscreen flash mode for visual background activity detection
 
-%magstim
+%--------------------magstim
 magstimFcn = { 
 	@()drawBackground(s);
 	@()stimulate(mS); % run the magstim
 };
 
-%show 1deg size grid
+%--------------------show 1deg size grid
 gridFcn = {@()drawGrid(s)};
 
 %----------------------State Machine Table-------------------------
@@ -314,6 +329,7 @@ stateInfoTmp = {
 'breakfix'	'prefix'	tS.tOut	breakEntryFcn	incFcn			[]				incExitFcn;
 'correct'	'prefix'	0.5		correctEntryFcn	correctFcn		[]				correctExitFcn;
 'calibrate' 'pause'		0.5		calibrateFcn	[]				[]				[];
+'drift'		'pause'		0.5		driftFcn		[]				[]					[];
 'override'	'pause'		0.5		overrideFcn		[]				[]				[];
 'flash'		'pause'		0.5		flashFcn		[]				[]				[];
 'magstim'	'prefix'	0.5		[]				magstimFcn		[]				[];

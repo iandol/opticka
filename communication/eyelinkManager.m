@@ -720,7 +720,8 @@ classdef eyelinkManager < optickaCore
 				for i = 1:size(me.exclusionZone,1)
 					if (x >= me.exclusionZone(i,1) && x <= me.exclusionZone(i,2)) && ...
 						(me.y >= me.exclusionZone(i,3) && me.y <= me.exclusionZone(i,4))
-						searching = false; exclusion = true; me.isExclusion = true;
+						searching = false; exclusion = true; 
+						me.isExclusion = true; me.isFix = false;
 						return;
 					end
 				end
@@ -733,8 +734,8 @@ classdef eyelinkManager < optickaCore
 				window = find(r < me.fixInit.radius);
 				if ~any(window)
 					searching = false; fixinit = true;
-					me.isInitFail = fixinit; me.isFix = false;
-					fprintf('-+-+-> eyelinkManager: eye left fix init window @ %.3f secs!\n',ft);
+					me.isInitFail = true; me.isFix = false;
+					fprintf('-+-+-> eyelinkManager: Eye left fix init window @ %.3f secs!\n',ft);
 					return;
 				end
 			end
@@ -843,7 +844,7 @@ classdef eyelinkManager < optickaCore
 		%>   but not for the requisite fixation time, 'EXCLUDED!' if an exclusion
 		%>   zone was entered or the yesString or noString.
 		% ===================================================================
-		function [out, window, exclusion] = testSearchHoldFixation(me, yesString, noString)
+		function [out, window, exclusion, initfail] = testSearchHoldFixation(me, yesString, noString)
 			[fix, fixtime, searching, window, exclusion, initfail] = me.isFixated();
 			if exclusion
 				out = noString;
@@ -900,7 +901,7 @@ classdef eyelinkManager < optickaCore
 		%> @return out the output string which is 'fixing' if the fixation window was entered
 		%>   but not for the requisite fixation time, or the yes or no string.
 		% ===================================================================
-		function [out, window, exclusion] = testHoldFixation(me, yesString, noString)
+		function [out, window, exclusion, initfail] = testHoldFixation(me, yesString, noString)
 			[fix, fixtime, searching, window, exclusion, initfail] = me.isFixated();
 			if exclusion
 				out = noString;

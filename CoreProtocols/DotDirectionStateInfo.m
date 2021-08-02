@@ -175,6 +175,14 @@ breakEntryFcn = { @()statusMessage(eT,'Broke Fixation :-('); ...%status message 
 %calibration function
 calibrateFcn = { @()setOffline(eT); @()rstop(io); @()trackerSetup(eT) }; %enter tracker calibrate/validate setup mode
 
+%--------------------drift correction function
+driftFcn = { 
+	@()drawBackground(s); %blank the display
+	@()stopRecording(eT); % stop eyelink recording data
+	@()setOffline(eT); % set eyelink offline
+	@()driftCorrection(eT) % enter drift correct
+};
+
 %debug override
 overrideFcn = @()keyOverride(obj); %a special mode which enters a matlab debug state so we can manually edit object values
 
@@ -187,23 +195,24 @@ gridFcn = @()drawGrid(s);
 %----------------------State Machine Table-------------------------
 disp('================>> Building state info file <<================')
 %specify our cell array that is read by the stateMachine
-stateInfoTmp = { ...
-'name'      'next'		'time'  'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn'; ...
-'pause'		'fixate'	inf		pauseEntryFcn	[]				[]				pauseExitFcn; ...
-'prefix'	'fixate'	0.75	[]				prefixFcn		[]				[]; ...
-'fixate'	'incorrect'	1	 	fixEntryFcn		fixFcn			initFixFcn		fixExitFcn; ...
-'stimulus'  'incorrect'	2		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn; ...
-'incorrect'	'prefix'	1.25	incEntryFcn		incFcn			[]				incExitFcn; ...
-'breakfix'	'prefix'	1.25	breakEntryFcn	incFcn			[]				incExitFcn; ...
-'correct'	'prefix'	0.25	correctEntryFcn	correctFcn		[]				correctExitFcn; ...
-'calibrate' 'pause'		0.5		calibrateFcn	[]				[]				[]; ...
-'override'	'pause'		0.5		overrideFcn		[]				[]				[]; ...
-'flash'		'pause'		0.5		flashFcn		[]				[]				[]; ...
-'showgrid'	'pause'		10		[]				gridFcn			[]				[]; ...
+stateInfoTmp = {
+'name'		'next'		'time'	'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn';
+'pause'		'fixate'	inf		pauseEntryFcn	[]				[]				pauseExitFcn;
+'prefix'	'fixate'	0.75	[]				prefixFcn		[]				[];
+'fixate'	'incorrect'	1	 	fixEntryFcn		fixFcn			initFixFcn		fixExitFcn;
+'stimulus'  'incorrect'	2		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn;
+'incorrect'	'prefix'	1.25	incEntryFcn		incFcn			[]				incExitFcn;
+'breakfix'	'prefix'	1.25	breakEntryFcn	incFcn			[]				incExitFcn;
+'correct'	'prefix'	0.25	correctEntryFcn	correctFcn		[]				correctExitFcn;
+'calibrate' 'pause'		0.5		calibrateFcn	[]				[]				[];
+'drift'		'pause'		0.5		driftFcn		[]				[]				[];
+'override'	'pause'		0.5		overrideFcn		[]				[]				[];
+'flash'		'pause'		0.5		flashFcn		[]				[]				[];
+'showgrid'	'pause'		10		[]				gridFcn			[]				[];
 };
 
 disp(stateInfoTmp)
 disp('================>> Loaded state info file  <<================')
 clear pauseEntryFcn fixEntryFcn fixFcn initFixFcn fixExitFcn stimFcn maintainFixFcn incEntryFcn ...
 	incFcn incExitFcn breakEntryFcn breakFcn correctEntryFcn correctFcn correctExitFcn ...
-	calibrateFcn overrideFcn flashFcn gridFcn
+	calibrateFcn driftFcn overrideFcn flashFcn gridFcn

@@ -1,4 +1,4 @@
-%AREA SUMMATION state configuration file, this gets loaded by opticka via runExperiment class
+% AREA SUMMATION state configuration file, this gets loaded by opticka via runExperiment class
 % The following class objects (easily named handle copies) are already 
 % loaded and available to use: 
 %
@@ -47,7 +47,6 @@ me.lastYPosition			= tS.fixY;
 
 %==================================================================
 %---------------------------Eyelink setup--------------------------
-me.useEyeLink				= true; % make sure we are using eyetracker
 eT.name 					= tS.name;
 eT.sampleRate 				= 250; % sampling rate
 eT.calibrationStyle 		= 'HV3'; % calibration style
@@ -292,6 +291,14 @@ calibrateFcn = {
 	@()trackerSetup(eT);  %enter tracker calibrate/validate setup mode
 };
 
+%--------------------drift correction function
+driftFcn = { 
+	@()drawBackground(s); %blank the display
+	@()stopRecording(eT); % stop eyelink recording data
+	@()setOffline(eT); % set eyelink offline
+	@()driftCorrection(eT) % enter drift correct
+};
+
 %debug override
 overrideFcn = { @()keyOverride(me) }; %a special mode which enters a matlab debug state so we can manually edit object values
 
@@ -311,15 +318,16 @@ gridFcn = {@()drawGrid(s)};
 disp('================>> Building state info file <<================')
 %specify our cell array that is read by the stateMachine
 stateInfoTmp = {
-'name'      'next'		'time'  'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn';
+'name'		'next'		'time'	'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn';
 'pause'		'prefix'	inf		pauseEntryFcn	[]				[]				pauseExitFcn;
 'prefix'	'fixate'	0.5		prefixEntryFcn	prefixFcn		[]				[];
-'fixate'	'incorrect'	5	 	fixEntryFcn		fixFcn			inFixFcn		fixExitFcn;
-'stimulus'  'incorrect'	5		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn;
+'fixate'	'incorrect'	5		fixEntryFcn		fixFcn			inFixFcn		fixExitFcn;
+'stimulus'	'incorrect'	5		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn;
 'incorrect'	'prefix'	3		incEntryFcn		incFcn			[]				incExitFcn;
 'breakfix'	'prefix'	tS.tOut	breakEntryFcn	incFcn			[]				incExitFcn;
 'correct'	'prefix'	0.5		correctEntryFcn	correctFcn		[]				correctExitFcn;
 'calibrate' 'pause'		0.5		calibrateFcn	[]				[]				[];
+'drift'		'pause'		0.5		driftFcn		[]				[]				[];
 'override'	'pause'		0.5		overrideFcn		[]				[]				[];
 'flash'		'pause'		0.5		flashFcn		[]				[]				[];
 'magstim'	'prefix'	0.5		[]				magstimFcn		[]				[];

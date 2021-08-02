@@ -18,17 +18,16 @@
 %> me.stimuli = our list of stimuli
 %> tS = general struct to hold variables for this run, will be saved as part of the data
 
-
 %==================================================================
 %---------------------------TASK SWITCH----------------------------
-tS.type						= 'antisaccade'; %will be be saccade or antisaccade block?
+tS.type						= 'antisaccade'; %will be be saccade or antisaccade task run?
 tS.includeErrors			= true; %do we update the trial number even for incorrect saccades, if true then we call updateTask for both correct and incorrect, otherwise we only call updateTask() for correct responses
 CORRECT						= 1;
 BREAK						= -1;
 
 %==================================================================
 %----------------------General Settings----------------------------
-tS.useTask					= true; %==use stimulusSequence (randomised variable task object)
+tS.useTask					= true; %==use taskSequence (randomises stimulus variables)
 tS.rewardTime				= 250; %==TTL time in milliseconds
 tS.rewardPin				= 11; %==Output pin, 2 by default with Arduino.
 tS.checkKeysDuringStimulus  = true; %==allow keyboard control? Slight drop in performance
@@ -97,10 +96,10 @@ eT.updateFixationValues(tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.f
 %make sure we don't start with any exclusion zones set up
 eT.resetExclusionZones();
 
-%==================================================================
-%----which states assigned as correct or break for online plot?----
-bR.correctStateName				= 'correct';
-bR.breakStateName				= 'breakfix';
+%======================================================================
+%---REGEX for which states assigned correct or break for online plot---
+bR.correctStateName				= '^correct';
+bR.breakStateName				= '^(breakfix|incorrect)';
 
 %==================================================================
 %-------------------randomise stimulus variables every trial?-----------
@@ -157,7 +156,6 @@ me.stimuli.exclusionChoice = 2;
 % load, if you want up-to-date values then you need to use methods/function
 % wrappers to retrieve/set them.
 
-
 %pause entry
 pauseEntryFcn = { 
 	@()hide(me.stimuli);
@@ -206,28 +204,19 @@ inFixFcn = {
 	@()testSearchHoldFixation(eT,'stimulus','incorrect')
 };
 
+%exit fixation phase
+fixExitFcn = { 
+	@()updateFixationTarget(me, tS.useTask, tS.targetFixInit, tS.targetFixTime, tS.targetRadius, tS.strict); ... %use our stimuli values for next fix X and Y
+	@()updateExclusionZones(me, tS.useTask, tS.exclusionRadius);
+	@()edit(me.stimuli,3,'alphaOut',0); %dim fix spot
+	@()edit(me.stimuli,3,'alpha2Out',0.05); %dim fix spot
+	@()trackerMessage(eT,'END_FIX');
+}; 
+
 if strcmpi(tS.type,'saccade')
-	%exit fixation phase
-	fixExitFcn = { 
-		@()updateFixationTarget(me, tS.useTask, tS.targetFixInit, tS.targetFixTime, tS.targetRadius, tS.strict); ... %use our stimuli values for next fix X and Y
-		@()updateExclusionZones(me, tS.useTask, tS.exclusionRadius);
-		@()show(me.stimuli{1});
-		@()hide(me.stimuli{2});
-		@()edit(me.stimuli,3,'alphaOut',0); %dim fix spot
-		@()edit(me.stimuli,3,'alpha2Out',0.2); %dim fix spot
-		@()trackerMessage(eT,'END_FIX');
-	}; 
+	fixExitFcn = [ fixExitFcn; {@()show(me.stimuli{1}); @()hide(me.stimuli{2})} ];
 else
-	%exit fixation phase
-	fixExitFcn = { 
-		@()updateFixationTarget(me, tS.useTask, tS.targetFixInit, tS.targetFixTime, tS.targetRadius, tS.strict); ... %use our stimuli values for next fix X and Y
-		@()updateExclusionZones(me, tS.useTask, tS.exclusionRadius);
-		@()hide(me.stimuli{1});
-		@()show(me.stimuli{2});
-		@()edit(me.stimuli,3,'alphaOut',0); %dim fix spot
-		@()edit(me.stimuli,3,'alpha2Out',0.2); %dim fix spot
-		@()trackerMessage(eT,'END_FIX');
-	}; 
+	fixExitFcn = [ fixExitFcn; {@()hide(me.stimuli{1}); @()show(me.stimuli{2})} ];
 end
 
 %what to run when we enter the stim presentation state
@@ -300,33 +289,22 @@ incEntryFcn = {
 %our incorrect stimulus
 incFcn = {};
 
+%incorrect / break exit
+incExitFcn = { 
+	@()updateVariables(me); %randomise our stimuli, don't run updateTask(t), and set strobe value too
+	@()updateTask(me,BREAK); %make sure our taskSequence is moved to the next trial
+	@()update(me.stimuli); %update our stimuli ready for display
+	@()resetExclusionZones(eT); %reset the exclusion zones
+	@()trackerClearScreen(eT); 
+	@()trackerDrawFixation(eT); %draw fixation window on eyelink computer
+	@()trackerDrawStimuli(eT); %draw location of stimulus on eyelink
+	@()checkTaskEnded(me); %check if task is finished
+	@()updatePlot(bR, eT, sM); %update our behavioural plot;
+	@()drawnow;
+};
+
 if tS.includeErrors
-	%incorrect / break exit
-	incExitFcn = { 
-		@()updateVariables(me); %randomise our stimuli, don't run updateTask(t), and set strobe value too
-		@()updateTask(me,BREAK); %make sure our taskSequence is moved to the next trial
-		@()update(me.stimuli); %update our stimuli ready for display
-		@()resetExclusionZones(eT); %reset the exclusion zones
-		@()trackerClearScreen(eT); 
-		@()trackerDrawFixation(eT); %draw fixation window on eyelink computer
-		@()trackerDrawStimuli(eT); %draw location of stimulus on eyelink
-		@()checkTaskEnded(me); %check if task is finished
-		@()updatePlot(bR, eT, sM); %update our behavioural plot;
-		@()drawnow;
-	};
-else
-	%incorrect / break exit
-	incExitFcn = { 
-		@()updateVariables(me); %randomise our stimuli, don't run updateTask(t), and set strobe value too
-		@()update(me.stimuli); %update our stimuli ready for display
-		@()resetExclusionZones(eT); %reset the exclusion zones
-		@()trackerClearScreen(eT); 
-		@()trackerDrawFixation(eT); %draw fixation window on eyelink computer
-		@()trackerDrawStimuli(eT); %draw location of stimulus on eyelink
-		@()checkTaskEnded(me); %check if task is finished
-		@()updatePlot(bR, eT, sM); %update our behavioural plot;
-		@()drawnow;
-	};
+	incExitFcn = [ incExitFcn; {@()updateTask(me,BREAK)} ]; %make sure our taskSequence is moved to the next trial
 end
 
 %break entry

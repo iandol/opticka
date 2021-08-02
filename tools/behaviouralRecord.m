@@ -7,16 +7,16 @@ classdef behaviouralRecord < optickaCore
 	%--------------------PUBLIC PROPERTIES----------%
 	properties
 		%> verbosity
-		verbose = true
-		response = []
-		rt1 = []
-		rt2 = []
-		date = []
-		info = ''
-		correctStateName = 'correct'
-		breakStateName = 'breakfix'
-		rewardTime = 150;
-		rewardVolume = 3.6067e-04; %for 1ms
+		verbose				= true
+		response			= []
+		rt1					= []
+		rt2					= []
+		date				= []
+		info				= ''
+		correctStateName	= '^correct'
+		breakStateName		= '^(breakfix|incorrect)'
+		rewardTime			= 150;
+		rewardVolume		= 3.6067e-04; %for 1ms
 	end
 	
 	properties (SetAccess = ?runExperiment, Transient = true)
@@ -166,11 +166,11 @@ classdef behaviouralRecord < optickaCore
 				me.startTime = clock;
 			end
 			if exist('eL','var') && exist('sM','var')
-				if strcmpi(sM.currentName,me.correctStateName)
+				if ~isempty(regexpi(sM.currentName,me.correctStateName,'once'))
 					me.response(end+1) = 1;
-					me.rt1(end+1) = sM.log(end).totalTime;
-					me.rt2(end+1) = eL.fixInitLength;
-				elseif strcmpi(sM.currentName,me.breakStateName)
+					me.rt1(end+1) = sM.log(end).stateTimeToNow * 1e3;
+					me.rt2(end+1) = eL.fixInitLength * 1e3;
+				elseif ~isempty(regexpi(sM.currentName,me.breakStateName,'once'))
 					me.response(end+1) = -1;
 				else
 					me.response(end+1) = 0;
@@ -200,13 +200,15 @@ classdef behaviouralRecord < optickaCore
 			set(me.h.axis1,'NextPlot','replacechildren')
 			plot(me.h.axis1, 1:length(me.response), me.response,'k.-','MarkerSize',12);
 			set(me.h.axis1,'NextPlot','add')
-			plot(me.h.axis1, 1:length(me.response), me.radius,'r.','MarkerSize',10);
-			plot(me.h.axis1, 1:length(me.response), me.inittime,'g.','MarkerSize',10);
-			plot(me.h.axis1, 1:length(me.response), me.time,'b.','MarkerSize',10);
+			if ~isempty(me.radius)
+				plot(me.h.axis1, 1:length(me.response), me.radius,'r.','MarkerSize',10);
+				plot(me.h.axis1, 1:length(me.response), me.inittime,'g.','MarkerSize',10);
+				plot(me.h.axis1, 1:length(me.response), me.time,'b.','MarkerSize',10);
+			end
 			axis(me.h.axis1, 'tight');
 			%axis 2
-			if length(me.rt1) > 0
-				hist(me.h.axis2, [me.rt1' me.rt2'], 5);
+			if ~isempty(me.rt1) 
+				histogram(me.h.axis2, [me.rt1' me.rt2'], 8);
 				axis(me.h.axis2, 'tight');
 			end
 			
@@ -225,7 +227,7 @@ classdef behaviouralRecord < optickaCore
 				'Box','on','XGrid','on','YGrid','on','ZGrid','on');
 			
 			xlabel(me.h.axis1, 'Run Number')
-			xlabel(me.h.axis2, 'Time')
+			xlabel(me.h.axis2, 'Time (ms)')
 			xlabel(me.h.axis3, 'Group')
 			xlabel(me.h.axis4, '#')
 			ylabel(me.h.axis1, 'Yes / No')
@@ -233,7 +235,7 @@ classdef behaviouralRecord < optickaCore
 			ylabel(me.h.axis3, '% success')
 			ylabel(me.h.axis4, '% success')
 			title(me.h.axis1,['Success (' num2str(hitn) ') / Fail (all=' num2str(missn) ' | break=' num2str(breakn) ' | abort=' num2str(missn-breakn) ')'])
-			title(me.h.axis2,['Response Times (mean init: ' num2str(mean(me.rt2)) ' | mean init+fix: ' num2str(mean(me.rt1)) ')'])
+			title(me.h.axis2,sprintf('Mean Times:  total: %g | fixinit: %g',mean(me.rt1),mean(me.rt2)));
 			title(me.h.axis3,'Hit (blue) / Miss (red) / Break (blue) / Abort (red)')
 			title(me.h.axis4,'Average (n=10) Hit / Miss %')
 			hn = findobj(me.h.axis2,'Type','patch');
