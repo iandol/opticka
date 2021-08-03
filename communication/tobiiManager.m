@@ -48,6 +48,8 @@ classdef tobiiManager < optickaCore
 		%> add a manual offset to the eye position, similar to a drift correction
 		%> but handled by the eyelinkManager.
 		offset struct					= struct('X',0,'Y',0)
+		%> start eyetracker in dummy mode?
+		isDummy logical					= false
 		%> model of eyetracker:
 		%> 'Tobi Pro Spectrum' - 'IS4_Large_Peripheral' - 'Tobii TX300'
 		model char {mustBeMember(model,{'Tobii Pro Spectrum','Tobii TX300',...
@@ -65,14 +67,10 @@ classdef tobiiManager < optickaCore
 		%> type of calibration stimulus
 		calibrationStimulus char {mustBeMember(calibrationStimulus,{'animated',...
 					'movie','normal'})}	= 'animated'
-		%> Titta class object
-		tobii Titta
 		%> Titta settings structure
 		settings struct					= []
 		%> name of eyetracker data file
 		saveFile char					= 'tobiiData.mat'
-		%> start eyetracker in dummy mode?
-		isDummy logical					= false
 		%> do we use manual calibration mode?
 		manualCalibration logical		= false
 		%> custom calibration positions, e.g. [ .2 .5; .5 .5; .8 .5]
@@ -90,6 +88,8 @@ classdef tobiiManager < optickaCore
 	end
 	
 	properties (Hidden = true)
+		%> Titta class object
+		tobii Titta
 		%> do we log messages to the command window?
 		verbose							= false
 		%> stimulus positions to draw on screen
@@ -106,6 +106,7 @@ classdef tobiiManager < optickaCore
 		eyeSize double					= 6
 		% not used, compatibility with eyelinkManager
 		recordData
+		ignoreBlinks logical		= false
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Dependent = true)
@@ -513,8 +514,14 @@ classdef tobiiManager < optickaCore
 		% ===================================================================
 		%> @brief wrapper for StartRecording
 		%>
+		%> @param override - to keep compatibility with the eyelinkManager
+		%> API we need to only start and stop recording using a passed
+		%> parameter, as the eyelink requires start and stop on every trial
+		%> but the tobii does not. So by default without override==true this
+		%> will just return.
 		% ===================================================================
-		function startRecording(me)
+		function startRecording(me, override)
+			if ~exist('override','var') || isempty(override) || override~=true; return; end
 			if me.isConnected && ~me.isRecording
 				success = me.tobii.buffer.start('gaze');
 				if success
@@ -547,8 +554,14 @@ classdef tobiiManager < optickaCore
 		% ===================================================================
 		%> @brief wrapper for StopRecording
 		%>
+		%> @param override - to keep compatibility with the eyelinkManager
+		%> API we need to only start and stop recording using a passed
+		%> parameter, as the eyelink requires start and stop on every trial
+		%> but the tobii does not. So by default without override==true this
+		%> will just return.
 		% ===================================================================
-		function stopRecording(me)
+		function stopRecording(me. override)
+			if ~exist('override','var') || isempty(override) || override~=true; return; end
 			if me.isConnected && me.isRecording
 				if me.tobii.buffer.hasStream('eyeImage') && me.tobii.buffer.isRecording('eyeImage')
 					success = me.tobii.buffer.stop('eyeImage');

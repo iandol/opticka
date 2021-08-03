@@ -56,7 +56,7 @@ classdef eyelinkManager < optickaCore
 		%> do we ignore blinks, if true then we do not update X and Y position from
 		%> previous eye location, meaning the various methods will maintain position,
 		%> e.g. if you are fixated and blink, the within-fixation X and Y position are
-		%> retained so that a blink does not "break" fixation. a blink is difined as
+		%> retained so that a blink does not "break" fixation. a blink is defined as
 		%> a state whre gx and gy are MISSING and pa is 0. Technically we can't 
 		%> really tell if a subject is blinking or has removed their head using the 
 		%> float data.
@@ -465,9 +465,19 @@ classdef eyelinkManager < optickaCore
 		%> @brief wrapper for StopRecording
 		%>
 		% ===================================================================
-		function stopRecording(me)
+		function stopRecording(me,~)
 			if me.isConnected
 				Eyelink('StopRecording');
+			end
+		end
+		
+		% ===================================================================
+		%> @brief set into offline / idle mode
+		%>
+		% ===================================================================
+		function setOffline(me)
+			if me.isConnected
+				Eyelink('Command', 'set_idle_mode');
 			end
 		end
 		
@@ -1190,16 +1200,6 @@ classdef eyelinkManager < optickaCore
 				me.trackerTime = time;
 			else
 				time = 0;
-			end
-		end
-
-		% ===================================================================
-		%> @brief set into offline / idle mode
-		%>
-		% ===================================================================
-		function setOffline(me)
-			if me.isConnected
-				Eyelink('Command', 'set_idle_mode');
 			end
 		end
 		

@@ -12,18 +12,16 @@
 %> aM = audioManager
 %> sM = State Machine
 %> eT = eyetracker manager
-%> t  = task sequence (stimulusSequence class)
+%> task  = task sequence (taskSequence class)
 %> rM = Reward Manager (LabJack or Arduino TTL trigger to reward system/Magstim)
 %> bR = behavioural record plot (on screen GUI during task run)
-%> me.stimuli = our list of stimuli
+%> stims = our list of stimuli
 %> tS = general struct to hold variables for this run, will be saved as part of the data
 
 %==================================================================
 %---------------------------TASK SWITCH----------------------------
 tS.type						= 'antisaccade'; %will be be saccade or antisaccade task run?
 tS.includeErrors			= true; %do we update the trial number even for incorrect saccades, if true then we call updateTask for both correct and incorrect, otherwise we only call updateTask() for correct responses
-CORRECT						= 1;
-BREAK						= -1;
 
 %==================================================================
 %----------------------General Settings----------------------------
@@ -36,6 +34,9 @@ tS.askForComments			= false; %==little UI requestor asks for comments before/aft
 tS.saveData					= true; %==save behavioural and eye movement data?
 tS.name						= 'saccade-antisaccade'; %==name of this protocol
 tS.tOut						= 5; %if wrong response, how long to time out before next trial
+tS.CORRECT 					= 1; %==the code to send eyetracker for correct trials
+tS.BREAKFIX 				= -1; %==the code to send eyetracker for break fix trials
+tS.INCORRECT 				= -5; %==the code to send eyetracker for incorrect trials
 
 %==================================================================
 %---------------Debug logging to command window--------------------
@@ -111,15 +112,15 @@ bR.breakStateName				= '^(breakfix|incorrect)';
 % use stimulusSequence to define proper randomised and balanced variable
 % sets and triggers to send to recording equipment etc...
 %
-% me.stimuli.choice				= [];
+% stims.choice				= [];
 % n								= 1;
 % in(n).name					= 'xyPosition';
 % in(n).values					= [6 6; 6 -6; -6 6; -6 -6; -6 0; 6 0];
 % in(n).stimuli					= 1;
 % in(n).offset					= [];
-% me.stimuli.stimulusTable		= in;
-me.stimuli.choice 				= [];
-me.stimuli.stimulusTable 		= [];
+% stims.stimulusTable		= in;
+stims.choice 				= [];
+stims.stimulusTable 		= [];
 
 %==================================================================
 %-------------allows using arrow keys to control variables?-------------
@@ -127,23 +128,23 @@ me.stimuli.stimulusTable 		= [];
 % this is useful to probe RF properties or other features while still
 % allowing for fixation or other behavioural control.
 % Use arrow keys <- -> to control value and up/down to control variable
-me.stimuli.controlTable = [];
-me.stimuli.tableChoice = 1;
+stims.controlTable = [];
+stims.tableChoice = 1;
 
 %==================================================================
 %this allows us to enable subsets from our stimulus list
 % 1 = grating | 2 = fixation cross
-me.stimuli.stimulusSets = {[2],[1,2]};
-me.stimuli.setChoice = 1;
-hide(me.stimuli);
+stims.stimulusSets = {[2],[1,2]};
+stims.setChoice = 1;
+hide(stims);
 
 %==================================================================
 %which stimulus in the list is used for a fixation target? For this protocol it means
 %the subject must fixate this stimulus (the saccade target is #1 in the list) to get the
 %reward. Also which stimulus to set an exclusion zone around (where a
 %saccade into this area causes an immediate break fixation).
-me.stimuli.fixationChoice = 1;
-me.stimuli.exclusionChoice = 2;
+stims.fixationChoice = 1;
+stims.exclusionChoice = 2;
 
 %===================================================================
 %-----------------State Machine State Functions---------------------
@@ -158,7 +159,7 @@ me.stimuli.exclusionChoice = 2;
 
 %pause entry
 pauseEntryFcn = { 
-	@()hide(me.stimuli);
+	@()hide(stims);
 	@()drawBackground(s); %blank the subject display
 	@()drawTextNow(s,'Paused, press [p] to resume...');
 	@()disp('Paused, press [p] to resume...');
@@ -186,17 +187,18 @@ fixEntryFcn = {
 	@()trackerMessage(eT,sprintf('TRIALID %i',getTaskIndex(me))); %Eyelink start trial marker
 	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
 	@()trackerClearScreen(eT); % blank the eyelink screen
-	@()trackerDrawFixation(eT); % draw the fixation window
+	@()trackerDrawFixation(eT); % draw fixation window on eyetracker display
+	@()trackerDrawStimuli(eT,stims.stimulusPositions); %draw location of stimulus on eyetracker
 	@()needEyeSample(me,true); % make sure we start measuring eye position
-	@()edit(me.stimuli,3,'alphaOut',0.5); 
-	@()edit(me.stimuli,3,'alpha2Out',1);
-	@()show(me.stimuli{3});
+	@()edit(stims,3,'alphaOut',0.5); 
+	@()edit(stims,3,'alpha2Out',1);
+	@()show(stims{3});
 	@()logRun(me,'INITFIX'); %fprintf current trial info to command window
 };
 
 %fix within
 fixFcn = {
-	@()draw(me.stimuli); %draw stimulus
+	@()draw(stims); %draw stimulus
 };
 
 %test we are fixated for a certain length of time
@@ -208,15 +210,15 @@ inFixFcn = {
 fixExitFcn = { 
 	@()updateFixationTarget(me, tS.useTask, tS.targetFixInit, tS.targetFixTime, tS.targetRadius, tS.strict); ... %use our stimuli values for next fix X and Y
 	@()updateExclusionZones(me, tS.useTask, tS.exclusionRadius);
-	@()edit(me.stimuli,3,'alphaOut',0); %dim fix spot
-	@()edit(me.stimuli,3,'alpha2Out',0.05); %dim fix spot
+	@()edit(stims,3,'alphaOut',0); %dim fix spot
+	@()edit(stims,3,'alpha2Out',0.05); %dim fix spot
 	@()trackerMessage(eT,'END_FIX');
 }; 
 
 if strcmpi(tS.type,'saccade')
-	fixExitFcn = [ fixExitFcn; {@()show(me.stimuli{1}); @()hide(me.stimuli{2})} ];
+	fixExitFcn = [ fixExitFcn; {@()show(stims{1}); @()hide(stims{2})} ];
 else
-	fixExitFcn = [ fixExitFcn; {@()hide(me.stimuli{1}); @()show(me.stimuli{2})} ];
+	fixExitFcn = [ fixExitFcn; {@()hide(stims{1}); @()show(stims{2})} ];
 end
 
 %what to run when we enter the stim presentation state
@@ -226,14 +228,13 @@ stimEntryFcn = {
 
 %what to run when we are showing stimuli
 stimFcn =  { 
-	@()draw(me.stimuli);
-	@()finishDrawing(s);
-	@()animate(me.stimuli); % animate stimuli for subsequent draw
+	@()draw(stims);
+	@()animate(stims); % animate stimuli for subsequent draw
 };
 
 %test we are maintaining fixation
 maintainFixFcn = {
-	@()testSearchHoldFixation(eT,'correct','breakfix')
+	@()testSearchHoldFixation(eT,'correct','breakfix'); % tests finding and maintaining fixation
 };
 
 %as we exit stim presentation state
@@ -248,26 +249,26 @@ correctEntryFcn = {
 	@()beep(aM,2000); % correct beep
 	@()trackerDrawText(eT,'Correct! :-)');
 	@()trackerMessage(eT,'END_RT');
-	@()trackerMessage(eT,'TRIAL_RESULT 1');
+	@()trackerMessage(eT,['TRIAL_RESULT ' str2double(tS.CORRECT)]);
 	@()needEyeSample(me,false); % no need to collect eye data until we start the next trial
-	@()hide(me.stimuli);
+	@()hide(stims);
 	@()sendTTL(io,4);
 	@()logRun(me,'CORRECT'); %fprintf current trial info
 };
 
 %correct stimulus
-correctFcn = { };
+correctFcn = { 
+	@()drawBackground(s);
+};
 
 %when we exit the correct state
 correctExitFcn = {
 	@()updateVariables(me); %randomise our stimuli, and set strobe value too
 	@()updateTask(me,CORRECT); %make sure our taskSequence is moved to the next trial
-	@()update(me.stimuli); %update our stimuli ready for display
-	@()getStimulusPositions(me.stimuli); %make a struct the eT can use for drawing stim positions
+	@()update(stims); %update our stimuli ready for display
+	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions
 	@()resetExclusionZones(eT); %reset the exclusion zones
 	@()trackerClearScreen(eT); 
-	@()trackerDrawFixation(eT); %draw fixation window on eyelink computer
-	@()trackerDrawStimuli(eT,me.stimuli.stimulusPositions); %draw location of stimulus on eyelink
 	@()updatePlot(bR, eT, sM); %update our behavioural plot
 	@()checkTaskEnded(me); %check if task is finished
 	@()drawnow;
@@ -279,32 +280,33 @@ incEntryFcn = {
 	@()trackerClearScreen(eT);
 	@()trackerDrawText(eT,'Incorrect! :-(');
 	@()trackerMessage(eT,'END_RT');
-	@()trackerMessage(eT,'TRIAL_RESULT -5');
+	@()trackerMessage(eT,['TRIAL_RESULT ' str2double(tS.INCORRECT)]);
 	@()needEyeSample(me,false);
 	@()sendTTL(io,6);
-	@()hide(me.stimuli);
+	@()hide(stims);
 	@()logRun(me,'INCORRECT'); %fprintf current trial info
 }; 
 
 %our incorrect stimulus
-incFcn = {};
+incFcn = {
+	@()drawBackground(s);
+};
 
 %incorrect / break exit
-incExitFcn = { 
-	@()updateVariables(me); %randomise our stimuli, don't run updateTask(t), and set strobe value too
-	@()updateTask(me,BREAK); %make sure our taskSequence is moved to the next trial
-	@()update(me.stimuli); %update our stimuli ready for display
+incExitFcn = {
+	@()resetRun(task);... %we randomise the run within this block to make it harder to guess next trial
+	@()updateVariables(me); %randomise our stimuli, don't run updateTask(task), and set strobe value too
+	@()update(stims); %update our stimuli ready for display
+	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions
 	@()resetExclusionZones(eT); %reset the exclusion zones
 	@()trackerClearScreen(eT); 
-	@()trackerDrawFixation(eT); %draw fixation window on eyelink computer
-	@()trackerDrawStimuli(eT); %draw location of stimulus on eyelink
 	@()checkTaskEnded(me); %check if task is finished
 	@()updatePlot(bR, eT, sM); %update our behavioural plot;
 	@()drawnow;
 };
 
 if tS.includeErrors
-	incExitFcn = [ incExitFcn; {@()updateTask(me,BREAK)} ]; %make sure our taskSequence is moved to the next trial
+	incExitFcn = [ incExitFcn; {@()updateTask(me,tS.BREAKFIX)} ]; %make sure our taskSequence is moved to the next trial
 end
 
 %break entry
@@ -313,10 +315,10 @@ breakEntryFcn = {
 	@()trackerClearScreen(eT);
 	@()trackerDrawText(eT,'Broke maintain fix! :-(');
 	@()trackerMessage(eT,'END_RT');
-	@()trackerMessage(eT,['TRIAL_RESULT ' str2double(BREAK)]);
+	@()trackerMessage(eT,['TRIAL_RESULT ' str2double(tS.BREAKFIX)]);
 	@()needEyeSample(me,false);
 	@()sendTTL(io,5);
-	@()hide(me.stimuli);
+	@()hide(stims);
 	@()logRun(me,'BREAKFIX'); %fprintf current trial info
 };
 
@@ -325,10 +327,10 @@ exclEntryFcn = {
 	@()trackerClearScreen(eT);
 	@()trackerDrawText(eT,'Exclusion Zone entered! :-(');
 	@()trackerMessage(eT,'END_RT');
-	@()trackerMessage(eT,['TRIAL_RESULT ' str2double(BREAK)]);
+	@()trackerMessage(eT,['TRIAL_RESULT ' str2double(tS.BREAKFIX)]);
 	@()needEyeSample(me,false);
 	@()sendTTL(io,5);
-	@()hide(me.stimuli);
+	@()hide(stims);
 	@()logRun(me,'EXCLUSION'); %fprintf current trial info
 };
 

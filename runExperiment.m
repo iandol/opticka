@@ -558,13 +558,14 @@ classdef runExperiment < optickaCore
 			me.behaviouralRecord		= behaviouralRecord('name',me.name); %#ok<*CPROP>
 			bR							= me.behaviouralRecord; %short handle
 		
-			%------make a short handle to the screenManager
+			%------make a short handle to the screenManager and metaStimulus objects
 			s							= me.screen; 
-			me.stimuli.screen			= s;
+			stims						= me.stimuli;
+			stims.screen				= s;
 			
 			%------initialise task
-			t							= me.task;
-			initialise(t);
+			task						= me.task;
+			initialise(task);
 			
 			%-----try to open eyeOccluder
 			if me.useEyeOccluder
@@ -607,9 +608,9 @@ classdef runExperiment < optickaCore
 				
 				%------open the PTB screen and setup stimuli
 				me.screenVals			= s.open(me.debug,tL);
-				me.stimuli.verbose		= me.verbose;
-				setup(me.stimuli); %run setup() for each stimulus
-				t.fps					= s.screenVals.fps;
+				stims.verbose			= me.verbose;
+				setup(stims); %run setup() for each stimulus
+				task.fps					= s.screenVals.fps;
 				
 				%---------initialise and set up I/O
 				io						= configureIO(me);
@@ -675,15 +676,15 @@ classdef runExperiment < optickaCore
 				% some of the frames lost on first presentation for very complex
 				% stimuli using 32bit computation buffers...
 				fprintf('\n===>>> Warming up the GPU, Eyelink and I/O systems... <<<===\n')
-				show(me.stimuli);
+				show(stims);
 				if me.useEyeLink; trackerClearScreen(eT); end
 				for i = 1:s.screenVals.fps*1
-					draw(me.stimuli);
+					draw(stims);
 					drawBackground(s);
 					s.drawPhotoDiodeSquare([0 0 0 1]);
 					Screen('DrawText',s.win,'Warming up...',65,10);
 					finishDrawing(s);
-					animate(me.stimuli);
+					animate(stims);
 					if ~mod(i,10); io.sendStrobe(255); end
 					if me.useEyeLink || me.useTobii
 						getSample(eT); 
@@ -692,7 +693,7 @@ classdef runExperiment < optickaCore
 					end
 					flip(s);
 				end
-				update(me.stimuli); %make sure stimuli are set back to their start state
+				update(stims); %make sure stimuli are set back to their start state
 				io.resetStrobe;flip(s);flip(s);
 				
 				%-----Premptive save in case of crash or error SAVE IN /TMP
@@ -720,16 +721,16 @@ classdef runExperiment < optickaCore
 				end
 				
 				%-----initialise our various counters
-				t.tick					= 1;
-				t.switched				= 1;
-				t.totalRuns				= 1;
+				task.tick					= 1;
+				task.switched				= 1;
+				task.totalRuns				= 1;
 				me.isTask				= tS.useTask;
 				if me.isTask 
-					updateVariables(me, t.totalRuns, true, false); % set to first variable
-					update(me.stimuli); %update our stimuli ready for display
+					updateVariables(me, task.totalRuns, true, false); % set to first variable
+					update(stims); %update our stimuli ready for display
 				else
 					updateVariables(me, 1, false, false); % set to first variable
-					update(me.stimuli); %update our stimuli ready for display
+					update(stims); %update our stimuli ready for display
 				end
 				tS.keyTicks				= 0; %tick counter for reducing sensitivity of keyboard
 				tS.keyHold				= 1; %a small loop to stop overeager key presses
@@ -778,6 +779,7 @@ classdef runExperiment < optickaCore
 					
 					%------run the stateMachine one tick forward
 					update(sM);
+					if s.visualDebug;s.drawGrid;me.infoTextScreen;end
 					
 					%------check eye position manually. REMEMBER eyelink will save the real eye data in
 					% the EDF this is just a backup wrapped in the PTB loop. 
@@ -787,7 +789,7 @@ classdef runExperiment < optickaCore
 					end
 					
 					%------Check keyboard for commands
-					if tS.checkKeysDuringStimulus || isempty(regexpi(sM.currentName,tS.keyExclusionPattern,'ONCE'))
+					if tS.checkKeysDuringStimulus || isempty(regexpi(sM.currentName,tS.keyExclusionPattern,'once'))
 						tS = checkKeys(me,tS);
 					end
 					
@@ -837,7 +839,7 @@ classdef runExperiment < optickaCore
 				tL.screenLog.trackerEndTime = getTrackerTime(eT);
 				tL.screenLog.trackerEndOffset = getTimeOffset(eT);
 				
-				show(me.stimuli); %make all stimuli visible again, useful for editing 
+				show(stims); %make all stimuli visible again, useful for editing 
 				drawBackground(s);
 				trackerClearScreen(eT);
 				trackerDrawText(eT,['FINISHED TASK:' me.name]);
@@ -909,7 +911,7 @@ classdef runExperiment < optickaCore
 				me.stateInfo = [];
 				if isa(me.stateMachine,'stateMachine'); me.stateMachine.reset; end
 				
-				clear rE tL s tS bR rM eT io sM	
+				clear rE tL s tS bR rM eT io sM	task
 				
 			catch ME
 				me.isRunning = false;
@@ -1155,7 +1157,7 @@ classdef runExperiment < optickaCore
 					me.stimuli{i}.verbose = value;
 				end
 			end
-			me.salutation(sprintf('Verbose = %i cascaded...',value));
+			me.salutation(sprintf('Cascaded Verbose = %i to all objects...',value),[],true);
 		end
 		
 		% ===================================================================
@@ -1291,15 +1293,18 @@ classdef runExperiment < optickaCore
 		
 		% ===================================================================
 		%> @brief updateVariables
-		%> Updates the stimulus objects with the current variable set
+		%> Updates the stimulus objects with the current variable set from taskSequence()
+		%> 
 		%> @param index a single value
+		%> @param override - forces updating even if it is the same trial
+		%> @param update - do we run taskSequence.updateTask() as well?
 		% ===================================================================
 		function updateVariables(me, index, override, update)
 			if ~exist('update','var') || isempty(update)
 				update = false;
 			end
 			if update == true
-				updateTask(me.task,true,GetSecs); %do this before getting index
+				me.updateTask(true); %do this before getting new index
 			end
 			if ~exist('index','var') || isempty(index)
 				index = me.task.totalRuns;
@@ -1735,7 +1740,7 @@ classdef runExperiment < optickaCore
 		%> @return
 		% ===================================================================
 		function infoTextScreen(me)
-			t=infoText();
+			t=infoText(me);
 			Screen('DrawText',me.screen.win,t,50,1,[1 1 1 1],[0 0 0 1]);
 		end
 		
@@ -1748,23 +1753,25 @@ classdef runExperiment < optickaCore
 		function t = infoText(me)
 			if me.isRunTask; log = me.taskLog; else; log = me.runLog; end
 			if isempty(me.task.outValues)
-				t = sprintf('Time: %3.3f (%i) ',(log.vbl(end)-log.startTime), log.tick);
+				t = sprintf('%s | Time: %3.3f (%i) | isFix: %i | isExclusion: %i | isFixInit: %i',...
+					me.stateMachine.currentName,(log.vbl(end)-log.startTime), log.tick,...
+					me.eyeTracker.isFix,me.eyeTracker.isExclusion,me.eyeTracker.isInitFail);
 				return
 			else
 				var = me.task.outIndex(me.task.totalRuns);
 			end
 			if me.logFrames == true && log.tick > 1
-				t=sprintf('B: %i | R: %i [%i/%i] | isBlank: %i | Time: %3.3f (%i) | V: %i |',...
-					me.task.thisBlock, me.task.thisRun,me.task.totalRuns,...
-					me.task.nRuns,me.task.isBlank, ...
-					(log.vbl(end)-log.startTime),...
-					log.tick,var);
+				t=sprintf('%s | B: %i | R: %i [%i/%i] | V: %i | Time: %3.3f (%i) | isFix: %i | isExclusion: %i | isFixInit: %i',...
+					me.stateMachine.currentName,me.task.thisBlock, me.task.thisRun, me.task.totalRuns,...
+					me.task.nRuns, var, ...
+					(log.vbl(end)-log.startTime), log.tick,...
+					me.eyeTracker.isFix,me.eyeTracker.isExclusion,me.eyeTracker.isInitFail);
 			else
-				t=sprintf('B: %i | R: %i [%i/%i] | isBlank: %i | Time: %3.3f (%i) | V: %i |',...
-					me.task.thisBlock,me.task.thisRun,me.task.totalRuns,...
-					me.task.nRuns,me.task.isBlank, ...
-					(log.vbl(1)-log.startTime),log.tick,...
-					var);
+				t=sprintf('%s | B: %i | R: %i [%i/%i] | V: %i | Time: %3.3f (%i) | isFix: %i | isExcl: %i | isFixInit: %i',...
+					me.stateMachine.currentName,me.task.thisBlock,me.task.thisRun,me.task.totalRuns,...
+					me.task.nRuns, var, ...
+					(log.vbl(1)-log.startTime), log.tick,...
+					me.eyeTracker.isFix,me.eyeTracker.isExclusion,me.eyeTracker.isInitFail);
 			end
 			for i=1:me.task.nVars
 				if iscell(me.task.outVars{me.task.thisBlock,i}(me.task.thisRun))
