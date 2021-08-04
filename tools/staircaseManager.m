@@ -47,10 +47,10 @@ classdef staircaseManager < optickaCore & dynamicprops
 		%> parsed.
 		%> @return instance of the class.
 		% ===================================================================
-		function obj = staircaseManager(varargin) 
-			if nargin == 0; varargin.name = 'staircaseManager'; end
-			obj=obj@optickaCore(varargin); %superclass constructor
-			if nargin > 0; obj.parseArgs(varargin,obj.allowedProperties); end
+		function me = staircaseManager(varargin) 
+			args = optickaCore.addDefaults(varargin,struct('name','staircase manager'));
+			me=me@optickaCore(args); %we call the superclass constructor first
+			me.parseArgs(args, me.allowedProperties);
 		end
 
 		

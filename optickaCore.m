@@ -475,6 +475,21 @@ classdef optickaCore < handle
 			end
 		end
 		
+		% ===================================================================
+		%> @brief Converts properties to a structure
+		%>
+		%>
+		%> @param me this instance object
+		%> @param tmp is whether to use the temporary or permanent properties
+		%> @return out the structure
+		% ===================================================================
+		function out=toStructure(me)
+			fn = fieldnames(me);
+			for j=1:length(fn)
+				out.(fn{j}) = me.(fn{j});
+			end
+		end
+		
 		
 		% ===================================================================
 		%> @brief Prints messages dependent on verbosity

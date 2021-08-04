@@ -502,6 +502,19 @@ classdef stateMachine < optickaCore
 			end
 		end
 		
+		% ===================================================================
+		%> @brief show the log if present
+		%> @param
+		%> @return
+		% ===================================================================
+		function showLog(me)
+			if ~isempty(me.log)
+				stateMachine.plotLogs(me.log, me.fullName);
+			else
+				helpdlg('The current state machine log appears to be empty...')
+			end
+		end
+		
 	end
 	
 	%=======================================================================
@@ -625,21 +638,6 @@ classdef stateMachine < optickaCore
 			me.log(end).fevalTime = me.fevalTime;
 		end
 		
-		% ===================================================================
-		%> @brief Converts properties to a structure
-		%>
-		%>
-		%> @param me this instance object
-		%> @param tmp is whether to use the temporary or permanent properties
-		%> @return out the structure
-		% ===================================================================
-		function out=toStructure(me)
-			fn = fieldnames(me);
-			for j=1:length(fn)
-				out.(fn{j}) = me.(fn{j});
-			end
-		end
-		
 	end
 	
 	%=======================================================================
@@ -658,25 +656,32 @@ classdef stateMachine < optickaCore
 		%> @brief plot timing logs
 		%>
 		% ===================================================================
-		function plotLogs(log)
-			if isempty(log);warndlg('No log data yet...');return;end
+		function plotLogs(log,tin)
+			if ~exist('log','var') || isempty(log);warndlg('No log data yet...');return;end
+			if ~exist('tin','var')
+				tout = ['State Machine with ' num2str(length(log)) ' states']; 
+			else
+				tout = [tin ' : ' num2str(length(log)) ' states'];
+			end
 			try
 				for i = 1:length(log)
 					names{i} = log(i).name;
 				end
 				f = figure('Position',[0 0 1500 1000],'Name','State Machine Time Logs');
-				tiledlayout(f,'flow','TileSpacing','compact');
+				tl = tiledlayout(f,'flow','TileSpacing','tight','Padding','compact');
+				tl.Title.String = tout;
+				tl.Title.FontWeight = 'bold';
 				nexttile;
 				plot([log.entryTime]-[log.startTime],'ko','MarkerSize',12, 'MarkerFaceColor', [1 1 1])
 				hold on
 				plot([log.tnow]-[log.startTime],'ro','MarkerSize',12, 'MarkerFaceColor', [1 1 1])
-				legend('Enter time','Exit time');
+				legend('Enter time','Exit time','Location','southeast');
 				%axis([-inf inf 0.97 1.02]);
-				title('State Enter/Exit Times from Start');
+				title('State Enter/Exit Times from State Machine Start');
 				ylabel('Time (seconds)');
 				set(gca,'XTick',1:length(log));
 				set(gca,'XTickLabel',names);
-				try set(gca,'XTickLabelRotation',45); end
+				try set(gca,'XTickLabelRotation',30); end
 				box on; grid on; axis tight;
 				if isfield(log(1).fevalTime,'enter')
 					for i = 1:length(log)
@@ -690,8 +695,8 @@ classdef stateMachine < optickaCore
 					set(gca,'YScale','log');
 					set(gca,'XTick',1:length(log));
 					set(gca,'XTickLabel',names);
-					try set(gca,'XTickLabelRotation',45); end
-					legend('enter','exit')
+					try set(gca,'XTickLabelRotation',30); end
+					legend('Enter feval','Exit feval')
 					title('Time the enter and exit state function evals ran')
 					ylabel('Time (milliseconds)')
 					box on; grid on; axis tight;

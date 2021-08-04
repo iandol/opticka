@@ -396,6 +396,9 @@ classdef tobiiManager < optickaCore
 			me.isFix			= false;
 			me.isExclusion		= false;
 			me.isInitFail		= false;
+			if me.verbose
+				fprintf('-+-+-> tobiiManager:reset fixation: %i %i %i\n',me.fixLength,me.fixTotal,me.fixN);
+			end
 		end
 		
 		% ===================================================================
@@ -461,6 +464,7 @@ classdef tobiiManager < optickaCore
 		function cal = trackerSetup(me,incal)
 			cal = [];
 			if ~me.isConnected || ~me.screen.isOpen || me.isDummy; return; end
+			fprintf('\n===>>> CALIBRATING TOBII... <<<===\n');
 			if ~exist('incal','var');incal=[];end
 			wasRecording = me.isRecording;
 			if wasRecording; stopRecording(me);	end
@@ -496,6 +500,7 @@ classdef tobiiManager < optickaCore
 				if isfield(me.calibration,'selectedCal')
 					try
 						calMsg = me.tobii.getValidationQualityMessage(me.calibration);
+						fprintf('-+-+-> CAL RESULT = ');
 						disp(calMsg);
 					end
 				end
@@ -560,7 +565,7 @@ classdef tobiiManager < optickaCore
 		%> but the tobii does not. So by default without override==true this
 		%> will just return.
 		% ===================================================================
-		function stopRecording(me. override)
+		function stopRecording(me, override)
 			if ~exist('override','var') || isempty(override) || override~=true; return; end
 			if me.isConnected && me.isRecording
 				if me.tobii.buffer.hasStream('eyeImage') && me.tobii.buffer.isRecording('eyeImage')
@@ -617,8 +622,8 @@ classdef tobiiManager < optickaCore
 			calibkey			= KbName('C');
 			driftkey			= KbName('D');
 			if me.isConnected || me.isDummy
-				x=me.toPixels(me.fixation.X,'x'); %#ok<*PROPLC>
-				y=me.toPixels(me.fixation.Y,'y');
+				x = me.toPixels(me.fixation.X,'x'); %#ok<*PROPLC>
+				y = me.toPixels(me.fixation.Y,'y');
 				Screen('Flip',me.screen.win);
 				ifi = me.screen.screenVals.ifi;
 				breakLoop = false; i = 1; flash = true;
@@ -790,7 +795,7 @@ classdef tobiiManager < optickaCore
 			if nargin > 5 && ~isempty(radius); me.fixation.radius = radius; end
 			if nargin > 6 && ~isempty(strict); me.fixation.strict = strict; end
 			if me.verbose
-				fprintf('-+-+-> eyelinkManager:updateFixationValues: X=%g | Y=%g | IT=%s | FT=%s | R=%g\n', ...
+				fprintf('-+-+-> tobiiManager:updateFixationValues: X=%g | Y=%g | IT=%s | FT=%s | R=%g\n', ...
 					me.fixation.X, me.fixation.Y, num2str(me.fixation.initTime), num2str(me.fixation.time), ...
 					me.fixation.radius);
 			end
@@ -851,6 +856,7 @@ classdef tobiiManager < optickaCore
 					if ~any(window)
 						searching = false; exclusion = true; fixinit = true;
 						me.isInitFail = fixinit; me.isFix = false;
+						fprintf('-+-+-> tobiiManager: Eye left fix init window @ %.3f secs!\n',ft);
 						return;
 					end
 				end

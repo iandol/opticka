@@ -264,7 +264,7 @@ correctFcn = {
 %when we exit the correct state
 correctExitFcn = {
 	@()updateVariables(me); %randomise our stimuli, and set strobe value too
-	@()updateTask(me,CORRECT); %make sure our taskSequence is moved to the next trial
+	@()updateTask(me,tS.CORRECT); %make sure our taskSequence is moved to the next trial
 	@()update(stims); %update our stimuli ready for display
 	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions
 	@()resetExclusionZones(eT); %reset the exclusion zones
@@ -336,7 +336,7 @@ exclEntryFcn = {
 
 %calibration function
 calibrateFcn = { 
-	@()rstop(io); 
+	@()rstop(io);
 	@()trackerSetup(eT);  %enter tracker calibrate/validate setup mode
 };
 

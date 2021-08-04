@@ -780,6 +780,7 @@ classdef runExperiment < optickaCore
 					%------run the stateMachine one tick forward
 					update(sM);
 					if s.visualDebug;s.drawGrid;me.infoTextScreen;end
+					s.finishDrawing(); % potential optimisation, but note stateMachine may run non-drawing tasks in update()
 					
 					%------check eye position manually. REMEMBER eyelink will save the real eye data in
 					% the EDF this is just a backup wrapped in the PTB loop. 

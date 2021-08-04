@@ -447,7 +447,7 @@ classdef eyelinkManager < optickaCore
 				Screen('Flip',me.screen.win);
 			end
 			[result,out] = Eyelink('CalMessage');
-			fprintf('===>>> CAL RESULT =  %.2f | message: %s\n\n',result,out);
+			fprintf('-+-+-> CAL RESULT =  %.2f | message: %s\n\n',result,out);
 		end
 		
 		% ===================================================================
@@ -526,8 +526,8 @@ classdef eyelinkManager < optickaCore
 			calibkey			= KbName('C');
 			driftkey			= KbName('D');
 			if me.isConnected || me.isDummy
-				x=me.toPixels(me.fixation.X,'x'); %#ok<*PROPLC>
-				y=me.toPixels(me.fixation.Y,'y');
+				x = me.toPixels(me.fixation.X,'x'); %#ok<*PROPLC>
+				y = me.toPixels(me.fixation.Y,'y');
 				Screen('Flip',me.screen.win);
 				ifi = me.screen.screenVals.ifi;
 				breakLoop = false; i = 1; flash = true;
