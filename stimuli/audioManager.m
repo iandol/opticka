@@ -1,5 +1,5 @@
 classdef audioManager < optickaCore
-	%AUDIOMANAGER Connects and manages audio playback
+	% AUDIOMANAGER Connects and manages audio playback, set as global aM from runExperiment.runTask()
 	properties
 		device				= []
 		fileName char		= ''
@@ -14,7 +14,6 @@ classdef audioManager < optickaCore
 		isBuffered logical	= false
 		aHandle
 		status
-		%> list of names if multipleImages > 0
 		fileNames			= {};
 		devices
 		isSetup logical		= false
@@ -24,8 +23,7 @@ classdef audioManager < optickaCore
 	properties (SetAccess = private, GetAccess = private)
 		handles				= []
 		isFiles logical		= false
-		screen screenManager
-		allowedProperties char ='device|fileName|silentMode|verbose'
+		allowedProperties char ='numChannels|frequency|lowLatency|device|fileName|silentMode|verbose'
 	end
 	
 	%=======================================================================
@@ -34,9 +32,11 @@ classdef audioManager < optickaCore
 	
 		%==============CONSTRUCTOR============%
 		function me = audioManager(varargin)
-			if nargin == 0; varargin.name = 'audio manager'; end
-			me=me@optickaCore(varargin); %superclass constructor
-			me.parseArgs(varargin,me.allowedProperties);
+			
+			args = optickaCore.addDefaults(varargin,struct('name','audio-manager'));
+			me=me@optickaCore(args); %we call the superclass constructor first
+			me.parseArgs(args, me.allowedProperties);
+			
 			isValid = checkFiles(me);
 			if ~isValid
 				me.salutation('constructor','Please ensure valid file/dir name');
@@ -66,10 +66,10 @@ classdef audioManager < optickaCore
 			end
 			InitializePsychSound(me.lowLatency);
 			me.devices = PsychPortAudio('GetDevices');
-            if me.device > length(me.devices)
-               fprintf('You have specified a non-existant device, trying first available device!\n');
-               me.device = me.devices(1).DeviceIndex;
-               fprintf('Using device %i: %s\n',me.device,me.devices(1).DeviceName);
+			if me.device > length(me.devices)
+				fprintf('You have specified a non-existant device, trying first available device!\n');
+				me.device = me.devices(1).DeviceIndex;
+				fprintf('Using device %i: %s\n',me.device,me.devices(1).DeviceName);
 			end
 			try
 				if isempty(me.aHandle)
@@ -85,21 +85,21 @@ classdef audioManager < optickaCore
 				me.reset();
 				me.silentMode = true;
 			end
-        end
-        
-        % ===================================================================
+		end
+		
+		% ===================================================================
 		%> @brief setup
 		%>  
 		% ===================================================================
 		function loadSamples(me)
 			if me.silentMode; return; end
-            if me.isFiles
+			if me.isFiles
 				%TODO
 			else
 				[audiodata, infreq] = psychwavread(me.fileName);
-            end
+			end
 			PsychPortAudio('FillBuffer', me.aHandle, audiodata');
-        end
+		end
 
 		% ===================================================================
 		%> @brief  
@@ -112,9 +112,9 @@ classdef audioManager < optickaCore
 			if me.isSetup
 				PsychPortAudio('Start', me.aHandle, [], when);
 			end
-        end
-        
-        % ===================================================================
+		end
+		
+		% ===================================================================
 		%> @brief  
 		%>
 		% ===================================================================
@@ -123,16 +123,16 @@ classdef audioManager < optickaCore
 			if me.isSetup
 				PsychPortAudio('Stop', me.aHandle, 1, 1);
 			end
-        end
-        
-        % ===================================================================
+		end
+		
+		% ===================================================================
 		%> @brief  
-        %>
-        % ===================================================================
-        function beep(me,freq,durationSec,fVolume)
+		%>
+		% ===================================================================
+		function beep(me,freq,durationSec,fVolume)
 			if me.silentMode; return; end
 			if ~me.isSetup; setup(me);end
-            
+			
 			if ~exist('freq', 'var');freq = 400;end
 			if ~exist('durationSec', 'var');durationSec = 0.15;	end
 			if ~exist('fVolume', 'var')
@@ -161,8 +161,8 @@ classdef audioManager < optickaCore
 			soundVec = soundVec * fVolume;
 			PsychPortAudio('FillBuffer', me.aHandle, soundVec);
 			PsychPortAudio('Start', me.aHandle);
-        end
-   
+		end
+
 		% ===================================================================
 		%> @brief  
 		%>
@@ -170,10 +170,10 @@ classdef audioManager < optickaCore
 		function run(me)
 			setup(me)
 			play(me);
-            waitUntilStopped(me);
+			waitUntilStopped(me);
 			reset(me);
 		end
-		
+
 		% ===================================================================
 		%> @brief Reset 
 		%>
@@ -197,7 +197,7 @@ classdef audioManager < optickaCore
 				getReport(ME)
 			end
 		end
-		
+
 		% ===================================================================
 		%> @brief Close 
 		%>
@@ -211,7 +211,7 @@ classdef audioManager < optickaCore
 		%>
 		% ===================================================================
 		function delete(me)			
-            reset(me);
+			reset(me);
 		end
 		
 	end %---END PUBLIC METHODS---%
@@ -264,6 +264,6 @@ classdef audioManager < optickaCore
 	%=======================================================================
 	methods ( Access = private ) %-------PRIVATE METHODS-----%
 	%=======================================================================
-        
-    end %---END PRIVATE METHODS---%
+		
+	end %---END PRIVATE METHODS---%
 end
