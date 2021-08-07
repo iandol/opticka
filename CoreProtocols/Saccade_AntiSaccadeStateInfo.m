@@ -39,10 +39,10 @@ tS.BREAKFIX 				= -1; %==the code to send eyetracker for break fix trials
 tS.INCORRECT 				= -5; %==the code to send eyetracker for incorrect trials
 
 %==================================================================
-%---------------Debug logging to command window--------------------
-io.verbose					= false; %print out io commands for debugging
-eT.verbose					= true; %print out eyetracker commands for debugging
-rM.verbose					= false; %print out reward commands for debugging
+%------------Debug logging to command window-----------------
+%io.verbose					= true;	%==print out io commands for debugging
+%eT.verbose					= true;	%==print out eyelink commands for debugging
+%rM.verbose					= true;	%==print out reward commands for debugging
 
 %==================================================================
 %-----------------INITIAL Eyetracker Settings----------------------
@@ -67,7 +67,7 @@ if me.useEyeLink
 	warning('Note this protocol is optimised for the Tobii eyetracker, beware...')
 	eT.name 					= tS.name;
 	eT.sampleRate 				= 250; % sampling rate
-	eT.calibrationStyle 		= 'HV3'; % calibration style
+	eT.calibrationStyle 		= 'HV5'; % calibration style
 	eT.calibrationProportion	= [0.4 0.4]; %the proportion of the screen occupied by the calibration stimuli
 	if tS.saveData == true;		eT.recordData = true; end %===save EDF file?
 	if me.dummyMode;			eT.isDummy = true; end %===use dummy or real eyetracker? 
@@ -76,7 +76,7 @@ if me.useEyeLink
 	% this is useful for a baby or monkey who has not been trained for fixation
 	% use 1-9 to show each dot, space to select fix as valid, INS key ON EYELINK KEYBOARD to
 	% accept calibration!
-	eT.remoteCalibration		= true; 
+	eT.remoteCalibration		= false; 
 	%-----------------------
 	eT.modify.calibrationtargetcolour = [1 1 1]; % calibration target colour
 	eT.modify.calibrationtargetsize = 2; % size of calibration target as percentage of screen
@@ -146,6 +146,13 @@ hide(stims);
 stims.fixationChoice = 1;
 stims.exclusionChoice = 2;
 
+%==================================================================
+% N x 2 cell array of regexpi strings, list to skip the current -> next state's exit functions; for example
+% skipExitStates = {'fixate','incorrect|breakfix'}; means that if the currentstate is
+% 'fixate' and the next state is either incorrect OR breakfix, then skip the FIXATE exit
+% state. Add multiple rows for skipping multiple state's exit states.
+sM.skipExitStates			= {'fixate','incorrect|breakfix'};
+
 %===================================================================
 %-----------------State Machine State Functions---------------------
 % each cell {array} holds a set of anonymous function handles which are executed by the
@@ -166,13 +173,14 @@ pauseEntryFcn = {
 	@()trackerClearScreen(eT); % blank the eyelink screen
 	@()trackerDrawText(eT,'PAUSED, press [P] to resume...');
 	@()trackerMessage(eT,'TRIAL_RESULT -100'); %store message in EDF
+	@()stopRecording(eT, true); %stop recording eye position data
 	@()disableFlip(me); % no need to flip the PTB screen
 	@()needEyeSample(me,false); % no need to check eye position
 };
 
 %pause exit
 pauseExitFcn = {
-	
+	@()startRecording(eT, true); %start recording eye position data again
 }; 
 
 prefixEntryFcn = { 
@@ -183,6 +191,8 @@ prefixFcn = {};
 
 %fixate entry
 fixEntryFcn = { 
+	@()resetFixationHistory(eT); % reset the recent eye position history
+	@()resetExclusionZones(eT); % reset the exclusion zones on eyetracker
 	@()updateFixationValues(eT,tS.fixX,tS.fixY,[],tS.firstFixTime); %reset fixation window
 	@()trackerMessage(eT,sprintf('TRIALID %i',getTaskIndex(me))); %Eyelink start trial marker
 	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
@@ -210,8 +220,7 @@ inFixFcn = {
 fixExitFcn = { 
 	@()updateFixationTarget(me, tS.useTask, tS.targetFixInit, tS.targetFixTime, tS.targetRadius, tS.strict); ... %use our stimuli values for next fix X and Y
 	@()updateExclusionZones(me, tS.useTask, tS.exclusionRadius);
-	@()edit(stims,3,'alphaOut',0); %dim fix spot
-	@()edit(stims,3,'alpha2Out',0.05); %dim fix spot
+	@()hide(stims{3}); % hide fixation cross
 	@()trackerMessage(eT,'END_FIX');
 }; 
 
@@ -247,12 +256,12 @@ stimExitFcn = {
 correctEntryFcn = { 
 	@()timedTTL(rM, tS.rewardPin, tS.rewardTime); % send a reward TTL
 	@()beep(aM,2000); % correct beep
-	@()trackerDrawText(eT,'Correct! :-)');
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,['TRIAL_RESULT ' str2double(tS.CORRECT)]);
+	@()trackerClearScreen(eT);
+	@()trackerDrawText(eT,'Correct! :-)');
 	@()needEyeSample(me,false); % no need to collect eye data until we start the next trial
 	@()hide(stims);
-	@()sendTTL(io,4);
 	@()logRun(me,'CORRECT'); %fprintf current trial info
 };
 
@@ -268,21 +277,19 @@ correctExitFcn = {
 	@()update(stims); %update our stimuli ready for display
 	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions
 	@()resetExclusionZones(eT); %reset the exclusion zones
-	@()trackerClearScreen(eT); 
 	@()updatePlot(bR, eT, sM); %update our behavioural plot
-	@()checkTaskEnded(me); %check if task is finished
 	@()drawnow;
+	@()checkTaskEnded(me); %check if task is finished
 };
 
 %incorrect entry
 incEntryFcn = { 
 	@()beep(aM,400,0.5,1);
-	@()trackerClearScreen(eT);
-	@()trackerDrawText(eT,'Incorrect! :-(');
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,['TRIAL_RESULT ' str2double(tS.INCORRECT)]);
+	@()trackerClearScreen(eT);
+	@()trackerDrawText(eT,'Incorrect! :-(');
 	@()needEyeSample(me,false);
-	@()sendTTL(io,6);
 	@()hide(stims);
 	@()logRun(me,'INCORRECT'); %fprintf current trial info
 }; 
@@ -299,12 +306,10 @@ incExitFcn = {
 	@()update(stims); %update our stimuli ready for display
 	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions
 	@()resetExclusionZones(eT); %reset the exclusion zones
-	@()trackerClearScreen(eT); 
-	@()checkTaskEnded(me); %check if task is finished
 	@()updatePlot(bR, eT, sM); %update our behavioural plot;
 	@()drawnow;
+	@()checkTaskEnded(me); %check if task is finished
 };
-
 if tS.includeErrors
 	incExitFcn = [ incExitFcn; {@()updateTask(me,tS.BREAKFIX)} ]; %make sure our taskSequence is moved to the next trial
 end
@@ -312,24 +317,22 @@ end
 %break entry
 breakEntryFcn = {
 	@()beep(aM,400,0.5,1);
-	@()trackerClearScreen(eT);
-	@()trackerDrawText(eT,'Broke maintain fix! :-(');
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,['TRIAL_RESULT ' str2double(tS.BREAKFIX)]);
+	@()trackerClearScreen(eT);
+	@()trackerDrawText(eT,'Broke maintain fix! :-(');
 	@()needEyeSample(me,false);
-	@()sendTTL(io,5);
 	@()hide(stims);
 	@()logRun(me,'BREAKFIX'); %fprintf current trial info
 };
 
 exclEntryFcn = {
 	@()beep(aM,400,0.5,1);
-	@()trackerClearScreen(eT);
-	@()trackerDrawText(eT,'Exclusion Zone entered! :-(');
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,['TRIAL_RESULT ' str2double(tS.BREAKFIX)]);
+	@()trackerClearScreen(eT);
+	@()trackerDrawText(eT,'Exclusion Zone entered! :-(');
 	@()needEyeSample(me,false);
-	@()sendTTL(io,5);
 	@()hide(stims);
 	@()logRun(me,'EXCLUSION'); %fprintf current trial info
 };
@@ -338,6 +341,14 @@ exclEntryFcn = {
 calibrateFcn = { 
 	@()rstop(io);
 	@()trackerSetup(eT);  %enter tracker calibrate/validate setup mode
+};
+
+%--------------------drift correction function
+driftFcn = {
+	@()drawBackground(s); %blank the display
+	@()stopRecording(eT); % stop eyelink recording data
+	@()setOffline(eT); % set eyelink offline
+	@()driftCorrection(eT) % enter drift correct
 };
 
 %debug override
@@ -369,6 +380,7 @@ stateInfoTmp = {
 'exclusion'	'prefix'	tS.tOut	exclEntryFcn	incFcn			[]				incExitFcn;
 'correct'	'prefix'	0.5		correctEntryFcn	correctFcn		[]				correctExitFcn;
 'calibrate' 'pause'		0.5		calibrateFcn	[]				[]				[];
+'drift'		'pause'		0.5		driftFcn		[]				[]				[];
 'override'	'pause'		0.5		overrideFcn		[]				[]				[];
 'flash'		'pause'		0.5		flashFcn		[]				[]				[];
 'magstim'	'prefix'	0.5		[]				magstimFcn		[]				[];

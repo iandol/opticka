@@ -122,36 +122,41 @@ classdef behaviouralRecord < optickaCore
 			me.h.vbox3 = uiextras.VBox('Parent', me.h.hbox);
 			me.h.axis2 = axes('Parent', me.h.vbox3,'Units','pixels');
 			me.h.axis3 = axes('Parent', me.h.vbox3,'Units','pixels');
+			me.h.axis5 = axes('Parent', me.h.vbox3,'Units','pixels');
 			axis([me.h.axis1 me.h.axis2 me.h.axis3 me.h.axis4], 'square');
-			opticka.resizeFigure([],[900 900]);
-			set(me.h.vbox,'Sizes',[-3 -1])
+			opticka.resizeFigure([],[1100 950]);
+			set(me.h.vbox,'Sizes',[-4 -1])
 			set(me.h.hbox,'Sizes',[-2 -1])
 			set(me.h.vbox2,'Sizes',[-2 -1])
-			set(me.h.vbox3,'Sizes',[-2 -1])
+			set(me.h.vbox3,'Sizes',[-2 -1 -1])
 
 			plot(me.h.axis1, 1, 0,'ko');
 			hist(me.h.axis2, 0, 0:0.1:2);
-			colormap('jet')
+			colormap('turbo')
 			bar(me.h.axis3,rand(2,2),'stacked')
 			set(me.h.axis3,'XTickLabel', {'all';'newest'})
 			plot(me.h.axis4, 1, 0,'ko-');
 			
 			set([me.h.axis1 me.h.axis2 me.h.axis3 me.h.axis4], ...
 				'Box','on','XGrid','on','YGrid','on','ZGrid','on');
-			axis([me.h.axis2 me.h.axis3 me.h.axis4], 'tight');
+			axis([me.h.axis2 me.h.axis3 me.h.axis4 me.h.axis5], 'tight');
+			
 			
 			xlabel(me.h.axis1, 'Run Number')
 			xlabel(me.h.axis2, 'Time')
 			xlabel(me.h.axis3, 'Group')
 			xlabel(me.h.axis4, '#')
+			xlabel(me.h.axis5, 'X')
 			ylabel(me.h.axis1, 'Yes / No')
 			ylabel(me.h.axis2, 'Number #')
 			ylabel(me.h.axis3, '% success')
 			ylabel(me.h.axis4, '% success')
+			ylabel(me.h.axis5, 'Y')
 			title(me.h.axis1,'Success (1) / Fail (0)')
 			title(me.h.axis2,'Response Times')
 			title(me.h.axis3,'Hit (blue) / Miss (red)')
 			title(me.h.axis4,'Average (n=10) Hit / Miss %')
+			title(me.h.axis5,'Last Eye Position')
 			hn = findobj(me.h.axis2,'Type','patch');
 			set(hn,'FaceColor','k','EdgeColor','k');
 		end
@@ -223,6 +228,17 @@ classdef behaviouralRecord < optickaCore
 			axis(me.h.axis4, 'tight');
 			ylim(me.h.axis4,[0 100])
 			
+			%axis 5
+			if ~isempty(eL.xAll)
+				plot(me.h.axis5, eL.xAll, eL.yAll, 'b.','MarkerSize',15); hold on
+				plot(me.h.axis5, eL.xAll(1), eL.yAll(1), 'g.','MarkerSize',18);
+				plot(me.h.axis5, eL.xAll(end), eL.yAll(end), 'r.','MarkerSize',18,'Color',[1 0.5 0]); hold off
+				axis(me.h.axis5, 'ij');
+				grid(me.h.axis5,'on');
+				xlim(me.h.axis5,[-15 15]);
+				ylim(me.h.axis5,[-15 15]);
+			end
+			
 			set([me.h.axis1 me.h.axis2 me.h.axis3 me.h.axis4], ...
 				'Box','on','XGrid','on','YGrid','on','ZGrid','on');
 			
@@ -230,14 +246,17 @@ classdef behaviouralRecord < optickaCore
 			xlabel(me.h.axis2, 'Time (ms)')
 			xlabel(me.h.axis3, 'Group')
 			xlabel(me.h.axis4, '#')
+			xlabel(me.h.axis5, 'x')
 			ylabel(me.h.axis1, 'Yes / No')
 			ylabel(me.h.axis2, 'Number #')
 			ylabel(me.h.axis3, '% success')
 			ylabel(me.h.axis4, '% success')
+			ylabel(me.h.axis5, 'y')
 			title(me.h.axis1,['Success (' num2str(hitn) ') / Fail (all=' num2str(missn) ' | break=' num2str(breakn) ' | abort=' num2str(missn-breakn) ')'])
 			title(me.h.axis2,sprintf('Mean Times:  total: %g | fixinit: %g',mean(me.rt1),mean(me.rt2)));
 			title(me.h.axis3,'Hit (blue) / Miss (red) / Break (blue) / Abort (red)')
 			title(me.h.axis4,'Average (n=10) Hit / Miss %')
+			title(me.h.axis5,'Last Eye Position');
 			hn = findobj(me.h.axis2,'Type','patch');
 			%set(hn,'FaceColor','k','EdgeColor','k');
 			

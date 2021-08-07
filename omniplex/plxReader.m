@@ -585,7 +585,7 @@ classdef plxReader < optickaCore
 				me.info{end+1} = ' ';
 				rE = me.rE; %#ok<*PROP>
 				me.info{end+1} = sprintf('# of Stimulus Variables : %g', rE.task.nVars);
-				me.info{end+1} = sprintf('Total # of Variable Values: %g', rE.task.minBlocks);
+				me.info{end+1} = sprintf('Total # of Variable Values: %g', rE.task.minTrials);
 				me.info{end+1} = sprintf('Random Seed : %g', rE.task.randomSeed);
 				names = '';
 				vals = '';
@@ -1028,7 +1028,7 @@ classdef plxReader < optickaCore
 				c(idx)=[];
 				b(idx) = [];
 			end
-			idx = find(c > me.rE.task.minBlocks & c < 32767); %check for invalid event numbers, remove
+			idx = find(c > me.rE.task.minTrials & c < 32767); %check for invalid event numbers, remove
 			if ~isempty(idx)
 				c(idx)=[];
 				b(idx) = [];
@@ -1087,9 +1087,9 @@ classdef plxReader < optickaCore
 			
 			aa = 1; cidx = 1; bidx = 1; iidx = 1;
 			
-			if eL.nVars < me.rE.task.minBlocks
+			if eL.nVars < me.rE.task.minTrials
 				fprintf('\n--->>> plxReader.getEvents parser:\n')
-				error('---!!! %s only contains %i variables when there should be %i minimum for a trial; this suggests an incomplete run and cannot properly parse this dataset into a trial structure.',me.fullName, eL.nVars, me.rE.task.minBlocks);
+				error('---!!! %s only contains %i variables when there should be %i minimum for a trial; this suggests an incomplete run and cannot properly parse this dataset into a trial structure.',me.fullName, eL.nVars, me.rE.task.minTrials);
 			end
 			
 			for i = 1:2:eL.n % iterate through all trials

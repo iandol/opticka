@@ -531,21 +531,22 @@ classdef runExperiment < optickaCore
 			
 			fprintf('\n\n\n===>>> Start task: %s <<<===\n\n\n',me.name);
 			
-			%------a general structure to hold various parameters, 
+			%------tS is a general structure to hold various parameters
 			% will be saved after the run; prefer structure over class 
-			% to keep it light. These defaults may be overwritten by the StateFile.m
+			% to keep it light. These defaults can be overwritten by the StateFile.m
 			tS							= struct();
 			tS.name						= 'generic'; %==name of this protocol
-			tS.useTask					= false; %use taskSequence (randomised variable task object)
-			tS.checkKeysDuringStimulus	= false; %==allow keyboard control? Slight drop in performance
+			tS.useTask					= false;	%==use taskSequence (randomised variable task object)
+			tS.checkKeysDuringStimulus	= false;	%==allow keyboard control? Slight drop in performance
 			tS.keyExclusionPattern		= '^(fixate|stim)';
-			tS.recordEyePosition		= false; %==record eye position within PTB, **in addition** to the EDF?
-			tS.askForComments			= false; %==little UI requestor asks for comments before/after run
-			tS.saveData					= false; %==save behavioural and eye movement data?
-			tS.dummyMode				= true; %==use mouse as a dummy eyelink, good for testing away from the lab.
+			tS.recordEyePosition		= false;	%==record eye position within PTB, **in addition** to the eyetracker?
+			tS.askForComments			= false;	%==little UI requestor asks for comments before/after run
+			tS.saveData					= false;	%==save behavioural and eye movement data?
+			tS.controlPlexon			= false;	%==send start/stop commands to a plexon?
+			tS.rewardTime				= 250;		%==TTL time in milliseconds
+			tS.rewardPin				= 2;		%==Output pin, 2 by default with Arduino.
+			tS.tOut						= 5;		%==if wrong response, how long to time out before next trial
 			tS.useMagStim				= false;
-			tS.rewardTime				= 250; %==TTL time in milliseconds
-			tS.rewardPin				= 2; %==Output pin, 2 by default with Arduino.
 	
 			%------initialise time logs for this run
 			me.previousInfo.taskLog		= me.taskLog;
@@ -566,20 +567,6 @@ classdef runExperiment < optickaCore
 			%------initialise task
 			task						= me.task;
 			initialise(task);
-			
-			%-----try to open eyeOccluder
-			if me.useEyeOccluder
-				if ~isfield(tS,'eO') || ~isa(tS.eO,'eyeOccluder')
-					tS.eO				= eyeOccluder;
-				end
-				if tS.eO.isOpen == true
-					pause(0.1);
-					tS.eO.bothEyesOpen;
-				else
-					tS.eO				= [];
-					tS					= rmfield(tS,'eO');
-				end
-			end
 			
 			%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 			try %================This is our main TASK setup=====================
@@ -606,7 +593,7 @@ classdef runExperiment < optickaCore
 					bR.rewardTime		= tS.rewardTime;
 				end
 				
-				%------open the PTB screen and setup stimuli
+				%--------open the PTB screen and setup stimuli
 				me.screenVals			= s.open(me.debug,tL);
 				stims.verbose			= me.verbose;
 				setup(stims); %run setup() for each stimulus
@@ -615,7 +602,7 @@ classdef runExperiment < optickaCore
 				%---------initialise and set up I/O
 				io						= configureIO(me);
 				
-				%-----initialise the state machine
+				%---------initialise the state machine
 				sM						= stateMachine('verbose',me.verbose,'realTime',true,'timeDelta',1e-4,'name',me.name); 
 				me.stateMachine			= sM;
 				if isempty(me.paths.stateInfoFile) || ~exist(me.paths.stateInfoFile,'file')
@@ -628,7 +615,7 @@ classdef runExperiment < optickaCore
 					addStates(sM, me.stateInfo);
 				end
 				
-				%-----set up the eyelink interface
+				%---------set up the eyetracker interface
 				if me.useEyeLink
 					fprintf('\n===>>> Handing over to eyelink for calibration & validation...\n')
 					initialise(eT, s);
@@ -656,7 +643,7 @@ classdef runExperiment < optickaCore
 
 				%--------get pre-run comments for this data collection
 				if tS.askForComments
-					comment = inputdlg({'CHECK: ARM PLEXON!!! Initial Comment for this Run?'},['Run Comment for ' me.name]);
+					comment = inputdlg({'CHECK Recording system!!! Initial Comment for this Run?'},['Run Comment for ' me.name]);
 					if ~isempty(comment)
 						comment = comment{1};
 						me.comment = [me.name ':' comment];
@@ -664,7 +651,7 @@ classdef runExperiment < optickaCore
 					end
 				end
 				
-				%-----set up our behavioural plot
+				%---------set up our behavioural plot
 				createPlot(bR, eT);
 				drawnow; 
 				commandwindow;
@@ -672,17 +659,15 @@ classdef runExperiment < optickaCore
 				%------------------------------------------------------------
 				% lets draw 1 seconds worth of the stimuli we will be using
 				% covered by a blank. Primes the GPU and other components with the sorts
-				% of stimuli/tasks used and this does appear to minimise
-				% some of the frames lost on first presentation for very complex
-				% stimuli using 32bit computation buffers...
-				fprintf('\n===>>> Warming up the GPU, Eyelink and I/O systems... <<<===\n')
+				% of stimuli/tasks used...
+				fprintf('\n===>>> Warming up the GPU, Eyetracker and I/O systems... <<<===\n')
 				show(stims);
 				if me.useEyeLink; trackerClearScreen(eT); end
 				for i = 1:s.screenVals.fps*1
 					draw(stims);
 					drawBackground(s);
 					s.drawPhotoDiodeSquare([0 0 0 1]);
-					Screen('DrawText',s.win,'Warming up...',65,10);
+					Screen('DrawText',s.win,'Warming up the GPU, Eyetracker and I/O systems...',65,10);
 					finishDrawing(s);
 					animate(stims);
 					if ~mod(i,10); io.sendStrobe(255); end
@@ -696,7 +681,7 @@ classdef runExperiment < optickaCore
 				update(stims); %make sure stimuli are set back to their start state
 				io.resetStrobe;flip(s);flip(s);
 				
-				%-----Premptive save in case of crash or error SAVE IN /TMP
+				%-----Premptive save in case of crash or error: SAVE IN /TMP
 				rE = me;
 				htmp = me.screenSettings.optickahandle; me.screenSettings.optickahandle = [];
 				%h2tmp = me.behaviouralRecord.h; me.behaviouralRecord.h = [];
@@ -713,7 +698,7 @@ classdef runExperiment < optickaCore
 				end
 				
 				%-----Start Plexon in paused mode
-				if me.useDisplayPP || me.useDataPixx
+				if tS.controlPlexon && (me.useDisplayPP || me.useDataPixx)
 					fprintf('\n===>>> Triggering I/O systems... <<<===\n')
 					pauseRecording(io); %make sure this is set low first
 					startRecording(io);
@@ -724,7 +709,7 @@ classdef runExperiment < optickaCore
 				task.tick					= 1;
 				task.switched				= 1;
 				task.totalRuns				= 1;
-				me.isTask				= tS.useTask;
+				me.isTask					= tS.useTask;
 				if me.isTask 
 					updateVariables(me, task.totalRuns, true, false); % set to first variable
 					update(stims); %update our stimuli ready for display
@@ -737,9 +722,6 @@ classdef runExperiment < optickaCore
 				tS.totalTicks			= 1; % a tick counter
 				tS.pauseToggle			= 1; %toggle pause/unpause
 				tS.eyePos				= []; %locally record eye position
-				
-				%-----profiling starts here
-				%profile clear; profile on;
 				
 				%-----double check the labJackT handle is still valid
 				% (sometimes it disconnects)
@@ -757,6 +739,9 @@ classdef runExperiment < optickaCore
 					ListenChar(-1); %2=capture all keystrokes
 				end
 				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
+				
+				%-----profiling starts here
+				%profile clear; profile on;
 				
 				%-----initialise our vbl's
 				me.needSample				= false;
@@ -1556,6 +1541,19 @@ classdef runExperiment < optickaCore
 			else
 				rM = ioManager();
 			end
+			%-----try to open eyeOccluder
+			if me.useEyeOccluder
+				if ~isfield(tS,'eO') || ~isa(tS.eO,'eyeOccluder')
+					tS.eO				= eyeOccluder;
+				end
+				if tS.eO.isOpen == true
+					pause(0.1);
+					tS.eO.bothEyesOpen;
+				else
+					tS.eO				= [];
+					tS					= rmfield(tS,'eO');
+				end
+			end
 		end
 		
 		% ===================================================================
@@ -1678,7 +1676,7 @@ classdef runExperiment < optickaCore
 					% now update our stimuli, we do it after the first blank as less
 					% critical timingwise
 					if me.task.doUpdate == true
-						if ~mod(me.task.thisRun,me.task.minBlocks) %are we rolling over into a new trial?
+						if ~mod(me.task.thisRun,me.task.minTrials) %are we rolling over into a new trial?
 							mT=me.task.thisBlock+1;
 							mR = 1;
 						else
@@ -1707,7 +1705,7 @@ classdef runExperiment < optickaCore
 					me.task.isBlank = true;
 					me.task.blankTick = 0;
 					
-					if me.task.thisRun == me.task.minBlocks %are we within a trial block or not? we add the required time to our switch timer
+					if me.task.thisRun == me.task.minTrials %are we within a trial block or not? we add the required time to our switch timer
 						me.task.switchTime=me.task.switchTime+me.task.ibTimeNow;
 						me.task.switchTick=me.task.switchTick+(me.task.ibTimeNow*ceil(me.screenVals.fps));
 						fprintf('IB TIME: %g\n',me.task.ibTimeNow);
@@ -1798,11 +1796,11 @@ classdef runExperiment < optickaCore
 				end
 				if isempty(me.task.outValues)
 					fprintf('Tick: %i | Time: %5.8g\n',tag,...
-					me.task.tick,me.task.timeNow-me.task.startTime);
+						me.task.tick,me.task.timeNow-me.task.startTime);
 				else
 					fprintf('%s -- B: %i | R: %i [%i/%i] | TT: %i | Tick: %i | Time: %5.8g\n',tag,...
-					me.task.thisBlock,me.task.thisRun,me.task.totalRuns,me.task.nRuns,...
-					me.task.isBlank,me.task.tick,me.task.timeNow-me.task.startTime);
+						me.task.thisBlock,me.task.thisRun,me.task.totalRuns,me.task.nRuns,...
+						me.task.isBlank,me.task.tick,me.task.timeNow-me.task.startTime);
 				end
 			end
 		end
@@ -1810,14 +1808,14 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 		%> @brief save this trial eye info
 		%>
-		%> @param 
+		%> @param
 		% ===================================================================
 		function tS = saveEyeInfo(me,sM,eT,tS)
 			switch sM.currentName
-				case 'stimulus'
-					prefix = 'E';
 				case 'fixate'
 					prefix = 'F';
+				case 'stimulus'
+					prefix = 'E';
 				case 'correct'
 					prefix = 'CC';
 				case 'breakfix'
@@ -1886,7 +1884,7 @@ classdef runExperiment < optickaCore
 							end
 							tS.keyHold = tS.keyTicks + fInc;
 						end
-					
+						
 					case {'LeftArrow','left'} %previous variable 1 value
 						if tS.keyTicks > tS.keyHold
 							if ~isempty(me.stimuli.controlTable) && ~isempty(me.stimuli.controlTable.variable)
@@ -2039,15 +2037,15 @@ classdef runExperiment < optickaCore
 							fprintf('===>>> Calibrate ENGAGED!\n');
 							tS.pauseToggle = tS.pauseToggle + 1; %we go to pause after this so toggle this
 							tS.keyHold = tS.keyTicks + fInc;
-							forceTransition(me.stateMachine, 'calibrate');	
+							forceTransition(me.stateMachine, 'calibrate');
 							return
-						end	
+						end
 					case 'u'
 						if tS.keyTicks > tS.keyHold
 							fprintf('===>>> Drift OFFSET ENGAGED!\n');
 							tS.pauseToggle = tS.pauseToggle + 1; %we go to pause after this so toggle this
 							tS.keyHold = tS.keyTicks + fInc;
-							forceTransition(me.stateMachine, 'offset');	
+							forceTransition(me.stateMachine, 'offset');
 							return
 						end
 					case 'i'
@@ -2055,7 +2053,7 @@ classdef runExperiment < optickaCore
 							fprintf('===>>> Drift CORRECT ENGAGED!\n');
 							tS.pauseToggle = tS.pauseToggle + 1; %we go to pause after this so toggle this
 							tS.keyHold = tS.keyTicks + fInc;
-							forceTransition(me.stateMachine, 'drift');	
+							forceTransition(me.stateMachine, 'drift');
 							return
 						end
 					case 'f'
@@ -2065,7 +2063,7 @@ classdef runExperiment < optickaCore
 							tS.keyHold = tS.keyTicks + fInc;
 							forceTransition(me.stateMachine, 'flash');
 							return
-						end	
+						end
 					case 't'
 						if tS.keyTicks > tS.keyHold
 							fprintf('===>>> MagStim ENGAGED!\n');
@@ -2081,7 +2079,7 @@ classdef runExperiment < optickaCore
 							tS.keyHold = tS.keyTicks + fInc;
 							forceTransition(me.stateMachine, 'override');
 							return
-						end	
+						end
 					case 'g'
 						if tS.keyTicks > tS.keyHold
 							fprintf('===>>> grid ENGAGED!\n');
@@ -2089,8 +2087,8 @@ classdef runExperiment < optickaCore
 							tS.keyHold = tS.keyTicks + fInc;
 							forceTransition(me.stateMachine, 'showgrid');
 							return
-						end		
-					case 'z' 
+						end
+					case 'z'
 						if tS.keyTicks > tS.keyHold
 							me.eyeTracker.fixation.initTime = me.eyeTracker.fixation.initTime - 0.1;
 							if me.eyeTracker.fixation.initTime < 0.01
@@ -2100,14 +2098,14 @@ classdef runExperiment < optickaCore
 							fprintf('===>>> FIXATION INIT TIME: %g\n',me.eyeTracker.fixation.initTime)
 							tS.keyHold = tS.keyTicks + fInc;
 						end
-					case 'x' 
+					case 'x'
 						if tS.keyTicks > tS.keyHold
 							me.eyeTracker.fixationInitTime = me.eyeTracker.fixation.initTime + 0.1;
 							tS.firstFixInit = me.eyeTracker.fixation.initTime;
 							fprintf('===>>> FIXATION INIT TIME: %g\n',me.eyeTracker.fixation.initTime)
 							tS.keyHold = tS.keyTicks + fInc;
 						end
-					case 'c' 
+					case 'c'
 						if tS.keyTicks > tS.keyHold
 							me.eyeTracker.fixationTime = me.eyeTracker.fixation.time - 0.1;
 							if me.eyeTracker.fixation.time < 0.01
@@ -2150,7 +2148,7 @@ classdef runExperiment < optickaCore
 								forceTransition(me.stateMachine, 'pause');
 								fprintf('===>>> PAUSE ENGAGED! (press [p] to unpause)\n');
 								tS.pauseToggle = tS.pauseToggle + 1;
-							end 
+							end
 							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case 's'
@@ -2196,47 +2194,14 @@ classdef runExperiment < optickaCore
 								rightEyeClosed(tS.eO)
 								Eyelink('Command','binocular_enabled = NO');
 								Eyelink('Command','active_eye = LEFT');
-							end		
+							end
 							tS.keyHold = tS.keyTicks + fInc;
 						end
-						
 				end
 			end
-%  q		=		quit
-%  UP		=		next control table
-%  DOWN		=		previous control table
-%  LEFT		=		increase value
-%  RIGHT	=		decrease value
-%  <,		=		previous stimulus set
-%  >.		= 		next stimulus set
-%  =+		=		Screen center LEFT
-%  -_		=		Screen center RIGHT
-%  [{		=		Screen Center UP
-%  ]}		=		Screen Center DOWN
-%  k		=		Increase Prestimulus Time
-%  l		=		Decrease Prestimulus Time
-%  r		=		give reward
-%  y		=		calibrate
-%  u		=		offset
-%  i		=		drift
-%  f		=		flash screen
-%  ;		=		override mode (causes debug state)
-%  z		=		DEC fix init time
-%  x		=		INC fix init time
-%  c		=		DEC fix time
-%  v		=		INC fix time
-%  b		=		DEC fix radius
-%  n		=		INC fix radius
-%  p		=		PAUSE
-%  s		=		Show mouse cursor
-%  d		=		Hide mouse cursor
-%  1		=		Both eyes open
-%  2		=		Both eyes closed
-%  3		=		Left eye open
-%  4		=		Right eye open
 		end
 		
-	end
+	end %-------END PRIVATE METHODS
 	
 	%=======================================================================
 	methods (Static = true) %------------------STATIC METHODS

@@ -149,6 +149,12 @@ classdef eyelinkManager < optickaCore
 		version						= ''
 		%> the PTB screen to work on, passed in during initialise
 		screen						= []
+		%> All gaze X position in degrees reset using resetFixation
+		xAll							= []
+		%> Last gaze Y position in degrees reset using resetFixation
+		yAll							= []
+		%> all pupil size reset using resetFixation
+		pupilAll						= []
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -176,22 +182,17 @@ classdef eyelinkManager < optickaCore
 		%>
 		% ===================================================================
 		function me = eyelinkManager(varargin)
-			if nargin>0
-				me.parseArgs(varargin,me.allowedProperties);
-			end
+			args = optickaCore.addDefaults(varargin,struct('name','eyelink manager'));
+			me=me@optickaCore(args); %we call the superclass constructor first
+			me.parseArgs(args, me.allowedProperties);
+			
 			me.defaults = EyelinkInitDefaults();
 			try % is eyelink interface working
 				me.version = Eyelink('GetTrackerVersion');
 			catch %#ok<CTCH>
+				warning('Problem getting eyetracker version...')
 				me.version = 0;
 			end
-			me.modify.calibrationtargetcolour = [1 1 1];
-			me.modify.calibrationtargetsize = 1;
-			me.modify.calibrationtargetwidth = 0.1;
-			me.modify.displayCalResults = 1;
-			me.modify.targetbeep = 1;
-			me.modify.devicenumber = -1;
-			me.modify.waitformodereadytime = 500;
 		end
 		
 		% ===================================================================
@@ -336,8 +337,10 @@ classdef eyelinkManager < optickaCore
 		% ===================================================================
 		%> @brief reset the fixation counters ready for a new trial
 		%>
+		%> @param removeHistory remove the history of recent eye position?
 		% ===================================================================
-		function resetFixation(me)
+		function resetFixation(me,removeHistory)
+			if ~exist('removeHistory','var');removeHistory=false;end
 			me.fixStartTime			= 0;
 			me.fixLength			= 0;
 			me.fixInitStartTime		= 0;
@@ -345,6 +348,9 @@ classdef eyelinkManager < optickaCore
 			me.fixTotal				= 0;
 			me.fixN					= 0;
 			me.fixSelection			= 0;
+			if removeHistory
+				resetFixationHistory(me);
+			end
 			me.isFix				= false;
 			me.isBlink				= false;
 			me.isExclusion			= false;
@@ -352,6 +358,16 @@ classdef eyelinkManager < optickaCore
 			if me.verbose
 				fprintf('-+-+-> eyelinkManager:reset fixation: %i %i %i\n',me.fixLength,me.fixTotal,me.fixN);
 			end
+		end
+		
+		% ===================================================================
+		%> @brief reset the fixation history: xAll yAll pupilAll
+		%>
+		% ===================================================================
+		function resetFixationHistory(me)
+			me.xAll				= [];
+			me.yAll				= [];
+			me.pupilAll			= [];
 		end
 		
 		% ===================================================================
@@ -611,6 +627,9 @@ classdef eyelinkManager < optickaCore
 						me.x = me.currentSample.gx(me.eyeUsed+1); % +1 as we're accessing MATLAB array
 						me.y = me.currentSample.gy(me.eyeUsed+1);
 						me.pupil = me.currentSample.pa(me.eyeUsed+1);
+						me.xAll = [me.xAll me.x];
+						me.yAll = [me.yAll me.y];
+						me.pupilAll = [me.pupilAll me.pupil];
 						me.isBlink = false;
 					end
 					%if me.verbose;fprintf('<GS X: %.2g | Y: %.2g | P: %.2g | isBlink: %i>\n',me.x,me.y,me.pupil,me.isBlink);end
@@ -628,6 +647,9 @@ classdef eyelinkManager < optickaCore
 				me.currentSample.gy = me.y;
 				me.currentSample.pa = me.pupil;
 				me.currentSample.time = GetSecs * 1000;
+				me.xAll = [me.xAll me.x];
+				me.yAll = [me.yAll me.y];
+				me.pupilAll = [me.pupilAll me.pupil];
 				%if me.verbose;fprintf('<DM X: %.2f | Y: %.2f | P: %.2f | T: %f>\n',me.x,me.y,me.pupil,me.currentSample.time);end
 			end
 			sample = me.currentSample;

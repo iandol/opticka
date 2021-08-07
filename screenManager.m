@@ -658,7 +658,7 @@ classdef screenManager < optickaCore
 			% This is the trick Mario told us to "hide" the colour changes as PTB
 			% intialises -- we could use backgroundcolour here to be even better
 			if me.hideFlash == true && all(me.windowed == false)
-				if isa(me.gammaTable,'calibrateLuminance') && (me.gammaTable.choice > 0)
+				if ~isempty(me.gammaTable) && isa(me.gammaTable,'calibrateLuminance') && (me.gammaTable.choice > 0)
 					me.screenVals.oldGamma = Screen('LoadNormalizedGammaTable', me.screen, repmat(me.gammaTable.gammaTable{me.gammaTable.choice}(128,:), 256, 3));
 					me.screenVals.resetGamma = true;
 				else

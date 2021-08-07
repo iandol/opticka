@@ -8,32 +8,47 @@
 % ========================================================================
 classdef taskSequence < optickaCore & dynamicprops
 	properties
-		%> whether to randomise (true) or run sequentially (false)
-		randomise logical = true
-		%> structure holding each independant variable
+		%> structure holding each independant stimulus variable
+		%> name = name of the stimulus variable
+		%> values = the values as a numerical or cell array
+		%> stimulus = which stimulus to apply to?
+		%> offsetstimulus = an offset can be applied to other stimuli
+		%> offsetvalue = the value offset, e.g. 90 for angle will add 90 to any random angle value
+		%> e.g. nVar(1) = struct('name','contrast','stimulus',[1 2],'values',[0 0.1 0.2],'offsetstimulus',[3],'offsetvalue',[0.1])
 		nVar struct
-		%> structure holding details of block level variable
+		%> independent block level identifying factor, for example
+		%> blockVar.values={'A','B'} + blockVar.probabilities = [0.6 0.4];
+		%> will assign A and B to blocks with a 60:40 probability.
 		blockVar struct
-		%> number of repeat blocks to present
+		%> independent trial level identifying factor
+		%> trialVar.values={'YES','NO'} + trialVar.probabilities = [0.5 0.5];
+		%> will assign YES and NO to blocks with a 50:50 probability.
+		trialVar struct
+		%> number of repeated blocks to present
 		nBlocks double = 1
-		%> time stimulus trial is shown
-		trialTime double = 2
-		%> inter stimulus trial time
-		isTime double = 1
-		%> inter block time
-		ibTime double = 2
+		%> whether to randomise nVar (true) or run sequentially (false)
+		randomise logical = true
+		%> insert a blank condition in each block?
+		addBlank logical = false
 		%> do we follow real time or just number of ticks to get to a known time
 		realTime logical = true
 		%> random seed value, we can use this to set the RNG to a known state
 		randomSeed
 		%> mersenne twister default
 		randomGenerator char = 'mt19937ar'
-		%> used for dynamically estimating total number of frames
-		fps double = 60
 		%> verbose or not
 		verbose = false
-		%> insert a blank condition?
-		addBlank logical = false
+	end
+	
+	properties (Hidden = true)
+		%> used for dynamically estimating total number of frames
+		fps double = 60
+		%> time stimulus trial is shown
+		trialTime double = 2
+		%> inter stimulus trial time
+		isTime double = 1
+		%> inter block time
+		ibTime double = 2
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -45,14 +60,16 @@ classdef taskSequence < optickaCore & dynamicprops
 		outIndex
 		%> mapping the stimulus to the number as a X Y and Z etc position for display
 		outMap
-		%> block level randomised variable
+		%> block level randomised factor
 		outBlock 
+		%> trial level randomised factor
+		outTrial
 		%> variable labels
 		varLabels
 		%> variable list
 		varList
-		%> minimum number of blocks
-		minBlocks
+		%> minimum number of trials within a block, depends on nVar values
+		minTrials
 		%> log of within block resets
 		resetLog
 		%> have we initialised the dynamic task properties?
@@ -75,13 +92,13 @@ classdef taskSequence < optickaCore & dynamicprops
 	end
 	
 	properties (Dependent = true,  SetAccess = private)
+		%> number of independant variables
+		nVars
 		%> number of blocks, need to rename!
 		nRuns
 		%> estimate of the total number of frames this task will occupy,
 		%> requires accurate fps
 		nFrames
-		%> number of independant variables
-		nVars
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -91,7 +108,7 @@ classdef taskSequence < optickaCore & dynamicprops
 		%> handles from me.showLog
 		h
 		%> properties allowed during initial construction
-		allowedProperties char = ['randomise|nVar|nBlocks|trialTime|isTime|ibTime|realTime|randomSeed|fps'...
+		allowedProperties char = ['randomise|nVar|blockVar|trialVar|nBlocks|trialTime|isTime|ibTime|realTime|randomSeed|fps'...
 			'randomGenerator|verbose|addBlank']
 		%> used to handle problems with dependant property nVar: the problem is
 		%> that set.nVar gets called before static loadobj, and therefore we need
@@ -102,11 +119,13 @@ classdef taskSequence < optickaCore & dynamicprops
 		%> this stops loading old randstreams etc.
 		loadProperties cell = {'randomise','nVar','nBlocks','trialTime','isTime','ibTime','isStimulus','verbose',...
 			'realTime','randomSeed','randomGenerator','outValues','outVars','addBlank', ...
-			'outIndex', 'outMap', 'minBlocks','states','nState','name'}
+			'outIndex', 'outMap', 'minTrials','states','nState','name'}
 		%> nVar template and default values
 		varTemplate struct = struct('name','','stimulus',[],'values',[],'offsetstimulus',[],'offsetvalue',[])
-		%> nVar template and default values
-		blockTemplate struct = struct('values',{{'normal'}},'comment','block level variables')
+		%> blockVar template and default values
+		blockTemplate struct = struct('values',{{'none'}},'probability',[1],'comment','block level factor')
+		%> blockVar template and default values
+		trialTemplate struct = struct('values',{{'none'}},'probability',[1],'comment','trial level factor')
 		%> Set up the task structures needed
 		tProp cell = {'totalRuns',1,'thisBlock',1,'thisRun',1,'isBlank',false,...
 			'isTimeNow',1,'ibTimeNow',1,'response',[],'responseInfo',{},'tick',0,'blankTick',0,...
@@ -134,8 +153,10 @@ classdef taskSequence < optickaCore & dynamicprops
 			
 			me.nVar = me.varTemplate;
 			me.blockVar = me.blockTemplate;
+			me.trialVar = me.trialTemplate;
 			me.initialiseGenerator();
 			me.isLoading = false;
+			
 		end
 		
 		% ===================================================================
@@ -184,135 +205,9 @@ classdef taskSequence < optickaCore & dynamicprops
 		%>
 		%> Do the randomisation
 		% ===================================================================
-		function randomiseStimuli(me)
-			if me.nVars > 0 %no need unless we have some variables
-				if me.verbose==true;rSTime = tic;end
-				me.currentState=me.taskStream.State;
-				nLevels = zeros(me.nVars_, 1);
-				for f = 1:me.nVars_
-					nLevels(f) = length(me.nVar(f).values);
-				end
-				me.minBlocks = prod(nLevels);
-				if me.addBlank
-					me.minBlocks = me.minBlocks + 1;
-				end
-				if isempty(me.minBlocks)
-					me.minBlocks = 1;
-				end
-				if me.minBlocks > 255
-					warning('WARNING: You are exceeding the number of stimulus numbers in an 8bit strobed word!')
-				end
-				
-				% ---- deal with block level variable randomisation
-				if isempty(me.blockVar.values)
-					me.outBlock = {};
-				elseif ~isempty(length(me.blockVar.values)) && length(me.blockVar) > me.nBlocks
-					warning('Your block variables are greater than the number of blocks!')
-					me.outBlock = cell(me.nBlocks,1);
-					for i = 1:me.nBlocks
-						me.outBlock{i} = me.blockVar.values{1};
-					end
-				else
-					divBlock = floor(me.nBlocks / size(me.blockVar.values,1));
-					a = 1;
-					block = {};
-					for i = 1:length(me.blockVar.values)
-						block = [block; repmat(me.blockVar.values(i),divBlock,1)];
-					end
-					while length(block) < me.nBlocks
-						block(end+1) = me.blockVar.values(randi(length(me.blockVar.values)));
-					end
-					[~,idx] = sort(rand(length(block),1));
-					block = block(idx);
-					me.outBlock = block;
-				end
-				
-				% ---- initialize cell array that will hold balanced variables
-				Vars = cell(me.nBlocks, me.nVars_);
-				Vals = cell(me.nBlocks*me.minBlocks, me.nVars_);
-				Indx = [];
-				% the following initializes and runs the main loop in the function, which
-				% generates enough repetitions of each factor, ensuring a balanced design,
-				% and randomizes them
-				for i = 1:me.nBlocks
-					if me.randomise == true
-						[~, index] = sort(rand(me.minBlocks, 1));
-					else
-						index = (1:me.minBlocks)';
-					end
-					Indx = [Indx; index];
-					if me.addBlank
-						pos1 = me.minBlocks - 1;
-					else
-						pos1 = me.minBlocks;
-					end
-					pos2 = 1;
-					for f = 1:me.nVars_
-						pos1 = pos1 / nLevels(f);
-						if size(me.nVar(f).values, 1) ~= 1
-							% ensure that factor levels are arranged in one row
-							me.nVar(f).values = reshape(me.nVar(f).values, 1, numel(me.nVar(f).values));
-						end
-						% this is the critical line: it ensures there are enough repetitions
-						% of the current factor in the correct order
-						mb = me.minBlocks;
-						if me.addBlank; mb = mb - 1; end
-						Vars{i,f} = repmat(reshape(repmat(me.nVar(f).values, pos1, pos2), mb, 1), me.nVars_, 1);
-						Vars{i,f} = Vars{i,f}(index);
-						pos2 = pos2 * nLevels(f);
-						if me.addBlank
-							if iscell(Vars{i,f})
-								Vars{i,f}{index==max(index)} = NaN;
-							else
-								Vars{i,f}(index==max(index)) = NaN;
-							end
-						end
-					end
-				end
-				
-				% generate me.outValues
-				offset = 0;
-				for i = 1:size(Vars,1)
-					for j = 1:size(Vars,2)
-						for k = 1:length(Vars{i,j})
-							if iscell(Vars{i,j})
-								Vals{offset+k,j} = Vars{i,j}{k};
-							else
-								Vals{offset+k,j} = Vars{i,j}(k);
-							end
-						end
-					end
-					offset = offset + me.minBlocks;
-				end
-				
-				% assign to properties
-				me.outVars = Vars;
-				me.outValues = Vals;
-				me.outIndex = Indx;
-				
-				% generate outMap
-				me.outMap=zeros(size(me.outValues));
-				for f = 1:me.nVars_
-					for g = 1:length(me.nVar(f).values)
-						for hh = 1:length(me.outValues(:,f))
-							if iscell(me.nVar(f).values(g))
-								if (ischar(me.nVar(f).values{g}) && ischar(me.outValues{hh,f})) && strcmpi(me.outValues{hh,f},me.nVar(f).values{g})
-									me.outMap(hh,f) = g;
-								elseif (isnumeric(me.nVar(f).values{g}) && isnumeric(me.outValues{hh,f})) && isequal(me.outValues{hh,f}, me.nVar(f).values{g})
-									me.outMap(hh,f) = g;
-									%elseif ~ischar(me.nVar(f).values{g}) && isequal(me.outValues{hh,f}, me.nVar(f).values{g})
-									%	me.outMap(hh,f) = g;
-								end
-							else
-								if me.outValues{hh,f} == me.nVar(f).values(g)
-									me.outMap(hh,f) = g;
-								end
-							end
-						end
-					end
-				end
-				if me.verbose; me.salutation(sprintf('randomiseStimuli took %g ms\n',toc(rSTime)*1000)); end
-			else
+		function randomiseTask(me)
+			if me.nVars == 0
+				me.salutation('randomise','No variables to randomise...',true);
 				me.outIndex = 1; %there is only one stimulus, no variables
 				me.outValues = [];
 				me.outVars = {};
@@ -320,10 +215,177 @@ classdef taskSequence < optickaCore & dynamicprops
 				me.outBlock = {};
 				me.varLabels = {};
 				me.varList = {};
-				me.minBlocks = 1;
+				me.minTrials = 1;
 				me.taskInitialised = false;
 				me.taskFinished = false;
+				return
 			end
+			
+			if me.verbose==true;rSTime = tic;end
+			
+			me.currentState=me.taskStream.State;
+			nLevels = zeros(me.nVars_, 1);
+			for f = 1:me.nVars_
+				nLevels(f) = length(me.nVar(f).values);
+			end
+			me.minTrials = prod(nLevels);
+			if me.addBlank
+				me.minTrials = me.minTrials + 1;
+			end
+			if isempty(me.minTrials)
+				me.minTrials = 1;
+			end
+			if me.minTrials > 255
+				warning('WARNING: You are exceeding the number of variable numbers in an 8bit strobed word!')
+			end
+
+			% ---- deal with block level factor randomisation
+			if isempty(me.blockVar.values)
+				me.outBlock = {};
+			elseif ~isempty(length(me.blockVar.values)) && length(me.blockVar.values) > me.nBlocks
+				error('Your block factors are greater than the number of blocks!')
+			else
+				if sum(me.blockVar.probability) ~= 1 || length(me.blockVar.values) ~= length(me.blockVar.probability)
+					warning('blockVar probability doesn''t sum to 100!'); 
+					prob = [];
+				else
+					prob = me.blockVar.probability;
+				end
+				
+				[~,b] = sort(me.blockVar.probability);
+				me.blockVar.probability = me.blockVar.probability(b);
+				me.blockVar.values = me.blockVar.values(b);
+				prob = cumsum(me.blockVar.probability); %cumulative sum
+				
+				Vals = cell(me.nBlocks, 1);
+				for i = 1:length(Vals)
+					thisR = rand();
+					a = 1;
+					while isempty(Vals{i}) && a <= length(prob)
+						if thisR <= prob(a)
+							Vals{i} = me.blockVar.values{a};
+						end
+						a = a + 1;
+					end
+				end
+				me.outBlock = Vals;
+			end
+
+			% ---- deal with trial level factor randomisation
+			tVn = length(me.trialVar.values);
+			if tVn == 0
+				me.outTrial = {};
+			else
+				if sum(me.trialVar.probability) ~= 1 || tVn ~= length(me.trialVar.probability)
+					error('blockVar probability doesn''t sum to 1!'); 
+				end
+				
+				[~,b] = sort(me.trialVar.probability);
+				me.trialVar.probability = me.trialVar.probability(b);
+				me.trialVar.values = me.trialVar.values(b);
+				prob = cumsum(me.trialVar.probability); %cumulative sum
+	
+				Vals = cell(me.nRuns, 1);
+				for i = 1:length(Vals)
+					thisR = rand();
+					a = 1;
+					while isempty(Vals{i}) && a <= length(prob)
+						if thisR <= prob(a)
+							Vals{i} = me.trialVar.values{a};
+						end
+						a = a + 1;
+					end
+				end
+				me.outTrial = Vals;
+			end
+
+			% ---- initialize cell array that will hold balanced variables
+			Vars = cell(me.nBlocks, me.nVars_);
+			Vals = cell(me.nRuns, me.nVars_);
+			Indx = [];
+			% the following initializes and runs the main loop in the function, which
+			% generates enough repetitions of each factor, ensuring a balanced design,
+			% and randomizes them
+			for i = 1:me.nBlocks
+				if me.randomise == true
+					[~, index] = sort(rand(me.minTrials, 1));
+				else
+					index = (1:me.minTrials)';
+				end
+				Indx = [Indx; index];
+				if me.addBlank
+					pos1 = me.minTrials - 1;
+				else
+					pos1 = me.minTrials;
+				end
+				pos2 = 1;
+				for f = 1:me.nVars_
+					pos1 = pos1 / nLevels(f);
+					if size(me.nVar(f).values, 1) ~= 1
+						% ensure that factor levels are arranged in one row
+						me.nVar(f).values = reshape(me.nVar(f).values, 1, numel(me.nVar(f).values));
+					end
+					% this is the critical line: it ensures there are enough repetitions
+					% of the current factor in the correct order
+					mb = me.minTrials;
+					if me.addBlank; mb = mb - 1; end
+					Vars{i,f} = repmat(reshape(repmat(me.nVar(f).values, pos1, pos2), mb, 1), me.nVars_, 1);
+					Vars{i,f} = Vars{i,f}(index);
+					pos2 = pos2 * nLevels(f);
+					if me.addBlank
+						if iscell(Vars{i,f})
+							Vars{i,f}{index==max(index)} = NaN;
+						else
+							Vars{i,f}(index==max(index)) = NaN;
+						end
+					end
+				end
+			end
+
+			% generate me.outValues
+			offset = 0;
+			for i = 1:size(Vars,1)
+				for j = 1:size(Vars,2)
+					for k = 1:length(Vars{i,j})
+						if iscell(Vars{i,j})
+							Vals{offset+k,j} = Vars{i,j}{k};
+						else
+							Vals{offset+k,j} = Vars{i,j}(k);
+						end
+					end
+				end
+				offset = offset + me.minTrials;
+			end
+
+			% assign to properties
+			me.outVars = Vars;
+			me.outValues = Vals;
+			me.outIndex = Indx;
+
+			% generate outMap
+			me.outMap=zeros(size(me.outValues));
+			for f = 1:me.nVars_
+				for g = 1:length(me.nVar(f).values)
+					for hh = 1:length(me.outValues(:,f))
+						if iscell(me.nVar(f).values(g))
+							if (ischar(me.nVar(f).values{g}) && ischar(me.outValues{hh,f})) && strcmpi(me.outValues{hh,f},me.nVar(f).values{g})
+								me.outMap(hh,f) = g;
+							elseif (isnumeric(me.nVar(f).values{g}) && isnumeric(me.outValues{hh,f})) && isequal(me.outValues{hh,f}, me.nVar(f).values{g})
+								me.outMap(hh,f) = g;
+								%elseif ~ischar(me.nVar(f).values{g}) && isequal(me.outValues{hh,f}, me.nVar(f).values{g})
+								%	me.outMap(hh,f) = g;
+							end
+						else
+							if me.outValues{hh,f} == me.nVar(f).values(g)
+								me.outMap(hh,f) = g;
+							end
+						end
+					end
+				end
+			end
+			
+			if me.verbose; me.salutation(sprintf('randomiseTask took %g ms\n',toc(rSTime)*1000)); end
+			
 		end
 		
 		% ===================================================================
@@ -331,7 +393,7 @@ classdef taskSequence < optickaCore & dynamicprops
 		%>
 		% ===================================================================
 		function initialise(me)
-			me.randomiseStimuli();
+			me.randomiseTask();
 			me.initialiseTask();
 			fprintf('---> taskSequence.initialise: Randomised and Initialised!\n');
 		end
@@ -397,8 +459,8 @@ classdef taskSequence < optickaCore & dynamicprops
 		% ===================================================================
 		function [block, run] = findRun(me, index)
 			if ~exist('index','var') || isempty(index); index = me.totalRuns; end
-			block = floor( (index - 1) / me.minBlocks ) + 1;
-			run = index - (me.minBlocks * (block - 1));
+			block = floor( (index - 1) / me.minTrials ) + 1;
+			run = index - (me.minTrials * (block - 1));
 		end
 		
 		% ===================================================================
@@ -428,7 +490,7 @@ classdef taskSequence < optickaCore & dynamicprops
 			success = false;
 			if me.taskInitialised
 				iLow = me.totalRuns; % select from this run...
-				iHigh = me.thisBlock * me.minBlocks; %...to the last run in the current block
+				iHigh = me.thisBlock * me.minTrials; %...to the last run in the current block
 				iRange = (iHigh - iLow) + 1;
 				if iRange < 2
 					return
@@ -436,7 +498,7 @@ classdef taskSequence < optickaCore & dynamicprops
 				randomChoice = randi(iRange); %random from 0 to range
 				trialToSwap = me.totalRuns + (randomChoice - 1);
 				
-				blockOffset = ((me.thisBlock-1) * me.minBlocks);
+				blockOffset = ((me.thisBlock-1) * me.minTrials);
 				blockSource = me.totalRuns - blockOffset;
 				blockDestination = trialToSwap - blockOffset;
 				
@@ -532,7 +594,7 @@ classdef taskSequence < optickaCore & dynamicprops
 		%> Dependent property nruns get method
 		% ===================================================================
 		function nRuns = get.nRuns(me)
-			nRuns = me.minBlocks*me.nBlocks;
+			nRuns = me.minTrials * me.nBlocks;
 		end
 		
 		% ===================================================================
@@ -541,7 +603,7 @@ classdef taskSequence < optickaCore & dynamicprops
 		%> Dependent property nFrames get method
 		% ===================================================================
 		function nFrames = get.nFrames(me)
-			nSecs = (me.nRuns * me.trialTime) + (me.minBlocks-1 * me.isTime) + (me.nBlocks-1 * me.ibTime);
+			nSecs = (me.nRuns * me.trialTime) + (me.minTrials-1 * me.isTime) + (me.nBlocks-1 * me.ibTime);
 			nFrames = ceil(nSecs) * ceil(me.fps); %be a bit generous in defining how many frames the task will take
 		end
 		
@@ -555,7 +617,8 @@ classdef taskSequence < optickaCore & dynamicprops
 			me.h = struct();
 			build_gui();
 			outvals = me.outValues;
-			data = cell(size(outvals,1),size(outvals,2)+2);
+			data = cell(size(outvals,1),(size(outvals,2)*2)+3);
+			a = 1;
 			for i = 1:size(outvals,1)
 				for j = 1:me.nVars
 					if iscell(outvals{i,j})
@@ -570,11 +633,16 @@ classdef taskSequence < optickaCore & dynamicprops
 				for k = 1:size(me.outMap,2)
 					data{i,me.nVars+(k+1)} = me.outMap(i,k);
 				end
+				data{i,end-1} = me.outTrial{i};
+				if i > a * me.minTrials
+					a = a + 1;
+				end
+				data{i,end} = me.outBlock{a};
 			end
 			if isempty(data)
 				data = 'No variables!';
 			end
-			cnames = cell(me.nVars,1);
+			cnames = cell(1,me.nVars);
 			for ii = 1:me.nVars
 				cnames{ii} = [me.nVar(ii).name num2str(me.nVar(ii).stimulus,'-%i')];
 			end
@@ -582,6 +650,8 @@ classdef taskSequence < optickaCore & dynamicprops
 			for ii = 1:size(me.outMap,2)
 				cnames{end+1} = ['Var' num2str(ii) 'Index'];
 			end
+			cnames{end+1} = 'Trial Factors';
+			cnames{end+1} = 'Block Factors';
 			data = cell2table(data,'VariableNames',cnames);
 			set(me.h.uitable1,'Data',data);
 			
@@ -610,6 +680,7 @@ classdef taskSequence < optickaCore & dynamicprops
 					'Position', [0 0 1 1], ...
 					'FontName', mfont, ...
 					'FontSize', fsmall, ...
+					'RowName', 'numbered',...
 					'BackgroundColor', [1 1 1;0.95 0.95 0.95], ...
 					'RowStriping','on', ...
 					'ColumnEditable', [], ...

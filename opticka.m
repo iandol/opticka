@@ -474,7 +474,7 @@ classdef opticka < optickaCore
 			me.r.task.nBlocks = me.gd(me.h.OKnBlocks);
 			me.r.task.realTime = me.gv(me.h.OKrealTime);
 			if isempty(me.r.task.taskStream); me.r.task.initialiseGenerator; end
-			me.r.task.randomiseStimuli;
+			me.r.task.randomiseTask;
 		end
 		
 		% ===================================================================
@@ -673,7 +673,7 @@ classdef opticka < optickaCore
 					me.r.task.nVar(revertN+1).offsetvalue = offset{2};
 				end
 				try 
-					me.r.task.randomiseStimuli;
+					me.r.task.randomiseTask;
 					validate(me.r.task);
 				catch
 					warndlg('There is a problem with the stimulus variables, please check!')
@@ -700,7 +700,7 @@ classdef opticka < optickaCore
 					me.r.task.nVar = [];
 					me.r.task.nVar = nV;
 					if me.r.task.nVars > 0
-						me.r.task.randomiseStimuli;
+						me.r.task.randomiseTask;
 					end
 				end
 				me.refreshVariableList;
@@ -1140,7 +1140,7 @@ classdef opticka < optickaCore
 				%copy task parameters
 				if isempty(tmp.r.task)
 					me.r.task = stimulusSequence;
-					me.r.task.randomiseStimuli;
+					me.r.task.randomiseTask;
 				else
 					me.r.task = tmp.r.task;
 					for i=1:me.r.task.nVars

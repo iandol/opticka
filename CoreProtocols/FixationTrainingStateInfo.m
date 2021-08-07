@@ -146,13 +146,14 @@ pauseExitFcn = {
 
 %---------------------prestim entry
 psEntryFcn = {
-	@()trackerClearScreen(eT); % blank the eyelink screen
 	@()resetFixation(eT); %reset the fixation counters ready for a new trial
+	@()resetFixationHistory(eT); %reset the fixation counters ready for a new trial
 	@()startRecording(eT); % start eyelink recording for this trial
 	@()trackerMessage(eT,'V_RT MESSAGE END_FIX END_RT'); % Eyelink commands
 	@()trackerMessage(eT,sprintf('TRIALID %i',getTaskIndex(me))); %Eyelink start trial marker
 	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
 	@()statusMessage(eT,'Pre-fixation...'); %status text on the eyelink
+	@()trackerClearScreen(eT); % blank the eyelink screen
 	@()trackerDrawFixation(eT); % draw the fixation window
 	@()needEyeSample(me,true); % make sure we start measuring eye position
 	@()showSet(me.stimuli); % make sure we prepare to show the stimulus set
@@ -162,7 +163,6 @@ psEntryFcn = {
 %---------------------prestimulus blank
 prestimulusFcn = {
 	@()drawBackground(s); % only draw a background colour to the PTB screen
-	@()drawText(s,'Prefix'); % gives a text lable of what state we are in
 };
 
 %---------------------exiting prestimulus state
@@ -178,9 +178,7 @@ stimEntryFcn = {
 %---------------------stimulus within state
 stimFcn = {
 	@()draw(me.stimuli); % draw the stimuli
-	@()drawText(s,'Stim'); % draw test to show what state we are in
 	%@()drawEyePosition(eT); % draw the eye position to PTB screen
-	@()finishDrawing(s); % tell PTB we have finished drawing
 	@()animate(me.stimuli); % animate stimuli for subsequent draw
 };
 
@@ -206,6 +204,7 @@ correctEntryFcn = {
 	@()beep(aM,2000); % correct beep
 	@()trackerMessage(eT,'TRIAL_RESULT 1'); % tell EDF trial was a correct
 	@()statusMessage(eT,'Correct! :-)'); %show it on the eyelink screen
+	@()trackerClearScreen(eT);
 	@()trackerDrawText(eT,'Correct! :-)');
 	@()stopRecording(eT); % stop recording for this trial
 	@()setOffline(eT); %set eyelink offline

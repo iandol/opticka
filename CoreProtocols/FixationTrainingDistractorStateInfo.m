@@ -1,22 +1,18 @@
 %FIXATION TRAINING state configuration file
 %
-% This presents a fixation spot with a flashing disk in a loop to train for fixation.
-% There is a distractor that moves around and subject must ignore it.
-% Adjust eyetracker setting values over training to refine behaviour
-% The following class objects (easily named handle copies) are already 
-% loaded and available to use: 
+% This presents a fixation spot with a flashing disk in a loop to train for
+% fixation. There is a distractor that moves around and subject must ignore
+% it. Adjust eyetracker setting values over training to refine behaviour
+% The following class objects (easily named handle copies) are already
+% loaded and available to use:
 %
-% me = runExperiment object
-% io = digital I/O to recording system
-% s = screenManager
-% aM = audioManager
-% sM = State Machine
-% eT = eyetracker manager
-% t  = task sequence (taskSequence class)
-% rM = Reward Manager (LabJack or Arduino TTL trigger to reward system/Magstim)
-% bR = behavioural record plot (on screen GUI during task run)
-% me.stimuli = our list of stimuli
-% tS = general struct to hold variables for this run, will be saved
+% me = runExperiment object io = digital I/O to recording system s =
+% screenManager aM = audioManager sM = State Machine eT = eyetracker
+% manager t  = task sequence (taskSequence class) rM = Reward Manager
+% (LabJack or Arduino TTL trigger to reward system/Magstim) bR =
+% behavioural record plot (on screen GUI during task run) me.stimuli = our
+% list of stimuli tS = general struct to hold variables for this run, will
+% be saved
 
 %==================================================================
 %------------General Settings-----------------
@@ -33,8 +29,8 @@ tS.name						= 'fixation+distractor'; %==name of this protocol
 %------------Eyetracker Settings-----------------
 tS.fixX						= 0; % X position in degrees
 tS.fixY						= 0; % X position in degrees
-tS.firstFixInit				= 2; % time to search and enter fixation window
-tS.firstFixTime				= 7; % time to maintain fixation within windo
+tS.firstFixInit				= 4; % time to search and enter fixation window
+tS.firstFixTime				= 2; % time to maintain fixation within windo
 tS.firstFixRadius			= 2; % radius in degrees
 tS.strict					= true; %do we forbid eye to enter-exit-reenter fixation window?
 tS.exclusionZone			= []; %do we add an exclusion zone where subject cannot saccade to...
@@ -111,19 +107,34 @@ me.stimuli.setChoice				= 1;
 showSet(me.stimuli);
 
 %==================================================================
-%which stimulus in the list from the GUI is used for a fixation target? 
+%which stimulus in the list from the GUI is assigned as a fixation target? 
 me.stimuli.fixationChoice			= 3;
+
+%==================================================================
+% N x 2 cell array of regexpi strings, list to skip the current -> next
+% state's exit functions; for example skipExitStates =
+% {'fixate','incorrect|breakfix'}; means that if the currentstate is
+% 'fixate' and the next state is either incorrect OR breakfix, then skip
+% running the fixate exit state functions. Add multiple rows for skipping
+% multiple exit states. Sometimes the exit functions prepare for some new
+% state, and those functions are not relevant if another state comes after.
+% In the example, the idea is fixate should go to stimulus, so run
+% preparatory functions in exitFcn, but if the subject didn't properly
+% fixate, then when going to incorrect we don't need to prepare the
+% stimulus.
+sM.skipExitStates = {'fixate','incorrect|breakfix'};
+
 
 %===================================================================
 %-----------------State Machine State Functions---------------------
-% each cell {array} holds a set of anonymous function handles which are executed by the
-% state machine to control the experiment. The state machine can run sets
-% at entry, during, to trigger a transition, and at exit. Remember these
-% {sets} need to access the objects that are available within the
-% runExperiment context (see top of file). You can also add global
-% variables/objects then use these. The values entered here are set on
-% load, if you want up-to-date values then you need to use methods/function
-% wrappers to retrieve/set them.
+% each cell {array} holds a set of anonymous function handles which are
+% executed by the state machine to control the experiment. The state
+% machine can run sets at entry, during, to trigger a transition, and at
+% exit. Remember these {sets} need to access the objects that are available
+% within the runExperiment context (see top of file). You can also add
+% global variables/objects then use these. The values entered here are set
+% on load, if you want up-to-date values then you need to use
+% methods/function wrappers to retrieve/set them.
 
 %--------------------enter pause state
 pauseEntryFcn = {
@@ -149,6 +160,7 @@ pauseExitFcn = {
 psEntryFcn = {
 	@()trackerClearScreen(eT); % blank the eyelink screen
 	@()resetFixation(eT); %reset the fixation counters ready for a new trial
+	@()resetFixationHistory(eT); %reset the fixation counters ready for a new trial
 	@()startRecording(eT); % start eyelink recording for this trial
 	@()trackerMessage(eT,'V_RT MESSAGE END_FIX END_RT'); % Eyelink commands
 	@()trackerMessage(eT,sprintf('TRIALID %i',getTaskIndex(me))); %Eyelink start trial marker
@@ -163,7 +175,6 @@ psEntryFcn = {
 %---------------------prestimulus blank
 prestimulusFcn = {
 	@()drawBackground(s); % only draw a background colour to the PTB screen
-	@()drawText(s,'Prefix'); % gives a text lable of what state we are in
 };
 
 %---------------------exiting prestimulus state
@@ -179,9 +190,7 @@ stimEntryFcn = {
 %---------------------stimulus within state
 stimFcn = {
 	@()draw(me.stimuli); % draw the stimuli
-	@()drawText(s,'Stim'); % draw test to show what state we are in
-	%@()drawEyePosition(eT); % draw the eye position to PTB screen
-	@()finishDrawing(s); % tell PTB we have finished drawing
+	@()drawEyePosition(eT); % draw the eye position to PTB screen
 	@()animate(me.stimuli); % animate stimuli for subsequent draw
 };
 
@@ -207,6 +216,7 @@ correctEntryFcn = {
 	@()beep(aM,2000); % correct beep
 	@()trackerMessage(eT,'TRIAL_RESULT 1'); % tell EDF trial was a correct
 	@()statusMessage(eT,'Correct! :-)'); %show it on the eyelink screen
+	@()trackerClearScreen(eT);
 	@()trackerDrawText(eT,'Correct! :-)');
 	@()stopRecording(eT); % stop recording for this trial
 	@()setOffline(eT); %set eyelink offline
@@ -309,17 +319,6 @@ gridFcn = {
 	@()drawGrid(s); 
 	@()drawScreenCenter(s);
 };
-
-% N x 2 cell array of regexpi strings, list to skip the current -> next state's exit functions; for example
-% skipExitStates = {'fixate','incorrect|breakfix'}; means that if the currentstate is
-% 'fixate' and the next state is either incorrect OR breakfix, then skip running the fixate exit
-% state functions. Add multiple rows for skipping multiple exit states.
-% Sometimes the exit functions prepare for some new state, and those
-% functions are not relevant if another state comes after. In the example,
-% the idea is fixate should go to stimulus, so run preparatory functions in
-% exitFcn, but if the subject didn't properly fixate, then when going to
-% incorrect we don't need to prepare the stimulus.
-sM.skipExitStates = {'fixate','incorrect|breakfix'};
 
 %==================================================================
 %----------------------State Machine Table-------------------------
