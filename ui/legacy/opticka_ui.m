@@ -1296,7 +1296,7 @@ if isappdata(handles.output,'o')
 	if v > 0
 		oldv = o.r.task.verbose;
 		o.r.task.verbose = true;
-		o.r.task.randomiseStimuli();
+		o.r.task.randomiseTask();
 		o.r.task.verbose = oldv;
 	end
 end

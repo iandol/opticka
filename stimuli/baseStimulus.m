@@ -68,8 +68,10 @@ classdef baseStimulus < optickaCore & dynamicprops
 		dstRect double = []
 		%> current screen rectangle position [LEFT TOP RIGHT BOTTOM]
 		mvRect double = []
-		%> tick updates +1 on each draw, resets on each update
+		%> tick updates +1 on each call of draw (even if delay or off is true and no stimulus is drawn, resets on each update
 		tick double = 0
+		%> draw tick only updates when a draw command is called, resets on each update
+		drawTick double = 0
 		%> pixels per degree (normally inhereted from screenManager)
 		ppd double = 36
 		%> is stimulus position defined as rect [true] or point [false]
@@ -298,6 +300,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				getMousePosition(me);
 			end
 			me.tick = 0; 
+			me.drawTick = 0;
 		end
 		
 		% ===================================================================

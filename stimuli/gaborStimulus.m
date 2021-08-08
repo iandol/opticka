@@ -227,13 +227,14 @@ classdef gaborStimulus < baseStimulus
 		%> 
 		% ===================================================================
 		function draw(me)
-			if me.isVisible && me.tick >= me.delayTicks
+			if me.isVisible && me.tick >= me.delayTicks && me.tick < me.offTicks
 					Screen('DrawTexture', me.sM.win, me.texture, [],me.mvRect,...
 					me.angleOut, [], [], [], [], 2,...
 					[me.driftPhase, me.sfOut, me.spatialConstantOut,...
 					me.contrastOut, me.aspectRatioOut, 0, 0, 0]); 
-				me.tick = me.tick + 1;
+				me.drawTick = me.drawTick + 1;
 			end
+			me.tick = me.tick + 1;
 		end
 		
 		% ===================================================================

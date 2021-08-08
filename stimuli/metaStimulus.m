@@ -485,6 +485,7 @@ classdef metaStimulus < optickaCore
 
 				draw(me);
 				flip(s);
+				update(me);
 				WaitSecs('YieldSecs',1);
 				nFrames = 0;
 				for i = 1:(s.screenVals.fps*runtime) 
@@ -708,7 +709,11 @@ classdef metaStimulus < optickaCore
 						if max(size(sout)) == 1
 							sout = sout{1};
 						end
-						me.stimuli = sout;
+						if ~iscell(sout)
+							me.stimuli = {sout};
+						else
+							me.stimuli = sout;
+						end
 					else
 						me.stimuli = {};
 					end

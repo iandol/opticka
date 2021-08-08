@@ -65,7 +65,7 @@ task.nVar(2).name		= 'delayTimeOut';
 task.nVar(2).stimuli = 2;
 task.nVar(2).values	= {1, 1.01, 1.02, 1.03, 1.04, 1.2};
 
-randomiseStimuli(task);
+randomiseTask(task);
 initialiseTask(task);
 
 try %our main experimental try catch loop

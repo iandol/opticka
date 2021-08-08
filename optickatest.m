@@ -179,7 +179,7 @@ myTask.nVar(3).offsetvalue = 2;
 
 %% Randomisation
 % We call the method to randomise the trials in a block structure
-randomiseStimuli(myTask);
+randomiseTask(myTask);
 
 %% Visual Trial List
 % Lets print out a table of the stimulus properties for every trial
@@ -196,10 +196,12 @@ myScreen = screenManager('distance', 57.3,... %display distance from observer
 	'pixelsPerCm', 32,... %calibration value for pixel density, measure using calibrateSize()
 	'backgroundColour', [0.5 0.5 0.5],... %initial background colour
 	'blend', true,... %enable OpenGL blending, you can also set blend modes when needed
-	'srcMode', 'GL_ONE',... %src blend mode
-	'dstMode', 'GL_ZERO',... %dst blend mode
+	'srcMode', 'GL_SRC_ALPHA',... %src blend mode
+	'dstMode', 'GL_ONE_MINUS_SRC_ALPHA',... %dst blend mode
+	'debug', true,...
+	'visualDebug', true,...
 	'windowed', [],... %set to a widthxheight for debugging i.e. [800 600]; set to empty for fullscreen
-	'antiAlias', 0,... %can be set to 4 or 8x oversampling with no dropped frames on macOS ATI 5870
+	'antiAlias', 4,... %can be set to 4 or 8x oversampling with no dropped frames on macOS ATI 5870
 	'bitDepth', 'FloatingPoint32bitIfPossible',... %8bit, FloatingPoint16bit FloatingPoint32bit etc.
 	'displayPPRefresh', 120); %ensure refresh is 120Hz if a Display++ is attached
 

@@ -460,7 +460,7 @@ classdef opticka < optickaCore
 		% ===================================================================
 		function getTaskVals(me)
 			if isempty(me.r.task)
-				me.r.task = stimulusSequence;
+				me.r.task = taskSequence;
 			end
 			if isfield(me.r.screenVals,'fps')
 				me.r.task.fps = me.r.screenVals.fps;
@@ -1139,7 +1139,7 @@ classdef opticka < optickaCore
 				end
 				%copy task parameters
 				if isempty(tmp.r.task)
-					me.r.task = stimulusSequence;
+					me.r.task = taskSequence;
 					me.r.task.randomiseTask;
 				else
 					me.r.task = tmp.r.task;

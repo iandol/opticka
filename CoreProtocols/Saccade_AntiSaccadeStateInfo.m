@@ -105,11 +105,11 @@ bR.breakStateName				= '^(breakfix|incorrect)';
 %==================================================================
 %-------------------randomise stimulus variables every trial?-----------
 % if you want to have some randomisation of stimuls variables without
-% using stimulusSequence task, you can uncomment this and runExperiment can
+% using taskSequence task, you can uncomment this and runExperiment can
 % use this structure to change e.g. X or Y position, size, angle
 % see metaStimulus for more details. Remember this will not be "Saved" for
 % later use, if you want to do controlled methods of constants experiments
-% use stimulusSequence to define proper randomised and balanced variable
+% use taskSequence to define proper randomised and balanced variable
 % sets and triggers to send to recording equipment etc...
 %
 % stims.choice				= [];
