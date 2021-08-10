@@ -135,13 +135,17 @@ classdef metaStimulus < optickaCore
 		function update(me,choice,mask)
 			%tic
 			if ~exist('mask','var');mask=false;end
-			if exist('choice','var') %user forces a single stimulus
+			if exist('choice','var') && isnumeric(choice) %user forces a single stimulus
 				
-				update(me.stimuli{choice});
+				for i = choice
+					update(me.stimuli{i});
+				end
 				
-			elseif ~isempty(me.choice) %object forces a single stimulus
+			elseif ~isempty(me.choice) && isnumeric(me.choice) %object forces a single stimulus
 				
-				update(me.stimuli{me.choice});
+				for i = me.choice
+					update(me.stimuli{me.choice});
+				end
 				
 			elseif mask && me.showMask == true && me.nMask_ > 0 %draw mask instead
 				
@@ -166,13 +170,17 @@ classdef metaStimulus < optickaCore
 		%> @return
 		% ===================================================================
 		function draw(me,choice)
-			if exist('choice','var') %user forces a single stimulus
+			if exist('choice','var') && isnumeric(choice) %user forces a single stimulus
 				
-				draw(me.stimuli{choice});
+				for i = choice
+					draw(me.stimuli{i});
+				end
 				
-			elseif ~isempty(me.choice) %object forces a single stimulus
+			elseif ~isempty(me.choice) && isnumeric(me.choice) %object forces a single stimulus
 				
-				draw(me.stimuli{me.choice});
+				for i = me.choice
+					draw(me.stimuli{i});
+				end
 				
 			elseif me.showMask == true && me.nMask_ > 0 %draw mask instead
 				
@@ -196,13 +204,17 @@ classdef metaStimulus < optickaCore
 		%> @return
 		% ===================================================================
 		function animate(me,choice)
-			if exist('choice','var') %user forces a single stimulus
+			if exist('choice','var') && isnumeric(choice) %user forces a stimulus
 				
-				animate(me.stimuli{choice});
+				for i = choice
+					animate(me.stimuli{i});
+				end
 				
-			elseif ~isempty(me.choice) %object forces a single stimulus
+			elseif ~isempty(me.choice) && isnumeric(me.choice) %object forces a single stimulus
 				
-				animate(me.stimuli{me.choice});
+				for i = me.choice
+					animate(me.stimuli{i});
+				end
 				
 			elseif me.showMask == true && me.nMask_ > 0 %animate mask instead
 				
@@ -217,6 +229,24 @@ classdef metaStimulus < optickaCore
 				end
 				
 			end
+		end
+		
+		% ===================================================================
+		%> @brief reset ticks wrapper
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function resetTicks(me)
+
+			for i = 1:me.n
+				resetTicks(me.stimuli{i});
+			end
+				
+			for i = 1:me.nMask
+				resetTicks(me.maskStimuli{i});
+			end
+			
 		end
 		
 		% ===================================================================
@@ -290,9 +320,15 @@ classdef metaStimulus < optickaCore
 		%> @brief Shorthand to set isVisible=true.
 		%>
 		% ===================================================================
-		function show(me)
-			for i = 1:me.n_
-				show(me.stimuli{i});
+		function show(me, choice)
+			if exist('choice','var') && isnumeric(choice) %user forces a stimulus
+				for i = choice
+					show(me.stimuli{i});
+				end
+			else
+				for i = 1:me.n_
+					show(me.stimuli{i});
+				end
 			end
 		end
 				
@@ -300,9 +336,15 @@ classdef metaStimulus < optickaCore
 		%> @brief Shorthand to set isVisible=false.
 		%>
 		% ===================================================================
-		function hide(me)
-			for i = 1:me.n_
-				hide(me.stimuli{i});
+		function hide(me, choice)
+			if exist('choice','var') && isnumeric(choice) %user forces a stimulus
+				for i = choice
+					hide(me.stimuli{i});
+				end
+			else
+				for i = 1:me.n_
+					hide(me.stimuli{i});
+				end
 			end
 		end
 		

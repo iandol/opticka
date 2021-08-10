@@ -28,13 +28,13 @@ classdef runExperiment < optickaCore
 	
 	properties
 		%> a metaStimulus class holding our stimulus objects
-		stimuli
+		stimuli metaStimulus
 		%> the taskSequence object(s) for the task
-		task
+		task taskSequence
 		%> screen manager object
-		screen
+		screen screenManager
 		%> file to define the stateMachine state info
-		stateInfoFile = ''
+		stateInfoFile char = ''
 		%> use Display++ for strobed digital I/O?
 		useDisplayPP logical = false
 		%> use dataPixx for strobed digital I/O?
@@ -81,7 +81,7 @@ classdef runExperiment < optickaCore
 	
 	properties (Transient = true)
 		%> structure for screenManager on initialisation and info from opticka
-		screenSettings = struct()
+		screenSettings struct = struct()
 	end
 	
 	properties (Hidden = true)
@@ -141,8 +141,6 @@ classdef runExperiment < optickaCore
 		runLog
 		%> task log
 		taskLog
-		%> training log
-		trainingLog
 		%> behavioural log
 		behaviouralRecord
 		%> info on the current run
@@ -156,12 +154,12 @@ classdef runExperiment < optickaCore
 	properties (SetAccess = private, GetAccess = private)
 		%> is it MOC run (false) or stateMachine runTask (true)?
 		isRunTask logical	= true
-		%> are we using stimulusSequeence or not?
+		%> are we using taskSequeence or not?
 		isTask logical		= true
 		%> should we stop the task?
 		stopTask logical	= false
 		%> properties allowed to be modified during construction
-		allowedProperties='stimuli|task|screen|visualDebug|useLabJack|useDataPixx|logFrames|debug|verbose|screenSettings|benchmark'
+		allowedProperties='stateInfoFile|dummyMode|stimuli|task|screen|visualDebug|useLabJack|useDataPixx|logFrames|debug|verbose|screenSettings|benchmark'
 	end
 	
 	events %causing a major MATLAB 2019a crash when loading .mat files that contain events, removed for the moment
@@ -186,9 +184,11 @@ classdef runExperiment < optickaCore
 		%> @return instance of the class.
 		% ===================================================================
 		function me = runExperiment(varargin)
-			if nargin == 0; varargin.name = 'runExperiment'; end
-			me=me@optickaCore(varargin); %superclass constructor
-			if nargin > 0; me.parseArgs(varargin,me.allowedProperties); end
+			
+			args = optickaCore.addDefaults(varargin,struct('name','runExperiment'));
+			me=me@optickaCore(args); %superclass constructor
+			me.parseArgs(args,me.allowedProperties);
+			
 		end
 		
 		% ===================================================================
@@ -808,11 +808,7 @@ classdef runExperiment < optickaCore
 							me.sendSyncTime = false;
 						end
 						%------Log stim / no stim condition
-						if strcmpi(sM.currentName,'stimulus')
-							tL.stimTime(tS.totalTicks)=1;
-						else
-							tL.stimTime(tS.totalTicks)=0;
-						end
+						if me.logFrames; logStim(tL,sM.currentName,tS.totalTicks); end
 						%----- increment our global tick counter
 						tS.totalTicks = tS.totalTicks + 1; tL.tick = tS.totalTicks;
 					end
@@ -1276,6 +1272,31 @@ classdef runExperiment < optickaCore
 			updateTask(me.task,result,GetSecs,info); %do this before getting index
 		end
 		
+		% ===================================================================
+		%> @brief updateNextState
+		%> taskSequence can have a trail factor, and we can set these to
+		%> the name of a state in the stateMachine. This means we can choose
+		%> a state based on the trial factor in taskSequence. This sets
+		%> stateMacine.tempNextState to override the state table next field.
+		%>
+		%> @param type - whether to use 'trial' [default] or 'block' factor
+		% ===================================================================
+		function updateNextState(me, type)
+			if ~exist('type','var'); type = 'trial'; end
+			if me.isTask && me.isRunTask
+				switch type
+					case {'block'}
+						thisName = me.task.outBlock{me.task.totalRuns};
+					otherwise
+						thisName = me.task.outTrial{me.task.totalRuns};
+				end
+				if ~isempty(thisName) && me.stateMachine.isStateName(thisName)
+					if me.verbose; fprintf('!!!>>> Next STATE selected: %s\n',thisName); end
+					me.stateMachine.tempNextState = thisName;
+				end
+			end 
+		end
+		
 		
 		% ===================================================================
 		%> @brief updateVariables
@@ -1336,9 +1357,22 @@ classdef runExperiment < optickaCore
 
 					if ~isempty(offsetix)
 						if ischar(offsetvalue)
-							if strcmpi(offsetvalue,'invert')
-								val = -value;
-							else 
+							mtch = regexpi(offsetvalue,'^(?<name>[^\(\s\d]*)(\(?)(?<num>\d*)(\)?)','names');
+							nme = mtch.name;
+							num = str2double(mtch.num);
+							if ~isempty(nme)
+								switch (lower(nme))
+									case {'invert'}
+										if isnan(num) || isempty(num)
+											val = -value;
+										else
+											val(num) = -value(num);
+										end
+									otherwise
+										val = -value;
+								end
+
+							else
 								val = value;
 							end
 						else

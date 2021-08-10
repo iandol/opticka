@@ -17,11 +17,11 @@ classdef taskSequence < optickaCore & dynamicprops
 		%> e.g. nVar(1) = struct('name','contrast','stimulus',[1 2],'values',[0 0.1 0.2],'offsetstimulus',[3],'offsetvalue',[0.1])
 		nVar struct
 		%> independent block level identifying factor, for example
-		%> blockVar.values={'A','B'} + blockVar.probabilities = [0.6 0.4];
+		%> blockVar.values={'A','B'} + blockVar.probability = [0.6 0.4];
 		%> will assign A and B to blocks with a 60:40 probability.
 		blockVar struct
 		%> independent trial level identifying factor
-		%> trialVar.values={'YES','NO'} + trialVar.probabilities = [0.5 0.5];
+		%> trialVar.values={'YES','NO'} + trialVar.probability = [0.5 0.5];
 		%> will assign YES and NO to blocks with a 50:50 probability.
 		trialVar struct
 		%> number of repeated blocks to present

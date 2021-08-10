@@ -1,4 +1,4 @@
-%> SACCADE / ANTISACCADE state file, this gets loaded by opticka via 
+%> TWOSTEP SACCADE state file, this gets loaded by opticka via 
 %> runExperiment class. You can set up any state and define the logic of
 %> which functions to run when you enter, are within, or exit a state.
 %> Objects provide many methods you can run, like sending triggers, showing
@@ -19,9 +19,13 @@
 %> tS = general struct to hold variables for this run, will be saved as part of the data
 
 %==================================================================
-%---------------------------TASK SWITCH----------------------------
-tS.type						= 'saccade'; %will be be saccade or antisaccade task run?
-tS.includeErrors			= true; %do we update the trial number even for incorrect saccades, if true then we call updateTask for both correct and incorrect, otherwise we only call updateTask() for correct responses
+%---------------------------TASK CONFIG----------------------------
+tS.includeErrors			= false; %do we update the trial number even for incorrect saccades, if true then we call updateTask for both correct and incorrect, otherwise we only call updateTask() for correct responses
+% we use taskSequence to randomise which state to switch into below
+task.trialVar.values		= {'fixateOS','fixateTS'};
+task.trialVar.probability	= [0.5 0.5];
+task.trialVar.comment		= 'one or twostep trial based on 60:40 probability';
+tL.stimStateNames			= {'onestep','twostep'};
 
 %==================================================================
 %----------------------General Settings----------------------------
@@ -32,8 +36,8 @@ tS.checkKeysDuringStimulus  = true; %==allow keyboard control? Slight drop in pe
 tS.recordEyePosition		= true; %==record eye position within PTB, **in addition** to the EDF?
 tS.askForComments			= false; %==little UI requestor asks for comments before/after run
 tS.saveData					= true; %==save behavioural and eye movement data?
-tS.name						= 'saccade-antisaccade'; %==name of this protocol
-tS.tOut						= 5; %if wrong response, how long to time out before next trial
+tS.name						= 'twostep-saccade'; %==name of this protocol
+tS.tOut						= 1; %if wrong response, how long to time out before next trial
 tS.CORRECT 					= 1; %==the code to send eyetracker for correct trials
 tS.BREAKFIX 				= -1; %==the code to send eyetracker for break fix trials
 tS.INCORRECT 				= -5; %==the code to send eyetracker for incorrect trials
@@ -53,13 +57,13 @@ tS.firstFixTime				= [0.5 1.25]; % time to maintain fixation within window
 tS.firstFixRadius			= 3; % radius in degrees
 tS.strict					= true; % do we forbid eye to enter-exit-reenter fixation window?
 tS.exclusionRadius			= 5; % radius of the exclusion zone...
+tS.targetFixInit			= 3; % time to find the target
+tS.targetFixTime			= 0.3; % to to maintain fixation on target 
+tS.targetRadius				= 6; %radius to fix within.
 me.lastXPosition			= tS.fixX;
 me.lastYPosition			= tS.fixY;
 me.lastXExclusion			= [];
 me.lastYExclusion			= [];
-tS.targetFixInit			= 1; % time to find the target
-tS.targetFixTime			= 0.3; % to to maintain fixation on target 
-tS.targetRadius				= 8; %radius to fix within.
 
 %==================================================================
 %---------------------------Eyetracker setup-----------------------
@@ -68,7 +72,7 @@ if me.useEyeLink
 	eT.name 					= tS.name;
 	eT.sampleRate 				= 250; % sampling rate
 	eT.calibrationStyle 		= 'HV5'; % calibration style
-	eT.calibrationProportion	= [0.4 0.4]; %the proportion of the screen occupied by the calibration stimuli
+	eT.calibrationProportion	= [0.2 0.2]; %the proportion of the screen occupied by the calibration stimuli
 	if tS.saveData == true;		eT.recordData = true; end %===save EDF file?
 	if me.dummyMode;			eT.isDummy = true; end %===use dummy or real eyetracker? 
 	%-----------------------
@@ -143,8 +147,8 @@ hide(stims);
 %the subject must fixate this stimulus (the saccade target is #1 in the list) to get the
 %reward. Also which stimulus to set an exclusion zone around (where a
 %saccade into this area causes an immediate break fixation).
-stims.fixationChoice = 1;
-stims.exclusionChoice = 2;
+stims.fixationChoice = [1 2];
+stims.exclusionChoice = [];
 
 %==================================================================
 % N x 2 cell array of regexpi strings, list to skip the current -> next state's exit functions; for example
@@ -185,59 +189,69 @@ pauseExitFcn = {
 
 prefixEntryFcn = { 
 	@()enableFlip(me); 
+	@()hide(stims);
+	@()edit(stims,3,'alphaOut',0.5); 
+	@()edit(stims,3,'alpha2Out',1);
+	@()resetFixationHistory(eT); % reset the recent eye position history
+	@()resetExclusionZones(eT); % reset any exclusion zones on eyetracker
+	@()updateFixationValues(eT,tS.fixX,tS.fixY,[],tS.firstFixTime); %reset fixation window
+	@()updateNextState(me,'trial'); % we use the trial/block factor in task to select which state to transition to next
 };
 
-prefixFcn = {};
+prefixFcn = {
+	
+};
 
-%fixate entry
-fixEntryFcn = { 
-	@()resetFixationHistory(eT); % reset the recent eye position history
-	@()resetExclusionZones(eT); % reset the exclusion zones on eyetracker
-	@()updateFixationValues(eT,tS.fixX,tS.fixY,[],tS.firstFixTime); %reset fixation window
+prefixExitFcn = { 
 	@()trackerMessage(eT,sprintf('TRIALID %i',getTaskIndex(me))); %Eyelink start trial marker
 	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
 	@()trackerClearScreen(eT); % blank the eyelink screen
 	@()trackerDrawFixation(eT); % draw fixation window on eyetracker display
 	@()trackerDrawStimuli(eT,stims.stimulusPositions); %draw location of stimulus on eyetracker
 	@()needEyeSample(me,true); % make sure we start measuring eye position
-	@()edit(stims,3,'alphaOut',0.5); 
-	@()edit(stims,3,'alpha2Out',1);
-	@()show(stims{3});
-	@()logRun(me,'INITFIX'); %fprintf current trial info to command window
+	@()updateNextState(me,'trial'); % we use the trial/block factor in task to select which state to transition to next
+};
+
+%====================================================ONESTEP
+
+%fixate entry
+fixOSEntryFcn = { 
+	@()show(stims, 3);
+	@()logRun(me,'INITFIXOneStep'); %fprintf current trial info to command window
 };
 
 %fix within
-fixFcn = {
-	@()draw(stims); %draw stimulus
+fixOSFcn = {
+	@()draw(stims, 3); %draw stimulus
 };
 
 %test we are fixated for a certain length of time
-inFixFcn = { 
-	@()testSearchHoldFixation(eT,'stimulus','incorrect')
+inFixOSFcn = { 
+	@()testSearchHoldFixation(eT,'onestep','incorrect'); %useTemp is a special state which will use the state assigned by updateNextState
 };
 
 %exit fixation phase
-fixExitFcn = { 
-	@()updateFixationTarget(me, tS.useTask, tS.targetFixInit, tS.targetFixTime, tS.targetRadius, tS.strict); ... %use our stimuli values for next fix X and Y
-	@()updateExclusionZones(me, tS.useTask, tS.exclusionRadius);
-	@()hide(stims{3}); % hide fixation cross
+fixOSExitFcn = { 
+	@()show(stims, 1);
+	@()hide(stims, 2);
+	@()edit(stims,1,'offTime',0.1);
+	@()set(stims,'fixationChoice',1);
+	@()updateFixationTarget(me, tS.useTask, tS.targetFixInit, ...
+	tS.targetFixTime, tS.targetRadius, false);
+	@()resetTicks(stims);
 	@()trackerMessage(eT,'END_FIX');
 }; 
 
-if strcmpi(tS.type,'saccade')
-	fixExitFcn = [ fixExitFcn; {@()show(stims{1}); @()hide(stims{2})} ];
-else
-	fixExitFcn = [ fixExitFcn; {@()hide(stims{1}); @()show(stims{2})} ];
-end
-
 %what to run when we enter the stim presentation state
-stimEntryFcn = { 
-	@()doStrobe(me,true)
+osEntryFcn = { 
+	@()doStrobe(me,true);
+	@()logRun(me,'ONESTEP'); %fprintf current trial info to command window
 };
 
 %what to run when we are showing stimuli
-stimFcn =  { 
-	@()draw(stims);
+osFcn =  { 
+	@()draw(stims, 1);
+	@()drawText(s,'ONESTEP');
 	@()animate(stims); % animate stimuli for subsequent draw
 };
 
@@ -247,10 +261,57 @@ maintainFixFcn = {
 };
 
 %as we exit stim presentation state
-stimExitFcn = { 
+sExitFcn = { 
 	@()setStrobeValue(me,255); 
 	@()doStrobe(me,true);
 };
+
+%====================================================TWOSTEP
+
+%fixate entry
+fixTSEntryFcn = { 
+	@()updateNextState(me,'trial'); % we use the trial/block factor in task to select which state to transition to next
+	@()show(stims, 3);
+	@()edit(stims,1,'offTime',0.1);
+	@()edit(stims,2,'offTime',0.3);
+	@()edit(stims,2,'delayTime',0.2);
+	@()logRun(me,'INITFIXTwoStep'); %fprintf current trial info to command window
+};
+
+%fix within
+fixTSFcn = {
+	@()draw(stims, 3); %draw stimulus
+};
+
+%test we are fixated for a certain length of time
+inFixTSFcn = { 
+	@()testSearchHoldFixation(eT,'twostep','incorrect'); %useTemp is a special state which will use the state assigned by updateNextState
+};
+
+%exit fixation phase
+fixTSExitFcn = { 
+	@()resetTicks(stims);
+	@()trackerMessage(eT,'END_FIX');
+	@()set(stims,'fixationChoice',2);
+	@()updateFixationTarget(me, tS.useTask, tS.targetFixInit, ...
+	tS.targetFixTime, tS.targetRadius, false);
+	@()show(stims);
+}; 
+
+%what to run when we enter the stim presentation state
+tsEntryFcn = {
+	@()doStrobe(me,true);
+	@()logRun(me,'TWOSTEP'); %fprintf current trial info to command window
+};
+
+%what to run when we are showing stimuli
+tsFcn =  { 
+	@()draw(stims,[1 2]);
+	@()drawText(s,'TWOSTEP');
+	@()animate(stims); % animate stimuli for subsequent draw	
+};
+
+%====================================================DECISION
 
 %if the subject is correct (small reward)
 correctEntryFcn = { 
@@ -372,13 +433,16 @@ disp('================>> Building state info file <<================')
 stateInfoTmp = {
 'name'      'next'		'time'  'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn';
 'pause'		'prefix'	inf		pauseEntryFcn	[]				[]				pauseExitFcn;
-'prefix'	'fixate'	0.5		prefixEntryFcn	prefixFcn		[]				[];
-'fixate'	'incorrect'	5	 	fixEntryFcn		fixFcn			inFixFcn		fixExitFcn;
-'stimulus'  'incorrect'	5		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn;
+'prefix'	'UseTemp'	0.5		prefixEntryFcn	prefixFcn		[]				prefixExitFcn;
+'fixateOS'	'incorrect'	5	 	fixOSEntryFcn	fixOSFcn		inFixOSFcn		fixOSExitFcn;
+'fixateTS'	'incorrect'	5	 	fixTSEntryFcn	fixTSFcn		inFixTSFcn		fixTSExitFcn;
+'onestep'	'incorrect'	5		osEntryFcn		osFcn			maintainFixFcn	sExitFcn;
+'twostep'	'incorrect'	5		tsEntryFcn		tsFcn			maintainFixFcn	sExitFcn;
 'incorrect'	'prefix'	3		incEntryFcn		incFcn			[]				incExitFcn;
 'breakfix'	'prefix'	tS.tOut	breakEntryFcn	incFcn			[]				incExitFcn;
 'exclusion'	'prefix'	tS.tOut	exclEntryFcn	incFcn			[]				incExitFcn;
 'correct'	'prefix'	0.5		correctEntryFcn	correctFcn		[]				correctExitFcn;
+'useTemp'	'prefix'	0.5		[]				[]				[]				[];
 'calibrate' 'pause'		0.5		calibrateFcn	[]				[]				[];
 'drift'		'pause'		0.5		driftFcn		[]				[]				[];
 'override'	'pause'		0.5		overrideFcn		[]				[]				[];

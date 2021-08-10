@@ -288,6 +288,19 @@ classdef optickaCore < handle
 			end
 		end
 		
+		% ===================================================================
+		%> @brief Edit -- method to fast change a particular value. This is
+		%> useful for use in anonymous functions, like in the state machine.
+		%>
+		%> @param property - the property to change
+		%> @param value - the value to change it to
+		% ===================================================================
+		function set(me, property, value)
+			if isprop(me,property)
+				me.(property) = value;
+			end
+		end
+		
 	end
 	
 	%=======================================================================

@@ -25,7 +25,7 @@ classdef opticka < optickaCore
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> version number
-		optickaVersion char = '1.30'
+		optickaVersion char = '2.01'
 		%> history of display objects
 		history
 		%> is this a remote instance?
@@ -414,19 +414,19 @@ classdef opticka < optickaCore
 			else
 				me.r.useDataPixx = false;
 			end
-			if strcmpi(get(me.h.OKuseDisplayPP,'Checked'),'on')
+			if me.h.OKuseDisplayPP.Checked == true
 				me.r.useDisplayPP = true;
 				%me.r.dPPMode = get(me.h.OKdPPMode,'Value');
 			else
 				me.r.useDisplayPP = false;
 			end
-			if strcmpi(get(me.h.OKuseArduino,'Checked'),'on')
+			if me.h.OKuseArduino.Checked == true
 				me.r.useArduino = true;
 				me.r.arduinoPort = me.gv(me.h.OKarduinoPort);
 			else
 				me.r.useArduino = false;
 			end
-			if strcmpi(get(me.h.OKuseLabJackReward,'Checked'),'on')
+			if me.h.OKuseLabJackReward.Checked == true
 				me.r.useLabJackReward = true;
 			else
 				me.r.useLabJackReward = false;
@@ -445,7 +445,7 @@ classdef opticka < optickaCore
 			else
 				me.r.useTobii = false;
 			end
-			if strcmpi(get(me.h.OKuseEyeOccluder,'Checked'),'on')
+			if me.h.OKuseEyeOccluder.Enable == true && me.h.OKuseEyeOccluder.Checked == true
 				me.r.useEyeOccluder = true;
 			else
 				me.r.useEyeOccluder = false;
@@ -455,7 +455,7 @@ classdef opticka < optickaCore
 		
 		% ===================================================================
 		%> @brief getTaskVals
-		%> Gets the settings from th UI and updates our task object
+		%> Gets the settings from the UI and updates our task object
 		%> @param 
 		% ===================================================================
 		function getTaskVals(me)
@@ -520,7 +520,7 @@ classdef opticka < optickaCore
 		% ===================================================================
 		function clearStimulusList(me)
 			if ~isempty(me.r)
-				if ~isempty(me.r.stimuli)
+				if isempty(me.r.stimuli)
 					me.r.stimuli = metaStimulus();
 				end
 			end
@@ -547,9 +547,10 @@ classdef opticka < optickaCore
 		function clearVariableList(me)
 			if ~isempty(me.r)
 				if ~isempty(me.r.task) && me.r.task.nVars > 0
-					me.r.task = [];
+					me.r.task = taskSequence();
 				end
 			end
+			refreshVariableList(me);
 		end
 		
 		% ===================================================================
@@ -665,7 +666,7 @@ classdef opticka < optickaCore
 				end
 				me.r.task.nVar(revertN+1).stimulus = me.gn(me.h.OKVariableStimuli);
 				offset = eval(['{' me.h.OKVariableOffset.Value '}']);
-				if isempty(offset)
+				if isempty(offset) || (iscell(offset) && isempty(offset{1}))
 					me.r.task.nVar(revertN+1).offsetstimulus = [];
 					me.r.task.nVar(revertN+1).offsetvalue = [];
 				else
@@ -1339,7 +1340,7 @@ classdef opticka < optickaCore
 		%> @param 
 		% ===================================================================
 		function refreshVariableList(me)
-			if me.r.task.nVars == 0
+			if isempty(me.r.task) || me.r.task.nVars == 0
 				me.h.OKVarList.Items = {};
 				me.h.OKVarList.Value = {};
 				return; 
@@ -1670,6 +1671,10 @@ classdef opticka < optickaCore
 			if size(2) > height;	size(2) = height;	end
 
 			switch(position)
+			case 0
+				y=(height/2)-(size(2)/2);
+				if y < 0; y = 0; end
+				set(gcf,'Position',[0 y size(1) size(2)]);	
 			case 2 %a third off
 				x=(width/3)-(size(1)/2);
 				y=(height/2)-(size(2)/2);

@@ -4,18 +4,19 @@ classdef timeLogger < optickaCore
 	%   result.
 	
 	properties
-		screenLog	= struct()
-		timer		= @GetSecs
-		vbl			= 0
-		show		= 0
-		flip		= 0
-		miss		= 0
-		stimTime	= 0
-		tick		= 0
-		tickInfo	= 0
-		startTime	= 0
-		startRun	= 0
-		verbose		= true
+		screenLog		= struct()
+		timer			= @GetSecs
+		vbl				= 0
+		show			= 0
+		flip			= 0
+		miss			= 0
+		stimTime		= 0
+		tick			= 0
+		tickInfo		= 0
+		startTime		= 0
+		startRun		= 0
+		verbose			= true
+		stimStateNames	= {'stimulus','onestep','twostep'}
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -24,10 +25,10 @@ classdef timeLogger < optickaCore
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		runLog		= struct()
-		trainingLog	= struct()
+		runLog			= struct()
+		trainingLog		= struct()
 		%> allowed properties passed to object upon construction
-		allowedProperties = 'timer'
+		allowedProperties = 'stimStateName|timer'
 	end
 	
 	%=======================================================================
@@ -77,12 +78,14 @@ classdef timeLogger < optickaCore
 			obj.flip(idx) = [];
 			obj.miss(idx) = [];
 			obj.stimTime(idx) = [];
-			index=min([length(obj.vbl) length(obj.flip) length(obj.show)]);
-			obj.vbl=obj.vbl(1:index);
-			obj.show=obj.show(1:index);
-			obj.flip=obj.flip(1:index);
-			obj.miss=obj.miss(1:index);
-			obj.stimTime=obj.stimTime(1:index);
+			index=min([length(obj.vbl) length(obj.flip) length(obj.show) length(obj.stimTime)]);
+			try
+				obj.vbl=obj.vbl(1:index);
+				obj.show=obj.show(1:index);
+				obj.flip=obj.flip(1:index);
+				obj.miss=obj.miss(1:index);
+				obj.stimTime=obj.stimTime(1:index);
+			end
 		end
 		
 		% ===================================================================
@@ -90,6 +93,17 @@ classdef timeLogger < optickaCore
 		% ===================================================================
 		function plot(obj)
 			obj.printRunLog();
+		end
+		
+		% ===================================================================
+		%> @brief print Log of the frame timings
+		% ===================================================================
+		function logStim(obj, name, tick)
+			if contains(name, obj.stimStateNames)
+				obj.stimTime(tick) = 1;
+			else
+				obj.stimTime(tick) = 0;
+			end
 		end
 		
 		% ===================================================================
@@ -114,12 +128,12 @@ classdef timeLogger < optickaCore
 			
 			calculateMisses(obj,miss,stimTime)
 			
-			figure;
-			set(gcf,'Name',obj.name,'NumberTitle','off','Color',[1 1 1]);
-			p = panel('defer');
-			p.pack(3,1)
+			ssz = get(0,'ScreenSize');
+			figure('Name',obj.name,'NumberTitle','off','Color',[1 1 1],...
+				'Position', [10 1 round(ssz(3)/3) ssz(4)]);
+			tl = tiledlayout(3,1,'TileSpacing','compact','Padding','compact');
 			
-			p(1,1).select();
+			nexttile;
 			hold on
 			vv=diff(vbl);
 			vv(vv>100)=100;
@@ -134,17 +148,17 @@ classdef timeLogger < optickaCore
 			hold off
 			legend('VBL','Show','Flip','Stim ON')
 			[m,e]=obj.stderr(diff(vbl));
-			t=sprintf('VBL mean=%2.2f+-%2.2f s.e.', m, e);
+			t=sprintf('VBL mean=%.3f ± %.3f s.e.', m, e);
 			[m,e]=obj.stderr(diff(show));
-			t=[t sprintf(' | Show mean=%2.2f+-%2.2f', m, e)];
+			t=[t sprintf(' | Show mean=%.3f ± %.3f', m, e)];
 			[m,e]=obj.stderr(diff(flip));
-			t=[t sprintf(' | Flip mean=%2.2f+-%2.2f', m, e)];
-			p(1,1).title(t)
-			p(1,1).xlabel('Frame number (difference between frames)');
-			p(1,1).ylabel('Time (milliseconds)');
+			t=[t sprintf(' | Flip mean=%.3f ± %.3f', m, e)];
+			title(t)
+			xlabel('Frame number (difference between frames)');
+			ylabel('Time (milliseconds)');
+			box on; grid on; grid minor;
 			
-			
-			p(2,1).select();
+			nexttile;
 			x = 1:length(show);
 			hold on
 			plot(x,show-vbl,'r')
@@ -153,41 +167,29 @@ classdef timeLogger < optickaCore
 			plot(x,stimTime-0.5,'k')
 			legend('Show-VBL','Show-Flip','VBL-Flip','Simulus ON/OFF');
 			hold off
-% 			ax1=gca;
-% 			ax2 = axes('Position',get(ax1,'Position'),...
-% 				'XAxisLocation','top',...
-% 				'YAxisLocation','right',...
-% 				'Color','none',...
-% 				'XColor','k','YColor','k');
-% 			hl2 = line(x,stimTime,'Color','k','Parent',ax2);
-% 			set(ax2,'YLim',[-1 2])
-% 			set(ax2,'YTick',[-1 0 1 2])
-% 			set(ax2,'YTickLabel',{'','BLANK','STIMULUS',''})
-% 			linkprop([ax1 ax2],'Position');
 			[m,e]=obj.stderr(show-vbl);
-			t=sprintf('Show-VBL=%2.2f+-%2.2f', m, e);
+			t=sprintf('Show-VBL=%.3f ± %.3f', m, e);
 			[m,e]=obj.stderr(show-flip);
-			t=[t sprintf(' | Show-Flip=%2.2f+-%2.2f', m, e)];
+			t=[t sprintf(' | Show-Flip=%.3f ± %.3f', m, e)];
 			[m,e]=obj.stderr(vbl-flip);
-			t=[t sprintf(' | VBL-Flip=%2.2f+-%2.2f', m, e)];
-			p(2,1).title(t);
-			p(2,1).xlabel('Frame number');
-			p(2,1).ylabel('Time (milliseconds)');
+			t=[t sprintf(' | VBL-Flip=%.3f ± %.3f', m, e)];
+			title(t);
+			xlabel('Frame number');
+			ylabel('Time (milliseconds)');
+			box on; grid on; grid minor;
 			
-			p(3,1).select();
+			nexttile;
 			hold on
 			miss(miss > 0.05) = 0.05;
 			plot(miss,'k.-');
 			plot(obj.missImportant,'ro','MarkerFaceColor',[1 0 0]);
 			plot(stimTime/30,'k','linewidth',1);
 			hold off
-			p(3,1).title(['Missed frames = ' num2str(obj.nMissed) ' (RED > 0 means missed frame)']);
-			p(3,1).xlabel('Frame number');
-			p(3,1).ylabel('Miss Value');
+			title(['Missed frames = ' num2str(obj.nMissed) ' (RED > 0 means missed frame)']);
+			xlabel('Frame number');
+			ylabel('Miss Value');
+			box on; grid on; grid minor;
 			
-			scnsize = get(0,'ScreenSize');
-			set(gcf,'Position', [10 1 round(scnsize(3)/3) scnsize(4)]);
-			p.refresh();
 			clear vbl show flip index miss stimTime
 		end
 		

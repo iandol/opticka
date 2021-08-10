@@ -200,9 +200,10 @@ classdef discStimulus < baseStimulus
 					[]);
 				end
 				if me.changeBlend;Screen('BlendFunction', me.sM.win, me.sM.srcMode, me.sM.dstMode);end
+				%if me.verbose;fprintf('%s: %i of %i\n',me.name, me.drawTick, me.tick); end
 				me.drawTick = me.drawTick + 1;
 			end
-			me.tick = me.tick + 1;
+			me.isVisible; me.tick = me.tick + 1; end
 		end
 		
 		% ===================================================================

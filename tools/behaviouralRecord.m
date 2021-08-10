@@ -13,6 +13,8 @@ classdef behaviouralRecord < optickaCore
 		rt2					= []
 		date				= []
 		info				= ''
+		xAll				= []
+		yAll				= [];
 		correctStateName	= '^correct'
 		breakStateName		= '^(breakfix|incorrect)'
 		rewardTime			= 150;
@@ -124,8 +126,8 @@ classdef behaviouralRecord < optickaCore
 			me.h.axis3 = axes('Parent', me.h.vbox3,'Units','pixels');
 			me.h.axis5 = axes('Parent', me.h.vbox3,'Units','pixels');
 			axis([me.h.axis1 me.h.axis2 me.h.axis3 me.h.axis4], 'square');
-			opticka.resizeFigure([],[1100 950]);
-			set(me.h.vbox,'Sizes',[-4 -1])
+			opticka.resizeFigure(0,[900 980]);
+			set(me.h.vbox,'Sizes',[-5 -1])
 			set(me.h.hbox,'Sizes',[-2 -1])
 			set(me.h.vbox2,'Sizes',[-2 -1])
 			set(me.h.vbox3,'Sizes',[-2 -1 -1])
@@ -183,6 +185,8 @@ classdef behaviouralRecord < optickaCore
 				me.radius(end+1) = eL.fixation.radius;
 				me.time(end+1) = eL.fixation.time;
 				me.inittime(end+1) = eL.fixation.initTime;
+				me.xAll = eL.xAll;
+				me.yAll = eL.yAll;
 			end
 			
 			hitn = length( me.response(me.response > 0) );
@@ -229,10 +233,10 @@ classdef behaviouralRecord < optickaCore
 			ylim(me.h.axis4,[0 100])
 			
 			%axis 5
-			if ~isempty(eL.xAll)
-				plot(me.h.axis5, eL.xAll, eL.yAll, 'b.','MarkerSize',15); hold on
-				plot(me.h.axis5, eL.xAll(1), eL.yAll(1), 'g.','MarkerSize',18);
-				plot(me.h.axis5, eL.xAll(end), eL.yAll(end), 'r.','MarkerSize',18,'Color',[1 0.5 0]); hold off
+			if ~isempty(me.xAll)
+				plot(me.h.axis5, me.xAll, me.yAll, 'b.','MarkerSize',15,'Color',[0.5 0.5 0.8]); hold on
+				plot(me.h.axis5, me.xAll(1), me.yAll(1), 'g.','MarkerSize',18);
+				plot(me.h.axis5, me.xAll(end), me.yAll(end), 'r.','MarkerSize',18,'Color',[1 0.5 0]); hold off
 				axis(me.h.axis5, 'ij');
 				grid(me.h.axis5,'on');
 				xlim(me.h.axis5,[-15 15]);
@@ -285,8 +289,7 @@ classdef behaviouralRecord < optickaCore
 		%> 
 		% ===================================================================
 		function plotPerformance(me)
-			createPlot(me);
-			updatePlot(me);
+			plot(me);
 		end
 		
 		% ===================================================================

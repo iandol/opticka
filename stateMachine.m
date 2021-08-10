@@ -26,34 +26,41 @@ classdef stateMachine < optickaCore
 	
 	properties
 		%> our main state list, stored as a structure
-		stateList struct = struct([])
+		stateList struct			= struct([])
 		%> timedelta for time > ticks calculation, assume 1e-4 by default
 		%> can set to IFI of display.
-		timeDelta double = 1e-4
+		timeDelta double			= 1e-4
 		%> use real time (true) or ticks (false) to mark state time. Real time is more
 		%> accurate, and robust against unexpected delays. Ticks uses timeDelta per tick and a
 		%> tick timer (each loop is 1 tick) for time measurement. This is simpler, can be
 		%> controlled by an external driver that deals with timing, and without supervision
 		%> but delays may accumulate vs real timer.
-		realTime logical = false
+		realTime logical			= false
 		%> clock function to use
-		clockFcn function_handle = @GetSecs
+		clockFcn function_handle	= @GetSecs
 		%> pause function
-		waitFcn function_handle = @WaitSecs
+		waitFcn function_handle		= @WaitSecs
 		%> transition function run globally between transitions
-		globalTransitionFcn cell = {}
+		globalTransitionFcn cell	= {}
 		%> N x 2 cell array of strings to compare, list to skip the current -> next state's exit functions; for example
 		%> skipExitStates = {'fixate',{'incorrect','breakfix'}}; means that if the currentstate is
 		%> 'fixate' and the next state is either incorrect OR breakfix, then skip the FIXATE exit
 		%> state. Add multiple rows for skipping multiple state's exit states.
-		skipExitStates cell = {}
+		skipExitStates cell			= {}
+		%> for a state transition you can override the next state,
+		%> but this is reset on the transition, so you need logic at runtime
+		%> to set this value each time. This can be used in an experiment
+		%> where you set this when you are in state A, and based on a
+		%> probability you can transition to state B or state C for
+		%> example...
+		tempNextState char			= ''
 		%> verbose logging to command window?
-		verbose = false
+		verbose						= false
 	end
 	
 	properties (SetAccess = protected, GetAccess = public, Transient = true)
 		%> true or false, whether this object is currently busy running
-		isRunning = false
+		isRunning					= false
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -253,9 +260,10 @@ classdef stateMachine < optickaCore
 					trigger = me.currentTick >= me.nextTickOut;
 				end
 				if trigger == true %we have exceeded the time (real|ticks), so time to transition or exit
-					nextName = me.stateList(me.currentIndex).next;
-					if ~isempty(nextName) %if no next state, exit the statemachine
-						me.transitionToStateWithName(nextName);
+					if ~isempty(me.tempNextState) && isStateName(me, me.tempNextState)
+						me.transitionToStateWithName(me.tempNextState);
+					elseif ~isempty(me.stateList(me.currentIndex).next) %if no next state, exit the statemachine
+						me.transitionToStateWithName(me.stateList(me.currentIndex).next);
 					else
 						me.exitCurrentState;
 						me.isRunning = false;
@@ -456,12 +464,12 @@ classdef stateMachine < optickaCore
 		function runDemo(me)
 			oldVerbose = me.verbose;
 			oldTimeDelta = me.timeDelta;
-			me.timeDelta = 1e-4;
+			me.timeDelta = 1e-6;
 			me.verbose = true;
-			beginFcn = {@()disp('Hello there!');};
-			middleFcn = {@()disp('Still here?');};
-			endFcn = {@()disp('See you soon!');};
-			surpriseFcn = {@()disp('SURPRISE!!!');};
+			beginFcn = {@()disp('begin state: Hello there!');};
+			middleFcn = {@()disp('middle state: Still here?');};
+			endFcn = {@()disp('end state: See you soon!');};
+			surpriseFcn = {@()disp('surprise state: SURPRISE!!!');};
 			withinFcn = {}; %don't run anything within the state
 			transitionFcn = {@()sprintf('surprise');}; %returns a valid state name and thus triggers a transition
 			exitFcn = { @()fprintf('\t--->>exit state'); @()fprintf('\n') };
@@ -523,11 +531,12 @@ classdef stateMachine < optickaCore
 		
 		% ===================================================================
 		%> @brief transition to a named state
-		%> @param
+		%> @param nextName the next state to switch to
 		%> @return
 		% ===================================================================
 		% call transitionFevalable before exiting last and entering next state
 		function transitionToStateWithName(me, nextName)
+			if strcmpi(nextName,'useTemp'); nextName=me.tempNextState; end
 			[isState, index] = isStateName(me, nextName);
 			if isState
 				if ~isempty(me.skipExitStates)
@@ -562,13 +571,13 @@ classdef stateMachine < optickaCore
 			me.fevalTime.exit = toc(tt)*1000;
 			
 			storeCurrentStateInfo(me);
-			
+			me.tempNextState = '';
 			me.currentEntryFcn = {};
 			me.currentEntryTime = [];
 			me.nextTickOut = [];
 			me.nextTimeOut = [];
 			
-			%if me.verbose; me.salutation(['Exit state:' me.currentState.name ' @ ' num2str(me.log(end).tnow-me.startTime) 's | ' num2str(me.log(end).stateTimeToNow) 'secs | ' num2str(me.log(end).tick) '/' num2str(me.totalTicks) 'ticks'],'',false); end
+			if me.verbose; me.salutation(['Exit state: ' me.currentState.name ' @ ' num2str(me.log(end).tnow-me.startTime) 's | ' num2str(me.log(end).stateTimeToNow) 'secs | ' num2str(me.log(end).tick) '/' num2str(me.totalTicks) 'ticks'],'',false); end
 		end
 		
 		% ===================================================================
@@ -607,7 +616,7 @@ classdef stateMachine < optickaCore
 				end
 				me.fevalTime.enter = toc(tt)*1000;
 				
-				%if me.verbose; me.salutation(['Enter state: ' me.currentName ' @ ' num2str(me.currentEntryTime-me.startTime) 'secs / ' num2str(me.totalTicks) 'ticks'],'',false); end
+				if me.verbose; me.salutation(['Enter state: ' me.currentName ' @ ' num2str(me.currentEntryTime-me.startTime) 'secs / ' num2str(me.totalTicks) 'ticks'],'',false); end
 
 			else
 				if me.verbose; me.salutation('enterStateAtIndex method', 'newIndex is greater than stateList length'); end
@@ -636,6 +645,7 @@ classdef stateMachine < optickaCore
 			me.log(end).timeError = me.log(end).tnow - me.log(end).nextTimeOut;
 			me.log(end).tickError = me.log(end).tick - me.log(end).nextTickOut;
 			me.log(end).fevalTime = me.fevalTime;
+			me.log(end).tempNextState = me.tempNextState;
 		end
 		
 	end
