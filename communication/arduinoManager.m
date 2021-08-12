@@ -4,7 +4,7 @@ classdef arduinoManager < optickaCore
 	%provide much better performance than MATLAB's hardware package.
 	properties
 		port char				= ''
-		board char				= 'Uno'
+		board char {mustBeMember(board,{'Uno','Xiao'})}	= 'Uno' % Xiao or Uno
 		silentMode logical		= false %this allows us to be called even if no arduino is attached
 		verbose					= true
 		openGUI logical			= true

@@ -1110,7 +1110,7 @@ classdef screenManager < optickaCore
 		%> @return
 		% ===================================================================
 		function drawText(me,text)
-			% drawTextNow(me,text)
+			% drawText(me,text)
 			if ~exist('text','var');return;end
 			Screen('DrawText',me.win,text,10,10,[1 1 1],[0.3 0.3 0.1]);
 		end
@@ -1121,37 +1121,45 @@ classdef screenManager < optickaCore
 		%> @param xy x is row1 and y is row2
 		%> @return
 		% ===================================================================
-		function drawLines(me,xy,size,colour)
+		function drawLines(me,xy,width,colour)
+			% drawLines(me, xy, width, colour)
 			if ~exist('xy','var');return;end
-			if ~exist('size','var') || isempty(size); size = 2; end
+			if ~exist('width','var') || isempty(width); width = 0.1; end
 			if ~exist('colour','var') || isempty(colour); colour = [1 1 0]; end
 			xy(1,:) = me.xCenter + (xy(1,:) * me.ppd_);
 			xy(2,:) = me.yCenter + (xy(2,:) * me.ppd_);
-			Screen('DrawLines', me.win, xy);
+			width	= width * me.ppd_;
+			Screen('DrawLines', me.win, xy, width, colour,[],1);
 		end
 		
 		% ===================================================================
 		%> @brief draw box specified with x and y and size in degrees
 		%>
-		%> @param xy x is row1 and y is row2 in degrees
+		%> @param xy X is row1 and Y is row2 in degrees
 		%> @param size in degrees
-		%> @param colour RGB[A]
+		%> @param colour RGB[A], use columns for multiple colours
 		%> @return
 		% ===================================================================
-		function drawBox(me,xy,size,colour)
+		function drawBox(me,xy,boxsize,colour)
+			% drawBox(me, xy, size, colour)
 			if ~exist('xy','var');return;end
-			if ~exist('size','var') || isempty(size); size = 2; end
-			if ~exist('colour','var') || isempty(colour); colour = [1 1 0]; end
-			size = size * me.ppd_;
-			if length(size) == 1
-				rect = [0 0 size size];
+			if ~exist('size','var') || isempty(boxsize); boxsize = 2; end
+			if ~exist('colour','var') || isempty(colour); colour = [1 1 0]'; end
+			boxsize = boxsize * me.ppd_;
+			xy(1,:) = xy(1,:) * me.ppd_ + me.xCenter;
+			xy(2,:) = xy(2,:) * me.ppd_ + me.yCenter;
+			if length(boxsize) == 1
+				xbs = boxsize;
+				ybs = boxsize;
 			else
-				rect = [0 0 size(1) size(2)];
+				xbs = boxsize(1);
+				ybs = boxsize(2);
 			end
-			xy(1,:) = me.xCenter + (xy(1,:) * me.ppd_);
-			xy(2,:) = me.yCenter + (xy(2,:) * me.ppd_);
-			rect = CenterRectOnPointd(rect,xy(1),xy(2));
-			Screen('FillRect', me.win, color, rect);
+			for i = 1:size(xy,2)
+				rect(:,i) = [0 0 xbs ybs]';
+				rect(:,i) = CenterRectOnPointd(rect(:,i),xy(1,i),xy(2,i));
+			end
+			Screen('FillRect', me.win, colour, rect);
 		end
 		
 		% ===================================================================
@@ -1163,7 +1171,7 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		function drawRect(me,rect,colour)
 			if ~exist('rect','var');return;end
-			if ~exist('colour','var') || isempty(colour); colour = [1 1 0]; end
+			if ~exist('colour','var') || isempty(colour); colour = [1 1 0]'; end
 			x = me.xCenter + ([rect(1) rect(3)] * me.ppd_);
 			y = me.yCenter + ([rect(2) rect(4)] * me.ppd_);
 			Screen('FillRect', me.win, colour, [x(1) y(1) x(2) y(2)]);

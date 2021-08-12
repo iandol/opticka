@@ -203,7 +203,7 @@ classdef discStimulus < baseStimulus
 				%if me.verbose;fprintf('%s: %i of %i\n',me.name, me.drawTick, me.tick); end
 				me.drawTick = me.drawTick + 1;
 			end
-			me.isVisible; me.tick = me.tick + 1; end
+			if me.isVisible; me.tick = me.tick + 1; end
 		end
 		
 		% ===================================================================

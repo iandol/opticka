@@ -21,7 +21,7 @@
 %------------General Settings-----------------
 tS.useTask					= true;		%==use taskSequence (randomised variable task object)
 tS.rewardTime				= 250;		%==TTL time in milliseconds
-tS.rewardPin				= 11;		%==Output pin, 2 by default with Arduino.
+tS.rewardPin				= 2;		%==Output pin, 2 by default with Arduino.
 tS.checkKeysDuringStimulus  = true;		%==allow keyboard control? Slight drop in performance
 tS.recordEyePosition		= false;	%==record eye position within PTB, **in addition** to the EDF?
 tS.askForComments			= false;	%==little UI requestor asks for comments before/after run
@@ -138,8 +138,8 @@ sM.skipExitStates			= {'fixate','incorrect|breakfix'};
 pauseEntryFcn = { 
 	@()hide(stims);
 	@()drawBackground(s); %blank the subject display
-	@()drawTextNow(s,'Paused, press [p] to resume...');
-	@()disp('Paused, press [p] to resume...');
+	@()drawTextNow(s,'PAUSED, press [p] to resume...');
+	@()disp('PAUSED, press [p] to resume...');
 	@()trackerClearScreen(eT); % blank the eyelink screen
 	@()trackerDrawText(eT,'PAUSED, press [P] to resume...');
 	@()trackerMessage(eT,'TRIAL_RESULT -100'); %store message in EDF
@@ -151,6 +151,7 @@ pauseEntryFcn = {
 
 %pause exit
 pauseExitFcn = {
+	@()disp('Leaving paused state...');
 	@()startRecording(eT, true); %start recording eye position data again
 }; 
 

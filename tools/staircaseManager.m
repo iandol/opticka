@@ -13,6 +13,12 @@ classdef staircaseManager < optickaCore & dynamicprops
 		stair cell
 		%> verbose
 		verbose = false
+		type = 'UD'
+		udsettings cell = {struct('up',1,'down',3,'StepSizeDown',0.05,...
+							'StepSizeUp',0.05,'stopcriterion','trials',...
+							'stoprule',50,'startvalue',0.5);}
+		psisettings cell 
+		
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -31,7 +37,7 @@ classdef staircaseManager < optickaCore & dynamicprops
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> properties allowed during initial construction
-		allowedProperties='task|stair|verbose'
+		allowedProperties='type|task|stair|verbose'
 	end
 	
 	%=======================================================================	
@@ -52,6 +58,20 @@ classdef staircaseManager < optickaCore & dynamicprops
 			me=me@optickaCore(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
 		end
+		
+		function setup(me)
+			switch me.type
+				case 'UD'
+					for i = 1:length(me.udsettings)
+						stair{i} = PAL_AMUD_setupUD(me.udsettings{i});
+					end
+				otherwise
+					for i = 1:length(me.udsettings)
+						stair{i} = PAL_AMUD_setupUD(me.udsettings{i});
+					end
+			end
+			
+		end
 
 		
 	end % END METHODS
@@ -67,24 +87,6 @@ classdef staircaseManager < optickaCore & dynamicprops
 	methods (Static) %------------------STATIC METHODS
 	%=======================================================================
 		
-		% ===================================================================
-		%> @brief make a matrix from a cell array
-		%> 
-		%> 
-		% ===================================================================
-		function out=cellStruct(in)
-			out = [];
-			if iscell(in)
-				for i = 1:size(in,2)
-					cc = [in{:,i}]';
-					if iscell(cc)
-						out = [out, [in{:,i}]'];
-					else
-						out = [out, cc];
-					end
-				end
-			end
-		end
 		
 	end
 	

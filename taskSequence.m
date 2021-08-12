@@ -38,6 +38,8 @@ classdef taskSequence < optickaCore & dynamicprops
 		randomGenerator char = 'mt19937ar'
 		%> verbose or not
 		verbose = false
+		%> staircase manager, which interacts with the task sequence
+		staircase staircaseManager
 	end
 	
 	properties (Hidden = true)
@@ -507,6 +509,12 @@ classdef taskSequence < optickaCore & dynamicprops
 				bTrial = me.outValues(trialToSwap,:);
 				me.outValues(me.totalRuns,:) = bTrial;
 				me.outValues(trialToSwap,:) = aTrial;
+				
+				%outTrial
+				aTrial = me.outTrial(me.totalRuns,:);
+				bTrial = me.outTrial(trialToSwap,:);
+				me.outTrial(me.totalRuns,:) = bTrial;
+				me.outTrial(trialToSwap,:) = aTrial;
 				
 				%outVars
 				for i = 1:me.nVars

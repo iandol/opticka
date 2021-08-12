@@ -21,9 +21,13 @@
 %==================================================================
 %---------------------------TASK CONFIG----------------------------
 tS.includeErrors			= false; %do we update the trial number even for incorrect saccades, if true then we call updateTask for both correct and incorrect, otherwise we only call updateTask() for correct responses
-% we use taskSequence to randomise which state to switch into below
+% we use taskSequence to randomise which state to switch to (independent trial-level factor). The idea is we
+% we call @()updateNextState(me,'trial') in the prefixation state; this sets
+% one of these two trialVar values as the next state. The fixateOS and fixateTS
+% states will then call onestep or twostep stimulus state. Therefore we can
+% call different experiment structures based on this trial-level factor.
 task.trialVar.values		= {'fixateOS','fixateTS'};
-task.trialVar.probability	= [0.5 0.5];
+task.trialVar.probability	= [0.6 0.4];
 task.trialVar.comment		= 'one or twostep trial based on 60:40 probability';
 tL.stimStateNames			= {'onestep','twostep'};
 
@@ -31,7 +35,7 @@ tL.stimStateNames			= {'onestep','twostep'};
 %----------------------General Settings----------------------------
 tS.useTask					= true; %==use taskSequence (randomises stimulus variables)
 tS.rewardTime				= 250; %==TTL time in milliseconds
-tS.rewardPin				= 11; %==Output pin, 2 by default with Arduino.
+tS.rewardPin				= 2; %==Output pin, 2 by default with Arduino.
 tS.checkKeysDuringStimulus  = true; %==allow keyboard control? Slight drop in performance
 tS.recordEyePosition		= true; %==record eye position within PTB, **in addition** to the EDF?
 tS.askForComments			= false; %==little UI requestor asks for comments before/after run
@@ -172,10 +176,11 @@ sM.skipExitStates			= {'fixate','incorrect|breakfix'};
 pauseEntryFcn = { 
 	@()hide(stims);
 	@()drawBackground(s); %blank the subject display
-	@()drawTextNow(s,'Paused, press [p] to resume...');
-	@()disp('Paused, press [p] to resume...');
+	@()drawText(s,'PAUSED, press [p] to resume...');
+	@()flip(s);
+	@()fprintf('\n\nPAUSED, press [p] to resume...\n\n');
 	@()trackerClearScreen(eT); % blank the eyelink screen
-	@()trackerDrawText(eT,'PAUSED, press [P] to resume...');
+	@()trackerDrawText(eT,'PAUSED, press [p] to resume...');
 	@()trackerMessage(eT,'TRIAL_RESULT -100'); %store message in EDF
 	@()stopRecording(eT, true); %stop recording eye position data
 	@()disableFlip(me); % no need to flip the PTB screen

@@ -264,7 +264,7 @@ classdef runExperiment < optickaCore
 				
 				me.initialiseTask(); %set up our task structure 
 				
-				me.updateVars(1,1); %set the variables for the very first run;
+				me.updateMOCVars(1,1); %set the variables for the very first run;
 				
 				KbReleaseWait; %make sure keyboard keys are all released
 				
@@ -764,8 +764,8 @@ classdef runExperiment < optickaCore
 					
 					%------run the stateMachine one tick forward
 					update(sM);
-					if s.visualDebug;s.drawGrid;me.infoTextScreen;end
-					s.finishDrawing(); % potential optimisation, but note stateMachine may run non-drawing tasks in update()
+					if me.doFlip && s.visualDebug; s.drawGrid; me.infoTextScreen; end
+					if me.doFlip; s.finishDrawing(); end % potential optimisation, but note stateMachine may run non-drawing tasks in update()
 					
 					%------check eye position manually. REMEMBER eyelink will save the real eye data in
 					% the EDF this is just a backup wrapped in the PTB loop. 
@@ -1228,19 +1228,6 @@ classdef runExperiment < optickaCore
 			me.doFlip = false;
 		end
 		
-		
-		% ===================================================================
-		%> @brief update task run index
-		%>
-		%> 
-		% ===================================================================
-		function updateTaskIndex(me)
-			updateTask(me.task);
-			if me.task.totalRuns > me.task.nRuns
-				me.currentInfo.stopTask = true;
-			end
-		end
-		
 		% ===================================================================
 		%> @brief get task run index
 		%>
@@ -1265,9 +1252,12 @@ classdef runExperiment < optickaCore
 		function updateTask(me,result)
 			info = '';
 			if me.useEyeLink || me.useTobii
-				info = sprintf('isBlink = %i; isExclusion = %i; isFix = %i; isInitFail = %i; fixTotal = %g',...
+				info = sprintf('isBlink = %i; isExclusion = %i; isFix = %i; isInitFail = %i; fixTotal = %g ',...
 					me.eyeTracker.isBlink, me.eyeTracker.isExclusion, me.eyeTracker.isFix,...
 				me.eyeTracker.isInitFail, me.eyeTracker.fixTotal);
+			end
+			for i = 1:me.stimuli.n
+				info = sprintf('%sstim%i: %i tick %i drawtick',info,i,me.stimuli{i}.tick,me.stimuli{i}.drawTick);
 			end
 			updateTask(me.task,result,GetSecs,info); %do this before getting index
 		end
@@ -1328,7 +1318,7 @@ classdef runExperiment < optickaCore
 			end
 			if me.isTask && ((index > me.lastIndex) || override == true)
 				[thisBlock, thisRun] = me.task.findRun(index);
-				t = sprintf('Total#%g|Block#%g|Run#%g = ',index,thisBlock,thisRun);
+				t = sprintf('B#%i R#%i T#%i = ',thisBlock,thisRun, index);
 				for i=1:me.task.nVars
 					ix = []; valueList = cell(1); oValueList = cell(1); %#ok<NASGU>
 					doXY = false;
@@ -1368,6 +1358,14 @@ classdef runExperiment < optickaCore
 										else
 											val(num) = -value(num);
 										end
+									case {'yoffset'}
+										if doXY && ~isnan(num) && ~isempty(num) && length(value)==2
+											val = [value(1) value(2)+num];
+										end
+									case {'xoffset'}
+										if doXY && ~isnan(num) && ~isempty(num) && length(value)==2
+											val = [value(1)+num value(2)];
+										end
 									otherwise
 										val = -value;
 								end
@@ -1385,7 +1383,7 @@ classdef runExperiment < optickaCore
 
 					a = 1;
 					for j = ix %loop through our stimuli references for this variable
-						t = [t sprintf('S%i: %s = %s ',j,name,num2str(valueList{a}))];
+						t = [t sprintf('S%i: %s: %s ',j,name,num2str(valueList{a}))];
 						if ~doXY
 							me.stimuli{j}.(name)=valueList{a};
 						else
@@ -1395,6 +1393,7 @@ classdef runExperiment < optickaCore
 						a = a + 1;
 					end
 				end
+				me.currentInfo = t;
 				me.behaviouralRecord.info = t;
 				me.lastIndex = index;
 			end
@@ -1603,12 +1602,12 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief updateVars
+		%> @brief updateMOCVars
 		%> Updates the stimulus objects with the current variable set
 		%> @param thisBlock is the current trial
 		%> @param thisRun is the current run
 		% ===================================================================
-		function updateVars(me,thisBlock,thisRun)
+		function updateMOCVars(me,thisBlock,thisRun)
 			
 			if thisBlock > me.task.nBlocks
 				return %we've reached the end of the experiment, no need to update anything!
@@ -1642,7 +1641,7 @@ classdef runExperiment < optickaCore
 							update(me.stimuli, j);
 						end
 						if me.verbose==true
-							fprintf('=-> updateVars() block/trial %i/%i: Variable:%i %s = %s | Stimulus %g -> %g ms\n',thisBlock,thisRun,i,name,num2str(valueList{a}),j,toc*1000);
+							fprintf('=-> updateMOCVars() block/trial %i/%i: Variable:%i %s = %s | Stimulus %g -> %g ms\n',thisBlock,thisRun,i,name,num2str(valueList{a}),j,toc*1000);
 						end
 						a = a + 1;
 					end
@@ -1717,7 +1716,7 @@ classdef runExperiment < optickaCore
 							mT=me.task.thisBlock;
 							mR = me.task.thisRun + 1;
 						end
-						me.updateVars(mT,mR);
+						me.updateMOCVars(mT,mR);
 						me.task.doUpdate = false;
 					end
 					%this dispatches each stimulus update on a new blank frame to
@@ -1785,33 +1784,32 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 		function t = infoText(me)
 			etinfo = '';
-			name = '';
 			if me.isRunTask
 				log = me.taskLog;
 				name = me.stateMachine.currentName;
 				if me.useEyeLink || me.useTobii
-					etinfo = sprintf('| isFix: %i | isExclusion: %i | isFixInit: %i',me.eyeTracker.isFix,me.eyeTracker.isExclusion,me.eyeTracker.isInitFail);
+					etinfo = sprintf('| isFix:%i isExcl:%i isFixInit:%i',me.eyeTracker.isFix,me.eyeTracker.isExclusion,me.eyeTracker.isInitFail);
 				end
 			else
 				log = me.runLog;
-				name = sprintf('Blank:%i',me.task.isBlank);
+				name = sprintf('%s Blank:%i',name,me.task.isBlank);
 			end
 			if isempty(me.task.outValues)
 				t = sprintf('%s | Time: %3.3f (%i) | isFix: %i | isExclusion: %i | isFixInit: %i',...
-					me.stateMachine.currentName,(log.vbl(end)-log.startTime), log.tick,...
+					name,(log.vbl(end)-log.startTime), log.tick,...
 					me.eyeTracker.isFix,me.eyeTracker.isExclusion,me.eyeTracker.isInitFail);
 				return
 			else
 				var = me.task.outIndex(me.task.totalRuns);
 			end
 			if me.logFrames == true && log.tick > 1
-				t=sprintf('%s | B: %i | R: %i [%i/%i] | V: %i | Time: %3.3f (%i) %s',...
+				t=sprintf('%s | B:%i R:%i [%i/%i] | V: %i | Time: %3.3f (%i) %s',...
 					name,me.task.thisBlock, me.task.thisRun, me.task.totalRuns,...
 					me.task.nRuns, var, ...
 					(log.vbl(end)-log.startTime), log.tick,...
 					etinfo);
 			else
-				t=sprintf('%s | B: %i | R: %i [%i/%i] | V: %i | Time: %3.3f (%i) %s',...
+				t=sprintf('%s | B:%i R:%i [%i/%i] | V: %i | Time: %3.3f (%i) %s',...
 					name,me.task.thisBlock,me.task.thisRun,me.task.totalRuns,...
 					me.task.nRuns, var, ...
 					(log.vbl(1)-log.startTime), log.tick,...
@@ -1819,12 +1817,15 @@ classdef runExperiment < optickaCore
 			end
 			for i=1:me.task.nVars
 				if iscell(me.task.outVars{me.task.thisBlock,i}(me.task.thisRun))
-					t=[t sprintf(' / %s: %s',me.task.nVar(i).name,...
+					t=[t sprintf(' > %s: %s',me.task.nVar(i).name,...
 						num2str(me.task.outVars{me.task.thisBlock,i}{me.task.thisRun}))];
 				else
-					t=[t sprintf(' / %s: %2.2f',me.task.nVar(i).name,...
+					t=[t sprintf(' > %s: %3.3f',me.task.nVar(i).name,...
 						me.task.outVars{me.task.thisBlock,i}(me.task.thisRun))];
 				end
+			end
+			if ~isempty(me.currentInfo)
+				t = [t me.currentInfo];
 			end
 		end
 		
@@ -1843,7 +1844,7 @@ classdef runExperiment < optickaCore
 					fprintf('Tick: %i | Time: %5.8g\n',tag,...
 						me.task.tick,me.task.timeNow-me.task.startTime);
 				else
-					fprintf('%s -- B: %i | R: %i [%i/%i] | TT: %i | Tick: %i | Time: %5.8g\n',tag,...
+					fprintf('%s -- B:%i R:%i [%i/%i] | TT: %i | Tick: %i | Time: %5.8g\n',tag,...
 						me.task.thisBlock,me.task.thisRun,me.task.totalRuns,me.task.nRuns,...
 						me.task.isBlank,me.task.tick,me.task.timeNow-me.task.startTime);
 				end
@@ -2186,14 +2187,14 @@ classdef runExperiment < optickaCore
 						end
 					case 'p' %pause the display
 						if tS.keyTicks > tS.keyHold
-							if strcmpi(me.stateMachine.currentState.name,'pause')
+							if strcmpi(me.stateMachine.currentState.name, 'pause')
 								forceTransition(me.stateMachine, me.stateMachine.currentState.next);
-								fprintf('===>>> PAUSE OFF!\n');
 							else
+								flip(me.screen,[],[],2);
 								forceTransition(me.stateMachine, 'pause');
-								fprintf('===>>> PAUSE ENGAGED! (press [p] to unpause)\n');
 								tS.pauseToggle = tS.pauseToggle + 1;
 							end
+							FlushEvents();
 							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case 's'
