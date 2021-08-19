@@ -1377,7 +1377,7 @@ classdef opticka < optickaCore
 				end
 				str{i} = [V(i).name ' on Stim: ' num2str(V(i).stimulus) '|' v];
 				if isfield(V, 'offsetstimulus') && ~isempty(V(i).offsetstimulus)
-					str{i} =  [str{i} ' | Stim ' num2str(V(i).offsetstimulus) ' offset:' num2str(V(i).offsetvalue)];
+					str{i} =  [str{i} ' | Stim:' num2str(V(i).offsetstimulus) ' modify:' num2str(V(i).offsetvalue)];
 				end
 				str{i}=regexprep(str{i},'\s+',' ');
 			end

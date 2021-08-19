@@ -38,10 +38,6 @@ classdef stateMachine < optickaCore
 		realTime logical			= false
 		%> clock function to use
 		clockFcn function_handle	= @GetSecs
-		%> pause function
-		waitFcn function_handle		= @WaitSecs
-		%> transition function run globally between transitions
-		globalTransitionFcn cell	= {}
 		%> N x 2 cell array of strings to compare, list to skip the current -> next state's exit functions; for example
 		%> skipExitStates = {'fixate',{'incorrect','breakfix'}}; means that if the currentstate is
 		%> 'fixate' and the next state is either incorrect OR breakfix, then skip the FIXATE exit
@@ -56,6 +52,8 @@ classdef stateMachine < optickaCore
 		tempNextState char			= ''
 		%> verbose logging to command window?
 		verbose						= false
+		%> pause function
+		waitFcn function_handle		= @WaitSecs
 	end
 	
 	properties (SetAccess = protected, GetAccess = public, Transient = true)
@@ -112,11 +110,11 @@ classdef stateMachine < optickaCore
 		%> should we run the finish function
 		isFinishing logical = false
 		%> field names of allStates struct array, defining state behaviors
-		stateFields cell = {'name', 'next', 'entryFcn', 'withinFcn', 'time', 'transitionFcn','exitFcn', 'skipExitFcn'}
+		stateFields cell = { 'name', 'next', 'entryFcn', 'withinFcn', 'time', 'transitionFcn','exitFcn', 'skipExitFcn' }
 		%> default values of allStates struct array fields
-		stateDefaults cell = {'', '', {}, {}, 1, {}, {}, false}
+		stateDefaults cell = { '', '', {}, {}, 1, {}, {}, false }
 		%> properties allowed during construction
-		allowedProperties char = 'name|realTime|verbose|clockFcn|waitFcn|timeDelta|globalTransitionFcn'
+		allowedProperties char = 'name|realTime|verbose|clockFcn|waitFcn|timeDelta|skipExitStates|tempNextState'
 	end
 	
 	%events
@@ -144,13 +142,15 @@ classdef stateMachine < optickaCore
 		%> @return instance of class.
 		% ===================================================================
 		function me = stateMachine(varargin)
-			if nargin == 0; varargin.name = 'state machine';end
-			me = me@optickaCore(varargin); %superclass constructor
+			
+			args = optickaCore.addDefaults(varargin,struct('name','state machine'));
+			me=me@optickaCore(args); %superclass constructor
+			me.parseArgs(args,me.allowedProperties);
+			
 			%initialise the statelist index
 			me.stateList = struct([]);
 			me.stateListIndex = containers.Map('uniformValues', false);
-			%parse any inputs
-			if nargin>0; parseArgs(me, varargin, me.allowedProperties); end
+			
 		end
 		
 		% ===================================================================
@@ -252,11 +252,11 @@ classdef stateMachine < optickaCore
 		% ===================================================================
 		function update(me)
 			if me.isRunning == true
-				
-				if me.realTime == true %are we running on time or ticks?
+				trigger = false;
+				if me.realTime == true && ~isinf(me.nextTimeOut) %are we running on time or ticks?
 					me.currentTime = feval(me.clockFcn);
 					trigger = me.currentTime >= me.nextTimeOut;
-				else
+				elseif ~isinf(me.nextTickOut)
 					trigger = me.currentTick >= me.nextTickOut;
 				end
 				if trigger == true %we have exceeded the time (real|ticks), so time to transition or exit
@@ -464,7 +464,7 @@ classdef stateMachine < optickaCore
 		function runDemo(me)
 			oldVerbose = me.verbose;
 			oldTimeDelta = me.timeDelta;
-			me.timeDelta = 1e-6;
+			me.timeDelta = 1e-4;
 			me.verbose = true;
 			beginFcn = {@()disp('begin state: Hello there!');};
 			middleFcn = {@()disp('middle state: Still here?');};
@@ -473,21 +473,22 @@ classdef stateMachine < optickaCore
 			withinFcn = {}; %don't run anything within the state
 			transitionFcn = {@()sprintf('surprise');}; %returns a valid state name and thus triggers a transition
 			exitFcn = { @()fprintf('\t--->>exit state'); @()fprintf('\n') };
-			statesInfo = { ...
-				'name'		'next'		'time'	'entryFcn'	'withinFcn'	'transitionFcn'	'exitFcn'; ...
-				'begin'		'middle'	2		beginFcn	withinFcn	{}				exitFcn; ...
-				'middle'	'end'		2		middleFcn	withinFcn	transitionFcn	exitFcn; ...
-				'end'		''			2		endFcn		withinFcn	{}				exitFcn; ...
-				'surprise'	'end'		2		surpriseFcn	withinFcn	{}				exitFcn; ...
-				};
+			statesInfo = {
+				'name'		'next'		'time'	'entryFcn'	'withinFcn'	'transitionFcn'	'exitFcn';
+				'begin'		'middle'	2		beginFcn	withinFcn	{}				exitFcn;
+				'middle'	'end'		2		middleFcn	withinFcn	transitionFcn	exitFcn;
+				'end'		''			2		endFcn		withinFcn	{}				exitFcn;
+				'surprise'	'end'		2		surpriseFcn	withinFcn	{}				exitFcn;
+			};
 			addStates(me,statesInfo);
 			disp('>--------------------------------------------------')
 			disp(' The demo will run the following states settings:  ')
 			disp(statesInfo)
 			disp('>--------------------------------------------------')
-			me.waitFcn(1);
+			me.waitFcn(0.5);
 			run(me);
-			stateMachine.plotLogs(me.log);
+			me.waitFcn(0.5);
+			me.showLog();
 			disp('>--------------------------------------------------')
 			disp(' Demo finished, you can run the reset() method to ');
 			disp(' cleanup this object...')

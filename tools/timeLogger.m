@@ -1,7 +1,7 @@
 classdef timeLogger < optickaCore
-	%TIMELOG Simple class used to store the timing data from an experiment
-	%   timeLogger stores timing data for a taskrun and optionally graphs the
-	%   result.
+	%TIMELOGGER Simple class used to store the timing data from an experiment
+	%  timeLogger stores timing data for a taskrun and optionally graphs the
+	%  result.
 	
 	properties
 		screenLog		= struct()
@@ -15,6 +15,7 @@ classdef timeLogger < optickaCore
 		tickInfo		= 0
 		startTime		= 0
 		startRun		= 0
+		messages struct	= struct('tick',[],'vbl',[],'message',{})
 		verbose			= true
 		stimStateNames	= {'stimulus','onestep','twostep'}
 	end
@@ -25,10 +26,8 @@ classdef timeLogger < optickaCore
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		runLog			= struct()
-		trainingLog		= struct()
 		%> allowed properties passed to object upon construction
-		allowedProperties = 'stimStateName|timer'
+		allowedProperties = 'stimStateNames|timer'
 	end
 	
 	%=======================================================================
@@ -41,14 +40,14 @@ classdef timeLogger < optickaCore
 		%> @param varargin
 		%> @return
 		% ===================================================================
-		function obj=timeLogger(varargin)
+		function me=timeLogger(varargin)
 			if nargin == 0; varargin.name = 'timeLog';end
-			if nargin>0; obj.parseArgs(varargin,obj.allowedProperties); end
-			if isempty(obj.name);obj.name = 'timeLog'; end
+			if nargin>0; me.parseArgs(varargin,me.allowedProperties); end
+			if isempty(me.name);me.name = 'timeLog'; end
 			if ~exist('GetSecs','file')
-				obj.timer = @now;
+				me.timer = @now;
 			end
-			obj.screenLog.construct = obj.timer();
+			me.screenLog.construct = me.timer();
 		end
 		
 		% ===================================================================
@@ -57,12 +56,12 @@ classdef timeLogger < optickaCore
 		%> @param varargin
 		%> @return
 		% ===================================================================
-		function preAllocate(obj,n)
-			obj.vbl = zeros(1,n);
-			obj.show = obj.vbl;
-			obj.flip = obj.vbl;
-			obj.miss = obj.vbl;
-			obj.stimTime = obj.vbl;
+		function preAllocate(me,n)
+			me.vbl = zeros(1,n);
+			me.show = me.vbl;
+			me.flip = me.vbl;
+			me.miss = me.vbl;
+			me.stimTime = me.vbl;
 		end
 		
 		% ===================================================================
@@ -71,39 +70,46 @@ classdef timeLogger < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function removeEmptyValues(obj)
-			idx = find(obj.vbl == 0);
-			obj.vbl(idx) = [];
-			obj.show(idx) = [];
-			obj.flip(idx) = [];
-			obj.miss(idx) = [];
-			obj.stimTime(idx) = [];
-			index=min([length(obj.vbl) length(obj.flip) length(obj.show) length(obj.stimTime)]);
+		function removeEmptyValues(me)
+			idx = find(me.vbl == 0);
+			me.vbl(idx) = [];
+			me.show(idx) = [];
+			me.flip(idx) = [];
+			me.miss(idx) = [];
+			me.stimTime(idx) = [];
+			index=min([length(me.vbl) length(me.flip) length(me.show) length(me.stimTime)]);
 			try
-				obj.vbl=obj.vbl(1:index);
-				obj.show=obj.show(1:index);
-				obj.flip=obj.flip(1:index);
-				obj.miss=obj.miss(1:index);
-				obj.stimTime=obj.stimTime(1:index);
+				me.vbl=me.vbl(1:index);
+				me.show=me.show(1:index);
+				me.flip=me.flip(1:index);
+				me.miss=me.miss(1:index);
+				me.stimTime=me.stimTime(1:index);
 			end
 		end
 		
 		% ===================================================================
 		%> @brief print Log of the frame timings
 		% ===================================================================
-		function plot(obj)
-			obj.printRunLog();
+		function plot(me)
+			me.printRunLog();
 		end
 		
 		% ===================================================================
-		%> @brief print Log of the frame timings
+		%> @brief 
 		% ===================================================================
-		function logStim(obj, name, tick)
-			if contains(name, obj.stimStateNames)
-				obj.stimTime(tick) = 1;
+		function logStim(me, name, tick)
+			if contains(name, me.stimStateNames)
+				me.stimTime(tick) = 1;
 			else
-				obj.stimTime(tick) = 0;
+				me.stimTime(tick) = 0;
 			end
+		end
+		
+		% ===================================================================
+		%> @brief 
+		% ===================================================================
+		function addMessage(me, tick, message)
+			
 		end
 		
 		% ===================================================================
@@ -112,24 +118,24 @@ classdef timeLogger < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function printRunLog(obj)
-			if length(obj.vbl) <= 5
+		function printRunLog(me)
+			if length(me.vbl) <= 5
 				disp('No timing data available...')
 				return
 			end
 			
-			removeEmptyValues(obj)
+			removeEmptyValues(me)
 			
-			vbl=obj.vbl.*1000; %#ok<*PROP>
-			show=obj.show.*1000;
-			flip=obj.flip.*1000; 
-			miss=obj.miss;
-			stimTime=obj.stimTime;
+			vbl=me.vbl.*1000; %#ok<*PROP>
+			show=me.show.*1000;
+			flip=me.flip.*1000; 
+			miss=me.miss;
+			stimTime=me.stimTime;
 			
-			calculateMisses(obj,miss,stimTime)
+			calculateMisses(me,miss,stimTime)
 			
 			ssz = get(0,'ScreenSize');
-			figure('Name',obj.name,'NumberTitle','off','Color',[1 1 1],...
+			figure('Name',me.name,'NumberTitle','off','Color',[1 1 1],...
 				'Position', [10 1 round(ssz(3)/3) ssz(4)]);
 			tl = tiledlayout(3,1,'TileSpacing','compact','Padding','compact');
 			
@@ -147,11 +153,11 @@ classdef timeLogger < optickaCore
 			plot(stimTime(2:end)*100,'k-')
 			hold off
 			legend('VBL','Show','Flip','Stim ON')
-			[m,e]=obj.stderr(diff(vbl));
+			[m,e]=me.stderr(diff(vbl));
 			t=sprintf('VBL mean=%.3f ± %.3f s.e.', m, e);
-			[m,e]=obj.stderr(diff(show));
+			[m,e]=me.stderr(diff(show));
 			t=[t sprintf(' | Show mean=%.3f ± %.3f', m, e)];
-			[m,e]=obj.stderr(diff(flip));
+			[m,e]=me.stderr(diff(flip));
 			t=[t sprintf(' | Flip mean=%.3f ± %.3f', m, e)];
 			title(t)
 			xlabel('Frame number (difference between frames)');
@@ -167,11 +173,11 @@ classdef timeLogger < optickaCore
 			plot(x,stimTime-0.5,'k')
 			legend('Show-VBL','Show-Flip','VBL-Flip','Simulus ON/OFF');
 			hold off
-			[m,e]=obj.stderr(show-vbl);
+			[m,e]=me.stderr(show-vbl);
 			t=sprintf('Show-VBL=%.3f ± %.3f', m, e);
-			[m,e]=obj.stderr(show-flip);
+			[m,e]=me.stderr(show-flip);
 			t=[t sprintf(' | Show-Flip=%.3f ± %.3f', m, e)];
-			[m,e]=obj.stderr(vbl-flip);
+			[m,e]=me.stderr(vbl-flip);
 			t=[t sprintf(' | VBL-Flip=%.3f ± %.3f', m, e)];
 			title(t);
 			xlabel('Frame number');
@@ -182,10 +188,10 @@ classdef timeLogger < optickaCore
 			hold on
 			miss(miss > 0.05) = 0.05;
 			plot(miss,'k.-');
-			plot(obj.missImportant,'ro','MarkerFaceColor',[1 0 0]);
+			plot(me.missImportant,'ro','MarkerFaceColor',[1 0 0]);
 			plot(stimTime/30,'k','linewidth',1);
 			hold off
-			title(['Missed frames = ' num2str(obj.nMissed) ' (RED > 0 means missed frame)']);
+			title(['Missed frames = ' num2str(me.nMissed) ' (RED > 0 means missed frame)']);
 			xlabel('Frame number');
 			ylabel('Miss Value');
 			box on; grid on; grid minor;
@@ -199,17 +205,17 @@ classdef timeLogger < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function calculateMisses(obj,miss,stimTime)
-			removeEmptyValues(obj)
+		function calculateMisses(me,miss,stimTime)
+			removeEmptyValues(me)
 			if nargin == 1
-				miss = obj.miss;
-				stimTime = obj.stimTime;
+				miss = me.miss;
+				stimTime = me.stimTime;
 			end
-			obj.missImportant = miss;
-			obj.missImportant(obj.missImportant <= 0) = -inf;
-			obj.missImportant(stimTime < 1) = -inf;
-			obj.missImportant(1) = -inf; %ignore first frame
-			obj.nMissed = length(find(obj.missImportant > 0));
+			me.missImportant = miss;
+			me.missImportant(me.missImportant <= 0) = -inf;
+			me.missImportant(stimTime < 1) = -inf;
+			me.missImportant(1) = -inf; %ignore first frame
+			me.nMissed = length(find(me.missImportant > 0));
 		end
 	end %---END PUBLIC METHODS---%
 	
@@ -223,7 +229,7 @@ classdef timeLogger < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function [avg,err] = stderr(obj,data)
+		function [avg,err] = stderr(me,data)
 			avg=mean(data);
 			err=std(data);
 			err=sqrt(err.^2/length(data));

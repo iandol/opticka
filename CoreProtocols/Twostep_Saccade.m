@@ -4,32 +4,47 @@
 %> Objects provide many methods you can run, like sending triggers, showing
 %> stimuli, controlling the eyetracker etc.
 %
-%> The following class objects are already loaded and available to use: 
+%> This state file is loaded by the runExperiment class. runExperiment
+%> initialises other classes that are used to control the experiment. The
+%> following class objects are already loaded and available to use:
 %
-%> me = runExperiment object
-%> io = digital I/O to recording system
-%> s = screenManager
-%> aM = audioManager
-%> sM = State Machine
-%> eT = eyetracker manager
-%> task  = task sequence (taskSequence class)
-%> rM = Reward Manager (LabJack or Arduino TTL trigger to reward system/Magstim)
-%> bR = behavioural record plot (on screen GUI during task run)
-%> stims = our list of stimuli
-%> tS = general struct to hold variables for this run, will be saved as part of the data
+%> me		= runExperiment object
+%> s		= screenManager
+%> sM		= State Machine
+%> eT		= eyetracker manager
+%> task		= task sequence (taskSequence class)
+%> stims	= our list of stimuli
+%> io		= digital I/O to recording system
+%> aM		= audioManager
+%> rM		= Reward Manager (LabJack or Arduino TTL trigger to reward system/Magstim)
+%> bR		= behavioural record plot (on screen GUI of trial performance during task run)
+%> tL		= timeLog that records the timing of experiment
+%> tS		= general struct to hold variables for this run, will be saved as part of the data
 
 %==================================================================
 %---------------------------TASK CONFIG----------------------------
-tS.includeErrors			= false; %do we update the trial number even for incorrect saccades, if true then we call updateTask for both correct and incorrect, otherwise we only call updateTask() for correct responses
-% we use taskSequence to randomise which state to switch to (independent trial-level factor). The idea is we
-% we call @()updateNextState(me,'trial') in the prefixation state; this sets
-% one of these two trialVar values as the next state. The fixateOS and fixateTS
-% states will then call onestep or twostep stimulus state. Therefore we can
+%do we update the trial number even for incorrect saccades, if true then we
+%call updateTask for both correct and incorrect, otherwise we only call
+%updateTask() for correct responses
+tS.includeErrors			= false; 
+% we use taskSequence to randomise which state to switch to (independent
+% trial-level factor). The idea is we we call
+% @()updateNextState(me,'trial') in the prefixation state; this sets one of
+% these two trialVar.values as the next state. The fixateOS and fixateTS
+% states will then call onestep or twostep stimulus states. Therefore we can
 % call different experiment structures based on this trial-level factor.
 task.trialVar.values		= {'fixateOS','fixateTS'};
 task.trialVar.probability	= [0.6 0.4];
 task.trialVar.comment		= 'one or twostep trial based on 60:40 probability';
+
 tL.stimStateNames			= {'onestep','twostep'};
+
+%==================================================================
+%----------------------Staircase manager---------------------------
+scopts = struct('up',1,'down',3,'StepSizeDown',0.05,...
+					'StepSizeUp',0.05,'stopcriterion','trials',...
+					'stoprule',50,'startvalue',0.3);
+task.staircase = staircaseManager('udsettings',{scopts});
 
 %==================================================================
 %----------------------General Settings----------------------------
@@ -62,7 +77,7 @@ tS.firstFixRadius			= 3; % radius in degrees
 tS.strict					= true; % do we forbid eye to enter-exit-reenter fixation window?
 tS.exclusionRadius			= 5; % radius of the exclusion zone...
 tS.targetFixInit			= 3; % time to find the target
-tS.targetFixTime			= 0.3; % to to maintain fixation on target 
+tS.targetFixTime			= 0.25; % to to maintain fixation on target 
 tS.targetRadius				= 6; %radius to fix within.
 me.lastXPosition			= tS.fixX;
 me.lastYPosition			= tS.fixY;
@@ -111,21 +126,21 @@ bR.correctStateName				= '^correct';
 bR.breakStateName				= '^(breakfix|incorrect)';
 
 %==================================================================
-%-------------------randomise stimulus variables every trial?-----------
-% if you want to have some randomisation of stimuls variables without
-% using taskSequence task, you can uncomment this and runExperiment can
-% use this structure to change e.g. X or Y position, size, angle
-% see metaStimulus for more details. Remember this will not be "Saved" for
-% later use, if you want to do controlled methods of constants experiments
-% use taskSequence to define proper randomised and balanced variable
-% sets and triggers to send to recording equipment etc...
+%-----simplistic randomisation of stimulus variables every trial?-----
+% if you want to have some randomisation of stimuls variables without using
+% taskSequence task (e.g. for training), you can uncomment this and
+% runExperiment can use this structure to change e.g. X or Y position,
+% size, angle see metaStimulus for more details. Remember this will not be
+% "Saved" for later use, if you want to do controlled methods of constants
+% experiments use taskSequence to define proper randomised and balanced
+% variable sets and triggers to send to recording equipment etc...
 %
 % stims.choice				= [];
-% n								= 1;
-% in(n).name					= 'xyPosition';
-% in(n).values					= [6 6; 6 -6; -6 6; -6 -6; -6 0; 6 0];
-% in(n).stimuli					= 1;
-% in(n).offset					= [];
+% n							= 1;
+% in(n).name				= 'xyPosition';
+% in(n).values				= [6 6; 6 -6; -6 6; -6 -6; -6 0; 6 0];
+% in(n).stimuli				= 1;
+% in(n).offset				= [];
 % stims.stimulusTable		= in;
 stims.choice 				= [];
 stims.stimulusTable 		= [];
@@ -147,44 +162,52 @@ stims.setChoice = 1;
 hide(stims);
 
 %==================================================================
-%which stimulus in the list is used for a fixation target? For this protocol it means
-%the subject must fixate this stimulus (the saccade target is #1 in the list) to get the
-%reward. Also which stimulus to set an exclusion zone around (where a
-%saccade into this area causes an immediate break fixation).
+% which stimulus in the list is used for a fixation target? For this
+% protocol it means the subject must fixate this stimulus (the saccade
+% target is #1 in the list) to get the reward. Also which stimulus to set
+% an exclusion zone around (where a saccade into this area causes an
+% immediate break fixation).
 stims.fixationChoice = [1 2];
 stims.exclusionChoice = [];
 
 %==================================================================
-% N x 2 cell array of regexpi strings, list to skip the current -> next state's exit functions; for example
-% skipExitStates = {'fixate','incorrect|breakfix'}; means that if the currentstate is
-% 'fixate' and the next state is either incorrect OR breakfix, then skip the FIXATE exit
-% state. Add multiple rows for skipping multiple state's exit states.
+% N x 2 cell array of regexpi strings, list to skip the current -> next
+% state's exit functions; for example skipExitStates =
+% {'fixate','incorrect|breakfix'}; means that if the currentstate is
+% 'fixate' and the next state is either incorrect OR breakfix, then skip
+% the FIXATE exit state. Add multiple rows for skipping multiple state's
+% exit states.
 sM.skipExitStates			= {'fixate','incorrect|breakfix'};
 
-%===================================================================
-%-----------------State Machine State Functions---------------------
-% each cell {array} holds a set of anonymous function handles which are executed by the
-% state machine to control the experiment. The state machine can run sets
-% at entry, during, to trigger a transition, and at exit. Remember these
-% {sets} need to access the objects that are available within the
-% runExperiment context (see top of file). You can also add global
-% variables/objects then use these. The values entered here are set on
-% load, if you want up-to-date values then you need to use methods/function
-% wrappers to retrieve/set them.
 
+%===================================================================
+%===================================================================
+%===================================================================
+%-----------------State Machine Task Functions---------------------
+% Each cell {array} holds a set of anonymous function handles which are
+% executed by the state machine to control the experiment. The state
+% machine can run sets at entry ['entryFcn'], during ['withinFcn'], to
+% trigger a transition jump to another state ['transitionFcn'], and at exit
+% ['exitFcn'. Remember these {sets} need to access the objects that are
+% available within the runExperiment context (see top of file). You can
+% also add global variables/objects then use these. The values entered here
+% are set on load, if you want up-to-date values then you need to use
+% methods/function wrappers to retrieve/set them.
+
+%====================================================PAUSE
 %pause entry
 pauseEntryFcn = { 
 	@()hide(stims);
 	@()drawBackground(s); %blank the subject display
 	@()drawText(s,'PAUSED, press [p] to resume...');
 	@()flip(s);
-	@()fprintf('\n\nPAUSED, press [p] to resume...\n\n');
 	@()trackerClearScreen(eT); % blank the eyelink screen
 	@()trackerDrawText(eT,'PAUSED, press [p] to resume...');
 	@()trackerMessage(eT,'TRIAL_RESULT -100'); %store message in EDF
 	@()stopRecording(eT, true); %stop recording eye position data
 	@()disableFlip(me); % no need to flip the PTB screen
 	@()needEyeSample(me,false); % no need to check eye position
+	@()fprintf('\n\nPAUSED, press [p] to resume...\n\n'); 
 };
 
 %pause exit
@@ -192,6 +215,7 @@ pauseExitFcn = {
 	@()startRecording(eT, true); %start recording eye position data again
 }; 
 
+%====================================================PREFIXATION
 prefixEntryFcn = { 
 	@()enableFlip(me); 
 	@()hide(stims);
@@ -199,8 +223,11 @@ prefixEntryFcn = {
 	@()edit(stims,3,'alpha2Out',1);
 	@()resetFixationHistory(eT); % reset the recent eye position history
 	@()resetExclusionZones(eT); % reset any exclusion zones on eyetracker
-	@()updateFixationValues(eT,tS.fixX,tS.fixY,[],tS.firstFixTime); %reset fixation window
-	@()updateNextState(me,'trial'); % we use the trial/block factor in task to select which state to transition to next
+	@()updateFixationValues(eT,tS.fixX,tS.fixY,[],tS.firstFixTime); %reset fixation window to initial values
+	% updateNextState method is critical, it reads the independent trial factor in
+	% taskSequence to select state to transition to next. This sets
+	% stateMachine.tempNextState to override the state table's default next field.
+	@()updateNextState(me,'trial'); 
 };
 
 prefixFcn = {
@@ -217,7 +244,7 @@ prefixExitFcn = {
 	@()updateNextState(me,'trial'); % we use the trial/block factor in task to select which state to transition to next
 };
 
-%====================================================ONESTEP
+%====================================================ONESTEP FIXATION + STIMULATION
 
 %fixate entry
 fixOSEntryFcn = { 
@@ -232,29 +259,30 @@ fixOSFcn = {
 
 %test we are fixated for a certain length of time
 inFixOSFcn = { 
-	@()testSearchHoldFixation(eT,'onestep','incorrect'); %useTemp is a special state which will use the state assigned by updateNextState
+	% if subject found and held fixation, go to 'onestep' state, otherwise 'incorrect'
+	@()testSearchHoldFixation(eT,'onestep','incorrect');
 };
 
 %exit fixation phase
-fixOSExitFcn = { 
+fixOSExitFcn = {
+	@()resetTicks(stims);
 	@()show(stims, 1);
 	@()hide(stims, 2);
 	@()edit(stims,1,'offTime',0.1);
-	@()set(stims,'fixationChoice',1);
+	@()set(stims,'fixationChoice',1);  % choose stim 1 as fixation target
 	@()updateFixationTarget(me, tS.useTask, tS.targetFixInit, ...
-	tS.targetFixTime, tS.targetRadius, false);
-	@()resetTicks(stims);
+		tS.targetFixTime, tS.targetRadius, false);
 	@()trackerMessage(eT,'END_FIX');
 }; 
 
 %what to run when we enter the stim presentation state
-osEntryFcn = { 
+osEntryFcn = {
 	@()doStrobe(me,true);
 	@()logRun(me,'ONESTEP'); %fprintf current trial info to command window
 };
 
 %what to run when we are showing stimuli
-osFcn =  { 
+osFcn =  {
 	@()draw(stims, 1);
 	@()drawText(s,'ONESTEP');
 	@()animate(stims); % animate stimuli for subsequent draw
@@ -262,24 +290,21 @@ osFcn =  {
 
 %test we are maintaining fixation
 maintainFixFcn = {
-	@()testSearchHoldFixation(eT,'correct','breakfix'); % tests finding and maintaining fixation
+	% if subject found and held fixation, go to 'onestep' state, otherwise 'incorrect'
+	@()testSearchHoldFixation(eT,'correct','breakfix'); 
 };
 
 %as we exit stim presentation state
-sExitFcn = { 
+sExitFcn = {
 	@()setStrobeValue(me,255); 
 	@()doStrobe(me,true);
 };
 
-%====================================================TWOSTEP
+%====================================================TWOSTEP FIXATION + STIMULATION
 
 %fixate entry
 fixTSEntryFcn = { 
-	@()updateNextState(me,'trial'); % we use the trial/block factor in task to select which state to transition to next
 	@()show(stims, 3);
-	@()edit(stims,1,'offTime',0.1);
-	@()edit(stims,2,'offTime',0.3);
-	@()edit(stims,2,'delayTime',0.2);
 	@()logRun(me,'INITFIXTwoStep'); %fprintf current trial info to command window
 };
 
@@ -290,17 +315,21 @@ fixTSFcn = {
 
 %test we are fixated for a certain length of time
 inFixTSFcn = { 
-	@()testSearchHoldFixation(eT,'twostep','incorrect'); %useTemp is a special state which will use the state assigned by updateNextState
+	% if subject found and held fixation, go to 'twostep' state, otherwise 'incorrect'
+	@()testSearchHoldFixation(eT,'twostep','incorrect'); 
 };
 
 %exit fixation phase
 fixTSExitFcn = { 
 	@()resetTicks(stims);
-	@()trackerMessage(eT,'END_FIX');
-	@()set(stims,'fixationChoice',2);
-	@()updateFixationTarget(me, tS.useTask, tS.targetFixInit, ...
-	tS.targetFixTime, tS.targetRadius, false);
+	@()edit(stims,1,'offTime',0.1);
+	@()edit(stims,2,'delayTime',0.1);
+	@()edit(stims,2,'offTime',0.2);
 	@()show(stims);
+	@()set(stims,'fixationChoice',2); % choose stim 2 as fixation target
+	@()updateFixationTarget(me, tS.useTask, tS.targetFixInit, ...
+		tS.targetFixTime, tS.targetRadius, false);
+	@()trackerMessage(eT,'END_FIX');
 }; 
 
 %what to run when we enter the stim presentation state
@@ -403,34 +432,56 @@ exclEntryFcn = {
 	@()logRun(me,'EXCLUSION'); %fprintf current trial info
 };
 
-%calibration function
+%====================================================EXPERIMENTAL CONTROL
+
+%calibration function, can only be triggered from keyboard
 calibrateFcn = { 
-	@()rstop(io);
+	@()drawBackground(s); %blank the display
+	@()flip(s);
+	@()trackerMessage(eT,'TRIAL_RESULT -100');
+	@()stopRecording(eT, true); % stop eyelink recording data
+	@()setOffline(eT); % set eyelink offline
 	@()trackerSetup(eT);  %enter tracker calibrate/validate setup mode
 };
 
-%--------------------drift correction function
+%--------------------drift correction function, can only be triggered from keyboard
 driftFcn = {
 	@()drawBackground(s); %blank the display
-	@()stopRecording(eT); % stop eyelink recording data
+	@()flip(s);
+	@()trackerMessage(eT,'TRIAL_RESULT -100');
+	@()stopRecording(eT, true); % stop eyelink recording data
 	@()setOffline(eT); % set eyelink offline
 	@()driftCorrection(eT) % enter drift correct
 };
 
-%debug override
-overrideFcn = { @()keyOverride(me) }; %a special mode which enters a matlab debug state so we can manually edit object values
+%debug override, can only be triggered from keyboard
+overrideFcn = { @()keyOverride(me) }; %a special mode which enters a matlab debug state so we can manually inspect object values
 
-%screenflash
-flashFcn = { @()flashScreen(s, 0.2) }; % fullscreen flash mode for visual background activity detection
+%screenflash, can only be triggered from keyboard
+flashFcn = { 
+	@()drawBackground(s); %blank the display
+	@()flip(s);
+	@()trackerMessage(eT,'TRIAL_RESULT -100');
+	@()stopRecording(eT, true); % stop eyelink recording data
+	@()setOffline(eT); % set eyelink offline
+	@()flashScreen(s, 0.2) % fullscreen flash mode for visual background activity detection
+};
 
-%magstim
+%magstim, can only be triggered from keyboard
 magstimFcn = { 
 	@()drawBackground(s);
 	@()stimulate(mS); % run the magstim
 };
 
 %show 1deg size grid
-gridFcn = {@()drawGrid(s)};
+gridFcn = { 
+	@()drawBackground(s); %blank the display
+	@()flip(s);
+	@()trackerMessage(eT,'TRIAL_RESULT -100');
+	@()stopRecording(eT, true); % stop eyelink recording data
+	@()setOffline(eT); % set eyelink offline
+	@()drawGrid(s);
+};
 
 %----------------------State Machine Table-------------------------
 disp('================>> Building state info file <<================')
@@ -438,7 +489,7 @@ disp('================>> Building state info file <<================')
 stateInfoTmp = {
 'name'      'next'		'time'  'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn';
 'pause'		'prefix'	inf		pauseEntryFcn	[]				[]				pauseExitFcn;
-'prefix'	'UseTemp'	0.5		prefixEntryFcn	prefixFcn		[]				prefixExitFcn;
+'prefix'	'UseTemp'	2		prefixEntryFcn	prefixFcn		[]				prefixExitFcn;
 'fixateOS'	'incorrect'	5	 	fixOSEntryFcn	fixOSFcn		inFixOSFcn		fixOSExitFcn;
 'fixateTS'	'incorrect'	5	 	fixTSEntryFcn	fixTSFcn		inFixTSFcn		fixTSExitFcn;
 'onestep'	'incorrect'	5		osEntryFcn		osFcn			maintainFixFcn	sExitFcn;

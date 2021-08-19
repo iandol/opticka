@@ -1264,7 +1264,7 @@ classdef runExperiment < optickaCore
 		
 		% ===================================================================
 		%> @brief updateNextState
-		%> taskSequence can have a trail factor, and we can set these to
+		%> taskSequence can generate a trial factor, and we can set these to
 		%> the name of a state in the stateMachine. This means we can choose
 		%> a state based on the trial factor in taskSequence. This sets
 		%> stateMacine.tempNextState to override the state table next field.
@@ -1344,7 +1344,6 @@ classdef runExperiment < optickaCore
 					
 					offsetix = me.task.nVar(i).offsetstimulus;
 					offsetvalue = me.task.nVar(i).offsetvalue;
-
 					if ~isempty(offsetix)
 						if ischar(offsetvalue)
 							mtch = regexpi(offsetvalue,'^(?<name>[^\(\s\d]*)(\(?)(?<num>\d*)(\)?)','names');
@@ -1358,6 +1357,22 @@ classdef runExperiment < optickaCore
 										else
 											val(num) = -value(num);
 										end
+									case {'yvar'}
+										if doXY && ~isnan(num) && ~isempty(num) && length(value)==2
+											if rand < 0.5
+												val = [value(1) value(2)-num];
+											else
+												val = [value(1) value(2)+num];
+											end
+										end
+									case {'xvar'}
+										if doXY && ~isnan(num) && ~isempty(num) && length(value)==2
+											if rand< 0.5
+												val = [value(1)-num value(2)];
+											else
+												val = [value(1)+num value(2)];
+											end
+										end
 									case {'yoffset'}
 										if doXY && ~isnan(num) && ~isempty(num) && length(value)==2
 											val = [value(1) value(2)+num];
@@ -1369,10 +1384,10 @@ classdef runExperiment < optickaCore
 									otherwise
 										val = -value;
 								end
-
 							else
 								val = value;
 							end
+							%t = [t ' <MOD S:' num2str(offsetix,'%g ') ': ' num2str(val,'%g ') '>'];
 						else
 							val = value+offsetvalue;
 						end
@@ -1380,19 +1395,20 @@ classdef runExperiment < optickaCore
 						[ovalueList{1,1:size(offsetix,2)}] = deal(val);
 						valueList = [valueList{:} ovalueList];
 					end
-
-					a = 1;
-					for j = ix %loop through our stimuli references for this variable
-						t = [t sprintf('S%i: %s: %s ',j,name,num2str(valueList{a}))];
-						if ~doXY
-							me.stimuli{j}.(name)=valueList{a};
-						else
-							me.stimuli{j}.xPositionOut=valueList{a}(1);
-							me.stimuli{j}.yPositionOut=valueList{a}(2);
-						end
-						a = a + 1;
-					end
 				end
+				
+				a = 1;
+				for j = ix %loop through our stimuli references for this variable
+					t = [t sprintf('S%i: %s: %s ',j,name,num2str(valueList{a}, '%g '))];
+					if ~doXY
+						me.stimuli{j}.(name)=valueList{a};
+					else
+						me.stimuli{j}.xPositionOut=valueList{a}(1);
+						me.stimuli{j}.yPositionOut=valueList{a}(2);
+					end
+					a = a + 1;
+				end
+					
 				me.currentInfo = t;
 				me.behaviouralRecord.info = t;
 				me.lastIndex = index;
@@ -1898,6 +1914,18 @@ classdef runExperiment < optickaCore
 				switch rchar
 					case 'q' %quit
 						me.stopTask = true;
+					case 'p' %pause the display
+						if tS.keyTicks > tS.keyHold
+							if strcmpi(me.stateMachine.currentState.name, 'pause')
+								forceTransition(me.stateMachine, me.stateMachine.currentState.next);
+							else
+								flip(me.screen,[],[],2);flip(me.screen,[],[],2)
+								forceTransition(me.stateMachine, 'pause');
+								tS.pauseToggle = tS.pauseToggle + 1;
+							end
+							FlushEvents();
+							tS.keyHold = tS.keyTicks + fInc;
+						end
 					case {'UpArrow','up'}
 						if tS.keyTicks > tS.keyHold
 							if ~isempty(me.stimuli.controlTable)
@@ -2183,18 +2211,6 @@ classdef runExperiment < optickaCore
 							me.eyeTracker.fixation.radius = me.eyeTracker.fixation.radius + 0.1;
 							tS.firstFixRadius = me.eyeTracker.fixation.radius;
 							fprintf('===>>> FIXATION RADIUS: %g\n',me.eyeTracker.fixation.radius)
-							tS.keyHold = tS.keyTicks + fInc;
-						end
-					case 'p' %pause the display
-						if tS.keyTicks > tS.keyHold
-							if strcmpi(me.stateMachine.currentState.name, 'pause')
-								forceTransition(me.stateMachine, me.stateMachine.currentState.next);
-							else
-								flip(me.screen,[],[],2);
-								forceTransition(me.stateMachine, 'pause');
-								tS.pauseToggle = tS.pauseToggle + 1;
-							end
-							FlushEvents();
 							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case 's'

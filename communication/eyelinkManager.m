@@ -514,7 +514,7 @@ classdef eyelinkManager < optickaCore
 				Screen('gluDisk',me.screen.win,[1 0 1 0.5],x,y,8);
 				Screen('Flip',me.screen.win);
 				WaitSecs('YieldSecs',0.2);
-				success = EyelinkDoDriftCorrect(me.defaults, round(x), round(y), 1, 1);
+				success = EyelinkDoDriftCorrection(me.defaults, round(x), round(y), 1, 1);
 				[result,out] = Eyelink('CalMessage');
 				fprintf('DriftCorrect @ %.2f/%.2f px (%.2f/%.2f deg): result = %i msg = %s\n',...
 					x,y, me.fixation.X, me.fixation.Y,result,out);
