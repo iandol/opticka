@@ -207,13 +207,17 @@ classdef screenManager < optickaCore
 			%get the gammatable and dac information
 			sv.resetGamma		= false;
 			try
-				[sv.originalGamma,sv.dacBits,sv.lutSize]=Screen('ReadNormalizedGammaTable', me.screen);
+				[sv.originalGamma, sv.dacBits, sv.lutSize]=Screen('ReadNormalizedGammaTable', me.screen);
 				sv.linearGamma  = repmat(linspace(0,1,sv.lutSize)',1,3);
-				sv.gammaTable	= sv.linearGamma;
+				sv.gammaTable	= sv.originalGamma;
 			catch
 				sv.gammaTable	= [];
 				sv.dacBits		= [];
-				sv.lutSize		= 256;
+				if IsWin
+					sv.lutSize		= 256;
+				else
+					sv.lutSize		= 1024;
+				end
 			end
 			
 			%get screen dimensions
@@ -476,6 +480,11 @@ classdef screenManager < optickaCore
                 
                 me.photoDiodeRect = [me.winRect(3)-45 0 me.winRect(3) 45];
 				
+				
+				[sv.originalGamma, sv.dacBits, sv.lutSize]=Screen('ReadNormalizedGammaTable', me.win);
+				sv.linearGamma  = repmat(linspace(0,1,sv.lutSize)',1,3);
+				sv.gammaTable	= sv.originalGamma;
+				
 				if me.hideFlash == true && isempty(me.gammaTable)
 					Screen('LoadNormalizedGammaTable', me.screen, sv.linearGamma);
 					sv.resetGamma = false;
@@ -489,9 +498,15 @@ classdef screenManager < optickaCore
 							gTmp = [me.gammaTable.gammaTable{choice,2:4}];
 						end
 					else
-						gTmp = repmat(me.gammaTable.gammaTable{choice,1},1,3);
+						if isprop(me.gammaTable,'finalCLUT') && ~isempty(me.gammaTable.finalCLUT)
+							gTmp = me.gammaTable.finalCLUT;
+						else
+							gTmp = repmat(me.gammaTable.gammaTable{choice,1},1,3);
+						end
 					end
-					Screen('LoadNormalizedGammaTable', me.screen, gTmp);
+					sv.gammaTable = gTmp;
+					[sv.oldCLUT, success] = Screen('LoadNormalizedGammaTable', me.win, sv.gammaTable);
+					if success < 1;error('Cannot load gamma table!!!');end
 					fprintf('\n---> screenManager: SET GAMMA CORRECTION using: %s\n', me.gammaTable.modelFit{choice}.method);
 					if isprop(me.gammaTable,'correctColour') && me.gammaTable.correctColour == true
 						fprintf('---> screenManager: GAMMA CORRECTION used independent R, G & B Correction \n');
@@ -682,7 +697,7 @@ classdef screenManager < optickaCore
 				me.audio.reset();
 			end
 			if me.screenVals.resetGamma && isfield(me.screenVals,'originalGamma') && ~isempty(me.screenVals.originalGamma)
-				Screen('LoadNormalizedGammaTable', me.screen, me.screenVals.originalGamma);
+				Screen('LoadNormalizedGammaTable', me.win, me.screenVals.originalGamma);
 				fprintf('\n---> screenManager: REVERT GAMMA TABLES\n');
 			end
 			if me.isInAsync 

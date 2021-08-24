@@ -945,7 +945,7 @@ classdef calibrateLuminance < handle
 		end
 		
 		% ===================================================================
-		%> @brief getCCalxyY
+		%> @brief getSpectroCALValues
 		%>	Uses the SpectroCAL2 to return the current xyY values
 		%>
 		% ===================================================================
@@ -971,6 +971,11 @@ classdef calibrateLuminance < handle
 		%===============reset======================%
 		function spectroCalLaser(me,state)
 			if ~exist('state','var') || isempty(state); state = false; end
+			if ischar(state) && strcmpi(state,'on')
+				state = true;
+			else
+				state = false;
+			end
 			if ~isa(me.spCAL,'serial') || isempty(me.spCAL) || strcmp(me.spCAL.Status,'closed')
 				doClose = true;
 				me.openSpectroCAL();
