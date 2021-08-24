@@ -673,11 +673,13 @@ classdef calibrateLuminance < handle
 		%>	This plots the calibration results
 		%>
 		% ===================================================================
-		function plot(me)
+		function plot(me,full)
 			if ~me.isAnalyzed
 				disp('You must use the run() then analyse() methods first...')
 				return;
 			end
+			
+			if ~exist('full','var') || isempty(full); full = false; end
 			
 			if me.useSpectroCal2;me.closeSpectroCAL();end %just in case not closed yet
 			
@@ -869,7 +871,7 @@ classdef calibrateLuminance < handle
 			me.p.title(t);
 			me.p.refresh();
             cnames = {'Gray';'Red';'Green';'Blue'};
-            if me.useSpectroCal2 && ~isempty(me.spectrum) && me.testColour
+            if full && me.useSpectroCal2 && ~isempty(me.spectrum) && me.testColour
                 figure;figpos(1,[900 900])
                 for i = 1:length(me.spectrum)
                     subplot(2,2,i);
@@ -881,7 +883,7 @@ classdef calibrateLuminance < handle
                     axis tight; grid on; box on;
                 end
             end
-            if me.useSpectroCal2 && ~isempty(me.spectrumTest) && me.testColour
+            if full && me.useSpectroCal2 && ~isempty(me.spectrumTest) && me.testColour
                 figure;figpos(1,[900 900]);
                 for i = 1:length(me.spectrumTest)
                     subplot(2,2,i);

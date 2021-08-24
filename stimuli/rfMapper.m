@@ -22,6 +22,8 @@ classdef rfMapper < barStimulus
 		srcMode = 'GL_SRC_ALPHA'
 		%> GL_ONE % dst mode
 		dstMode = 'GL_ONE_MINUS_SRC_ALPHA'
+		%> use eyetracking loop
+		useEyetracker = false
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -86,6 +88,8 @@ classdef rfMapper < barStimulus
 				elseif isa(rE,'screenManager')
 					me.sM = rE;
 				end
+			else
+				
 			end
 			
 			%me.sM.windowed = [];
@@ -155,7 +159,7 @@ classdef rfMapper < barStimulus
 					t=[t sprintf('| Texture = %g',me.textureIndex)];
                     t=[t sprintf('| Buttons: %i\t',me.buttons)];
 					if ischar(me.rchar); t=[t sprintf(' | Char: %s ',me.rchar)]; end
-					Screen('DrawText', me.sM.win, t, 5, 5, [1 1 0]);
+					Screen('DrawText', me.sM.win, t, 5, 5, [0.6 0.3 0]);
 					
 					%drawCross(me,size,colour,x,y,lineWidth,showDisk,alpha)
 					me.sM.drawCross(0.75,[],[],[],[],[],0.5);

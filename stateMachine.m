@@ -542,7 +542,7 @@ classdef stateMachine < optickaCore
 			if isState
 				if ~isempty(me.skipExitStates)
 					for i=1:size(me.skipExitStates,1)
-						if strcmpi(me.currentName,me.skipExitStates{i,1}) && any(strcmpi(nextName,me.skipExitStates{i,2}))
+						if contains(me.currentName,me.skipExitStates{i,1}) && contains(nextName,me.skipExitStates{i,2})
 							me.currentState.skipExitFcn = true;
 						end
 						if me.currentState.skipExitFcn; break; end

@@ -92,7 +92,7 @@ classdef screenManager < optickaCore
 		bitDepths cell = {''; 'FloatingPoint32BitIfPossible'; 'FloatingPoint32Bit';...
 			'FixedPoint16Bit'; 'FloatingPoint16Bit'; '8bit'; 'PseudoGray';...
 			'HDR'; 'Native10Bit'; 'Native11Bit'; 'Native16Bit'; 'Native16BitFloat';...
-			'EnableBits++Bits++Output'; 'EnableBits++Mono++Output'; 'EnableBits++Color++Output' }
+			'Bits++Bits++Output'; 'Bits++Mono++Output'; 'Bits++Color++Output' }
 		%> possible blend modes
 		blendModes cell = {'GL_ZERO'; 'GL_ONE'; 'GL_DST_COLOR'; 'GL_ONE_MINUS_DST_COLOR';...
 			'GL_SRC_ALPHA'; 'GL_ONE_MINUS_SRC_ALPHA'; 'GL_DST_ALPHA';...
@@ -346,7 +346,7 @@ classdef screenManager < optickaCore
 				me.isPlusPlus = screenManager.bitsCheckOpen();
 				if me.isPlusPlus
 					fprintf('\tFound Display++ ');
-					if regexpi(me.bitDepth, 'Bits++','ONCE')
+					if contains(me.bitDepth, 'Bits++')
 						if regexpi(me.bitDepth, '^Bits++','ONCE')
 							me.bitDepth = ['Enable' me.bitDepth];
 						end

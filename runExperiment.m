@@ -192,7 +192,10 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief The main run loop for MOC type experiments
+		%> @brief The main run loop for MOC type experiments - a MOC
+		%> experiment just runs trials with variables applied to stimuli in a
+		%> fixed loop, no conditional logic. Use the behavioural tasks
+		%> using the state machine for more complex experimental paradigms.
 		%>
 		%> run uses built-in loop for experiment control and runs a
 		%> methods-of-constants experiment with the settings passed to it (stimuli,task
@@ -323,7 +326,7 @@ classdef runExperiment < optickaCore
 				
 				%==================================================================%
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-				% Our main display loop
+				% Our display loop
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%==================================================================%
 				while ~me.task.taskFinished
@@ -550,7 +553,7 @@ classdef runExperiment < optickaCore
 	
 			%------initialise time logs for this run
 			me.previousInfo.taskLog		= me.taskLog;
-			me.runLog					= timeLogger();
+			me.runLog					= [];
 			me.taskLog					= timeLogger();
 			tL							= me.taskLog; %short handle to log
 			tL.name						= me.name;
@@ -757,7 +760,7 @@ classdef runExperiment < optickaCore
 
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-				% Our task display loop
+				% Our display loop
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				while me.stopTask == false
@@ -775,7 +778,7 @@ classdef runExperiment < optickaCore
 					end
 					
 					%------Check keyboard for commands
-					if tS.checkKeysDuringStimulus || isempty(regexpi(sM.currentName,tS.keyExclusionPattern,'once'))
+					if tS.checkKeysDuringStimulus || ~contains(sM.currentName,tS.keyExclusionPattern)
 						tS = checkKeys(me,tS);
 					end
 					
@@ -847,10 +850,10 @@ classdef runExperiment < optickaCore
 				end
 				
 				close(s); %screen
-				close(aM);
 				close(io);
-				close(eT); % eyelink, should save the EDF for us we've already given it our name and folder
+				close(eT); % eyetracker, should save the data for us we've already given it our name and folder
 				WaitSecs(0.25);
+				close(aM);
 				close(rM);
 				
 				fprintf('\n\n===>>> Total ticks: %g | stateMachine ticks: %g\n', tS.totalTicks, sM.totalTicks);
@@ -892,6 +895,7 @@ classdef runExperiment < optickaCore
 				
 				me.stateInfo = [];
 				if isa(me.stateMachine,'stateMachine'); me.stateMachine.reset; end
+				if isa(me.stimuli,'metaStimulus'); me.stimuli.reset; end
 				
 				clear rE tL s tS bR rM eT io sM	task
 				
@@ -1257,8 +1261,9 @@ classdef runExperiment < optickaCore
 				me.eyeTracker.isInitFail, me.eyeTracker.fixTotal);
 			end
 			for i = 1:me.stimuli.n
-				info = sprintf('%sstim%i: %i tick %i drawtick',info,i,me.stimuli{i}.tick,me.stimuli{i}.drawTick);
+				info = sprintf('%s stim:%i tick:%i drawtick:%i',info,i,me.stimuli{i}.tick,me.stimuli{i}.drawTick);
 			end
+			info = [info '\n' me.currentInfo];
 			updateTask(me.task,result,GetSecs,info); %do this before getting index
 		end
 		
@@ -1387,7 +1392,6 @@ classdef runExperiment < optickaCore
 							else
 								val = value;
 							end
-							%t = [t ' <MOD S:' num2str(offsetix,'%g ') ': ' num2str(val,'%g ') '>'];
 						else
 							val = value+offsetvalue;
 						end
