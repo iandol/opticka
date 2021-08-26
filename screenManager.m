@@ -487,6 +487,7 @@ classdef screenManager < optickaCore
 				
 				if me.hideFlash == true && isempty(me.gammaTable)
 					Screen('LoadNormalizedGammaTable', me.screen, sv.linearGamma);
+					sv.gammaTable = sv.linearGamma;
 					sv.resetGamma = false;
 				elseif ~isempty(me.gammaTable) && ~isempty(me.gammaTable.gammaTable) && (me.gammaTable.choice > 0)
 					choice = me.gammaTable.choice;
@@ -1042,8 +1043,9 @@ classdef screenManager < optickaCore
 			x = me.xCenter + (x * me.ppd_);
 			y = me.yCenter + (y * me.ppd_);
 			size = size * me.ppd_;
-			
-			Screen('gluDisk', me.win, colour, x, y, size);
+			for p = 1:length(x)
+				Screen('gluDisk', me.win, colour, x(p), y(p), size);
+			end
 		end
 		
 		% ===================================================================
@@ -1256,8 +1258,9 @@ classdef screenManager < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function drawBackground(me)
-			Screen('FillRect',me.win,me.backgroundColour,[]);
+		function drawBackground(me,background)
+			if ~exist('background','var'); background=me.backgroundColour; end
+			Screen('FillRect',me.win,background,[]);
 		end
 		
 		% ===================================================================

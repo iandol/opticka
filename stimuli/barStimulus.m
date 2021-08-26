@@ -423,7 +423,7 @@ classdef barStimulus < baseStimulus
 				bwpixels = round(me.barWidthOut*me.ppd);
 				blpixels = round(me.barHeightOut*me.ppd);
 				if bwpixels>me.screenWidth;bwpixels=me.screenWidth;end
-				if blpixels>me.screenHeight;blpixels=me.screenHeight;end
+				if blpixels>me.screenHeight;blpixels=bwpixels;end
 	
 				if ~strcmpi(me.type,'checkerboard')
 					if rem(bwpixels,2);bwpixels=bwpixels+1;end
