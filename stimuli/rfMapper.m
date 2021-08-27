@@ -344,7 +344,7 @@ classdef rfMapper < barStimulus
 				%me.xClick = unique(me.xClick);
 				%me.yClick = unique(me.yClick);
 				figure;
-				plot(me.xClick,me.yClick,'k.-.')
+				plot(me.xClick,me.yClick,'ko','MarkerFaceColor',[0 0 0])
 				xax = me.sM.winRect(3)/me.ppd;
 				xax = xax - (xax/2);
 				yax = me.sM.winRect(4)/me.ppd;
@@ -354,6 +354,7 @@ classdef rfMapper < barStimulus
 				title('Marked Positions during RF Mapping')
 				xlabel('X Position (degs)')
 				ylabel('Y Position (degs)');
+				box on; grid on; grid minor;
 			catch ME
 				rethrow ME
 			end
@@ -370,9 +371,9 @@ classdef rfMapper < barStimulus
 			if ~ishandle(me.fhandle);return;end
 			figure(me.fhandle);
 			if clear
-				plot(0,0);
+				cla;
 			else
-			plot(me.xClick(me.dStartTick:end), me.yClick(me.dStartTick:end), 'r-.');
+			plot(me.xClick(me.dStartTick:end), me.yClick(me.dStartTick:end), 'ro','MarkerFaceColor',[1 0 0]);
 			end
 		end
 		
@@ -393,6 +394,7 @@ classdef rfMapper < barStimulus
 			title('Marked Positions during RF Mapping')
 			xlabel('X Position (degs)')
 			ylabel('Y Position (degs)')
+			box on; grid on; grid minor;
 			box on
 			hold on
 		end

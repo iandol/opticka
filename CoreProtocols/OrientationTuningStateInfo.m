@@ -31,7 +31,7 @@ tS.INCORRECT 				= -5; %==the code to send eyetracker for incorrect trials
 
 %==================================================================
 %------------Debug logging to command window-----------------
-io.verbose					= true; %print out io commands for debugging
+io.verbose					= false; %print out io commands for debugging
 eT.verbose					= false; %print out eyelink commands for debugging
 rM.verbose					= false; %print out reward commands for debugging
 
@@ -44,7 +44,7 @@ tS.firstFixTime				= 0.5; % time to maintain fixation within windo
 tS.firstFixRadius			= 5; % radius in degrees
 tS.strict					= true; % do we forbid eye to enter-exit-reenter fixation window?
 tS.exclusionZone			= []; % do we add an exclusion zone where subject cannot saccade to...
-tS.stimulusFixTime			= 1.5; % time to fix on the stimulus
+tS.stimulusFixTime			= 2; % time to fix on the stimulus
 me.lastXPosition			= tS.fixX;
 me.lastYPosition			= tS.fixY;
 
@@ -221,7 +221,6 @@ correctEntryFcn = {
 	@()setOffline(eT); %set eyelink offline
 	@()needEyeSample(me,false); % no need to collect eye data until we start the next trial
 	@()hide(stims);
-	@()sendStrobe(io,250);
 	@()logRun(me,'CORRECT'); %fprintf current trial info
 };
 
@@ -232,9 +231,10 @@ correctFcn = {
 
 %--------------------when we exit the correct state
 correctExitFcn = {
+	@()sendStrobe(io,250);
 	@()updateVariables(me); %get our stimulus variable values for next trial, set strobe value too
 	@()update(stims); %update the visual stimuli ready for next trial
-	@()updateTask(me.task, CORRECT); %update our task (taskSequence)
+	@()updateTask(me.task, tS.CORRECT); %update our task (taskSequence)
 	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions
 	@()trackerClearScreen(eT); 
 	@()checkTaskEnded(me); %check if task is finished
@@ -252,7 +252,6 @@ incEntryFcn = {
 	@()stopRecording(eT);
 	@()setOffline(eT); %set eyelink offline
 	@()needEyeSample(me,false);
-	@()sendStrobe(io,251);
 	@()hide(stims);
 	@()logRun(me,'INCORRECT'); %fprintf current trial info
 }; 
@@ -264,6 +263,7 @@ incFcn = {
 
 %--------------------incorrect / break exit
 incExitFcn = { 
+	@()sendStrobe(io,251);
 	@()resetRun(task);... %we randomise the run within this block to make it harder to guess next trial
 	@()updateVariables(me); %randomise our stimuli, set strobe value too
 	@()update(stims); %update our stimuli ready for display
@@ -284,7 +284,6 @@ breakEntryFcn = {
 	@()stopRecording(eT);
 	@()setOffline(eT); %set eyelink offline
 	@()needEyeSample(me,false);
-	@()sendStrobe(io,252);
 	@()hide(stims);
 	@()logRun(me,'BREAKFIX'); %fprintf current trial info
 };

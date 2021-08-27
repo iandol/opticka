@@ -2227,12 +2227,14 @@ classdef runExperiment < optickaCore
 						end
 					case 's'
 						if tS.keyTicks > tS.keyHold
-							ShowCursor;
+							fprintf('===>>> Show Cursor!\n');
+							ShowCursor('CrossHair',me.screen.win);
 							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case 'd'
 						if tS.keyTicks > tS.keyHold
-							HideCursor;
+							fprintf('===>>> Hide Cursor!\n');
+							HideCursor(me.screen.win);
 							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case '1!'
