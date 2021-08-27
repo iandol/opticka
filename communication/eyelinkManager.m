@@ -364,6 +364,23 @@ classdef eyelinkManager < optickaCore
 		end
 		
 		% ===================================================================
+		%> @brief reset the fixation counters ready for a new trial
+		%>
+		% ===================================================================
+		function resetExclusionZones(me)
+			me.exclusionZone = [];
+		end
+		
+		% ===================================================================
+		%> @brief reset the fixation counters ready for a new trial
+		%>
+		% ===================================================================
+		function resetFixationTime(me)
+			me.fixStartTime		= 0;
+			me.fixLength		= 0;
+		end
+		
+		% ===================================================================
 		%> @brief reset the fixation history: xAll yAll pupilAll
 		%>
 		% ===================================================================
@@ -371,14 +388,6 @@ classdef eyelinkManager < optickaCore
 			me.xAll				= [];
 			me.yAll				= [];
 			me.pupilAll			= [];
-		end
-		
-		% ===================================================================
-		%> @brief reset the fixation counters ready for a new trial
-		%>
-		% ===================================================================
-		function resetExclusionZones(me)
-			me.exclusionZone = [];
 		end
 		
 		% ===================================================================
@@ -1348,12 +1357,12 @@ classdef eyelinkManager < optickaCore
 						% if we have an eye position, plot the info on the display
 						% screen
 						if ~isempty(me.currentSample)
-							[~, ~, searching] = isFixated(me);
+							[~, ~, searching, window, exclusion, fixinit] = isFixated(me);
 							x = me.toPixels(me.x - me.offset.X,'x'); %#ok<*PROP>
 							y = me.toPixels(me.y - me.offset.Y,'y');
 							txt = sprintf('Q = finish, SPACE = next. X = %3.1f / %2.2f | Y = %3.1f / %2.2f | RADIUS = %s | TIME = %.1f | FIX = %.1f | WIN = %i | SEARCH = %i | BLINK = %i | EXCLUSION = %i | FAIL-INIT = %i',...
 								x, me.x - me.offset.X, y, me.y - me.offset.Y, sprintf('%1.1f ',me.fixation.radius), ...
-								me.fixTotal, me.fixWindow, me.fixLength, searching, me.isBlink, me.isExclusion, me.isInitFail);
+								me.fixTotal, me.fixLength, window, searching, me.isBlink, exclusion, fixinit);
 							Screen('DrawText', s.win, txt, 10, 10,[1 1 1]);
 							drawEyePosition(me);
 						end

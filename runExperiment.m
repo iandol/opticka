@@ -1058,7 +1058,6 @@ classdef runExperiment < optickaCore
 			end
 		end
 		
-		
 		% ===================================================================
 		%> @brief checks the variable value of a stimulus (e.g. its angle) and then sets a fixation target based on
 		%> that value, so you can use multiple test stimuli and set the target to one of them in a
@@ -1249,6 +1248,15 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
+		%> @brief get task run index
+		%>
+		%> 
+		% ===================================================================
+		function window = getFixationWindow(me)
+			window = me.eyeTracker.fixWindow;
+		end
+		
+		% ===================================================================
 		%> @brief updateTask
 		%> runs the taskSequence.updateTask function
 		%> @param result an integer result, e.g. 1 = correct
@@ -1256,9 +1264,9 @@ classdef runExperiment < optickaCore
 		function updateTask(me,result)
 			info = '';
 			if me.useEyeLink || me.useTobii
-				info = sprintf('isBlink = %i; isExclusion = %i; isFix = %i; isInitFail = %i; fixTotal = %g ',...
-					me.eyeTracker.isBlink, me.eyeTracker.isExclusion, me.eyeTracker.isFix,...
-				me.eyeTracker.isInitFail, me.eyeTracker.fixTotal);
+				info = sprintf('window = %i; isBlink = %i; isExclusion = %i; isFix = %i; isInitFail = %i; fixTotal = %g ',...
+					me.eyeTracker.fixWindow, me.eyeTracker.isBlink, me.eyeTracker.isExclusion, ...
+					me.eyeTracker.isFix, me.eyeTracker.isInitFail, me.eyeTracker.fixTotal);
 			end
 			for i = 1:me.stimuli.n
 				info = sprintf('%s stim:%i tick:%i drawtick:%i',info,i,me.stimuli{i}.tick,me.stimuli{i}.drawTick);

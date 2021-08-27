@@ -139,16 +139,18 @@ classdef tobiiManager < optickaCore
 		isFix logical					= false
 		%> did the fixInit test fail or not?
 		isInitFail logical				= false
-		%> Initiate fixation time
-		fixInitStartTime				= 0
-		%> Initiate fixation length
-		fixInitLength					= 0
-		%the first timestamp fixation was true
-		fixStartTime					= 0
-		%how long have we been fixated?
-		fixLength						= 0
 		%> total time searching and holding fixation
 		fixTotal						= 0
+		%> Initiate fixation length
+		fixInitLength					= 0
+		%how long have we been fixated?
+		fixLength						= 0
+		%> Initiate fixation time
+		fixInitStartTime				= 0
+		%the first timestamp fixation was true
+		fixStartTime					= 0
+		%> which fixation window matched the last fixation?
+		fixWindow						= 0
 		%> last time offset betweeen tracker and display computers
 		currentOffset					= 0
 		%> tracker time stamp
@@ -388,6 +390,7 @@ classdef tobiiManager < optickaCore
 			me.fixInitStartTime	= 0;
 			me.fixInitLength	= 0;
 			me.fixTotal			= 0;
+			me.fixWindow		= 0;
 			me.fixN				= 0;
 			me.fixSelection		= 0;
 			if removeHistory
@@ -864,16 +867,19 @@ classdef tobiiManager < optickaCore
 			% now test if we are still searching or in fixation window, if
 			% radius is single value, assume circular, otherwise assume
 			% rectangular
+			window = 0;
 			if length(me.fixation.radius) == 1 % circular test
 				r = sqrt((me.x - me.fixation.X).^2 + (me.y - me.fixation.Y).^2); %fprintf('x: %g-%g y: %g-%g r: %g-%g\n',me.x, me.fixation.X, me.y, me.fixation.Y,r,me.fixation.radius);
 				window = find(r < me.fixation.radius);
 			elseif length(me.fixation.radius) == 2 % x y rectangular window test
-				if (me.x >= (me.fixation.X - me.fixation.radius(1))) && (me.x <= (me.fixation.X + me.fixation.radius(1))) ...
-						&& (me.y >= (me.fixation.Y - me.fixation.radius(2))) && (me.y <= (me.fixation.Y + me.fixation.radius(2)))
-					window = 1;
+				for i = 1:length(me.fixation.X)
+					if (me.x >= (me.fixation.X - me.fixation.radius(1))) && (me.x <= (me.fixation.X + me.fixation.radius(1))) ...
+							&& (me.y >= (me.fixation.Y - me.fixation.radius(2))) && (me.y <= (me.fixation.Y + me.fixation.radius(2)))
+						window = i;break;
+					end
 				end
 			end
-			% update our logic depending on if we are in or out of fixation window
+			me.fixWindow = window;
 			me.fixTotal = (me.currentSample.time - me.fixInitStartTime) / 1e6;
 			if any(window) % inside fixation window
 				if me.fixN == 0
