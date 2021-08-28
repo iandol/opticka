@@ -354,6 +354,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 
 				oldscreen = s.screen;
 				oldbitdepth = s.bitDepth;
+				oldwindowed = s.windowed;
 				if forceScreen >= 0
 					s.screen = forceScreen;
 					if forceScreen == 0
@@ -362,11 +363,10 @@ classdef baseStimulus < optickaCore & dynamicprops
 				end
 				prepareScreen(s);
 				
-				oldwindowed = s.windowed;
 				if benchmark
 					s.windowed = false;
 				elseif forceScreen > -1
-					s.windowed = [0 0 s.screenVals.width/2 s.screenVals.height/2]; %middle of screen
+					s.windowed = [0 0 s.screenVals.width/2 s.screenVals.height/2]; %half of screen
 				end
 				
 				if ~s.isOpen
@@ -379,19 +379,22 @@ classdef baseStimulus < optickaCore & dynamicprops
 				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
 				
 				if ~strcmpi(me.type,'movie'); draw(me); resetTicks(me); end
-				if s.visualDebug
-					drawGrid(s); %draw +-5 degree dot grid
-					drawScreenCenter(s); %centre spot
-				end
+				
+				drawGrid(s); %draw +-5 degree dot grid
+				drawScreenCenter(s); %centre spot
 				
 				if benchmark
 					Screen('DrawText', s.win, 'BENCHMARK: screen won''t update properly, see FPS in command window at end.', 5,5,[0 0 0]);
 				else
-					Screen('DrawText', s.win, sprintf('Stim will be static for 2.0 seconds, then animate for %.2f seconds',runtime), 5,5,[0 0 0]);
+					Screen('DrawText', s.win, sprintf('Stim will be static for 2.0 seconds (debug grid is 1deg), then animate for %.2f seconds',runtime), 5,5,[0 0 0]);
 				end
 				
 				flip(s);
-				WaitSecs('YieldSecs',2);
+				if benchmark
+					WaitSecs('YieldSecs',0.5);
+				else
+					WaitSecs('YieldSecs',2);
+				end
 				if runtime < sv.ifi; runtime = sv.ifi; end
 				nFrames = 0;
 				notFinished = true;
@@ -434,7 +437,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 				s.windowed = oldwindowed;
 				s.bitDepth = oldbitdepth;
 				fps = nFrames / diffT;
-				fprintf('\n\n======>>> <strong>SPEED</strong> (%i frames in %.3f secs) = <strong>%g</strong> fps <<<=======\n\n',nFrames, diffT, fps);
+				fprintf('\n\n======>>> Stimulus: %s\n',me.fullName);
+				fprintf('======>>> <strong>SPEED</strong> (%i frames in %.3f secs) = <strong>%g</strong> fps\n\n',nFrames, diffT, fps);
 				if ~benchmark;fprintf('\b======>>> First - Last frame time: %.3f\n\n',vbl(end)-startT);end
 				clear s fps benchmark runtime b bb i vbl; %clear up a bit
 				warning on

@@ -513,16 +513,12 @@ classdef metaStimulus < optickaCore
 
 				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
 
-				
-				if s.visualDebug
-					drawGrid(s); %draw +-5 degree dot grid
-					drawScreenCenter(s); %centre spot
-				end
-
 				if benchmark
 					Screen('DrawText', s.win, 'BENCHMARK: screen won''t update properly, see FPS in command window at end.', 5,5,[0.25 0.15 0]);
 				else
-					Screen('DrawText', s.win, ['Preview of ALL stimuli will be static for 1 seconds, then animate for ' num2str(runtime) ' seconds...'], 5,5,[0.25 0.15 0]);
+					drawGrid(s); %draw +-5 degree dot grid
+					drawScreenCenter(s); %centre spot
+					Screen('DrawText', s.win, ['Preview of ALL stimuli (grid is 1deg) will be static for 1 seconds, then animate for ' num2str(runtime) ' seconds...'], 5,5,[0.25 0.15 0]);
 				end
 
 				draw(me);
@@ -553,7 +549,8 @@ classdef metaStimulus < optickaCore
 				s.windowed = oldwindowed;
 				s.bitDepth = oldbitdepth;
 				fps = nFrames / (endT-startT);
-				fprintf('\n\n======>>> <strong>SPEED</strong> (%i frames in %.3f secs) = <strong>%.3f</strong> fps <<<=======\n\n',...
+				fprintf('\n\n======>>> Stimulus: %s\n',me.fullName);
+				fprintf('======>>> <strong>SPEED</strong> (%i frames in %.3f secs) = <strong>%.3f</strong> fps\n\n',...
 					nFrames, endT-startT, fps);
 				clear s fps benchmark runtime b bb i; %clear up a bit
 				warning on
