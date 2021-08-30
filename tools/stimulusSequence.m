@@ -213,7 +213,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 					a = 1;
 					block = {};
 					for i = 1:length(me.blockVar.values)
-						block = [block; repmat(me.blockVar.values{i},divBlock,1)];
+						block = [block; repmat(me.blockVar.values(i),divBlock,1)];
 					end
 					randb = rand(length(block),1);
 					[~,idx] = sort(randb);

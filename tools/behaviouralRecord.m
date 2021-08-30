@@ -130,7 +130,7 @@ classdef behaviouralRecord < optickaCore
 			set(me.h.vbox,'Sizes',[-5 -1])
 			set(me.h.hbox,'Sizes',[-2 -1])
 			set(me.h.vbox2,'Sizes',[-2 -1])
-			set(me.h.vbox3,'Sizes',[-2 -1 -1])
+			set(me.h.vbox3,'Sizes',[-1 -1 -1])
 
 			plot(me.h.axis1, 1, 0,'ko');
 			hist(me.h.axis2, 0, 0:0.1:2);

@@ -20,7 +20,7 @@ classdef opticka < optickaCore
 	
 	properties (SetAccess = protected, GetAccess = public, Transient = true)
 		%> all of the handles to the opticka_ui GUI
-		h opticka_uiapp
+		h 
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -57,13 +57,13 @@ classdef opticka < optickaCore
 		%> @return instance of opticka class.
 		% ===================================================================
 		function me = opticka(varargin)
-			if nargin == 0; varargin.name = 'opticka'; end
-			me=me@optickaCore(varargin); %superclass constructor
-			if nargin>0
-				me.parseArgs(varargin, me.allowedProperties);
-			end
+			
+			args = optickaCore.addDefaults(varargin,struct('name','opticka'));
+			me=me@optickaCore(args); %superclass constructor
+			me.parseArgs(args,me.allowedProperties);
+			
 			if me.cloning == false
-				addOptickaToPath;
+				if ~exist('OKStartTask_image.png','file');addOptickaToPath;end
 				me.initialiseUI;
 			end
 		end

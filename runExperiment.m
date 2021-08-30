@@ -1331,16 +1331,17 @@ classdef runExperiment < optickaCore
 			end
 			if me.isTask && ((index > me.lastIndex) || override == true)
 				[thisBlock, thisRun] = me.task.findRun(index);
+				stimIdx = []; 
 				t = sprintf('B#%i R#%i T#%i = ',thisBlock,thisRun, index);
 				for i=1:me.task.nVars
-					ix = []; valueList = cell(1); oValueList = cell(1); %#ok<NASGU>
+					valueList = cell(1); oValueList = cell(1); %#ok<NASGU>
 					doXY = false;
-					ix = me.task.nVar(i).stimulus; %which stimuli
+					stimIdx = me.task.nVar(i).stimulus; %which stimuli
 					value=me.task.outVars{thisBlock,i}(thisRun);
 					if iscell(value)
 						value = value{1};
 					end
-					[valueList{1,1:size(ix,2)}] = deal(value);
+					[valueList{1,1:size(stimIdx,2)}] = deal(value);
 					name=[me.task.nVar(i).name 'Out']; %which parameter
 					
 					if regexpi(name,'^xyPositionOut','once')
@@ -1403,14 +1404,14 @@ classdef runExperiment < optickaCore
 						else
 							val = value+offsetvalue;
 						end
-						ix = [ix offsetix];
+						stimIdx = [stimIdx offsetix];
 						[ovalueList{1,1:size(offsetix,2)}] = deal(val);
 						valueList = [valueList{:} ovalueList];
 					end
 				end
 				
 				a = 1;
-				for j = ix %loop through our stimuli references for this variable
+				for j = stimIdx %loop through our stimuli references for this variable
 					t = [t sprintf('S%i: %s: %s ',j,name,num2str(valueList{a}, '%g '))];
 					if ~doXY
 						me.stimuli{j}.(name)=valueList{a};
@@ -1811,7 +1812,7 @@ classdef runExperiment < optickaCore
 		%> @return
 		% ===================================================================
 		function t = infoText(me)
-			etinfo = '';
+			etinfo = '';name='';
 			if me.isRunTask
 				log = me.taskLog;
 				name = me.stateMachine.currentName;
@@ -2186,14 +2187,14 @@ classdef runExperiment < optickaCore
 						end
 					case 'x'
 						if tS.keyTicks > tS.keyHold
-							me.eyeTracker.fixationInitTime = me.eyeTracker.fixation.initTime + 0.1;
+							me.eyeTracker.fixation.initTime = me.eyeTracker.fixation.initTime + 0.1;
 							tS.firstFixInit = me.eyeTracker.fixation.initTime;
 							fprintf('===>>> FIXATION INIT TIME: %g\n',me.eyeTracker.fixation.initTime)
 							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case 'c'
 						if tS.keyTicks > tS.keyHold
-							me.eyeTracker.fixationTime = me.eyeTracker.fixation.time - 0.1;
+							me.eyeTracker.fixation.time = me.eyeTracker.fixation.time - 0.1;
 							if me.eyeTracker.fixation.time < 0.01
 								me.eyeTracker.fixation.time = 0.01;
 							end

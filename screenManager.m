@@ -169,11 +169,11 @@ classdef screenManager < optickaCore
 		%> @return instance of the class.
 		% ===================================================================
 		function me = screenManager(varargin)
-			if nargin == 0; varargin.name = ''; end
-			me=me@optickaCore(varargin); %superclass constructor
-			if nargin>0
-				me.parseArgs(varargin,me.allowedProperties);
-			end
+			
+			args = optickaCore.addDefaults(varargin,struct('name','screenManager'));
+			me=me@optickaCore(args); %superclass constructor
+			me.parseArgs(args,me.allowedProperties);
+			
 			try
 				AssertOpenGL
 				me.isPTB = true;
@@ -1248,7 +1248,7 @@ classdef screenManager < optickaCore
 		%> @return
 		% ===================================================================
 		function drawPhotoDiode(me,colour)
-			% drawPhotoDiode(me,colour)
+			% drawPhotoDiode(me,colour) % conditionally draw a white square to trigger photodiode
 			if me.photoDiode;Screen('FillRect',me.win,colour,me.photoDiodeRect);end
 		end
 		
@@ -1259,6 +1259,7 @@ classdef screenManager < optickaCore
 		%> @return
 		% ===================================================================
 		function drawBackground(me,background)
+			% drawBackground(me,background)
 			if ~exist('background','var'); background=me.backgroundColour; end
 			Screen('FillRect',me.win,background,[]);
 		end
