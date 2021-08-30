@@ -257,8 +257,8 @@ correctFcn = {
 
 %when we exit the correct state
 correctExitFcn = {
-	@()updateVariables(me); %randomise our stimuli, and set strobe value too
 	@()updateTask(me,tS.CORRECT); %make sure our taskSequence is moved to the next trial
+	@()updateVariables(me); %randomise our stimuli, and set strobe value too
 	@()update(me.stimuli); %update our stimuli ready for display
 	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions\
 	@()resetFixation(eT);
@@ -287,7 +287,6 @@ incFcn = {
 
 %--------------------incorrect / break exit
 incExitFcn = { 
-	@()resetRun(task);... %we randomise the run within this block to make it harder to guess next trial
 	@()updateVariables(me); %randomise our stimuli, set strobe value too
 	@()update(stims); %update our stimuli ready for display
 	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions
@@ -298,7 +297,9 @@ incExitFcn = {
 	@()drawnow;
 };
 if tS.includeErrors
-	incExitFcn = [ incExitFcn; {@()updateTask(me,tS.BREAKFIX)} ]; %make sure our taskSequence is moved to the next trial
+	incExitFcn = [ {@()updateTask(me,tS.BREAKFIX)}; incExitFcn ]; %make sure our taskSequence is moved to the next trial
+else
+	incExitFcn = [ {@()resetRun(task)}; incExitFcn ]; %we randomise the run within this block to make it harder to guess next trial
 end
 
 %--------------------break entry

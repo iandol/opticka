@@ -253,8 +253,8 @@ correctFcn = {
 
 %when we exit the correct state
 correctExitFcn = {
-	@()updateVariables(me); %randomise our stimuli, and set strobe value too
 	@()updateTask(me,tS.CORRECT); %make sure our taskSequence is moved to the next trial
+	@()updateVariables(me); %randomise our stimuli, and set strobe value too
 	@()update(stims); %update our stimuli ready for display
 	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions
 	@()drawTimedSpot(s, 0.5, [0 1 0 1], 0.2, true); %reset the timer on the green spot

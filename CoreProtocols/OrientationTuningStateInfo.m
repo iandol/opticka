@@ -232,9 +232,9 @@ correctFcn = {
 %--------------------when we exit the correct state
 correctExitFcn = {
 	@()sendStrobe(io,250);
-	@()updateVariables(me); %get our stimulus variable values for next trial, set strobe value too
-	@()update(stims); %update the visual stimuli ready for next trial
-	@()updateTask(me.task, tS.CORRECT); %update our task (taskSequence)
+	@()updateTask(me.task, tS.CORRECT); %update our task (taskSequence) going to next trial
+	@()updateVariables(me); %get our stimulus variable values for this new trial & set strobe value for next trial's I/O
+	@()update(stims); %update the visual stimuli for the new variables.
 	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions
 	@()trackerClearScreen(eT); 
 	@()checkTaskEnded(me); %check if task is finished
@@ -264,7 +264,7 @@ incFcn = {
 %--------------------incorrect / break exit
 incExitFcn = { 
 	@()sendStrobe(io,251);
-	@()resetRun(task);... %we randomise the run within this block to make it harder to guess next trial
+	@()resetRun(task); %we randomise the run within this block to make it harder to guess next trial
 	@()updateVariables(me); %randomise our stimuli, set strobe value too
 	@()update(stims); %update our stimuli ready for display
 	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions

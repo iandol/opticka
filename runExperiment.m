@@ -1332,7 +1332,7 @@ classdef runExperiment < optickaCore
 			if me.isTask && ((index > me.lastIndex) || override == true)
 				[thisBlock, thisRun] = me.task.findRun(index);
 				stimIdx = []; 
-				t = sprintf('B#%i R#%i T#%i = ',thisBlock,thisRun, index);
+				t = sprintf('B#%i R#%i T#%i = ',thisBlock, thisRun, index);
 				for i=1:me.task.nVars
 					valueList = cell(1); oValueList = cell(1); %#ok<NASGU>
 					doXY = false;

@@ -75,7 +75,8 @@ showSet(me.stimuli);
 % in the scope of the runExperiemnt object.
 
 %pause entry
-pauseEntryFcn = { @()hide(me.stimuli);
+pauseEntryFcn = { 
+	@()hide(me.stimuli);
 	@()drawBackground(s); %blank the display
 	@()rstop(io);
 	@()setOffline(eT); %set eyelink offline
@@ -83,16 +84,17 @@ pauseEntryFcn = { @()hide(me.stimuli);
 	@()edfMessage(eT,'TRIAL_RESULT -10');
 	@()fprintf('\n===>>>ENTER PAUSE STATE\n');
 	@()disableFlip(me);
-	};
+};
 
 %pause exit
-pauseExitFcn = @()rstart(io);%lets unpause the plexon!...
+pauseExitFcn = { @()rstart(io); }; %lets unpause the plexon!...
 
 prefixEntryFcn = { @()enableFlip(me); };
-prefixFcn = []; %@()draw(me.stimuli);
+prefixFcn = {}; %@()draw(me.stimuli);
 
 %fixate entry
-fixEntryFcn = { @()statusMessage(eT,'Initiate Fixation...'); %status text on the eyelink
+fixEntryFcn = {
+	@()statusMessage(eT,'Initiate Fixation...'); %status text on the eyelink
 	@()sendTTL(io,3);
 	@()updateFixationValues(eT,tS.fixX,tS.fixY,[],tS.firstFixTime); %reset 
 	@()setOffline(eT); %make sure offline before start recording
@@ -102,39 +104,48 @@ fixEntryFcn = { @()statusMessage(eT,'Initiate Fixation...'); %status text on the
 	@()startRecording(eT); %fire up eyelink
 	@()syncTime(eT); %EDF sync message
 	@()draw(me.stimuli); %draw stimulus
-	};
+};
 
 %fix within
-fixFcn = {@()draw(me.stimuli); %draw stimulus
-	};
+fixFcn = {
+	@()draw(me.stimuli); %draw stimulus
+};
 
 %test we are fixated for a certain length of time
-initFixFcn = @()testSearchHoldFixation(eT,'stimulus','incorrect');
+initFixFcn = {
+	@()testSearchHoldFixation(eT,'stimulus','incorrect');
+};
 
 %exit fixation phase
-fixExitFcn = { @()statusMessage(eT,'Show Stimulus...');
+fixExitFcn = { 
+	@()statusMessage(eT,'Show Stimulus...');
 	@()updateFixationValues(eT,[],[],[],tS.stimulusFixTime); %reset a maintained fixation of 1 second
 	@()show(me.stimuli);
 	@()edfMessage(eT,'END_FIX');
-	}; 
+};
 
 %what to run when we enter the stim presentation state
-stimEntryFcn = @()doStrobe(me,true);
+stimEntryFcn = { @()doStrobe(me,true); };
 
 %what to run when we are showing stimuli
-stimFcn =  { @()draw(me.stimuli);
+stimFcn =  { 
+	@()draw(me.stimuli);
 	@()finishDrawing(s);
 	@()animate(me.stimuli); % animate stimuli for subsequent draw
-	};
+};
 
 %test we are maintaining fixation
-maintainFixFcn = @()testSearchHoldFixation(eT,'correct','breakfix');
+maintainFixFcn = { @()testSearchHoldFixation(eT,'correct','breakfix'); };
 
 %as we exit stim presentation state
-stimExitFcn = { @()setStrobeValue(me,inf); @()doStrobe(me,true) };
+stimExitFcn = { 
+	@()setStrobeValue(me,inf); 
+	@()doStrobe(me,true);
+};
 
 %if the subject is correct (small reward)
-correctEntryFcn = { @()timedTTL(lJ,0,tS.rewardTime); % labjack sends a TTL to Crist reward system
+correctEntryFcn = {
+	@()timedTTL(lJ,0,tS.rewardTime); % labjack sends a TTL to Crist reward system
 	@()sendTTL(io,4);
 	@()statusMessage(eT,'Correct! :-)');
 	@()edfMessage(eT,'END_RT');
@@ -142,11 +153,12 @@ correctEntryFcn = { @()timedTTL(lJ,0,tS.rewardTime); % labjack sends a TTL to Cr
 	@()edfMessage(eT,'TRIAL_RESULT 1');
 	@()hide(me.stimuli);
 	@()drawTimedSpot(s, 0.5, [0 1 0 1]);
-	};
+};
 
 %correct stimulus
-correctFcn = { @()drawTimedSpot(s, 0.5, [0 1 0 1]);
-	};
+correctFcn = {
+	@()drawTimedSpot(s, 0.5, [0 1 0 1]);
+};
 
 %when we exit the correct state
 correctExitFcn = {
@@ -159,15 +171,17 @@ correctExitFcn = {
 	@()trackerDrawFixation(eT); %draw fixation window on eyelink computer
 	@()trackerDrawStimuli(eT,me.stimuli.stimulusPositions); %draw location of stimulus on eyelink
 	@()drawTimedSpot(s, 0.5, [0 1 0 1], 0.2, true); %reset the timer on the green spot
-	};
+};
+
 %incorrect entry
-incEntryFcn = { @()statusMessage(eT,'Incorrect :-('); %status message on eyelink
+incEntryFcn = { 
+	@()statusMessage(eT,'Incorrect :-('); %status message on eyelink
 	@()sendTTL(io,6);
 	@()edfMessage(eT,'END_RT');
 	@()stopRecording(eT);
 	@()edfMessage(eT,'TRIAL_RESULT 0');
 	@()hide(me.stimuli);
-	}; 
+}; 
 
 %our incorrect stimulus
 incFcn = [];
@@ -181,16 +195,17 @@ incExitFcn = {
 	@()trackerClearScreen(eT); 
 	@()trackerDrawFixation(eT); %draw fixation window on eyelink computer
 	@()trackerDrawStimuli(eT); %draw location of stimulus on eyelink
-	};
+};
 
 %break entry
-breakEntryFcn = { @()statusMessage(eT,'Broke Fixation :-('); status message on eyelink
+breakEntryFcn = { 
+	@()statusMessage(eT,'Broke Fixation :-('); status message on eyelink
 	@()sendTTL(io,5);
 	@()edfMessage(eT,'END_RT');
 	@()stopRecording(eT);
 	@()edfMessage(eT,'TRIAL_RESULT -1');
 	@()hide(me.stimuli);
-	};
+};
 
 %--------------------calibration function
 calibrateFcn = { 
@@ -237,13 +252,13 @@ magstimFcn = { @()rstop(io);
 	@()stimulate(mS); % run the magstim
 };
 
-magstimExitFcn = @()rstart(io);%lets unpause the plexon!...
+magstimExitFcn = { @()rstart(io); };%lets unpause the plexon!...
 
 
 %----------------------State Machine Table-------------------------
 disp('================>> Building state info file <<================')
 %specify our cell array that is read by the stateMachine
-stateInfoTmp = { ...
+stateInfoTmp = {
 'name'		'next'		'time'  'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn';
 'pause'		'fixate'	inf		pauseEntryFcn	[]				[]				pauseExitFcn;
 'prefix'	'fixate'	0.5		prefixEntryFcn	prefixFcn		[]				[];
