@@ -360,8 +360,8 @@ classdef screenManager < optickaCore
 					fprintf('\tFound Display++ ');
 					if contains(bD, 'Bits++')
 						normalMode = false;
-						if isempty(regexpi(bD, '^Bits++','ONCE')); bD = ['Enable' bD]; end
-						if isempty(regexpi(bD, '++$','ONCE')); bD = [bD 'Output']; end
+						if isempty(regexpi(bD, '^Enable','ONCE')); bD = ['Enable' bD]; end
+						if isempty(regexpi(bD, 'Output$','ONCE')); bD = [bD 'Output']; end
 						fprintf('-> mode: %s\n', bD);
 						PsychImaging('AddTask', 'FinalFormatting', 'DisplayColorCorrection', 'ClampOnly');
 						if contains(me.bitDepth, 'Color')

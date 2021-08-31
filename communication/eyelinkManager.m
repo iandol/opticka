@@ -1116,13 +1116,16 @@ classdef eyelinkManager < optickaCore
 		%> @brief draw the stimuli boxes on the tracker display
 		%>
 		% ===================================================================
-		function trackerDrawStimuli(me, ts, clearScreen)
+		function trackerDrawStimuli(me, ts, clearScreen, convertToPixels)
 			if me.isConnected
 				if exist('ts','var') && isstruct(ts)
 					me.stimulusPositions = ts;
 				end
 				if ~exist('clearScreen','var')
 					clearScreen = false;
+				end
+				if ~exist('convertToPixels','var')
+					convertToPixels = false;
 				end
 				if clearScreen; Eyelink('Command', 'clear_screen 0'); end
 				for i = 1:length(me.stimulusPositions)
@@ -1132,7 +1135,8 @@ classdef eyelinkManager < optickaCore
 					if isempty(size); size = 1; end
 					rect = [0 0 size size];
 					rect = CenterRectOnPoint(rect, x, y); 
-					rect = round(toPixels(me, rect,'rect'));
+					if convertToPixels; rect = toPixels(me, rect,'rect'); end
+					rect = round(rect);
 					if me.stimulusPositions(i).selected == true
 						Eyelink('Command', 'draw_box %d %d %d %d 10', rect(1), rect(2), rect(3), rect(4));
 					else

@@ -383,8 +383,8 @@ classdef metaStimulus < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief Return the stimulus fixation position
-		%>s
+		%> @brief Return the stimulus exclusion positions
+		%>
 		% ===================================================================
 		function [x,y] = getExclusionPositions(me)
 			x = []; y = [];
@@ -403,12 +403,14 @@ classdef metaStimulus < optickaCore
 		%> @brief Return the stimulus positions
 		%>
 		% ===================================================================
-		function out = getStimulusPositions(me)
+		function out = getStimulusPositions(me, ignoreVisible)
+			if ~exist('ignoreVisible','var'); ignoreVisible=false; end
 			a=1;
 			out = [];
 			me.stimulusPositions = out;
 			for i = 1:me.n_
-				if me.stimuli{i}.isVisible == true && me.stimuli{i}.showOnTracker == true
+				if ignoreVisible; check = true; else; check = me.stimuli{i}.isVisible; end
+				if check && me.stimuli{i}.showOnTracker == true
 					if isprop(me.stimuli{i},'sizeOut')
 						if ~isempty(me.stimuli{i}.xOut)
 							me.stimulusPositions(a).x = me.stimuli{i}.xOut;

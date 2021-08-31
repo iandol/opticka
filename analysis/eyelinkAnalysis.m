@@ -201,8 +201,13 @@ classdef eyelinkAnalysis < analysisCore
 			tmain = tic;
 			parseEvents(me);
 			parseAsVars(me);
-			me.isParsed = true;
-			fprintf('\tOverall Simple Parsing of EDF Trials took <strong>%.2f secs</strong>\n',toc(tmain));
+			if isempty(me.trials)
+				warning('---> eyelinkAnalysis.parseSimple: Could not parse!')
+				me.isParsed = false;
+			else
+				me.isParsed = true;
+			end
+			fprintf('Simple Parsing of EDF Trials took <strong>%.2f secs</strong>\n',toc(tmain));
 		end
 
 		% ===================================================================
@@ -1655,6 +1660,11 @@ classdef eyelinkAnalysis < analysisCore
 			
 			me.otherinfo = this;
 			
+			if isempty(me.trials)
+				warning('---> eyelinkAnalysis.parseEvents: No trials could be parsed in this data!')
+				return
+			end
+			
 			%prune the end trial if invalid
 			if ~me.trials(end).correct && ~me.trials(end).breakFix && ~me.trials(end).incorrect
 				me.trials(end) = [];
@@ -1681,6 +1691,10 @@ classdef eyelinkAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function parseAsVars(me)
+			if isempty(me.trials)
+				warning('---> eyelinkAnalysis.parseAsVars: No trials and therefore cannot extract variables!')
+				return
+			end
 			me.vars = struct();
 			me.vars(1).name = '';
 			me.vars(1).var = [];

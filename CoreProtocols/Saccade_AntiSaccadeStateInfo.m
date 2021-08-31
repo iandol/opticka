@@ -22,6 +22,13 @@
 %---------------------------TASK SWITCH----------------------------
 tS.type						= 'saccade'; %will be be saccade or antisaccade task run?
 tS.includeErrors			= true; %do we update the trial number even for incorrect saccades, if true then we call updateTask for both correct and incorrect, otherwise we only call updateTask() for correct responses
+if strcmp(tS.type,'saccade')
+	stims{1}.showOnTracker = true;
+	stims{2}.showOnTracker = false;
+else
+	stims{1}.showOnTracker = false;
+	stims{2}.showOnTracker = true;
+end
 
 %==================================================================
 %----------------------General Settings----------------------------
@@ -50,7 +57,7 @@ tS.fixX						= 0; % X position in degrees (screen center)
 tS.fixY						= 0; % X position in degrees (screen center)
 tS.firstFixInit				= 3; % time to search and enter fixation window
 tS.firstFixTime				= [0.5 1.25]; % time to maintain fixation within window
-tS.firstFixRadius			= 3; % radius in degrees
+tS.firstFixRadius			= 1; % radius in degrees
 tS.strict					= true; % do we forbid eye to enter-exit-reenter fixation window?
 tS.exclusionRadius			= 5; % radius of the exclusion zone...
 me.lastXPosition			= tS.fixX;
@@ -59,7 +66,7 @@ me.lastXExclusion			= [];
 me.lastYExclusion			= [];
 tS.targetFixInit			= 1; % time to find the target
 tS.targetFixTime			= 0.3; % to to maintain fixation on target 
-tS.targetRadius				= 8; %radius to fix within.
+tS.targetRadius				= 5; %radius to fix within.
 
 %==================================================================
 %---------------------------Eyetracker setup-----------------------
@@ -133,8 +140,8 @@ stims.tableChoice = 1;
 
 %==================================================================
 %this allows us to enable subsets from our stimulus list
-% 1 = grating | 2 = fixation cross
-stims.stimulusSets = {[2],[1,2]};
+% 1 = saccade target | 2 = anti-saccade target | 3 = fixation cross
+stims.stimulusSets = {[3],[1],[2]};
 stims.setChoice = 1;
 hide(stims);
 
@@ -171,6 +178,7 @@ pauseEntryFcn = {
 	@()drawTextNow(s,'Paused, press [p] to resume...');
 	@()disp('Paused, press [p] to resume...');
 	@()trackerClearScreen(eT); % blank the eyelink screen
+	@()statusMessage(eT,me.name);
 	@()trackerDrawText(eT,'PAUSED, press [P] to resume...');
 	@()trackerMessage(eT,'TRIAL_RESULT -100'); %store message in EDF
 	@()stopRecording(eT, true); %stop recording eye position data
@@ -187,22 +195,29 @@ prefixEntryFcn = {
 	@()enableFlip(me); 
 };
 
-prefixFcn = {};
+prefixFcn = {
+	@()drawBackground(s);
+};
+
+prefixExitFcn = {
+	@()edit(stims,3,'alphaOut',0.5); 
+	@()edit(stims,3,'alpha2Out',1);
+};
 
 %fixate entry
 fixEntryFcn = { 
+	@()startRecording(eT);
 	@()resetFixationHistory(eT); % reset the recent eye position history
 	@()resetExclusionZones(eT); % reset the exclusion zones on eyetracker
-	@()updateFixationValues(eT,tS.fixX,tS.fixY,[],tS.firstFixTime); %reset fixation window
+	@()getStimulusPositions(stims,true); %make a struct the eT can use for drawing stim positions
+	@()updateFixationValues(eT,tS.fixX,tS.fixY,tS.firstFixInit,tS.firstFixTime,tS.firstFixRadius); %reset fixation window
 	@()trackerMessage(eT,sprintf('TRIALID %i',getTaskIndex(me))); %Eyelink start trial marker
 	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
 	@()trackerClearScreen(eT); % blank the eyelink screen
 	@()trackerDrawFixation(eT); % draw fixation window on eyetracker display
 	@()trackerDrawStimuli(eT,stims.stimulusPositions); %draw location of stimulus on eyetracker
+	@()changeSet(stims, 1);
 	@()needEyeSample(me,true); % make sure we start measuring eye position
-	@()edit(stims,3,'alphaOut',0.5); 
-	@()edit(stims,3,'alpha2Out',1);
-	@()show(stims{3});
 	@()logRun(me,'INITFIX'); %fprintf current trial info to command window
 };
 
@@ -220,19 +235,18 @@ inFixFcn = {
 fixExitFcn = { 
 	@()updateFixationTarget(me, tS.useTask, tS.targetFixInit, tS.targetFixTime, tS.targetRadius, tS.strict); ... %use our stimuli values for next fix X and Y
 	@()updateExclusionZones(me, tS.useTask, tS.exclusionRadius);
-	@()hide(stims{3}); % hide fixation cross
+	@()trackerDrawFixation(eT); % draw fixation window on eyetracker display
 	@()trackerMessage(eT,'END_FIX');
 }; 
-
 if strcmpi(tS.type,'saccade')
-	fixExitFcn = [ fixExitFcn; {@()show(stims{1}); @()hide(stims{2})} ];
+	fixExitFcn = [ fixExitFcn; {@()changeSet(stims, 2)} ];
 else
-	fixExitFcn = [ fixExitFcn; {@()hide(stims{1}); @()show(stims{2})} ];
+	fixExitFcn = [ fixExitFcn; {@()changeSet(stims, 3)} ];
 end
 
 %what to run when we enter the stim presentation state
 stimEntryFcn = { 
-	@()doStrobe(me,true)
+	@()doStrobe(me,true);
 };
 
 %what to run when we are showing stimuli
@@ -275,7 +289,6 @@ correctExitFcn = {
 	@()updateTask(me,tS.CORRECT); %make sure our taskSequence is moved to the next trial
 	@()updateVariables(me); %randomise our stimuli, and set strobe value too
 	@()update(stims); %update our stimuli ready for display
-	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions
 	@()resetExclusionZones(eT); %reset the exclusion zones
 	@()updatePlot(bR, eT, sM); %update our behavioural plot
 	@()drawnow;
@@ -303,7 +316,6 @@ incFcn = {
 incExitFcn = {
 	@()updateVariables(me); %randomise our stimuli, don't run updateTask(task), and set strobe value too
 	@()update(stims); %update our stimuli ready for display
-	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions
 	@()resetExclusionZones(eT); %reset the exclusion zones
 	@()updatePlot(bR, eT, sM); %update our behavioural plot;
 	@()drawnow;
@@ -321,7 +333,7 @@ breakEntryFcn = {
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,['TRIAL_RESULT ' str2double(tS.BREAKFIX)]);
 	@()trackerClearScreen(eT);
-	@()trackerDrawText(eT,'Broke maintain fix! :-(');
+	@()trackerDrawText(eT,'Fail to Saccade to Target! :-(');
 	@()needEyeSample(me,false);
 	@()hide(stims);
 	@()logRun(me,'BREAKFIX'); %fprintf current trial info
