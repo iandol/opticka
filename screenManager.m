@@ -89,10 +89,13 @@ classdef screenManager < optickaCore
 	
 	properties (Constant)
 		%> possible bitDepths
-		bitDepths cell = {''; 'FloatingPoint32BitIfPossible'; 'FloatingPoint32Bit';...
-			'FixedPoint16Bit'; 'FloatingPoint16Bit'; '8bit'; 'PseudoGray';...
-			'HDR'; 'Native10Bit'; 'Native11Bit'; 'Native16Bit'; 'Native16BitFloat';...
-			'Bits++Bits++Output'; 'Bits++Mono++Output'; 'Bits++Color++Output' }
+		bitDepths cell = {'FloatingPoint32BitIfPossible'; 'FloatingPoint32Bit'; '8bit';...
+			'HDR'; 'PseudoGray'; 'Native10Bit'; 'Native11Bit'; 'Native16Bit'; 'Native16BitFloat';...
+			'EnableNative10BitFrameBuffer'; 'EnableNative11BitFrameBuffer'; 'EnableNative16BitFrameBuffer';...
+			'FixedPoint16Bit'; 'FloatingPoint16Bit';...
+			'Bits++Bits++'; 'Bits++Mono++'; 'Bits++Color++';...
+			'Bits++Bits++Output'; 'Bits++Mono++Output'; 'Bits++Color++Output';...
+			'EnableBits++Bits++Output'; 'EnableBits++Mono++Output'; 'EnableBits++Color++Output'}
 		%> possible blend modes
 		blendModes cell = {'GL_ZERO'; 'GL_ONE'; 'GL_DST_COLOR'; 'GL_ONE_MINUS_DST_COLOR';...
 			'GL_SRC_ALPHA'; 'GL_ONE_MINUS_SRC_ALPHA'; 'GL_DST_ALPHA';...
@@ -337,60 +340,68 @@ classdef screenManager < optickaCore
 				tL.screenLog.preOpenWindow=GetSecs;
 				
 				%check if system supports HDR mode
-				isHDR = PsychHDR('Supported');
-				if strcmpi(me.bitDepth,'HDR') && ~isHDR
-					warning('---> screenManager: tried to use HDR but it is not supported!');
+				isHDR = logical(PsychHDR('Supported'));
+				if strcmp(me.bitDepth,'HDR') && ~isHDR
 					me.bitDepth = 'Native10Bit';
+					error('---> screenManager: tried to use HDR but it is not supported!\n');
 				end
 				
 				% start to set up PTB screen
 				PsychImaging('PrepareConfiguration');
 				PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
-				fprintf('---> screenManager: Probing for a Display++...');
 				me.isPlusPlus = screenManager.bitsCheckOpen();
+				fprintf('---> screenManager: Probing for a Display++...');
+				bD = me.bitDepth;
+				normalMode = true;
+				if ~me.isPlusPlus && contains(bD, 'Bits++')
+					error('---> screenManager: You specified a Bits++ colour mode but cannot connect to the Display++!');
+				end
 				if me.isPlusPlus
 					fprintf('\tFound Display++ ');
-					if contains(me.bitDepth, 'Bits++')
-						if regexpi(me.bitDepth, '^Bits++','ONCE')
-							me.bitDepth = ['Enable' me.bitDepth];
-						end
-						fprintf('-> mode: %s\n', me.bitDepth);
+					if contains(bD, 'Bits++')
+						normalMode = false;
+						if isempty(regexpi(bD, '^Bits++','ONCE')); bD = ['Enable' bD]; end
+						if isempty(regexpi(bD, '++$','ONCE')); bD = [bD 'Output']; end
+						fprintf('-> mode: %s\n', bD);
 						PsychImaging('AddTask', 'FinalFormatting', 'DisplayColorCorrection', 'ClampOnly');
-						if regexp(me.bitDepth, 'Color')
-							PsychImaging('AddTask', 'General', me.bitDepth, 2);
+						if contains(me.bitDepth, 'Color')
+							PsychImaging('AddTask', 'General', bD, 2);
 						else
-							PsychImaging('AddTask', 'General', me.bitDepth);
+							PsychImaging('AddTask', 'General', bD);
 						end
 					else
-						me.isPlusPlus = false; %we just use a regular setup
+						warning('---> screenManager: You are connected to a Display++ but not using a Bits++ mode...')
 					end
+				else
+					fprintf('\tNO Display++\n');
 				end
-				if ~me.isPlusPlus
-					fprintf('\tNO Display++...\n'); 
-					switch lower(me.bitDepth)
+				if normalMode
+					switch lower(bD)
 						case {'hdr','enablehdr'}
 							PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
 							PsychImaging('AddTask', 'General', 'EnableHDR');
 						case {'native10bit','native11bit','native16bit'}
+							if isempty(regexpi(bD, '^Enable','ONCE')); bD = ['Enable' bD]; end
+							if isempty(regexpi(bD, 'Framebuffer$','ONCE')); bD = [bD 'Framebuffer']; end
 							PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
-							PsychImaging('AddTask', 'General', ['Enable' me.bitDepth 'Framebuffer']);
-							fprintf('\n---> screenManager: 32-bit internal / %s Output bit-depth\n', me.bitDepth);
+							PsychImaging('AddTask', 'General', bD);
+							fprintf('---> screenManager: 32-bit internal / %s Output bit-depth\n', bD);
 						case {'native16bitfloat'}
 							PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
-							PsychImaging('AddTask', 'General', ['Enable' me.bitDepth 'ingPointFramebuffer']);
-							fprintf('\n---> screenManager: 32-bit internal / %s Output bit-depth\n', me.bitDepth);
+							PsychImaging('AddTask', 'General', ['Enable' bD 'ingPointFramebuffer']);
+							fprintf('---> screenManager: 32-bit internal / %s Output bit-depth\n', bD);
 						case {'pseudogray','enablepseudograyoutput'}
 							PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
 							PsychImaging('AddTask', 'General', 'EnablePseudoGrayOutput');
-							fprintf('\n---> screenManager: Internal processing set to: %s\n', 'PseudoGrayOutput');
+							fprintf('---> screenManager: Internal processing set to: %s\n', 'PseudoGrayOutput');
 						case {'floatingpoint32bitifpossible','floatingpoint32bit'}
-							PsychImaging('AddTask', 'General', me.bitDepth);
-							fprintf('\n---> screenManager: Internal processing set to: %s\n', me.bitDepth);
+							PsychImaging('AddTask', 'General', bD);
+							fprintf('---> screenManager: Internal processing set to: %s\n', bD);
 						case {'8bit'}
 							PsychImaging('AddTask', 'General', 'UseVirtualFramebuffer');
-							fprintf('\n---> screenManager: Internal processing set to: %s\n', '8 bits');
+							fprintf('---> screenManager: Internal processing set to: %s\n', '8 bits');
 						otherwise
-							fprintf('\n---> screenManager: No imaging pipeline requested...\n');
+							fprintf('---> screenManager: No imaging pipeline requested...\n');
 					end
 				end
 				
@@ -445,7 +456,7 @@ classdef screenManager < optickaCore
 					error('GLSL Shading support is required for Opticka!');
 				end
 				
-				if IsLinux & ~isHDR
+				if IsLinux && ~isHDR
 					d=Screen('ConfigureDisplay','Scanout',me.screen,0);
 					sv.name		= d.name;
 					sv.widthMM	= d.displayWidthMM;
@@ -753,7 +764,7 @@ classdef screenManager < optickaCore
 				case 4
 					me.backgroundColour = value;
 				otherwise
-					warning('Wrong colour values given, enter 1, 3 or 4 values')
+					error('Wrong colour values given, enter 1, 3 or 4 values')
 			end
 		end
 		
@@ -766,8 +777,9 @@ classdef screenManager < optickaCore
 			if any(check)
 				me.bitDepth = me.bitDepths{check};
 			else
-				warning('Wrong value given, select from list below')
+				me.bitDepth = me.bitDepths{1};
 				disp(me.bitDepths)
+				error('Wrong value given, select from list above')
 			end
 		end
 		
@@ -780,8 +792,8 @@ classdef screenManager < optickaCore
 			if any(check)
 				me.srcMode = me.blendModes{check};
 			else
-				warning('Wrong value given, select from list below')
 				disp(me.blendModes)
+				error('Wrong value given, select from list above')
 			end
 		end
 		
@@ -794,8 +806,8 @@ classdef screenManager < optickaCore
 			if any(check)
 				me.dstMode = me.blendModes{check};
 			else
-				warning('Wrong value given, select from list below')
 				disp(me.blendModes)
+				error('Wrong value given, select from list above')
 			end
 		end
 		
@@ -806,7 +818,8 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		function set.distance(me,value)
 			if ~(value > 0)
-				value = 57.3;
+				me.distance = 57.3;
+				error('Distance must be greater than 0!')
 			end
 			me.distance = value;
 			me.makeGrid();
@@ -819,7 +832,8 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		function set.pixelsPerCm(me,value)
 			if ~(value > 0)
-				value = 36;
+				me.pixelsPerCm = 36;
+				error('Pixels per cm must be greater than 0!')
 			end
 			me.pixelsPerCm = value;
 			me.makeGrid();
