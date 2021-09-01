@@ -16,80 +16,89 @@ classdef gratingStimulus < baseStimulus
 
 	properties %--------------------PUBLIC PROPERTIES----------%
 		%> family type, can be 'sinusoid' or 'square'
-		type = 'sinusoid'
+		type					= 'sinusoid'
 		%> spatial frequency of the grating
-		sf = 1
+		sf						= 1
 		%> temporal frequency of the grating
-		tf = 1
+		tf						= 1
 		%> rotate the grating patch (false) or the grating texture within the patch (true [default])?
-		rotateTexture logical = true
+		rotateTexture logical	= true
 		%> phase of grating
-		phase = 0
+		phase					= 0
 		%> contrast of grating
-		contrast = 0.5
+		contrast				= 0.5
 		%> use a circular mask for the grating (default = true), note this can also be smoothed at the edge.
-		mask logical = true
+		mask logical			= true
 		%> direction of the drift; default = false means drift left>right when angle is 0deg.
 		%This switch can be accomplished simply setting angle, but this control enables
 		%simple reverse direction protocols.
 		reverseDirection logical = false
 		%> the direction of the whole grating object - i.e. the object can
 		%> move as well as the grating texture rotate within the object.
-		direction = 0
-		%> PTB Contrast Multiplier, 0.5 gives "standard" 0-1 contrast measure (see PTB docs)
-		contrastMult = 0.5
+		direction				= 0
 		%> Do we need to correct the phase to be relative to center not edge? This enables
 		%> centre surround stimuli are phase matched, and if we enlarge a grating object its
 		%> phase stays identical at the centre of the object (where we would imagine our RF)
-		correctPhase logical = false
+		correctPhase logical	= false
 		%> Reverse phase of grating X times per second? Useful with a static grating for linearity testing
-		phaseReverseTime = 0
+		phaseReverseTime		= 0
 		%> What phase to use for reverse?
-		phaseOfReverse = 180
+		phaseOfReverse			= 180
 		%> If mask == true, cosine smoothing sigma in pixels for mask
-		sigma = 0
+		sigma					= 0
 		%> If mask == true, use colour or alpha channel for smoothing?
-		useAlpha logical = false
+		useAlpha logical		= false
 		%> If mask == true, use hermite interpolation (true, default) or cosine (false)
-		smoothMethod logical = true
+		smoothMethod logical	= true
 		%> aspect ratio of the grating, can be [x y] to select width height differently
-		aspectRatio = 1;
+		aspectRatio				= 1;
+	end
+	
+	properties (Hidden = true)
+		%> PTB Contrast Multiplier, 0.5 gives "standard" 0-1 contrast measure (see PTB docs)
+		contrastMult			= 0.5
 	end
 
 	properties (SetAccess = protected, GetAccess = public)
 		%stimulus family
-		family = 'grating'
+		family					= 'grating'
 		%> scale is used when changing size as an independent variable to keep sf accurate
-		scale = 1
+		scale					= 1
 		%> the phase amount we need to add for each frame of animation
-		phaseIncrement = 0
+		phaseIncrement			= 0
 	end
 
 	properties (SetAccess = private, GetAccess = public, Hidden = true)
-		typeList = {'sinusoid';'square'}
+		typeList				= {'sinusoid';'square'}
 	end
 
 	properties (SetAccess = protected, GetAccess = protected)
+		%> beware alpha blending affects alpha so you need to change the
+		%> modulateColour
+		modulateColor			= [1 1 1 0]
+		%> we need different blend mode depending on square or sin wave
+		src						= 'GL_SRC_ALPHA'
+		dst						= 'GL_ONE_MINUS_SRC_ALPHA'
 		%> as get methods are slow, we cache sf, then recalculate sf whenever
 		%> changeScale event is called
-		sfCache = []
+		sfCache					= []
 		%>to stop a loop between set method and an event
-		sfRecurse = false
+		sfRecurse				= false
 		%> allowed properties passed to object upon construction
 		allowedProperties = ['type|sf|tf|angle|direction|phase|rotateTexture|' ...
 			'contrast|mask|reverseDirection|speed|startPosition|aspectRatio|' ...
 			'contrastMult|sigma|useAlpha|smoothMethod|' ...
 			'correctPhase|phaseReverseTime|phaseOfReverse']
 		%>properties to not create transient copies of during setup phase
-		ignoreProperties = 'name|type|scale|phaseIncrement|correctPhase|contrastMult|mask'
+		ignoreProperties		= 'name|type|scale|phaseIncrement|correctPhase|contrastMult|mask'
 		%> how many frames between phase reverses
-		phaseCounter = 0
+		phaseCounter			= 0
 		%> do we generate a square wave?
-		squareWave = false
+		squareWave				= false
 		%> mask value
 		maskValue
 		%> change blend?
-		changeBlend = false
+		changeBlend				= false
 	end
 
 	events (ListenAccess = 'protected', NotifyAccess = 'protected') %only this class can access these
@@ -114,7 +123,7 @@ classdef gratingStimulus < baseStimulus
 		% ===================================================================
 		function me = gratingStimulus(varargin)
 			args = optickaCore.addDefaults(varargin,...
-				struct('name','grating','colour',[0.5 0.5 0.5]));
+				struct('name','grating','colour',[0.5 0.5 0.5 1],'alpha',1));
 			me=me@baseStimulus(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
 			
@@ -216,9 +225,15 @@ classdef gratingStimulus < baseStimulus
 			end
 
 			if strcmpi(me.type,'square')
+				me.src = 'GL_ONE';
+				me.dst = 'GL_ZERO';
+				me.modulateColor = [1 1 1 1];
 				me.texture = CreateProceduralSquareWaveGrating(me.sM.win, me.res(1),...
 					me.res(2), me.colourOut, me.maskValue, me.contrastMult);
 			else
+				me.src = 'GL_SRC_ALPHA';
+				me.dst = 'GL_ONE_MINUS_SRC_ALPHA';
+				me.modulateColor = [1 1 1 0];
 				if me.sigmaOut > 0
 					me.texture = CreateProceduralSmoothedApertureSineGrating(me.sM.win, me.res(1), ...
 						me.res(2), me.colourOut, me.maskValue, me.contrastMult, me.sigmaOut, ...
@@ -229,7 +244,7 @@ classdef gratingStimulus < baseStimulus
 				end
 			end
 			
-			if me.sM.blend == true && strcmpi(me.sM.srcMode,'GL_SRC_ALPHA') && strcmpi(me.sM.dstMode,'GL_ONE_MINUS_SRC_ALPHA')
+			if me.sM.blend == true && strcmpi(me.sM.srcMode,me.src) && strcmpi(me.sM.dstMode,me.dst)
 				me.changeBlend = false;
 			else
 				me.changeBlend = true;
@@ -265,9 +280,9 @@ classdef gratingStimulus < baseStimulus
 		% ===================================================================
 		function draw(me)
 			if me.isVisible && me.tick >= me.delayTicks && me.tick < me.offTicks
-				if me.changeBlend;Screen('BlendFunction', me.sM.win, 'GL_SRC_ALPHA', 'GL_ONE_MINUS_SRC_ALPHA');end
+				if me.changeBlend;Screen('BlendFunction', me.sM.win, me.src, me.dst);end
 				Screen('DrawTexture', me.sM.win, me.texture, [],me.mvRect,...
-					me.angleOut, [], [], [], [], me.rotateMode,...
+					me.angleOut, [], [], me.modulateColor, [], me.rotateMode,...
 					[me.driftPhase, me.sfOut, me.contrastOut, me.sigmaOut]);
 				if me.changeBlend;Screen('BlendFunction', me.sM.win, me.sM.srcMode, me.sM.dstMode);end
 			end
