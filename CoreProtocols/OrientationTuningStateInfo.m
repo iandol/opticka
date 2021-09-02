@@ -53,8 +53,8 @@ me.lastYPosition			= tS.fixY;
 me.useEyeLink				= true; % make sure we are using eyetracker
 eT.name 					= tS.name;
 eT.sampleRate 				= 250; % sampling rate
-eT.calibrationStyle 		= 'HV3'; % calibration style
-eT.calibrationProportion	= [0.2 0.2]; %the proportion of the screen occupied by the calibration stimuli
+eT.calibrationStyle 		= 'HV5'; % calibration style
+eT.calibrationProportion	= [0.3 0.3]; %the proportion of the screen occupied by the calibration stimuli
 if tS.saveData == true;		eT.recordData = true; end %===save EDF file?
 if me.dummyMode;			eT.isDummy = true; end %===use dummy or real eyetracker? 
 %-----------------------
@@ -89,11 +89,11 @@ bR.breakStateName				= '^(breakfix|incorrect)';
 % sets and triggers to send to recording equipment etc...
 %
 % stims.choice				= [];
-% n								= 1;
-% in(n).name					= 'xyPosition';
-% in(n).values					= [6 6; 6 -6; -6 6; -6 -6; -6 0; 6 0];
-% in(n).stimuli					= 1;
-% in(n).offset					= [];
+% n							= 1;
+% in(n).name				= 'xyPosition';
+% in(n).values				= [6 6; 6 -6; -6 6; -6 -6; -6 0; 6 0];
+% in(n).stimuli				= 1;
+% in(n).offset				= [];
 % stims.stimulusTable		= in;
 stims.choice 				= [];
 stims.stimulusTable 		= [];
@@ -149,6 +149,7 @@ pauseExitFcn = {
 prefixEntryFcn = { 
 	@()enableFlip(me); 
 	@()needEyeSample(me,true); % make sure we start measuring eye position
+	@()getStimulusPositions(stims,true); %make a struct the eT can use for drawing stim positions
 	@()hide(stims);
 };
 
@@ -196,7 +197,6 @@ stimEntryFcn = {
 %--------------------what to run when we are showing stimuli
 stimFcn =  { 
 	@()draw(stims);
-	@()finishDrawing(s);
 	@()animate(stims); % animate stimuli for subsequent draw
 };
 
@@ -245,10 +245,10 @@ correctExitFcn = {
 %--------------------incorrect entry
 incEntryFcn = { 
 	@()beep(aM,400,0.5,1);
-	@()trackerClearScreen(eT);
-	@()trackerDrawText(eT,'Incorrect! :-(');
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,['TRIAL_RESULT ' num2str(tS.INCORRECT)]);
+	@()trackerClearScreen(eT);
+	@()trackerDrawText(eT,'Incorrect! :-(');
 	@()stopRecording(eT);
 	@()setOffline(eT); %set eyelink offline
 	@()needEyeSample(me,false);
@@ -267,8 +267,6 @@ incExitFcn = {
 	@()resetRun(task); %we randomise the run within this block to make it harder to guess next trial
 	@()updateVariables(me); %randomise our stimuli, set strobe value too
 	@()update(stims); %update our stimuli ready for display
-	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions
-	@()trackerClearScreen(eT); 
 	@()checkTaskEnded(me); %check if task is finished
 	@()updatePlot(bR, eT, sM); %update our behavioural plot;
 	@()drawnow;
