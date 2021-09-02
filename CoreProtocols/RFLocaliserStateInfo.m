@@ -42,11 +42,10 @@ me.lastXPosition			= tS.fixX;
 me.lastYPosition			= tS.fixY;
 
 %------------------------Eyelink setup--------------------------
-me.useEyeLink				= true; % make sure we are using eyetracker, override UI setting
-eT.name						= tS.name;
-if tS.saveData == true;		eT.recordData = true; end %===save EDF file?
-if me.dummyMode;			eT.isDummy = true; end %===use dummy or real eyetracker, from UI...
-eT.sampleRate 				= 250; % sampling rate
+me.useEyeLink					= true; % make sure we are using eyetracker, override UI setting
+eT.name							= tS.name;
+if tS.saveData == true;			eT.recordData = true; end %===save EDF file?
+if me.dummyMode;				eT.isDummy = true; end %===use dummy or real eyetracker, from UI...
 %===========================
 % remote calibration enables manual control and selection of each fixation
 % this is useful for a baby or monkey who has not been trained for fixation
@@ -54,6 +53,7 @@ eT.sampleRate 				= 250; % sampling rate
 % accept calibration!
 eT.remoteCalibration			= false; 
 %===========================
+eT.sampleRate					= 250; % sampling rate
 eT.calibrationStyle 			= 'HV5'; % calibration style
 eT.modify.calibrationtargetcolour = [1 1 1];
 eT.modify.calibrationtargetsize = 1; % size of calibration target as percentage of screen
@@ -91,7 +91,7 @@ me.stimuli.tableChoice = 1;
 n=1;
 me.stimuli.controlTable(n).variable = 'angle';
 me.stimuli.controlTable(n).delta = 15;
-me.stimuli.controlTable(n).stimuli = [6 7 8 9 10];
+me.stimuli.controlTable(n).stimuli = [7 8 9 10];
 me.stimuli.controlTable(n).limits = [0 360];
 n=n+1;
 me.stimuli.controlTable(n).variable = 'size';
@@ -140,9 +140,9 @@ me.stimuli.controlTable(n).stimuli = [10];
 me.stimuli.controlTable(n).limits = [0.04 0.51];
 
 %------this allows us to enable subsets from our stimulus list
-me.stimuli.stimulusSets = {[11], [2 11], [3 11], [4 11], [5 11],...
+me.stimuli.stimulusSets = {[11], [1 11], [2 11], [3 11], [4 11], [5 11],...
 	[6 11], [7 11], [8 11], [9 11], [10 11]};
-me.stimuli.setChoice = 1;
+me.stimuli.setChoice = 3;
 showSet(me.stimuli);
 
 %----------------------State Machine States-------------------------
@@ -183,7 +183,7 @@ pauseExitFcn = {
 
 %---------------------prestim entry
 psEntryFcn = {
-	@()resetFixation(eT); %reset the fixation counters ready for a new trial
+	@()resetFixation(eT,true); %reset the fixation counters ready for a new trial
 	@()startRecording(eT); % start eyelink recording for this trial
 	@()edfMessage(eT,'V_RT MESSAGE END_FIX END_RT'); % Eyelink commands
 	@()edfMessage(eT,sprintf('TRIALID %i',1)); %Eyelink start trial marker
@@ -210,15 +210,13 @@ psExitFcn = {
 %---------------------stimulus entry state
 stimEntryFcn = { 
 	@()doStrobe(me,true);
-	@()logRun(me,'SHOW Fixation Spot'); % log start to command window
+	@()logRun(me,'STIMULUS'); % log start to command window
 };
 
 %---------------------stimulus within state
 stimFcn = { 
 	@()draw(me.stimuli); % draw the stimuli
 	@()drawText(s,'Stim'); % draw test to show what state we are in
-	@()drawEyePosition(eT); % draw the eye position to PTB screen
-	@()finishDrawing(s); % tell PTB we have finished drawing
 	@()animate(me.stimuli); % animate stimuli for subsequent draw
 };
 
@@ -237,9 +235,7 @@ stimExitFcn = {
 %if the subject is correct (small reward)
 correctEntryFcn = {
 	@()timedTTL(rM,tS.rewardPin,tS.rewardTime); % labjack sends a TTL to Crist reward system
-	@()sendStrobe(io,251); % strobe 250 to signal a correct
 	@()beep(aM,2000); % correct beep
-	%@()drawTimedSpot(s, 0.5, [0 1 0 1]); 
 	@()statusMessage(eT,'Correct! :-)'); 
 	@()stopRecording(eT); 
 	@()setOffline(eT); %set eyelink offline
@@ -250,7 +246,10 @@ correctEntryFcn = {
 %correct stimulus
 correctFcn = { 
 	@()drawBackground(s);
-	%@()drawTimedSpot(s, 0.25, [0 1 0 1]); 
+};
+
+correctExitFcn = { 
+	@()sendStrobe(io,251); % strobe 250 to signal a correct
 };
 
 %break entry
@@ -278,7 +277,7 @@ breakFcn =  {
 	@()drawBackground(s);
 };
 
-%when we exit the correct/incorrect/breakfix state
+%when we exit the incorrect/breakfix state
 ExitFcn = { 
 	@()updateVariables(me,1);
 	@()updatePlot(bR, eT, sM);
@@ -291,6 +290,14 @@ calibrateFcn = {
 	@()stopRecording(eT); % stop eyelink recording data
 	@()setOffline(eT); % set eyelink offline
 	@()trackerSetup(eT) % enter tracker calibrate/validate setup mode
+};
+
+%--------------------drift correction function
+driftFcn = {
+	@()drawBackground(s); %blank the display
+	@()stopRecording(eT); % stop eyelink recording data
+	@()setOffline(eT); % set eyelink offline
+	@()driftCorrection(eT) % enter drift correct
 };
 
 %--------------------screenflash
@@ -327,8 +334,9 @@ stateInfoTmp = {
 'stimulus'  'incorrect'		5		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn;
 'incorrect'	'blank'			1		incorrEntryFcn	breakFcn		[]				ExitFcn;
 'breakfix'	'blank'			1		breakEntryFcn	breakFcn		[]				ExitFcn;
-'correct'	'blank'			0.5		correctEntryFcn	correctFcn		[]				ExitFcn;
+'correct'	'blank'			0.5		correctEntryFcn	correctFcn		[]				correctExitFcn;
 'calibrate' 'pause'			0.5		calibrateFcn	[]				[]				[]; 
+'drift'		'pause'			0.5		driftFcn		[]				[]				[];
 'flash'		'pause'			0.5		[]				flashFcn		[]				[]; 
 'override'	'pause'			0.5		[]				overrideFcn		[]				[]; 
 'showgrid'	'pause'			1		[]				gridFcn			[]				[]; 

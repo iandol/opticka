@@ -1986,7 +1986,7 @@ classdef runExperiment < optickaCore
 								stims = intersect(stims,thisstim); %only change the visible stimulus
 								limits = me.stimuli.controlTable(choice).limits;
 								for i = 1:length(stims)
-									if strcmpi(var,'size') || strcmpi(var,'dotSize')
+									if ~isa(me.stimuli{stims(i)},'barStimulus') && (strcmpi(var,'size') || strcmpi(var,'dotSize'))
 										oval = me.stimuli{stims(i)}.([var 'Out']) / me.stimuli{stims(i)}.ppd;
 									elseif strcmpi(var,'sf')
 										oval = me.stimuli{stims(i)}.getsfOut;
@@ -2003,7 +2003,8 @@ classdef runExperiment < optickaCore
 										val = val(1:length(oval));
 									end
 									me.stimuli{stims(i)}.([var 'Out']) = val;
-									fprintf('===>>> Stimulus#%g--%s: %g (%g)\n',stims(i),var,val,oval)
+									me.stimuli{stims(i)}.update();
+									fprintf('===>>> Stimulus #%i -- %s: %.3f (%.3f)\n',stims(i),var,val,oval)
 								end
 							end
 							tS.keyHold = tS.keyTicks + fInc;
@@ -2022,7 +2023,7 @@ classdef runExperiment < optickaCore
 								stims = intersect(stims,thisstim); %only change the visible stimulus
 								limits = me.stimuli.controlTable(choice).limits;
 								for i = 1:length(stims)
-									if strcmpi(var,'size') || strcmpi(var,'dotSize')
+									if ~isa(me.stimuli{stims(i)},'barStimulus') && (strcmpi(var,'size') || strcmpi(var,'dotSize'))
 										oval = me.stimuli{stims(i)}.([var 'Out']) / me.stimuli{stims(i)}.ppd;
 									elseif strcmpi(var,'sf')
 										oval = me.stimuli{stims(i)}.getsfOut;
@@ -2039,7 +2040,8 @@ classdef runExperiment < optickaCore
 										val = val(1:length(oval));
 									end
 									me.stimuli{stims(i)}.([var 'Out']) = val;
-									fprintf('===>>> Stimulus#%g--%s: %g (%g)\n',stims(i),var,val,oval)
+									me.stimuli{stims(i)}.update();
+									fprintf('===>>> Stimulus #%i -- %s: %.3f (%.3f)\n',stims(i),var,val,oval)
 								end
 							end
 							tS.keyHold = tS.keyTicks + fInc;
