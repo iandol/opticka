@@ -1030,6 +1030,13 @@ classdef opticka < optickaCore
 				if isprop(tmp.r,'stimuli')
 					if isa(tmp.r.stimuli,'metaStimulus')
 						me.r.stimuli = tmp.r.stimuli;
+						rm = [];
+						for i = 1:me.r.stimuli.n
+							if ~isa(me.r.stimuli{i},'baseStimulus')
+								rm = [rm i];
+							end
+						end
+						if ~isempty(rm); me.r.stimuli(rm) = []; end
 					elseif iscell(tmp.r.stimuli)
 						me.r.stimuli = metaStimulus();
 						me.r.stimuli.stimuli = tmp.r.stimuli;

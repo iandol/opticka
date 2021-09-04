@@ -580,6 +580,23 @@ classdef analysisCore < optickaCore
 			val = in(idx);
 			delta = abs(value - val);
 		end
+		
+		
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function [xx, yy, p1, p2, f] = linearFit(x,y)
+			if size(x,1)<size(x,2);x=x';end
+			if size(y,1)<size(y,2);y=y';end
+			f = fit(x,y,'poly1');
+			xx = linspace(min(x),max(x),2^11)';
+			yy = feval(f,xx);
+			p1 = f.p1;
+			p2 = f.p2;
+		end
 
 		% ===================================================================
 		%> @brief convert variance to standard error
