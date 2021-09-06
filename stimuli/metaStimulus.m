@@ -442,14 +442,14 @@ classdef metaStimulus < optickaCore
 		%> @brief Toggle show/hide for particular sets of stimuli
 		%>
 		% ===================================================================
-		function showSet(me)
-			if ~isempty(me.stimulusSets) && me.setChoice > 0
-				sets = me.stimulusSets{me.setChoice};
-				if max(sets) <= me.n_
-					hide(me)
-					for i = sets
-						show(me.stimuli{i});
-					end
+		function showSet(me, set)
+			if ~exist('set','var'); set = me.setChoice; end
+			if ~isempty(me.stimulusSets)
+				if set == 0 || set > me.n_; return; end
+				hide(me);
+				for i = me.stimulusSets{set}
+					show(me.stimuli{i});
+					if me.verbose;me.salutation('ShowSet',['Show stimulus ' num2str(i)],true); end
 				end
 			end
 		end
@@ -460,11 +460,9 @@ classdef metaStimulus < optickaCore
 		% ===================================================================
 		function changeSet(me,value)
 			if ~exist('value','var'); value = 0; end
-			if ~isempty(me.stimulusSets) && value > 0
-				if value <= length(me.stimulusSets)
-					me.setChoice = value;
-					showSet(me);
-				end
+			if ~isempty(me.stimulusSets) && value <= length(me.stimulusSets)
+				me.setChoice = value;
+				showSet(me);
 			end
 		end
 		

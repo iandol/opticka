@@ -1130,7 +1130,7 @@ classdef screenManager < optickaCore
 		function drawTextNow(me,text)
 			% drawTextNow(me,text)
 			if ~exist('text','var');return;end
-			Screen('DrawText',me.win,text,10,10,[1 1 1],[0.3 0.3 0.1]);
+			Screen('DrawText',me.win,text,5,10,[1 1 1],[0.3 0.3 0.1]);
 			flip(me,[],[],2);
 		end
 		
@@ -1143,7 +1143,7 @@ classdef screenManager < optickaCore
 		function drawText(me,text)
 			% drawText(me,text)
 			if ~exist('text','var');return;end
-			Screen('DrawText',me.win,text,10,10,[1 1 1],[0.3 0.3 0.1]);
+			Screen('DrawText',me.win,text,5,10,[1 1 1],[0.3 0.3 0.1]);
 		end
 		
 		% ===================================================================
@@ -1253,6 +1253,28 @@ classdef screenManager < optickaCore
 		function drawPhotoDiodeSquare(me,colour)
 			% drawPhotoDiodeSquare(me,colour)
 			Screen('FillRect',me.win,colour,me.photoDiodeRect);
+		end
+		
+		% ===================================================================
+		%> @brief draw the mouse X and Y position on screen
+		%>
+		%> @param force, override the global X and Y position which is only
+		%> updated when stimuli are animating and visible...
+		%> @return
+		% ===================================================================
+		function drawMousePosition(me,force)
+			global mouseGlobalX mouseGlobalY
+			if ~exist('force','var'); force = false; end
+			if force == true
+				[mouseGlobalX,mouseGlobalY] = GetMouse(me.win);
+				val = me.toDegrees([mouseGlobalX mouseGlobalY]);
+				txt = sprintf('X: %.2f | Y: %.2f',val(1),val(2));
+				Screen('DrawText',me.win, txt, me.xCenter,5, [0.7 0.7 0.5], [0.5 0.5 0.5]);
+			elseif ~isempty(mouseGlobalX) && ~isempty(mouseGlobalY)
+				val = me.toDegrees([mouseGlobalX mouseGlobalY]);
+				txt = sprintf('X: %.2f | Y: %.2f',val(1),val(2));
+				Screen('DrawText',me.win,txt, me.xCenter, 5, [0.7 0.7 0.5], [0.5 0.5 0.5]);
+			end
 		end
 		
 		% ===================================================================
@@ -1614,6 +1636,61 @@ classdef screenManager < optickaCore
 					me.screenVals.xCenter = me.xCenter;
 					me.screenVals.yCenter = me.yCenter;
 				end
+			end
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		% ===================================================================
+		function out = toDegrees(me,in,axis)
+			if ~exist('axis','var');axis='';end
+			switch axis
+				case ''
+					if length(in)==2
+						out(1) = (in(1) - me.xCenter) / me.ppd_;
+						out(2) = (in(2) - me.yCenter) / me.ppd_;
+					else
+						out = 0;
+					end
+				case 'rect'
+					out(1) = (in(1) - me.xCenter) / me.ppd_;
+					out(2) = (in(2) - me.yCenter) / me.ppd_;
+					out(3) = (in(3) - me.xCenter) / me.ppd_;
+					out(4) = (in(4) - me.yCenter) / me.ppd_;
+				case 'x'
+					out = (in - me.xCenter) / me.ppd_;
+				case 'y'
+					out = (in - me.yCenter) / me.ppd_;
+			end
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		% ===================================================================
+		function out = toPixels(me,in,axis)
+			if ~exist('axis','var');axis='';end
+			switch axis
+				case ''
+					if length(in)==4
+						out(1:2) = (in(1:2) * me.ppd_) + me.xCenter;
+						out(3:4) = (in(3:4) * me.ppd_) + me.yCenter;
+					elseif length(in)==2
+						out(1) = (in(1) * me.ppd_) + me.xCenter;
+						out(2) = (in(2) * me.ppd_) + me.yCenter;
+					else
+						out = 0;
+					end
+				case 'rect'
+					out(1) = (in(1) * me.ppd_) + me.xCenter;
+					out(2) = (in(2) * me.ppd_) + me.yCenter;
+					out(3) = (in(3) * me.ppd_) + me.xCenter;
+					out(4) = (in(4) * me.ppd_) + me.yCenter;
+				case 'x'
+					out = (in * me.ppd_) + me.xCenter;
+				case 'y'
+					out = (in * me.ppd_) + me.yCenter;
 			end
 		end
 		

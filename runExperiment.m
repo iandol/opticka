@@ -106,6 +106,10 @@ classdef runExperiment < optickaCore
 		dPPMode char = 'plain'
 		%> which port is the arduino on?
 		arduinoPort char = '/dev/ttyACM0'
+		%> initial eyelink settings
+		eyelink
+		%> initial tobii settings
+		tobii
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -152,6 +156,8 @@ classdef runExperiment < optickaCore
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		%> fInc for managing keyboard sensitivity
+		fInc = 6
 		%> is it MOC run (false) or stateMachine runTask (true)?
 		isRunTask logical	= true
 		%> are we using taskSequeence or not?
@@ -522,6 +528,7 @@ classdef runExperiment < optickaCore
 				me.comment = '';
 			end
 			
+			refreshScreen(me);
 			initialiseSaveFile(me); %generate a savePrefix for this run
 			me.name = [me.subjectName '-' me.savePrefix]; %give us a run name
 			if isempty(me.screen) || isempty(me.task)
@@ -598,6 +605,11 @@ classdef runExperiment < optickaCore
 				
 				%--------open the PTB screen and setup stimuli
 				me.screenVals			= s.open(me.debug,tL);
+				if me.screenVals.fps < 90
+					me.fInc = 6;
+				else
+					me.fInc = 8;
+				end
 				stims.verbose			= me.verbose;
 				setup(stims); %run setup() for each stimulus
 				task.fps					= s.screenVals.fps;
@@ -1454,6 +1466,11 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 		function refreshScreen(me)
 			me.screenVals = me.screen.prepareScreen();
+			if me.screenVals.fps < 90
+				me.fInc = 6;
+			else
+				me.fInc = 8;
+			end
 		end
 		
 		% ===================================================================
@@ -1802,7 +1819,7 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 		function infoTextScreen(me)
 			t=infoText(me);
-			Screen('DrawText',me.screen.win,t,50,1,[1 1 1 1],[0 0 0 1]);
+			Screen('DrawText',me.screen.win,t,5,50,[0.8 0.8 0.8 1],[0.1 0.1 0.1 1]);
 		end
 		
 		% ===================================================================
@@ -1916,8 +1933,6 @@ classdef runExperiment < optickaCore
 		%> @param args input structure
 		% ===================================================================
 		function tS = checkKeys(me,tS)
-			%frame increment to stop keys being too sensitive
-			fInc = 6;
 			tS.keyTicks = tS.keyTicks + 1;
 			%now lets check whether any keyboard commands are pressed...
 			[keyIsDown, ~, keyCode] = KbCheck(-1);
@@ -1937,7 +1952,7 @@ classdef runExperiment < optickaCore
 								tS.pauseToggle = tS.pauseToggle + 1;
 							end
 							FlushEvents();
-							tS.keyHold = tS.keyTicks + fInc;
+							tS.keyHold = tS.keyTicks + me.fInc;
 						end
 					case {'UpArrow','up'}
 						if tS.keyTicks > tS.keyHold
@@ -1953,7 +1968,7 @@ classdef runExperiment < optickaCore
 								delta=me.stimuli.controlTable(me.stimuli.tableChoice).delta;
 								fprintf('===>>> Set Control table %g - %s : %g\n',me.stimuli.tableChoice,var,delta)
 							end
-							tS.keyHold = tS.keyTicks + fInc;
+							tS.keyHold = tS.keyTicks + me.fInc;
 						end
 					case {'DownArrow','down'}
 						if tS.keyTicks > tS.keyHold
@@ -1969,7 +1984,7 @@ classdef runExperiment < optickaCore
 								delta=me.stimuli.controlTable(me.stimuli.tableChoice).delta;
 								fprintf('===>>> Set Control table %g - %s : %g\n',me.stimuli.tableChoice,var,delta)
 							end
-							tS.keyHold = tS.keyTicks + fInc;
+							tS.keyHold = tS.keyTicks + me.fInc;
 						end
 						
 					case {'LeftArrow','left'} %previous variable 1 value
@@ -2007,7 +2022,7 @@ classdef runExperiment < optickaCore
 									fprintf('===>>> Stimulus #%i -- %s: %.3f (%.3f)\n',stims(i),var,val,oval)
 								end
 							end
-							tS.keyHold = tS.keyTicks + fInc;
+							tS.keyHold = tS.keyTicks + me.fInc;
 						end
 					case {'RightArrow','right'} %next variable 1 value
 						if tS.keyTicks > tS.keyHold
@@ -2044,7 +2059,7 @@ classdef runExperiment < optickaCore
 									fprintf('===>>> Stimulus #%i -- %s: %.3f (%.3f)\n',stims(i),var,val,oval)
 								end
 							end
-							tS.keyHold = tS.keyTicks + fInc;
+							tS.keyHold = tS.keyTicks + me.fInc;
 						end
 					case ',<'
 						if tS.keyTicks > tS.keyHold
@@ -2053,7 +2068,7 @@ classdef runExperiment < optickaCore
 								me.stimuli.showSet();
 							end
 							fprintf('===>>> Stimulus Set: #%g | Stimuli: %s\n',me.stimuli.setChoice, num2str(me.stimuli.stimulusSets{me.stimuli.setChoice}))
-							tS.keyHold = tS.keyTicks + fInc;
+							tS.keyHold = tS.keyTicks + me.fInc;
 						end
 					case '.>'
 						if tS.keyTicks > tS.keyHold
@@ -2062,7 +2077,7 @@ classdef runExperiment < optickaCore
 								me.stimuli.showSet();
 							end
 							fprintf('===>>> Stimulus Set: #%g | Stimuli: %s\n',me.stimuli.setChoice, num2str(me.stimuli.stimulusSets{me.stimuli.setChoice}))
-							tS.keyHold = tS.keyTicks + fInc;
+							tS.keyHold = tS.keyTicks + me.fInc;
 						end
 					case 'r'
 						timedTTL(rM,rM.rewardPin,rM.rewardTime);
@@ -2070,25 +2085,25 @@ classdef runExperiment < optickaCore
 						if tS.keyTicks > tS.keyHold
 							me.screen.screenXOffset = me.screen.screenXOffset + 1;
 							fprintf('===>>> Screen X Center: %g deg / %g pixels\n',me.screen.screenXOffset,me.screen.xCenter);
-							tS.keyHold = tS.keyTicks + fInc;
+							tS.keyHold = tS.keyTicks + me.fInc;
 						end
 					case '-_'
 						if tS.keyTicks > tS.keyHold
 							me.screen.screenXOffset = me.screen.screenXOffset - 1;
 							fprintf('===>>> Screen X Center: %g deg / %g pixels\n',me.screen.screenXOffset,me.screen.xCenter);
-							tS.keyHold = tS.keyTicks + fInc;
+							tS.keyHold = tS.keyTicks + me.fInc;
 						end
 					case '[{'
 						if tS.keyTicks > tS.keyHold
 							me.screen.screenYOffset = me.screen.screenYOffset - 1;
 							fprintf('===>>> Screen Y Center: %g deg / %g pixels\n',me.screen.screenYOffset,me.screen.yCenter);
-							tS.keyHold = tS.keyTicks + fInc;
+							tS.keyHold = tS.keyTicks + me.fInc;
 						end
 					case ']}'
 						if tS.keyTicks > tS.keyHold
 							me.screen.screenYOffset = me.screen.screenYOffset + 1;
 							fprintf('===>>> Screen Y Center: %g deg / %g pixels\n',me.screen.screenYOffset,me.screen.yCenter);
-							tS.keyHold = tS.keyTicks + fInc;
+							tS.keyHold = tS.keyTicks + me.fInc;
 						end
 					case 'k'
 						if tS.keyTicks > tS.keyHold
@@ -2104,7 +2119,7 @@ classdef runExperiment < optickaCore
 									end
 								end
 							end
-							tS.keyHold = tS.keyTicks + fInc;
+							tS.keyHold = tS.keyTicks + me.fInc;
 						end
 					case 'l'
 						if tS.keyTicks > tS.keyHold
@@ -2119,13 +2134,13 @@ classdef runExperiment < optickaCore
 								end
 								
 							end
-							tS.keyHold = tS.keyTicks + fInc;
+							tS.keyHold = tS.keyTicks + me.fInc;
 						end
 					case 'y'
 						if tS.keyTicks > tS.keyHold
 							fprintf('===>>> Calibrate ENGAGED!\n');
 							tS.pauseToggle = tS.pauseToggle + 1; %we go to pause after this so toggle this
-							tS.keyHold = tS.keyTicks + fInc;
+							tS.keyHold = tS.keyTicks + me.fInc;
 							forceTransition(me.stateMachine, 'calibrate');
 							return
 						end
@@ -2133,7 +2148,7 @@ classdef runExperiment < optickaCore
 						if tS.keyTicks > tS.keyHold
 							fprintf('===>>> Drift OFFSET ENGAGED!\n');
 							tS.pauseToggle = tS.pauseToggle + 1; %we go to pause after this so toggle this
-							tS.keyHold = tS.keyTicks + fInc;
+							tS.keyHold = tS.keyTicks + me.fInc;
 							forceTransition(me.stateMachine, 'offset');
 							return
 						end
@@ -2141,7 +2156,7 @@ classdef runExperiment < optickaCore
 						if tS.keyTicks > tS.keyHold
 							fprintf('===>>> Drift CORRECT ENGAGED!\n');
 							tS.pauseToggle = tS.pauseToggle + 1; %we go to pause after this so toggle this
-							tS.keyHold = tS.keyTicks + fInc;
+							tS.keyHold = tS.keyTicks + me.fInc;
 							forceTransition(me.stateMachine, 'drift');
 							return
 						end
@@ -2149,7 +2164,7 @@ classdef runExperiment < optickaCore
 						if tS.keyTicks > tS.keyHold
 							fprintf('===>>> Flash ENGAGED!\n');
 							tS.pauseToggle = tS.pauseToggle + 1; %we go to pause after this so toggle this
-							tS.keyHold = tS.keyTicks + fInc;
+							tS.keyHold = tS.keyTicks + me.fInc;
 							forceTransition(me.stateMachine, 'flash');
 							return
 						end
@@ -2157,7 +2172,7 @@ classdef runExperiment < optickaCore
 						if tS.keyTicks > tS.keyHold
 							fprintf('===>>> MagStim ENGAGED!\n');
 							tS.pauseToggle = tS.pauseToggle + 1; %we go to pause after this so toggle this
-							tS.keyHold = tS.keyTicks + fInc;
+							tS.keyHold = tS.keyTicks + me.fInc;
 							forceTransition(me.stateMachine, 'magstim');
 							return
 						end
@@ -2165,7 +2180,7 @@ classdef runExperiment < optickaCore
 						if tS.keyTicks > tS.keyHold
 							fprintf('===>>> Override ENGAGED!\n');
 							tS.pauseToggle = tS.pauseToggle + 1; %we go to pause after this so toggle this
-							tS.keyHold = tS.keyTicks + fInc;
+							tS.keyHold = tS.keyTicks + me.fInc;
 							forceTransition(me.stateMachine, 'override');
 							return
 						end
@@ -2173,7 +2188,7 @@ classdef runExperiment < optickaCore
 						if tS.keyTicks > tS.keyHold
 							fprintf('===>>> grid ENGAGED!\n');
 							tS.pauseToggle = tS.pauseToggle + 1; %we go to pause after this so toggle this
-							tS.keyHold = tS.keyTicks + fInc;
+							tS.keyHold = tS.keyTicks + me.fInc;
 							forceTransition(me.stateMachine, 'showgrid');
 							return
 						end
@@ -2185,14 +2200,14 @@ classdef runExperiment < optickaCore
 							end
 							tS.firstFixInit = me.eyeTracker.fixation.initTime;
 							fprintf('===>>> FIXATION INIT TIME: %g\n',me.eyeTracker.fixation.initTime)
-							tS.keyHold = tS.keyTicks + fInc;
+							tS.keyHold = tS.keyTicks + me.fInc;
 						end
 					case 'x'
 						if tS.keyTicks > tS.keyHold
 							me.eyeTracker.fixation.initTime = me.eyeTracker.fixation.initTime + 0.1;
 							tS.firstFixInit = me.eyeTracker.fixation.initTime;
 							fprintf('===>>> FIXATION INIT TIME: %g\n',me.eyeTracker.fixation.initTime)
-							tS.keyHold = tS.keyTicks + fInc;
+							tS.keyHold = tS.keyTicks + me.fInc;
 						end
 					case 'c'
 						if tS.keyTicks > tS.keyHold
@@ -2202,14 +2217,14 @@ classdef runExperiment < optickaCore
 							end
 							tS.firstFixTime = me.eyeTracker.fixation.time;
 							fprintf('===>>> FIXATION TIME: %g\n',me.eyeTracker.fixation.time)
-							tS.keyHold = tS.keyTicks + fInc;
+							tS.keyHold = tS.keyTicks + me.fInc;
 						end
 					case 'v'
 						if tS.keyTicks > tS.keyHold
 							me.eyeTracker.fixation.time = me.eyeTracker.fixation.time + 0.1;
 							tS.firstFixTime = me.eyeTracker.fixation.time;
 							fprintf('===>>> FIXATION TIME: %g\n',me.eyeTracker.fixation.time)
-							tS.keyHold = tS.keyTicks + fInc;
+							tS.keyHold = tS.keyTicks + me.fInc;
 						end
 					case 'b'
 						if tS.keyTicks > tS.keyHold
@@ -2219,26 +2234,26 @@ classdef runExperiment < optickaCore
 							end
 							tS.firstFixRadius = me.eyeTracker.fixation.radius;
 							fprintf('===>>> FIXATION RADIUS: %g\n',me.eyeTracker.fixation.radius)
-							tS.keyHold = tS.keyTicks + fInc;
+							tS.keyHold = tS.keyTicks + me.fInc;
 						end
 					case 'n'
 						if tS.keyTicks > tS.keyHold
 							me.eyeTracker.fixation.radius = me.eyeTracker.fixation.radius + 0.1;
 							tS.firstFixRadius = me.eyeTracker.fixation.radius;
 							fprintf('===>>> FIXATION RADIUS: %g\n',me.eyeTracker.fixation.radius)
-							tS.keyHold = tS.keyTicks + fInc;
+							tS.keyHold = tS.keyTicks + me.fInc;
 						end
 					case 's'
 						if tS.keyTicks > tS.keyHold
 							fprintf('===>>> Show Cursor!\n');
 							ShowCursor('CrossHair',me.screen.win);
-							tS.keyHold = tS.keyTicks + fInc;
+							tS.keyHold = tS.keyTicks + me.fInc;
 						end
 					case 'd'
 						if tS.keyTicks > tS.keyHold
 							fprintf('===>>> Hide Cursor!\n');
 							HideCursor(me.screen.win);
-							tS.keyHold = tS.keyTicks + fInc;
+							tS.keyHold = tS.keyTicks + me.fInc;
 						end
 					case '1!'
 						if tS.keyTicks > tS.keyHold
@@ -2247,7 +2262,7 @@ classdef runExperiment < optickaCore
 								Eyelink('Command','binocular_enabled = NO')
 								Eyelink('Command','active_eye = LEFT')
 							end
-							tS.keyHold = tS.keyTicks + fInc;
+							tS.keyHold = tS.keyTicks + me.fInc;
 						end
 					case '2@'
 						if tS.keyTicks > tS.keyHold
@@ -2256,7 +2271,7 @@ classdef runExperiment < optickaCore
 								Eyelink('Command','binocular_enabled = NO');
 								Eyelink('Command','active_eye = LEFT');
 							end
-							tS.keyHold = tS.keyTicks + fInc;
+							tS.keyHold = tS.keyTicks + me.fInc;
 						end
 					case '3#'
 						if tS.keyTicks > tS.keyHold
@@ -2265,7 +2280,7 @@ classdef runExperiment < optickaCore
 								Eyelink('Command','binocular_enabled = NO');
 								Eyelink('Command','active_eye = RIGHT');
 							end
-							tS.keyHold = tS.keyTicks + fInc;
+							tS.keyHold = tS.keyTicks + me.fInc;
 						end
 					case '4$'
 						if tS.keyTicks > tS.keyHold
@@ -2274,7 +2289,7 @@ classdef runExperiment < optickaCore
 								Eyelink('Command','binocular_enabled = NO');
 								Eyelink('Command','active_eye = LEFT');
 							end
-							tS.keyHold = tS.keyTicks + fInc;
+							tS.keyHold = tS.keyTicks + me.fInc;
 						end
 				end
 			end

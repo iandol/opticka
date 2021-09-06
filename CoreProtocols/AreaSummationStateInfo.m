@@ -78,7 +78,7 @@ elseif me.useTobii
 	eT.name 					= tS.name;
 	eT.model					= 'Tobii Pro Spectrum';
 	eT.trackingMode				= 'human';
-	eT.calPositions				= [ .2 .5; .5 .5; .8 .5];
+	eT.calPositions				= [ .2 .5; .5 .5; .8 .5 ];
 	eT.valPositions				= [ .5 .5 ];
 	if me.dummyMode;			eT.isDummy = true; end %===use dummy or real eyetracker? 
 end
@@ -244,7 +244,7 @@ stimExitFcn = {
 %if the subject is correct (small reward)
 correctEntryFcn = {
 	@()timedTTL(rM, tS.rewardPin, tS.rewardTime); % send a reward TTL
-	@()beep(aM,2000); % correct beep
+	@()beep(aM,2000,0.1 0.1); % correct beep
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.CORRECT));
 	@()trackerClearScreen(eT);

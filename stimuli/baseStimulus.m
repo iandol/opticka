@@ -274,7 +274,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%>
 		% ===================================================================
 		function resetTicks(me)
-			global mouseTick %shared across all stimuli
+			global mouseTick mouseGlobalX mouseGlobalY %shared across all stimuli
 			if max(me.delayTime) > 0 %delay display a number of frames 
 				if length(me.delayTime) == 1
 					me.delayTicks = round(me.delayTime/me.screenVals.ifi);
@@ -295,10 +295,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 			else
 				me.offTicks = Inf;
 			end
-			mouseTick = 1;
-			if me.mouseOverride
-				getMousePosition(me);
-			end
+			mouseTick = 0; mouseGlobalX = 0; mouseGlobalY = 0;
+			me.mouseX = 0; me.mouseY = 0;
 			me.tick = 0; 
 			me.drawTick = 0;
 		end
@@ -312,18 +310,23 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> PTB screen (useful for mouse override positioning for stimuli)
 		% ===================================================================
 		function getMousePosition(me)
-			global mouseTick
+			global mouseTick mouseGlobalX mouseGlobalY
 			me.mouseValid = false;
 			if me.tick > mouseTick
 				if ~isempty(me.sM) && isa(me.sM,'screenManager') && me.sM.isOpen
 					[me.mouseX,me.mouseY] = GetMouse(me.sM.win);
-					if me.mouseX <= me.sM.screenVals.width && me.mouseY <= me.sM.screenVals.height
+					if me.mouseX > 0 && me.mouseY > 0 && me.mouseX <= me.sM.screenVals.width && me.mouseY <= me.sM.screenVals.height
 						me.mouseValid = true;
 					end
 				else
 					[me.mouseX,me.mouseY] = GetMouse;
 				end
 				mouseTick = me.tick; %set global so no other object with same tick number can call this again
+				mouseGlobalX = me.mouseX; mouseGlobalY = me.mouseY;
+			else
+				if ~isempty(mouseGlobalX) && ~isempty(mouseGlobalY)
+					me.mouseX = mouseGlobalX; me.mouseY = mouseGlobalY; me.mouseValid = true;
+				end
 			end
 		end
 		
