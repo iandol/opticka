@@ -51,6 +51,8 @@ classdef taskSequence < optickaCore & dynamicprops
 		isTime double = 1
 		%> inter block time
 		ibTime double = 2
+		%> original index before any resetRun()s
+		startIndex
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -397,6 +399,7 @@ classdef taskSequence < optickaCore & dynamicprops
 		function initialise(me)
 			me.randomiseTask();
 			me.initialiseTask();
+			me.backup();
 			fprintf('---> taskSequence.initialise: Randomised and Initialised!\n');
 		end
 		
@@ -418,6 +421,16 @@ classdef taskSequence < optickaCore & dynamicprops
 			me.taskInitialised = true;
 			me.makeLabels();
 			randomiseTimes(me);
+		end
+		
+		% ===================================================================
+		%> @brief Initialise the properties used to track the run
+		%>
+		%> Initialise the properties used to track the run. These are dynamic
+		%> props.
+		% ===================================================================
+		function backup(me)
+			me.startIndex = me.outIndex;
 		end
 		
 		% ===================================================================
@@ -488,8 +501,9 @@ classdef taskSequence < optickaCore & dynamicprops
 		%> stimulus repeatedly until there is a correct response...
 		%>
 		% ===================================================================
-		function success = resetRun(me)
+		function [success, message] = resetRun(me)
 			success = false;
+			message = '';
 			if me.taskInitialised
 				iLow = me.totalRuns; % select from this run...
 				iHigh = me.thisBlock * me.minTrials; %...to the last run in the current block
@@ -548,7 +562,8 @@ classdef taskSequence < optickaCore & dynamicprops
 				me.resetLog(myN).aIdx = aIdx;
 				me.resetLog(myN).bIdx = bIdx;
 				success = true;
-				if me.verbose;fprintf('--->>> taskSequence.resetRun() Task %i(v=%i): swap with = %i(v=%i) (random choice=%i)\n',me.totalRuns, aIdx, trialToSwap, bIdx, randomChoice);end
+				message = sprintf('--->>> taskSequence.resetRun() Run=%i swap trial %i(v=%i) with %i(v=%i) : trialToSwap=%i (random choice trial %i)',me.totalRuns, blockSource, bIdx, blockDestination, aIdx, trialToSwap, randomChoice);
+				if me.verbose;disp(message);end
 			end
 		end
 		
