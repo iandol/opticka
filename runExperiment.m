@@ -589,7 +589,7 @@ classdef runExperiment < optickaCore
 					me.eyeTracker		= tobiiManager();
 				else
 					me.eyeTracker		= eyelinkManager();
-					if ~isempty(me.eyelink); me.eyeTracker.editProperties(me.eyelink); end
+					if ~isempty(me.elsettings); me.eyeTracker.editProperties(me.elsettings); end
 				end
 				eT						= me.eyeTracker;
 				eT.verbose				= me.verbose;
