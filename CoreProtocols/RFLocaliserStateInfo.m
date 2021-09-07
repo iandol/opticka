@@ -21,20 +21,20 @@
 % tS		= general structure to hold general variables, will be saved as part of the data
 
 %------------General Settings-----------------
-tS.useTask              = false; %==use taskSequence (randomised variable task object)
-tS.rewardTime           = 300; %==TTL time in milliseconds
-tS.rewardPin            = 2; %==Output pin, 2 by default with Arduino.
-tS.checkKeysDuringStimulus = true; %==allow keyboard control? Slight drop in performance
-tS.recordEyePosition	= false; %==record eye position within PTB, **in addition** to the EDF?
-tS.askForComments		= false; %==little UI requestor asks for comments before/after run
-tS.saveData				= false; %we don't want to save any data
-tS.useMagStim			= false; %enable the magstim manager
+tS.useTask              = false;	%==use taskSequence (randomised variable task object)
+tS.rewardTime           = 100;		%==TTL time in milliseconds
+tS.rewardPin            = 2;		%==Output pin, 2 by default with Arduino.
+tS.checkKeysDuringStimulus = true;	%==allow keyboard control? Slight drop in performance
+tS.recordEyePosition	= false;	%==record eye position within PTB, **in addition** to the EDF?
+tS.askForComments		= false;	%==little UI requestor asks for comments before/after run
+tS.saveData				= false;	%==we don't want to save any data
+tS.useMagStim			= false;	%==enable the magstim manager
 tS.name					= 'RF Localiser'; %==name of this protocol
 tS.nStims				= stims.n;	%==number of stimuli
-tS.tOut					= 5;	%==if wrong response, how long to time out before next trial
-tS.CORRECT				= 1;	%==the code to send eyetracker for correct trials
-tS.BREAKFIX				= -1;	%==the code to send eyetracker for break fix trials
-tS.INCORRECT			= -5;	%==the code to send eyetracker for incorrect trials
+tS.tOut					= 5;		%==if breakfix response, how long to timeout before next trial
+tS.CORRECT				= 1;		%==the code to send eyetracker for correct trials
+tS.BREAKFIX				= -1;		%==the code to send eyetracker for break fix trials
+tS.INCORRECT			= -5;		%==the code to send eyetracker for incorrect trials
 
 %==================================================================
 %------------Debug logging to command window-----------------
@@ -47,11 +47,11 @@ tS.INCORRECT			= -5;	%==the code to send eyetracker for incorrect trials
 tS.fixX						= 0;		% X position in degrees
 tS.fixY						= 0;		% X position in degrees
 tS.firstFixInit				= 3;		% time to search and enter fixation window
-tS.firstFixTime				= 3;		% time to maintain fixation within windo
-tS.firstFixRadius			= 6;		% radius in degrees
+tS.firstFixTime				= 0.5;		% time to maintain fixation within windo
+tS.firstFixRadius			= 2;		% radius in degrees
 tS.strict					= true;		% do we forbid eye to enter-exit-reenter fixation window?
 tS.exclusionZone			= [];		% do we add an exclusion zone where subject cannot saccade to...
-tS.stimulusFixTime			= 3;		% time to fix on the stimulus
+tS.stimulusFixTime			= 2.5;		% time to fix on the stimulus
 me.lastXPosition			= tS.fixX;
 me.lastYPosition			= tS.fixY;
 

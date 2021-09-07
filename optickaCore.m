@@ -60,7 +60,7 @@ classdef optickaCore < handle
 	%--------------------PRIVATE PROPERTIES----------%
 	properties (SetAccess = private, GetAccess = private)
 		%> allowed properties passed to object upon construction
-		allowedProperties char = 'name|comment|cloning'
+		allowedPropertiesCore char = 'name|comment|cloning'
 		%> cached full name
 		fullName_ char
 	end
@@ -84,7 +84,7 @@ classdef optickaCore < handle
 			me.uuid = num2str(dec2hex(floor((now - floor(now))*1e10))); %me.uuid = char(java.util.UUID.randomUUID)%128bit uuid
 			me.fullName_ = me.fullName; %cache fullName
 			if nargin>0
-				me.parseArgs(args,me.allowedProperties);
+				me.parseArgs(args,me.allowedPropertiesCore);
 			end
 			me.mversion = str2double(regexp(version,'(?<ver>^\d\.\d[\d]?)','match','once'));
 			setPaths(me)
@@ -289,7 +289,16 @@ classdef optickaCore < handle
 		end
 		
 		% ===================================================================
-		%> @brief Edit -- method to fast change a particular value. This is
+		%> @brief editProperties -- method to edit a bunch of properties
+		%>
+		%> @param properties - cell or struct of properties
+		% ===================================================================
+		function editProperties(me, properties)
+			me.addArgs(properties);
+		end
+		
+		% ===================================================================
+		%> @brief set -- method to fast change a particular value. This is
 		%> useful for use in anonymous functions, like in the state machine.
 		%>
 		%> @param property - the property to change
@@ -413,7 +422,6 @@ classdef optickaCore < handle
 		function args = addDefaults(args,defs)
 			if iscell(args); args = optickaCore.makeArgs(args); end
 			if iscell(defs); defs = optickaCore.makeArgs(defs); end
-			
 			fnameDef = fieldnames(defs); %find our argument names
 			fnameArg = fieldnames(args); %find our argument names
 			for i=1:length(fnameDef)
@@ -446,7 +454,7 @@ classdef optickaCore < handle
 				fnames = fieldnames(args); %find our argument names
 				for i=1:length(fnames)
 					if regexpi(fnames{i},allowedProperties) %only set if allowed property
-						me.salutation(fnames{i},'Constructor parsing input argument');
+						me.salutation(fnames{i},'Parsing input argument');
 						try
 							me.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
 						catch
@@ -456,6 +464,28 @@ classdef optickaCore < handle
 				end
 			end
 			
+		end
+		
+		% ===================================================================
+		%> @brief Sets properties from a structure or normal arguments pairs,
+		%> ignores invalid or non-allowed properties
+		%>
+		%> @param args input structure
+		%> @param allowedProperties properties possible to set on construction
+		% ===================================================================
+		function addArgs(me, args)
+			args = optickaCore.makeArgs(args);
+			if isstruct(args)
+				fnames = intersect(findAttributes(me,'SetAccess','public'),fieldnames(args));
+				for i=1:length(fnames)
+					try
+						me.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
+						me.salutation(fnames{i},'SET property')
+					catch
+						me.salutation(fnames{i},'Property INVALID!',true);
+					end
+				end
+			end
 		end
 		
 		% ===================================================================

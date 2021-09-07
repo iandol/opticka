@@ -53,11 +53,9 @@ classdef behaviouralRecord < optickaCore
 		%> @return instance of class.
 		% ===================================================================
 		function me = behaviouralRecord(varargin)
-			if nargin == 0; varargin.name = 'Behavioural Record'; end
-			me=me@optickaCore(varargin); %superclass constructor
-			if nargin>0
-				me.parseArgs(varargin,me.allowedProperties);
-			end
+			args = optickaCore.addDefaults(varargin,struct('name','Behavioural Record'));
+			me=me@optickaCore(args); %we call the superclass constructor first
+			me.parseArgs(args, me.allowedProperties);
 		end
 		
 		% ===================================================================

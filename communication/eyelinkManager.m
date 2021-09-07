@@ -106,7 +106,7 @@ classdef eyelinkManager < optickaCore
 		customTarget				= []
 	end
 	
-	properties (SetAccess = private, GetAccess = public)
+	properties (SetAccess = protected, GetAccess = public)
 		%> Gaze X position in degrees
 		x							= []
 		%> Gaze Y position in degrees
@@ -159,7 +159,7 @@ classdef eyelinkManager < optickaCore
 		pupilAll						= []
 	end
 	
-	properties (SetAccess = private, GetAccess = private)
+	properties (SetAccess = protected, GetAccess = ?optickaCore)
 		% value for missing data
 		MISSING_DATA				= -32768
 		%> the PTB screen handle, normally set by screenManager but can force it to use another screen

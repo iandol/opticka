@@ -107,9 +107,9 @@ classdef runExperiment < optickaCore
 		%> which port is the arduino on?
 		arduinoPort char = '/dev/ttyACM0'
 		%> initial eyelink settings
-		eyelink
+		elsettings
 		%> initial tobii settings
-		tobii
+		tobiisettings
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -589,6 +589,7 @@ classdef runExperiment < optickaCore
 					me.eyeTracker		= tobiiManager();
 				else
 					me.eyeTracker		= eyelinkManager();
+					if ~isempty(me.eyelink); me.eyeTracker.editProperties(me.eyelink); end
 				end
 				eT						= me.eyeTracker;
 				eT.verbose				= me.verbose;

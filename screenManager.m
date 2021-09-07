@@ -1268,11 +1268,11 @@ classdef screenManager < optickaCore
 			if force == true
 				[mouseGlobalX,mouseGlobalY] = GetMouse(me.win);
 				val = me.toDegrees([mouseGlobalX mouseGlobalY]);
-				txt = sprintf('X: %.2f | Y: %.2f',val(1),val(2));
-				Screen('DrawText',me.win, txt, me.xCenter,5, [0.7 0.7 0.5], [0.5 0.5 0.5]);
+				txt = sprintf('X: %+.2f | Y: %+.2f',val(1),val(2));
+				Screen('DrawText',me.win, txt, me.xCenter,5, [0.7 0.7 0.4], [0.5 0.5 0.5]);
 			elseif ~isempty(mouseGlobalX) && ~isempty(mouseGlobalY)
 				val = me.toDegrees([mouseGlobalX mouseGlobalY]);
-				txt = sprintf('X: %.2f | Y: %.2f',val(1),val(2));
+				txt = sprintf('X: %+.2f | Y: %+.2f',val(1),val(2));
 				Screen('DrawText',me.win,txt, me.xCenter, 5, [0.7 0.7 0.5], [0.5 0.5 0.5]);
 			end
 		end

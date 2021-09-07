@@ -28,6 +28,10 @@ classdef rfMapper < barStimulus
 		dummyMode = true
 	end
 	
+	properties (Hidden = true)
+		stimTime = 2;
+	end
+	
 	properties (SetAccess = private, GetAccess = public)
 		winRect = []
 		buttons = []
@@ -71,12 +75,8 @@ classdef rfMapper < barStimulus
 		%> @return instance of the class.
 		% ===================================================================
 		function me = rfMapper(varargin)
-			args = optickaCore.addDefaults(varargin,struct('name','rfMapper'));
-			
+			args = optickaCore.addDefaults(varargin,struct('backgroundColour',[0 0 0 0],'name','rfMapper'));
 			me=me@barStimulus(args); %we call the superclass constructor first
-			
-			me.backgroundColour = [0 0 0 0];
-			me.family = 'rfMapper';
 			me.salutation('constructor','rfMapper initialisation complete');
 		end
 		
@@ -97,13 +97,15 @@ classdef rfMapper < barStimulus
 			end
 			aM.silentMode = false;
 			if ~aM.isSetup;	aM.setup; end
-			aM.beep(1000,0.1,0.1);
+			aM.beep(2000,0.1,0.25);
 			
 			if exist('rE','var') && isa(rE,'runExperiment')
 				me.sM = rE.screen;
+				el = [];
 				me.dummyMode = rE.dummyMode;
 				if rE.useEyeLink
 					me.useEyetracker = true;
+					el = rE.elsettings;
 				else
 					me.useEyetracker = false;
 				end
@@ -123,22 +125,30 @@ classdef rfMapper < barStimulus
 				sM.backgroundColour = me.backgroundColour;
 				open(sM);
 				me.setup(sM);
+				stimtime = me.stimTime;
 				if me.useEyetracker
 					eT						= eyelinkManager();
+					eT.verbose				= me.verbose;
 					fprintf('--->>> rfMapper eyetracker setup starting: %s\n', eT.fullName);
 					eT.isDummy				= me.dummyMode; %use dummy or real eyelink?
 					eT.recordData			= false; %save EDF file
-					eT.sampleRate			= 250;
-					eT.verbose				= true;
-					eT.remoteCalibration	= false; % manual calibration?
-					eT.calibrationStyle		= 'HV5';
-					eT.calibrationProportion = [0.3 0.3];
+					if ~isempty(el)
+						eT.editProperties(el);
+						fixtime = el.fixation.time;
+					else
+						eT.sampleRate			= 250;
+						eT.remoteCalibration	= false; % manual calibration?
+						eT.calibrationStyle		= 'HV5';
+						eT.calibrationProportion = [0.3 0.3];
+						fixtime = 0.5;
+						updateFixationValues(eT, 0, 0, 2, fixtime, 2, true);
+					end
+					eT.verbose = true;
 					eT.modify.calibrationtargetcolour = [1 1 1];
 					eT.modify.calibrationtargetsize = 1.75;
 					eT.modify.calibrationtargetwidth = 0.1;
 					eT.modify.waitformodereadytime = 500;
 					eT.modify.devicenumber	= -1; % -1 = use any keyboard
-					updateFixationValues(eT, 0, 0, 2,0.5, 15, false);
 					initialise(eT, sM); %use sM to pass screen values to eyelink
 					fprintf('--->>> rfMapper eyetracker setup complete: %s\n', eT.fullName);
 					WaitSecs('YieldSecs',0.1);
@@ -153,20 +163,23 @@ classdef rfMapper < barStimulus
 				yOut = 0;
 				me.rchar='';
 				Priority(MaxPriority(sM.win)); %bump our priority to maximum allowed
+				Screen('TextFont',sM.win,'Liberation Mono');
 				FlushEvents;
 				HideCursor;
 				if ~sM.debug; ListenChar(-1); end
 				me.tick = 1;
 				me.stopTask = false;
-				nTicks = round( 5 / sM.screenVals.ifi );
+				nTicks = round( me.stimTime / sM.screenVals.ifi );
 				HideCursor(sM.win); me.cursor = false;
 				nRewards = 0;
 				while ~me.stopTask
 					%================================================================
 					if me.useEyetracker % intitate fixation
 						isFix = '';
+						updateFixationValues(eT, [], [], [], fixtime);
+						trackerClearScreen(eT);
+						trackerDrawFixation(eT);
 						statusMessage(eT,'Initiate Fixation...');
-						updateFixationValues(eT, 0, 0, 3, 0.3, 10, false);
 						while ~strcmpi(isFix,'fix') && ~strcmpi(isFix,'break')
 							drawBackground(sM,me.backgroundColour);
 							drawGrid(sM);
@@ -174,21 +187,25 @@ classdef rfMapper < barStimulus
 							flip(sM);
 							getSample(eT);
 							isFix = testSearchHoldFixation(eT,'fix','break');
+							[mX, mY, me.buttons] = GetMouse(sM.screen);
+							checkKeys(me,mX,mY); FlushEvents('keyDown');
 						end
 						if strcmpi(isFix,'break')
 							fprintf('--->>> Broke initiate fixation...\n');
+							trackerClearScreen(eT);
 							statusMessage(eT,'Subject Broke Initial Fixation!');
-							vbl = flip(sM); tNow = vbl+0.75;
+							vbl = flip(sM); tNow = vbl + 0.75;
 							while vbl <= tNow
-								drawBackground(sM,me.backgroundColour);
+								drawBackground(sM, me.backgroundColour);
+								drawGrid(sM);
 								[mX, mY, me.buttons] = GetMouse(sM.screen);
-								checkKeys(me,mX,mY); FlushEvents('keyDown');
+								checkKeys(me, mX, mY); FlushEvents('keyDown');
 								vbl = flip(sM);
-								if me.stopTask;break;end
+								if me.stopTask; break; end
 							end
 							continue;
 						end
-						updateFixationValues(eT, 0, 0, 0.1, 2, 10, false);
+						updateFixationValues(eT, [], [], [], stimtime);
 						statusMessage(eT,'Show Stimulus...');
 					end
 					%================================================================
@@ -196,7 +213,7 @@ classdef rfMapper < barStimulus
 					isFix = 'fixing';
 					isBreak = false;
 					%================================================================
-					while ~isBreak && me.tick <= switchTick && ~me.stopTask
+					while isBreak==false && ~me.stopTask
 						[mX, mY, me.buttons] = GetMouse(sM.screen);
 						drawBackground(sM,me.backgroundColour);
 						drawGrid(sM);
@@ -223,7 +240,7 @@ classdef rfMapper < barStimulus
 						%draw text
 						width=abs(me.dstRect(1)-me.dstRect(3))/me.ppd;
 						height=abs(me.dstRect(2)-me.dstRect(4))/me.ppd;
-						t=sprintf('X = %2.3g | Y = %2.3g ',xOut,yOut);
+						t=sprintf('X = %+.2f | Y = %+.2f ',xOut,yOut);
 						t=[t sprintf('| W = %.2f H = %.2f ',width,height)];
 						t=[t sprintf('| Scale = %i ',me.scaleOut)];
 						t=[t sprintf('| SF = %.2f ',me.sfOut)];
@@ -240,43 +257,46 @@ classdef rfMapper < barStimulus
 							me.dEndTick = length(me.xClick);
 							updateFigure(me);
 						end
-						checkKeys(me,mX,mY); FlushEvents('keyDown');
+						checkKeys(me, mX, mY); FlushEvents('keyDown');
 						if me.useEyetracker
 							getSample(eT);
-							isFix=testHoldFixation(eT,'fix','break');
-							if ~strcmpi(isFix,'fixing'); isBreak = true; end
+							isFix=testHoldFixation(eT, 'fix', 'break');
+							if ~strcmpi(isFix, 'fixing'); isBreak = true; end
+						else
+							if me.tick >= switchTick; isBreak = true; end
 						end
-						me.dstRect=CenterRectOnPointd(me.dstRect,mX,mY);
+						me.dstRect=CenterRectOnPointd(me.dstRect, mX, mY);
 						flip(sM);
 						me.tick = me.tick + 1;
 					end
 					if me.useEyetracker
 						statusMessage(eT,'Stimulus turned off...');
-						fprintf('fix result: %s\n',isFix);
+						trackerClearScreen(eT);
+						fprintf('--->>> Fixation result: %s\n',isFix);
 						if strcmpi(isFix,'fix')
-							aM.beep(1000,0.1,0.1); 
-							rM.timedTTL; 
+							aM.beep(2000, 0.1, 0.1);
+							rM.timedTTL;
 							nRewards = nRewards + 1;
+							tOut = 0.5;
 						else
-							aM.beep(260,0.6,0.6);
+							aM.beep(250, 0.6, 1);
+							tOut = 2;
 						end
 						fprintf('--->>> Given %i rewards...\n',nRewards);
-						vbl = flip(sM); tNow = vbl+0.75;
+						vbl = flip(sM); tNow = vbl + tOut;
 						while vbl <= tNow
 							drawBackground(sM,me.backgroundColour);
-							checkKeys(me,mX,mY); FlushEvents('keyDown');
+							drawGrid(sM);
+							checkKeys(me, mX, mY); FlushEvents('keyDown');
 							vbl=flip(sM);
-							if me.stopTask;break;end
+							if me.stopTask; break; end
 						end
 					end
 				end
 				
 				close(sM);
 				sM.backgroundColour = oldbg;
-				Priority(0);
-				ListenChar(0)
-				ShowCursor;
-				sca;
+				Priority(0);ListenChar(0); ShowCursor;
 				if ~isempty(me.xClick) && length(me.xClick)>1
 					me.drawMap; 
 				end
@@ -284,12 +304,10 @@ classdef rfMapper < barStimulus
 				me.ax = [];
 				
 			catch ME
-				close(me.sM)
-				Priority(0);
-				ListenChar(0);
-				ShowCursor;
+				try close(me.sM); end
+				try reset(me); end
+				Priority(0); ListenChar(0); ShowCursor;
 				sca;
-				%psychrethrow(psychlasterror);
 				rethrow(ME);
 			end
 		end
