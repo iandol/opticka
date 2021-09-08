@@ -475,7 +475,7 @@ classdef stateMachine < optickaCore
 			exitFcn = { @()fprintf('\t--->>exit state'); @()fprintf('\n') };
 			statesInfo = {
 				'name'		'next'		'time'	'entryFcn'	'withinFcn'	'transitionFcn'	'exitFcn';
-				'begin'		'middle'	2		beginFcn	withinFcn	{}				exitFcn;
+				'begin'		'middle'	[2 4]	beginFcn	withinFcn	{}				exitFcn;
 				'middle'	'end'		2		middleFcn	withinFcn	transitionFcn	exitFcn;
 				'end'		''			2		endFcn		withinFcn	{}				exitFcn;
 				'surprise'	'end'		2		surpriseFcn	withinFcn	{}				exitFcn;

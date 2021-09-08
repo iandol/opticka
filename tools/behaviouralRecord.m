@@ -21,6 +21,10 @@ classdef behaviouralRecord < optickaCore
 		rewardVolume		= 3.6067e-04; %for 1ms
 	end
 	
+	properties (GetAccess = public, SetAccess = protected)
+		trials
+	end
+	
 	properties (SetAccess = ?runExperiment, Transient = true)
 		%> handles for the GUI
 		h
@@ -215,7 +219,13 @@ classdef behaviouralRecord < optickaCore
 			axis(me.h.axis1, 'tight');
 			%axis 2
 			if ~isempty(me.rt1) 
-				histogram(me.h.axis2, [me.rt1' me.rt2'], 8);
+				if max(me.rt1) == 0 && max(me.rt2) > 0
+					histogram(me.h.axis2, [me.rt2'], 8);
+				elseif max(me.rt1) > 0 && max(me.rt2) == 0
+					histogram(me.h.axis2, [me.rt1'], 8);
+				elseif max(me.rt1) > 0 && max(me.rt2) > 0
+					histogram(me.h.axis2, [me.rt1' me.rt2'], 8);
+				end
 				axis(me.h.axis2, 'tight');
 			end
 			
@@ -255,7 +265,7 @@ classdef behaviouralRecord < optickaCore
 			ylabel(me.h.axis4, '% success')
 			ylabel(me.h.axis5, 'y')
 			title(me.h.axis1,['Success (' num2str(hitn) ') / Fail (all=' num2str(missn) ' | break=' num2str(breakn) ' | abort=' num2str(missn-breakn) ')'])
-			title(me.h.axis2,sprintf('Mean Times:  total: %g | fixinit: %g',mean(me.rt1),mean(me.rt2)));
+			title(me.h.axis2,sprintf('Time:  total: %g | fixinit: %g',mean(me.rt1),mean(me.rt2)));
 			title(me.h.axis3,'Hit (blue) / Miss (red) / Break (blue) / Abort (red)')
 			title(me.h.axis4,'Average (n=10) Hit / Miss %')
 			title(me.h.axis5,'Last Eye Position');
@@ -275,7 +285,15 @@ classdef behaviouralRecord < optickaCore
 			t{end+1} = ['Overall | Latest (n=10) Hit Rate = ' num2str(hitmiss) ' | ' num2str(average)];
 			t{end+1} = ['Run time = ' num2str(etime(clock,me.startTime)/60) 'mins'];
 			t{end+1} = sprintf('Estimated Volume at %gms TTL = %g mls', me.rewardTime, (me.rewardVolume*me.rewardTime)*hitn);
-			set(me.h.info,'String', t')
+			set(me.h.info,'String', t');
+			
+			if ~isempty(me.response)
+				n = length(me.response);
+				me.trials(n).info = me.info;
+				me.trials(n).tick = me.tick;
+				me.trials(n).comment = me.comment;
+				me.trials(n).response = me.response(n);
+			end
 			
 			me.tick = me.tick + 1;
 			
@@ -311,7 +329,9 @@ classdef behaviouralRecord < optickaCore
 		%> @param in input object/structure
 		% ===================================================================
 		function lobj=loadobj(in)
-			in.clearHandles();
+			if isa(in,'behaviouralRecord') && ~isempty(in.h)
+				in.clearHandles();
+			end
 			lobj = in;
 		end
 	end

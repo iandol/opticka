@@ -244,7 +244,7 @@ stimExitFcn = {
 %if the subject is correct (small reward)
 correctEntryFcn = {
 	@()timedTTL(rM, tS.rewardPin, tS.rewardTime); % send a reward TTL
-	@()beep(aM,2000,0.1 0.1); % correct beep
+	@()beep(aM, 2000, 0.1, 0.1); % correct beep
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.CORRECT));
 	@()trackerClearScreen(eT);

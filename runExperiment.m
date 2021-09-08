@@ -147,8 +147,10 @@ classdef runExperiment < optickaCore
 		taskLog
 		%> behavioural log
 		behaviouralRecord
-		%> info on the current run
+		%> general info on current run
 		currentInfo
+		%> variable info on the current run
+		variableInfo
 		%> previous info populated during load of a saved object
 		previousInfo struct = struct()
 		%> check if runExperiment is running or not
@@ -897,13 +899,14 @@ classdef runExperiment < optickaCore
 				me.tS = tS; %copy our tS structure for backup
 				
 				if tS.saveData
+					sname = [me.paths.savedData filesep me.name '.mat'];
 					rE = me;
 					bR.clearHandles();
 					htmp = me.screenSettings.optickahandle; me.screenSettings.optickahandle = [];
 					assignin('base', 'tS', tS);
-					save([me.paths.savedData filesep me.name '.mat'],'rE','tS');
+					save(sname,'rE','tS','bR');
 					me.screenSettings.optickahandle = htmp;
-					fprintf('\n===>>> SAVED DATA to: %s\n',[me.paths.savedData filesep me.name '.mat'])
+					fprintf('\n===>>> SAVED DATA to: %s\n',sname)
 				end
 				
 				me.stateInfo = [];
@@ -1284,7 +1287,7 @@ classdef runExperiment < optickaCore
 			for i = 1:me.stimuli.n
 				info = sprintf('%s stim:%i tick:%i drawtick:%i',info,i,me.stimuli{i}.tick,me.stimuli{i}.drawTick);
 			end
-			info = [info '\n' me.currentInfo];
+			info = [info '\n' me.variableInfo];
 			updateTask(me.task,result,GetSecs,info); %do this before getting index
 		end
 		
@@ -1435,7 +1438,7 @@ classdef runExperiment < optickaCore
 					a = a + 1;
 				end
 					
-				me.currentInfo = t;
+				me.variableInfo = t;
 				me.behaviouralRecord.info = t;
 				me.lastIndex = index;
 			end
@@ -1830,12 +1833,13 @@ classdef runExperiment < optickaCore
 		%> @return
 		% ===================================================================
 		function t = infoText(me)
-			etinfo = '';name='';
+			etinfo = '';name=''; uuid = '';
 			if me.isRunTask
 				log = me.taskLog;
-				name = me.stateMachine.currentName;
+				name = [me.stateMachine.currentName ':' me.stateMachine.currentUUID];
 				if me.useEyeLink || me.useTobii
-					etinfo = sprintf('| isFix:%i isExcl:%i isFixInit:%i',me.eyeTracker.isFix,me.eyeTracker.isExclusion,me.eyeTracker.isInitFail);
+					etinfo = sprintf('| isFix:%i isExcl:%i isFixInit:%i fixLength: %.2f',...
+						me.eyeTracker.isFix,me.eyeTracker.isExclusion,me.eyeTracker.isInitFail,me.eyeTracker.fixLength);
 				end
 			else
 				log = me.runLog;
@@ -1865,14 +1869,14 @@ classdef runExperiment < optickaCore
 			for i=1:me.task.nVars
 				if iscell(me.task.outVars{me.task.thisBlock,i}(me.task.thisRun))
 					t=[t sprintf(' > %s: %s',me.task.nVar(i).name,...
-						num2str(me.task.outVars{me.task.thisBlock,i}{me.task.thisRun}))];
+						num2str(me.task.outVars{me.task.thisBlock,i}{me.task.thisRun},'%.2f '))];
 				else
 					t=[t sprintf(' > %s: %3.3f',me.task.nVar(i).name,...
 						me.task.outVars{me.task.thisBlock,i}(me.task.thisRun))];
 				end
 			end
-			if ~isempty(me.currentInfo)
-				t = [t me.currentInfo];
+			if ~isempty(me.variableInfo)
+				t = [t me.variableInfo];
 			end
 		end
 		

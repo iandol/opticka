@@ -1266,8 +1266,8 @@ classdef screenManager < optickaCore
 			global mouseGlobalX mouseGlobalY
 			if ~exist('force','var'); force = false; end
 			if force == true
-				[mouseGlobalX,mouseGlobalY] = GetMouse(me.win);
-				val = me.toDegrees([mouseGlobalX mouseGlobalY]);
+				[x,y] = mousePosition(me,false);
+				val = [x y];
 				txt = sprintf('X: %+.2f | Y: %+.2f',val(1),val(2));
 				Screen('DrawText',me.win, txt, me.xCenter,5, [0.7 0.7 0.4], [0.5 0.5 0.5]);
 			elseif ~isempty(mouseGlobalX) && ~isempty(mouseGlobalY)
@@ -1307,15 +1307,16 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		function [xPos, yPos] = mousePosition(me, verbose)
 			if ~exist('verbose','var') || isempty(verbose); verbose = me.verbose; end
+			global mouseGlobalX mouseGlobalY
 			if me.isOpen
-				[xPos,yPos] = GetMouse(me.win);
+				[mouseGlobalX,mouseGlobalY] = GetMouse(me.win);
 			else
-				[xPos,yPos] = GetMouse();
+				[mouseGlobalX,mouseGlobalY] = GetMouse();
 			end
-			xPos = (xPos - me.xCenter) / me.ppd_;
-			yPos = (yPos - me.yCenter) / me.ppd_;
+			xPos = (mouseGlobalX - me.xCenter) / me.ppd_;
+			yPos = (mouseGlobalY - me.yCenter) / me.ppd_;
 			if verbose
-				fprintf('--->>> MOUSE POSITION: \tX = %5.5g \t\tY = %5.5g\n',xPos,yPos);
+				fprintf('--->>> MOUSE POSITION: \tX = %+2.2f (%4.2f) \t\tY = %+2.2f (%4.2f)\n',xPos,mouseGlobalX,yPos,mouseGlobalY);
 			end
 		end
 		
