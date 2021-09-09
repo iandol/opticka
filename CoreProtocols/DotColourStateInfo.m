@@ -42,7 +42,7 @@ tS.INCORRECT				= -5;		%==the code to send eyetracker for incorrect trials
 tS.fixX						= 0;		% X position in degrees
 tS.fixY						= 0;		% X position in degrees
 tS.firstFixInit				= 3;		% time to search and enter fixation window
-tS.firstFixTime				= 0.5;		% time to maintain fixation within windo
+tS.firstFixTime				= 0.5;		% time to maintain fixation within window
 tS.firstFixRadius			= 2;		% radius in degrees
 tS.strict					= true;		% do we forbid eye to enter-exit-reenter fixation window?
 tS.exclusionZone			= [];		% do we add an exclusion zone where subject cannot saccade to...
