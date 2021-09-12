@@ -971,9 +971,10 @@ classdef screenManager < optickaCore
 		%> @param lineWidth of lines in degrees (1px minimum)
 		%> @return
 		% ===================================================================
-		function drawCross(me,size,colour,x,y,lineWidth,showDisk,alpha)
+		function drawCross(me,size,colour,x,y,lineWidth,showDisk,alpha,alpha2)
 			if ~me.isOpen; fprintf('drawCross(me,size,colour,x,y,lineWidth,showDisk,alpha)\n');return; end
 			% drawCross(me, size, colour, x, y, lineWidth)
+			if nargin < 9 || isempty(alpha2); alpha2 = 1; end
 			if nargin < 8 || isempty(alpha); alpha = 1; end
 			if nargin < 7 || isempty(showDisk); showDisk = true; end
 			if nargin < 6 || isempty(lineWidth); lineWidth = 0.05; end
@@ -986,10 +987,11 @@ classdef screenManager < optickaCore
 					colour = [0 0 0 alpha];
 				end
 			end
+			colour = [colour(1:3) alpha];
 			if mean(colour(1:3)) <= 0.5
-				lineColour = [1 1 1 1];
+				lineColour = [1 1 1 alpha2];
 			else
-				lineColour = [0 0 0 1];
+				lineColour = [0 0 0 alpha2];
 			end
 			if nargin < 2 || isempty(size); size = 0.6; end
 			x = me.xCenter + (x * me.ppd_);
