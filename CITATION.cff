@@ -1,0 +1,14 @@
+# YAML 1.2
+---
+abstract: "Opticka is an experiment manager built on top of the Psychophysics toolbox (PTB) for MATLAB. It runs experimental tasks using flexible state machine logic and easily does dynamic methods-of-constants type experiments with full behavioural control. It uses a class system to create simple to use visual stimuli using experimenter friendly units. Opticka can use an Eyelink or Tobii eyetracker, Plexon Omniplex neurophysiology data collection and general TTL control using either a cheap LabJack (ms precision) or DataPixx/Display++ (µs precision). It contains analysis routines linked to Fieldtrip for spike and LFP data easily parsed in terms of the experimental variables."
+authors: 
+  -
+    affiliation: "Inst. of Neuroscience, Chinese Academy of Sciences"
+    family-names: Andolina
+    given-names: "Ian Max"
+    orcid: "https://orcid.org/0000-0001-9985-3414"
+cff-version: "1.1.0"
+message: "If you use this software, please cite it using these metadata."
+repository-code: "https://github.com/iandol/opticka"
+title: "Opticka: Psychophysics-toolbox based experiment manager"
+...
