@@ -16,9 +16,11 @@ classdef eyelinkAnalysis < analysisCore
 		trialStartMessageName char					= 'TRIALID'
 		%> which EDF message contains the variable name or value
 		variableMessageName char					= 'TRIALID'
-		%> the EDF message name to start measuring stimulus presentation
+		%> the EDF message name to start measuring stimulus presentation,
+		%> and this is the 0 time in the analysis by default, can be
+		%> overridden by send SYNCTIME or rtOverrideMessage
 		rtStartMessage char							= 'END_FIX'
-		%> EDF message name to end the stimulus presentation
+		%> EDF message name to end the stimulus presentation or subject repsonse
 		rtEndMessage char							= 'END_RT'
 		%> EDF message name to signal end of the trial, also parses a passed number, so
 		%> e.g. "TRIAL_RESULT -1" sets the trial.result to -1, these are used to label trials
@@ -66,7 +68,9 @@ classdef eyelinkAnalysis < analysisCore
 		yCenter double								= 512
 		%>57.3 bug override
 		override573									= false
+		%> downsample the data for plotting
 		downSample logical							= true
+		excludeTrials								= []
 	end
 
 	properties (SetAccess = private, GetAccess = public)
@@ -259,6 +263,9 @@ classdef eyelinkAnalysis < analysisCore
 			end
 			me.correct.idx = find([me.trials.correct] == true);
 			me.correct.saccTimes = [me.trials(me.correct.idx).firstSaccade];
+			tr = [me.trials(me.correct.idx).timeRange];
+			tr = reshape(tr,[2,length(me.correct.idx)])';
+			me.correct.timeRange = tr;
 			me.incorrect.idx = find([me.trials.incorrect] == true);
 			me.incorrect.saccTimes = [me.trials(me.incorrect.idx).firstSaccade];
 		end
@@ -281,6 +288,9 @@ classdef eyelinkAnalysis < analysisCore
 
 			me.correct.idx = idx;
 			me.correct.saccTimes = [me.trials(me.correct.idx).firstSaccade];
+			tr = [me.trials(me.correct.idx).timeRange];
+			tr = reshape(tr,[2,length(me.correct.idx)])';
+			me.correct.timeRange = tr;
 			me.correct.isCustomIdx = true;
 
 			for i = me.correct.idx
@@ -303,6 +313,9 @@ classdef eyelinkAnalysis < analysisCore
 			me.trialList(num) = [];
 			me.correct.idx = find([me.trials.correct] == true);
 			me.correct.saccTimes = [me.trials(me.correct.idx).firstSaccade];
+			tr = [me.trials(me.correct.idx).timeRange];
+			tr = reshape(tr,[2,length(me.correct.idx)])';
+			me.correct.timeRange = tr;
 			me.breakFix.idx = find([me.trials.breakFix] == true);
 			me.breakFix.saccTimes = [me.trials(me.breakFix.idx).firstSaccade];
 			me.incorrect.idx = find([me.trials.incorrect] == true);
@@ -326,12 +339,10 @@ classdef eyelinkAnalysis < analysisCore
 			if ~exist('type','var') || isempty(type); type = 'correct'; end
 			if ~exist('seperateVars','var') || ~islogical(seperateVars); seperateVars = false; end
 			if ~exist('name','var') || isempty(name)
-				if isnumeric(select)
-					if length(select) > 1
-						name = [me.file ' | Select: ' num2str(length(select)) ' trials'];
-					else
-						name = [me.file ' | Select: ' num2str(select)];
-					end
+				if isnumeric(select) && length(select) > 1
+					name = [me.file ' | Select: ' num2str(length(select)) ' trials'];
+				else
+					name = [me.file ' | Select: ' select];
 				end
 			end
 			if isnumeric(select) && ~isempty(select)
@@ -351,6 +362,7 @@ classdef eyelinkAnalysis < analysisCore
 				end
 				idxInternal = true;
 			end
+			idx = setdiff(idx, me.excludeTrials);
 			if isempty(idx)
 				fprintf('No trials were selected to plot...\n')
 				return
@@ -363,19 +375,12 @@ classdef eyelinkAnalysis < analysisCore
 				end
 				return
 			end
-			handle=figure;
-			set(gcf,'Color',[1 1 1],'Name',name);
+			handle=figure('Name',name,'Color',[1 1 1],'NumberTitle','off',...
+				'Papertype','a4','PaperUnits','centimeters',...
+				'PaperOrientation','landscape','Renderer','painters');
 			figpos(1,[0.6 0.9],1,'%');
-			p = panel(handle);
-			p.fontsize = 10;
-			p.margin = [10 10 10 20]; %left bottom right top
-			p.pack('v',{2/3, []});
-			q = p(1);
-			q.margin = [20 20 10 25]; %left bottom right top
-			q.pack(2,2);
-			qq = p(2);
-			qq.margin = [50 20 10 35]; %left bottom right top
-			qq.pack(1,2);
+			p = tiledlayout(3,2,'TileSpacing','compact','Padding','compact');
+			
 			a = 1;
 			stdex = [];
 			meanx = [];
@@ -465,8 +470,8 @@ classdef eyelinkAnalysis < analysisCore
 					pupilPlot(idx) = [];
 				end
 
-				q(1,1).select();
-				q(1,1).hold('on')
+				ax = nexttile(1);
+				hold on;
 				plot(xp, yp,'k-','Color',c,'LineWidth',1,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
 				if isfield(thisTrial,'microSaccades') & ~isnan(thisTrial.microSaccades) & ~isempty(thisTrial.microSaccades)
 					for jj = 1: length(thisTrial.microSaccades)
@@ -478,8 +483,8 @@ classdef eyelinkAnalysis < analysisCore
 					end
 				end
 				
-				q(1,2).select();
-				q(1,2).hold('on');
+				ax = nexttile(2);
+				hold on;
 				plot(tp,abs(xp),'k-','Color',c,'MarkerSize',3,'MarkerEdgeColor',c,...
 					'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
 				plot(tp,abs(yp),'k.-','Color',c,'MarkerSize',3,'MarkerEdgeColor',c,...
@@ -492,12 +497,12 @@ classdef eyelinkAnalysis < analysisCore
 					end
 				end
 
-				qq(1,1).select();
-				qq(1,1).hold('on')
+				ax = nexttile(5);
+				hold on;
 				for fix=1:length(thisTrial.fixations)
 					f=thisTrial.fixations(fix);
-					ti = f.time/1e3; le = double(f.length)/1e3;
-					if ti >= me.plotRange(1) && ti <= me.plotRange(2)
+					ti = double(f.time)/1e3; le = double(f.length)/1e3;
+					if ti >= me.plotRange(1)-0.1 && ti+le <= me.plotRange(2)+0.1
 						plot3([ti ti+le],[f.gstx f.genx],[f.gsty f.geny],'k-o',...
 						'LineWidth',1,'MarkerSize',5,'MarkerEdgeColor',[0 0 0],...
 						'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],...
@@ -506,8 +511,8 @@ classdef eyelinkAnalysis < analysisCore
 				end
 				for sac=1:length(thisTrial.saccades)
 					s=thisTrial.saccades(sac);
-					ti = f.time/1e3; le = double(f.length)/1e3;
-					if ti >= me.plotRange(1) && ti <= me.plotRange(2)
+					ti = double(s.time)/1e3; le = double(s.length)/1e3;
+					if ti >= me.plotRange(1)-0.1 && ti+le <= me.plotRange(2)+0.1
 						plot3([ti ti+le],[s.gstx s.genx],[s.gsty s.geny],'r-o',...
 						'LineWidth',1.5,'MarkerSize',5,'MarkerEdgeColor',[1 0 0],...
 						'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],...
@@ -515,8 +520,8 @@ classdef eyelinkAnalysis < analysisCore
 					end
 				end
 				
-				qq(1,2).select();
-				qq(1,2).hold('on')
+				ax = nexttile(6);
+				hold on;
 				plot(tp,pupilPlot,'Color',c, 'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
 				
 				idxt = find(t >= t1 & t <= t2);
@@ -535,13 +540,14 @@ classdef eyelinkAnalysis < analysisCore
 				stdey = [stdey std(ya(idxt))];
 
 				udt = [thisTrial.idx thisTrial.correctedIndex thisTrial.variable];
-				q(2,1).select();
-				q(2,1).hold('on');
+				
+				ax = nexttile(3);
+				hold on;
 				plot(meanx(end), meany(end),'ko','Color',c,'MarkerSize',6,'MarkerEdgeColor',[0 0 0],...
 					'MarkerFaceColor',c,'UserData', udt,'ButtonDownFcn', @clickMe);
 
-				q(2,2).select();
-				q(2,2).hold('on');
+				ax = nexttile(4);
+				hold on;
 				plot3(meanx(end), meany(end),a,'ko','Color',c,'MarkerSize',6,'MarkerEdgeColor',[0 0 0],...
 					'MarkerFaceColor',c,'UserData', udt,'ButtonDownFcn', @clickMe);
 				a = a + 1;
@@ -550,7 +556,7 @@ classdef eyelinkAnalysis < analysisCore
 
 			display = me.display / me.ppd_;
 
-			q(1,1).select();
+			ah = nexttile(1);
 			ah = gca; ah.ButtonDownFcn = @spawnMe;
 			ah.DataAspectRatio = [1 1 1];
 			axis equal;
@@ -558,11 +564,11 @@ classdef eyelinkAnalysis < analysisCore
 			grid on;
 			box on;
 			axis(round([-display(1)/2 display(1)/2 -display(2)/2 display(2)/2]));
-			title(q(1,1),[thisVarName upper(type) ': X vs. Y Eye Position']);
-			xlabel(q(1,1),'X Deg');
-			ylabel(q(1,1),'Y Deg');
+			title(ah,[thisVarName upper(type) ': X vs. Y Eye Position']);
+			xlabel(ah,'X Deg');
+			ylabel(ah,'Y Deg');
 
-			q(1,2).select();
+			ah = nexttile(2);
 			ah = gca; ah.ButtonDownFcn = @spawnMe;
 			grid on;
 			box on;
@@ -576,36 +582,35 @@ classdef eyelinkAnalysis < analysisCore
 				median(abs(medy)), median(abs(stdey)));
 			h=title(sprintf('X & Y(dot) Position vs. Time\n%s\n%s', ti,ti2));
 			set(h,'BackgroundColor',[1 1 1]);
-			xlabel(q(1,2),'Time (s)');
-			ylabel(q(1,2),'Degrees');
+			xlabel(ah,'Time (s)');
+			ylabel(ah,'Degrees');
 
-			qq(1,1).select();
-			qq(1,1).margin = [50 20 10 35]; %left bottom right top
+			ah = nexttile(5);
 			ah = gca; ah.ButtonDownFcn = @spawnMe;
 			grid on;
 			box on;
 			axis([me.plotRange(1) me.plotRange(2) -10 10 -10 10]);
 			view([35 20]);
 			set(gca,'PlotBoxAspectRatio',[2 1 1])
-			xlabel(qq(1,1),'Time (ms)');
-			ylabel(qq(1,1),'X Position');
-			zlabel(qq(1,1),'Y Position');
+			xlabel(ah,'Time (ms)');
+			ylabel(ah,'X Position');
+			zlabel(ah,'Y Position');
 			[mn,er] = me.stderr(sacc,'SD');
 			md = nanmedian(sacc);
 			h=title(sprintf('%s %s: Saccades (red) & Fixation (black) | First Saccade mean/median: %.2f / %.2f +- %.2f SD [%.2f <> %.2f]',...
 				thisVarName,upper(type),mn,md,er,min(sacc),max(sacc)));
 			set(h,'BackgroundColor',[1 1 1]);
 			
-			qq(1,2).select();
+			ah = nexttile(6);
 			ah = gca; ah.ButtonDownFcn = @spawnMe;
 			axis([me.plotRange(1) me.plotRange(2) -inf inf]);
 			grid on;
 			box on;
-			title(qq(1,2),[thisVarName upper(type) ': Pupil Diameter']);
-			xlabel(qq(1,2),'Time (s)');
-			ylabel(qq(1,2),'Diameter');
+			title(ah,[thisVarName upper(type) ': Pupil Diameter']);
+			xlabel(ah,'Time (s)');
+			ylabel(ah,'Diameter');
 
-			q(2,1).select();
+			ah = nexttile(3);
 			ah = gca; ah.ButtonDownFcn = @spawnMe;
 			axis ij;
 			grid on;
@@ -616,10 +621,10 @@ classdef eyelinkAnalysis < analysisCore
 			h=title(sprintf('X & Y %.2f-%.2fs MD/MN/STD: \nX : %.2f / %.2f / %.2f | Y : %.2f / %.2f / %.2f', ...
 				t1,t2,mean(meanx), median(medx),mean(stdex),mean(meany),median(medy),mean(stdey)));
 			set(h,'BackgroundColor',[1 1 1]);
-			xlabel(q(2,1),'X Degrees');
-			ylabel(q(2,1),'Y Degrees');
+			xlabel(ah,'X Degrees');
+			ylabel(ah,'Y Degrees');
 
-			q(2,2).select();
+			ah = nexttile(4);
 			ah = gca; ah.ButtonDownFcn = @spawnMe;
 			grid on;
 			box on;
@@ -628,9 +633,9 @@ classdef eyelinkAnalysis < analysisCore
 			%axis square
 			view([50 30]);
 			title(sprintf('%s %s Mean X & Y Pos %.2f-%.2fs over time',thisVarName,upper(type),t1,t2));
-			xlabel(q(2,2),'X Degrees');
-			ylabel(q(2,2),'Y Degrees');
-			zlabel(q(2,2),'Trial');
+			xlabel(ah,'X Degrees');
+			ylabel(ah,'Y Degrees');
+			zlabel(ah,'Trial');
 
 			assignin('base','xvals',xvals);
 			assignin('base','yvals',yvals);
@@ -1230,6 +1235,7 @@ classdef eyelinkAnalysis < analysisCore
 			me.correct.idx = [];
 			me.correct.saccTimes = [];
 			me.correct.fixations = [];
+			me.correct.timeRange = [];
 			me.breakFix = me.correct;
 			me.incorrect = me.correct;
 			me.unknown = me.correct;
@@ -1265,7 +1271,9 @@ classdef eyelinkAnalysis < analysisCore
 			trialDef.totaltime = 0;
 			trialDef.startsampletime = NaN;
 			trialDef.endsampletime = NaN;
+			trialDef.timeRange = [NaN NaN];
 			trialDef.rtstarttime = NaN;
+			trialDef.rtstarttimeOLD = NaN;
 			trialDef.rtendtime = NaN;
 			trialDef.synctime = NaN;
 			trialDef.deltaT = NaN;
@@ -1342,12 +1350,12 @@ classdef eyelinkAnalysis < analysisCore
 						thisTrial = trialDef;
 						thisTrial.variable = str2double(id.ID);
 						thisTrial.idx = tri;
-						thisTrial.time = evt.time;
-						thisTrial.sttime = evt.sttime;
+						thisTrial.time = double(evt.time);
+						thisTrial.sttime = double(evt.sttime);
 						if tri > 1
 							thisTrial.totaltime = (thisTrial.sttime - me.trials(1).sttime)/1e3;
 						end
-						thisTrial.rtstarttime = evt.sttime;
+						thisTrial.rtstarttime = thisTrial.sttime;
 						isTrial = true;
 						continue
 					end
@@ -1385,9 +1393,9 @@ classdef eyelinkAnalysis < analysisCore
 							end
 							fixa.n = eventN;
 							fixa.ppd = me.ppd_;
-							fixa.sttime = evt.sttime;
-							fixa.entime = evt.entime;
-							fixa.time = double(fixa.sttime) - double(rel);
+							fixa.sttime = double(evt.sttime);
+							fixa.entime = double(evt.entime);
+							fixa.time = fixa.sttime - rel;
 							fixa.length = fixa.entime - fixa.sttime;
 							fixa.rel = rel;
 
@@ -1423,9 +1431,9 @@ classdef eyelinkAnalysis < analysisCore
 							end
 							sacc.n = eventN;
 							sacc.ppd = me.ppd_;
-							sacc.sttime = evt.sttime;
-							sacc.entime = evt.entime;
-							sacc.time = double(sacc.sttime) - rel;
+							sacc.sttime = double(evt.sttime);
+							sacc.entime = double(evt.entime);
+							sacc.time = sacc.sttime - rel;
 							sacc.length = sacc.entime - sacc.sttime;
 							sacc.rel = rel;
 
@@ -1449,12 +1457,13 @@ classdef eyelinkAnalysis < analysisCore
 						end
 
 						if evt.type ==  me.EVENT_TYPES.ENDSAMPLES %strcmpi(evt.codestring,'ENDSAMPLES')
-							thisTrial.endsampletime = evt.sttime;
+							thisTrial.endsampletime = double(evt.sttime);
 							idx = me.raw.FSAMPLE.time >= thisTrial.startsampletime & ...
 								me.raw.FSAMPLE.time <= thisTrial.endsampletime;
 
 							thisTrial.times = double(me.raw.FSAMPLE.time(idx));
-							thisTrial.times = thisTrial.times - double(thisTrial.rtstarttime);
+							thisTrial.times = thisTrial.times - thisTrial.rtstarttime;
+							thisTrial.timeRange = [thisTrial.times(1) thisTrial.times(end)];
 							if me.sampleRate == 2000
 								evenidx=fliplr(logical(mod(1:length(thisTrial.times),2)));
 								thisTrial.times(evenidx) = thisTrial.times(evenidx) + 0.5;
@@ -1471,39 +1480,53 @@ classdef eyelinkAnalysis < analysisCore
 							thisTrial.hy = me.raw.FSAMPLE.hy(eyeUsed, idx);
 
 							thisTrial.pa = me.raw.FSAMPLE.pa(eyeUsed, idx);
+							
+							if thisTrial.rt && ~isempty(thisTrial.fixations)
+								for lf = 1 : length(thisTrial.fixations)
+									thisTrial.fixations(lf).rel = thisTrial.rtstarttime;
+									thisTrial.fixations(lf).time = thisTrial.fixations(lf).sttime - thisTrial.rtstarttime;
+									thisTrial.fixations(lf).rt = true;
+								end
+							end
+							if thisTrial.rt && ~isempty(thisTrial.saccades)
+								for lf = 1 : length(thisTrial.saccades)
+									thisTrial.saccades(lf).rel = thisTrial.rtstarttime;
+									thisTrial.saccades(lf).time = thisTrial.saccades(lf).sttime - thisTrial.rtstarttime;
+									thisTrial.saccades(lf).rt = true;
+									thisTrial.saccadeTimes(lf) = thisTrial.saccades(lf).time;
+								end
+							end
+							if thisTrial.rt && ~isempty(thisTrial.messages)
+								m = thisTrial.messages; 
+								st = thisTrial.rtstarttime;
+								fld = fieldnames(m);
+								for i = 1 : length(fld)
+									if ~isempty(regexpi(fld{i},'TIME$','once'))
+										t = m.(fld{i});
+										tm = repmat({st},size(t));
+										ot = cellfun(@minus,t,tm,'UniformOutput',false);
+										m.(fld{i}) = ot;
+									end
+								end
+								thisTrial.messages = m;
+							end
 							continue
 						end
-
 					else
-
-						msg = regexpi(evt.message,'^MSG:\s?(?<MSG>[\w]+) *(?<VAL>.*)','names');
+						msg = regexpi(evt.message,'^MSG:\s?(?<MSG>[\w]+)[ =]*(?<VAL>.*)','names');
 						if ~isempty(msg) && ~isempty(msg.MSG)
 							if isfield(thisTrial.messages,msg.MSG)
 								thisTrial.messages.(msg.MSG){end+1} = msg.VAL;
-								thisTrial.messages.([msg.MSG 'TIME']){end+1} = evt.sttime;
+								thisTrial.messages.([msg.MSG 'TIME']){end+1} = double(evt.sttime);
 							else
 								thisTrial.messages.(msg.MSG){1} = msg.VAL;
-								thisTrial.messages.([msg.MSG 'TIME']){1} = evt.sttime;
+								thisTrial.messages.([msg.MSG 'TIME']){1} = double(evt.sttime);
 							end
 							if strcmpi(msg.MSG, me.rtOverrideMessage)
 								thisTrial.rtstarttimeOLD = thisTrial.rtstarttime;
-								thisTrial.rtstarttime = evt.sttime;
+								thisTrial.rtstarttime = double(evt.sttime);
+								thisTrial.rt = true;
 								thisTrial.rtoverride = true;
-								if ~isempty(thisTrial.fixations)
-									for lf = 1 : length(thisTrial.fixations)
-										thisTrial.fixations(lf).rel = thisTrial.rtstarttime;
-										thisTrial.fixations(lf).time = double(thisTrial.fixations(lf).sttime) - double(thisTrial.rtstarttime);
-										thisTrial.fixations(lf).rt = true;
-									end
-								end
-								if ~isempty(thisTrial.saccades)
-									for lf = 1 : length(thisTrial.saccades)
-										thisTrial.saccades(lf).rel = thisTrial.rtstarttime;
-										thisTrial.saccades(lf).time = double(thisTrial.saccades(lf).sttime) - double(thisTrial.rtstarttime);
-										thisTrial.saccades(lf).rt = true;
-										thisTrial.saccadeTimes(lf) = thisTrial.saccades(lf).time;
-									end
-								end
 							end
 							continue
 						end
@@ -1521,37 +1544,28 @@ classdef eyelinkAnalysis < analysisCore
 							continue
 						end
 
-						synct = regexpi(evt.message,'^SYNCTIME','match');
-						if ~isempty(synct)
-							thisTrial.synctime = evt.sttime;
-							continue
-						end
-
 						endfix = regexpi(evt.message,['^' me.rtStartMessage],'match');
 						if ~isempty(endfix)
-							thisTrial.rtstarttime = evt.sttime;
+							if thisTrial.rtoverride || thisTrial.rt; continue; end
+							thisTrial.rtstarttimeOLD = thisTrial.rtstarttime;
+							thisTrial.rtstarttime = double(evt.sttime);
 							thisTrial.rt = true;
-							if ~isempty(thisTrial.fixations)
-								for lf = 1 : length(thisTrial.fixations)
-									thisTrial.fixations(lf).rel = thisTrial.rtstarttime;
-									thisTrial.fixations(lf).time = double(thisTrial.fixations(lf).sttime) - double(thisTrial.rtstarttime);
-									thisTrial.fixations(lf).rt = true;
-								end
-							end
-							if ~isempty(thisTrial.saccades)
-								for lf = 1 : length(thisTrial.saccades)
-									thisTrial.saccades(lf).rel = thisTrial.rtstarttime;
-									thisTrial.saccades(lf).time = double(thisTrial.saccades(lf).sttime) - double(thisTrial.rtstarttime);
-									thisTrial.saccades(lf).rt = true;
-									thisTrial.saccadeTimes(lf) = thisTrial.saccades(lf).time;
-								end
-							end
+							continue
+						end
+						
+						synct = regexpi(evt.message,'^SYNCTIME','match');
+						if ~isempty(synct)
+							if thisTrial.rtoverride; continue; end
+							thisTrial.rtstarttimeOLD = thisTrial.rtstarttime;
+							thisTrial.synctime = double(evt.sttime);
+							thisTrial.rtstarttime = thisTrial.synctime;
+							thisTrial.rt = true;
 							continue
 						end
 
 						endrt = regexpi(evt.message,['^' me.rtEndMessage],'match');
 						if ~isempty(endrt)
-							thisTrial.rtendtime = evt.sttime;
+							thisTrial.rtendtime = double(evt.sttime);
 							if isfield(me.trials,'rtstarttime')
 								thisTrial.rttime = thisTrial.rtendtime - thisTrial.rtstarttime;
 							end
@@ -1560,7 +1574,7 @@ classdef eyelinkAnalysis < analysisCore
 
 						id = regexpi(evt.message,['^' me.trialEndMessage ' (?<ID>(\-|\+|\d)+)'],'names');
 						if ~isempty(id) && ~isempty(id.ID)
-							thisTrial.entime = evt.sttime;
+							thisTrial.entime = double(evt.sttime);
 							thisTrial.result = str2num(id.ID);
 							sT=[];
 							if ~isempty(thisTrial.nsacc)
@@ -1675,6 +1689,12 @@ classdef eyelinkAnalysis < analysisCore
 				me.incorrect.idx = find([me.trials.incorrect] == true);
 				me.incorrect.saccTimes = [me.trials(me.incorrect.idx).firstSaccade];
 			end
+			
+			% time range for correct trials
+			tr = [me.trials(me.correct.idx).timeRange] .* 1e-3;
+			tr = reshape(tr,[2,length(me.correct.idx)])';
+			me.correct.timeRange = tr;
+			me.plotRange = [max(tr(:,1)) min(tr(:,2))];
 
 			if max(abs(me.trialList)) == 1010 && min(abs(me.trialList)) == 1010
 				me.needOverride = true;
