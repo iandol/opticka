@@ -31,9 +31,9 @@ tS.INCORRECT 				= -5; %==the code to send eyetracker for incorrect trials
 
 %==================================================================
 %------------Debug logging to command window-----------------
-io.verbose					= false; %print out io commands for debugging
-eT.verbose					= false; %print out eyelink commands for debugging
-rM.verbose					= false; %print out reward commands for debugging
+%io.verbose					= true; %print out io commands for debugging
+%eT.verbose					= true; %print out eyetracker commands for debugging
+%rM.verbose					= true; %print out reward commands for debugging
 
 %==================================================================
 %------------Eyetracker Settings-----------------
@@ -62,7 +62,7 @@ if me.dummyMode;			eT.isDummy = true; end %===use dummy or real eyetracker?
 % this is useful for a baby or monkey who has not been trained for fixation
 % use 1-9 to show each dot, space to select fix as valid, INS key ON EYELINK KEYBOARD to
 % accept calibration!
-eT.remoteCalibration		= true; 
+eT.remoteCalibration		= false; 
 %-----------------------
 eT.modify.calibrationtargetcolour = [1 1 1]; % calibration target colour
 eT.modify.calibrationtargetsize = 2; % size of calibration target as percentage of screen
@@ -173,6 +173,7 @@ fixEntryFcn = {
 %--------------------fix within
 fixFcn = {
 	@()draw(stims); %draw stimulus
+	@()drawPhotoDiode(s,[0 0 0]);
 };
 
 %--------------------test we are fixated for a certain length of time
@@ -190,13 +191,14 @@ fixExitFcn = {
 
 %--------------------what to run when we enter the stim presentation state
 stimEntryFcn = {
-	@()syncTime(eT); %EDF sync message
+	@()doSyncTime(me); %EDF sync message
 	@()doStrobe(me,true)
 };
 
 %--------------------what to run when we are showing stimuli
-stimFcn =  { 
+stimFcn =  {
 	@()draw(stims);
+	@()drawPhotoDiode(s,[1 1 1]);
 	@()animate(stims); % animate stimuli for subsequent draw
 };
 
@@ -206,7 +208,7 @@ maintainFixFcn = {
 };
 
 %--------------------as we exit stim presentation state
-stimExitFcn = { 
+stimExitFcn = {
 	@()sendStrobe(io,255);
 };
 
@@ -226,6 +228,7 @@ correctEntryFcn = {
 
 %--------------------correct stimulus
 correctFcn = { 
+	@()drawPhotoDiode(s,[0 0 0]);
 	@()drawBackground(s);
 };
 

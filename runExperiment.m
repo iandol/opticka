@@ -500,7 +500,7 @@ classdef runExperiment < optickaCore
 		%> 
 		% ===================================================================
 		function runTask(me)
-			global rM %global reward manager we can share with eyetracker
+			global rM %#ok<*GVMIS> %global reward manager we can share with eyetracker 
 			global aM %global audio manager we can share with eyetracker
 			
 			%-----make sure we reset any state machine functions to not
