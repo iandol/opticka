@@ -25,7 +25,7 @@ classdef opticka < optickaCore
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> version number
-		optickaVersion char = '2.02'
+		optickaVersion char = '2.03'
 		%> history of display objects
 		history
 		%> is this a remote instance?
@@ -308,7 +308,7 @@ classdef opticka < optickaCore
 					me.paths.savedData = [root 'SavedData'];
 				end
 
-				me.h = opticka_uiapp(me); %our GUI file
+				me.h = opticka_ui(me); %our GUI file
 				
 				me.loadPrefs();
 				me.getScreenVals();
