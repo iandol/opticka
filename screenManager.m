@@ -37,8 +37,9 @@ classdef screenManager < optickaCore
 		%>  '8bit' is best for old GPUs, but prefer 'FloatingPoint32BitIfPossible' for newer GPUs. 
 		%> Native high bitdepths (assumes FloatingPoint32Bit internal processing): 
 		%>   'PseudoGray', 'HDR', 'Native10Bit', 'Native11Bit', 'Native16Bit', 'Native16BitFloat'
-		%> Options to enable Display++ modes: 
-		%>  'EnableBits++Bits++Output', 'EnableBits++Mono++Output' or 'EnableBits++Color++Output'
+		%> Options to enable Display++ or VPixx modes: 
+		%>  'EnableBits++Bits++Output', 'EnableBits++Mono++Output', 'EnableBits++Mono++OutputWithOverlay' or 'EnableBits++Color++Output'
+		%>  'EnableDataPixxM16Output','EnableDataPixxC48Output'
 		bitDepth char							= 'FloatingPoint32BitIfPossible'
 		%> The acceptable variance in flip timing tests performed when
 		%> screen opens, set with Screen('Preference', 'SyncTestSettings', syncVariance)
@@ -95,7 +96,8 @@ classdef screenManager < optickaCore
 			'FixedPoint16Bit'; 'FloatingPoint16Bit';...
 			'Bits++Bits++'; 'Bits++Mono++'; 'Bits++Color++';...
 			'Bits++Bits++Output'; 'Bits++Mono++Output'; 'Bits++Color++Output';...
-			'EnableBits++Bits++Output'; 'EnableBits++Mono++Output'; 'EnableBits++Color++Output'}
+			'EnableBits++Bits++Output'; 'EnableBits++Color++Output';'EnableBits++Mono++Output';'EnableBits++Mono++OutputWithOverlay';...
+			'EnableDataPixxM16Output';'EnableDataPixxC48Output'}
 		%> possible blend modes
 		blendModes cell = {'GL_ZERO'; 'GL_ONE'; 'GL_DST_COLOR'; 'GL_ONE_MINUS_DST_COLOR';...
 			'GL_SRC_ALPHA'; 'GL_ONE_MINUS_SRC_ALPHA'; 'GL_DST_ALPHA';...
@@ -103,6 +105,8 @@ classdef screenManager < optickaCore
 	end
 	
 	properties (Hidden = true)
+		%> The mode to use for color++ mode
+		colorMode								= 2
 		%> an optional audioManager that experiments can use. can play
 		%> samples or simple beeps
 		audio audioManager
@@ -365,7 +369,7 @@ classdef screenManager < optickaCore
 						fprintf('-> mode: %s\n', bD);
 						PsychImaging('AddTask', 'FinalFormatting', 'DisplayColorCorrection', 'ClampOnly');
 						if contains(me.bitDepth, 'Color')
-							PsychImaging('AddTask', 'General', bD, 2);
+							PsychImaging('AddTask', 'General', bD, me.colorMode);
 						else
 							PsychImaging('AddTask', 'General', bD);
 						end
