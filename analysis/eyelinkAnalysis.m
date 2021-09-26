@@ -125,13 +125,13 @@ classdef eyelinkAnalysis < analysisCore
 			'STARTFIX', 7, ...
 			'ENDFIX', 8, ...
 			'FIXUPDATE', 9, ...
-			'STARTSAMPLES', 15, ...  % /* start of events in block */
-			'ENDSAMPLES', 16, ...  % /* end of samples in block */
-			'STARTEVENTS', 17, ...  % /* start of events in block */
-			'ENDEVENTS', 18, ...  % /* end of events in block */
-			'MESSAGEEVENT', 24, ...  % /* user-definable text or data */
-			'BUTTONEVENT', 25, ...  % /* button state change */
-			'INPUTEVENT', 28, ...  % /* change of input port */
+			'STARTSAMPLES', int16(15), ...  % /* start of events in block */
+			'ENDSAMPLES', int16(16), ...  % /* end of samples in block */
+			'STARTEVENTS', int16(17), ...  % /* start of events in block */
+			'ENDEVENTS', int16(18), ...  % /* end of events in block */
+			'MESSAGEEVENT', int16(24), ...  % /* user-definable text or data */
+			'BUTTONEVENT', int16(25), ...  % /* button state change */
+			'INPUTEVENT', int16(28), ...  % /* change of input port */
 			'LOST_DATA_EVENT', hex2dec('3F'));   %/* NEW: Event flags gap in data stream */
 		RECORDING_STATES    = struct('START', 1, 'END', 0);
 		EYES                = struct('LEFT', 1, 'RIGHT', 2, 'BINOCULAR', 3);
@@ -1284,6 +1284,7 @@ classdef eyelinkAnalysis < analysisCore
 			trialDef.hx = [];
 			trialDef.hy = [];
 			trialDef.pa = [];
+			startSampleTemp = NaN;
 
 			me.ppd; %faster to cache this now (dependant property sets ppd_ too)
 
@@ -1305,6 +1306,14 @@ classdef eyelinkAnalysis < analysisCore
 					isMessage = true;
 					no = regexpi(evt.message,'^(?<NO>!cal|!mode|validate|reccfg|elclcfg|gaze_coords|thresholds|elcl_)','names'); %ignore these first
 					if ~isempty(no)  && ~isempty(no.NO)
+						continue
+					end
+				end
+
+				if ~isMessage && ~isTrial
+					%just in case we start sampling BEFORE wesend the trial start message
+					if evt.type == me.EVENT_TYPES.STARTSAMPLES || evt.type == me.EVENT_TYPES.STARTEVENTS
+						startSampleTemp = double(evt.sttime);
 						continue
 					end
 				end
@@ -1346,12 +1355,16 @@ classdef eyelinkAnalysis < analysisCore
 						if isempty(id.ID) %we have a bug in early EDF files with an empty TRIALID!!!
 							id.ID = '1010';
 						end
-						eventN=1;
 						thisTrial = trialDef;
+						eventN=1;
 						thisTrial.variable = str2double(id.ID);
 						thisTrial.idx = tri;
 						thisTrial.time = double(evt.time);
 						thisTrial.sttime = double(evt.sttime);
+						if ~isnan(startSampleTemp)
+							thisTrial.startsampletime = startSampleTemp; 
+							startSampleTemp = NaN;
+						end
 						if tri > 1
 							thisTrial.totaltime = (thisTrial.sttime - me.trials(1).sttime)/1e3;
 						end
@@ -1364,16 +1377,16 @@ classdef eyelinkAnalysis < analysisCore
 				if isTrial
 
 					if ~isMessage
-						
-						if evt.type == me.EVENT_TYPES.STARTEVENTS || ...
-								evt.type == me.EVENT_TYPES.STARTFIX || ...
-								evt.type == me.EVENT_TYPES.STARTSACC || ...
-								evt.type == me.EVENT_TYPES.STARTBLINK
+
+						if evt.type == me.EVENT_TYPES.STARTSAMPLES || evt.type == me.EVENT_TYPES.STARTEVENTS
+							thisTrial.startsampletime = double(evt.sttime);
+							thisTrial.rtstarttime = thisTrial.startsampletime;
 							continue
 						end
 						
-						if evt.type == me.EVENT_TYPES.STARTSAMPLES
-							thisTrial.startsampletime = evt.sttime;
+						if evt.type == me.EVENT_TYPES.STARTFIX || ...
+								evt.type == me.EVENT_TYPES.STARTSACC || ...
+								evt.type == me.EVENT_TYPES.STARTBLINK
 							continue
 						end
 						
@@ -1461,25 +1474,27 @@ classdef eyelinkAnalysis < analysisCore
 							idx = me.raw.FSAMPLE.time >= thisTrial.startsampletime & ...
 								me.raw.FSAMPLE.time <= thisTrial.endsampletime;
 
-							thisTrial.times = double(me.raw.FSAMPLE.time(idx));
-							thisTrial.times = thisTrial.times - thisTrial.rtstarttime;
-							thisTrial.timeRange = [thisTrial.times(1) thisTrial.times(end)];
-							if me.sampleRate == 2000
-								evenidx=fliplr(logical(mod(1:length(thisTrial.times),2)));
-								thisTrial.times(evenidx) = thisTrial.times(evenidx) + 0.5;
+							if any(idx)
+								thisTrial.times = double(me.raw.FSAMPLE.time(idx));
+								thisTrial.times = thisTrial.times - thisTrial.rtstarttime;
+								thisTrial.timeRange = [thisTrial.times(1) thisTrial.times(end)];
+								if me.sampleRate == 2000
+									evenidx=fliplr(logical(mod(1:length(thisTrial.times),2)));
+									thisTrial.times(evenidx) = thisTrial.times(evenidx) + 0.5;
+								end
+
+								thisTrial.gx = me.raw.FSAMPLE.gx(eyeUsed, idx);
+								thisTrial.gx = thisTrial.gx - me.display(1)/2;
+	
+								thisTrial.gy = me.raw.FSAMPLE.gy(eyeUsed, idx);
+								thisTrial.gy = thisTrial.gy - me.display(2)/2;
+	
+								thisTrial.hx = me.raw.FSAMPLE.hx(eyeUsed, idx);
+	
+								thisTrial.hy = me.raw.FSAMPLE.hy(eyeUsed, idx);
+	
+								thisTrial.pa = me.raw.FSAMPLE.pa(eyeUsed, idx);
 							end
-
-							thisTrial.gx = me.raw.FSAMPLE.gx(eyeUsed, idx);
-							thisTrial.gx = thisTrial.gx - me.display(1)/2;
-
-							thisTrial.gy = me.raw.FSAMPLE.gy(eyeUsed, idx);
-							thisTrial.gy = thisTrial.gy - me.display(2)/2;
-
-							thisTrial.hx = me.raw.FSAMPLE.hx(eyeUsed, idx);
-
-							thisTrial.hy = me.raw.FSAMPLE.hy(eyeUsed, idx);
-
-							thisTrial.pa = me.raw.FSAMPLE.pa(eyeUsed, idx);
 							
 							if thisTrial.rt && ~isempty(thisTrial.fixations)
 								for lf = 1 : length(thisTrial.fixations)
@@ -1578,7 +1593,7 @@ classdef eyelinkAnalysis < analysisCore
 							thisTrial.result = str2num(id.ID);
 							sT=[];
 							if ~isempty(thisTrial.nsacc)
-								thisTrial.saccadeTimes = zeros(thisTrial.nsacc);
+								thisTrial.saccadeTimes = zeros(1,thisTrial.nsacc);
 								for ii = 1:thisTrial.nsacc
 									t = thisTrial.saccades(ii).time;
 									thisTrial.saccadeTimes(ii) = t;
@@ -1639,7 +1654,8 @@ classdef eyelinkAnalysis < analysisCore
 									me.raw.FSAMPLE.time <= thisTrial.endsampletime;
 
 								thisTrial.times = double(me.raw.FSAMPLE.time(idx));
-								thisTrial.times = thisTrial.times - double(thisTrial.rtstarttime);
+								thisTrial.times = thisTrial.times - thisTrial.rtstarttime;
+								thisTrial.timeRange = [thisTrial.times(1) thisTrial.times(end)];
 								if me.sampleRate == 2000
 									evenidx=fliplr(logical(mod(1:length(thisTrial.times),2)));
 									thisTrial.times(evenidx) = thisTrial.times(evenidx) + 0.5;
@@ -1662,7 +1678,9 @@ classdef eyelinkAnalysis < analysisCore
 							else
 								me.trials(tri) = thisTrial;
 							end
-							isTrial = false;
+							isTrial = false; 
+							clear thisTrial;
+							startSampleTemp = NaN;
 							tri = tri + 1;
 							continue
 						end
