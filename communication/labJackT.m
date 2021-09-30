@@ -188,11 +188,11 @@ classdef labJackT < handle
 				me.functionList = libfunctions(me.libName, '-full'); %store our raw lib functions
 			end
 
-			if isempty(me.device)
+			if isempty(me.device) || isempty(me.devCount) || isempty(me.devTypes)
 				me.listAll();
 			end
 
-			if me.devCount == 0
+			if isempty(me.devCount) || me.devCount == 0
 				me.salutation('OPEN','No LabJack devices attached, entering silentMode...',true);
 				me.close();
 				me.silentMode = true;
@@ -293,6 +293,8 @@ classdef labJackT < handle
 			me.close;
 			me.silentMode=false;
 			me.device = [];
+			me.devCount = [];
+			me.devTypes = [];
 		end
 		
 		% ===================================================================
@@ -300,7 +302,7 @@ classdef labJackT < handle
 		%>	
 		% ===================================================================
 		function [devCount,devTypes] = listAll(me)
-			if me.silentMode || isempty(me.handle); return; end
+			if me.silentMode; return; end
 			[err,devCount,devTypes] = calllib(me.libName,'LJM_ListAll',0,0,0,0,[],[],[]);
 			me.checkError(err);
 			me.devCount = devCount;
@@ -331,8 +333,8 @@ classdef labJackT < handle
 		function strobeServer(me, value)
 			if me.silentMode || isempty(me.handle); return; end
 			if ~exist('value','var'); value = me.sendValue; end
-			fprintf('SS Sending strobe: %i\n',value);
 			calllib(me.libName, 'LJM_eWriteAddress', me.handle, me.RAMAddress, me.LJM_FLOAT32, value);
+			if me.verbose;fprintf('--->>> LabjackT:strobeServer Sending strobe: %i\n',value);end
 		end
 		
 		% ===================================================================
@@ -343,9 +345,8 @@ classdef labJackT < handle
 		function sendStrobe(me, value)
 			if me.silentMode || isempty(me.handle); return; end
 			if ~exist('value','var'); value = me.sendValue; end
-			if me.verbose; fprintf('--->>> LabjackT Sending strobe: %i\n',value); end
 			calllib(me.libName, 'LJM_eWriteAddress', me.handle, me.RAMAddress, me.LJM_FLOAT32, value);
-		
+			if me.verbose; fprintf('--->>> LabjackT:sendStrobe Sending strobe: %i\n',value); end
 		end
 		
 		% ===================================================================
@@ -390,7 +391,7 @@ classdef labJackT < handle
 				64, [2501 61590 2501], [0 1 0], [1 1 1], [1 1 1], [value me.strobeTime*1000 0], 3, cmd);
 			me.command = cmd;
 			me.checkError(err);
-			if me.verbose;fprintf('--->>> LabJackT saving strobe value: %i\n',value);end
+			if me.verbose;fprintf('--->>> LabJackT:prepareStrobe saving strobe value: %i\n',value);end
 		end
 		
 		% ===================================================================
@@ -679,6 +680,15 @@ classdef labJackT < handle
 		% ===================================================================
 		function sendTTL(me, varargin)
 			
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
+		% ===================================================================
+		function endStimulus(me)
+			sendStrobe(me,255);
 		end
 		
 		% ===================================================================

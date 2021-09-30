@@ -112,11 +112,12 @@ classdef plusplusManager < optickaCore
 				data = me.tempData;
 				mask = me.tempMask; %#ok<*PROPLC>
 			else
+				value = me.sendValue;
 				data = me.sendData;
 				mask = me.sendMask;
 			end
 			BitsPlusPlus('DIOCommand', me.sM.win, me.repetitions, mask, data, me.command);
-            if me.verbose; fprintf('===>>> sendStrobe: %i\n', value); end
+            if me.verbose; fprintf('===>>> sendStrobe: %i | mode:%s\t| mask:%s |\n', value, me.strobeMode, dec2bin(mask)); end
 		end
 		
 		% ===================================================================

@@ -1213,7 +1213,7 @@ classdef runExperiment < optickaCore
 		%> 
 		% ===================================================================
 		function doStrobe(me, value)
-			if value == true
+			if isempty(value) || value == true
 				me.sendStrobe = true;
 			else
 				me.sendStrobe = false;
