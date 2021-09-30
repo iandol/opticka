@@ -36,6 +36,7 @@ classdef labJackT < handle
 		openNow logical = true
 		%> silentMode=true allows one to gracefully fail methods without a labJack connected
 		silentMode logical = false
+		comment char
 	end
 	
 	properties (Hidden = true)
