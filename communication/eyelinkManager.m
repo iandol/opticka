@@ -192,7 +192,6 @@ classdef eyelinkManager < optickaCore
 			try % is eyelink interface working
 				me.version = Eyelink('GetTrackerVersion');
 			catch %#ok<CTCH>
-				warning('Problem getting eyetracker version...')
 				me.version = 0;
 			end
 		end
