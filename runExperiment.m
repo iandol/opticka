@@ -140,10 +140,10 @@ classdef runExperiment < optickaCore
 		%> PTB info
 		ptb
 		%> gamma tables and the like from screenManager
-		screenVals
-		%> log times during display
+		screenVals struct
+		%> MOC log times
 		runLog
-		%> task log
+		%> task log times
 		taskLog
 		%> behavioural log
 		behaviouralRecord
@@ -839,6 +839,7 @@ classdef runExperiment < optickaCore
 				tL.screenLog.trackerEndTime = getTrackerTime(eT);
 				tL.screenLog.trackerEndOffset = getTimeOffset(eT);
 				
+				updatePlot(bR, eT, sM); %update our behavioural plot for final state
 				show(stims); %make all stimuli visible again, useful for editing 
 				drawBackground(s);
 				trackerClearScreen(eT);
@@ -901,12 +902,11 @@ classdef runExperiment < optickaCore
 				if tS.saveData
 					sname = [me.paths.savedData filesep me.name '.mat'];
 					rE = me;
-					bR.clearHandles();
 					htmp = me.screenSettings.optickahandle; me.screenSettings.optickahandle = [];
 					assignin('base', 'tS', tS);
-					save(sname,'rE','tS','bR');
+					save(sname,'rE','tS');
 					me.screenSettings.optickahandle = htmp;
-					fprintf('\n===>>> SAVED DATA to: %s\n',sname)
+					fprintf('\n\n===>>> SAVED DATA to: %s\n\n',sname)
 				end
 				
 				me.stateInfo = [];
@@ -2524,7 +2524,6 @@ classdef runExperiment < optickaCore
 						lobj.screen = screenManager();
 						lobj.screen.distance = in.distance;
 						lobj.screen.pixelsPerCm = in.pixelsPerCm;
-						lobj.screen.backgroundColour = in.backgroundColour;
 						lobj.screen.screenXOffset = in.screenXOffset;
 						lobj.screen.screenYOffset = in.screenYOffset;
 						lobj.screen.antiAlias = in.antiAlias;
@@ -2551,6 +2550,13 @@ classdef runExperiment < optickaCore
 					lobj.previousInfo.screenVals = in.screenVals;
 					lobj.previousInfo.screenSettings = in.screenSettings;
 				end
+				try lobj.stateMachine		= in.stateMachine; end
+				try lobj.eyeTracker			= in.eyeTracker; end
+				try lobj.behaviouralRecord	= in.behaviouralRecord; end
+				try lobj.runkLog			= in.runLog; end
+				try lobj.taskLog			= in.taskLog; end
+				try lobj.stateInfo			= in.stateInfo; end
+				try lobj.comment			= in.comment; end
 				fprintf('\n');
 			end
 		end
