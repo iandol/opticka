@@ -90,8 +90,8 @@ eT.resetExclusionZones();
 
 %==================================================================
 %----which states assigned as correct or break for online plot?----
-bR.correctStateName				= 'correct';
-bR.breakStateName				= 'breakfix';
+bR.correctStateName				= '^correct'; %use regex for better matching
+bR.breakStateName				= '^(breakfix|incorrect)';
 
 %==================================================================
 %--------------randomise stimulus variables every trial?-----------
@@ -292,6 +292,20 @@ incEntryFcn = {
 	@()logRun(me,'INCORRECT'); %fprintf current trial info
 }; 
 
+%--------------------break entry
+breakEntryFcn = {
+	@()beep(aM,400,0.5,1);
+	@()trackerMessage(eT,'END_RT');
+	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.BREAKFIX));
+	@()trackerClearScreen(eT);
+	@()trackerDrawText(eT,'Broke maintain fix! :-(');
+	@()stopRecording(eT);
+	@()setOffline(eT); %set eyelink offline
+	@()needEyeSample(me,false);
+	@()hide(stims);
+	@()logRun(me,'BREAKFIX'); %fprintf current trial info
+};
+
 %--------------------our incorrect stimulus
 incFcn = {
 	@()drawPhotoDiode(s,[0 0 0]);
@@ -307,20 +321,6 @@ incExitFcn = {
 	@()checkTaskEnded(me); %check if task is finished
 	@()updatePlot(bR, eT, sM); %update our behavioural plot;
 	@()drawnow;
-};
-
-%--------------------break entry
-breakEntryFcn = {
-	@()beep(aM,400,0.5,1);
-	@()trackerMessage(eT,'END_RT');
-	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.BREAKFIX));
-	@()trackerClearScreen(eT);
-	@()trackerDrawText(eT,'Broke maintain fix! :-(');
-	@()stopRecording(eT);
-	@()setOffline(eT); %set eyelink offline
-	@()needEyeSample(me,false);
-	@()hide(stims);
-	@()logRun(me,'BREAKFIX'); %fprintf current trial info
 };
 
 %--------------------calibration function

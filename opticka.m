@@ -16,6 +16,8 @@ classdef opticka < optickaCore
 	properties (SetAccess = public, GetAccess = public, Transient = true)
 		%> general store for misc properties
 		store struct = struct()
+		%> initialise UI?
+		initUI logical = true
 	end
 	
 	properties (SetAccess = protected, GetAccess = public, Transient = true)
@@ -25,7 +27,7 @@ classdef opticka < optickaCore
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> version number
-		optickaVersion char = '2.03'
+		optickaVersion char = '2.04'
 		%> history of display objects
 		history
 		%> is this a remote instance?
@@ -36,7 +38,7 @@ classdef opticka < optickaCore
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> used to sanitise passed values on construction
-		allowedProperties char = 'verbose'
+		allowedProperties char = 'verbose|initUI'
 		%> which UI settings should be saved locally to the machine?
 		uiPrefsList cell = {'OKOmniplexIP','OKMonitorDistance','OKpixelsPerCm',...
 			'OKbackgroundColour','OKAntiAliasing','OKbitDepth','OKUseRetina',...
@@ -64,7 +66,7 @@ classdef opticka < optickaCore
 			
 			if me.cloning == false
 				if ~exist('OKStartTask_image.png','file');addOptickaToPath;end
-				me.initialiseUI;
+				if me.initUI; me.initialiseUI; end
 			end
 		end
 		
@@ -328,8 +330,8 @@ classdef opticka < optickaCore
 					me.r.stateInfoFile = me.paths.stateInfoFile;
 				end
 				
-				me.h.OKTrainingResearcherName.Value = me.r.researcherName;
-				me.h.OKTrainingName.Value = me.r.subjectName;
+				me.r.researcherName = me.h.OKTrainingResearcherName.Value;
+				me.r.subjectName = me.h.OKTrainingName.Value;
 				getStateInfo(me);
 			catch ME
 				try close(me.h.OKRoot); me.h = []; end %#ok<*TRYNC>
@@ -1088,9 +1090,11 @@ classdef opticka < optickaCore
 					
 					if isprop(tmp.r,'drawFixation');me.r.drawFixation=tmp.r.drawFixation;end
 					if isprop(tmp.r,'dPPMode'); me.r.dPPMode = tmp.r.dPPMode; end
-					if isprop(tmp.r,'subjectName');me.r.subjectName = tmp.r.subjectName;me.h.OKTrainingName.Value = me.r.subjectName;end
-					if isprop(tmp.r,'researcherName');me.r.researcherName = tmp.r.researcherName;me.h.OKTrainingResearcherName.Value=me.r.researcherName;end
-					
+					%if isprop(tmp.r,'subjectName');me.r.subjectName = tmp.r.subjectName;me.h.OKTrainingName.Value = me.r.subjectName;end
+					%if isprop(tmp.r,'researcherName');me.r.researcherName = tmp.r.researcherName;me.h.OKTrainingResearcherName.Value=me.r.researcherName;end
+					me.r.subjectName = me.h.OKTrainingName.Value;
+					me.r.researcherName = me.h.OKTrainingResearcherName.Value;
+
 					me.h.OKuseLabJackStrobe.Checked		= 'off';
 					me.h.OKuseLabJackTStrobe.Checked	= 'off';
 					me.h.OKuseDataPixx.Checked			= 'off';
@@ -1503,8 +1507,9 @@ classdef opticka < optickaCore
 				lobj = in;
 			else
 				fprintf('---> opticka loadobj: Recreating object from structure...\n')
-				lobj = opticka();
+				lobj = opticka('initUI',false);
 				lobj.r = in.r;
+				lobj.comment = in.comment;
 			end	
 		end
 		

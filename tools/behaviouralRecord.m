@@ -78,7 +78,7 @@ classdef behaviouralRecord < optickaCore
 		%> 
 		% ===================================================================
 		function createPlot(me, eL)
-			me.tick = 1;
+			reset(me);
 			me.date = datestr(now);
 			if ~exist('eL','var')
 				eL.fixation.radius = 1;
@@ -156,7 +156,7 @@ classdef behaviouralRecord < optickaCore
 			ylabel(me.h.axis3, '% success')
 			ylabel(me.h.axis4, '% success')
 			ylabel(me.h.axis5, 'Y')
-			title(me.h.axis1,'Success (1) / Fail (0)')
+			title(me.h.axis1,'Success () / Fail ()')
 			title(me.h.axis2,'Response Times')
 			title(me.h.axis3,'Hit (blue) / Miss (red)')
 			title(me.h.axis4,'Average (n=10) Hit / Miss %')
@@ -170,25 +170,30 @@ classdef behaviouralRecord < optickaCore
 		%> 
 		%> 
 		% ===================================================================
-		function updatePlot(me, eL, sM)
+		function updatePlot(me, eT, sM, task)
 			if me.tick == 1
+				reset(me);
 				me.startTime = clock;
 			end
-			if exist('eL','var') && exist('sM','var')
+			if exist('sM','var')
 				if ~isempty(regexpi(sM.currentName,me.correctStateName,'once'))
-					me.response(end+1) = 1;
-					me.rt1(end+1) = sM.log(end).stateTimeToNow * 1e3;
-					me.rt2(end+1) = eL.fixInitLength * 1e3;
+					me.response(me.tick) = 1;
+					me.rt1(me.tick) = sM.log(end).stateTimeToNow * 1e3;
 				elseif ~isempty(regexpi(sM.currentName,me.breakStateName,'once'))
-					me.response(end+1) = -1;
+					me.response(me.tick) = -1;
+					me.rt1(me.tick) = 0;
 				else
-					me.response(end+1) = 0;
+					me.response(me.tick) = 0;
+					me.rt1(me.tick) = 0;
 				end
-				me.radius(end+1) = eL.fixation.radius;
-				me.time(end+1) = eL.fixation.time;
-				me.inittime(end+1) = eL.fixation.initTime;
-				me.xAll = eL.xAll;
-				me.yAll = eL.yAll;
+			end
+			if exist('eT','var')
+				me.rt2(me.tick) = eT.fixInitLength * 1e3;
+				me.radius(me.tick) = eT.fixation.radius;
+				me.time(me.tick) = eT.fixation.time;
+				me.inittime(me.tick) = eT.fixation.initTime;
+				me.xAll = eT.xAll;
+				me.yAll = eT.yAll;
 			end
 			
 			hitn = length( me.response(me.response > 0) );
@@ -204,7 +209,7 @@ classdef behaviouralRecord < optickaCore
 				lastn = me.response(end-9:end);				
 				average = (length(lastn(lastn > 0)) / length(lastn)) * 100;
 			end
-			me.averages(end+1) = average;
+			me.averages(me.tick) = average;
 			hits = [hitmiss 100-hitmiss; average 100-average; breakmiss 100-breakmiss];
 			
 			%axis 1
@@ -297,6 +302,23 @@ classdef behaviouralRecord < optickaCore
 			
 			me.tick = me.tick + 1;
 			
+		end
+
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> 
+		% ===================================================================
+		function reset(me)
+			me.tick = 1;
+			me.trials = [];
+			me.startTime = [];
+			me.response = [];
+			me.rt1 = [];
+			me.rt2 = [];
+			me.info = '';
+			me.xAll = [];
+			me.yAll = [];
 		end
 		
 		% ===================================================================

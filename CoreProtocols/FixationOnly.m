@@ -87,8 +87,8 @@ eT.resetExclusionZones();
 
 %==================================================================
 %----which states assigned as correct or break for online plot?----
-bR.correctStateName				= 'correct';
-bR.breakStateName				= 'breakfix';
+bR.correctStateName				= '^correct';
+bR.breakStateName				= '^(incorrect|breakfix)';
 
 %==================================================================
 %-------------------randomise stimulus variables every trial?-----------

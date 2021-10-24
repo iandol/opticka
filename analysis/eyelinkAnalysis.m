@@ -29,7 +29,7 @@ classdef eyelinkAnalysis < analysisCore
 		%> override the rtStart time with a custom message?
 		rtOverrideMessage char						= 'SYNCSTROBE'
 		%> minimum saccade distance in degrees
-		minSaccadeDistance double					= 0.99
+		minSaccadeDistance double					= 1.0
 		%> relative velocity threshold
 		VFAC double									= 5
 		%> minimum saccade duration
@@ -162,7 +162,8 @@ classdef eyelinkAnalysis < analysisCore
 			end
 			if nargin>0; me.parseArgs(varargin, me.allowedProperties); end
 			if isempty(me.file) || isempty(me.dir)
-				[me.file, me.dir] = uigetfile('*.edf','Load EDF File:');
+				[f,p]=uigetfile('*.edf','Load EDF File:');
+				if ischar(f); me.file = f; me.dir = p; end
 			end
 			me.ppd; %cache our initial ppd_
 		end
