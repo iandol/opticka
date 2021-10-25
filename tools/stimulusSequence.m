@@ -697,7 +697,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%>
 		% ===================================================================
 		function makeLabels(me)
-			if ~me.taskInitialised || me.nVars == 0; return; end
+			if isempty(me.outIndex); return; end
 			varIndex = sort(unique(me.outIndex));
 			list = cell(length(varIndex),me.nVars+2);
 			for i = 1:length(varIndex)
