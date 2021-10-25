@@ -121,8 +121,9 @@ eT.updateFixationValues(tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.f
 %make sure we don't start with any exclusion zones set up
 eT.resetExclusionZones();
 
-%======================================================================
-%---REGEX for which states assigned correct or break for online plot---
+%==================================================================
+%----WHICH states assigned as correct or break for online plot?----
+%----You need to use regex patterns for the match (doc regexp)-----
 bR.correctStateName				= '^correct';
 bR.breakStateName				= '^(breakfix|incorrect)';
 

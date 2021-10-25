@@ -87,7 +87,8 @@ eT.modify.targetbeep				= 1;		%==beep during calibration
 eT.updateFixationValues(tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
 
 %==================================================================
-%----which states assigned as correct or break for online plot?----
+%----WHICH states assigned as correct or break for online plot?----
+%----You need to use regex patterns for the match (doc regexp)-----
 bR.correctStateName				= '^correct';
 bR.breakStateName				= '^(breakfix|incorrect)';
 

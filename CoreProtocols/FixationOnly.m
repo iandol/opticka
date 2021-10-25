@@ -86,9 +86,10 @@ eT.updateFixationValues(tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.f
 eT.resetExclusionZones();
 
 %==================================================================
-%----which states assigned as correct or break for online plot?----
+%----WHICH states assigned as correct or break for online plot?----
+%----You need to use regex patterns for the match (doc regexp)-----
 bR.correctStateName				= '^correct';
-bR.breakStateName				= '^(incorrect|breakfix)';
+bR.breakStateName				= '^(breakfix|incorrect)';
 
 %==================================================================
 %-------------------randomise stimulus variables every trial?-----------
