@@ -94,7 +94,15 @@ if me.useEyeLink
 elseif me.useTobii
 	eT.name 					= tS.name;
 	eT.model					= 'Tobii Pro Spectrum';
+	eT.sampleRate				= 300;
 	eT.trackingMode				= 'human';
+	eT.calibrationStimulus		= 'animated';
+	eT.autoPace					= true;
+	%-----------------------
+	% remote calibration enables manual control and selection of each fixation
+	% this is useful for a baby or monkey who has not been trained for fixation
+	eT.manualCalibration		= false;
+	%-----------------------
 	eT.calPositions				= [ .2 .5; .5 .5; .8 .5];
 	eT.valPositions				= [ .5 .5 ];
 	if me.dummyMode;			eT.isDummy = true; end %===use dummy or real eyetracker? 

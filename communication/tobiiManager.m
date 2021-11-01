@@ -750,7 +750,7 @@ classdef tobiiManager < optickaCore
 				me.yAll			= [me.yAll me.y];
 				me.pupilAll		= [me.pupilAll me.pupil];
 			else
-				if me.verbose;fprintf('--->>> tobiiManager getSample(): are you sure you are recording?\n');end
+				if me.verbose;fprintf('-+-+-> tobiiManager.getSample(): are you sure you are recording?\n');end
 			end
 			me.currentSample	= sample;
 		end
@@ -1346,7 +1346,7 @@ classdef tobiiManager < optickaCore
 				if ispc; Screen('TextFont',s.win,'Consolas'); end
 				sgolayfilt(rand(10,1),1,3); %warm it up
 				me.heuristicFilter(rand(10,1), 2);
-				startRecording(me);
+				startRecording(me, true);
 				WaitSecs('YieldSecs',1);
 				for i = 1 : s.screenVals.fps
 					draw(o);draw(f);

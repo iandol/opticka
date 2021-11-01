@@ -35,7 +35,7 @@ tS.INCORRECT				= -5;		%==the code to send eyetracker for incorrect trials
 
 %==================================================================
 %------------Debug logging to command window-----------------
-io.verbose					= true; %print out io commands for debugging
+%io.verbose					= true; %print out io commands for debugging
 %eT.verbose					= true; %print out eyetracker commands for debugging
 %rM.verbose					= true; %print out reward commands for debugging
 
