@@ -77,7 +77,15 @@ if me.useEyeLink
 elseif me.useTobii
 	eT.name 					= tS.name;
 	eT.model					= 'Tobii Pro Spectrum';
+	eT.sampleRate				= 300;
 	eT.trackingMode				= 'human';
+	eT.calibrationStimulus		= 'animated';
+	eT.autoPace					= true;
+	%-----------------------
+	% remote calibration enables manual control and selection of each fixation
+	% this is useful for a baby or monkey who has not been trained for fixation
+	eT.manualCalibration		= false;
+	%-----------------------
 	eT.calPositions				= [ .2 .5; .5 .5; .8 .5];
 	eT.valPositions				= [ .5 .5 ];
 	if me.dummyMode;			eT.isDummy = true; end %===use dummy or real eyetracker? 
@@ -104,46 +112,46 @@ bR.breakStateName				= '^(breakfix|incorrect)';
 % use taskSequence to define proper randomised and balanced variable
 % sets and triggers to send to recording equipment etc...
 %
-% me.stimuli.choice				= [];
+% stims.choice				= [];
 % n								= 1;
 % in(n).name					= 'xyPosition';
 % in(n).values					= [6 6; 6 -6; -6 6; -6 -6; -6 0; 6 0];
 % in(n).stimuli					= 1;
 % in(n).offset					= [];
-% me.stimuli.stimulusTable		= in;
-me.stimuli.choice 				= [];
-me.stimuli.stimulusTable 		= [];
+% stims.stimulusTable		= in;
+stims.choice 				= [];
+stims.stimulusTable 		= [];
 
 %==================================================================
 %-------------allows using arrow keys to control variables?-------------
 % another option is to enable manual control of a table of variables
 % this is useful to probe RF properties or other features while still
 % allowing for fixation or other behavioural control.
-me.stimuli.tableChoice				= 1;
+stims.tableChoice				= 1;
 n									= 1;
-me.stimuli.controlTable(n).variable = 'size';
-me.stimuli.controlTable(n).delta	= 0.5;
-me.stimuli.controlTable(n).stimuli	= [1];
-me.stimuli.controlTable(n).limits	= [0.5 20];
+stims.controlTable(n).variable = 'size';
+stims.controlTable(n).delta	= 0.5;
+stims.controlTable(n).stimuli	= [1];
+stims.controlTable(n).limits	= [0.5 20];
 n									= n + 1;
-me.stimuli.controlTable(n).variable = 'angle';
-me.stimuli.controlTable(n).delta	= 0.5;
-me.stimuli.controlTable(n).stimuli	= [2];
-me.stimuli.controlTable(n).limits	= [0 180];
+stims.controlTable(n).variable = 'angle';
+stims.controlTable(n).delta	= 0.5;
+stims.controlTable(n).stimuli	= [2];
+stims.controlTable(n).limits	= [0 180];
 
 %==================================================================
 %this allows us to enable subsets from our stimulus list
-me.stimuli.stimulusSets				= {[1,2],[2]};
-me.stimuli.setChoice				= 1;
-showSet(me.stimuli);
+stims.stimulusSets				= {[1,2],[2]};
+stims.setChoice				= 1;
+showSet(stims);
 
 %==================================================================
 %which stimulus in the list is used for a fixation target? For this protocol it means
 %the subject must fixate this stimulus (the saccade target is #1 in the list) to get the
 %reward. Also which stimulus to set an exclusion zone around (where a
 %saccade into this area causes an immediate break fixation).
-me.stimuli.fixationChoice = 2;
-me.stimuli.exclusionChoice = [];
+stims.fixationChoice = 2;
+stims.exclusionChoice = [];
 
 %===================================================================
 %-----------------State Machine State Functions---------------------
@@ -175,6 +183,7 @@ pauseEntryFcn = {
 pauseExitFcn = {
 	@()fprintf('\n===>>>EXIT PAUSE STATE\n')
 	@()enableFlip(me); % start PTB screen flips
+	@()startRecording(eT, true); % start eyelink recording for this trial
 };
 
 %---------------------prestim entry
@@ -189,7 +198,7 @@ psEntryFcn = {
 	@()trackerClearScreen(eT); % blank the eyelink screen
 	@()trackerDrawFixation(eT); % draw the fixation window
 	@()needEyeSample(me,true); % make sure we start measuring eye position
-	@()showSet(me.stimuli); % make sure we prepare to show the stimulus set
+	@()showSet(stims); % make sure we prepare to show the stimulus set
 	@()logRun(me,'PREFIX'); %fprintf current trial info to command window
 };
 
@@ -210,9 +219,9 @@ stimEntryFcn = {
 
 %---------------------stimulus within state
 stimFcn = {
-	@()draw(me.stimuli); % draw the stimuli
+	@()draw(stims); % draw the stimuli
 	%@()drawEyePosition(eT); % draw the eye position to PTB screen
-	@()animate(me.stimuli); % animate stimuli for subsequent draw
+	@()animate(stims); % animate stimuli for subsequent draw
 };
 
 %-----------------------test we are maintaining fixation
@@ -254,14 +263,14 @@ correctFcn = {
 %----------------------when we exit the correct state
 correctExitFcn = {
 	@()updateVariables(me,[],[],true); ... %update the task variables
-	@()update(me.stimuli); ... %update our stimuli ready for display
+	@()update(stims); ... %update our stimuli ready for display
 	@()updatePlot(bR, eT, sM); % update the behavioural report plot
 	@()drawnow; % ensure we update the figure
 };
 
 %----------------------break entry
 breakEntryFcn = {
-	@()beep(aM,400,0.5,1);
+	@()beep(aM,200,0.5,1);
 	@()trackerClearScreen(eT);
 	@()trackerDrawText(eT,'Broke fix! :-(');
 	@()trackerMessage(eT,'TRIAL_RESULT 0'); %trial incorrect message
@@ -273,7 +282,7 @@ breakEntryFcn = {
 
 %----------------------inc entry
 incEntryFcn = { 
-	@()beep(aM,400,0.5,1);
+	@()beep(aM,200,0.5,1);
 	@()trackerClearScreen(eT);
 	@()trackerDrawText(eT,'Incorrect! :-(');
 	@()trackerMessage(eT,'TRIAL_RESULT 0'); %trial incorrect message
@@ -292,7 +301,7 @@ breakFcn =  {
 %----------------------break exit
 breakExitFcn = { 
 	@()updateVariables(me,[],[],false); ... %update the task variables
-	@()update(me.stimuli); %update our stimuli ready for display
+	@()update(stims); %update our stimuli ready for display
 	@()updatePlot(bR, eT, sM);
 	@()drawnow;
 };

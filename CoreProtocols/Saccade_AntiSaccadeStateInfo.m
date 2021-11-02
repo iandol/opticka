@@ -34,12 +34,13 @@ end
 %----------------------General Settings----------------------------
 tS.useTask					= true; %==use taskSequence (randomises stimulus variables)
 tS.rewardTime				= 250; %==TTL time in milliseconds
-tS.rewardPin				= 11; %==Output pin, 2 by default with Arduino.
+tS.rewardPin				= 2; %==Output pin, 2 by default with Arduino.
 tS.checkKeysDuringStimulus  = true; %==allow keyboard control? Slight drop in performance
 tS.recordEyePosition		= true; %==record eye position within PTB, **in addition** to the EDF?
 tS.askForComments			= false; %==little UI requestor asks for comments before/after run
 tS.saveData					= true; %==save behavioural and eye movement data?
 tS.name						= 'saccade-antisaccade'; %==name of this protocol
+tS.nStims					= stims.n;	%==number of stimuli
 tS.tOut						= 5; %if wrong response, how long to time out before next trial
 tS.CORRECT 					= 1; %==the code to send eyetracker for correct trials
 tS.BREAKFIX 				= -1; %==the code to send eyetracker for break fix trials
@@ -306,7 +307,7 @@ correctExitFcn = {
 
 %incorrect entry
 incEntryFcn = { 
-	@()beep(aM,400,0.5,1);
+	@()beep(aM,200,0.5,1);
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,['TRIAL_RESULT ' str2double(tS.INCORRECT)]);
 	@()trackerClearScreen(eT);
