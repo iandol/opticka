@@ -1,20 +1,26 @@
-# Opticka: Sensory Experiment Generator #
+# Opticka: Behavioural Experiment Manager #
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.12293.svg)](https://doi.org/10.5281/zenodo.592253)  [![Open in Visual Studio Code](https://open.vscode.dev/badges/open-in-vscode.svg)](https://open.vscode.dev/iandol/opticka)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.592253.svg)](https://doi.org/10.5281/zenodo.592253)  —  [![Open in Visual Studio Code](https://open.vscode.dev/badges/open-in-vscode.svg)](https://open.vscode.dev/iandol/opticka)
 
 Opticka is an object oriented framework with optional GUI for the [Psychophysics toolbox (PTB)](http://psychtoolbox.org/), allowing full experimental presentation of complex visual or other stimuli. It is designed to work on Linux, macOS or Windows and interfaces via strobed words and ethernet for recording neurophysiological and behavioural data. Full behavioural control is available by use of a [Finite State-Machine](http://iandol.github.io/OptickaDocs/classstate_machine.html#details) controller, in addition to simple method of constants (MOC) experiments. Opticka uses the TCP interface to both Eyelink & Tobii Pro eyetrackers affording better control, reliability and data recording over using analog voltages alone (and doesn't require any DAQ cards for eye data). The various base classes can be used *without* the need to run the GUI (see [`optickatest.m`](http://iandol.github.io/OptickaDocs/optickatest.html) for an example), and plug-n-play stimuli provide a unified interface (setup, animate, draw, update, reset) to integrate into other PTB routines. The object methods take care of all the background geometry and normalisation, meaning stimuli are much easier to use than “raw” PTB commands alone. Analysis routines are also present for taking e.g. Plexon files (`.PL2` or `.PLX`), Eyelink files (`.EDF`), and behavioural responses and parsing them into a consistent structure, interfacing directly with [Fieldtrip](http://fieldtrip.fcdonders.nl/start) for further spike, LFP, and spike-LFP analysis. Opticka is more modular and affords much better graphics control (most stimuli are optimised OpenGL with advanced control via PTB) than [MonkeyLogic](http://www.brown.edu/Research/monkeylogic/). 
 
 ## Example hardware setup
 
-The diagram below shows an example Opticka configuration setup:
+The diagram below shows an example Opticka configuration setup,;note that the eyetracker, display and electrophysiology systems can be swapped for other hardware (list below):
 
 ![Example hardware setup to run Opticka](https://github.com/iandol/opticka/raw/gh-pages/images/Opticka-Setup.png)
 
-GUI:
+## GUI
 
-![Opticka Screenshot](https://github.com/iandol/opticka/raw/gh-pages/images/opticka.png)  
+The GUI can run method of constant (MOC) and more complex behavioural tasks. THe GUI is not required to use the underlying classes.
 
-### Hardware currently supported: ##
+![Opticka Screenshot](https://github.com/iandol/opticka/raw/gh-pages/images/opticka.png)
+
+## State machine control
+
+For more complex behavioural tasks, a state machine is used. You can still load visual stimuli and task variables into the GUI, and then edit a `StateInfo.m` file which specifies which states (`pause`, `prefix`, `stimulus`, `correct`, `breakfix` etc.) can be run and for each state which methods/functions run. States can witch based on logic, like saccade/fixation responses.
+
+## Hardware currently supported: ##
 
 * **Display + digital I/O**: high quality display (high bit depths, great colour management) and microsecond precise frame-locked digital I/O: [Display++ developed by CRS](https://www.crsltd.com/tools-for-vision-science/calibrated-displays/displaypp-lcd-monitor/).
 * **Display + digital I/O**: high quality display (high bit depths) and microsecond precise digital I/O: [DataPixx / ViewPixx / ProPixx](http://vpixx.com/products/tools-for-vision-sciences/).
