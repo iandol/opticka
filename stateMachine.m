@@ -21,6 +21,8 @@
 %>
 %> To see how to run the stateMacine from a PTB loop, see
 %> runExperiment.runTask()
+%>
+%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef stateMachine < optickaCore
 	

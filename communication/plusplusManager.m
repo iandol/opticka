@@ -2,6 +2,8 @@
 %> @brief Display++ Communication Class
 %>
 %> 
+%>
+%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ======================================================================
 classdef plusplusManager < optickaCore
 	

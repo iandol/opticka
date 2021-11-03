@@ -2,6 +2,8 @@
 %> @brief single disc stimulus, inherits from baseStimulus
 %> SPOTSTIMULUS single spot stimulus, inherits from baseStimulus
 %>   The current properties are:
+%>
+%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef spotStimulus < baseStimulus
 	

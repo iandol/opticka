@@ -1,8 +1,11 @@
 % ======================================================================
 %> @brief Opticka stimulus generator GUI
 %>
-%> Opticka is an object oriented stimulus generator based on Psychophysics toolbox
-%> See http://iandol.github.com/opticka/ for more details. This class builds the %> main GUI.
+%> Opticka is an object oriented stimulus generator based on Psychophysics
+%> toolbox See http://iandol.github.com/opticka/ for more details. This
+%> class builds and controls the GUI.
+%>
+%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ======================================================================
 classdef opticka < optickaCore
 	

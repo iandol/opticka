@@ -2,8 +2,10 @@
 %> @brief optickaCore base class inherited by many other opticka classes.
 %> optickaCore is itself derived from handle. It provides methods to find
 %> attributes with specific parameters (used in autogenerating UI panels),
-%> clone the object, parse arguments safely on construction and default
-%> properties such as datestamp, a UUID and name/comment management.
+%> clone the object, parse arguments safely on construction and add default
+%> properties such as datestamp, UUID and name/comment management.
+%>
+%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef optickaCore < handle
 	
@@ -244,8 +246,9 @@ classdef optickaCore < handle
 		end
 		
 		% ===================================================================
-		%> @brief Use this syntax to make a deep copy of an object me,
-		%> i.e. OBJ_OUT has the same field values, but will not behave as a handle-copy of me anymore.
+		%> @brief Use this syntax to make a deep copy of the object, i.e.
+		%> OBJ_OUT has the same field values, but will not behave as a
+		%> handle-copy of me anymore.
 		%>
 		%> @return obj_out  cloned object
 		% ===================================================================

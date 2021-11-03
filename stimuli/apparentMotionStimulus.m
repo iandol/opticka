@@ -3,6 +3,8 @@
 %>
 %> apparentMotionStimulus is a simple apparent motion stimulus, comprising
 %> of a bar which flashes on and off across a series of spatial positions.
+%>
+%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef apparentMotionStimulus < baseStimulus
 

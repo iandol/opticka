@@ -1,6 +1,8 @@
 % ========================================================================
 %> @brief Create and update behavioural record.
 %> 
+%>
+%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef behaviouralRecord < optickaCore
 	

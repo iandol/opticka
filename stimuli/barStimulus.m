@@ -1,5 +1,7 @@
 % ========================================================================
 %> @brief barStimulus single bar stimulus, inherits from baseStimulus
+%>
+%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef barStimulus < baseStimulus
 	

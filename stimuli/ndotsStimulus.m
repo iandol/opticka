@@ -2,6 +2,8 @@
 %> @brief ndotsStimulus limited lifetime coherence dots stimulus
 %>
 %>
+%>
+%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef ndotsStimulus < baseStimulus
 	properties

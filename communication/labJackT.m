@@ -2,6 +2,8 @@
 %> @brief LABJACKT Connects and manages a LabJack T4 / T7
 %> This class handles digital I/O and analog I/O and analog streaming.
 %> Connection can be USB or network.
+%>
+%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef labJackT < handle
 	

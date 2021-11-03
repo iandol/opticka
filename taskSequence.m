@@ -5,6 +5,8 @@
 %> a set of values and randomly interleves them into a pseudorandom variable
 %> list each of which has a unique index number. 
 
+%>
+%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef taskSequence < optickaCore & dynamicprops
 	properties

@@ -2,6 +2,8 @@
 %> @brief plays an animated movie for a calibration stimulus
 %>
 %>
+%>
+%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================	
 classdef tittaCalMovieStimulus < handle
 	properties (Access=private, Constant)

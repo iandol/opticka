@@ -1,6 +1,8 @@
 % ========================================================================
 %> @brief ANIMATIONMANAGER provides per frame paths for stimuli
 %>
+%>
+%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef animationManager < optickaCore
 	

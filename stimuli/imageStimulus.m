@@ -3,6 +3,8 @@
 %>
 %> Superclass providing basic structure for texture stimulus classes
 %>
+%>
+%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================	
 classdef imageStimulus < baseStimulus	
 	properties %--------------------PUBLIC PROPERTIES----------%

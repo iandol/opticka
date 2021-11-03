@@ -2,6 +2,8 @@
 %> @brief movieStimulus is the class for movie based stimulus objects
 %>
 %>
+%>
+%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================	
 classdef movieStimulus < baseStimulus	
 	properties %--------------------PUBLIC PROPERTIES----------%

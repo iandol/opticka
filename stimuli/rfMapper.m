@@ -8,6 +8,8 @@
 %> (numeric keys). Right/middle mouse draws the current position into a buffer, you can turn on and off 
 %> visualising drawing buffer with ; and use ' to reset the drawn positions. See the
 %> checkKeys method for better description of what the keyboard commands do.
+%>
+%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef rfMapper < barStimulus
 	

@@ -21,6 +21,8 @@
 %> screen. fixInit allows you to define a minimum time with which the subject
 %> must initiate a saccade away from a position (which stops a subject cheating).
 %>
+%>
+%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef tobiiManager < optickaCore
 	

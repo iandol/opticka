@@ -4,6 +4,8 @@
 %> ends a trial by default) so can parse eye data and plot it for trial groups. You
 %> can also manually find microsaccades, and perform ROI/TOI filtering on the eye
 %> movements.
+%>
+%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef eyelinkAnalysis < analysisCore
 	% eyelinkAnalysis offers a set of methods to load, parse & plot raw EDF files.

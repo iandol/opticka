@@ -23,6 +23,8 @@
 %>  run(myExp);
 %>
 %>	will run a minimal experiment showing a 1c/d circularly masked grating
+%>
+%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef runExperiment < optickaCore
 	

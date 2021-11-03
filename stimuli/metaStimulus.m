@@ -10,6 +10,8 @@
 %> You can also pass a mask stimulus set, and when you toggle showMask, the
 %> mask stimuli will be drawn instead of the stimuli themselves, the timing
 %> is left to the calling function.
+%>
+%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef metaStimulus < optickaCore
 	

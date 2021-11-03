@@ -23,6 +23,8 @@
 %> lighting conditions etc). You can then save mycal to disk for later use by
 %> your programs. 
 %>
+%>
+%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef calibrateLuminance < handle
 	

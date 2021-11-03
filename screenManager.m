@@ -5,6 +5,8 @@
 %> close the screen based on those properties. It also manages movie
 %> recording of the screen buffer and some basic drawing commands like grids,
 %> spots and the hide flash trick from Mario.
+%>
+%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef screenManager < optickaCore
 	

@@ -1,28 +1,37 @@
 % ========================================================================
-%> @brief eyelinkManager wraps around the eyelink toolbox functions
-%> offering a simpler interface, with methods for fixation window control
+%> @brief eyelinkManager wraps around the eyelink toolbox functions offering
+%> a simpler interface, with methods for fixation window control
 %>
 %> The core methods enable the user to test for common behavioural eye
 %> tracking tasks with single commands. For example, to initiate a task we
 %> normally place a fixation cross on the screen and ask the subject to
-%> saccade to the cross and maintain fixation for a particular duration. This
-%> is achieved using testSearchHoldFixation('yes','no'), using the properties:
-%> fixation.initTime to time how long the subject has to saccade into the
-%> window, fixation.time for how long they must maintain fixation,
-%> fixation.radius for the radius around fixation.X and fixation.Y
-%> position. The method returns the 'yes' string if the rules are matched, 
-%> and 'no' if they are not, thus enabling experiment code to simply define what 
-%> happened. Other methods include isFixated(), testFixationTime(),
-%> testHoldFixation(). 
+%> saccade to the cross and maintain fixation for a particular duration.
+%> This is achieved using testSearchHoldFixation('yes','no'), using the
+%> properties: fixation.initTime to time how long the subject has to
+%> saccade into the window, fixation.time for how long they must maintain
+%> fixation, fixation.radius for the radius around fixation.X and
+%> fixation.Y position. The method returns the 'yes' string if the rules
+%> are matched, and 'no' if they are not, thus enabling experiment code to
+%> simply call this method until it returns 'yes''. Other methods include
+%> isFixated(), testFixationTime(), testHoldFixation().
 %>
-%> Multiple fixation windows can be assigned, and in addition exclusion
-%> windows can ensure a subject doesn't saccade to particular parts of the
-%> screen. fixInit allows you to define a minimum time with which the subject
-%> must initiate a saccade away from a position (which stops a subject cheating).
+%> Try using the demo mode to see it in action (read the runDemo() code to
+%> understand how to use the class):
+%>   > em = eyelinkManager('verbose', true);
+%>   > em.runDemo();
 %>
-%> For the eyelink we also enable use of remote calibration and can call
-%> reward systems during calibration / validation to improve subject
-%> performance.
+%> Multiple fixation windows can be assigned (either circular or
+%> rectangular), and in addition exclusion windows (exclusionZone) can
+%> ensure a subject doesn't saccade to particular parts of the screen.
+%> fixInit allows you to define a minimum time with which the subject can
+%> initiate a saccade away from a position (which stops a subject cheating
+%> by moving the eyes too soon).
+%>
+%> For the eyelink we also allow the use of remote calibration and can call
+%> a reward systems during calibration / validation to improve subject
+%> performance compared to the eyelink toolbox alone.
+%>
+%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef eyelinkManager < optickaCore
 	

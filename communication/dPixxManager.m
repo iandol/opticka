@@ -6,6 +6,8 @@
 %> It also enables better contrast range modes, critical for threshold type experiments.
 %> Opticka is an object oriented stimulus generator based on Psychophysics toolbox
 %> See http://iandol.github.com/opticka/ for more details
+%>
+%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ======================================================================
 classdef dPixxManager < optickaCore
 	

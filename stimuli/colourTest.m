@@ -1,5 +1,7 @@
 % ========================================================================
 %> @brief colour test is a simple RGB colour blender for teaching
+%>
+%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef colourTest < spotStimulus
 	

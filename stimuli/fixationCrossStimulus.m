@@ -3,6 +3,8 @@
 %>  Goodale MA, & Gegenfurtner KR (2013) "What is the best fixation target:
 %>  The effect of target shape on stability of fixational eye movements."
 %>  Vision research 76, 31-42 <http://doi.org/10.1016/j.visres.2012.10.012>
+%>
+%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef fixationCrossStimulus < baseStimulus
 	

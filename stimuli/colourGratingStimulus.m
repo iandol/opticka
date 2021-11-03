@@ -18,6 +18,8 @@
 %>   mask = use circular mask (true) or not (false)
 %>
 %> See docs for more property details
+%>
+%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef colourGratingStimulus < baseStimulus
 	

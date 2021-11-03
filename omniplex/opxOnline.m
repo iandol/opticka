@@ -3,6 +3,8 @@
 %>	for online data display
 %> 
 %>
+%>
+%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef opxOnline < handle
 	properties

@@ -4,6 +4,8 @@
 %> Use a taskSequence to randomise a variable, then for each value of
 %> that variable, run a Palamedes staricase
 %>
+%>
+%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef staircaseManager < optickaCore & dynamicprops
 	properties

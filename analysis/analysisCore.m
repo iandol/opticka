@@ -2,6 +2,8 @@
 %> @brief analysisCore base class inherited by other analysis classes.
 %> analysisCore is itself derived from optickaCore. Provides a set of shared methods
 %> and some core properties and stats GUI for various analysis classes.
+%>
+%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef analysisCore < optickaCore
 	

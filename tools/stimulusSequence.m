@@ -1,5 +1,7 @@
 % ========================================================================
 %> DEPRECATED, use taskSequence. 
+%>
+%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef stimulusSequence < optickaCore & dynamicprops
 	properties

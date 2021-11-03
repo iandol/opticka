@@ -6,6 +6,8 @@
 %> >> mM = magstimManager() %create magstim manager object
 %> >> mM.open %connect via a LabJack
 %> >> mM.stimulate % run a stimulation protocol
+%>
+%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef magstimManager < optickaCore
 	properties
