@@ -117,6 +117,10 @@ classdef tobiiManager < optickaCore
 		% calculates the smoothing in ms
 		smoothingTime double
 	end
+
+	properties (SetAccess = private, Hidden = true)
+		
+	end
 	
 	properties (SetAccess = private, GetAccess = public)
 		%> Last gaze X position in degrees
@@ -125,22 +129,14 @@ classdef tobiiManager < optickaCore
 		y								= []
 		%> pupil size
 		pupil							= []
-		%> All gaze X position in degrees reset using resetFixation
-		xAll							= []
-		%> Last gaze Y position in degrees reset using resetFixation
-		yAll							= []
-		%> all pupil size reset using resetFixation
-		pupilAll						= []
-		%current sample taken from tobii
-		currentSample struct
-		%current event taken from tobii
-		currentEvent struct
-		%> are we in an exclusion zone?
-		isExclusion	logical				= false
 		%> last isFixated true/false result
 		isFix logical					= false
 		%> did the fixInit test fail or not?
 		isInitFail logical				= false
+		%> are we in an exclusion zone?
+		isExclusion	logical				= false
+		% are we in a blink?
+		isBlink logical = false
 		%> total time searching and holding fixation
 		fixTotal						= 0
 		%> Initiate fixation length
@@ -159,6 +155,16 @@ classdef tobiiManager < optickaCore
 		trackerTime						= 0
 		%> tracker time stamp
 		systemTime						= 0
+		%> current sample taken from tobii
+		currentSample struct
+		%> current event taken from tobii
+		currentEvent struct
+		%> All gaze X position in degrees reset using resetFixation
+		xAll							= []
+		%> Last gaze Y position in degrees reset using resetFixation
+		yAll							= []
+		%> all pupil size reset using resetFixation
+		pupilAll						= []
 		%> the PTB screen to work with, passed in during initialise
 		screen screenManager
 		% are we connected to Tobii?

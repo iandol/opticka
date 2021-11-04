@@ -122,14 +122,14 @@ classdef eyelinkManager < optickaCore
 		y							= []
 		%> pupil size
 		pupil						= []
-		%> are we in a blink?
-		isBlink						= false
-		%> are we in an exclusion zone?
-		isExclusion					= false
 		%> last isFixated true/false result
 		isFix						= false
 		%> did the fixInit test fail or not?
 		isInitFail					= false
+		%> are we in a blink?
+		isBlink						= false
+		%> are we in an exclusion zone?
+		isExclusion					= false
 		%> total time searching and holding fixation
 		fixTotal					= 0
 		%> Initiate fixation length
