@@ -1055,7 +1055,7 @@ classdef eyelinkManager < optickaCore
 		%>
 		%>
 		% ===================================================================
-		function trackerMessage(me, message)
+		function trackerMessage(me, message, varargin)
 			if me.isConnected
 				Eyelink('Message', message );
 				if me.verbose; fprintf('-+-+-> EDF Message: %s\n',message);end

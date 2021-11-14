@@ -474,7 +474,6 @@ classdef optickaCore < handle
 		%> ignores invalid or non-allowed properties
 		%>
 		%> @param args input structure
-		%> @param allowedProperties properties possible to set on construction
 		% ===================================================================
 		function addArgs(me, args)
 			args = optickaCore.makeArgs(args);

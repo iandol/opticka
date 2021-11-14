@@ -36,7 +36,6 @@ tS.includeErrors			= false;
 task.trialVar.values		= {'fixateOS','fixateTS'};
 task.trialVar.probability	= [0.6 0.4];
 task.trialVar.comment		= 'one or twostep trial based on 60:40 probability';
-
 tL.stimStateNames			= {'onestep','twostep'};
 
 %==================================================================
@@ -56,6 +55,7 @@ tS.recordEyePosition		= true; %==record eye position within PTB, **in addition**
 tS.askForComments			= false; %==little UI requestor asks for comments before/after run
 tS.saveData					= true; %==save behavioural and eye movement data?
 tS.name						= 'twostep-saccade'; %==name of this protocol
+tS.nStims					= stims.n;	%==number of stimuli
 tS.tOut						= 1; %if wrong response, how long to time out before next trial
 tS.CORRECT 					= 1; %==the code to send eyetracker for correct trials
 tS.BREAKFIX 				= -1; %==the code to send eyetracker for break fix trials
@@ -87,14 +87,14 @@ me.lastYExclusion			= [];
 
 %==================================================================
 %---------------------------Eyetracker setup-----------------------
+% note: opticka UI sets some defaults, but these will override the UI
 if me.useEyeLink
 	warning('Note this protocol is optimised for the Tobii eyetracker, beware...')
 	eT.name 					= tS.name;
 	eT.sampleRate 				= 250; % sampling rate
 	eT.calibrationStyle 		= 'HV5'; % calibration style
-	eT.calibrationProportion	= [0.2 0.2]; %the proportion of the screen occupied by the calibration stimuli
+	eT.calibrationProportion	= [0.4 0.4]; %the proportion of the screen occupied by the calibration stimuli
 	if tS.saveData == true;		eT.recordData = true; end %===save EDF file?
-	if me.dummyMode;			eT.isDummy = true; end %===use dummy or real eyetracker? 
 	%-----------------------
 	% remote calibration enables manual control and selection of each fixation
 	% this is useful for a baby or monkey who has not been trained for fixation
@@ -110,11 +110,18 @@ if me.useEyeLink
 	eT.modify.targetbeep 			= 1; % beep during calibration
 elseif me.useTobii
 	eT.name 					= tS.name;
-	eT.model					= 'Tobii Pro Spectrum';
-	eT.trackingMode				= 'human';
-	eT.calPositions				= [ .2 .5; .5 .5; .8 .5];
-	eT.valPositions				= [ .5 .5 ];
-	if me.dummyMode;			eT.isDummy = true; end %===use dummy or real eyetracker? 
+	%eT.model					= 'Tobii Pro Spectrum';
+	%eT.sampleRate				= 300;
+	%eT.trackingMode				= 'human';
+	%eT.calibrationStimulus		= 'animated';
+	%eT.autoPace					= true;
+	%-----------------------
+	% remote calibration enables manual control and selection of each fixation
+	% this is useful for a baby or monkey who has not been trained for fixation
+	%eT.manualCalibration		= false;
+	%-----------------------
+	%eT.calPositions				= [ .2 .5; .5 .5; .8 .5];
+	%eT.valPositions				= [ .5 .5 ];
 end
 %Initialise the eyeTracker object with X, Y, FixInitTime, FixTime, Radius, StrictFix
 eT.updateFixationValues(tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);

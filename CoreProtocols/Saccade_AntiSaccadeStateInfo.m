@@ -4,24 +4,30 @@
 %> Objects provide many methods you can run, like sending triggers, showing
 %> stimuli, controlling the eyetracker etc.
 %
-%> The following class objects are already loaded and available to use: 
+%> This state file is loaded by the runExperiment class. runExperiment
+%> initialises other classes that are used to control the experiment. The
+%> following class objects are already loaded and available to use:
 %
-%> me = runExperiment object
-%> io = digital I/O to recording system
-%> s = screenManager
-%> aM = audioManager
-%> sM = State Machine
-%> eT = eyetracker manager
-%> task  = task sequence (taskSequence class)
-%> rM = Reward Manager (LabJack or Arduino TTL trigger to reward system/Magstim)
-%> bR = behavioural record plot (on screen GUI during task run)
-%> stims = our list of stimuli
-%> tS = general struct to hold variables for this run, will be saved as part of the data
+%> me		= runExperiment object
+%> s		= screenManager
+%> sM		= State Machine
+%> eT		= eyetracker manager
+%> task		= task sequence (taskSequence class)
+%> stims	= our list of stimuli
+%> io		= digital I/O to recording system
+%> aM		= audioManager
+%> rM		= Reward Manager (LabJack or Arduino TTL trigger to reward system/Magstim)
+%> bR		= behavioural record plot (on screen GUI of trial performance during task run)
+%> tL		= timeLog that records the timing of experiment
+%> tS		= general struct to hold variables for this run, will be saved as part of the data
 
 %==================================================================
-%---------------------------TASK SWITCH----------------------------
+%---------------------------TASK CONFIG----------------------------
+%do we update the trial number even for incorrect saccades, if true then we
+%call updateTask for both correct and incorrect, otherwise we only call
+%updateTask() for correct responses
+tS.includeErrors			= false; 
 tS.type						= 'saccade'; %will be be saccade or antisaccade task run?
-tS.includeErrors			= true; %do we update the trial number even for incorrect saccades, if true then we call updateTask for both correct and incorrect, otherwise we only call updateTask() for correct responses
 if strcmp(tS.type,'saccade')
 	stims{1}.showOnTracker = true;
 	stims{2}.showOnTracker = false;
@@ -49,7 +55,7 @@ tS.INCORRECT 				= -5; %==the code to send eyetracker for incorrect trials
 %==================================================================
 %------------Debug logging to command window-----------------
 %io.verbose					= true;	%==print out io commands for debugging
-%eT.verbose					= true;	%==print out eyelink commands for debugging
+%eT.verbose					= true;	%==print out eyetracker commands for debugging
 %rM.verbose					= true;	%==print out reward commands for debugging
 
 %==================================================================
@@ -71,6 +77,7 @@ tS.targetRadius				= 5; %radius to fix within.
 
 %==================================================================
 %---------------------------Eyetracker setup-----------------------
+% note: opticka UI sets some defaults, but these will override the UI
 if me.useEyeLink
 	warning('Note this protocol is optimised for the Tobii eyetracker, beware...')
 	eT.name 					= tS.name;
@@ -78,7 +85,6 @@ if me.useEyeLink
 	eT.calibrationStyle 		= 'HV5'; % calibration style
 	eT.calibrationProportion	= [0.4 0.4]; %the proportion of the screen occupied by the calibration stimuli
 	if tS.saveData == true;		eT.recordData = true; end %===save EDF file?
-	if me.dummyMode;			eT.isDummy = true; end %===use dummy or real eyetracker? 
 	%-----------------------
 	% remote calibration enables manual control and selection of each fixation
 	% this is useful for a baby or monkey who has not been trained for fixation
@@ -94,23 +100,22 @@ if me.useEyeLink
 	eT.modify.targetbeep 			= 1; % beep during calibration
 elseif me.useTobii
 	eT.name 					= tS.name;
-	eT.model					= 'Tobii Pro Spectrum';
-	eT.sampleRate				= 300;
-	eT.trackingMode				= 'human';
-	eT.calibrationStimulus		= 'animated';
-	eT.autoPace					= true;
+	%eT.model					= 'Tobii Pro Spectrum';
+	%eT.sampleRate				= 300;
+	%eT.trackingMode				= 'human';
+	%eT.calibrationStimulus		= 'animated';
+	%eT.autoPace					= true;
 	%-----------------------
 	% remote calibration enables manual control and selection of each fixation
 	% this is useful for a baby or monkey who has not been trained for fixation
-	eT.manualCalibration		= false;
+	%eT.manualCalibration		= false;
 	%-----------------------
-	eT.calPositions				= [ .2 .5; .5 .5; .8 .5];
-	eT.valPositions				= [ .5 .5 ];
-	if me.dummyMode;			eT.isDummy = true; end %===use dummy or real eyetracker? 
+	%eT.calPositions				= [ .2 .5; .5 .5; .8 .5];
+	%eT.valPositions				= [ .5 .5 ];
 end
 %Initialise the eyeTracker object with X, Y, FixInitTime, FixTime, Radius, StrictFix
 eT.updateFixationValues(tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
-%make sure we don't start with any exclusion zones set up
+%Ensure we don't start with any exclusion zones set up
 eT.resetExclusionZones();
 
 %==================================================================
@@ -171,16 +176,20 @@ stims.exclusionChoice = 2;
 sM.skipExitStates			= {'fixate','incorrect|breakfix'};
 
 %===================================================================
-%-----------------State Machine State Functions---------------------
-% each cell {array} holds a set of anonymous function handles which are executed by the
-% state machine to control the experiment. The state machine can run sets
-% at entry, during, to trigger a transition, and at exit. Remember these
-% {sets} need to access the objects that are available within the
-% runExperiment context (see top of file). You can also add global
-% variables/objects then use these. The values entered here are set on
-% load, if you want up-to-date values then you need to use methods/function
-% wrappers to retrieve/set them.
+%===================================================================
+%===================================================================
+%-----------------State Machine Task Functions---------------------
+% Each cell {array} holds a set of anonymous function handles which are
+% executed by the state machine to control the experiment. The state
+% machine can run sets at entry ['entryFcn'], during ['withinFcn'], to
+% trigger a transition jump to another state ['transitionFcn'], and at exit
+% ['exitFcn'. Remember these {sets} need to access the objects that are
+% available within the runExperiment context (see top of file). You can
+% also add global variables/objects then use these. The values entered here
+% are set on load, if you want up-to-date values then you need to use
+% methods/function wrappers to retrieve/set them.
 
+%====================================================PAUSE
 %pause entry
 pauseEntryFcn = { 
 	@()hide(stims);
@@ -201,6 +210,7 @@ pauseExitFcn = {
 	@()startRecording(eT, true); %start recording eye position data again
 }; 
 
+%====================================================PREFIXATION
 prefixEntryFcn = { 
 	@()enableFlip(me); 
 };
@@ -214,6 +224,7 @@ prefixExitFcn = {
 	@()edit(stims,3,'alpha2Out',1);
 };
 
+%====================================================FIXATION
 %fixate entry
 fixEntryFcn = { 
 	@()startRecording(eT);
@@ -254,6 +265,7 @@ else
 	fixExitFcn = [ fixExitFcn; {@()changeSet(stims, 3)} ];
 end
 
+%====================================================TARGET STIMULUS
 %what to run when we enter the stim presentation state
 stimEntryFcn = { 
 	@()doStrobe(me,true);
@@ -275,6 +287,8 @@ stimExitFcn = {
 	@()setStrobeValue(me,255); 
 	@()doStrobe(me,true);
 };
+
+%====================================================DECISION
 
 %if the subject is correct (small reward)
 correctEntryFcn = { 

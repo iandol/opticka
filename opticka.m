@@ -30,7 +30,7 @@ classdef opticka < optickaCore
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> version number
-		optickaVersion char = '2.04'
+		optickaVersion char = '2.05'
 		%> history of display objects
 		history
 		%> is this a remote instance?
@@ -47,7 +47,8 @@ classdef opticka < optickaCore
 			'OKbackgroundColour','OKAntiAliasing','OKbitDepth','OKUseRetina',...
 			'OKHideFlash','OKUsePhotoDiode','OKTrainingResearcherName',...
 			'OKTrainingName','OKarduinoPort','OKdPPMode','OKDummyMode',...
-			'OKOpenGLBlending'}
+			'OKOpenGLBlending','OKCalEditField','OKValEditField',...
+			'OKTrackerDropDown'}
 	end
 	
 	%=======================================================================
@@ -87,7 +88,7 @@ classdef opticka < optickaCore
 				case 'saveData'
 					me.saveData();
 				case 'saveProtocol'
-					me.saveProtocol();
+					me.saveProtocol(vars);
 				case 'loadProtocol'
 					me.loadProtocol(vars);
 				case 'deleteProtocol'
@@ -320,6 +321,8 @@ classdef opticka < optickaCore
 				me.getTaskVals();
 				me.loadCalibration();
 				me.refreshProtocolsList();
+
+				OKTobiiUpdate(me.h);
 				
 				%addlistener(me.r,'abortRun',@me.abortRunEvent);
 				%addlistener(me.r,'endAllRuns',@me.endRunEvent);
@@ -915,23 +918,44 @@ classdef opticka < optickaCore
 		%> Save Protocol
 		%> @param 
 		% ===================================================================
-		function saveProtocol(me)
+		function saveProtocol(me, copy)
+			if ~exist('copy','var'); copy = false; end
 			me.paths.currentPath = pwd;
 			cd(me.paths.protocols);
-			[f,p] = uiputfile('*.mat','Save Opticka Protocol','Protocol.mat');
+			if isfield(me.store,'protocolName')
+				fname = me.store.protocolName;
+			else
+				fname = 'Protocol.mat';
+			end
+			[f,p] = uiputfile('*.mat','Save Opticka Protocol',fname);
 			if f ~= 0
 				cd(p);
 				tmp = clone(me);
 				tmp.name = f;
 				tmp.r.name = f;
-				tmp.r.paths.stateInfoFile = me.r.paths.stateInfoFile;
+				
 				tmp.store = struct(); %lets just nuke this incase some rogue handles are lurking
 				tmp.h = struct(); %remove the handles to the UI which will not be valid on reload
 				if isfield(tmp.r.screenSettings,'optickahandle'); tmp.r.screenSettings.optickahandle = []; end %!!!this fixes matlab bug 01255186
 				for i = 1:tmp.r.stimuli.n
 					cleanHandles(tmp.r.stimuli{i}); %just in case!
 				end
-				save(f,'tmp'); %this is the original code -- MAT CRASH on load, it is the same if i save me directly or the cloned variant tmp
+				[~, ff, ee] = fileparts(me.r.paths.stateInfoFile);
+				if copy == true
+					tmp.r.paths.stateInfoFile = [pwd filesep ff ee];
+					status = copyfile(me.r.paths.stateInfoFile,[ff ee]);
+					if status ~= 1
+						warning('Couldn''t copy state info file!');
+					else
+						me.r.paths.stateInfoFile = tmp.r.paths.stateInfoFile;
+					end
+					save(f,'tmp');
+					fprintf('\n---> Saving Protocol %s as copy (with state file) to %s\n', f, pwd);
+					getStateInfo(me);
+				else
+					save(f,'tmp');
+					fprintf('\n---> Saving Protocol %s to %s\n', f, pwd);
+				end
 				me.refreshStimulusList;
 				me.refreshVariableList;
 				me.refreshProtocolsList;
@@ -1028,6 +1052,7 @@ classdef opticka < optickaCore
 			me.paths.protocols = p;
 			
 			me.comment = ['Prt: ' file];
+			me.store.protocolName = file;
 			
 			salutation(me,sprintf('Routing Protocol from %s to %s',tmp.fullName,me.fullName),[],true);
 			
@@ -1075,7 +1100,7 @@ classdef opticka < optickaCore
 							[~,f,e] = fileparts(tmp.r.paths.stateInfoFile);
 							newfile = [pwd filesep f e];
 							if exist(tmp.r.paths.stateInfoFile,'file')
-								me.r.paths.stateInfoFile =newfile;
+								me.r.paths.stateInfoFile = newfile;
 							else
 								me.r.paths.stateInfoFile = tmp.r.paths.stateInfoFile;
 							end
@@ -1216,7 +1241,7 @@ classdef opticka < optickaCore
 				
 			end
 			
-			me.h.OKOptickaVersion.Text = ['Opticka Experiment Manager V' me.optickaVersion ' - ' file];
+			me.h.OKOptickaVersion.Text = ['Opticka Experiment Manager V' me.optickaVersion ' - ' me.store.protocolName];
 			me.refreshProtocolsList;
 			figure(me.h.OKRoot); drawnow;
 		end

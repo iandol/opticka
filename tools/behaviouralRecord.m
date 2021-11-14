@@ -18,13 +18,16 @@ classdef behaviouralRecord < optickaCore
 		xAll				= []
 		yAll				= [];
 		correctStateName	= '^correct'
+		correctStateValue	= 1;
 		breakStateName		= '^(breakfix|incorrect)'
+		breakStateValue		= -1;
 		rewardTime			= 150;
 		rewardVolume		= 3.6067e-04; %for 1ms
 	end
 	
 	properties (GetAccess = public, SetAccess = protected)
 		trials
+		tick
 	end
 	
 	properties (SetAccess = ?runExperiment, Transient = true)
@@ -34,7 +37,7 @@ classdef behaviouralRecord < optickaCore
 	
 	%--------------------PRIVATE PROPERTIES----------%
 	properties (SetAccess = private, GetAccess = private)
-		tick
+		plotOnly			= false
 		startTime
 		radius
 		time
@@ -70,8 +73,10 @@ classdef behaviouralRecord < optickaCore
 		%> 
 		% ===================================================================
 		function plot(me)
+			me.plotOnly = true;
 			createPlot(me);
 			updatePlot(me);
+			me.plotOnly = false;
 		end
 		
 		% ===================================================================
@@ -79,21 +84,27 @@ classdef behaviouralRecord < optickaCore
 		%> 
 		%> 
 		% ===================================================================
-		function createPlot(me, eL)
-			reset(me);
-			me.date = datestr(now);
+		function createPlot(me, eL);
+			if ~me.plotOnly
+				reset(me);
+				me.date = datestr(now);
+			end
+			if isfield(me.h,'root') && ~isempty(findobj(me.h.root))
+				close(me.h.root);
+			end
+			me.h = [];
 			if ~exist('eL','var')
 				eL.fixation.radius = 1;
 				eL.fixation.time = 1;
 				eL.fixation.initTime = 1;
 			end
-			t = {['INFORMATION @ ' me.date]};
-			t{end+1} = ['RUN = ' me.comment];
-			t{end+1} = ['RADIUS = ' num2str(eL.fixation.radius)];
-			t{end+1} = ' ';
-			t{end+1} = ['TIME = ' num2str(eL.fixation.time)];
-			t{end+1} = ' ';
-			t{end+1} = ['INIT TIME = ' num2str(eL.fixation.initTime)];
+			tx = {['INFORMATION @ ' me.date]};
+			tx{end+1} = ['RUN = ' me.comment];
+			tx{end+1} = ['RADIUS = ' num2str(eL.fixation.radius)];
+			tx{end+1} = ' ';
+			tx{end+1} = ['TIME = ' num2str(eL.fixation.time)];
+			tx{end+1} = ' ';
+			tx{end+1} = ['INIT TIME = ' num2str(eL.fixation.initTime)];
 			
 			if ismac
 				nfont = 'avenir next';
@@ -105,66 +116,46 @@ classdef behaviouralRecord < optickaCore
 				nfont = 'Liberation Sans'; %get(0,'defaultAxesFontName');
 				mfont = 'Fira Code';
 			end
-			me.h.root = figure('NumberTitle', 'off', 'Toolbar', 'none');
-			me.h.panel = uiextras.BoxPanel('Parent',me.h.root, ...
-				'Title',me.fullName, ...
-				'FontSize',12, ...
-				'TitleColor',[0.8 0.79 0.78], ...
-				'BackgroundColor',[0.83 0.83 0.83]);
-			me.h.vbox = uiextras.VBoxFlex( 'Parent', me.h.panel );
-			me.h.hbox = uiextras.HBoxFlex('Parent', me.h.vbox);
-			me.h.info = uicontrol('Style','edit', ...
-				'Parent', me.h.vbox, ...
-				'Tag','bRInfoText', ...
-				'String', t, ...
-				'BackgroundColor', [1 1 1], ...
-				'HorizontalAlignment', 'center', ...
-				'Max', 100, ...
-				'FontSize', 10, ...
-				'FontName',mfont);
-			me.h.vbox2 = uiextras.VBox('Parent', me.h.hbox);
-			me.h.axis1 = axes('Parent', me.h.vbox2,'Units','pixels');
-			me.h.axis4 = axes('Parent', me.h.vbox2,'Units','pixels');
-			me.h.vbox3 = uiextras.VBox('Parent', me.h.hbox);
-			me.h.axis2 = axes('Parent', me.h.vbox3,'Units','pixels');
-			me.h.axis3 = axes('Parent', me.h.vbox3,'Units','pixels');
-			me.h.axis5 = axes('Parent', me.h.vbox3,'Units','pixels');
-			axis([me.h.axis1 me.h.axis2 me.h.axis3 me.h.axis4], 'square');
-			opticka.resizeFigure(0,[900 980]);
-			set(me.h.vbox,'Sizes',[-5 -1])
-			set(me.h.hbox,'Sizes',[-2 -1])
-			set(me.h.vbox2,'Sizes',[-2 -1])
-			set(me.h.vbox3,'Sizes',[-1 -1 -1])
 
-			plot(me.h.axis1, 1, 0,'ko');
-			hist(me.h.axis2, 0, 0:0.1:2);
+			me.h.root = uifigure('Name',me.fullName);
+			me.h.root.Units = 'normalized';
+			me.h.root.Position = [0.6 0 0.4 1];
+			me.h.grid = uigridlayout(me.h.root,[2 1]);
+			me.h.grid.RowHeight = {'4x' '1x'};
+			me.h.grid.RowSpacing = 2;
+			me.h.grid.Padding = [3 3 3 3];
+			me.h.panel = uipanel(me.h.grid);
+			me.h.info = uitextarea(me.h.grid, 'HorizontalAlignment', 'center');
+			me.h.box = tiledlayout(me.h.panel,3,3);
+			me.h.box.Padding='compact';
+			me.h.axis1 = nexttile(me.h.box, [2 2]);
+			me.h.axis2 = nexttile(me.h.box, [1 2]);
+			me.h.axis3 = nexttile(me.h.box);
+			me.h.axis4 = nexttile(me.h.box);
+			me.h.axis5 = nexttile(me.h.box);
+
 			colormap('turbo')
-			bar(me.h.axis3,rand(2,2),'stacked')
-			set(me.h.axis3,'XTickLabel', {'all';'newest'})
-			plot(me.h.axis4, 1, 0,'ko-');
 			
-			set([me.h.axis1 me.h.axis2 me.h.axis3 me.h.axis4], ...
+			set([me.h.axis1 me.h.axis2 me.h.axis3 me.h.axis4 me.h.axis5], ...
 				'Box','on','XGrid','on','YGrid','on','ZGrid','on');
-			axis([me.h.axis2 me.h.axis3 me.h.axis4 me.h.axis5], 'tight');
-			
 			
 			xlabel(me.h.axis1, 'Run Number')
 			xlabel(me.h.axis2, 'Time')
 			xlabel(me.h.axis3, 'Group')
 			xlabel(me.h.axis4, '#')
-			xlabel(me.h.axis5, 'X')
+			xlabel(me.h.axis5, 'x')
 			ylabel(me.h.axis1, 'Yes / No')
 			ylabel(me.h.axis2, 'Number #')
 			ylabel(me.h.axis3, '% success')
 			ylabel(me.h.axis4, '% success')
-			ylabel(me.h.axis5, 'Y')
+			ylabel(me.h.axis5, 'y')
 			title(me.h.axis1,'Success () / Fail ()')
 			title(me.h.axis2,'Response Times')
 			title(me.h.axis3,'Hit (blue) / Miss (red)')
 			title(me.h.axis4,'Average (n=10) Hit / Miss %')
 			title(me.h.axis5,'Last Eye Position')
-			hn = findobj(me.h.axis2,'Type','patch');
-			set(hn,'FaceColor','k','EdgeColor','k');
+			%hn = findobj(me.h.axis2,'Type','patch');
+			%set(hn,'FaceColor','k','EdgeColor','k');
 		end
 		
 		% ===================================================================
@@ -173,29 +164,39 @@ classdef behaviouralRecord < optickaCore
 		%> 
 		% ===================================================================
 		function updatePlot(me, eT, sM, task)
-			if me.tick == 1
-				reset(me);
-				me.startTime = clock;
-			end
-			if exist('sM','var')
-				if ~isempty(regexpi(sM.currentName,me.correctStateName,'once'))
-					me.response(me.tick) = 1;
-					me.rt1(me.tick) = sM.log(end).stateTimeToNow * 1e3;
-				elseif ~isempty(regexpi(sM.currentName,me.breakStateName,'once'))
-					me.response(me.tick) = -1;
-					me.rt1(me.tick) = 0;
-				else
-					me.response(me.tick) = 0;
-					me.rt1(me.tick) = 0;
+			if ~me.plotOnly 
+				if me.tick == 1
+					reset(me);
+					me.startTime = clock;
 				end
-			end
-			if exist('eT','var')
-				me.rt2(me.tick) = eT.fixInitLength * 1e3;
-				me.radius(me.tick) = eT.fixation.radius;
-				me.time(me.tick) = eT.fixation.time;
-				me.inittime(me.tick) = eT.fixation.initTime;
-				me.xAll = eT.xAll;
-				me.yAll = eT.yAll;
+				if exist('sM','var')
+					if ~isempty(regexpi(sM.currentName,me.correctStateName,'once'))
+						me.response(me.tick) = me.correctStateValue;
+						me.rt1(me.tick) = sM.log(end).stateTimeToNow * 1e3;
+					elseif ~isempty(regexpi(sM.currentName,me.breakStateName,'once'))
+						me.response(me.tick) = me.breakStateValue;
+						me.rt1(me.tick) = 0;
+					else
+						me.response(me.tick) = 0;
+						me.rt1(me.tick) = 0;
+					end
+				else
+					me.response(me.tick) = NaN;
+					me.rt1(me.tick) = NaN;
+				end
+				if exist('eT','var')
+					me.rt2(me.tick) = eT.fixInitLength * 1e3;
+					me.radius(me.tick) = eT.fixation.radius;
+					me.time(me.tick) = eT.fixation.time;
+					me.inittime(me.tick) = eT.fixation.initTime;
+					me.xAll = eT.xAll;
+					me.yAll = eT.yAll;
+				else
+					me.rt2(me.tick) = NaN;
+					me.radius(me.tick) = NaN;
+					me.time(me.tick) = NaN;
+					me.inittime(me.tick) = NaN;
+				end
 			end
 			
 			hitn = length( me.response(me.response > 0) );
@@ -216,54 +217,63 @@ classdef behaviouralRecord < optickaCore
 			
 			%axis 1
 			set(me.h.axis1,'NextPlot','replacechildren')
-			plot(me.h.axis1, 1:length(me.response), me.response,'k.-','MarkerSize',12);
+			plot(me.h.axis1, 1:length(me.response), me.response,'k.-','MarkerSize',12,'MarkerFaceColor','black');
 			set(me.h.axis1,'NextPlot','add')
-			if ~isempty(me.radius)
-				plot(me.h.axis1, 1:length(me.response), me.radius,'r.','MarkerSize',10);
-				plot(me.h.axis1, 1:length(me.response), me.inittime,'g.','MarkerSize',10);
-				plot(me.h.axis1, 1:length(me.response), me.time,'b.','MarkerSize',10);
+			if ~isempty(me.radius) && ~all(isnan(me.radius))
+				plot(me.h.axis1, 1:length(me.radius), me.radius,'r.','MarkerSize',10);
+				plot(me.h.axis1, 1:length(me.inittime), me.inittime,'g.','MarkerSize',10);
+				plot(me.h.axis1, 1:length(me.time), me.time,'b.','MarkerSize',10);
 			end
-			axis(me.h.axis1, 'tight');
-			%axis 2
-			if ~isempty(me.rt1) 
-				if max(me.rt1) == 0 && max(me.rt2) > 0
-					histogram(me.h.axis2, [me.rt2'], 8);
-				elseif max(me.rt1) > 0 && max(me.rt2) == 0
-					histogram(me.h.axis2, [me.rt1'], 8);
-				elseif max(me.rt1) > 0 && max(me.rt2) > 0
-					histogram(me.h.axis2, [me.rt1' me.rt2'], 8);
-				end
-				axis(me.h.axis2, 'tight');
-			end
+
+			%axis 4
+			plot(me.h.axis2, 1:length(me.averages), me.averages,'k.-','MarkerSize',12);
+			ylim(me.h.axis2,[-1 101])
 			
 			%axis 3
-			bar(me.h.axis3,hits,'stacked')
-			set(me.h.axis3,'XTickLabel', {'all';'newest';'break/abort'})
-			axis(me.h.axis3, 'tight');
-			ylim(me.h.axis3,[0 100])
-			
-			%axis 4
-			plot(me.h.axis4, 1:length(me.averages), me.averages,'k.-','MarkerSize',12);
-			axis(me.h.axis4, 'tight');
-			ylim(me.h.axis4,[0 100])
-			
-			%axis 5
-			if ~isempty(me.xAll)
-				plot(me.h.axis5, me.xAll, me.yAll, 'b.','MarkerSize',15,'Color',[0.5 0.5 0.8]); hold on
-				plot(me.h.axis5, me.xAll(1), me.yAll(1), 'g.','MarkerSize',18);
-				plot(me.h.axis5, me.xAll(end), me.yAll(end), 'r.','MarkerSize',18,'Color',[1 0.5 0]); hold off
-				axis(me.h.axis5, 'ij');
-				grid(me.h.axis5,'on');
-				xlim(me.h.axis5,[-15 15]);
-				ylim(me.h.axis5,[-15 15]);
+			bar(me.h.axis3,hits,'stacked');
+			set(me.h.axis3,'XTickLabel', {'all';'newest';'break/abort'});
+			ylim(me.h.axis3,[-1 101])
+
+			%axis 2
+			if ~isempty(me.rt1) && ~all(isnan(me.rt1))
+				if max(me.rt1) == 0 && max(me.rt2) > 0
+					histogram(me.h.axis4, [me.rt2'], 8);
+				elseif max(me.rt1) > 0 && max(me.rt2) == 0
+					histogram(me.h.axis4, [me.rt1'], 8);
+				elseif max(me.rt1) > 0 && max(me.rt2) > 0
+					histogram(me.h.axis4, [me.rt2'], 8); hold(me.h.axis4,'on');
+					histogram(me.h.axis4, [me.rt1'], 8); hold(me.h.axis4,'off');
+				end
 			end
+
+			%axis 5
+			if me.plotOnly && length(me.trials) > 1
+				for i = 1:length(me.trials)
+					set(me.h.axis5,'NextPlot','add')
+					if isfield(me.trials(i),'xAll')
+						plot(me.h.axis5, me.trials(i).xAll, me.trials(i).yAll, 'MarkerSize',15,'Marker', '.');
+					end
+				end
+			else
+				if ~isempty(me.xAll)
+					set(me.h.axis5,'NextPlot','replacechildren')
+					plot(me.h.axis5, me.xAll, me.yAll, 'b.','MarkerSize',15,'Color',[0.5 0.5 0.8]); hold on
+					set(me.h.axis5,'NextPlot','add')
+					plot(me.h.axis5, me.xAll(1), me.yAll(1), 'g.','MarkerSize',18);
+					plot(me.h.axis5, me.xAll(end), me.yAll(end), 'r.','MarkerSize',18,'Color',[1 0.5 0]);
+				end
+			end
+			axis(me.h.axis5, 'ij');
+			xlim(me.h.axis5,[-15 15]);
+			ylim(me.h.axis5,[-15 15]);
 			
-			set([me.h.axis1 me.h.axis2 me.h.axis3 me.h.axis4], ...
+			set([me.h.axis1 me.h.axis2 me.h.axis3 me.h.axis4 me.h.axis5], ...
 				'Box','on','XGrid','on','YGrid','on','ZGrid','on');
+			%axis([me.h.axis1 me.h.axis2], 'tight');
 			
 			xlabel(me.h.axis1, 'Run Number')
 			xlabel(me.h.axis2, 'Time (ms)')
-			xlabel(me.h.axis3, 'Group')
+			%xlabel(me.h.axis3, 'Group')
 			xlabel(me.h.axis4, '#')
 			xlabel(me.h.axis5, 'x')
 			ylabel(me.h.axis1, 'Yes / No')
@@ -272,14 +282,24 @@ classdef behaviouralRecord < optickaCore
 			ylabel(me.h.axis4, '% success')
 			ylabel(me.h.axis5, 'y')
 			title(me.h.axis1,['Success (' num2str(hitn) ') / Fail (all=' num2str(missn) ' | break=' num2str(breakn) ' | abort=' num2str(missn-breakn) ')'])
-			title(me.h.axis2,sprintf('Time:  total: %g | fixinit: %g',mean(me.rt1),mean(me.rt2)));
+			title(me.h.axis4,sprintf('Time:  total: %g | fixinit: %g',mean(me.rt1),mean(me.rt2)));
 			title(me.h.axis3,'Hit (blue) / Miss (red) / Break (blue) / Abort (red)')
-			title(me.h.axis4,'Average (n=10) Hit / Miss %')
+			title(me.h.axis2,'Average (n=10) Hit / Miss %')
 			title(me.h.axis5,'Last Eye Position');
-			hn = findobj(me.h.axis2,'Type','patch');
-			%set(hn,'FaceColor','k','EdgeColor','k');
 			
+			if ~me.plotOnly && ~isempty(me.response)
+				n = length(me.response);
+				me.trials(n).now = clock;
+				me.trials(n).info = me.info;
+				me.trials(n).tick = me.tick;
+				me.trials(n).comment = me.comment;
+				me.trials(n).response = me.response(n);
+				me.trials(n).xAll = me.xAll;
+				me.trials(n).yAll = me.yAll;
+			end
+
 			t = {['INFORMATION @ ' me.date]};
+			t{end+1} = ['RUN time = ' num2str(etime(me.trials(end).now,me.startTime)/60) 'mins'];
 			t{end+1} = ['RUN:' me.comment];
 			t{end+1} = ['INFO:' me.info];
 			t{end+1} = ['RADIUS (red) b|n = ' num2str(me.radius(end)) 'deg'];
@@ -290,20 +310,20 @@ classdef behaviouralRecord < optickaCore
 				t{end+1} = ['Last/Mean Init Time = ' num2str(me.rt2(end)) ' / ' num2str(mean(me.rt2)) 'secs | Last/Mean Init+Fix = ' num2str(me.rt1(end)) ' / ' num2str(mean(me.rt1)) 'secs'];
 			end
 			t{end+1} = ['Overall | Latest (n=10) Hit Rate = ' num2str(hitmiss) ' | ' num2str(average)];
-			t{end+1} = ['Run time = ' num2str(etime(clock,me.startTime)/60) 'mins'];
 			t{end+1} = sprintf('Estimated Volume at %gms TTL = %g mls', me.rewardTime, (me.rewardVolume*me.rewardTime)*hitn);
-			set(me.h.info,'String', t');
 			
-			if ~isempty(me.response)
-				n = length(me.response);
-				me.trials(n).info = me.info;
-				me.trials(n).tick = me.tick;
-				me.trials(n).comment = me.comment;
-				me.trials(n).response = me.response(n);
+			t{end+1} = ' ';
+			t{end+1} = '=========Previous trial info=========';
+			for i = 1:length(me.trials)
+				t{end+1} = ['RUN ' num2str(i) ': ' me.trials(i).info ' <> ' me.trials(i).comment];
 			end
 			
-			me.tick = me.tick + 1;
-			
+			set(me.h.info,'Value', t');
+
+			if ~me.plotOnly
+				me.tick = me.tick + 1;
+			end
+
 		end
 
 		% ===================================================================
@@ -318,6 +338,10 @@ classdef behaviouralRecord < optickaCore
 			me.response = [];
 			me.rt1 = [];
 			me.rt2 = [];
+			me.radius = [];
+			me.time = [];
+			me.inittime = [];
+			me.comment = '';
 			me.info = '';
 			me.xAll = [];
 			me.yAll = [];

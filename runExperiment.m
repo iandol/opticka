@@ -468,7 +468,7 @@ classdef runExperiment < optickaCore
 				
 			catch ME
 				me.isRunning = false;
-				fprintf('\n\n---!!! ERROR in runExperiment.run()\n');
+				fprintf('\n\n---!!! ERROR in runExperiment.runMOC()\n');
 				getReport(ME)
 				if me.useDataPixx || me.useDisplayPP
 					pauseRecording(io); %pause plexon
@@ -591,9 +591,10 @@ classdef runExperiment < optickaCore
 				%-----open the eyelink interface
 				if me.useTobii
 					me.eyeTracker		= tobiiManager();
+					if ~isempty(me.tobiisettings); me.eyeTracker.addArgs(me.tobiisettings); end
 				else
 					me.eyeTracker		= eyelinkManager();
-					if ~isempty(me.elsettings); me.eyeTracker.editProperties(me.elsettings); end
+					if ~isempty(me.elsettings); me.eyeTracker.addArgs(me.elsettings); end
 				end
 				eT						= me.eyeTracker;
 				eT.verbose				= me.verbose;
@@ -617,7 +618,7 @@ classdef runExperiment < optickaCore
 				end
 				stims.verbose			= me.verbose;
 				setup(stims); %run setup() for each stimulus
-				task.fps					= s.screenVals.fps;
+				task.fps				= s.screenVals.fps;
 				
 				%---------initialise and set up I/O
 				io						= configureIO(me);
@@ -686,7 +687,7 @@ classdef runExperiment < optickaCore
 				for i = 1:s.screenVals.fps*1
 					draw(stims);
 					drawBackground(s);
-					s.drawPhotoDiodeSquare([0 0 0 1]);
+					s.drawPhotoDiodeSquare([1 1 1 1]);
 					Screen('DrawText',s.win,'Warming up the GPU, Eyetracker and I/O systems...',65,10);
 					finishDrawing(s);
 					animate(stims);
@@ -1447,7 +1448,7 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief do we use eyeManager getSample on current flip?
+		%> @brief set needSample if eyeManager getSample on current flip?
 		%>
 		%> @param
 		% ===================================================================
@@ -1596,9 +1597,10 @@ classdef runExperiment < optickaCore
 				io.verbose = false;
 				io.name = 'silentruninstance';
 				me.useDataPixx = false;
+				me.useLabJackTStrobe = false;
 				me.useLabJackStrobe = false;
 				me.useDisplayPP = false;
-				fprintf('===> No strobe output I/O...\n')
+				fprintf('\n===>>> No strobe output I/O...\n')
 			end
 			if me.useArduino
 				if ~isa(rM,'arduinoManager')

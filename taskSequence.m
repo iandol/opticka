@@ -664,20 +664,22 @@ classdef taskSequence < optickaCore & dynamicprops
 				end
 				data{i,end} = me.outBlock{a};
 			end
+		
 			if isempty(data)
-				data = 'No variables!';
+				data = table({'No task variables set!'}, 'VariableNames', {'Independent Variable'});
+			else
+				cnames = cell(1,me.nVars);
+				for ii = 1:me.nVars
+					cnames{ii} = [me.nVar(ii).name num2str(me.nVar(ii).stimulus,'-%i')];
+				end
+				cnames{end+1} = 'outIndex';
+				for ii = 1:size(me.outMap,2)
+					cnames{end+1} = ['Var' num2str(ii) 'Index'];
+				end
+				cnames{end+1} = 'Trial Factors';
+				cnames{end+1} = 'Block Factors';
+				data = cell2table(data,'VariableNames',cnames);
 			end
-			cnames = cell(1,me.nVars);
-			for ii = 1:me.nVars
-				cnames{ii} = [me.nVar(ii).name num2str(me.nVar(ii).stimulus,'-%i')];
-			end
-			cnames{end+1} = 'outIndex';
-			for ii = 1:size(me.outMap,2)
-				cnames{end+1} = ['Var' num2str(ii) 'Index'];
-			end
-			cnames{end+1} = 'Trial Factors';
-			cnames{end+1} = 'Block Factors';
-			data = cell2table(data,'VariableNames',cnames);
 			set(me.h.uitable1,'Data',data);
 			
 			function build_gui()
