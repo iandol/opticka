@@ -1499,6 +1499,14 @@ classdef eyelinkManager < optickaCore
 		function evt = getEvent(me)
 			
 		end
+
+		% ===================================================================
+		%> @brief compatibility with tobiiManager
+		%>
+		% ===================================================================
+		function saveData(me,args)
+			
+		end
 		
 		% ===================================================================
 		%> @brief send message to store in EDF data
