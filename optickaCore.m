@@ -1,5 +1,8 @@
 % ========================================================================
 %> @brief optickaCore base class inherited by many other opticka classes.
+%>
+%> @section intro Introduction
+%>
 %> optickaCore is itself derived from handle. It provides methods to find
 %> attributes with specific parameters (used in autogenerating UI panels),
 %> clone the object, parse arguments safely on construction and add default
@@ -74,20 +77,19 @@ classdef optickaCore < handle
 		% ===================================================================
 		%> @brief Class constructor
 		%>
-		%> More detailed description of what the constructor does.
+		%> The class constructor for optickaCore.
 		%>
 		%> @param args are passed as a structure of properties which is
 		%> parsed.
 		%> @return instance of class.
 		% ===================================================================
-		function me = optickaCore(args)
-			me.className = class(me);
+		function me = optickaCore(varargin)
+			args = me.addDefaults(varargin);
+			me.parseArgs(args,me.allowedPropertiesCore);
 			me.dateStamp = clock();
+			me.className = class(me);
 			me.uuid = num2str(dec2hex(floor((now - floor(now))*1e10))); %me.uuid = char(java.util.UUID.randomUUID)%128bit uuid
 			me.fullName_ = me.fullName; %cache fullName
-			if nargin>0
-				me.parseArgs(args,me.allowedPropertiesCore);
-			end
 			me.mversion = str2double(regexp(version,'(?<ver>^\d\.\d[\d]?)','match','once'));
 			setPaths(me)
 		end
@@ -111,8 +113,8 @@ classdef optickaCore < handle
 		%>
 		%> For single stimulus presentation, randomise stimulus choice
 		% ===================================================================
-		function initialiseSaveFile(me,path)
-			if ~exist('path','var')
+		function initialiseSaveFile(me, path)
+			if ~exist('path','var') || isempty(path)
 				path = me.paths.savedData;
 			else
 				me.paths.savedData = path;
@@ -140,8 +142,8 @@ classdef optickaCore < handle
 			
 			% Initial size and preallocate
 			ii = 0; nProps = length(mc.PropertyList);
-			cl_array = cell(1,nProps);
-			mp_array = cell(1,nProps);
+			cl_array = cell(1, nProps);
+			mp_array = cell(1, nProps);
 			
 			% For each property, check the value of the queried attribute
 			for  c = 1:nProps
@@ -151,14 +153,14 @@ classdef optickaCore < handle
 				
 				% Determine if the specified attribute is valid on this object
 				if isempty (findprop(mp,attrName))
-					error('Not a valid attribute name')
+					error('Not a valid attribute name');
 				end
 				thisValue = mp.(attrName);
 				
 				% If the attribute is set or has the specified value,
 				% save its name in cell array
 				if ischar(attrValue)
-					if strcmpi(attrValue,thisValue)
+					if strcmpi(attrValue, thisValue)
 						ii = ii + 1;
 						cl_array(ii) = {mp.Name};
 						mp_array{ii} = mp;
@@ -194,14 +196,15 @@ classdef optickaCore < handle
 		function list = findAttributesandType(me, attrName, attrValue, type)
 			% Determine if first input is object or class name
 			if ischar(me)
-				mc = meta.class.fromName(me);
+				mc		= meta.class.fromName(me);
 			elseif isobject(me)
-				mc = metaclass(me);
+				mc		= metaclass(me);
 			end
 			
 			% Initial size and preallocate
-			ii = 0; nProps = length(mc.PropertyList);
-			cl_array = cell(1,nProps);
+			ii			= 0; 
+			nProps		= length(mc.PropertyList);
+			cl_array	= cell(1, nProps);
 			
 			% For each property, check the value of the queried attribute
 			for  c = 1:nProps
@@ -273,13 +276,13 @@ classdef optickaCore < handle
 			% Check lower levels ...
 			props_child = {meta.PropertyList.Name};
 			
-			CheckSuperclasses(meta)
+			checkSuperclasses(meta)
 			
 			% This function is called recursively ...
-			function CheckSuperclasses(List)
+			function checkSuperclasses(List)
 				for ii=1:length(List.SuperclassList(:))
 					if ~isempty(List.SuperclassList(ii).SuperclassList)
-						CheckSuperclasses(List.SuperclassList(ii))
+						checkSuperclasses(List.SuperclassList(ii))
 					end
 					for jj=1:length(List.SuperclassList(ii).PropertyList(:))
 						prop_super = List.SuperclassList(ii).PropertyList(jj).Name;
@@ -324,62 +327,62 @@ classdef optickaCore < handle
 		%> @param
 		%> @return
 		% ===================================================================
-		function checkPaths(ego)
+		function checkPaths(me)
 			samePath = false;
-			if isprop(ego,'dir')
+			if isprop(me,'dir')
 				
 				%if our object wraps a plxReader, try to use its paths
-				if isprop(ego,'p') && isa(ego.p,'plxReader')
-					checkPaths(ego.p);
-					ego.dir = ego.p.dir; %inherit the path
+				if isprop(me,'p') && isa(me.p,'plxReader')
+					checkPaths(me.p);
+					me.dir = me.p.dir; %inherit the path
 				end
 				
-				if isprop(ego,'matdir') %normally they are the same
-					if ~isempty(ego.dir) && strcmpi(ego.dir, ego.matdir)
+				if isprop(me,'matdir') %normally they are the same
+					if ~isempty(me.dir) && strcmpi(me.dir, me.matdir)
 						samePath = true; 
 					end
 				end
 				
-				if ~exist(ego.dir,'dir')
-					if isprop(ego,'file')
-						fn = ego.file;
+				if ~exist(me.dir,'dir')
+					if isprop(me,'file')
+						fn = me.file;
 					else
 						fn = '';
 					end
 					fprintf('Please find new directory for: %s\n',fn);
 					p = uigetdir('',['Please find new directory for: ' fn]);
 					if p ~= 0
-						ego.dir = p;
+						me.dir = p;
 						
 					else
 						warning('Can''t find valid source directory')
 					end
 				end
 			end
-			if isprop(ego,'matdir')
-				if samePath; ego.matdir = ego.dir; return; end
-				if ~exist(ego.matdir,'dir')
-					if exist(ego.dir,'dir')
-						ego.matdir = ego.file;
+			if isprop(me,'matdir')
+				if samePath; me.matdir = me.dir; return; end
+				if ~exist(me.matdir,'dir')
+					if exist(me.dir,'dir')
+						me.matdir = me.file;
 					else
-						if isprop(ego,'matfile')
-							fn = ego.matfile;
+						if isprop(me,'matfile')
+							fn = me.matfile;
 						else
 							fn = '';
 						end
 						fprintf('Please find new directory for: %s\n',fn);
 						p = uigetdir('',['Please find new directory for: ' fn]);
 						if p ~= 0
-							ego.matdir = p;
+							me.matdir = p;
 						else
 							warning('Can''t find valid source directory')
 						end
 					end
 				end
 			end
-			if isa(ego,'plxReader')
-				if isprop(ego,'eA') && isa(ego.eA,'eyelinkAnalysis')
-					ego.eA.dir = ego.dir;
+			if isa(me,'plxReader')
+				if isprop(me,'eA') && isa(me.eA,'eyelinkAnalysis')
+					me.eA.dir = me.dir;
 				end
 			end
 		end
@@ -390,11 +393,11 @@ classdef optickaCore < handle
 	%=======================================================================
 	
 		% ===================================================================
-		%> @brief Converts cell args to structure
+		%> @brief Converts cell args to structure array
 		%> 
 		%>
-		%> @param args input structure
-		%> @return args
+		%> @param args input data
+		%> @return args as a structure
 		% ===================================================================
 		function args = makeArgs(args)
 			
@@ -419,10 +422,13 @@ classdef optickaCore < handle
 		%> @brief add default options to arg input
 		%> 
 		%>
-		%> @param args input structure
-		%> @return args
+		%> @param args input structure from varargin
+		%> @param defs extra default settings
+		%> @return args structure
 		% ===================================================================
-		function args = addDefaults(args,defs)
+		function args = addDefaults(args, defs)
+			if ~exist('args','var'); args = struct; end
+			if ~exist('defs','var'); defs = struct; end
 			if iscell(args); args = optickaCore.makeArgs(args); end
 			if iscell(defs); defs = optickaCore.makeArgs(defs); end
 			fnameDef = fieldnames(defs); %find our argument names

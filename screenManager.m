@@ -1,6 +1,7 @@
 % ========================================================================
-%> @brief screenManager 
-%> screenManager manages (wraps) the PTB screen settings. You can set many
+%> @brief screenManager — manage opening and configuring the screen
+%>
+%> screenManager manages the PTB screen settings. You can set many
 %> properties of this class to control PTB screens, and use it to open and
 %> close the screen based on those properties. It also manages movie
 %> recording of the screen buffer and some basic drawing commands like grids,
@@ -14,20 +15,19 @@ classdef screenManager < optickaCore
 		%> the monitor to use, 0 is the main display on macOS/Linux
 		%> default value will be set to max(Screen('Screens'))
 		screen double							= []
+		%> Pixels Per Centimeter — used for calculating the number of pixels per visual degree (ppd)
 		%> MBP 1440x900 is 33.2x20.6cm so 44px/cm, Flexscan is 32px/cm @1280 26px/cm @ 1024
 		%> Display++ is 27px/cm @1920x1080
 		%> Use calibrateSize.m function to measure this value accurately for each monitor you will use.
 		pixelsPerCm double						= 36
-		%> distance of subject from Display -- rad2ang(2 * atan( sz / (2 * dis) ) ) = Xdeg
-		%> when sz == 1cm and dis == 57.3cm, X == 1deg
+		%> distance in centimeters of subject from Display 
+		%> rad2ang(2 * atan( size / (2 * distance) ) ) = Xdeg
+		%> when size == 1cm & distance == 57.3cm; X == 1deg
 		distance double							= 57.3
-		%> hide the black flash as PTB tests its refresh timing, uses a gamma
-		%> trick from Mario
-		hideFlash logical						= false
 		%> windowed: when FALSE use fullscreen; set to TRUE and it is windowed 800x600pixels or you
 		%> can add in a window width and height i.e. [800 600] to specify windowed size. Remember
-		%> that windowed presentation should never be used for real experimental
-		%> presentation due to poor timing...
+		%> that windowed presentation should *never* be used for real experimental
+		%> presentation due to poor timing…
 		windowed								= false
 		%> change the debug parameters for poorer temporal fidelity but no sync testing etc.
 		debug logical							= false
@@ -88,6 +88,9 @@ classdef screenManager < optickaCore
 		screenToHead							= []
 		%> force framerate for Display++ (120Hz or 100Hz, empty uses the default OS setup)
 		displayPPRefresh double					= []
+		%> hide the black flash as PTB tests its refresh timing, uses a gamma
+		%> trick from Mario
+		hideFlash logical						= false
 	end
 	
 	properties (Constant)
@@ -118,7 +121,8 @@ classdef screenManager < optickaCore
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Dependent = true)
-		%> dependent pixels per degree property calculated from distance and pixelsPerCm
+		%> dependent Pixels Per Degree property; calculated from distance and pixelsPerCm
+		%> pixelsPerDegree = pixelsPerCm  ×  (distance ÷ 57.3)
 		ppd
 	end
 	
