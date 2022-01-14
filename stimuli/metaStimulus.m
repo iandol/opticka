@@ -11,7 +11,7 @@
 %> mask stimuli will be drawn instead of the stimuli themselves, the timing
 %> is left to the calling function.
 %>
-%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef metaStimulus < optickaCore
 	
@@ -515,15 +515,14 @@ classdef metaStimulus < optickaCore
 
 				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
 
+				draw(me);
 				if benchmark
 					Screen('DrawText', s.win, 'BENCHMARK: screen won''t update properly, see FPS in command window at end.', 5,5,[0.25 0.15 0]);
 				else
 					drawGrid(s); %draw +-5 degree dot grid
-					drawScreenCenter(s); %centre spot
-					Screen('DrawText', s.win, ['Preview of ALL stimuli (grid is 1deg) will be static for 1 seconds, then animate for ' num2str(runtime) ' seconds...'], 5,5,[0.25 0.15 0]);
+					Screen('DrawText', s.win, ['Preview ALL stimuli (grid is 1deg); static for 1 seconds, then animate for ' num2str(runtime) ' seconds...'], 5,5,[0.25 0.15 0]);
 				end
 
-				draw(me);
 				flip(s);
 				update(me);
 				WaitSecs('YieldSecs',1);
@@ -531,7 +530,7 @@ classdef metaStimulus < optickaCore
 				for i = 1:(s.screenVals.fps*runtime) 
 					nFrames = nFrames + 1;
 					draw(me); %draw stimuli
-					if ~benchmark; drawGrid(s); end
+					if ~benchmark && s.debug; drawGrid(s); end
 					finishDrawing(s); %tell PTB/GPU to draw
 					animate(me); %animate stimuli, ready for next draw();
 					if benchmark

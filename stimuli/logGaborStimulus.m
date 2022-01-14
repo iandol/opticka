@@ -5,7 +5,7 @@
 %> behavioral signatures of face processing" Goffaux & Dakin (2010) Frontiers in Perception
 %> Science v1, 143 | May 2015,  Steven Dakin, s.dakin@auckland.ac.nz
 %>
-%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================	
 classdef logGaborStimulus < baseStimulus	
 	properties %--------------------PUBLIC PROPERTIES----------%

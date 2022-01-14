@@ -8,7 +8,7 @@
 %> clone the object, parse arguments safely on construction and add default
 %> properties such as datestamp, UUID and name/comment management.
 %>
-%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef optickaCore < handle
 	

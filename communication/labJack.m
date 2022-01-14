@@ -16,7 +16,7 @@
 %> >> lj.toggleFIO(1) %toggle FIO1 between low and high
 %> >> lj.timedTTL(3,200) % send a 200ms timed TTL pulse on FIO3
 %>
-%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef labJack < handle
 	

@@ -3,11 +3,13 @@
 %>
 %> screenManager manages the PTB screen settings. You can set many
 %> properties of this class to control PTB screens, and use it to open and
-%> close the screen based on those properties. It also manages movie
-%> recording of the screen buffer and some basic drawing commands like grids,
-%> spots and the hide flash trick from Mario.
+%> close the screen based on those properties. This class controls the
+%> transformation from degrees into pixels, and it can offset the screen
+%> coordinates. It also manages movie recording of the screen buffer and
+%> some basic drawing commands like grids, spots and the hide flash trick
+%> from Mario.
 %>
-%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef screenManager < optickaCore
 	
@@ -1422,7 +1424,8 @@ classdef screenManager < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function finaliseMovie(me,wasError)
+		function finaliseMovie(me, wasError)
+			if ~exist('wasError','file'); wasError = false; end
 			if me.movieSettings.record == true
 				switch me.movieSettings.type
 					case 1
@@ -1450,12 +1453,18 @@ classdef screenManager < optickaCore
 		%> @return
 		% ===================================================================
 		function playMovie(me)
-			if me.movieSettings.record == true  && me.movieSettings.type == 2 && exist('implay','file') && ~isempty(me.movieSettings.movieFile)
+			if me.movieSettings.record == true  && ...
+					me.movieSettings.type == 2 && ...
+					exist('implay','file') && ...
+					~isempty(me.movieSettings.movieFile) && ...
+					~isdeployed
 				try
 					mimg = load(me.movieSettings.movieFile);
 					implay(mimg);
 					clear mimg
 				end
+			else
+				me.salutation('playMovie method','Playing failed!',true);
 			end
 		end
 		

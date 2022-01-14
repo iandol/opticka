@@ -10,11 +10,11 @@ MATLAB=`which matlab`
 #Auto-run Matlab, publishing HTML output from optickatest.m
 if [[ "$(uname -s)" = "Darwin" ]]; then 
 	if [ -f $MATLAB ]; then
-		$MATLAB -nodesktop -nosplash -r "Screen('Preference', 'SkipSyncTests', 2);publish('optickatest.m');pause(2);exit"
+		$MATLAB -nodesktop -nosplash -r "Screen('Preference', 'SkipSyncTests', 2);publish('optickaTest.m');close all;publish('optickaBehaviourTest.m');pause(1);exit"
 	fi
 else
 	if [ -f $MATLAB ]; then
-		$MATLAB -nodesktop -nosplash -r "publish('optickatest.m');pause(2);exit"
+		$MATLAB -nodesktop -nosplash -r "publish('optickatest.m');close all;publish('optickaBehaviourTest.m');pause(1);exit"
 	fi
 fi
 
@@ -29,7 +29,7 @@ if [ $? -eq 0 ]; then
 else
 	echo; echo "---> Edit .doxyfile FAILED"; echo
 fi
-sleep 2
+sleep 1
 echo; echo "---> Will run DOXYGEN"; echo
 doxygen .doxyfile
 echo; echo "---> Ran doxygen"
@@ -41,10 +41,12 @@ sleep 1
 mv html/ docs/
 if [[ "$(uname -s)" = "Darwin" ]]; then 
 	open docs/index.html
-	open docs/optickatest.html
+	open docs/optickaTest.html
+	open docs/optickaBehaviourTest.html
 else
 	xdg-open docs/index.html
-	xdg-open docs/optickatest.html
+	xdg-open docs/optickaTest.html
+	xdg-open docs/optickaBehaviourTest.html
 fi
 echo; echo "---> FINISHED!"
 exit 0

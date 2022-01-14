@@ -1,28 +1,33 @@
 % ========================================================================
-%> @brief stateMachine a state machine object
+%> @brief stateMachine run behavioural task as a series of states.
 %>
 %> stateMachine allows a set of 'states' to be run, with functions
 %> executed on entering state, within the state, and on
 %> exiting the state. States can be linked, so a 'middle' state can be
-%> run after a 'start' state. States can run in a loop (run() method) and
+%> run after a 'start' state. States can run in a loop (`run()` method) and
 %> use either real time as assesed using the clockFcn fHandle
 %> property or via tick time, where each update() to the stateMachine is a
 %> 'tick'. Tick time is useful when controlled via an external manager like
 %> the Psychophysics toolbox which uses display refresh as a natural
-%> tick timer. States have 4 fundamental evaluation points: ENTER, WITHIN, TRANSITION
-%> and EXIT. TRANSITION evaluation is used to allow logic to switch from a
+%> tick timer. 
+% 
+%> States have 4 fundamental evaluation points: ENTER, WITHIN, TRANSITION
+%> and EXIT. Each evaluation point takes a cell array of functions to run.
+%> TRANSITION evaluation is used to allow logic to switch from a
 %> default transition path to an alternate. For example, you can imagine a
 %> default stimulus > incorrect transition, but if the subject answers correctly
-%> you can use the transition evaluation to switch instead to a correct state.
+%> you can use the transition evaluation to switch instead to the correct state.
 %>
 %> To run a demo, try the following:
-%> >> sm = stateMachine
+%> ~~~
+%> >> sm = stateMachine;
 %> >> runDemo(sm);
+%> ~~~
 %>
 %> To see how to run the stateMacine from a PTB loop, see
-%> runExperiment.runTask()
+%> `runExperiment.runTask()`
 %>
-%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef stateMachine < optickaCore
 	
@@ -116,7 +121,8 @@ classdef stateMachine < optickaCore
 		%> default values of allStates struct array fields
 		stateDefaults cell = { '', '', {}, {}, 1, {}, {}, false }
 		%> properties allowed during construction
-		allowedProperties char = 'name|realTime|verbose|clockFcn|waitFcn|timeDelta|skipExitStates|tempNextState'
+		allowedProperties char = ['name|realTime|verbose|clockFcn|waitFcn|'...
+			'timeDelta|skipExitStates|tempNextState']
 	end
 	
 	%events
@@ -490,11 +496,12 @@ classdef stateMachine < optickaCore
 			me.waitFcn(0.5);
 			run(me);
 			me.waitFcn(0.5);
-			me.showLog();
+			showLog(me);
 			disp('>--------------------------------------------------')
-			disp(' Demo finished, you can run the reset() method to ');
+			disp(' Demo finished, we will run the reset() method to ');
 			disp(' cleanup this object...')
 			disp('>--------------------------------------------------')
+			reset(me);
 			me.verbose = oldVerbose; %reset verbose back to original value
 			me.timeDelta = oldTimeDelta;
 		end

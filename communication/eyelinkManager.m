@@ -31,7 +31,7 @@
 %> a reward systems during calibration / validation to improve subject
 %> performance compared to the eyelink toolbox alone.
 %>
-%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef eyelinkManager < optickaCore
 	
@@ -173,7 +173,7 @@ classdef eyelinkManager < optickaCore
 		MISSING_DATA				= -32768
 		%> the PTB screen handle, normally set by screenManager but can force it to use another screen
 		win							= []
-		ppd_ double					= 35
+		ppd_ double					= 32
 		tempFile char				= 'MYDATA.edf'
 		% deals with strict fixation
 		fixN double					= 0
@@ -332,19 +332,6 @@ classdef eyelinkManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief
-		%>
-		% ===================================================================
-		function setup(me)
-			if me.isConnected
-				oldrk = RestrictKeysForKbCheck([]); %just in case someone has restricted keys
-				trackerSetup(me); % Calibrate the eye tracker
-				checkEye(me);
-				RestrictKeysForKbCheck(oldrk);
-			end
-		end
-		
-		% ===================================================================
 		%> @brief reset the fixation counters ready for a new trial
 		%>
 		%> @param removeHistory remove the history of recent eye position?
@@ -439,6 +426,7 @@ classdef eyelinkManager < optickaCore
 		% ===================================================================
 		function trackerSetup(me)
 			if ~me.isConnected; return; end
+			oldrk = RestrictKeysForKbCheck([]); %just in case someone has restricted keys
 			fprintf('\n===>>> CALIBRATING EYELINK... <<<===\n');
 			Eyelink('Verbosity',me.verbosityLevel);
 			if ~isempty(me.calibrationProportion) && length(me.calibrationProportion)==2
@@ -484,6 +472,8 @@ classdef eyelinkManager < optickaCore
 			end
 			[result,out] = Eyelink('CalMessage');
 			fprintf('-+-+-> CAL RESULT =  %.2f | message: %s\n\n',result,out);
+			RestrictKeysForKbCheck(oldrk);
+			checkEye(me);
 		end
 		
 		% ===================================================================

@@ -5,7 +5,7 @@
 %> that variable, run a Palamedes staricase
 %>
 %>
-%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef staircaseManager < optickaCore & dynamicprops
 	properties

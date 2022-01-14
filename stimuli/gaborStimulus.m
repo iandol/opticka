@@ -1,6 +1,6 @@
 
 %>
-%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 %> @brief single grating stimulus, inherits from baseStimulus
 %> GRATINGSTIMULUS single grating stimulus, inherits from baseStimulus
@@ -15,7 +15,7 @@
 %>   mask = use circular mask (1) or not (0)
 %>   gabor = use a gabor rather than grating
 %>
-%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef gaborStimulus < baseStimulus
 	

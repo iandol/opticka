@@ -2,7 +2,7 @@
 %> @brief single disc stimulus, inherits from baseStimulus
 %> DISCSTIMULUS single disc stimulus, inherits from baseStimulus
 %>
-%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef discStimulus < baseStimulus
 	

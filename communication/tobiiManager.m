@@ -22,7 +22,7 @@
 %> must initiate a saccade away from a position (which stops a subject cheating).
 %>
 %>
-%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef tobiiManager < optickaCore
 	

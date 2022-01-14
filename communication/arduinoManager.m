@@ -72,48 +72,47 @@ classdef arduinoManager < optickaCore
 			close(me); me.ports = seriallist;
 			if me.silentMode==false && isempty(me.device)
 				try
-					switch me.mode
-						case 'original'
-							if ~isempty(me.port)
-								if IsWin && ~isempty(regexp(me.port, '^/dev/', 'once'))
-									warning('--->arduinoManager: Linux/macOS port specified but running on windows!')
-									me.port = '';
-								elseif (IsLinux||IsOSX) && ~isempty(regexp(me.port, '^COM', 'once'))
-									warning('--->arduinoManager: Windows port specified but running on Linux/macOS!')
-									me.port = '';
-								end
-								if isempty(me.board)
-									me.board = 'Uno';
-								end
-								switch me.board
-									case {'Xiao','xiao'}
-										if isempty(me.availablePins)
-											me.availablePins = {0,1,2,3,4,5,6,7,8,9,10}; %XIAO board
-										end
-									otherwise
-										if isempty(me.availablePins)
-											me.availablePins = {2,3,4,5,6,7,8,9,10,11,12,13}; %UNO board
-										end
-								end
-								endPin = max(cell2mat(me.availablePins));
-								startPin = min(cell2mat(me.availablePins));
-								me.device = arduinoIOPort(me.port,endPin,startPin);
-								if me.device.isDemo
-									me.isOpen = false; me.silentMode = true;
-									warning('--->arduinoManager: IOport couldn''t open the port, going into silent mode!');
-									return
-								else
-									me.deviceID = me.port;
-									me.isOpen = true;setLow(me);
-								end
-								
-							else
-								warning('--->arduinoManager: Please specify the port to use, going into silent mode!')
+					if strcmpi(me.mode, 'original')
+						if ~isempty(me.port)
+							if IsWin && ~isempty(regexp(me.port, '^/dev/', 'once'))
+								warning('--->arduinoManager: Linux/macOS port specified but running on windows!')
+								me.port = '';
+							elseif (IsLinux||IsOSX) && ~isempty(regexp(me.port, '^COM', 'once'))
+								warning('--->arduinoManager: Windows port specified but running on Linux/macOS!')
+								me.port = '';
+							end
+							if isempty(me.board)
+								me.board = 'Uno';
+							end
+							switch me.board
+								case {'Xiao','xiao'}
+									if isempty(me.availablePins)
+										me.availablePins = {0,1,2,3,4,5,6,7,8,9,10}; %XIAO board
+									end
+								otherwise
+									if isempty(me.availablePins)
+										me.availablePins = {2,3,4,5,6,7,8,9,10,11,12,13}; %UNO board
+									end
+							end
+							endPin = max(cell2mat(me.availablePins));
+							startPin = min(cell2mat(me.availablePins));
+							me.device = arduinoIOPort(me.port,endPin,startPin);
+							if me.device.isDemo
 								me.isOpen = false; me.silentMode = true;
-								return;
+								warning('--->arduinoManager: IOport couldn''t open the port, going into silent mode!');
+								return
+							else
+								me.deviceID = me.port;
+								me.isOpen = true;setLow(me);
 							end
 							
-						otherwise
+						else
+							warning('--->arduinoManager: Please specify the port to use, going into silent mode!')
+							me.isOpen = false; me.silentMode = true;
+							return;
+						end
+							
+					elseif ~isdeployed
 							if ~isempty(me.port)
 								me.device = arduino(me.port);
 							else
@@ -124,6 +123,10 @@ classdef arduinoManager < optickaCore
 							me.deviceID = me.device.Port;
 							me.availablePins = me.device.AvailablePins;
 							me.isOpen = true;setLow(me);
+					else
+						me.isOpen = false; me.silentMode = true;
+						warning('--->arduinoManager: couldn''t open, going into silent mode!');
+						return
 					end
 					if me.openGUI; GUI(me); end
 					me.silentMode = false;

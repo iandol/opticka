@@ -25,7 +25,7 @@
 %> and responds to commands, allowing you to send data and EVAL commands on a
 %> remote machine...
 %>
-%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef dataConnection < handle
 	%dataConnection Allows send/recieve over Ethernet

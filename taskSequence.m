@@ -6,7 +6,7 @@
 %> list each of which has a unique index number. 
 
 %>
-%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef taskSequence < optickaCore & dynamicprops
 	properties
@@ -96,6 +96,11 @@ classdef taskSequence < optickaCore & dynamicprops
 		%> current random stream state
 		currentState
 	end
+
+	properties (Transient = true, SetAccess = private, GetAccess = private)
+		%> handles from me.showLog
+		h
+	end
 	
 	properties (Dependent = true,  SetAccess = private)
 		%> number of independant variables
@@ -111,8 +116,6 @@ classdef taskSequence < optickaCore & dynamicprops
 		isStimulus
 		%> cache value for nVars
 		nVars_
-		%> handles from me.showLog
-		h
 		%> properties allowed during initial construction
 		allowedProperties char = ['randomise|nVar|blockVar|trialVar|nBlocks|trialTime|isTime|ibTime|realTime|randomSeed|fps'...
 			'randomGenerator|verbose|addBlank']
@@ -515,7 +518,11 @@ classdef taskSequence < optickaCore & dynamicprops
 				end
 				randomChoice = randi(iRange); %random from 0 to range
 				trialToSwap = me.totalRuns + (randomChoice - 1);
-				
+				if trialToSwap == me.totalRuns
+					message = sprintf('--->>> taskSequence.resetRun() no change made...');
+					if me.verbose; disp(message); end
+					return;
+				end
 				blockOffset = ((me.thisBlock-1) * me.minTrials);
 				blockSource = me.totalRuns - blockOffset;
 				blockDestination = trialToSwap - blockOffset;

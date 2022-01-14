@@ -24,7 +24,7 @@
 %>
 %>	will run a minimal experiment showing a 1c/d circularly masked grating
 %>
-%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef runExperiment < optickaCore
 	
@@ -141,7 +141,7 @@ classdef runExperiment < optickaCore
 		computer
 		%> PTB info
 		ptb
-		%> gamma tables and the like from screenManager
+		%> copy of screen settings from screenManager
 		screenVals struct
 		%> MOC log times
 		runLog
@@ -169,7 +169,11 @@ classdef runExperiment < optickaCore
 		%> should we stop the task?
 		stopTask logical	= false
 		%> properties allowed to be modified during construction
-		allowedProperties='stateInfoFile|dummyMode|stimuli|task|screen|visualDebug|useLabJack|useDataPixx|logFrames|debug|verbose|screenSettings|benchmark'
+		allowedProperties char = ['useDisplayPP|useDataPixx|useEyeLink|'...
+			'useArduino|dummyMode|logFrames|subjectName|researcherName'...
+			'useTobii|stateInfoFile|dummyMode|stimuli|task|'...
+			'screen|visualDebug|useLabJack|debug|'...
+			'verbose|screenSettings|benchmark']
 	end
 	
 	events %causing a major MATLAB 2019a crash when loading .mat files that contain events, removed for the moment
@@ -266,13 +270,17 @@ classdef runExperiment < optickaCore
 				end
 
 				% set up the eyelink interface
-				if me.useEyeLink
+				if me.useEyeLink || me.useTobii
+					if me.useTobii
+						warning('Tobii not valid for a MOC task, switching to eyelink summy mode')
+						me.useTobii = false; me.useEyeLink = true; me.dummyMode = true; 
+					end
 					me.eyeTracker = eyelinkManager();
 					eT = me.eyeTracker;
 					eT.isDummy = me.dummyMode;
 					eT.saveFile = [me.paths.savedData pathsep me.savePrefix 'RUN.edf'];
 					initialise(eT, s);
-					setup(eT);
+					trackerSetup(eT);
 				end
 				
 				me.initialiseTask(); %set up our task structure 
@@ -502,6 +510,9 @@ classdef runExperiment < optickaCore
 		%> 
 		% ===================================================================
 		function runTask(me)
+			% we try not to use global variables, however the external eyetracker
+			% API does not easily allow us to pass objects and so we use global
+			% variables in this specific case...
 			global rM %#ok<*GVMIS> %global reward manager we can share with eyetracker 
 			global aM %global audio manager we can share with eyetracker
 			
@@ -512,7 +523,7 @@ classdef runExperiment < optickaCore
 			me.stateInfo = {};
 			if isa(me.stateMachine,'stateMachine'); me.stateMachine.reset; me.stateMachine = []; end
 			
-			%------initialise the rM global
+			%------initialise the rewardManager global object
 			if ~isa(rM,'arduinoManager') 
 				rM=arduinoManager();
 			end
@@ -545,9 +556,9 @@ classdef runExperiment < optickaCore
 			
 			fprintf('\n\n\n===>>> Start task: %s <<<===\n\n\n',me.name);
 			
-			%------tS is a general structure to hold various parameters
-			% will be saved after the run; prefer structure over class 
-			% to keep it light. These defaults can be overwritten by the StateFile.m
+			% tS is a general structure to hold various parameters will be saved
+			% after the run; prefer structure over class to keep it light. These
+			% defaults can be overwritten by the StateFile.m
 			tS							= struct();
 			tS.name						= 'generic'; %==name of this protocol
 			tS.useTask					= false;	%==use taskSequence (randomised variable task object)
@@ -574,9 +585,9 @@ classdef runExperiment < optickaCore
 			bR							= me.behaviouralRecord; %short handle
 		
 			%------make a short handle to the screenManager and metaStimulus objects
+			me.stimuli.screen			= me.screen;
 			s							= me.screen; 
 			stims						= me.stimuli;
-			stims.screen				= s;
 			
 			%------initialise task
 			task						= me.task;
@@ -626,41 +637,19 @@ classdef runExperiment < optickaCore
 				%---------initialise the state machine
 				sM						= stateMachine('verbose',me.verbose,'realTime',true,'timeDelta',1e-4,'name',me.name); 
 				me.stateMachine			= sM;
+				if ~isempty(me.stateInfoFile); me.paths.stateInfoFile = me.stateInfoFile; end
 				if isempty(me.paths.stateInfoFile) || ~exist(me.paths.stateInfoFile,'file')
 					errordlg('Please specify a valid State Machine file...')
 				else
-					cd(fileparts(me.paths.stateInfoFile))
+					%cd(fileparts(me.paths.stateInfoFile))
 					me.paths.stateInfoFile = regexprep(me.paths.stateInfoFile,'\s+','\\ ');
 					run(me.paths.stateInfoFile)
-					me.stateInfo		= stateInfoTmp;
+					me.stateInfo = stateInfoTmp;
 					addStates(sM, me.stateInfo);
 				end
 				
 				%---------set up the eyetracker interface
-				if me.useEyeLink
-					fprintf('\n===>>> Handing over to eyelink for calibration & validation...\n')
-					initialise(eT, s);
-					setup(eT);
-				elseif me.useTobii
-					if length(Screen('Screens')) > 1 && s.screen - 1 >= 0
-						ss					= screenManager;
-						ss.screen			= 0;
-						ss.windowed			= [0 0 1000 1000];
-						ss.backgroundColour	= s.backgroundColour;
-						ss.bitDepth			= '8bit';
-						ss.blend			= true;
-						ss.pixelsPerCm		= 30;
-					end
-					if exist('ss','var')
-						initialise(eT,s,ss);
-					else
-						initialise(eT,s);
-					end
-					trackerSetup(eT); ShowCursor();
-					if ~eT.isConnected && ~eT.isDummy
-						warning('Eyetracker is not connected and not in dummy mode, potential connection issue...')
-					end
-				end
+				configureEyetracker(me, eT, s);
 
 				%--------get pre-run comments for this data collection
 				if tS.askForComments
@@ -704,10 +693,18 @@ classdef runExperiment < optickaCore
 				
 				%-----Premptive save in case of crash or error: SAVE IN /TMP
 				rE = me;
-				htmp = me.screenSettings.optickahandle; me.screenSettings.optickahandle = [];
-				%h2tmp = me.behaviouralRecord.h; me.behaviouralRecord.h = [];
+				htmp = []; h2tmp = [];
+				if isfield(me.screenSettings,'optickahandle')
+					htmp = me.screenSettings.optickahandle; 
+					me.screenSettings.optickahandle = [];
+				end
+				if ~isempty(me.behaviouralRecord.h)
+					h2tmp = me.behaviouralRecord.h; 
+					me.behaviouralRecord.h = [];
+				end
 				save([tempdir filesep me.name '.mat'],'rE','tS');
-				me.screenSettings.optickahandle = htmp; %me.behaviouralRecord.h = h2tmp;
+				if ~isempty(htmp); me.screenSettings.optickahandle = htmp; end
+				if ~isempty(h2tmp); me.behaviouralRecord.h = h2tmp; end
 				
 				%-----ensure we open the reward manager
 				if me.useArduino && isa(rM,'arduinoManager') && ~rM.isOpen
@@ -884,7 +881,7 @@ classdef runExperiment < optickaCore
 				if isfield(tS,'eO')
 					close(tS.eO)
 					tS.eO=[];
-				end				
+				end
 				
 				if tS.askForComments
 					comment = inputdlg('Final Comment for this Run?','Run Comment');
@@ -905,10 +902,14 @@ classdef runExperiment < optickaCore
 				if tS.saveData
 					sname = [me.paths.savedData filesep me.name '.mat'];
 					rE = me;
-					htmp = me.screenSettings.optickahandle; me.screenSettings.optickahandle = [];
+					htmp = me.screenSettings.optickahandle; 
+					me.screenSettings.optickahandle = [];
+					h2tmp = me.behaviouralRecord.h;
+					me.behaviouralRecord.h = [];
 					assignin('base', 'tS', tS);
 					save(sname,'rE','tS');
 					me.screenSettings.optickahandle = htmp;
+					me.behaviouralRecord.h = h2tmp;
 					fprintf('\n\n===>>> SAVED DATA to: %s\n\n',sname)
 				end
 				
@@ -1033,11 +1034,11 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief getrunLog Prints out the frame time plots from a run
+		%> @brief showTimingLog Prints out the frame time plots from a run
 		%>
 		%> @param
 		% ===================================================================
-		function getRunLog(me)
+		function showTimingLog(me)
 			if isa(me.taskLog,'timeLogger') && me.taskLog.vbl(1) ~= 0
 				me.taskLog.printRunLog;
 			elseif isa(me.runLog,'timeLogger') && me.runLog.vbl(1) ~= 0
@@ -1519,6 +1520,43 @@ classdef runExperiment < optickaCore
 	methods (Access = private) %------------------PRIVATE METHODS
 	%=======================================================================
 		
+		% ===================================================================
+		%> @brief configureEyetracker
+		%> Configures (calibration etc.) the eyetracker.
+		%> @param eT eyetracker object
+		%> @param s screen object
+		% ===================================================================
+		function configureEyetracker(me, eT, s)
+			if me.useTobii
+				if length(Screen('Screens')) > 1 && s.screen - 1 >= 0
+					ss					= screenManager;
+					ss.screen			= 0;
+					ss.windowed			= [0 0 1000 1000];
+					ss.backgroundColour	= s.backgroundColour;
+					ss.bitDepth			= '8bit';
+					ss.blend			= true;
+					ss.pixelsPerCm		= 30;
+				end
+				if exist('ss','var')
+					initialise(eT,s,ss);
+				else
+					initialise(eT,s);
+				end
+				trackerSetup(eT); 
+				ShowCursor();
+				if ~eT.isConnected && ~eT.isDummy
+					warning('Eyetracker is not connected and not in dummy mode, potential connection issue...')
+				end
+			elseif me.useEyeLink || me.dummyMode
+				if me.dummyMode
+					fprintf('\n===>>> Dummy eyelink being initialised...\n')
+				else
+					fprintf('\n===>>> Handing over to Eyelink for calibration & validation...\n')
+				end
+				initialise(eT, s);
+				trackerSetup(eT);
+			end
+		end
 		% ===================================================================
 		%> @brief configureIO
 		%> Configures the IO devices.

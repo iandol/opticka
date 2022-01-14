@@ -7,7 +7,7 @@
 %> >> mM.open %connect via a LabJack
 %> >> mM.stimulate % run a stimulation protocol
 %>
-%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef magstimManager < optickaCore
 	properties

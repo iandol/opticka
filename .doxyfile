@@ -38,7 +38,7 @@ PROJECT_NAME           = "Opticka"
 # could be handy for archiving the generated documentation or if some version
 # control system is used.
 
-PROJECT_NUMBER = 2.05
+PROJECT_NUMBER = 2.06
 
 # Using the PROJECT_BRIEF tag one can provide an optional one line description
 # for a project that appears at the top of each page and should give viewer a
@@ -821,11 +821,13 @@ EXCLUDE_SYMLINKS       = YES
 # Note that the wildcards are matched against the file with absolute path, so to
 # exclude all test directories for example use the pattern */test/*
 
-EXCLUDE_PATTERNS       = */+uix/* \
+EXCLUDE_PATTERNS       = */ui/* \
+                         */+uix/* \
                          */+uiextras/* \
                          */tools/* \
                          */ReadPLX/* \
-                         */nex/*
+                         */nex/* \
+                         */arduino/*
 
 # The EXCLUDE_SYMBOLS tag can be used to specify one or more symbol names
 # (namespaces, classes, functions, etc.) that should be excluded from the
@@ -910,7 +912,7 @@ FILTER_SOURCE_PATTERNS =
 # (index.html). This can be useful if you have a project on for instance GitHub
 # and want to reuse the introduction page also for the doxygen output.
 
-USE_MDFILE_AS_MAINPAGE = readme.md
+USE_MDFILE_AS_MAINPAGE = README.md
 
 #---------------------------------------------------------------------------
 # Configuration options related to source browsing

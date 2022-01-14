@@ -1,8 +1,9 @@
 % ========================================================================
-%> @brief Create and update behavioural record.
+%> @brief Create a GUI and update behavioural record for a behavioural
+%> task
 %> 
 %>
-%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef behaviouralRecord < optickaCore
 	
@@ -30,7 +31,7 @@ classdef behaviouralRecord < optickaCore
 		tick
 	end
 	
-	properties (SetAccess = ?runExperiment, Transient = true)
+	properties (Transient = true, SetAccess = ?runExperiment)
 		%> handles for the GUI
 		h
 	end
@@ -134,10 +135,10 @@ classdef behaviouralRecord < optickaCore
 			me.h.axis4 = nexttile(me.h.box);
 			me.h.axis5 = nexttile(me.h.box);
 
-			colormap('turbo')
-			
+			figure(me.h.root);
+			colormap(me.h.root, 'turbo');
 			set([me.h.axis1 me.h.axis2 me.h.axis3 me.h.axis4 me.h.axis5], ...
-				'Box','on','XGrid','on','YGrid','on','ZGrid','on');
+				{'Box','XGrid','YGrid'},{'on','on','on'});
 			
 			xlabel(me.h.axis1, 'Run Number')
 			xlabel(me.h.axis2, 'Time')
@@ -207,13 +208,13 @@ classdef behaviouralRecord < optickaCore
 			hitmiss = 100 * (hitn / totaln);
 			breakmiss = 100 * (breakn / missn);
 			if length(me.response) < 10
-				average = 100 * (hitn / totaln);
+				avg = 100 * (hitn / totaln);
 			else
 				lastn = me.response(end-9:end);				
-				average = (length(lastn(lastn > 0)) / length(lastn)) * 100;
+				avg = (length(lastn(lastn > 0)) / length(lastn)) * 100;
 			end
-			me.averages(me.tick) = average;
-			hits = [hitmiss 100-hitmiss; average 100-average; breakmiss 100-breakmiss];
+			me.averages(me.tick) = avg;
+			hits = [hitmiss 100-hitmiss; avg 100-avg; breakmiss 100-breakmiss];
 			
 			%axis 1
 			set(me.h.axis1,'NextPlot','replacechildren')
@@ -257,7 +258,7 @@ classdef behaviouralRecord < optickaCore
 			else
 				if ~isempty(me.xAll)
 					set(me.h.axis5,'NextPlot','replacechildren')
-					plot(me.h.axis5, me.xAll, me.yAll, 'b.','MarkerSize',15,'Color',[0.5 0.5 0.8]); hold on
+					plot(me.h.axis5, me.xAll, me.yAll, 'b.','MarkerSize',15,'Color',[0.5 0.5 0.8]);
 					set(me.h.axis5,'NextPlot','add')
 					plot(me.h.axis5, me.xAll(1), me.yAll(1), 'g.','MarkerSize',18);
 					plot(me.h.axis5, me.xAll(end), me.yAll(end), 'r.','MarkerSize',18,'Color',[1 0.5 0]);
@@ -268,8 +269,7 @@ classdef behaviouralRecord < optickaCore
 			ylim(me.h.axis5,[-15 15]);
 			
 			set([me.h.axis1 me.h.axis2 me.h.axis3 me.h.axis4 me.h.axis5], ...
-				'Box','on','XGrid','on','YGrid','on','ZGrid','on');
-			%axis([me.h.axis1 me.h.axis2], 'tight');
+				'Box','on','XGrid','on','YGrid','on');
 			
 			xlabel(me.h.axis1, 'Run Number')
 			xlabel(me.h.axis2, 'Time (ms)')
@@ -309,7 +309,7 @@ classdef behaviouralRecord < optickaCore
 			if ~isempty(me.rt1)
 				t{end+1} = ['Last/Mean Init Time = ' num2str(me.rt2(end)) ' / ' num2str(mean(me.rt2)) 'secs | Last/Mean Init+Fix = ' num2str(me.rt1(end)) ' / ' num2str(mean(me.rt1)) 'secs'];
 			end
-			t{end+1} = ['Overall | Latest (n=10) Hit Rate = ' num2str(hitmiss) ' | ' num2str(average)];
+			t{end+1} = ['Overall | Latest (n=10) Hit Rate = ' num2str(hitmiss) ' | ' num2str(avg)];
 			t{end+1} = sprintf('Estimated Volume at %gms TTL = %g mls', me.rewardTime, (me.rewardVolume*me.rewardTime)*hitn);
 			
 			t{end+1} = ' ';

@@ -1,27 +1,30 @@
-%% Demonstration of a command-driven setup of an Opticka Experiment.
-% Opticka is an object oriented framework/GUI for the
-% Psychophysics toolbox, allowing randomised interleaved presentation of 
-% parameter varying stimuli specified in experimenter-relevant values. 
-% It is designed to work on OS X, Windows or Linux, 
-% and can interface via strobed words and ethernet with external harware for 
-% recording neurophysiological data.
-% In this example, Stimulus objects (myStims class cell array), 
-% stimulus sequence variables (myTask object), and 
-% screenManager (myScreen object) are passed to the
-% runExperiment object for final display. Opticka also has a UI (type
-% opticka in the command window), which is a visual manager of the objects
-% introduced here. The UI also controls other functions such as
-% calibration, protocol loading/saving and communication with
-% neurophysiological equipment via LabJack and ethernet. There is also an
-% independent receptive field mapper (rfMapper) that uses mouse control to probe
-% receptive fields and generate drawn hand maps.
+%% Demonstration of a command-driven setup of an Opticka MOC Experiment.
+% Opticka is an object-oriented framework plus optional GUI for the
+% Psychophysics toolbox, allowing randomised interleaved presentation of
+% parameter-varying stimuli specified in experimenter-relevant values. It
+% is designed to work on Linux, macOS or Windows and can interface via
+% strobed words and ethernet with external harware for recording
+% neurophysiological data.
+%
+% In this example of a Methods of Constants (MOC) experiment, stimulus
+% objects (myStims object), stimulus sequence (myTask object), and
+% screenManager (myScreen object) are passed to the runExperiment class to
+% run the experiment.
+% 
+% Opticka also has a UI (type opticka in the command window), which is a
+% visual manager of the objects introduced here. The UI also controls other
+% functions such as calibration, protocol loading/saving and communication
+% with neurophysiological equipment via LabJack and ethernet. There is also
+% an independent receptive field mapper (rfMapper) that uses mouse control
+% to probe receptive fields for vision experiments and generates drawn hand
+% maps.
 %
 % The source of this file can be found at:
 % <https://github.com/iandol/opticka/blob/master/optickatest.m>
 
 %% Initial clear up of previous runs
 % Make sure we start in a clean environment, not essential
-clear myStims myTask rExp myScreen
+clear myStims myTask myExp myScreen
 sca %PTB screen clear all
 
 %% Stimulus Initialisation
@@ -206,9 +209,9 @@ myScreen = screenManager('distance', 57.3,... %display distance from observer
 
 %% Setup runExperiment Object
 % We now pass our stimulus screen and sequence objects to the
-% runExperiment class. runExperiment contains the run() method that actually
+% runExperiment class. runExperiment contains the runMOC() method that actually
 % runs the task.
-rExp = runExperiment('stimuli', myStims,... %stimulus objects
+myExp = runExperiment('stimuli', myStims,... %stimulus objects
 	'task', myTask,... %task design object
 	'screen', myScreen,... %screen manager object
 	'debug', false,... %disable debug mode
@@ -217,11 +220,11 @@ rExp = runExperiment('stimuli', myStims,... %stimulus objects
 %%
 % run our method of constants (MOC) experiment; 
 % to exit early, press [q] during the interstimulus period.
-runMOC(rExp);
+runMOC(myExp);
 
 %%
 % Plot a timing log of every frame against the stimulus on/off times:
-getRunLog(rExp);
+showTimingLog(myExp);
 
 %%
 % The image above is a graphical timing plot of every frame and whether any frames
@@ -234,22 +237,28 @@ getRunLog(rExp);
 % for complex stimuli a frame or two may be dropped during the blank and so
 % ensure you set the inter trial time > than the dropped frames!
 
-%%
+%% Manual control
 % You don't need to use opticka's stimuli via runExperiment(), you can
 % use them in your own experiments, lets have a quick look here, set
 % runThis to true.
-% We'll use the movie stimulus, and run it on its own, using its methods
-% to draw() and animate() in a standard PTB loop
+
 runThis = false;
 if ~runThis; return; end
+
+% We'll use the movie stimulus, and run it on its own, using its methods
+% to draw() and animate() in a standard PTB loop
 WaitSecs('YieldSecs',2);
 reset(myStims); % reset them back to their defaults
+
+%stimulus
 myMovie = myStims{11}; % the movie stimulus from above
 myMovie.xPosition = 0; myMovie.yPosition = 0;
 myMovie.speed = 5;
 myMovie.size = 0; %if size is zero, then native dimensions are used.
 myMovie.direction = 45; %you can specify the motion direction seperate from texture angle
 myMovie.enforceBlending = false; %not needed as screen will use correct blending mode
+
+% screen settings
 myScreen.backgroundColour = [1 0 0];
 myScreen.srcMode = 'GL_SRC_ALPHA';
 myScreen.dstMode = 'GL_ONE_MINUS_SRC_ALPHA';

@@ -8,7 +8,7 @@
 %> values that PTB uses. The transient copies are generated on setup and removed on reset.
 %>
 %>
-%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef baseStimulus < optickaCore & dynamicprops
 	

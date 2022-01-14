@@ -5,7 +5,7 @@
 %> can also manually find microsaccades, and perform ROI/TOI filtering on the eye
 %> movements.
 %>
-%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef tobiiAnalysis < analysisCore
 	% eyelinkAnalysis offers a set of methods to load, parse & plot raw EDF files.

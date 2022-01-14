@@ -3,7 +3,7 @@
 %>
 %> 
 %>
-%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef plaidStimulus < baseStimulus
    properties
@@ -42,7 +42,7 @@ classdef plaidStimulus < baseStimulus
 				end
 				obj.inc=obj.white-obj.gray;
 		end
-		function display(obj)
+		function setup(obj)
 			try
 				AssertOpenGL;
 				Screen('Preference', 'SkipSyncTests', 2);

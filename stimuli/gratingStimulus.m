@@ -9,10 +9,12 @@
 %>   phase = phase of grating
 %>   contrast = contrast from 0 - 1
 %>   mask = use circular mask (true) or not (false)
+%>   correctPhase = set the phase from the center rather than edge
+%>   sigma = optional smoothing for circular masks
 %>
 %> See docs for more property details
 %>
-%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef gratingStimulus < baseStimulus
 
@@ -49,7 +51,7 @@ classdef gratingStimulus < baseStimulus
 		%> If mask == true, cosine smoothing sigma in pixels for mask
 		sigma					= 0
 		%> If mask == true, use colour or alpha channel for smoothing?
-		useAlpha logical		= false
+		useAlpha logical		= true
 		%> If mask == true, use hermite interpolation (true, default) or cosine (false)
 		smoothMethod logical	= true
 		%> aspect ratio of the grating, can be [x y] to select width height differently
@@ -266,10 +268,10 @@ classdef gratingStimulus < baseStimulus
 			resetTicks(me);
 			updateShader(me);
 			if me.correctPhase
-				ps=me.calculatePhase;
-				me.driftPhase=me.phaseOut-ps;
+				ps = me.calculatePhase;
+				me.driftPhase = me.phaseOut - ps;
 			else
-				me.driftPhase=me.phaseOut;
+				me.driftPhase = me.phaseOut;
 			end
 			computePosition(me);
 			setRect(me);
@@ -356,12 +358,12 @@ classdef gratingStimulus < baseStimulus
 		function phase = calculatePhase(me)
 			phase = 0;
 			if me.correctPhase > 0
-				ppd = me.ppd;
-				size = (me.sizeOut/2); %divide by 2 to get the 0 point
-				sfTmp = (me.sfOut/me.scale)*me.ppd;
-				md = size / (ppd/sfTmp);
-				md=md-floor(md);
-				phase = (360*md);
+				ppd		= me.ppd;
+				size	= (me.sizeOut / 2); %divide by 2 to get the 0 point
+				sfTmp	= (me.sfOut / me.scale) * ppd;
+				md		= size / (ppd / sfTmp);
+				md		= md - floor(md);
+				phase	= (360 * md);
 			end
 		end
 

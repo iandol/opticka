@@ -5,7 +5,7 @@
 %> toolbox See http://iandol.github.com/opticka/ for more details. This
 %> class builds and controls the GUI.
 %>
-%> Copyright ©2014-2021 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ======================================================================
 classdef opticka < optickaCore
 	
@@ -30,7 +30,7 @@ classdef opticka < optickaCore
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> version number
-		optickaVersion char = '2.05'
+		optickaVersion char = '2.06'
 		%> history of display objects
 		history
 		%> is this a remote instance?
