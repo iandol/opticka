@@ -1,8 +1,7 @@
 title: Opticka
-description: Visual Stimulus Generator
+description: Behavioural Experiment Generator
 google_analytics: 
 show_downloads: true
 theme: jekyll-theme-minimal
-
 gems:
   - jekyll-mentions
