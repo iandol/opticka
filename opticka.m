@@ -1,7 +1,7 @@
 % ======================================================================
 %> @brief Opticka stimulus generator GUI
 %>
-%> Opticka is an object oriented stimulus generator based on Psychophysics
+%> Opticka is an object-oriented stimulus generator wrapping the Psychophysics
 %> toolbox See http://iandol.github.com/opticka/ for more details. This
 %> class builds and controls the GUI.
 %>
@@ -40,6 +40,8 @@ classdef opticka < optickaCore
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		%> spash screen handle
+		ss
 		%> used to sanitise passed values on construction
 		allowedProperties char = 'verbose|initUI'
 		%> which UI settings should be saved locally to the machine?
@@ -70,7 +72,11 @@ classdef opticka < optickaCore
 			
 			if me.cloning == false
 				if ~exist('OKStartTask_image.png','file');addOptickaToPath;end
-				if me.initUI; me.initialiseUI; end
+				if me.initUI 
+					me.ss = SplashScreen(['Opticka V' me.optickaVersion],'opticka.png');
+					me.ss.addText( 30, 50, 'Loading...', 'FontSize', 25, 'Color', [1 0.8 0.5] )
+					me.initialiseUI;
+				end
 			end
 		end
 		
@@ -339,6 +345,8 @@ classdef opticka < optickaCore
 				me.r.researcherName = me.h.OKTrainingResearcherName.Value;
 				me.r.subjectName = me.h.OKTrainingName.Value;
 				getStateInfo(me);
+				pause(0.1);
+				if ~isempty(me.ss); delete(me.ss); me.ss = []; end
 			catch ME
 				try close(me.h.OKRoot); me.h = []; end %#ok<*TRYNC>
 				warning('Problem initialising Opticka UI, please check errors on the commandline!');

@@ -465,7 +465,7 @@ classdef eyelinkManager < optickaCore
 			else
 				Eyelink('Command','remote_cal_enable = 0');
 			end
-			commandwindow;
+			if ~isdeployed; commandwindow; end
 			EyelinkDoTrackerSetup(me.defaults);
 			if ~isempty(me.screen) && me.screen.isOpen
 				Screen('Flip',me.screen.win);
@@ -1444,7 +1444,7 @@ classdef eyelinkManager < optickaCore
 				if ~me.isDummy
 					an = questdlg('Do you want to load the data and plot it?');
 					if strcmpi(an,'yes')
-						commandwindow;
+						if ~isdeployed; commandwindow; end
 						evalin('base',['eA=eyelinkAnalysis(''dir'',''' ...
 							me.paths.savedData ''', ''file'',''myData.edf'');eA.parseSimple;eA.plot']);
 					end

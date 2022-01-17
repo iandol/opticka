@@ -664,7 +664,7 @@ classdef runExperiment < optickaCore
 				%---------set up our behavioural plot
 				createPlot(bR, eT);
 				drawnow; 
-				commandwindow;
+				if ~isdeployed; commandwindow; end
 
 				%------------------------------------------------------------
 				% lets draw 1 seconds worth of the stimuli we will be using
@@ -751,7 +751,7 @@ classdef runExperiment < optickaCore
 				
 				%-----take over the keyboard!
 				KbReleaseWait; %make sure keyboard keys are all released
-				commandwindow;
+				if ~isdeployed; commandwindow; end
 				if me.debug == false
 					%warning('off'); %#ok<*WNOFF>
 					ListenChar(-1); %2=capture all keystrokes

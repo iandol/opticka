@@ -32,6 +32,8 @@ classdef arduinoManager < optickaCore
 		
 		%==============CONSTRUCTOR============%
 		function me = arduinoManager(varargin)
+		%arduinoManager Construct an instance of this class
+		%   Constructor
 			args = optickaCore.addDefaults(varargin,struct('name','arduino manager'));
 			me=me@optickaCore(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);

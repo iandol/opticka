@@ -509,7 +509,7 @@ classdef optickaCore < handle
 				me.paths.stateInfoFile = '';
 			end
 			if ismac || isunix
-				[~, me.paths.home] = system('echo $HOME');
+				me.paths.home = getenv('HOME');
 				me.paths.home = regexprep(me.paths.home,'\n','');
 			else
 				me.paths.home = 'C:';
@@ -523,6 +523,9 @@ classdef optickaCore < handle
 			if ~isfolder(me.paths.savedData)
 				status = mkdir(me.paths.savedData);
 				if status == 0;warning('Could not create savedData folder');end
+			end
+			if isdeployed
+				me.paths.deploypath = ctfroot;
 			end
 		end
 		

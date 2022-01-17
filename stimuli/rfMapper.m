@@ -157,7 +157,7 @@ classdef rfMapper < barStimulus
 					getSample(eT); %make sure everything is in memory etc.
 				end
 				secondaryFigure(me);
-				commandwindow;
+				if ~isdeployed; commandwindow; end
 				me.buttons = [0 0 0]; % When the user clicks the mouse, 'buttons' becomes nonzero.
 				mX = 0; % The x-coordinate of the mouse cursor
 				mY = 0; % The y-coordinate of the mouse cursor
