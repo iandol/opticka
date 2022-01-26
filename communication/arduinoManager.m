@@ -1,26 +1,47 @@
+% ========================================================================
+%> @brief Arduino Manager > Connects and manages arduino communication. By
+%> default it connects using arduinoIOPort (much faster than the MATLAB
+%> serial port interface) and the adio.ino arduino sketch (the legacy
+%> arduino interface by Mathworks), which provide much better performance
+%> than MATLAB's current hardware package.
+%>
+%> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
+% ========================================================================
 classdef arduinoManager < optickaCore
-	%ARDUINOMANAGER Connects and manages arduino communication, by default
-	%it connects using arduinoIOPort and the adio.ino arduino sketch, which
-	%provide much better performance than MATLAB's hardware package.
+	% ARDUINOMANAGER Connects and manages arduino communication. By default it
+	% connects using arduinoIOPort and the adio.ino arduino sketch (the legacy
+	% arduino interface by Mathworks), which provide much better performance
+	% than MATLAB's hardware package.
 	properties
+		%> arduino port, if left empty it will make a guess
 		port char				= ''
-		board char {mustBeMember(board,{'Uno','Xiao'})}	= 'Uno' % Xiao or Uno
-		silentMode logical		= false %this allows us to be called even if no arduino is attached
-		verbose					= true
+		%> board type; uno [default] is a generic arduino, xiao is the seeduino xiao
+		board char {mustBeMember(board,{'Uno','Xiao'})}	= 'Uno' 
+		%> run with no arduino attached
+		silentMode logical		= false
+		verbose					= false
 		openGUI logical			= true
-		mode char				= 'original' %original is built-in, otherwise needs matlab hardware package
+		%> default uses adio sketch, otherwise uses the slower arduino hardware package
+		mode char				= 'default'
+		%> which pin to trigger the reward TTL?
 		rewardPin double		= 2
+		%> time of the TTL sent?
 		rewardTime double		= 300
-		availablePins cell
+		%> specify the available pins to use; 2-13 is the default for an Uno
+		availablePins cell		= {2,3,4,5,6,7,8,9,10,11,12,13}
 	end
 	properties (SetAccess = private, GetAccess = public)
+		%> which ports are available
 		ports
+		%> could we succesfully open the arduino?
 		isOpen logical			= false
 		device					= []
 		deviceID				= ''
 	end
 	properties (SetAccess = private, GetAccess = private, Transient = true)
+		%> handles for the optional UI
 		handles					= []
+		%> a screen object to bind to
 		screen screenManager
 	end
 	properties (SetAccess = private, GetAccess = private)
@@ -32,8 +53,7 @@ classdef arduinoManager < optickaCore
 		
 		%==============CONSTRUCTOR============%
 		function me = arduinoManager(varargin)
-		%arduinoManager Construct an instance of this class
-		%   Constructor
+		% arduinoManager Construct an instance of this class
 			args = optickaCore.addDefaults(varargin,struct('name','arduino manager'));
 			me=me@optickaCore(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
@@ -53,9 +73,9 @@ classdef arduinoManager < optickaCore
 				end
 			end
 			switch me.mode
-				case 'original'
-					if ~exist('arduinoSerialPort','file')
-						me.comment = 'Cannot find arduinoSerialPort, check opticka path!';
+				case 'default'
+					if ~exist('arduinoIOPort','file')
+						me.comment = 'Cannot find arduinoIOPort, check opticka path!';
 						warning(me.comment)
 						me.silentMode = true;
 					end
@@ -74,7 +94,7 @@ classdef arduinoManager < optickaCore
 			close(me); me.ports = seriallist;
 			if me.silentMode==false && isempty(me.device)
 				try
-					if strcmpi(me.mode, 'original')
+					if strcmpi(me.mode, 'default')
 						if ~isempty(me.port)
 							if IsWin && ~isempty(regexp(me.port, '^/dev/', 'once'))
 								warning('--->arduinoManager: Linux/macOS port specified but running on windows!')

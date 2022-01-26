@@ -30,10 +30,16 @@ tS.BREAKFIX					= -1; %==the code to send eyetracker for break fix trials
 tS.INCORRECT				= -5; %==the code to send eyetracker for incorrect trials
 
 %==================================================================
-%------------Debug logging to command window-----------------
-io.verbose					= true; %print out io commands for debugging
-%eT.verbose					= true; %print out eyetracker commands for debugging
-%rM.verbose					= true; %print out reward commands for debugging
+%----------------Debug logging to command window------------------
+% uncomment each line to get specific verbose logging from each of these
+% components; you can also set verbose in the opticka GUI to enable all of
+% these…
+%sM.verbose					= true;		%==print out stateMachine info for debugging
+%stims.verbose				= true;		%==print out metaStimulus info for debugging
+%io.verbose					= true;		%==print out io commands for debugging
+%eT.verbose					= true;		%==print out eyelink commands for debugging
+%rM.verbose					= true;		%==print out reward commands for debugging
+%task.verbose				= true;		%==print out task info for debugging
 
 %==================================================================
 %-----------------INITIAL Eyetracker Settings----------------------

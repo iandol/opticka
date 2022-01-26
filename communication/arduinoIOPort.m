@@ -1,11 +1,17 @@
+% ========================================================================
+%> @brief arduinoIOPort - modified legacy ardino interface using PTB IOPort
+%> interface for serial communication and adding a new timedTTL function for
+%> asynchronous TTL output (i.e. returns immediately to MATLAB even if the
+%> TTL is for a long time).
+% ========================================================================
 classdef arduinoIOPort < handle
-	
-	% This class defines an "arduino" object
-	% Giampiero Campa, Aug 2013, Copyright 2013 The MathWorks, Inc.
-	% Modified for use with PTB
-	% This version uses IOPort from PTB.
-	% Also added a timedTTL function, requiring
-	% a compatible arduino sketch: adio.ino
+% This class defines an "arduino" object
+% Giampiero Campa, Aug 2013, Copyright 2013 The MathWorks, Inc.
+% Modified for use with PTB
+% This version uses IOPort from PTB, as it is faster.
+% https://psychtoolbox.discourse.group/t/serial-port-interface-code-a-performance-comparison/3781
+% Also added a timedTTL function, requiring
+% a compatible arduino sketch: adio.ino
 	
 	properties (SetAccess=private,GetAccess=public)
 		startPin = 2 % First addressable pin (arduino=2,xiao=0)
@@ -18,7 +24,6 @@ classdef arduinoIOPort < handle
 		mspd   % DC motors speed status
 		sspd   % Stepper motors speed status
 		encs   % Encoders status
-
 		sktc   % Which sketch is running on the Arduino board?
 		isDemo = false
 		allPorts = []

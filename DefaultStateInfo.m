@@ -1,39 +1,42 @@
-% DEFAULT state configuration file for runExperiment.runTask (full behavioural
-% task design). This state file has a prefix state, a fixation state for the
-% subject to initiate fixation, then a stimulus state. If the subject fails
-% initial fixation, an incorrect state is called. If the subject fails fixation
-% during stimulus presentation, a breakfix state is called.
+%> DEFAULT state configuration file for runExperiment.runTask (full
+%> behavioural task design). This state file has a prefix state, a fixation
+%> state for the subject to initiate fixation, then a stimulus state. If the
+%> subject fails initial fixation, an incorrect state is called. If the
+%> subject fails fixation during stimulus presentation, a breakfix state is
+%> called. It assumes there are TWO stimuli in the stims object, the first
+%> (stims{1}) is any type of visual stimulus and the second is a fixation
+%> stimulus (stims{2}).
 %
-% State files control the logic of a stateMachine instance for a behavioural
-% task, switching between states and executing functions on entry, within and on
-% exit of states. In addition there are transition function sets which can test
-% things like eye position to conditionally switch to another state. This state
-% control file will usually be run in the scope of the calling runExperiment.runTask
-% method and other objects will be available at run time (with easy to use names
-% listed below). The following class objects (easily named handle copies) are
-% already loaded and available to use. Each object has methods (functions) useful for running
-% the task: 
+% State files control the logic of a behavioural task, switching between
+% states and executing functions on ENTER, WITHIN and on EXIT of states. In
+% addition there are TRANSITION function sets which can test things like
+% eye position to conditionally jump to another state. This state control
+% file will usually be run in the scope of the calling
+% runExperiment.runTask() method and other objects will be available at run
+% time (with easy to use names listed below). The following class objects
+% are already loaded by runTask() and available to use; each object has
+% methods (functions) useful for running the task:
 %
-% me		= runExperiment class object
-% s			= screenManager class object
-% aM		= audioManager class object
+% me		= runExperiment object ('self' in OOP terminology) 
+% s			= screenManager object
+% aM		= audioManager object
+% stims		= our list of stimuli (metaStimulus class)
 % sM		= State Machine (stateMachine class)
 % task		= task sequence (taskSequence class)
 % eT		= eyetracker manager
 % io		= digital I/O to recording system
 % rM		= Reward Manager (LabJack or Arduino TTL trigger to reward system/Magstim)
-% bR		= behavioural record plot (on screen GUI during task run)
-% stims		= our list of stimuli (metaStimulus class)
+% bR		= behavioural record plot (on-screen GUI during a task run)
 % tS		= structure to hold general variables, will be saved as part of the data
 
 %==================================================================
 %------------------------General Settings--------------------------
-tS.useTask					= true;		%==use taskSequence (randomised variable task object)
+tS.useTask					= true;		%==use taskSequence (randomises stimulus variables)
 tS.rewardTime				= 250;		%==TTL time in milliseconds
 tS.rewardPin				= 2;		%==Output pin, 2 by default with Arduino.
-tS.checkKeysDuringStimulus  = true;		%==always allow keyboard control? Slight drop in performance…
-tS.recordEyePosition		= false;	%==record eye position within PTB, **in addition** to the EDF?
-tS.askForComments			= false;	%==little UI requestor asks for comments before/after run
+tS.checkKeysDuringStimulus  = true;		%==allow keyboard control within stimulus state? Slight drop in performance…
+tS.recordEyePosition		= false;	%==record local copy of eye position, **in addition** to the eyetracker?
+tS.askForComments			= false;	%==UI requestor asks for comments before/after run
 tS.saveData					= false;	%==save behavioural and eye movement data?
 tS.includeErrors			= false;	%==do we update the trial number even for incorrect saccade/fixate, if true then we call updateTask for both correct and incorrect, otherwise we only call updateTask() for correct responses
 tS.name						= 'default protocol'; %==name of this protocol
@@ -45,26 +48,46 @@ tS.INCORRECT 				= -5;		%==the code to send eyetracker for incorrect trials
 
 %==================================================================
 %----------------Debug logging to command window------------------
-% uncomment each line to get more verbose logging from each of these components
-% you can also set verbose in the opticka GUI to enable all of these…
-sM.verbose					= true;		%==print out stateMachine info for debugging
+% uncomment each line to get specific verbose logging from each of these
+% components; you can also set verbose in the opticka GUI to enable all of
+% these…
+%sM.verbose					= true;		%==print out stateMachine info for debugging
+%stims.verbose				= true;		%==print out metaStimulus info for debugging
 %io.verbose					= true;		%==print out io commands for debugging
 %eT.verbose					= true;		%==print out eyelink commands for debugging
 %rM.verbose					= true;		%==print out reward commands for debugging
-task.verbose				= true;		%==print out task info for debugging
+%task.verbose				= true;		%==print out task info for debugging
 
 %==================================================================
-%----------------Initial Eyetracker Settings-----------------------
-tS.fixX						= 0;		%==initial fixation X position in degrees
-tS.fixY						= 0;		%==initial fixation Y position in degrees
-tS.firstFixInit				= 3;		%==time to search and enter fixation window
-tS.firstFixTime				= [0.5 0.9];%==time to maintain fixation within window
-tS.firstFixRadius			= 2;		%==circular fixation window radius in degrees
-tS.strict					= true;		%==do we forbid eye to enter-exit-reenter fixation window?
-tS.exclusionZone			= [];		%==do we add an exclusion zone where subject cannot saccade to...
-tS.stimulusFixTime			= 0.5;		%==time to fix on the stimulus
-me.lastXPosition			= tS.fixX;	%==log this position
-me.lastYPosition			= tS.fixY;	%==log this position
+%-----------------INITIAL Eyetracker Settings----------------------
+% These settings define the initial fixation window and set up for the
+% eyetracker. They may be modified during the task (i.e. moving the
+% fixation window towards a target, enabling an exclusion window to stop
+% the subject entering a specific set of display areas etc.)
+%
+% initial fixation X position in degrees (0° is screen centre)
+tS.fixX						= 0;	
+% initial fixation Y position in degrees
+tS.fixY						= 0;
+% time to search and enter fixation window
+tS.firstFixInit				= 3;
+% time to maintain fixation within window, can be single value or a range
+% to randomise between
+tS.firstFixTime				= [0.5 0.9];
+% circular fixation window radius in degrees
+tS.firstFixRadius			= 2;
+% do we forbid eye to enter-exit-reenter fixation window?
+tS.strict					= true;
+% do we add an exclusion zone where subject cannot saccade to...
+tS.exclusionZone			= [];
+% time to fix on the stimulus
+tS.stimulusFixTime			= 0.5;
+% historical log of X and Y position, and exclusion zone
+me.lastXPosition			= tS.fixX;
+me.lastYPosition			= tS.fixY;
+me.lastXExclusion			= [];
+me.lastYExclusion			= [];
+
 
 %==================================================================
 %---------------------------Eyetracker setup-----------------------
@@ -73,6 +96,8 @@ me.lastYPosition			= tS.fixY;	%==log this position
 % are used. runExperiment.elsettings and runExperiment.tobiisettings
 % contain the GUI settings you can test if they are empty or not and set
 % them based on that...
+eT.name 					= tS.name;
+if tS.saveData == true;		eT.recordData = true; end %===save ET data?					
 if me.useEyeLink
 	eT.name 						= tS.name;
 	if me.dummyMode;				eT.isDummy = true; end %===use dummy or real eyetracker? 
@@ -116,7 +141,7 @@ end
 
 %Initialise the eyeTracker object with X, Y, FixInitTime, FixTime, Radius, StrictFix
 eT.updateFixationValues(tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
-%make sure we don't start with any exclusion zones set up
+%Ensure we don't start with any exclusion zones set up
 eT.resetExclusionZones();
 
 %==================================================================
@@ -128,11 +153,12 @@ bR.breakStateName				= '^(breakfix|incorrect)';
 %==================================================================
 %--------------randomise stimulus variables every trial?-----------
 % if you want to have some randomisation of stimuls variables without using
-% taskSequence task, you can uncomment this and runExperiment can use this
-% structure to change e.g. X or Y position, size, angle see metaStimulus for
-% more details. Remember this will not be "Saved" for later use, if you want to
-% do controlled experiments use taskSequence to define proper randomised and
-% balanced variable sets and triggers to send to recording equipment etc...
+% taskSequence task (i.e. general training tasks), you can uncomment this
+% and runExperiment can use this structure to change e.g. X or Y position,
+% size, angle see metaStimulus for more details. Remember this will not be
+% "Saved" for later use, if you want to do controlled methods of constants
+% experiments use taskSequence to define proper randomised and balanced
+% variable sets and triggers to send to recording equipment etc...
 %
 % stims.choice					= [];
 % n								= 1;
@@ -150,8 +176,8 @@ stims.stimulusTable				= [];
 % this is useful to probe RF properties or other features while still
 % allowing for fixation or other behavioural control.
 % Use arrow keys <- -> to control value and up/down to control variable
-stims.controlTable				= []; 
-stims.tableChoice				= 1;
+stims.controlTable			= [];
+stims.tableChoice			= 1;
 
 %==================================================================
 %this allows us to enable subsets from our stimulus list
@@ -165,20 +191,24 @@ hide(stims);
 % skipExitStates = {'fixate','incorrect|breakfix'}; means that if the currentstate is
 % 'fixate' and the next state is either incorrect OR breakfix, then skip the FIXATE exit
 % state. Add multiple rows for skipping multiple state's exit states.
-sM.skipExitStates = {'fixate','incorrect|breakfix'};
+sM.skipExitStates			= {'fixate','incorrect|breakfix'};
 
 %===================================================================
-%-----------------State Machine State Functions---------------------
-% each cell {array} holds a set of anonymous function handles which are executed
-% by the state machine to control the experiment. The state machine can run sets
-% at entry, during, exit and to trigger a transition. Remember these {sets} need
-% to access the objects that are available within the runExperiment context (see
-% top of file). You can also add global variables/objects then use these. The
-% values entered here are set on load, if you want up-to-date values then you
-% need to use methods/function wrappers to retrieve/set them. runExperiment (me)
-% contains many such methods to set various properties and update variables.
+%===================================================================
+%===================================================================
+%-----------------State Machine Task Functions---------------------
+% Each cell {array} holds a set of anonymous function handles which are
+% executed by the state machine to control the experiment. The state
+% machine can run sets at entry ['entryFcn'], during ['withinFcn'], to
+% trigger a transition jump to another state ['transitionFcn'], and at exit
+% ['exitFcn'. Remember these {sets} need to access the objects that are
+% available within the runExperiment context (see top of file). You can
+% also add global variables/objects then use these. The values entered here
+% are set on load, if you want up-to-date values then you need to use
+% methods/function wrappers to retrieve/set them.
 
-%--------------------pause entry
+%====================================================PAUSE
+%pause entry
 pauseEntryFcn = { 
 	@()hide(stims);
 	@()drawBackground(s); %blank the subject display
@@ -193,12 +223,12 @@ pauseEntryFcn = {
 	@()needEyeSample(me,false); % no need to check eye position
 };
 
-%--------------------pause exit
+%pause exit
 pauseExitFcn = {
 	@()startRecording(eT, true); %start recording eye position data again
 }; 
 
-%--------------------prefixation entry
+%====================================================PREFIXATION
 prefixEntryFcn = { 
 	@()enableFlip(me); 
 	@()needEyeSample(me,true); % make sure we start measuring eye position

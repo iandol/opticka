@@ -641,9 +641,9 @@ classdef runExperiment < optickaCore
 				if isempty(me.paths.stateInfoFile) || ~exist(me.paths.stateInfoFile,'file')
 					errordlg('Please specify a valid State Machine file...')
 				else
-					%cd(fileparts(me.paths.stateInfoFile))
 					me.paths.stateInfoFile = regexprep(me.paths.stateInfoFile,'\s+','\\ ');
-					run(me.paths.stateInfoFile)
+					disp(['===> Loading State File: ' me.paths.stateInfoFile]);
+					run(me.paths.stateInfoFile);
 					me.stateInfo = stateInfoTmp;
 					addStates(sM, me.stateInfo);
 				end
@@ -693,19 +693,8 @@ classdef runExperiment < optickaCore
 				
 				%-----Premptive save in case of crash or error: SAVE IN /TMP
 				rE = me;
-				htmp = []; h2tmp = [];
-				if isfield(me.screenSettings,'optickahandle')
-					htmp = me.screenSettings.optickahandle; 
-					me.screenSettings.optickahandle = [];
-				end
-				if ~isempty(me.behaviouralRecord.h)
-					h2tmp = me.behaviouralRecord.h; 
-					me.behaviouralRecord.h = [];
-				end
 				save([tempdir filesep me.name '.mat'],'rE','tS');
-				if ~isempty(htmp); me.screenSettings.optickahandle = htmp; end
-				if ~isempty(h2tmp); me.behaviouralRecord.h = h2tmp; end
-				
+
 				%-----ensure we open the reward manager
 				if me.useArduino && isa(rM,'arduinoManager') && ~rM.isOpen
 					fprintf('===>>> Opening Arduino for sending reward TTLs\n')
@@ -902,14 +891,8 @@ classdef runExperiment < optickaCore
 				if tS.saveData
 					sname = [me.paths.savedData filesep me.name '.mat'];
 					rE = me;
-					htmp = me.screenSettings.optickahandle; 
-					me.screenSettings.optickahandle = [];
-					h2tmp = me.behaviouralRecord.h;
-					me.behaviouralRecord.h = [];
 					assignin('base', 'tS', tS);
 					save(sname,'rE','tS');
-					me.screenSettings.optickahandle = htmp;
-					me.behaviouralRecord.h = h2tmp;
 					fprintf('\n\n===>>> SAVED DATA to: %s\n\n',sname)
 				end
 				
@@ -986,7 +969,7 @@ classdef runExperiment < optickaCore
 				me.dPixx = dPixxManager();
 			end
 			
-			if ~isfield(me.paths,'stateInfoFile') || isempty(me.paths.stateInfoFile)
+			if ~isdeployed && (~isfield(me.paths,'stateInfoFile') || isempty(me.paths.stateInfoFile))
 				if exist([me.paths.root filesep 'DefaultStateInfo.m'],'file')
 					me.paths.stateInfoFile = [me.paths.root filesep 'DefaultStateInfo.m'];
 				end
@@ -1049,9 +1032,10 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief updates eyelink with stimuli position
+		%> @brief update eyeTracker with stimuli position
 		%>
-		%> @param
+		%> @param useTask 
+		%> @param varargin 
 		% ===================================================================
 		function updateFixationTarget(me, useTask, varargin)
 			if ~exist('useTask','var');	useTask = false; end
@@ -1066,7 +1050,8 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 		%> @brief updates eyelink with stimuli position
 		%>
-		%> @param
+		%> @param useTask
+		%> @param radius
 		% ===================================================================
 		function updateExclusionZones(me, useTask, radius)
 			if ~exist('useTask','var');	useTask = false; end
@@ -1079,9 +1064,10 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief checks the variable value of a stimulus (e.g. its angle) and then sets a fixation target based on
-		%> that value, so you can use multiple test stimuli and set the target to one of them in a
-		%> forced choice paradigm that matches the variable value
+		%> @brief checks the variable value of a stimulus (e.g. its angle) and
+		%> then sets a fixation target based on that value, so you can use
+		%> multiple test stimuli and set the target to one of them in a forced
+		%> choice paradigm that matches the variable value
 		%>
 		%> @param stimulus	which stimulus or stimuli to check
 		%> @param variable	which variable to check
@@ -1162,7 +1148,7 @@ classdef runExperiment < optickaCore
 					me.stimuli{i}.verbose = value;
 				end
 			end
-			me.salutation(sprintf('Cascaded Verbose = %i to all objects...',value),[],true);
+			if value; me.salutation(sprintf('Cascaded Verbose = %i to all objects...',value),[],true); end
 		end
 		
 		% ===================================================================
@@ -1499,7 +1485,7 @@ classdef runExperiment < optickaCore
 		%>
 		%> @param
 		% ===================================================================
-		function noop(me)
+		function noop(me) %#ok<MANU> 
 			% used to test any overhead of simply calling an empty method
 		end
 		
@@ -1508,11 +1494,11 @@ classdef runExperiment < optickaCore
 		%>
 		%> @param
 		% ===================================================================
-		function out = saveobj(me)
-			me.screenSettings.optickahandle = [];
-			fprintf('===> Saving runExperiment object...\n')
-			out = me;
-		end
+% 		function out = saveobj(me)
+% 			me.screenSettings.optickahandle = [];
+% 			fprintf('===> Saving runExperiment object...\n')
+% 			out = me;
+% 		end
 
 	end%-------------------------END PUBLIC METHODS--------------------------------%
 	
@@ -2439,170 +2425,179 @@ classdef runExperiment < optickaCore
 		%> structures / objects specifically during object load
 		%> @param in input object/structure
 		% ===================================================================
-		function lobj=loadobj(in)
-			if isa(in,'runExperiment')
-				lobj = in;
-				name = '';
-				if isprop(lobj,'fullName')
-					name = [name 'NEW:' lobj.fullName];
-				end
-				fprintf('---> runExperiment loadobj: %s\n',name);
-				isObject = true;
-				setPaths(lobj);
-				rebuild();
-				return
-			else
-				lobj = runExperiment;
-				name = '';
-				if isprop(lobj,'fullName')
-					name = [name 'NEW:' lobj.fullName];
-				end
-				if isprop(in,'name')
-					name = [name '<--OLD:' in.name];
-				end
-				fprintf('---> runExperiment loadobj %s: Loading legacy structure...\n',name);
-				isObject = false;
-				lobj.initialise('notask noscreen nostimuli');
-				rebuild();
-			end
-			
-			
-			function me = rebuild()
-				fprintf('------> ');
-				try %#ok<*TRYNC>
-					if (isprop(in,'stimuli') || isfield(in,'stimuli')) && isa(in.stimuli,'metaStimulus')
-						if ~isObject
-							lobj.stimuli = in.stimuli;
-							fprintf('metaStimulus object loaded | ');
-						else
-							fprintf('metaStimulus object present | ');
-						end
-					elseif isfield(in,'stimulus') || isprop(in,'stimulus')
-						if iscell(in.stimulus) && isa(in.stimulus{1},'baseStimulus')
-							lobj.stimuli = metaStimulus();
-							lobj.stimuli.stimuli = in.stimulus;
-							fprintf('Legacy Stimuli | ');
-						elseif isa(in.stimulus,'metaStimulus')
-							me.stimuli = in.stimulus;
-							fprintf('Stimuli (old field) = metaStimulus object | ');
-						else
-							fprintf('NO STIMULI!!! | ');
-						end
-					end
-					if isfield(in.paths,'stateInfoFile') 
-						if exist(in.paths.stateInfoFile,'file')
-							if ~isObject; lobj.paths.stateInfoFile = in.paths.stateInfoFile;end
-							fprintf('stateInfoFile assigned');
-						else
-							tp = in.paths.stateInfoFile;
-							tp = regexprep(tp,'(^/\w+/\w+)',lobj.paths.home);
-							if exist(tp,'file')
-								lobj.paths.stateInfoFile = tp;
-								fprintf('stateInfoFile rebuilt');
-							end
-						end
-					elseif isprop(in,'stateInfoFile') || isfield(in,'stateInfoFile')
-						if exist(in.stateInfoFile,'file')
-							lobj.paths.stateInfoFile = in.stateInfoFile;
-							fprintf('stateInfoFile assigned');
-						end
-					end
-					if isa(in.task,'taskSequence') 
-						lobj.task = in.task;
-						fprintf(' | loaded taskSequence');
-					elseif isa(in.task,'stimulusSequence')
-						if isstruct(in.task)
-							tso = in.task;
-						else
-							tso = clone(in.task);
-						end
-						ts = taskSequence();
-						if isprop(tso,'nVar') || isfield(tso,'nVar')
-							ts.nVar = tso.nVar;
-						end
-						if isprop(tso,'nBlocks') || isfield(tso,'nBlocks')
-							ts.nBlocks = in.task.nBlocks;
-						end
-						if isprop(tso,'randomSeed') || isfield(tso,'randomSeed')
-							ts.randomSeed = in.task.randomSeed;
-						end
-						if isfield(tso,'isTime') || isprop(tso,'isTime')
-							ts.isTime = in.task.isTime;
-						end
-						if isfield(tso,'ibTime') || isprop(tso,'ibTime')
-							ts.ibTime = in.task.ibTime;
-						end
-						if isfield(tso,'trialTime') || isprop(tso,'trialTime')
-							ts.trialTime = in.task.trialTime;
-						end
-						if isfield(tso,'randomise') || isprop(tso,'randomise')
-							ts.randomise = in.task.randomise;
-						end
-						if isfield(tso,'realTime') || isprop(tso,'realTime')
-							ts.realTime = in.task.realTime;
-						end
-						lobj.task = ts;
-						fprintf(' | reconstructed taskSequence %s from %s',ts.fullName,tso.fullName);
-						clear tso ts
-					elseif isa(lobj.task,'taskSequence')
-						lobj.previousInfo.task = in.task;
-						fprintf(' | inherited taskSequence');
-					else
-						lobj.task = taskSequence();
-						fprintf(' | new taskSequence');
-					end
-					if ~isObject && isfield(in,'verbose')
-						lobj.verbose = in.verbose;
-					end
-					if ~isObject && isfield(in,'debug')
-						lobj.debug = in.debug;
-					end
-					if ~isObject && isfield(in,'useLabJack')
-						lobj.useLabJackReward = in.useLabJack;
-					end
-				end
-				try
-					if ~isa(in.screen,'screenManager') %this is an old object, pre screenManager
-						lobj.screen = screenManager();
-						lobj.screen.distance = in.distance;
-						lobj.screen.pixelsPerCm = in.pixelsPerCm;
-						lobj.screen.screenXOffset = in.screenXOffset;
-						lobj.screen.screenYOffset = in.screenYOffset;
-						lobj.screen.antiAlias = in.antiAlias;
-						lobj.screen.srcMode = in.srcMode;
-						lobj.screen.windowed = in.windowed;
-						lobj.screen.dstMode = in.dstMode;
-						lobj.screen.blend = in.blend;
-						lobj.screen.hideFlash = in.hideFlash;
-						lobj.screen.movieSettings = in.movieSettings;
-						fprintf(' | regenerated screenManager');
-					elseif ~strcmpi(in.screen.uuid,lobj.screen.uuid)
-						lobj.screen = in.screen;
-						in.screen.verbose = false; %no printout
-						%in.screen = []; %force close any old screenManager instance;
-						fprintf(' | inherited screenManager');
-					else
-						fprintf(' | loaded screenManager');
-					end
-				end
-				try
-					lobj.previousInfo.runLog = in.runLog;
-					lobj.previousInfo.computer = in.computer;
-					lobj.previousInfo.ptb = in.ptb;
-					lobj.previousInfo.screenVals = in.screenVals;
-					lobj.previousInfo.screenSettings = in.screenSettings;
-				end
-				try lobj.stateMachine		= in.stateMachine; end
-				try lobj.eyeTracker			= in.eyeTracker; end
-				try lobj.behaviouralRecord	= in.behaviouralRecord; end
-				try lobj.runkLog			= in.runLog; end
-				try lobj.taskLog			= in.taskLog; end
-				try lobj.stateInfo			= in.stateInfo; end
-				try lobj.comment			= in.comment; end
-				fprintf('\n');
-			end
-		end
-		
+% 		function lobj = loadobj(in)
+% 			if isa(in,'runExperiment')
+% 				lobj = in;
+% 				name = '';
+% 				if isprop(lobj,'fullName')
+% 					name = [name 'NEW:' lobj.fullName];
+% 				end
+% 				fprintf('---> runExperiment loadobj: %s (UUID: %s)\n',name,lobj.uuid);
+% 				isObjectLoaded = true;
+% 				setPaths(lobj);
+% 				rebuild();
+% 				return
+% 			else
+% 				lobj = runExperiment;
+% 				name = '';
+% 				if isprop(lobj,'fullName')
+% 					name = [name 'NEW:' lobj.fullName];
+% 				end
+% 				if isfield(in,'name')
+% 					name = [name '<--OLD:' in.name];
+% 				end
+% 				fprintf('---> runExperiment loadobj %s: Loading legacy structure (Old UUID: %s)...\n',name,in.uuid);
+% 				isObjectLoaded = false;
+% 				lobj.initialise('notask noscreen nostimuli');
+% 				rebuild();
+% 			end
+% 			
+% 			
+% 			function me = rebuild()
+% 				fprintf('   > ');
+% 				try %#ok<*TRYNC>
+% 
+% 					if (isprop(in,'stimuli') || isfield(in,'stimuli')) && isa(in.stimuli,'metaStimulus')
+% 						if ~isObjectLoaded
+% 							lobj.stimuli = in.stimuli;
+% 							fprintf('metaStimulus object loaded | ');
+% 						else
+% 							fprintf('metaStimulus object present | ');
+% 						end
+% 					elseif isfield(in,'stimulus') || isprop(in,'stimulus')
+% 						if iscell(in.stimulus) && isa(in.stimulus{1},'baseStimulus')
+% 							lobj.stimuli = metaStimulus();
+% 							lobj.stimuli.stimuli = in.stimulus;
+% 							fprintf('Legacy Stimuli | ');
+% 						elseif isa(in.stimulus,'metaStimulus')
+% 							me.stimuli = in.stimulus;
+% 							fprintf('Stimuli (old field) = metaStimulus object | ');
+% 						else
+% 							fprintf('NO STIMULI!!! | ');
+% 						end
+% 					end
+% 
+% 					if (~isObjectLoaded && isfield(in,'stateInfoFile') && ~isempty(in.stateInfoFile)) || ...
+% 					  (isObjectLoaded && isprop(in,'stateInfoFile') && ~isempty(in.stateInfoFile))
+% 						fprintf(['!!!SIF: ' in.stateInfoFile ' ']);
+% 						lobj.paths.stateInfoFile = in.stateInfoFile;
+% 					elseif isfield(in.paths,'stateInfoFile') && ~isempty(in.paths.stateInfoFile)
+% 						fprintf(['!!!PATH: ' in.paths.stateInfoFile ' ']);
+% 						lobj.paths.stateInfoFile = in.paths.stateInfoFile;
+% 					end
+% 					if ~exist(lobj.paths.stateInfoFile,'file')
+% 						tp = lobj.paths.stateInfoFile;
+% 						tp = regexprep(tp,'(^/\w+/\w+)',lobj.paths.home);
+% 						if exist(tp,'file')
+% 							lobj.paths.stateInfoFile = tp;
+% 						else
+% 							[~,f,e] = fileparts(tp);
+% 							newfile = [pwd filesep f e];
+% 							if exist(newfile, 'file')
+% 								lobj.paths.stateInfoFile = newfile;
+% 							end
+% 						end
+% 					end
+% 						
+% 					lobj.stateInfoFile = lobj.paths.stateInfoFile;
+% 					fprintf('stateInfoFile: %s assigned | ', lobj.stateInfoFile);
+% 
+% 					if isa(in.task,'taskSequence') 
+% 						lobj.task = in.task;
+% 						fprintf(' | loaded taskSequence');
+% 					elseif isa(in.task,'stimulusSequence')
+% 						if isstruct(in.task)
+% 							tso = in.task;
+% 						else
+% 							tso = clone(in.task);
+% 						end
+% 						ts = taskSequence();
+% 						if isprop(tso,'nVar') || isfield(tso,'nVar')
+% 							ts.nVar = tso.nVar;
+% 						end
+% 						if isprop(tso,'nBlocks') || isfield(tso,'nBlocks')
+% 							ts.nBlocks = in.task.nBlocks;
+% 						end
+% 						if isprop(tso,'randomSeed') || isfield(tso,'randomSeed')
+% 							ts.randomSeed = in.task.randomSeed;
+% 						end
+% 						if isfield(tso,'isTime') || isprop(tso,'isTime')
+% 							ts.isTime = in.task.isTime;
+% 						end
+% 						if isfield(tso,'ibTime') || isprop(tso,'ibTime')
+% 							ts.ibTime = in.task.ibTime;
+% 						end
+% 						if isfield(tso,'trialTime') || isprop(tso,'trialTime')
+% 							ts.trialTime = in.task.trialTime;
+% 						end
+% 						if isfield(tso,'randomise') || isprop(tso,'randomise')
+% 							ts.randomise = in.task.randomise;
+% 						end
+% 						if isfield(tso,'realTime') || isprop(tso,'realTime')
+% 							ts.realTime = in.task.realTime;
+% 						end
+% 						lobj.task = ts;
+% 						fprintf(' | reconstructed taskSequence %s from %s',ts.fullName,tso.fullName);
+% 						clear tso ts
+% 					elseif isa(lobj.task,'taskSequence')
+% 						lobj.previousInfo.task = in.task;
+% 						fprintf(' | inherited taskSequence');
+% 					else
+% 						lobj.task = taskSequence();
+% 						fprintf(' | new taskSequence');
+% 					end
+% 					if ~isObjectLoaded && isfield(in,'verbose')
+% 						lobj.verbose = in.verbose;
+% 					end
+% 					if ~isObjectLoaded && isfield(in,'debug')
+% 						lobj.debug = in.debug;
+% 					end
+% 					if ~isObjectLoaded && isfield(in,'useLabJack')
+% 						lobj.useLabJackReward = in.useLabJack;
+% 					end
+% 				end
+% 				try
+% 					if ~isa(in.screen,'screenManager') %this is an old object, pre screenManager
+% 						lobj.screen = screenManager();
+% 						lobj.screen.distance = in.distance;
+% 						lobj.screen.pixelsPerCm = in.pixelsPerCm;
+% 						lobj.screen.screenXOffset = in.screenXOffset;
+% 						lobj.screen.screenYOffset = in.screenYOffset;
+% 						lobj.screen.antiAlias = in.antiAlias;
+% 						lobj.screen.srcMode = in.srcMode;
+% 						lobj.screen.windowed = in.windowed;
+% 						lobj.screen.dstMode = in.dstMode;
+% 						lobj.screen.blend = in.blend;
+% 						lobj.screen.hideFlash = in.hideFlash;
+% 						lobj.screen.movieSettings = in.movieSettings;
+% 						fprintf(' | regenerated screenManager');
+% 					elseif ~strcmpi(in.screen.uuid,lobj.screen.uuid)
+% 						lobj.screen = in.screen;
+% 						in.screen.verbose = false; %no printout
+% 						%in.screen = []; %force close any old screenManager instance;
+% 						fprintf(' | inherited screenManager');
+% 					else
+% 						fprintf(' | loaded screenManager');
+% 					end
+% 				end
+% 				try
+% 					lobj.previousInfo.runLog = in.runLog;
+% 					lobj.previousInfo.computer = in.computer;
+% 					lobj.previousInfo.ptb = in.ptb;
+% 					lobj.previousInfo.screenVals = in.screenVals;
+% 					lobj.previousInfo.screenSettings = in.screenSettings;
+% 				end
+% 				try lobj.stateMachine		= in.stateMachine; end
+% 				try lobj.eyeTracker			= in.eyeTracker; end
+% 				try lobj.behaviouralRecord	= in.behaviouralRecord; end
+% 				try lobj.runkLog			= in.runLog; end
+% 				try lobj.taskLog			= in.taskLog; end
+% 				try lobj.stateInfo			= in.stateInfo; end
+% 				try lobj.comment			= in.comment; end
+% 				fprintf('\n');
+% 			end
+% 		end
+% 		
 	end
 	
 end

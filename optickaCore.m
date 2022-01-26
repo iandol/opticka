@@ -510,7 +510,6 @@ classdef optickaCore < handle
 			end
 			if ismac || isunix
 				me.paths.home = getenv('HOME');
-				me.paths.home = regexprep(me.paths.home,'\n','');
 			else
 				me.paths.home = 'C:';
 			end

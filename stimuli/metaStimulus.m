@@ -1,15 +1,23 @@
 % ========================================================================
-%> @brief metaStimulus is a wrapper object for opticka stimuli
-%> METASTIMULUS a collection of stimuli, wrapped in one object. It
-%> allows you to treat a group of heterogenous stimuli as if they are a single
-%> stimulus, so for example animate(metaStimulus) will run the animate method
-%> for all stimuli in the group without having to call it for each stimulus.
-%> You can also pick individual stimuli by using cell indexing of this
-%> object. So for example metaStimulus{2} actually calls
-%> metaStimulus.stimuli{2}.
-%> You can also pass a mask stimulus set, and when you toggle showMask, the
-%> mask stimuli will be drawn instead of the stimuli themselves, the timing
-%> is left to the calling function.
+%> @brief metaStimulus is a manager for multiple opticka stimuli
+%> 
+%> METASTIMULUS manages a collection of stimuli, wrapped in one object. It
+%> allows you to treat this group of heterogenous stimuli as if they are a
+%> single stimulus (draw, update,animate,reset), so for example
+%> animate(metaStimulus) will run the animate method for all stimuli in the
+%> group without having to call it for each stimulus. You can also pick
+%> individual stimuli by using cell indexing of this object. So for example
+%> metaStimulus{2} actually calls metaStimulus.stimuli{2}.
+%> 
+%> You can also pass a mask stimulus set, and when you toggle showMask, the mask
+%> stimuli will be drawn instead of the stimuli themselves.
+%> 
+%> This manager also allows you to build "sets" of stimuli (set stimulusSets to
+%> e.g [2 4 7] would be stimuli 2 4 and 7), and you can quickly switch between
+%> sets. For example you could have a set of fixation cross alone, and another
+%> of fixation cross and a distractor stimulus and use showSet() to quickly
+%> switch between these sets. There are also show([index]) and hide([index]) to
+%> show and hide stimuli directly.
 %>
 %> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
@@ -19,32 +27,33 @@ classdef metaStimulus < optickaCore
 	properties 
 		%>cell array of opticka stimuli to manage
 		stimuli cell		= {}
+		%>cell array of mask stimuli
+		maskStimuli	cell	= {}
 		%> do we draw the mask stimuli instead?
-		showMask			= false
-		%>mask stimuli
-		maskStimuli			= {}
+		showMask logical	= false
+		%> sets of stimuli, e.g. [[1 2 3], [2 3], [1 3]]
+		stimulusSets		= []
+		%> which set of stimuli to display when calling showSet()
+		setChoice			= 0;
+		%> choice allows to 'filter' a subset of stimulus in the group when 
+		%> calling draw, update, animate and reset
+		choice				= []
+		%> which stimuli should getFixationPositions() return the positions for?
+		fixationChoice		= []
+		%> which stimuli should etExclusionPositions() return the positions for?
+		exclusionChoice		= []
+		%> variable randomisation table to apply to a stimulus, most useful
+		%> during training tasks
+		stimulusTable		= []
+		%> choice for table
+		tableChoice			= []
+		%> control table for keyboard changes, again allows you to dynamically 
+		%> change variables during training sessions
+		controlTable		= []
 		%> screenManager handle
 		screen
 		%> verbose?
 		verbose				= false
-		%> choice allows to call only 1 stimulus in the group
-		choice				= []
-		%> which stimuli should fixation follow, see getFixationPositions()
-		fixationChoice		= []
-		%> which stimuli should exclusion follow, see getExclusionPositions()
-		exclusionChoice		= []
-		%> randomisation table to apply to a stimulus
-		stimulusTable		= []
-		%> choice for table
-		tableChoice			= []
-		%> control table for keyboard changes
-		controlTable		= []
-		%> show subsets of stimuli?
-		stimulusSets		= []
-		%> which set of stimuli to display
-		setChoice			= 0;
-		%> currently unused
-		flashRate			= 0.25
 	end
 	
 	%--------------------DEPENDENT PROPERTIES----------%
@@ -90,15 +99,13 @@ classdef metaStimulus < optickaCore
 		% ===================================================================
 		%> @brief Class constructor
 		%>
-		%> More detailed description of what the constructor does.
-		%>
 		%> @param varargin are passed as a structure of properties which is
 		%> parsed.
 		%> @return instance of class.
 		% ===================================================================
 		function me = metaStimulus(varargin)
 			args = optickaCore.addDefaults(varargin,struct('name','metaStimulus'));
-			me=me@optickaCore(args); %superclass constructor
+			me = me@optickaCore(args); %superclass constructor
 			me.parseArgs(args,me.allowedProperties);
 		end
 		
@@ -353,6 +360,10 @@ classdef metaStimulus < optickaCore
 		% ===================================================================
 		%> @brief Edit -- fast change a particular value.
 		%>
+		%> @params stims array of stimuli to edit
+		%> @params var he variable to edit
+		%> @params the value to assign
+		%> @params mask whether to edit a mask or notmal stimulus
 		% ===================================================================
 		function edit(me, stims, var, value, mask)
 			if ~exist('mask','var'); mask = false; end
@@ -368,8 +379,9 @@ classdef metaStimulus < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief Return the stimulus fixation position
-		%>s
+		%> @brief Return the stimulus fixation positions based on fixationChoice
+		%>
+		%> Using fixationChoice parameter, return the x and y positions of each stimulus
 		% ===================================================================
 		function [x,y] = getFixationPositions(me)
 			x = 0; y = 0;
@@ -387,10 +399,13 @@ classdef metaStimulus < optickaCore
 		% ===================================================================
 		%> @brief Return the stimulus exclusion positions
 		%>
+		%> Use the exclusionChoice value to find the X and Y positions of these
+		%> stimuli, returns x and y positions and also sets the lastXExclusion
+		%> and lastXExclusion parameters
 		% ===================================================================
 		function [x,y] = getExclusionPositions(me)
 			x = []; y = [];
-			if ~isempty(me.fixationChoice)
+			if ~isempty(me.exclusionChoice)
 				x=zeros(length(me.exclusionChoice),1); y = x;
 				for i=1:length(me.exclusionChoice)
 					x(i) = me.stimuli{me.exclusionChoice(i)}.xPositionOut / me.screen.ppd;
@@ -402,8 +417,16 @@ classdef metaStimulus < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief Return the stimulus positions
+		%> @brief Find the stimulus positions, setting stimulusPositions
+		%> structure
 		%>
+		%> Loop through all stimuli and get the X, Y and size of each stimulus.
+		%> This is added to stimulusPositions structure and is used to pass to
+		%> the eyetracker so it can draw the stimuli locations on the eyetracker
+		%> interface 
+		%>
+		%> @param ignoreVisible [false] ignore the visibility status of stims
+		%> @return out copy of the stimulusPositions structure
 		% ===================================================================
 		function out = getStimulusPositions(me, ignoreVisible)
 			if ~exist('ignoreVisible','var'); ignoreVisible=false; end
@@ -443,33 +466,18 @@ classdef metaStimulus < optickaCore
 		% ===================================================================
 		%> @brief Toggle show/hide for particular sets of stimuli
 		%>
+		%> @param set which set to show, note all other stimuli are hidden
 		% ===================================================================
 		function showSet(me, set)
 			if ~exist('set','var'); set = me.setChoice; end
-			if ~isempty(me.stimulusSets)
-				if set == 0 || set > me.n_; return; end
-				hide(me);
-				for i = me.stimulusSets{set}
-					show(me.stimuli{i});
-					if me.verbose;me.salutation('ShowSet',['Show stimulus ' num2str(i)],true); end
-				end
-			end
+			if set == 0 || isempty(me.stimulusSets) || set > length(me.stimulusSets); return; end			
+			hide(me);
+			show(me, me.stimulusSets{set});
+			if me.verbose;me.salutation('ShowSet',['Show stimuli: ' num2str(me.stimulusSets{set})],true); end
 		end
-		
+
 		% ===================================================================
-		%> @brief Toggle show/hide for particular sets of stimuli
-		%>
-		% ===================================================================
-		function changeSet(me,value)
-			if ~exist('value','var'); value = 0; end
-			if ~isempty(me.stimulusSets) && value <= length(me.stimulusSets)
-				me.setChoice = value;
-				showSet(me);
-			end
-		end
-		
-		% ===================================================================
-		%> @brief Run Stimulus in a window to preview
+		%> @brief Run Stimuli in a window to quickly preview them
 		%>
 		% ===================================================================
 		function run(me, benchmark, runtime, s, forceScreen)
@@ -570,7 +578,7 @@ classdef metaStimulus < optickaCore
 		
 		
 		% ===================================================================
-		%> @brief Run Stimulus in a window to preview
+		%> @brief Run single stimulus in a window to preview
 		%>
 		% ===================================================================
 		function runSingle(me,s,eL,runtime)

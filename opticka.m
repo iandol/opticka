@@ -73,8 +73,6 @@ classdef opticka < optickaCore
 			if me.cloning == false
 				if ~exist('OKStartTask_image.png','file');addOptickaToPath;end
 				if me.initUI 
-					me.ss = SplashScreen(['Opticka V' me.optickaVersion],'opticka.png');
-					me.ss.addText( 30, 50, 'Loading...', 'FontSize', 25, 'Color', [1 0.8 0.5] )
 					me.initialiseUI;
 				end
 			end
@@ -224,55 +222,31 @@ classdef opticka < optickaCore
 		% ===================================================================
 		function initialiseUI(me)
 			try
+				me.ss = SplashScreen(['Opticka V' me.optickaVersion],'opticka.png');
+				me.ss.addText( 10, 30, ['Loading Opticka V' me.optickaVersion '…'], 'FontSize', 20, 'Color', [1 0.8 0.5] )
 				me.paths.whoami = mfilename;
 				me.paths.whereami = fileparts(which(mfilename));
 				me.paths.startServer = [me.paths.whereami filesep 'udpserver' filesep 'launchDataConnection'];
 
 				if ismac
 					me.store.serverCommand = ['!osascript -e ''tell application "Terminal"'' -e ''activate'' -e ''do script "matlab -nodesktop -r \"runServer\""'' -e ''end tell'''];
-					me.paths.temp=tempdir;
-					
-					if ~exist([me.paths.home filesep 'MatlabFiles' filesep 'Protocols'],'dir')
-						mkdir([me.paths.home filesep 'MatlabFiles' filesep 'Protocols']);
-					end
-					if ~exist([me.paths.home filesep 'MatlabFiles' filesep 'Protocols' filesep 'CoreProtocols'],'dir')
-						src = [me.paths.whereami filesep 'CoreProtocols'];
-						dst = [me.paths.home filesep 'MatlabFiles' filesep 'Protocols' filesep];
-						cmd = ['!ln -s ' src ' ' dst];
-						eval(cmd);
-					end
-					
-					me.paths.protocols = [me.paths.home filesep 'MatlabFiles' filesep 'Protocols'];
-					cd(me.paths.protocols);
-					me.paths.currentPath = pwd;
-					
-					if ~exist([me.paths.home filesep 'MatlabFiles' filesep 'Calibration'],'dir')
-						mkdir([me.paths.home filesep 'MatlabFiles' filesep 'Calibration']);
-					end
-					me.paths.calibration = [me.paths.home filesep 'MatlabFiles' filesep 'Calibration'];
-					
-					if ~exist([me.paths.temp 'History'],'dir')
-						mkdir([me.paths.temp 'History']);
-					end
-					me.paths.historypath=[me.paths.temp 'History'];
-					
-					if ~exist([me.paths.home filesep 'MatlabFiles' filesep 'SavedData'],'dir')
-						mkdir([me.paths.home filesep 'MatlabFiles' filesep 'SavedData']);
-					end
-					me.paths.savedData = [me.paths.home filesep 'MatlabFiles' filesep 'SavedData'];
-					
-				elseif isunix
+				else
 					me.store.serverCommand = '!matlab -nodesktop -nosplash -r "d=dataConnection(struct(''autoServer'',1,''lPort'',5678));" &';
+				end
+
+				if ismac || isunix
 					me.paths.temp=tempdir;
+
 					if ~exist([me.paths.home filesep 'MatlabFiles' filesep 'Protocols'],'dir')
 						mkdir([me.paths.home filesep 'MatlabFiles' filesep 'Protocols']);
 					end
-					if ~exist([me.paths.home filesep 'MatlabFiles' filesep 'Protocols' filesep 'CoreProtocols'],'dir')
+					if ~isdeployed && ~exist([me.paths.home filesep 'MatlabFiles' filesep 'Protocols' filesep 'CoreProtocols'],'dir')
 						src = [me.paths.whereami filesep 'CoreProtocols'];
 						dst = [me.paths.home filesep 'MatlabFiles' filesep 'Protocols' filesep];
 						cmd = ['!ln -s ' src ' ' dst];
 						eval(cmd);
 					end
+					
 					me.paths.protocols = [me.paths.home filesep 'MatlabFiles' filesep 'Protocols'];
 					cd(me.paths.protocols);
 					me.paths.currentPath = pwd;
@@ -291,10 +265,8 @@ classdef opticka < optickaCore
 						mkdir([me.paths.home filesep 'MatlabFiles' filesep 'SavedData']);
 					end
 					me.paths.savedData = [me.paths.home filesep 'MatlabFiles' filesep 'SavedData'];
-				
 				elseif ispc
 					root = me.paths.parent;
-					me.store.serverCommand = '!matlab -nodesktop -nosplash -r "d=dataConnection(struct(''autoServer'',1,''lPort'',5678));" &';
 					me.paths.temp=tempdir;
 					
 					if ~exist([root 'Protocols'],'dir')
@@ -337,7 +309,7 @@ classdef opticka < optickaCore
 				if exist([me.paths.protocols filesep 'DefaultStateInfo.m'],'file')
 					me.paths.stateInfoFile = [me.paths.protocols filesep 'DefaultStateInfo.m'];
 					me.r.stateInfoFile = me.paths.stateInfoFile;
-				else
+				elseif ~isdeployed
 					me.paths.stateInfoFile = [me.paths.whereami filesep 'DefaultStateInfo.m'];
 					me.r.stateInfoFile = me.paths.stateInfoFile;
 				end
@@ -377,8 +349,6 @@ classdef opticka < optickaCore
 				clear s;
 				me.h.OKOptickaVersion.Text = olds;
 			end
-			
-			me.r.screenSettings.optickahandle = me.h.OKRoot;
 			
 			me.r.screen.screen = me.gd(me.h.OKSelectScreen);
 			
@@ -944,30 +914,39 @@ classdef opticka < optickaCore
 				
 				tmp.store = struct(); %lets just nuke this incase some rogue handles are lurking
 				tmp.h = struct(); %remove the handles to the UI which will not be valid on reload
-				if isfield(tmp.r.screenSettings,'optickahandle'); tmp.r.screenSettings.optickahandle = []; end %!!!this fixes matlab bug 01255186
 				for i = 1:tmp.r.stimuli.n
 					cleanHandles(tmp.r.stimuli{i}); %just in case!
 				end
 				[~, ff, ee] = fileparts(me.r.paths.stateInfoFile);
 				if copy == true
 					tmp.r.paths.stateInfoFile = [pwd filesep ff ee];
-					status = copyfile(me.r.paths.stateInfoFile,[ff ee]);
-					if status ~= 1
-						warning('Couldn''t copy state info file!');
-					else
-						me.r.paths.stateInfoFile = tmp.r.paths.stateInfoFile;
+					if ~strcmpi(me.r.paths.stateInfoFile,tmp.r.paths.stateInfoFile)
+						[status, msg] = copyfile(me.r.paths.stateInfoFile, tmp.r.paths.stateInfoFile, 'f');
+						if status ~= 1
+							warning(['Couldn''t copy state info file: ' msg]);
+						else
+							me.r.paths.stateInfoFile = tmp.r.paths.stateInfoFile;
+							me.r.stateInfoFile = me.r.paths.stateInfoFile;
+						end
 					end
 					save(f,'tmp');
 					fprintf('\n---> Saving Protocol %s as copy (with state file) to %s\n', f, pwd);
+					if exist(tmp.r.paths.stateInfoFile,'file')
+						fprintf('\tState file path: %s\n', me.r.paths.stateInfoFile);
+					end
 					getStateInfo(me);
 				else
 					save(f,'tmp');
-					fprintf('\n---> Saving Protocol %s to %s\n', f, pwd);
+					fprintf('\n---> Saving Protocol %s (without state file) to %s\n', f, pwd);
 				end
 				me.refreshStimulusList;
 				me.refreshVariableList;
 				me.refreshProtocolsList;
-				me.h.OKOptickaVersion.Text = ['Opticka Experiment Manager V' me.optickaVersion ' - ' f];
+				if isdeployed
+					me.h.OKOptickaVersion.Text = ['Opticka Experiment Manager [D] V' me.optickaVersion ' - ' f];
+				else
+					me.h.OKOptickaVersion.Text = ['Opticka Experiment Manager V' me.optickaVersion ' - ' f];
+				end
 				clear tmp f p
 			end
 			cd(me.paths.currentPath);
@@ -987,7 +966,6 @@ classdef opticka < optickaCore
 				data = clone(me);
 				data.r.paths.stateInfoFile = me.r.paths.stateInfoFile;
 				data.h = struct(); %remove the handles to the UI which will not be valid on reload
-				if isfield(data.r.screenSettings,'optickahandle'); data.r.screenSettings.optickahandle = []; end %!!!this fixes matlab bug 01255186
 				for i = 1:data.r.stimuli.n
 					cleanHandles(data.r.stimuli{i}); %just in case!
 				end
@@ -1015,6 +993,7 @@ classdef opticka < optickaCore
 			end
 			me.paths.stateInfoFile = [fpath fname];
 			me.r.paths.stateInfoFile = me.paths.stateInfoFile;
+			me.r.stateInfoFile = me.r.paths.stateInfoFile;
 		end
 		
 		% ===================================================================
@@ -1056,15 +1035,16 @@ classdef opticka < optickaCore
 			load(file);
 			
 			if ~isa(tmp,'opticka');warndlg('This is not an opticka protocol file...');return;end
-			
+
 			me.paths.protocols = p;
 			
-			me.comment = ['Prt: ' file];
+			me.comment = ['Protocol: ' file];
 			me.store.protocolName = file;
 			
-			salutation(me,sprintf('Routing Protocol from %s to %s',tmp.fullName,me.fullName),[],true);
+			salutation(me,sprintf('Routing Protocol FROM %s TO %s',tmp.fullName,me.fullName),[],true);
 			
 			if exist('tmp','var') && isa(tmp,'opticka')
+				fprintf('---> Load status:\n');
 				if isprop(tmp.r,'stimuli')
 					if isa(tmp.r.stimuli,'metaStimulus')
 						me.r.stimuli = tmp.r.stimuli;
@@ -1075,12 +1055,14 @@ classdef opticka < optickaCore
 							end
 						end
 						if ~isempty(rm); me.r.stimuli(rm) = []; end
+						fprintf('\t…metaStimulus object loaded\n');
 					elseif iscell(tmp.r.stimuli)
 						me.r.stimuli = metaStimulus();
 						me.r.stimuli.stimuli = tmp.r.stimuli;
+						fprintf('\t…metaStimulus object loaded from cell array\n');
 					else
 						clear tmp;
-						warndlg('Sorry, this protocol is appears to have no stimulus objects, please remake');
+						warndlg('Sorry, this protocol appears to have no stimulus objects, please remake');
 						error('No stimulus found in protocol!!!');
 					end
 				elseif isprop(tmp.r,'stimulus')
@@ -1090,6 +1072,7 @@ classdef opticka < optickaCore
 					elseif isa(tmp.r.stimulus,'metaStimulus')
 						me.r.stimuli = tmp.r.stimulus;
 					end
+					fprintf('\t…legacy metaStimulus object loaded\n');
 				else
 					clear tmp;
 					warndlg('Sorry, this protocol is appears to have no stimulus objects, please remake');
@@ -1103,26 +1086,42 @@ classdef opticka < optickaCore
 					else
 						me.r.name = [tmp.r.name];
 					end
-					if isfield(tmp.r.paths,'stateInfoFile')
-						if ~exist(tmp.r.paths.stateInfoFile,'file')
-							[~,f,e] = fileparts(tmp.r.paths.stateInfoFile);
-							newfile = [pwd filesep f e];
-							if exist(tmp.r.paths.stateInfoFile,'file')
-								me.r.paths.stateInfoFile = newfile;
-							else
-								me.r.paths.stateInfoFile = tmp.r.paths.stateInfoFile;
-							end
-						else
-							me.r.paths.stateInfoFile = tmp.r.paths.stateInfoFile;
-							me.getStateInfo();
-						end
-					elseif isprop(me.r,'stateInfoFile') && isprop(tmp.r,'stateInfoFile')
-						me.r.paths.stateInfoFile = tmp.r.stateInfoFile;
-						if ~exist(me.r.paths.stateInfoFile,'file')
-							me.r.paths.stateInfoFile=regexprep(tmp.r.stateInfoFile,'(.+)(.Code.opticka.+)','~$2','ignorecase','once');
-						end							
-						me.getStateInfo();
+
+					me.r.paths.stateInfoFile = '';
+					p1 = ''; p2 = '';
+					if isprop(tmp.r,'stateInfoFile') && ~isempty(tmp.r.stateInfoFile)
+						p1 = tmp.r.stateInfoFile;	
 					end
+					if isfield(tmp.r.paths,'stateInfoFile') && ~isempty(tmp.r.paths.stateInfoFile)
+						p2 = tmp.r.paths.stateInfoFile;	
+					end
+					if ~isempty(p1) && strcmp(p1,p2)
+						me.r.paths.stateInfoFile = p1;
+						fprintf(' p1 ')
+					elseif contains(p1,'DefaultStateInfo.m') && ~contains(p2,'DefaultStateInfo.m')
+						me.r.paths.stateInfoFile = p2;
+						fprintf(' p2 ')
+					end
+					if ~exist(me.r.paths.stateInfoFile,'file') % first try to find the file in current dir
+						[~,f,e] = fileparts(me.r.paths.stateInfoFile);
+						newfile = [pwd filesep f e];
+						if exist(newfile, 'file')
+							me.r.paths.stateInfoFile = newfile;
+							fprintf(' pwd ')
+						end
+					end	
+					if ~exist(me.r.paths.stateInfoFile,'file') % then try to replace the home directory
+						me.r.paths.stateInfoFile=regexprep(tmp.r.stateInfoFile,'(.+)(.Code.opticka.+)',[getenv('HOME') '$2'],'ignorecase','once');
+						fprintf(' rehome ')
+					end
+					if isempty(me.r.paths.stateInfoFile)
+						warndlg(['Couldn''t find state info file! Sources were: ' p1 ' ' p2 '  --  Revert to DefaultStateInfo.m']);
+						me.r.paths.stateInfoFile = which('DefaultStateInfo.m');
+					else
+						fprintf('\t…state info file: %s\n', me.r.paths.stateInfoFile);
+					end
+					if isprop(me.r,'stateInfoFile'); me.r.stateInfoFile = me.r.paths.stateInfoFile; end
+					me.getStateInfo();
 					
 					if isprop(tmp.r,'drawFixation');me.r.drawFixation=tmp.r.drawFixation;end
 					if isprop(tmp.r,'dPPMode'); me.r.dPPMode = tmp.r.dPPMode; end
@@ -1196,13 +1195,15 @@ classdef opticka < optickaCore
 					string = num2str(tmp.r.screen.backgroundColour);
 					string = regexprep(string,'\s+',' '); %collapse spaces
 					set(me.h.OKbackgroundColour,'Value',string);
+					fprintf('\t…screenManager settings copied\n');
 				else
-					me.salutation('No screenManager settings loaded!','',true);
+					fprintf('\t…No screenManager settings loaded!\n');
 				end
 				%copy task parameters
 				if isempty(tmp.r.task)
 					me.r.task = taskSequence;
 					me.r.task.randomiseTask;
+					fprintf('\t…taskSequence created\n');
 				else
 					me.r.task = tmp.r.task;
 					for i=1:me.r.task.nVars
@@ -1211,6 +1212,7 @@ classdef opticka < optickaCore
 							me.r.task.nVar(i).offsetvalue = [];
 						end
 					end
+					fprintf('\t…taskSequence assigned\n');
 				end
 				
 				set(me.h.OKtrialTime, 'Value', num2str(me.r.task.trialTime));
@@ -1249,7 +1251,13 @@ classdef opticka < optickaCore
 				
 			end
 			
-			me.h.OKOptickaVersion.Text = ['Opticka Experiment Manager V' me.optickaVersion ' - ' me.store.protocolName];
+			fprintf('---> Load finished\n');
+
+			if isdeployed
+				me.h.OKOptickaVersion.Text = ['Opticka Experiment Manager [D] V' me.optickaVersion ' - ' me.comment];
+			else
+				me.h.OKOptickaVersion.Text = ['Opticka Experiment Manager V' me.optickaVersion ' - ' me.comment];
+			end
 			me.refreshProtocolsList;
 			figure(me.h.OKRoot); drawnow;
 		end
@@ -1539,10 +1547,12 @@ classdef opticka < optickaCore
 		% ===================================================================
 		function lobj=loadobj(in)
 			if isa(in,'opticka')
-				fprintf('---> opticka loadobj: Assigning object...\n')
+				fprintf('---> opticka loadobj: Assigning object… ');
+				try fprintf('…previous object version: %s | dated: %s\n', in.optickaVersion, datestr(in.dateStamp)); end
 				lobj = in;
 			else
-				fprintf('---> opticka loadobj: Recreating object from structure...\n')
+				try fprintf('---> Opticka loadobj: Recreating object %s from structure…\n',in.fullName_); end
+				try fprintf('\t…previous object version: %s | dated: %s\n', in.optickaVersion, datestr(in.dateStamp)); end
 				lobj = opticka('initUI',false);
 				lobj.r = in.r;
 				lobj.comment = in.comment;

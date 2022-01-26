@@ -1,35 +1,42 @@
 % ========================================================================
-%> @brief eyelinkManager wraps around the eyelink toolbox functions offering
-%> a simpler interface, with methods for fixation window control
+%> @brief eyelinkManager wraps around the eyelink toolbox functions offering a
+%> consistent interface and methods for fixation window control
 %>
-%> The core methods enable the user to test for common behavioural eye
-%> tracking tasks with single commands. For example, to initiate a task we
-%> normally place a fixation cross on the screen and ask the subject to
-%> saccade to the cross and maintain fixation for a particular duration.
-%> This is achieved using testSearchHoldFixation('yes','no'), using the
-%> properties: fixation.initTime to time how long the subject has to
-%> saccade into the window, fixation.time for how long they must maintain
-%> fixation, fixation.radius for the radius around fixation.X and
-%> fixation.Y position. The method returns the 'yes' string if the rules
-%> are matched, and 'no' if they are not, thus enabling experiment code to
-%> simply call this method until it returns 'yes''. Other methods include
-%> isFixated(), testFixationTime(), testHoldFixation().
+%> Class methods enable the user to test for common behavioural eye tracking
+%> tasks with single commands. For example, to initiate a task we normally place
+%> a fixation cross on the screen and ask the subject to saccade to the cross
+%> and maintain fixation for a particular duration. This is achieved using
+%> testSearchHoldFixation('yes','no'), using the properties: fixation.initTime
+%> to time how long the subject has to saccade into the window, fixation.time
+%> for how long they must maintain fixation, fixation.radius for the radius
+%> around fixation.X and fixation.Y position. The method returns the 'yes'
+%> string if the rules are matched, and 'no' if they are not, thus enabling
+%> experiment code to simply call this method until it returns 'yes''. Other
+%> methods include isFixated(), testFixationTime(), testHoldFixation().
+%>
+%> This class enables several types of behavioural control:
+%>
+%> 1. Fixation window: one or more areas where the subject must enter with their eye position within a certain time and must maintain fixation for a certain time. Windows can be circular or rectangular.
+%> 2. Exclusion zones: one or more rectangular areas that cause failure if entered.
+%> 3. Fix initiation zone: an area the eye must stay with for a certain time before a saccade. For example if a subect fixates, then must saccade a time X, do not allow the eye to leave this zone before X + t (t by default is 100ms). This stops potential cheating by the subject.
 %>
 %> Try using the demo mode to see it in action (read the runDemo() code to
 %> understand how to use the class):
-%>   > em = eyelinkManager('verbose', true);
-%>   > em.runDemo();
 %>
-%> Multiple fixation windows can be assigned (either circular or
-%> rectangular), and in addition exclusion windows (exclusionZone) can
-%> ensure a subject doesn't saccade to particular parts of the screen.
-%> fixInit allows you to define a minimum time with which the subject can
-%> initiate a saccade away from a position (which stops a subject cheating
-%> by moving the eyes too soon).
+%>```matlab
+%> >> eT = eyelinkManager('verbose', true);
+%> >> eT.runDemo();
+%>```
 %>
-%> For the eyelink we also allow the use of remote calibration and can call
-%> a reward systems during calibration / validation to improve subject
-%> performance compared to the eyelink toolbox alone.
+%> Multiple fixation windows can be assigned (either circular or rectangular),
+%> and in addition multiple exclusion windows (exclusionZone) can ensure a
+%> subject doesn't saccade to particular parts of the screen. fixInit allows you
+%> to define a minimum time with which the subject can initiate a saccade away
+%> from a position (which stops a subject cheating by moving the eyes too soon).
+%>
+%> For the eyelink we also allow the use of remote calibration and can call a
+%> reward systems during calibration / validation to improve subject performance
+%> compared to the eyelink toolbox alone.
 %>
 %> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
@@ -37,23 +44,28 @@ classdef eyelinkManager < optickaCore
 	
 	properties
 		%> fixation window in deg with 0,0 being the screen center:
-		%> if X and Y have multiple rows, assume each one is a different fixation window.
-		%> if radius has a single value, assume circular window
-		%> if radius has 2 values assume width x height rectangle
+		%>
+		%> if X and Y have multiple rows, assume each row is a different
+		%> fixation window. so that multiple fixtation windows can be used.
+		%>
+		%> if radius has a single value, assume circular window if radius has 2
+		%> values assume width × height rectangle (not strictly a radius!)
+		%>
 		%> initTime is the time the subject has to initiate fixation
-		%> time is the time the sbject must maintain fixation within the window
+		%>
+		%> time is the time the subject must maintain fixation within the window
+		%>
 		%> strict = false allows subject to exit and enter window without
 		%> failure, useful during training
 		fixation struct				= struct('X',0,'Y',0,'initTime',1,'time',1,...
 									'radius',1,'strict',true)
-		%> Use exclusion zones where no eye movement allowed: [-degX +degX -degY +degY]
-		%> Add rows to generate succesive exclusion zones.
+		%> Use exclusion zones where no eye movement allowed: [-degX +degX -degY
+		%> +degY] Add rows to generate multiple exclusion zones.
 		exclusionZone double		= []
-		%> we can set an optional initial window that the subject must stay
-		%> inside before they saccade to the target window. This
-		%> restricts guessing and "cheating", by forcing a minimum delay
-		%> (default = 100ms) before initiating a saccade. Only used if X is not
-		%> empty.
+		%> we can define an optional window that the subject must stay inside
+		%> before they saccade to other targets. This restricts guessing and
+		%> "cheating", by forcing a minimum delay (default = 100ms / 0.1s)
+		%> before initiating a saccade. Only used if X position is not empty.
 		fixInit	struct				= struct('X',[],'Y',[],'time',0.1,'radius',2)
 		%> add a manual offset to the eye position, similar to a drift correction
 		%> but handled by the eyelinkManager.
@@ -62,18 +74,18 @@ classdef eyelinkManager < optickaCore
 		isDummy logical				= false
 		%> do we record and retrieve eyetracker EDF file?
 		recordData logical			= true
-		%> do we ignore blinks, if true then we do not update X and Y position from
-		%> previous eye location, meaning the various methods will maintain position,
-		%> e.g. if you are fixated and blink, the within-fixation X and Y position are
-		%> retained so that a blink does not "break" fixation. a blink is defined as
-		%> a state whre gx and gy are MISSING and pa is 0. Technically we can't 
-		%> really tell if a subject is blinking or has removed their head using the 
-		%> float data.
+		%> do we ignore blinks, if true then we do not update X and Y position
+		%> from previous eye location, meaning the various methods will maintain
+		%> position, e.g. if you are fixated and blink, the within-fixation X
+		%> and Y position are retained so that a blink does not "break"
+		%> fixation. a blink is defined as a state whre gx and gy are MISSING
+		%> and pa is 0. Technically we can't really tell if a subject is
+		%> blinking or has removed their head using the float data.
 		ignoreBlinks logical		= false
-		%> remote calibration enables manual control and selection of each fixation
-		%> this is useful for a baby or monkey who has not been trained for fixation
-		%> use 1-9 to show each dot, space to select fix as valid, and 
-		%> INS key ON EYELINK KEYBOARD to accept calibration!
+		%> remote calibration enables manual control and selection of each
+		%> fixation this is useful for a baby or monkey who has not been trained
+		%> for fixation use 1-9 to show each dot, space to select fix as valid,
+		%> and INS key ON EYELINK KEYBOARD to accept calibration!
 		remoteCalibration logical	= false
 		%> tracker update speed (Hz), should be 250 500 1000 2000
 		sampleRate double			= 1000
@@ -161,11 +173,11 @@ classdef eyelinkManager < optickaCore
 		%> the PTB screen to work on, passed in during initialise
 		screen						= []
 		%> All gaze X position in degrees reset using resetFixation
-		xAll							= []
+		xAll						= []
 		%> Last gaze Y position in degrees reset using resetFixation
-		yAll							= []
+		yAll						= []
 		%> all pupil size reset using resetFixation
-		pupilAll						= []
+		pupilAll					= []
 	end
 	
 	properties (SetAccess = protected, GetAccess = ?optickaCore)
@@ -1538,7 +1550,7 @@ classdef eyelinkManager < optickaCore
 					end
 			end
 		end
-		
+
 		% ===================================================================
 		%> @brief
 		%>

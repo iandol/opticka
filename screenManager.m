@@ -1,65 +1,76 @@
 % ========================================================================
 %> @brief screenManager — manage opening and configuring the screen
 %>
-%> screenManager manages the PTB screen settings. You can set many
+%> screenManager manages the (many) PTB screen settings. You can set many
 %> properties of this class to control PTB screens, and use it to open and
 %> close the screen based on those properties. This class controls the
 %> transformation from degrees into pixels, and it can offset the screen
-%> coordinates. It also manages movie recording of the screen buffer and
-%> some basic drawing commands like grids, spots and the hide flash trick
-%> from Mario.
+%> coordinates. By setting `bitDepth` you can enable Display++, DataPixx, or
+%> HDR and high bit-depth display modes. It also manages movie recording of
+%> the screen buffer. Finally it wraps some basic drawing commands like
+%> grids, text, spots or other basic things that a dedicated stimulus class
+%> would be overkill
 %>
 %> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef screenManager < optickaCore
 	
 	properties
-		%> the monitor to use, 0 is the main display on macOS/Linux
-		%> default value will be set to max(Screen('Screens'))
+		%> the display to use, 0 is the main display on macOS/Linux
+		%> default value will be set to `max(Screen('Screens'))`
 		screen double							= []
-		%> Pixels Per Centimeter — used for calculating the number of pixels per visual degree (ppd)
-		%> MBP 1440x900 is 33.2x20.6cm so 44px/cm, Flexscan is 32px/cm @1280 26px/cm @ 1024
-		%> Display++ is 27px/cm @1920x1080
-		%> Use calibrateSize.m function to measure this value accurately for each monitor you will use.
+		%> Pixels Per Centimeter — used for calculating the number of pixels per
+		%> visual degree (ppd). Use the calibrateSize.m function to measure this value accurately for each
+		%> monitor you will use. Examples: MBP 1440x900 is 33.2x20.6cm so 44px/cm; Flexscan is
+		%> 32px/cm @1280 26px/cm @ 1024; Display++ is 27px/cm @1920x1080
 		pixelsPerCm double						= 36
 		%> distance in centimeters of subject from Display 
 		%> rad2ang(2 * atan( size / (2 * distance) ) ) = Xdeg
 		%> when size == 1cm & distance == 57.3cm; X == 1deg
 		distance double							= 57.3
-		%> windowed: when FALSE use fullscreen; set to TRUE and it is windowed 800x600pixels or you
-		%> can add in a window width and height i.e. [800 600] to specify windowed size. Remember
-		%> that windowed presentation should *never* be used for real experimental
-		%> presentation due to poor timing…
+		%> windowed: when FALSE use fullscreen; set to TRUE and it is windowed
+		%> 800x600pixels or you can add in a window width and height i.e. [800
+		%> 600] to specify windowed size. Remember that windowed presentation
+		%> should *never* be used for real experimental presentation due to poor
+		%> timing…
 		windowed								= false
-		%> change the debug parameters for poorer temporal fidelity but no sync testing etc.
+		%> enable debug for poorer temporal fidelity but no sync testing etc.
 		debug logical							= false
-		%> shows the info text and position grid during stimulus presentation if true
+		%> shows some info text and position grid during stimulus presentation if
+		%> true
 		visualDebug logical						= false
-		%> normally should be left at 1 (1 is added to this number so doublebuffering is enabled)
+		%> normally should be left at 1 (1 is added to this number so
+		%> doublebuffering is enabled)
 		doubleBuffer uint8						= 1
-		%> float precision and bitDepth of framebuffer/output:  
-		%>  '8bit' is best for old GPUs, but prefer 'FloatingPoint32BitIfPossible' for newer GPUs. 
-		%> Native high bitdepths (assumes FloatingPoint32Bit internal processing): 
-		%>   'PseudoGray', 'HDR', 'Native10Bit', 'Native11Bit', 'Native16Bit', 'Native16BitFloat'
-		%> Options to enable Display++ or VPixx modes: 
-		%>  'EnableBits++Bits++Output', 'EnableBits++Mono++Output', 'EnableBits++Mono++OutputWithOverlay' or 'EnableBits++Color++Output'
-		%>  'EnableDataPixxM16Output','EnableDataPixxC48Output'
+		%> float precision and bitDepth of framebuffer/output:
+		%> '8bit' is best for old GPUs, but prefer
+		%> 'FloatingPoint32BitIfPossible' for newer GPUs. Native high bitdepths
+		%> (assumes FloatingPoint32Bit internal processing): 'PseudoGray',
+		%> 'HDR', 'Native10Bit', 'Native11Bit', 'Native16Bit',
+		%> 'Native16BitFloat' Options to enable Display++ or VPixx modes:
+		%> 'EnableBits++Bits++Output', 'EnableBits++Mono++Output',
+		%> 'EnableBits++Mono++OutputWithOverlay' or 'EnableBits++Color++Output'
+		%> 'EnableDataPixxM16Output','EnableDataPixxC48Output'
 		bitDepth char							= 'FloatingPoint32BitIfPossible'
-		%> The acceptable variance in flip timing tests performed when
-		%> screen opens, set with Screen('Preference', 'SyncTestSettings', syncVariance)
-		%> AMD cards under Ubuntu are very low variance, PTB default is 2e-04
+		%> The acceptable variance in flip timing tests performed when screen
+		%> opens, set with Screen('Preference', 'SyncTestSettings',
+		%> syncVariance) AMD cards under Ubuntu are very low variance, PTB
+		%> default is 2e-04
 		syncVariance double						= 2e-04
-		%> timestamping mode 1=beamposition,kernel fallback | 2=beamposition crossvalidate with kernel
+		%> timestamping mode 1=beamposition,kernel fallback | 2=beamposition
+		%> crossvalidate with kernel
 		timestampingMode double					= 1
 		%> multisampling sent to the graphics card, try values 0[disabled], 4, 8
-		%> and 16 -- useful for textures to minimise aliasing, but this
-		%> does provide extra work for the GPU
+		%> and 16 -- useful for textures to minimise aliasing, but this does
+		%> provide extra work for the GPU
 		antiAlias double						= 0
 		%> background RGBA of display during stimulus presentation
 		backgroundColour double					= [0.5 0.5 0.5 1.0]
-		%> shunt center by X degrees (coordinates are in degrees from centre of monitor)
+		%> shunt center by X degrees (coordinates are in degrees from centre of
+		%> monitor)
 		screenXOffset double					= 0
-		%> shunt center by Y degrees (coordinates are in degrees from centre of monitor)
+		%> shunt center by Y degrees (coordinates are in degrees from centre of
+		%> monitor)
 		screenYOffset double					= 0
 		%> use OpenGL blending mode
 		blend logical							= false
@@ -67,11 +78,11 @@ classdef screenManager < optickaCore
 		srcMode char							= 'GL_SRC_ALPHA'
 		%> OpenGL blending dst mode
 		dstMode char							= 'GL_ONE_MINUS_SRC_ALPHA'
-		%> show a white square in the top-right corner to trigger a
-		%> photodiode attached to screen. This is only displayed when the
-		%> stimulus is shown, not during the blank and can therefore be used
-		%> for timing validation. For stateMachine tasks you need to
-		%> pass in the drawing command for this to take effect.
+		%> show a white square in the top-right corner to trigger a photodiode
+		%> attached to screen. This is only displayed when the stimulus is
+		%> shown, not during the blank and can therefore be used for timing
+		%> validation. For stateMachine tasks you need to pass in the drawing
+		%> command for this to take effect.
 		photoDiode logical						= false
 		%> gamma correction info saved as a calibrateLuminance object
 		gammaTable calibrateLuminance
@@ -83,12 +94,15 @@ classdef screenManager < optickaCore
 		verbose									= false
 		%> level of PTB verbosity, set to 10 for full PTB logging
 		verbosityLevel double					= 3
-		%> Use retina resolution natively (worse performance but double resolution)
+		%> Use retina resolution natively (worse performance but double
+		%> resolution)
 		useRetina logical						= false
-		%> Screen To Head Mapping, a Nx3 vector: Screen('Preference', 'ScreenToHead', screen, head, crtc);
-		%> Each N should be a different display
+		%> Screen To Head Mapping, a Nx3 vector: Screen('Preference',
+		%> 'ScreenToHead', screen, head, crtc); Each N should be a different
+		%> display
 		screenToHead							= []
-		%> force framerate for Display++ (120Hz or 100Hz, empty uses the default OS setup)
+		%> force framerate for Display++ (120Hz or 100Hz, empty uses the default
+		%> OS setup)
 		displayPPRefresh double					= []
 		%> hide the black flash as PTB tests its refresh timing, uses a gamma
 		%> trick from Mario
@@ -96,16 +110,17 @@ classdef screenManager < optickaCore
 	end
 	
 	properties (Constant)
-		%> possible bitDepths
+		%> possible bitDepth or display modes
 		bitDepths cell = {'FloatingPoint32BitIfPossible'; 'FloatingPoint32Bit'; '8bit';...
 			'HDR'; 'PseudoGray'; 'Native10Bit'; 'Native11Bit'; 'Native16Bit'; 'Native16BitFloat';...
-			'EnableNative10BitFrameBuffer'; 'EnableNative11BitFrameBuffer'; 'EnableNative16BitFrameBuffer';...
-			'FixedPoint16Bit'; 'FloatingPoint16Bit';...
+			'EnableNative10BitFrameBuffer'; 'EnableNative11BitFrameBuffer';...
+			'EnableNative16BitFrameBuffer'; 'FixedPoint16Bit'; 'FloatingPoint16Bit';...
 			'Bits++Bits++'; 'Bits++Mono++'; 'Bits++Color++';...
 			'Bits++Bits++Output'; 'Bits++Mono++Output'; 'Bits++Color++Output';...
-			'EnableBits++Bits++Output'; 'EnableBits++Color++Output';'EnableBits++Mono++Output';'EnableBits++Mono++OutputWithOverlay';...
+			'EnableBits++Bits++Output'; 'EnableBits++Color++Output';...
+			'EnableBits++Mono++Output';'EnableBits++Mono++OutputWithOverlay';...
 			'EnableDataPixxM16Output';'EnableDataPixxC48Output'}
-		%> possible blend modes
+		%> possible OpenGL blend modes (src or dst)
 		blendModes cell = {'GL_ZERO'; 'GL_ONE'; 'GL_DST_COLOR'; 'GL_ONE_MINUS_DST_COLOR';...
 			'GL_SRC_ALPHA'; 'GL_ONE_MINUS_SRC_ALPHA'; 'GL_DST_ALPHA';...
 			'GL_ONE_MINUS_DST_ALPHA'; 'GL_SRC_ALPHA_SATURATE' }
@@ -114,16 +129,18 @@ classdef screenManager < optickaCore
 	properties (Hidden = true)
 		%> The mode to use for color++ mode
 		colorMode								= 2
-		%> an optional audioManager that experiments can use. can play
-		%> samples or simple beeps
+		%> an optional audioManager that experiments can use. can play samples
+		%> or simple beeps
 		audio audioManager
-		%> for some development macOS and windows machines we have to disable sync tests,
-		%> but we hide this as we should remember this is for development ONLY!
+		%> for some development macOS and windows machines we have to disable
+		%> sync tests, but we hide this as we should remember this is for
+		%> development ONLY!
 		disableSyncTests logical				= false
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Dependent = true)
-		%> dependent Pixels Per Degree property; calculated from distance and pixelsPerCm
+		%> dependent Pixels Per Degree property; calculated from distance and
+		%> pixelsPerCm.
 		%> pixelsPerDegree = pixelsPerCm  ×  (distance ÷ 57.3)
 		ppd
 	end

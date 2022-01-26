@@ -1,6 +1,6 @@
 % ========================================================================
 %> @brief tobiiManager wraps around the Titta toolbox functions
-%> offering a interface consistent with the previous eyelinkManager, offering
+%> offering a interface consistent with eyelinkManager, offering
 %> methods to check and change fixation windows gaze contingent tasks easily.
 %>
 %> The core methods enable the user to test for common behavioural eye
