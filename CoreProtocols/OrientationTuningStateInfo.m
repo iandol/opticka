@@ -55,37 +55,66 @@ me.lastXPosition			= tS.fixX;
 me.lastYPosition			= tS.fixY;
 
 %==================================================================
-%---------------------------Eyelink setup--------------------------
-me.useEyeLink				= true; % make sure we are using eyetracker
+%---------------------------Eyetracker setup-----------------------
+% NOTE: the opticka GUI can set eyetracker options too, if you set options
+% here they will OVERRIDE the GUI ones; if they are commented then the GUI
+% options are used. me.elsettings and me.tobiisettings contain the GUI
+% settings you can test if they are empty or not and set them based on
+% that...
 eT.name 					= tS.name;
-eT.sampleRate 				= 250; % sampling rate
-eT.calibrationStyle 		= 'HV5'; % calibration style
-eT.calibrationProportion	= [0.3 0.3]; %the proportion of the screen occupied by the calibration stimuli
-if tS.saveData == true;		eT.recordData = true; end %===save EDF file?
-if me.dummyMode;			eT.isDummy = true; end %===use dummy or real eyetracker? 
-%-----------------------
-% remote calibration enables manual control and selection of each fixation
-% this is useful for a baby or monkey who has not been trained for fixation
-% use 1-9 to show each dot, space to select fix as valid, INS key ON EYELINK KEYBOARD to
-% accept calibration!
-eT.remoteCalibration		= false; 
-%-----------------------
-eT.modify.calibrationtargetcolour = [1 1 1]; % calibration target colour
-eT.modify.calibrationtargetsize = 2; % size of calibration target as percentage of screen
-eT.modify.calibrationtargetwidth = 0.15; % width of calibration target's border as percentage of screen
-eT.modify.waitformodereadytime	= 500;
-eT.modify.devicenumber 			= -1; % -1 = use any attachedkeyboard
-eT.modify.targetbeep 			= 1; % beep during calibration
-%Initialise the eyeLink object with X, Y, FixInitTime, FixTime, Radius, StrictFix
+if tS.saveData == true;		eT.recordData = true; end %===save ET data?					
+if me.useEyeLink
+	eT.name 						= tS.name;
+	if me.dummyMode;				eT.isDummy = true; end %===use dummy or real eyetracker? 
+	if tS.saveData == true;			eT.recordData = true; end %===save EDF file?
+	if isempty(me.elsettings)		%==check if GUI settings are empty
+		eT.sampleRate				= 250;		%==sampling rate
+		eT.calibrationStyle			= 'HV5';	%==calibration style
+		eT.calibrationProportion	= [0.4 0.4]; %==the proportion of the screen occupied by the calibration stimuli
+		%-----------------------
+		% remote calibration enables manual control and selection of each
+		% fixation this is useful for a baby or monkey who has not been trained
+		% for fixation use 1-9 to show each dot, space to select fix as valid,
+		% INS key ON EYELINK KEYBOARD to accept calibration!
+		eT.remoteCalibration		= false; 
+		%-----------------------
+		eT.modify.calibrationtargetcolour = [1 1 1]; %==calibration target colour
+		eT.modify.calibrationtargetsize = 2;		%==size of calibration target as percentage of screen
+		eT.modify.calibrationtargetwidth = 0.15;	%==width of calibration target's border as percentage of screen
+		eT.modify.waitformodereadytime	= 500;
+		eT.modify.devicenumber 			= -1;		%==-1 = use any attachedkeyboard
+		eT.modify.targetbeep 			= 1;		%==beep during calibration
+	end
+elseif me.useTobii
+	eT.name 						= tS.name;
+	if me.dummyMode;				eT.isDummy = true; end %===use dummy or real eyetracker? 
+	if isempty(me.tobiisettings) 	%==check if GUI settings are empty
+		eT.model					= 'Tobii Pro Spectrum';
+		eT.sampleRate				= 300;
+		eT.trackingMode				= 'human';
+		eT.calibrationStimulus		= 'animated';
+		eT.autoPace					= true;
+		%-----------------------
+		% remote calibration enables manual control and selection of each
+		% fixation this is useful for a baby or monkey who has not been trained
+		% for fixation
+		eT.manualCalibration		= false;
+		%-----------------------
+		eT.calPositions				= [ .2 .5; .5 .5; .8 .5];
+		eT.valPositions				= [ .5 .5 ];
+	end
+end
+
+%Initialise the eyeTracker object with X, Y, FixInitTime, FixTime, Radius, StrictFix
 eT.updateFixationValues(tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
-%make sure we don't start with any exclusion zones set up
+%Ensure we don't start with any exclusion zones set up
 eT.resetExclusionZones();
 
 %==================================================================
 %----WHICH states assigned as correct or break for online plot?----
 %----You need to use regex patterns for the match (doc regexp)-----
-bR.correctStateName				= '^correct';
-bR.breakStateName				= '^(breakfix|incorrect)';
+bR.correctStateName				= '^correct'; % regex for correct state name
+bR.breakStateName				= '^(breakfix|incorrect)'; % regex for incorrect state names
 
 %==================================================================
 %--------------randomise stimulus variables every trial?-----------
@@ -124,22 +153,24 @@ stims.setChoice				= 1;
 hide(stims);
 
 %==================================================================
-% N x 2 cell array of regexpi strings, list to skip the current -> next state's exit functions; for example
-% skipExitStates = {'fixate','incorrect|breakfix'}; means that if the currentstate is
-% 'fixate' and the next state is either incorrect OR breakfix, then skip the FIXATE exit
-% state. Add multiple rows for skipping multiple state's exit states.
+% N x 2 cell array of regexpi strings, list to skip the current -> next
+% state's exit functions; for example skipExitStates =
+% {'fixate','incorrect|breakfix'}; means that if the currentstate is
+% 'fixate' and the next state is either incorrect OR breakfix, then skip
+% the FIXATE exit state. Add multiple rows for skipping multiple state's
+% exit states.
 sM.skipExitStates			= {'fixate','incorrect|breakfix'};
 
 %===================================================================
 %-----------------State Machine State Functions---------------------
-% each cell {array} holds a set of anonymous function handles which are executed by the
-% state machine to control the experiment. The state machine can run sets
-% at entry, during, to trigger a transition, and at exit. Remember these
-% {sets} need to access the objects that are available within the
-% runExperiment context (see top of file). You can also add global
-% variables/objects then use these. The values entered here are set on
-% load, if you want up-to-date values then you need to use methods/function
-% wrappers to retrieve/set them.
+% each cell {array} holds a set of anonymous function handles which are
+% executed by the state machine to control the experiment. The state
+% machine can run sets at entry, during, to trigger a transition, and at
+% exit. Remember these {sets} need to access the objects that are available
+% within the runExperiment context (see top of file). You can also add
+% global variables/objects then use these. The values entered here are set
+% on load, if you want up-to-date values then you need to use
+% methods/function wrappers to retrieve/set them.
 
 %--------------------pause entry
 pauseEntryFcn = {

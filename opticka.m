@@ -223,7 +223,11 @@ classdef opticka < optickaCore
 		function initialiseUI(me)
 			try
 				me.ss = SplashScreen(['Opticka V' me.optickaVersion],'opticka.png');
-				me.ss.addText( 10, 30, ['Loading Opticka V' me.optickaVersion '…'], 'FontSize', 20, 'Color', [1 0.8 0.5] )
+				if isdeployed
+					me.ss.addText( 10, 30, ['Loading Opticka [D] V' me.optickaVersion '…'], 'FontSize', 20, 'Color', [1 0.8 0.5] )
+				else
+					me.ss.addText( 10, 30, ['Loading Opticka V' me.optickaVersion '…'], 'FontSize', 20, 'Color', [1 0.8 0.5] )
+				end
 				me.paths.whoami = mfilename;
 				me.paths.whereami = fileparts(which(mfilename));
 				me.paths.startServer = [me.paths.whereami filesep 'udpserver' filesep 'launchDataConnection'];
@@ -811,9 +815,11 @@ classdef opticka < optickaCore
 		%> 
 		% ===================================================================
 		function loadPrefs(me)
+			anyLoaded = false; prefnames = '';
 			for i = 1:length(me.uiPrefsList)
 				prfname = me.uiPrefsList{i};
 				if ispref('opticka',prfname) %pref exists
+					prefnames = [prefnames ' ' prfname];
 					if isprop(me.h, prfname) %ui widget exists
 						myhandle = me.h.(prfname);
 						prf = getpref('opticka',prfname);
@@ -835,10 +841,11 @@ classdef opticka < optickaCore
 									myhandle.Value = prf;
 								end
 						end
+						anyLoaded = true;
 					end
 				end	
 			end
-			fprintf('\n===>>> Opticka loaded its local preferences...\n');
+			if anyLoaded; fprintf('\n===>>> Opticka loaded its local preferences: %s \n',prefnames); end
 		end
 		
 		% ===================================================================
@@ -1114,7 +1121,7 @@ classdef opticka < optickaCore
 						me.r.paths.stateInfoFile=regexprep(tmp.r.stateInfoFile,'(.+)(.Code.opticka.+)',[getenv('HOME') '$2'],'ignorecase','once');
 						fprintf(' rehome ')
 					end
-					if isempty(me.r.paths.stateInfoFile)
+					if isempty(me.r.paths.stateInfoFile) || ~exist(me.r.paths.stateInfoFile,'file')
 						warndlg(['Couldn''t find state info file! Sources were: ' p1 ' ' p2 '  --  Revert to DefaultStateInfo.m']);
 						me.r.paths.stateInfoFile = which('DefaultStateInfo.m');
 					else

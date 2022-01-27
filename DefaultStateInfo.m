@@ -1,33 +1,63 @@
 %> DEFAULT state configuration file for runExperiment.runTask (full
-%> behavioural task design). This state file has a prefix state, a fixation
-%> state for the subject to initiate fixation, then a stimulus state. If the
-%> subject fails initial fixation, an incorrect state is called. If the
-%> subject fails fixation during stimulus presentation, a breakfix state is
-%> called. It assumes there are TWO stimuli in the stims object, the first
-%> (stims{1}) is any type of visual stimulus and the second is a fixation
-%> stimulus (stims{2}).
-%
-% State files control the logic of a behavioural task, switching between
-% states and executing functions on ENTER, WITHIN and on EXIT of states. In
-% addition there are TRANSITION function sets which can test things like
-% eye position to conditionally jump to another state. This state control
-% file will usually be run in the scope of the calling
-% runExperiment.runTask() method and other objects will be available at run
-% time (with easy to use names listed below). The following class objects
-% are already loaded by runTask() and available to use; each object has
-% methods (functions) useful for running the task:
-%
-% me		= runExperiment object ('self' in OOP terminology) 
-% s			= screenManager object
-% aM		= audioManager object
-% stims		= our list of stimuli (metaStimulus class)
-% sM		= State Machine (stateMachine class)
-% task		= task sequence (taskSequence class)
-% eT		= eyetracker manager
-% io		= digital I/O to recording system
-% rM		= Reward Manager (LabJack or Arduino TTL trigger to reward system/Magstim)
-% bR		= behavioural record plot (on-screen GUI during a task run)
-% tS		= structure to hold general variables, will be saved as part of the data
+%> behavioural task design). This state file has a [prefix] state, a
+%> [fixate] state for the subject to initiate fixation. If the subject fails
+%> initial fixation, an [incorrect] state is called. If the subject fails
+%> fixation DURING [stimulus] presentation, a [breakfix] state is called. It
+%> assumes there are TWO stimuli in the stims object, the first (stims{1})
+%> is any type of visual stimulus and the second is a fixation cross
+%> (stims{2}). For this task most state transitions are deterministic, but
+%> for fixate there is a transitionFcn that checks if the subject initiates
+%> fixation [inFixFcn], and for stimulus there is a check if the subject
+%> maintains fixation for an additional time [maintainFixfcn].
+%>
+%>    ┌───────────────────────────────────────┐
+%>    │                                       ▼
+%>    │                                     ┌───────────────────────────┐
+%> ┌──┼───────────────────────────────────▶ │          prefix           │ ◀┐
+%> │  │                                     └───────────────────────────┘  │
+%> │  │                                       │                            │
+%> │  │                                       ▼                            │
+%> │┌───────────┐ Transition                ┌───────────────────────────┐  │
+%> ││ incorrect │ inFixFcn=>incorrect       │          fixate           │  │
+%> ││           │◀───────────────────────── │ show(stims, 2)            │  │
+%> │└───────────┘                           └───────────────────────────┘  │
+%> │                                          │                            │
+%> │                                          │ Transition                 │
+%> └──┐                                       │ inFixFcn=>stimulus         │
+%>    │                                       ▼                            │
+%>  ┌───────────┐ Transition                ┌───────────────────────────┐  │
+%>  │  CORRECT  │ maintainFixFcn=>correct   │         stimulus          │  │
+%>  │           │◀───────────────────────── │ show(stims, [1 2])        │  │
+%>  └───────────┘                           └───────────────────────────┘  │
+%>                                            │                            │
+%>                                            │ Transition                 │
+%>                                            │ maintainFixFcn=>breakfix   │
+%>                                            ▼                            │
+%>                                          ┌───────────────────────────┐  │
+%>                                          │         BREAKFIX          │ ─┘
+%>                                          └───────────────────────────┘
+%>
+%> State files control the logic of a behavioural task, switching between
+%> states and executing functions on ENTER, WITHIN and on EXIT of states. In
+%> addition there are TRANSITION function sets which can test things like
+%> eye position to conditionally jump to another state. This state control
+%> file will usually be run in the scope of the calling
+%> runExperiment.runTask() method and other objects will be available at run
+%> time (with easy to use names listed below). The following class objects
+%> are already loaded by runTask() and available to use; each object has
+%> methods (functions) useful for running the task:
+%>
+%> me		= runExperiment object ('self' in OOP terminology) 
+%> s			= screenManager object
+%> aM		= audioManager object
+%> stims		= our list of stimuli (metaStimulus class)
+%> sM		= State Machine (stateMachine class)
+%> task		= task sequence (taskSequence class)
+%> eT		= eyetracker manager
+%> io		= digital I/O to recording system
+%> rM		= Reward Manager (LabJack or Arduino TTL trigger to reward system/Magstim)
+%> bR		= behavioural record plot (on-screen GUI during a task run)
+%> tS		= structure to hold general variables, will be saved as part of the data
 
 %==================================================================
 %------------------------General Settings--------------------------
@@ -91,11 +121,11 @@ me.lastYExclusion			= [];
 
 %==================================================================
 %---------------------------Eyetracker setup-----------------------
-% NOTE: the opticka GUI can set eyetracker options too, if you set options here
-% they will OVERRIDE the GUI ones; if they are commented then the GUI options
-% are used. runExperiment.elsettings and runExperiment.tobiisettings
-% contain the GUI settings you can test if they are empty or not and set
-% them based on that...
+% NOTE: the opticka GUI can set eyetracker options too, if you set options
+% here they will OVERRIDE the GUI ones; if they are commented then the GUI
+% options are used. me.elsettings and me.tobiisettings contain the GUI
+% settings you can test if they are empty or not and set them based on
+% that...
 eT.name 					= tS.name;
 if tS.saveData == true;		eT.recordData = true; end %===save ET data?					
 if me.useEyeLink
@@ -107,10 +137,10 @@ if me.useEyeLink
 		eT.calibrationStyle			= 'HV5';	%==calibration style
 		eT.calibrationProportion	= [0.4 0.4]; %==the proportion of the screen occupied by the calibration stimuli
 		%-----------------------
-		% remote calibration enables manual control and selection of each fixation
-		% this is useful for a baby or monkey who has not been trained for fixation
-		% use 1-9 to show each dot, space to select fix as valid, INS key ON EYELINK KEYBOARD to
-		% accept calibration!
+		% remote calibration enables manual control and selection of each
+		% fixation this is useful for a baby or monkey who has not been trained
+		% for fixation use 1-9 to show each dot, space to select fix as valid,
+		% INS key ON EYELINK KEYBOARD to accept calibration!
 		eT.remoteCalibration		= false; 
 		%-----------------------
 		eT.modify.calibrationtargetcolour = [1 1 1]; %==calibration target colour
@@ -130,8 +160,9 @@ elseif me.useTobii
 		eT.calibrationStimulus		= 'animated';
 		eT.autoPace					= true;
 		%-----------------------
-		% remote calibration enables manual control and selection of each fixation
-		% this is useful for a baby or monkey who has not been trained for fixation
+		% remote calibration enables manual control and selection of each
+		% fixation this is useful for a baby or monkey who has not been trained
+		% for fixation
 		eT.manualCalibration		= false;
 		%-----------------------
 		eT.calPositions				= [ .2 .5; .5 .5; .8 .5];
@@ -187,10 +218,12 @@ stims.setChoice					= 1;
 hide(stims);
 
 %==================================================================
-% N x 2 cell array of regexpi strings, list to skip the current -> next state's exit functions; for example
-% skipExitStates = {'fixate','incorrect|breakfix'}; means that if the currentstate is
-% 'fixate' and the next state is either incorrect OR breakfix, then skip the FIXATE exit
-% state. Add multiple rows for skipping multiple state's exit states.
+% N x 2 cell array of regexpi strings, list to skip the current -> next
+% state's exit functions; for example skipExitStates =
+% {'fixate','incorrect|breakfix'}; means that if the currentstate is
+% 'fixate' and the next state is either incorrect OR breakfix, then skip
+% the FIXATE exit state. Add multiple rows for skipping multiple state's
+% exit states.
 sM.skipExitStates			= {'fixate','incorrect|breakfix'};
 
 %===================================================================
@@ -212,8 +245,8 @@ sM.skipExitStates			= {'fixate','incorrect|breakfix'};
 pauseEntryFcn = { 
 	@()hide(stims);
 	@()drawBackground(s); %blank the subject display
-	@()drawTextNow(s,'Paused, press [p] to resume...');
-	@()disp('Paused, press [p] to resume...');
+	@()drawTextNow(s,'PAUSED, press [p] to resume...');
+	@()disp('PAUSED, press [p] to resume...');
 	@()trackerClearScreen(eT); % blank the eyelink screen
 	@()trackerDrawText(eT,'PAUSED, press [P] to resume...');
 	@()trackerMessage(eT,'TRIAL_RESULT -100'); %store message in EDF
@@ -225,13 +258,17 @@ pauseEntryFcn = {
 
 %pause exit
 pauseExitFcn = {
-	@()startRecording(eT, true); %start recording eye position data again
+	%start recording eye position data again, note true is required here as
+	%the eyelink is started and stopped on each trial, but the tobii runs
+	%continuously, so @()startRecording(eT) only affects eyelink but
+	%@()startRecording(eT, true) affects both eyelink and tobii...
+	@()startRecording(eT, true); 
 }; 
 
 %====================================================PREFIXATION
 prefixEntryFcn = { 
 	@()enableFlip(me); 
-	@()needEyeSample(me,true); % make sure we start measuring eye position
+	@()needEyeSample(me, true); % make sure we start measuring eye position
 	@()hide(stims);
 };
 
@@ -461,6 +498,4 @@ stateInfoTmp = {
 
 disp(stateInfoTmp)
 disp('================>> Loaded state info file  <<================')
-clear pauseEntryFcn fixEntryFcn fixFcn initFixFcn fixExitFcn stimFcn maintainFixFcn incEntryFcn ...
-	incFcn incExitFcn breakEntryFcn breakFcn correctEntryFcn correctFcn correctExitFcn ...
-	calibrateFcn overrideFcn flashFcn gridFcn
+clearvars -regexp '.+Fcn$' % clear the cell arrays in the current workspace

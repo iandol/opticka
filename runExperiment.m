@@ -29,98 +29,101 @@
 classdef runExperiment < optickaCore
 	
 	properties
-		%> a metaStimulus class holding our stimulus objects
+		%> a metaStimulus class instance holding our stimulus objects
 		stimuli metaStimulus
-		%> the taskSequence object(s) for the task
+		%> a taskSequence class instance determining our stimulus variables
 		task taskSequence
-		%> screen manager object
+		%> a screenManager class instance managing the PTB Screen
 		screen screenManager
-		%> file to define the stateMachine state info
-		stateInfoFile char = ''
-		%> use Display++ for strobed digital I/O?
-		useDisplayPP logical = false
-		%> use dataPixx for strobed digital I/O?
-		useDataPixx logical = false
-		%> use LabJack T4 for strobed digital I/O?
-		useLabJackTStrobe logical = false
+		%> filename for a stateMachine state info
+		stateInfoFile char			= ''
+		%> use a Display++ for strobed digital I/O?
+		useDisplayPP logical		= false
+		%> use a dataPixx for strobed digital I/O?
+		useDataPixx logical			= false
+		%> use a LabJack T4/T7 for strobed digital I/O?
+		useLabJackTStrobe logical	= false
 		%> use LabJack U3/U6 for strobed digital I/O?
-		useLabJackStrobe logical = false
+		useLabJackStrobe logical	= false
 		%> use LabJack for reward TTL?
-		useLabJackReward logical = false
+		useLabJackReward logical	= false
 		%> use Arduino for reward TTL?
-		useArduino logical = false
+		useArduino logical			= false
 		%> use Eyelink eyetracker?
-		useEyeLink logical = false
+		useEyeLink logical			= false
 		%> use Tobii eyetracker?
-		useTobii logical = false
+		useTobii logical			= false
 		%> use eye occluder (custom arduino device) for monocular stimulation?
-		useEyeOccluder logical = false
+		useEyeOccluder logical		= false
 		%> use a dummy mode for the eyetrackers?
-		dummyMode logical = false
-		%> do we flip or not?
-		doFlip logical = true
+		dummyMode logical			= false
 		%> log all frame times?
-		logFrames logical = true
+		logFrames logical			= true
 		%> enable debugging? (poorer temporal fidelity)
-		debug logical = false
+		debug logical				= false
 		%> shows the info text and position grid during stimulus presentation
-		visualDebug logical = false
+		visualDebug logical			= false
 		%> draw simple fixation cross during trial for MOC tasks?
-		drawFixation logical = false
+		drawFixation logical		= false
 		%> flip as fast as possible?
-		benchmark logical = false
+		benchmark logical			= false
 		%> verbose logging to command window?
-		verbose = false
+		verbose						= false
 		%> what value to send on stimulus OFF
-		stimOFFValue double = 255
+		stimOFFValue double			= 255
 		%> subject name
-		subjectName char = 'Simulcra'
+		subjectName char			= 'Simulcra'
 		%> researcher name
-		researcherName char = 'Joanna Doe'
-		%> this lets the opticka UI leave commands to runExperiment
-		uiCommand char = ''
+		researcherName char			= 'Joanna Doe'
 	end
 	
 	properties (Transient = true)
 		%> structure for screenManager on initialisation and info from opticka
-		screenSettings struct = struct()
+		screenSettings struct		= struct()
+		%> this lets the opticka UI leave commands to runExperiment
+		uiCommand char				= ''
 	end
 	
 	properties (Hidden = true)
 		%> our old stimulus structure used to be a simple cell, now we use metaStimulus
 		stimulus
 		%> used to select single stimulus in training mode
-		stimList = []
+		stimList					= []
 		%> which stimulus is selected?
-		thisStim = []
+		thisStim					= []
 		%> tS is the runtime settings structure, saved here as a backup
 		tS
-		%> keep track of several task values
-		lastXPosition = 0
-		lastYPosition = 0
-		lastXExclusion = []
-		lastYExclusion = []
-		lastSize = 1
-		lastIndex = 0
 		%> what mode to run the Display++ digital I/O in? Plexon requires
 		%the use of a strobe trigger line, whereas most other equipment
 		%just uses simple threshold reading
-		dPPMode char = 'plain'
+		dPPMode char				= 'plain'
 		%> which port is the arduino on?
-		arduinoPort char = '/dev/ttyACM0'
+		arduinoPort char			= '/dev/ttyACM0'
 		%> initial eyelink settings
-		elsettings
+		elsettings 
 		%> initial tobii settings
 		tobiisettings
 	end
+
+	properties (Transient = true, Hidden = true)
+		%> keep track of several task values during runTask()
+		lastXPosition				= 0
+		lastYPosition				= 0
+		lastXExclusion				= []
+		lastYExclusion				= []
+		lastSize					= 1
+		lastIndex					= 0
+	end
 	
 	properties (SetAccess = private, GetAccess = public)
-		%> send strobe on next flip?
-		sendStrobe logical = false
-		%> need eyetracker sample on next flip?
-		needSample logical = false
-		%> send eyetracker SYNCTIME after next flip?
-		sendSyncTime logical = false
+		%> send a strobe on next flip?
+		sendStrobe logical			= false
+		%> need an eyetracker sample on next flip?
+		needSample logical			= false
+		%> send an eyetracker SYNCTIME on next flip?
+		sendSyncTime logical		= false
+		%> do we flip the screen or not?
+		doFlip logical				= true
 		%> stateMachine
 		stateMachine
 		%> eyetracker manager object
@@ -136,38 +139,38 @@ classdef runExperiment < optickaCore
 		%> Arduino control object
 		arduino 
 		%> state machine control cell array
-		stateInfo cell		= {}
-		%> general computer info
+		stateInfo cell				= {}
+		%> general computer info retrieved using PTB Screen('computer')
 		computer
-		%> PTB info
+		%> PTB version information: Screen('version')
 		ptb
 		%> copy of screen settings from screenManager
 		screenVals struct
-		%> MOC log times
+		%> log of timings for MOC tasks
 		runLog
-		%> task log times
+		%> log of timings for state machine tasks
 		taskLog
-		%> behavioural log
+		%> behavioural responses log
 		behaviouralRecord
 		%> general info on current run
 		currentInfo
 		%> variable info on the current run
 		variableInfo
 		%> previous info populated during load of a saved object
-		previousInfo struct = struct()
-		%> check if runExperiment is running or not
-		isRunning logical	= false
+		previousInfo struct			= struct()
+		%> return if runExperiment is running (true) or not (false)
+		isRunning logical			= false
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> fInc for managing keyboard sensitivity
-		fInc = 6
+		fInc						= 6
 		%> is it MOC run (false) or stateMachine runTask (true)?
-		isRunTask logical	= true
+		isRunTask logical			= true
 		%> are we using taskSequeence or not?
-		isTask logical		= true
+		isTask logical				= true
 		%> should we stop the task?
-		stopTask logical	= false
+		stopTask logical			= false
 		%> properties allowed to be modified during construction
 		allowedProperties char = ['useDisplayPP|useDataPixx|useEyeLink|'...
 			'useArduino|dummyMode|logFrames|subjectName|researcherName'...
@@ -189,37 +192,34 @@ classdef runExperiment < optickaCore
 	%=======================================================================
 		
 		% ===================================================================
-		%> @brief Class constructor
+		%> @brief runExperiment constructor
 		%>
-		%> More detailed description of what the constructor does.
-		%>
-		%> @param args are passed as a structure of properties which is
-		%> parsed.
+		%> @param args can be passed as a structure or name,arg pairs
 		%> @return instance of the class.
 		% ===================================================================
 		function me = runExperiment(varargin)
-			
-			args = optickaCore.addDefaults(varargin,struct('name','runExperiment'));
+			args = optickaCore.addDefaults(varargin,struct('name','Run Experiment'));
 			me=me@optickaCore(args); %superclass constructor
 			me.parseArgs(args,me.allowedProperties);
-			
 		end
 		
 		% ===================================================================
-		%> @brief The main run loop for MOC type experiments - a MOC
-		%> experiment just runs trials with variables applied to stimuli in a
-		%> fixed loop, no conditional logic. Use the behavioural tasks
-		%> using the state machine for more complex experimental paradigms.
-		%>
-		%> run uses built-in loop for experiment control and runs a
+		%> @brief The main run loop for method-of-constants (MOC)
+		%> 
+		%> runMOC() uses built-in loop for experiment control and runs a
 		%> methods-of-constants experiment with the settings passed to it (stimuli,task
 		%> and screen). This is different to the runTask method as it doesn't
-		%> use a stateMachine for experimental logic, just a minimal
-		%> trial+block loop.
+		%> use a stateMachine for experimental logic, just a minimal deterministic
+		%> trial+block loop. 
+		%>
+		%> @todo currently we can only record eye positions with the eyelink, add other tracker support
 		%>
 		%> @param me required class object
 		% ===================================================================
 		function runMOC(me)
+			% we try not to use global variables, however the external eyetracker
+			% API does not easily allow us to pass objects and so we use global
+			% variables in this specific case...
 			global rM %eyetracker calibration needs access to reward manager
 					
 			if isempty(me.screen) || isempty(me.task)
@@ -272,7 +272,7 @@ classdef runExperiment < optickaCore
 				% set up the eyelink interface
 				if me.useEyeLink || me.useTobii
 					if me.useTobii
-						warning('Tobii not valid for a MOC task, switching to eyelink summy mode')
+						warning('Tobii not valid for a MOC task, switching to eyelink dummy mode')
 						me.useTobii = false; me.useEyeLink = true; me.dummyMode = true; 
 					end
 					me.eyeTracker = eyelinkManager();
@@ -503,11 +503,12 @@ classdef runExperiment < optickaCore
 		end
 	
 		% ===================================================================
-		%> @brief runTask runs a state machine (behaviourally) driven task. Uses a StateInfo.m
-		%> file to control the behavioural paradigm. The state machine
-		%> controls the logic of the experiment, and this method manages the
-		%> display loop.
+		%> @brief runTask runs a state machine (behaviourally) driven task. 
 		%> 
+		%> Uses a StateInfo.m file to control the behavioural paradigm. The state
+		%> machine controls the logic of the experiment, and this method manages
+		%> the display loop.
+		% 
 		% ===================================================================
 		function runTask(me)
 			% we try not to use global variables, however the external eyetracker
@@ -516,10 +517,9 @@ classdef runExperiment < optickaCore
 			global rM %#ok<*GVMIS> %global reward manager we can share with eyetracker 
 			global aM %global audio manager we can share with eyetracker
 			
-			%-----make sure we reset any state machine functions to not
-			% cause problems when they are reassigned below. For example, io
-			% interfaces can be reset unless we clear this before we open
-			% the io.	
+			% make sure we reset any state machine functions to not cause problems
+			% when they are reassigned below. For example, io interfaces can be
+			% reset unless we clear this before we open the io.
 			me.stateInfo = {};
 			if isa(me.stateMachine,'stateMachine'); me.stateMachine.reset; me.stateMachine = []; end
 			
@@ -556,14 +556,15 @@ classdef runExperiment < optickaCore
 			
 			fprintf('\n\n\n===>>> Start task: %s <<<===\n\n\n',me.name);
 			
+			%--------------------------------------------------------------
 			% tS is a general structure to hold various parameters will be saved
 			% after the run; prefer structure over class to keep it light. These
 			% defaults can be overwritten by the StateFile.m
 			tS							= struct();
 			tS.name						= 'generic'; %==name of this protocol
 			tS.useTask					= false;	%==use taskSequence (randomised variable task object)
+			tS.keyExclusionPattern		= '^(fixate|stim)'; %==regex of which states not to check keyboard for checkKeysDuringStimulus
 			tS.checkKeysDuringStimulus	= false;	%==allow keyboard control? Slight drop in performance
-			tS.keyExclusionPattern		= '^(fixate|stim)';
 			tS.recordEyePosition		= false;	%==record eye position within PTB, **in addition** to the eyetracker?
 			tS.askForComments			= false;	%==little UI requestor asks for comments before/after run
 			tS.saveData					= false;	%==save behavioural and eye movement data?
@@ -1439,7 +1440,8 @@ classdef runExperiment < optickaCore
 		%>
 		%> @param
 		% ===================================================================
-		function needEyeSample(me,value)
+		function needEyeSample(me, value)
+			if ~exist('value','var'); value = true; end
 			me.needSample = value;
 		end
 		
