@@ -1,0 +1,12 @@
+*.asv
+*~
+*.tmp
+._*
+html*
+docs*
+debug.txt
+Junk
+.DS_Store
+.idea
+.bzrignore
+.vscode
