@@ -9,24 +9,24 @@ classdef spotStimulus < baseStimulus
 	
 	properties %--------------------PUBLIC PROPERTIES----------%
 		%> type can be "simple" or "flash"
-		type = 'simple'
+		type char = 'simple'
 		%> colour for flash, empty to inherit from screen background with 0 alpha
-		flashColour = []
+		flashColour double = []
 		%> time to flash on and off in seconds
-		flashTime = [0.25 0.25]
+		flashTime double {mustBeVector(flashTime)} = [0.25 0.25]
 		%> is the ON flash the first flash we see?
-		flashOn = true
+		flashOn logical = true
 		%> contrast scales from foreground to screen background colour
-		contrast = 1
+		contrast double {mustBeInRange(contrast,0,1)} = 1
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> stimulus family
-		family = 'spot'
+		family char = 'spot'
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Hidden = true)
-		typeList = {'simple','flash'}
+		typeList cell = {'simple','flash'}
 	end
 	
 	properties (Dependent = true, SetAccess = private, GetAccess = private)

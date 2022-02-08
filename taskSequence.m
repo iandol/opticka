@@ -1,22 +1,36 @@
 % ========================================================================
-%> @brief taskSequence a method of constants variable manager
+%> @class taskSequence
+%> @brief a variable randomisation manager
 %>
-%> This class takes a series of variables (contrast, angle etc) with
-%> a set of values and randomly interleves them into a pseudorandom variable
-%> list each of which has a unique index number. 
-
+%> This class takes one or more variables, each with an array of values
+%> and randomly interleves them into a randomised variable list each of
+%> which has a unique index number. This example creates an `angle` varible
+%> that is randomised over 5 different values and will be applied to the
+%> first 3 stimuli; in addition, the fourth stimulus will have the value
+%> offset by 45°:
+%>
+%> ```
+%> ts = taskSequence('nBlocks',10);
+%> ts.nVar(1).name = 'angle';
+%> ts.nVar(1).values = [ -90, -45, 0, 45, 90 ];
+%> ts.nVar(1).stimulus = [1, 2, 3];
+%> ts.nVar(1).offsetstimulus = 4;
+%> ts.nVar(1).offsetvalue = 45
+%> ts.randomiseTask;
+%> ts.showLog;
+%> ```
 %>
 %> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef taskSequence < optickaCore & dynamicprops
-	properties
-		%> structure holding each independant stimulus variable
-		%> name = name of the stimulus variable
-		%> values = the values as a numerical or cell array
-		%> stimulus = which stimulus to apply to?
-		%> offsetstimulus = an offset can be applied to other stimuli
-		%> offsetvalue = the value offset, e.g. 90 for angle will add 90 to any random angle value
-		%> e.g. nVar(1) = struct('name','contrast','stimulus',[1 2],'values',[0 0.1 0.2],'offsetstimulus',[3],'offsetvalue',[0.1])
+properties
+		%> structure holding each independant stimulus variable name = name
+		%> of the stimulus variable values = the values as a numerical or
+		%> cell array stimulus = which stimulus to apply to? offsetstimulus
+		%> = an offset can be applied to other stimuli offsetvalue = the
+		%> value offset, e.g. 90 for angle will add 90 to any random angle
+		%> value e.g. nVar(1) = struct('name','contrast','stimulus',[1
+		%> 2],'values',[0 0.1 0.2],'offsetstimulus',[3],'offsetvalue',[0.1])
 		nVar struct
 		%> independent block level identifying factor, for example
 		%> blockVar.values={'A','B'} + blockVar.probability = [0.6 0.4];
@@ -40,8 +54,6 @@ classdef taskSequence < optickaCore & dynamicprops
 		randomGenerator char = 'mt19937ar'
 		%> verbose or not
 		verbose = false
-		%> staircase manager, which interacts with the task sequence
-		staircase staircaseManager
 	end
 	
 	properties (Hidden = true)
@@ -113,20 +125,19 @@ classdef taskSequence < optickaCore & dynamicprops
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		isStimulus
 		%> cache value for nVars
 		nVars_
 		%> properties allowed during initial construction
 		allowedProperties char = ['randomise|nVar|blockVar|trialVar|nBlocks|trialTime|isTime|ibTime|realTime|randomSeed|fps'...
 			'randomGenerator|verbose|addBlank']
-		%> used to handle problems with dependant property nVar: the problem is
-		%> that set.nVar gets called before static loadobj, and therefore we need
-		%> to handle this differently. Initially set to empty, set to true when
-		%> running loadobj() and false when not loading object.
+		%> used to handle problems with dependant property nVar: the problem
+		%> is that set.nVar gets called before static loadobj, and therefore
+		%> we need to handle this differently. Initially set to empty, set
+		%> to true when running loadobj() and false when not loading object.
 		isLoading = []
 		%> properties used by loadobj when a structure is passed during load.
 		%> this stops loading old randstreams etc.
-		loadProperties cell = {'randomise','nVar','nBlocks','trialTime','isTime','ibTime','isStimulus','verbose',...
+		loadProperties cell = {'randomise','nVar','nBlocks','trialTime','isTime','ibTime','verbose',...
 			'realTime','randomSeed','randomGenerator','outValues','outVars','addBlank', ...
 			'outIndex', 'outMap', 'minTrials','states','nState','name'}
 		%> nVar template and default values
@@ -146,18 +157,18 @@ classdef taskSequence < optickaCore & dynamicprops
 	
 	methods
 		% ===================================================================
+		function me = taskSequence(varargin)
+		%> @fn taskSequence
 		%> @brief Class constructor
 		%>
-		%> Send any parameters to parseArgs.
+		%> Initialises the class sending any parameters to parseArgs.
 		%>
 		%> @param varargin are passed as a structure of properties which is
 		%> parsed.
 		%> @return instance of the class.
 		% ===================================================================
-		function me = taskSequence(varargin)
-			
 			args = optickaCore.addDefaults(varargin,struct('name','taskSequence'));
-			me=me@optickaCore(args); %superclass constructor
+			me = me@optickaCore(args); %superclass constructor
 			me.parseArgs(args,me.allowedProperties);
 			
 			me.nVar = me.varTemplate;
@@ -169,11 +180,12 @@ classdef taskSequence < optickaCore & dynamicprops
 		end
 		
 		% ===================================================================
+		function initialiseGenerator(me)
+		%> @fn initialiseGenerator()
 		%> @brief set up the random number generator
 		%>
 		%> set up the random number generator
 		% ===================================================================
-		function initialiseGenerator(me)
 			if isnan(me.mversion) || me.mversion == 0
 				me.mversion = str2double(regexp(version,'(?<ver>^\d+\.\d+)','match','once'));
 			end
@@ -196,11 +208,12 @@ classdef taskSequence < optickaCore & dynamicprops
 		end
 		
 		% ===================================================================
+		function resetRandom(me)
+		%> @fn resetRandom
 		%> @brief Reset the random number generator
 		%>
 		%> reset the random number generator
 		% ===================================================================
-		function resetRandom(me)
 			me.randomSeed=[];
 			if me.mversion > 7.11
 				RandStream.setGlobalStream(me.oldStream);
@@ -210,11 +223,13 @@ classdef taskSequence < optickaCore & dynamicprops
 		end
 		
 		% ===================================================================
+		function randomiseTask(me)
+		%> @fn randomiseTask
 		%> @brief Do the randomisation
 		%>
-		%> Do the randomisation
+		%> This method will take the parameters in nVar, blockVar and
+		%> trialVar and perform the randomisation and balancing.
 		% ===================================================================
-		function randomiseTask(me)
 			if me.nVars == 0
 				me.salutation('randomise','No variables to randomise...',true);
 				me.outIndex = 1; %there is only one stimulus, no variables
@@ -248,12 +263,13 @@ classdef taskSequence < optickaCore & dynamicprops
 				warning('WARNING: You are exceeding the number of variable numbers in an 8bit strobed word!')
 			end
 
+			checkBlockTrialVars(me);
 			% ---- deal with block level factor randomisation
 			if isempty(me.blockVar.values)
 				me.outBlock = {};
-			elseif ~isempty(length(me.blockVar.values)) && length(me.blockVar.values) > me.nBlocks
+			elseif length(me.blockVar.values) > me.nBlocks
 				error('Your block factors are greater than the number of blocks!')
-			else
+			else 
 				if sum(me.blockVar.probability) ~= 1 || length(me.blockVar.values) ~= length(me.blockVar.probability)
 					warning('blockVar probability doesn''t sum to 100!'); 
 					prob = [];
@@ -398,10 +414,11 @@ classdef taskSequence < optickaCore & dynamicprops
 		end
 		
 		% ===================================================================
+		function initialise(me)
+		%> @fn initialise
 		%> @brief Initialise the variables and task together
 		%>
 		% ===================================================================
-		function initialise(me)
 			me.randomiseTask();
 			me.initialiseTask();
 			me.backup();
@@ -409,12 +426,13 @@ classdef taskSequence < optickaCore & dynamicprops
 		end
 		
 		% ===================================================================
+		function initialiseTask(me)
+		%> @fn initialiseTask
 		%> @brief Initialise the properties used to track the run
 		%>
 		%> Initialise the properties used to track the run. These are dynamic
 		%> props.
 		% ===================================================================
-		function initialiseTask(me)
 			resetTask(me);
 			t = me.tProp;
 			for i = 1:2:length(t)
@@ -429,20 +447,24 @@ classdef taskSequence < optickaCore & dynamicprops
 		end
 		
 		% ===================================================================
+		function backup(me)
+		%> @fn backup
 		%> @brief Initialise the properties used to track the run
 		%>
 		%> Initialise the properties used to track the run. These are dynamic
 		%> props.
 		% ===================================================================
-		function backup(me)
 			me.startIndex = me.outIndex;
 		end
 		
 		% ===================================================================
+		function updateTask(me, thisResponse, runTime, info)
+		%> @fn updateTask
 		%> @brief update the task with a response
 		%>
+		%> This method allows us to update the task with a response, and
+		%> will track when the task is finished: setting taskFinished==true
 		% ===================================================================
-		function updateTask(me, thisResponse, runTime, info)
 			if ~me.taskInitialised; warning('--->>> taskSequence not initialised, cannot update!');return; end
 			if me.totalRuns > me.nRuns
 				me.taskFinished = true;
@@ -474,20 +496,21 @@ classdef taskSequence < optickaCore & dynamicprops
 		end
 		
 		% ===================================================================
+		function [block, run] = findRun(me, index)
 		%> @brief returns block and run from number of runs
 		%>
 		% ===================================================================
-		function [block, run] = findRun(me, index)
 			if ~exist('index','var') || isempty(index); index = me.totalRuns; end
 			block = floor( (index - 1) / me.minTrials ) + 1;
 			run = index - (me.minTrials * (block - 1));
 		end
 		
 		% ===================================================================
-		%> @brief the opposite of updateTask, step back one run
+		function rewindTask(me)
+		%> @fn rewindTask
+		%> @brief this steps back one run
 		%>
 		% ===================================================================
-		function rewindTask(me)
 			if me.taskInitialised
 				me.response(me.totalRuns) = [];
 				me.responseInfo{me.totalRuns} = [];
@@ -500,13 +523,20 @@ classdef taskSequence < optickaCore & dynamicprops
 		end
 		
 		% ===================================================================
-		%> @brief we want to re-randomise the current run, replace it with
-		%> another run in the same block. This adds some randomisation if a
-		%> run needs to be rerun for a subject and you do not want the same
-		%> stimulus repeatedly until there is a correct response...
-		%>
-		% ===================================================================
 		function [success, message] = resetRun(me)
+		%> @fn resetRun
+		%> @brief re-randomise within the current block
+		%>
+		%> If the subject got a trial wrong, we want to try to show a
+		%> different trial within the same block. This adds some
+		%> randomisation if a run needs to be rerun for a subject and you do
+		%> not want the same stimulus repeatedly until there is a correct
+		%> response. Note the limitation is if this is the last trial in a
+		%> block, the randomisation cannot do anything.
+		%>
+		%> @return success did we manage to randomise?
+		%> @return message details of the swapped trials
+		% ===================================================================
 			success = false;
 			message = '';
 			if me.taskInitialised
@@ -577,12 +607,13 @@ classdef taskSequence < optickaCore & dynamicprops
 		end
 		
 		% ===================================================================
+		function set.nVar(me,invalue)
+		%> @fn set.nVar
 		%> @brief set method for the nVar structure
 		%>
 		%> Check we have a minimal nVar structure and deals new values
 		%> appropriately.
 		% ===================================================================
-		function set.nVar(me,invalue)
 			if ~exist('invalue','var')
 				return
 			end
@@ -608,11 +639,12 @@ classdef taskSequence < optickaCore & dynamicprops
 		end
 		
 		% ===================================================================
-		%> @brief Dependent property nVars get method
-		%>
-		%> Dependent property nVars get method
-		% ===================================================================
 		function nVars = get.nVars(me)
+		%> @fn get.nVars
+		%> @brief Dependent property for how many variables we have
+		%>
+		%> Calculates ependent property nVars get method
+		% ===================================================================
 			nVars = 0;
 			if length(me.nVar) > 0 && ~isempty(me.nVar(1).name) %#ok<ISMT>
 				nVars = length(me.nVar);
@@ -621,30 +653,33 @@ classdef taskSequence < optickaCore & dynamicprops
 		end
 		
 		% ===================================================================
+		function nRuns = get.nRuns(me)
+		%> @fn get.nRuns
 		%> @brief Dependent property nRuns get method
 		%>
 		%> Dependent property nruns get method
 		% ===================================================================
-		function nRuns = get.nRuns(me)
 			nRuns = me.minTrials * me.nBlocks;
 		end
-		
-		% ===================================================================
+
+		% ===================================================================	
+		function nFrames = get.nFrames(me)
+		%> @fn get.nFrames
 		%> @brief Dependent property nFrames get method
 		%>
-		%> Dependent property nFrames get method
+		%> Gives us an approximate number of frames this task may take
 		% ===================================================================
-		function nFrames = get.nFrames(me)
 			nSecs = (me.nRuns * me.trialTime) + (me.minTrials-1 * me.isTime) + (me.nBlocks-1 * me.ibTime);
 			nFrames = ceil(nSecs) * ceil(me.fps); %be a bit generous in defining how many frames the task will take
 		end
 		
 		% ===================================================================
+		function showLog(me)
+		%> @fn showLog
 		%> @brief showLog
 		%>
 		%> Generates a table with the randomised stimulus values
 		% ===================================================================
-		function showLog(me)
 			me.makeLabels();
 			me.h = struct();
 			build_gui();
@@ -723,12 +758,13 @@ classdef taskSequence < optickaCore & dynamicprops
 		end
 		
 		% ===================================================================
-		%> @brief get a meta matrix compatible with vs parsed data,
-		%  unwrapping cell arrays
+		function [meta, key] = getMeta(me)
+		%> @fn getMeta
+		%> @brief get a meta matrix compatible with VS parsed data,
+		%> unwrapping cell arrays
 		%>
 		%> Generates a table with the randomised stimulus values
 		% ===================================================================
-		function [meta, key] = getMeta(me)
 			meta = [];
 			vals = me.outValues;
 			idx = me.outMap;
@@ -755,12 +791,10 @@ classdef taskSequence < optickaCore & dynamicprops
 		end
 		
 		% ===================================================================
-		%> @brief get a meta matrix compatible with vs parsed data,
-		%  unwrapping cell arrays
-		%>
-		%> Generates a table with the randomised stimulus values
-		% ===================================================================
 		function [labels, list] = getLabels(me)
+		%> @fn getLabels
+		%> @brief get the labels for the variables
+		% ===================================================================
 			labels = [];
 			list = [];
 			me.makeLabels()
@@ -769,12 +803,13 @@ classdef taskSequence < optickaCore & dynamicprops
 		end
 		
 		% ===================================================================
+		function validate(me)
+		%> @fn validate
 		%> @brief validate the taskSequence is ok
 		%>
 		%> Check we have a minimal task structure
 		% ===================================================================
-		function validate(me)
-			if me.nVars == 0
+		if me.nVars == 0
 				me.outIndex = 1; %there is only one stimulus, no variables
 				me.varLabels = {};
 				me.varList = {};
@@ -802,12 +837,13 @@ classdef taskSequence < optickaCore & dynamicprops
 	%=======================================================================
 		
 		% ===================================================================
-		%> @brief reset dynamic task properties
+		function makeLabels(me)
+		%> @fn makeLabels
+		%> @brief make labels for variables
 		%>
 		%>
 		% ===================================================================
-		function makeLabels(me)
-			if isempty(me.outIndex); return; end
+		if isempty(me.outIndex); return; end
 			varIndex = sort(unique(me.outIndex));
 			list = cell(length(varIndex),me.nVars+2);
 			for i = 1:length(varIndex)
@@ -836,12 +872,13 @@ classdef taskSequence < optickaCore & dynamicprops
 		end
 		
 		% ===================================================================
+		function resetTask(me)
+		%> @fn resetTask
 		%> @brief reset dynamic task properties
 		%>
 		%>
 		% ===================================================================
-		function resetTask(me)
-			t = me.tProp;
+		t = me.tProp;
 			for i = 1:2:length(t)
 				p = me.findprop(t{i});
 				if ~isempty(p)
@@ -854,12 +891,13 @@ classdef taskSequence < optickaCore & dynamicprops
 		end
 		
 		% ===================================================================
-		%> @brief reset dynamic task properties
+		function randomiseTimes(me)
+		%> @fn randomiseTimes
+		%> @brief randomise the time intervals
 		%>
 		%>
 		% ===================================================================
-		function randomiseTimes(me)
-			if ~me.taskInitialised;return;end
+		if ~me.taskInitialised;return;end
 			if length(me.isTime) == 2 %randomise isTime within a range
 				t = me.isTime;
 				me.isTimeNow = (rand * (t(2)-t(1))) + t(1);
@@ -872,7 +910,26 @@ classdef taskSequence < optickaCore & dynamicprops
 			end
 		end
 		
-		
+		% ===================================================================
+		function checkBlockTrialVars(me)
+		%> @fn checkBlockTrialVars
+		%> @brief validate blockVar and trialVar
+		%>
+		% ===================================================================
+		me.blockTemplate = struct('values',{{'none'}},'probability',[1],'comment','block level factor');
+			me.trialTemplate = struct('values',{{'none'}},'probability',[1],'comment','trial level factor');
+			if ~isfield(me.blockVar,'values'); me.blockVar = me.blockTemplate; end
+			if ~isfield(me.blockVar,'probability') || length(me.blockVar.values) ~= length(me.blockVar.probability)
+				me.blockVar.probability = repmat((1/length(me.blockVar.values)),1,length(me.blockVar.values));
+				warning('---! TaskSequence.blockVar not properly formatted — it should be a structure with ''values'' and ''probabilitiy'' of the same length! N values = %i, probability = %.2f',length(me.blockVar.values),me.blockVar.probability)
+			end
+			if ~isfield(me.trialVar,'values'); me.trialVar = me.trialTemplate; end
+			if ~isfield(me.trialVar,'probability') || length(me.trialVar.values)~= length(me.trialVar.probability)
+				me.trialVar.probability = repmat((1/length(me.trialVar.values)),1,length(me.trialVar.values));
+				warning('---! TaskSequence.trialVar not properly formatted — it should be a structure with ''values'' and ''probabilitiy'' of the same length! N values = %i, probability = %.2f',length(me.trialVar.values),me.trialVar.probability)
+				me.trialVar = me.trialTemplate;
+			end
+		end
 	end
 	
 	%=======================================================================
@@ -880,12 +937,13 @@ classdef taskSequence < optickaCore & dynamicprops
 	%=======================================================================
 		
 		% ===================================================================
+		function out=cellStruct(in)
+		%> @fn cellStruct
 		%> @brief make a matrix from a cell array
 		%>
 		%>
 		% ===================================================================
-		function out=cellStruct(in)
-			out = [];
+		out = [];
 			if iscell(in)
 				for i = 1:size(in,2)
 					cc = [in{:,i}]';
@@ -899,6 +957,8 @@ classdef taskSequence < optickaCore & dynamicprops
 		end
 		
 		% ===================================================================
+% 		function lobj=loadobj(in)
+		%> @fn loadobj
 		%> @brief loadobj handler
 		%>
 		%> The problem is we use set.nVar to allow robust setting of
@@ -906,27 +966,26 @@ classdef taskSequence < optickaCore & dynamicprops
 		%> older saved protocols during load. We need to specify we are loading
 		%> and use a conditional in set.nVar to do the right thing.
 		% ===================================================================
-		function lobj=loadobj(in)
-			if ~isa(in,'taskSequence') && isstruct(in)
-				fprintf('---> taskSequence loadobj: Rebuilding  structure...\n');
-				lobj = taskSequence;
-				lobj.isLoading = true;
-				fni = fieldnames(in);
-				fn = intersect(lobj.loadProperties,fni);
-				for i=1:length(fn)
-					lobj.(fn{i}) = in.(fn{i});
-				end
-			elseif isa(in,'taskSequence')
-				%fprintf('--->  taskSequence loadobj: Loading taskSequence object...\n');
-				in.currentState = []; %lets strip the old random streams
-				in.oldStream = [];
-				in.taskStream = [];
-				lobj = in;
-			else
-				fprintf('--->  taskSequence loadobj: Loading taskSequence FAILED...\n');
-			end
-			lobj.isLoading = false;
-		end
+% 			if ~isa(in,'taskSequence') && isstruct(in)
+% 				fprintf('---> taskSequence loadobj: Rebuilding  structure...\n');
+% 				lobj = taskSequence;
+% 				lobj.isLoading = true;
+% 				fni = fieldnames(in);
+% 				fn = intersect(lobj.loadProperties,fni);
+% 				for i=1:length(fn)
+% 					lobj.(fn{i}) = in.(fn{i});
+% 				end
+% 			elseif isa(in,'taskSequence')
+% 				%fprintf('--->  taskSequence loadobj: Loading taskSequence object...\n');
+% 				in.currentState = []; %lets strip the old random streams
+% 				in.oldStream = [];
+% 				in.taskStream = [];
+% 				lobj = in;
+% 			else
+% 				fprintf('--->  taskSequence loadobj: Loading taskSequence FAILED...\n');
+% 			end
+% 			lobj.isLoading = false;
+% 		end
 		
 	end
 	

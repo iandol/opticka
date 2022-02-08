@@ -202,10 +202,8 @@ myScreen = screenManager('distance', 57.3,... %display distance from observer
 	'srcMode', 'GL_SRC_ALPHA',... %src blend mode
 	'dstMode', 'GL_ONE_MINUS_SRC_ALPHA',... %dst blend mode
 	'debug', false,...
-	'windowed', [],... %set to a widthxheight for debugging i.e. [800 600]; set to empty for fullscreen
-	'antiAlias', 4,... %can be set to 4 or 8x oversampling with no dropped frames on macOS ATI 5870
-	'bitDepth', 'FloatingPoint32bitIfPossible',... %8bit, FloatingPoint16bit FloatingPoint32bit etc.
-	'displayPPRefresh', 120); %ensure refresh is 120Hz if a Display++ is attached
+	'windowed', [1000 800],... %set to a widthxheight for debugging i.e. [800 600]; set to empty for fullscreen
+	'bitDepth', 'FloatingPoint32bitIfPossible');
 
 %% Setup runExperiment Object
 % We now pass our stimulus screen and sequence objects to the

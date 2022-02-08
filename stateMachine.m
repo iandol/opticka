@@ -25,7 +25,7 @@
 %> ~~~
 %>
 %> To see how to run the stateMacine from a PTB loop, see
-%> `runExperiment.runTask()`
+%> `runExperiment.runTask()`; and check DefaultStateInfo.m and METHODS.md
 %>
 %> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================

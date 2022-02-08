@@ -131,8 +131,9 @@ classdef optickaCore < handle
 		%> @param attrName attribute name, i.e. GetAccess, Transient
 		%> @param attrValue value of that attribute, i.e. public, true
 		%> @return list of properties that match that attribute
+		%> @return typelist the type of the property
 		% ===================================================================
-		function [list, mplist] = findAttributes(me, attrName, attrValue)
+		function [list, typelist] = findAttributes(me, attrName, attrValue)
 			% Determine if first input is object or class name
 			if ischar(me)
 				mc = meta.class.fromName(me);
@@ -142,8 +143,8 @@ classdef optickaCore < handle
 			
 			% Initial size and preallocate
 			ii = 0; nProps = length(mc.PropertyList);
-			cl_array = cell(1, nProps);
-			mp_array = cell(1, nProps);
+			nameArray = cell(1, nProps);
+			typeArray = cell(1, nProps);
 			
 			% For each property, check the value of the queried attribute
 			for  c = 1:nProps
@@ -156,32 +157,31 @@ classdef optickaCore < handle
 					error('Not a valid attribute name');
 				end
 				thisValue = mp.(attrName);
-				
 				% If the attribute is set or has the specified value,
 				% save its name in cell array
 				if ischar(attrValue)
 					if strcmpi(attrValue, thisValue)
 						ii = ii + 1;
-						cl_array(ii) = {mp.Name};
-						mp_array{ii} = mp;
+						nameArray(ii) = {mp.Name};
+						typeArray{ii} = getType(me, mp);
 					end
 				elseif islogical(attrValue)
 					if thisValue == attrValue
 						ii = ii + 1;
-						cl_array(ii) = {mp.Name};
-						mp_array{ii} = mp;
+						nameArray(ii) = {mp.Name};
+						typeArray{ii} = getType(me, mp);
 					end
 				elseif isempty(attrValue)
 					if isempty(thisValue)
 						ii = ii + 1;
-						cl_array(ii) = {mp.Name};
-						mp_array(ii) = mp;
+						nameArray(ii) = {mp.Name};
+						typeArray{ii} = getType(me, mp);
 					end
 				end
 			end
 			% Return used portion of array
-			list = cl_array(1:ii)';
-			mplist = mp_array(1:ii)';
+			list = nameArray(1:ii)';
+			typelist = typeArray(1:ii)';
 		end
 		
 		% ===================================================================
@@ -541,6 +541,29 @@ classdef optickaCore < handle
 			for j=1:length(fn)
 				out.(fn{j}) = me.(fn{j});
 			end
+		end
+
+		% ===================================================================
+		%> @brief Give a metaproperty return the likely property class
+		%>
+		%>
+		%> @param me this instance object
+		%> @param in metaproperty
+		%> @return out class name
+		% ===================================================================
+		
+		function out = getType(me, in)
+			out = 'undefined';
+			thisClass = '';
+			if in.HasDefault
+				thisClass = class(in.DefaultValue);
+				if strcmpi(thisClass,'double') && length(in.DefaultValue) > 1
+					thisClass = 'double vector';
+				end
+			elseif ~isempty(in.Validation.Class)
+				thisClass = in.Validation.Class.Name;
+			end
+			if ~isempty(thisClass); out = thisClass; end
 		end
 		
 		

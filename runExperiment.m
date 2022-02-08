@@ -1,11 +1,12 @@
 % ========================================================================
+%> @class runExperiment
 %> @brief runExperiment is the main Experiment manager; Inherits from optickaCore
 %>
-%>RUNEXPERIMENT The main class which accepts a task (taskSequence) and 
-%>stimulus (metaStimulus) object and runs the stimuli based on the task object passed.
-%>This class uses the fundamental configuration of the screen (calibration, size
-%>etc. via screenManager), and manages communication to the DAQ systems
-%using digital I/O and communication over a UDP client<->server socket (via dataConnection).
+%> RUNEXPERIMENT The main class which accepts a task (taskSequence) and 
+%> stimulus (metaStimulus) object and runs the stimuli based on the task object passed.
+%> This class uses the fundamental configuration of the screen (calibration, size
+%> etc. via screenManager), and manages communication to the DAQ systems
+%> using digital I/O and communication over a UDP client<->server socket (via dataConnection).
 %>
 %> There are 2 main experiment types:
 %>  1) MOC (method of constants) tasks -- uses stimuli and task objects directly to run standard
@@ -94,8 +95,8 @@ classdef runExperiment < optickaCore
 		%> tS is the runtime settings structure, saved here as a backup
 		tS
 		%> what mode to run the Display++ digital I/O in? Plexon requires
-		%the use of a strobe trigger line, whereas most other equipment
-		%just uses simple threshold reading
+		%> the use of a strobe trigger line, whereas most other equipment
+		%> just uses simple threshold reading
 		dPPMode char				= 'plain'
 		%> which port is the arduino on?
 		arduinoPort char			= '/dev/ttyACM0'
@@ -554,7 +555,7 @@ classdef runExperiment < optickaCore
 				error('There is no working PTB available!')
 			end
 			
-			fprintf('\n\n\n===>>> Start task: %s <<<===\n\n\n',me.name);
+			fprintf('\n\n\n===>>>>>> Start task: %s <<<<<<===\n\n\n',me.name);
 			
 			%--------------------------------------------------------------
 			% tS is a general structure to hold various parameters will be saved
@@ -640,11 +641,16 @@ classdef runExperiment < optickaCore
 				me.stateMachine			= sM;
 				if ~isempty(me.stateInfoFile); me.paths.stateInfoFile = me.stateInfoFile; end
 				if isempty(me.paths.stateInfoFile) || ~exist(me.paths.stateInfoFile,'file')
-					errordlg('Please specify a valid State Machine file...')
+					errordlg('runExperiment.runTask(): Please specify a valid State Machine file!!!')
 				else
 					me.paths.stateInfoFile = regexprep(me.paths.stateInfoFile,'\s+','\\ ');
-					disp(['===> Loading State File: ' me.paths.stateInfoFile]);
-					run(me.paths.stateInfoFile);
+					disp(['===>>> Loading State File: ' me.paths.stateInfoFile]);
+					clear(me.paths.stateInfoFile);
+					if ~isdeployed
+						run(me.paths.stateInfoFile);
+					else
+						runDeployed(me.paths.stateInfoFile);
+					end
 					me.stateInfo = stateInfoTmp;
 					addStates(sM, me.stateInfo);
 				end

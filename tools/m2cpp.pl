@@ -47,6 +47,7 @@ foreach $my_fic (@listeFic)
   $inAbstractMethodBlock = 0;
   $listeProperties = 0;
   $listeEnumeration = 0;
+  $iscomment = false;
 
   $methodAttribute = "";
 
@@ -56,6 +57,7 @@ foreach $my_fic (@listeFic)
     if (/(^\s*)(%>)(.*)/)
     {
       $output=$output."$1///$3";
+      $iscomment = true;
     }
     if (($listeProperties == 1) && (/(^\s*\bend\b\s*)/))
     {
@@ -249,7 +251,15 @@ foreach $my_fic (@listeFic)
         $methodAttribute = $methodAttribute." static";
       }
     }
-    $output=$output."\n";
+    if ($iscomment==true) 
+    {
+      $output=$output."\n";
+    }
+    else
+    {
+      $output=$output."\n";
+    }
+    $iscomment = false;
   }
   close $in;
 }

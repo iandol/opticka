@@ -41,6 +41,10 @@ classdef fixationCrossStimulus < baseStimulus
 		%flash.
 		flashSwitch
 	end
+
+	properties (SetAccess = protected, GetAccess = ?baseStimulus)
+		ignorePropertiesUI = 'speed|startPosition'
+	end
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> current flash state
@@ -56,7 +60,7 @@ classdef fixationCrossStimulus < baseStimulus
 		colour2OutTemp = [1 1 1]
 		stopLoop = false
 		allowedProperties='showDisk|type|flashTime|flashOn|flashColour|colour2|alpha2|lineWidth'
-		ignoreProperties = 'flashSwitch';
+		ignoreProperties = 'flashSwitch'
 	end
 	
 	%=======================================================================

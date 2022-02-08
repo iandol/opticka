@@ -1,11 +1,11 @@
 % ========================================================================
-%> @brief ANIMATIONMANAGER provides per frame paths for stimuli
+%> @brief ANIMATIONMANAGER TODO provides per frame paths for stimuli
 %>
+%> @todo build the physics code for the different types of motion
 %>
 %> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
-% ========================================================================
+% ========================================================================	
 classdef animationManager < optickaCore
-	
 	properties
 		%> type of animation path, linear | brownian | circular
 		type char ...

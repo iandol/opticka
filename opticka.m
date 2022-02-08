@@ -1,9 +1,15 @@
 % ======================================================================
 %> @brief Opticka stimulus generator GUI
 %>
-%> Opticka is an object-oriented stimulus generator wrapping the Psychophysics
+%> Opticka is an object-oriented experiment manager wrapping the Psychophysics
 %> toolbox See http://iandol.github.com/opticka/ for more details. This
 %> class builds and controls the GUI.
+%>
+%> @todo expose maskStimulus settings in the optickaGUI
+%> @todo improve the variable list editor: live updating
+%> @todo add trialVar and blockVar from taskSequene to the GUI
+%> @todo make a html-based help button for different parts of the GUI
+%> @todo more flexible specification for arduino settings
 %>
 %> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ======================================================================
@@ -48,9 +54,9 @@ classdef opticka < optickaCore
 		uiPrefsList cell = {'OKOmniplexIP','OKMonitorDistance','OKpixelsPerCm',...
 			'OKbackgroundColour','OKAntiAliasing','OKbitDepth','OKUseRetina',...
 			'OKHideFlash','OKUsePhotoDiode','OKTrainingResearcherName',...
-			'OKTrainingName','OKarduinoPort','OKdPPMode','OKDummyMode',...
+			'OKTrainingName','OKarduinoPort','OKdPPMode','OKDebug',...
 			'OKOpenGLBlending','OKCalEditField','OKValEditField',...
-			'OKTrackerDropDown'}
+			'OKTrackerDropDown','OKWindowSize','OKUseDummy'}
 	end
 	
 	%=======================================================================
@@ -297,7 +303,7 @@ classdef opticka < optickaCore
 				end
 
 				me.h = opticka_ui(me); %our GUI file
-				
+				WaitSecs(3)
 				me.loadPrefs();
 				me.getScreenVals();
 				me.getTaskVals();
@@ -339,19 +345,23 @@ classdef opticka < optickaCore
 		function getScreenVals(me)
 			
 			if isempty(me.r)
-				olds = me.h.OKOptickaVersion.Text;
-				me.h.OKOptickaVersion.Text = 'Initialising Stimulus and Task objects...';
-				%drawnow
+				if ~isdeployed || ~ismcc
+					olds = me.h.OKOptickaVersion.Text;
+					me.h.OKOptickaVersion.Text = 'Initialising Stimulus and Task objects...';
+					%drawnow
+				end
 				me.r = runExperiment();
 				initialise(me.r); % set up the runExperiment object
 				s=cell(me.r.screen.maxScreen+1,1);
 				for i=0:me.r.screen.maxScreen
 					s{i+1} = num2str(i);
 				end
-				me.h.OKSelectScreen.Items = s;
-				me.h.OKSelectScreen.Value = s{end};
-				clear s;
-				me.h.OKOptickaVersion.Text = olds;
+				if ~isdeployed || ~ismcc
+					me.h.OKSelectScreen.Items = s;
+					me.h.OKSelectScreen.Value = s{end};
+					clear s;
+					me.h.OKOptickaVersion.Text = olds; 
+				end
 			end
 			
 			me.r.screen.screen = me.gd(me.h.OKSelectScreen);
@@ -475,7 +485,15 @@ classdef opticka < optickaCore
 			me.r.task.randomise = logical(me.gv(me.h.OKRandomise));
 			me.r.task.isTime = me.gn(me.h.OKisTime);
 			me.r.task.nBlocks = me.gd(me.h.OKnBlocks);
-			me.r.task.realTime = me.gv(me.h.OKrealTime);
+			me.r.task.realTime = logical(me.gv(me.h.OKrealTime));
+			if ~isempty(me.r.task.blockVar)
+				me.r.task.blockVar.values = me.ge(me.h.OKBlockValues);
+				me.r.task.blockVar.probability = me.gn(me.h.OKBlockProbability);
+			end
+			if ~isempty(me.r.task.trialVar)
+				me.r.task.trialVar.values = me.ge(me.h.OKBlockValues);
+				me.r.task.trialVar.probability = me.gn(me.h.OKBlockProbability);
+			end
 			if isempty(me.r.task.taskStream); me.r.task.initialiseGenerator; end
 			me.r.task.randomiseTask;
 		end
@@ -557,26 +575,6 @@ classdef opticka < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief deleteStimulus
-		%> 
-		%> @param 
-		% ===================================================================
-		function deleteStimulus(me)
-			if ~isempty(me.r.stimuli.n) && me.r.stimuli.n > 0
-				v=me.gp(me.h.OKStimList);
-				if isfield(me.store,'visibleStimulus')
-					if strcmp(me.store.visibleStimulus.uuid,me.r.stimuli{v}.uuid)
-						closePanel(me.r.stimuli{v})
-					end
-				end
-				me.r.stimuli(v) = [];
-				me.refreshStimulusList;
-			else
-				me.h.OKStimList.Items = {};
-			end
-		end
-		
-		% ===================================================================
 		%> @brief addStimulus
 		%> Run when we've added a new stimulus
 		%> @param 
@@ -591,10 +589,48 @@ classdef opticka < optickaCore
 			end
 			me.store.evnt = addlistener(me.r.stimuli{nidx},'readPanelUpdate',@me.readPanel);
 			if isfield(me.store,'visibleStimulus')
-				me.store.visibleStimulus.closePanel();
+				if ~me.store.visibleStimulus.isGUI
+					me.store.visibleStimulus.closePanel();
+					makePanel(me.r.stimuli{nidx},me.h.OKPanelStimulus);
+					me.store.visibleStimulus = me.r.stimuli{nidx};
+				else
+					me.store.visibleStimulus.showPanel;
+				end
+			else
+				makePanel(me.r.stimuli{nidx},me.h.OKPanelStimulus);
+				me.store.visibleStimulus = me.r.stimuli{nidx};
 			end
-			makePanel(me.r.stimuli{nidx},me.h.OKPanelStimulus);
-			me.store.visibleStimulus = me.r.stimuli{nidx};
+		end
+
+		% ===================================================================
+		%> @brief deleteStimulus
+		%> 
+		%> @param 
+		% ===================================================================
+		function deleteStimulus(me)
+			if ~isempty(me.r.stimuli.n) && me.r.stimuli.n > 0
+				v=me.gp(me.h.OKStimList);
+				if isfield(me.store,'visibleStimulus')
+					if strcmp(me.store.visibleStimulus.uuid,me.r.stimuli{v}.uuid)
+						closePanel(me.r.stimuli{v});
+						me.store.visibleStimulus = [];
+					end
+				end
+				me.r.stimuli(v) = [];
+				if me.r.stimuli.n > 0
+					v = v - 1;
+					if v == 0; v = 1; end
+					me.h.OKStimList.Value = me.h.OKStimList.Items{v};
+					me.store.visibleStimulus = me.r.stimuli{v};
+					if ~isempty(me.store.visibleStimulus) && ~me.store.visibleStimulus.isGUI
+						makePanel(me.r.stimuli{v},me.h.OKPanelStimulus);
+						me.store.visibleStimulus = me.r.stimuli{v};
+					else
+						me.store.visibleStimulus.showPanel;
+					end
+				end
+				me.refreshStimulusList;
+			end
 		end
 		
 		% ===================================================================
@@ -629,12 +665,13 @@ classdef opticka < optickaCore
 						delete(me.store.evnt);
 						me.store = rmfield(me.store,'evnt');
 					end
-					if isfield(me.store,'visibleStimulus') && isa(me.store.visibleStimulus,'baseStimulus')
-						me.store.visibleStimulus.closePanel();
-						me.store = rmfield(me.store,'visibleStimulus');
+					if me.r.stimuli{v}.isGUI
+						hidePanel(me.store.visibleStimulus);
+						showPanel(me.r.stimuli{v});
+					else
+						hidePanel(me.store.visibleStimulus);
+						makePanel(me.r.stimuli{v},me.h.OKPanelStimulus);
 					end
-					closePanel(me.r.stimuli{v});
-					makePanel(me.r.stimuli{v},me.h.OKPanelStimulus);
 					me.store.evnt = addlistener(me.r.stimuli{v},'readPanelUpdate',@me.readPanel);
 					me.store.visibleStimulus = me.r.stimuli{v};
 					me.refreshStimulusList;
@@ -643,7 +680,7 @@ classdef opticka < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief editStimulus
+		%> @brief modifyStimulus
 		%> Gets the settings from th UI and updates our runExperiment object
 		%> @param 
 		% ===================================================================
@@ -688,6 +725,82 @@ classdef opticka < optickaCore
 				rethrow(ME);
 			end
 		end
+
+		% ===================================================================
+		%> @brief updateVariable
+		%> Gets the values from the UI and updates that var
+		%> @param 
+		% ===================================================================
+		function updateVariable(me)	
+			try
+				pos = me.gp(me.h.OKVarList);
+				me.r.task.nVar(pos).name = me.gs(me.h.OKVariableName);
+				
+				s = me.gs(me.h.OKVariableValues);
+				if isempty(regexpi(s,'^\{'))
+					me.r.task.nVar(pos).values = str2num(s);
+				else
+					me.r.task.nVar(pos).values = eval(s);
+				end
+				
+				me.r.task.nVar(pos).stimulus = me.gn(me.h.OKVariableStimuli);
+				
+				offset = eval(['{' me.h.OKVariableOffset.Value '}']);
+				if isempty(offset) || (iscell(offset) && isempty(offset{1}))
+					me.r.task.nVar(pos).offsetstimulus = [];
+					me.r.task.nVar(pos).offsetvalue = [];
+				else
+					me.r.task.nVar(pos).offsetstimulus = offset{1};
+					me.r.task.nVar(pos).offsetvalue = offset{2};
+				end
+				try 
+					me.r.task.randomiseTask;
+					validate(me.r.task);
+				catch
+					warndlg('There is a problem with the stimulus variables, please check!')
+				end
+				me.refreshVariableList;
+			catch ME
+				getReport(ME);
+				rethrow(ME);
+			end
+		end
+
+		% ===================================================================
+		%> @brief editVariable
+		%> Gets the settings from the UI and updates our runExperiment object
+		%> @param 
+		% ===================================================================
+		function editVariable(me)
+			if isobject(me.r.task) && me.r.task.nVars > 0
+				
+				pos = me.gp(me.h.OKVarList);
+				
+				me.h.OKVariableName.Value = me.r.task.nVar(pos).name;
+				
+				v=me.r.task.nVar(pos).values;
+				if iscell(v)
+					v = me.cell2str(v);
+				else
+					v = num2str(me.r.task.nVar(pos).values);
+				end
+				str = v;
+				str = regexprep(str,'\s+',' ');
+				me.h.OKVariableValues.Value = str;
+
+				str = num2str(me.r.task.nVar(pos).stimulus);
+				str = regexprep(str,'\s+',' ');
+				me.h.OKVariableStimuli.Value = str;
+				
+				if isnumeric(me.r.task.nVar(pos).offsetvalue)
+					str=[num2str(me.r.task.nVar(pos).offsetstimulus) '; ' num2str(me.r.task.nVar(pos).offsetvalue)];
+				else
+					str=[num2str(me.r.task.nVar(pos).offsetstimulus) '; ''' me.r.task.nVar(pos).offsetvalue ''''];
+				end
+				me.h.OKVariableOffset.Value = str;
+			end
+			
+		end
 		
 		% ===================================================================
 		%> @brief deleteVariable
@@ -712,38 +825,6 @@ classdef opticka < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief editVariable
-		%> Gets the settings from the UI and updates our runExperiment object
-		%> @param 
-		% ===================================================================
-		function editVariable(me)
-			if isobject(me.r.task)
-				pos = me.gp(me.h.OKVarList);
-				me.h.OKVariableName.Value = me.r.task.nVar(pos).name;
-				v=me.r.task.nVar(pos).values;
-				if iscell(v)
-					v = me.cell2str(v);
-				else
-					v = num2str(me.r.task.nVar(pos).values);
-				end
-				str = v;
-				str = regexprep(str,'\s+',' ');
-				set(me.h.OKVariableValues,'Value', str);
-				str = num2str(me.r.task.nVar(pos).stimulus);
-				str = regexprep(str,'\s+',' ');
-				set(me.h.OKVariableStimuli, 'Value', str);
-				if isnumeric(me.r.task.nVar(pos).offsetvalue)
-					str=[num2str(me.r.task.nVar(pos).offsetstimulus) '; ' num2str(me.r.task.nVar(pos).offsetvalue)];
-				else
-					str=[num2str(me.r.task.nVar(pos).offsetstimulus) '; ''' me.r.task.nVar(pos).offsetvalue ''''];
-				end
-				set(me.h.OKVariableOffset,'Value',str);
-				me.deleteVariable
-			end
-			
-		end
-		
-		% ===================================================================
 		%> @brief copyVariable
 		%> Gets the settings from the UI and updates our runExperiment object
 		%> @param 
@@ -757,7 +838,7 @@ classdef opticka < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief loadPrefs Load calibration file, better that this is manual...
+		%> @brief Load calibration file, better that this is manual...
 		%> 
 		% ===================================================================
 		function loadCalibration(me)
@@ -789,7 +870,7 @@ classdef opticka < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief loadPrefs Load prefs better left local to the machine
+		%> @brief 
 		%> 
 		% ===================================================================
 		function saveCalibration(me)
@@ -816,32 +897,38 @@ classdef opticka < optickaCore
 		% ===================================================================
 		function loadPrefs(me)
 			anyLoaded = false; prefnames = '';
+			if ~ispref('opticka'); return; end
 			for i = 1:length(me.uiPrefsList)
 				prfname = me.uiPrefsList{i};
 				if ispref('opticka',prfname) %pref exists
-					prefnames = [prefnames ' ' prfname];
 					if isprop(me.h, prfname) %ui widget exists
 						myhandle = me.h.(prfname);
 						prf = getpref('opticka',prfname);
 						uiType = myhandle.Type;
+						thisVal = '';
 						switch uiType
 							case 'uieditfield'
 								if ischar(prf)
-									myhandle.Value = prf;
+									myhandle.Value = prf; 
+									thisVal = prf;
 								else
-									myhandle.Value = num2str(prf);
+									myhandle.Value = num2str(prf); 
+									thisVal = myhandle.Value;
 								end
 							case 'uicheckbox'
 								if islogical(prf) || isnumeric(prf)
 									myhandle.Value = prf;
+									thisVal = num2str(prf);
 								end
 							case 'uidropdown'
 								str = myhandle.Items;
-								if ischar(prf) & contains(str,prf)
+								if ischar(prf) && any(contains(prf,str))
 									myhandle.Value = prf;
+									thisVal = prf;
 								end
 						end
-						anyLoaded = true;
+						prefnames = [prefnames ' ' prfname '«' thisVal '»'];
+						if ~anyLoaded; anyLoaded = true; end
 					end
 				end	
 			end
@@ -853,6 +940,8 @@ classdef opticka < optickaCore
 		%> 
 		% ===================================================================
 		function savePrefs(me)
+			if ispref('opticka'); rmpref('opticka'); end
+			anySaved = false; prefnames = '';
 			for i = 1:length(me.uiPrefsList)
 				prfname = me.uiPrefsList{i};
 				if ~isprop(me.h,prfname); continue; end
@@ -870,8 +959,10 @@ classdef opticka < optickaCore
 						prf = myhandle.Value;
 						setpref('opticka', prfname, prf);
 				end
+				prefnames = [prefnames ' ' prfname '«' num2str(prf) '»'];
+				if ~anySaved; anySaved = true; end
 			end
-			fprintf('\n===>>> Opticka saved its local preferences...\n');
+			if anySaved; fprintf('\n===>>> Opticka saved its local preferences: %s\n', prefnames); end
 		end
 		
 	end
@@ -1038,6 +1129,7 @@ classdef opticka < optickaCore
 				disp('--->>> Opticka loadProtocol: No file specified...')
 				return
 			end
+			me.h.OKOptickaVersion.Text = 'Loading Protocol, please wait...';
 			cd(p);
 			load(file);
 			
@@ -1050,213 +1142,217 @@ classdef opticka < optickaCore
 			
 			salutation(me,sprintf('Routing Protocol FROM %s TO %s',tmp.fullName,me.fullName),[],true);
 			
-			if exist('tmp','var') && isa(tmp,'opticka')
-				fprintf('---> Load status:\n');
-				if isprop(tmp.r,'stimuli')
-					if isa(tmp.r.stimuli,'metaStimulus')
-						me.r.stimuli = tmp.r.stimuli;
-						rm = [];
-						for i = 1:me.r.stimuli.n
-							if ~isa(me.r.stimuli{i},'baseStimulus')
-								rm = [rm i];
-							end
+			
+			fprintf('===> Load status:\n');
+			if isprop(tmp.r,'stimuli')
+				if isa(tmp.r.stimuli,'metaStimulus')
+					me.r.stimuli = tmp.r.stimuli;
+					rm = [];
+					for i = 1:me.r.stimuli.n
+						if ~isa(me.r.stimuli{i},'baseStimulus')
+							rm = [rm i];
 						end
-						if ~isempty(rm); me.r.stimuli(rm) = []; end
-						fprintf('\t…metaStimulus object loaded\n');
-					elseif iscell(tmp.r.stimuli)
-						me.r.stimuli = metaStimulus();
-						me.r.stimuli.stimuli = tmp.r.stimuli;
-						fprintf('\t…metaStimulus object loaded from cell array\n');
-					else
-						clear tmp;
-						warndlg('Sorry, this protocol appears to have no stimulus objects, please remake');
-						error('No stimulus found in protocol!!!');
 					end
-				elseif isprop(tmp.r,'stimulus')
-					if iscell(tmp.r.stimulus)
-						me.r.stimuli = metaStimulus();
-						me.r.stimuli.stimuli = tmp.r.stimulus;
-					elseif isa(tmp.r.stimulus,'metaStimulus')
-						me.r.stimuli = tmp.r.stimulus;
-					end
-					fprintf('\t…legacy metaStimulus object loaded\n');
+					if ~isempty(rm); me.r.stimuli(rm) = []; end
+					me.r.stimuli.stimulusSets = tmp.r.stimuli.stimulusSets;
+					fprintf('\t…metaStimulus object loaded\n');
+				elseif iscell(tmp.r.stimuli)
+					me.r.stimuli = metaStimulus();
+					me.r.stimuli.stimuli = tmp.r.stimuli;
+					fprintf('\t…metaStimulus object loaded from cell array\n');
 				else
 					clear tmp;
-					warndlg('Sorry, this protocol is appears to have no stimulus objects, please remake');
+					warndlg('Sorry, this protocol appears to have no stimulus objects, please remake');
 					error('No stimulus found in protocol!!!');
 				end
-				
-				%copy rE parameters
-				if isa(tmp.r,'runExperiment')
-					if strcmpi(me.r.name,'runExperiment')
-						me.r.name = [tmp.r.comment];
-					else
-						me.r.name = [tmp.r.name];
-					end
-
-					me.r.paths.stateInfoFile = '';
-					p1 = ''; p2 = '';
-					if isprop(tmp.r,'stateInfoFile') && ~isempty(tmp.r.stateInfoFile)
-						p1 = tmp.r.stateInfoFile;	
-					end
-					if isfield(tmp.r.paths,'stateInfoFile') && ~isempty(tmp.r.paths.stateInfoFile)
-						p2 = tmp.r.paths.stateInfoFile;	
-					end
-					if ~isempty(p1) && strcmp(p1,p2)
-						me.r.paths.stateInfoFile = p1;
-						fprintf(' p1 ')
-					elseif contains(p1,'DefaultStateInfo.m') && ~contains(p2,'DefaultStateInfo.m')
-						me.r.paths.stateInfoFile = p2;
-						fprintf(' p2 ')
-					end
-					if ~exist(me.r.paths.stateInfoFile,'file') % first try to find the file in current dir
-						[~,f,e] = fileparts(me.r.paths.stateInfoFile);
-						newfile = [pwd filesep f e];
-						if exist(newfile, 'file')
-							me.r.paths.stateInfoFile = newfile;
-							fprintf(' pwd ')
-						end
-					end	
-					if ~exist(me.r.paths.stateInfoFile,'file') % then try to replace the home directory
-						me.r.paths.stateInfoFile=regexprep(tmp.r.stateInfoFile,'(.+)(.Code.opticka.+)',[getenv('HOME') '$2'],'ignorecase','once');
-						fprintf(' rehome ')
-					end
-					if isempty(me.r.paths.stateInfoFile) || ~exist(me.r.paths.stateInfoFile,'file')
-						warndlg(['Couldn''t find state info file! Sources were: ' p1 ' ' p2 '  --  Revert to DefaultStateInfo.m']);
-						me.r.paths.stateInfoFile = which('DefaultStateInfo.m');
-					else
-						fprintf('\t…state info file: %s\n', me.r.paths.stateInfoFile);
-					end
-					if isprop(me.r,'stateInfoFile'); me.r.stateInfoFile = me.r.paths.stateInfoFile; end
-					me.getStateInfo();
-					
-					if isprop(tmp.r,'drawFixation');me.r.drawFixation=tmp.r.drawFixation;end
-					if isprop(tmp.r,'dPPMode'); me.r.dPPMode = tmp.r.dPPMode; end
-					%if isprop(tmp.r,'subjectName');me.r.subjectName = tmp.r.subjectName;me.h.OKTrainingName.Value = me.r.subjectName;end
-					%if isprop(tmp.r,'researcherName');me.r.researcherName = tmp.r.researcherName;me.h.OKTrainingResearcherName.Value=me.r.researcherName;end
-					me.r.subjectName = me.h.OKTrainingName.Value;
-					me.r.researcherName = me.h.OKTrainingResearcherName.Value;
-
-					me.h.OKuseLabJackStrobe.Checked		= 'off';
-					me.h.OKuseLabJackTStrobe.Checked	= 'off';
-					me.h.OKuseDataPixx.Checked			= 'off';
-					me.h.OKuseDisplayPP.Checked			= 'off';
-					me.h.OKuseEyelink.Checked			= 'on';
-					me.h.OKuseTobii.Checked				= 'off';
-					me.h.OKuseLabJackReward.Checked		= 'off';
-					me.h.OKuseArduino.Checked			= 'off';
-					me.h.OKuseEyeOccluder.Checked		= 'off';
-					me.h.OKuseMagStim.Checked			= 'off';
-					
-					if isprop(tmp.r,'useLabJackTStrobe'); me.r.useLabJackTStrobe = tmp.r.useLabJackTStrobe; end
-					if me.r.useLabJackTStrobe == true; me.h.OKuseLabJackTStrobe.Checked = 'on'; end
-					
-					if isprop(tmp.r,'useDisplayPP'); me.r.useDisplayPP = tmp.r.useDisplayPP; end
-					if me.r.useDisplayPP == true; me.h.OKuseDisplayPP.Checked = 'on'; end
-					
-					if isprop(tmp.r,'useDataPixx'); me.r.useDataPixx = tmp.r.useDataPixx; end
-					if me.r.useDataPixx == true; me.h.OKuseDataPixx.Checked = 'on'; end
-					
-					if isprop(tmp.r,'useArduino'); me.r.useArduino = tmp.r.useArduino; end
-					if me.r.useArduino == true; me.h.OKuseArduino.Checked = 'on'; end
-					
-					if isprop(tmp.r,'useTobii'); me.r.useTobii = tmp.r.useTobii; end
-					if me.r.useTobii == true; me.h.OKuseTobii.Checked = 'on'; me.h.OKuseEyelink.Checked = 'off';end
-					
-					if isprop(tmp.r,'useEyeLink'); me.r.useEyeLink = tmp.r.useEyeLink; end
-					if me.r.useEyeLink == true; me.h.OKuseEyelink.Checked = 'on'; me.h.OKuseTobii.Checked = 'off';end
+			elseif isprop(tmp.r,'stimulus')
+				if iscell(tmp.r.stimulus)
+					me.r.stimuli = metaStimulus();
+					me.r.stimuli.stimuli = tmp.r.stimulus;
+				elseif isa(tmp.r.stimulus,'metaStimulus')
+					me.r.stimuli = tmp.r.stimulus;
 				end
-				
-				%copy screen parameters
-				if isa(tmp.r.screen,'screenManager')
-					me.h.OKscreenXOffset.Value = num2str(tmp.r.screen.screenXOffset);
-					me.h.OKscreenYOffset.Value = num2str(tmp.r.screen.screenYOffset);
-					
-					%set(me.h.OKNativeBeamPosition,'Value', tmp.r.screen.nativeBeamPosition);
-					
-					list = me.gi(me.h.OKGLSrc);
-					val = me.findValue(list,tmp.r.screen.srcMode);
-					if ~isempty(val) && val > 0 && val <=length(list)
-						me.r.screen.srcMode = list{val(1)};
-						me.h.OKGLSrc.Value = me.r.screen.srcMode;
-					end
-					
-					list = me.gi(me.h.OKGLDst);
-					val = me.findValue(list,tmp.r.screen.dstMode);
-					if ~isempty(val) && val > 0
-						me.r.screen.dstMode = list{val(1)};
-						me.h.OKGLDst.Value = me.r.screen.dstMode;
-					end
-					
-					list = me.gi(me.h.OKbitDepth);
-					val = me.findValue(list,tmp.r.screen.bitDepth);
-					if ~isempty(val) && val > 0
-						me.r.screen.bitDepth = list{val(1)};
-						me.h.OKbitDepth.Value = me.r.screen.bitDepth;
-					end
-					
-					set(me.h.OKOpenGLBlending,'Value', tmp.r.screen.blend);
-					set(me.h.OKAntiAliasing,'Value', num2str(tmp.r.screen.antiAlias));
-					set(me.h.OKHideFlash,'Value', tmp.r.screen.hideFlash);
-					set(me.h.OKUseRetina,'Value', tmp.r.screen.useRetina);
-					string = num2str(tmp.r.screen.backgroundColour);
-					string = regexprep(string,'\s+',' '); %collapse spaces
-					set(me.h.OKbackgroundColour,'Value',string);
-					fprintf('\t…screenManager settings copied\n');
-				else
-					fprintf('\t…No screenManager settings loaded!\n');
-				end
-				%copy task parameters
-				if isempty(tmp.r.task)
-					me.r.task = taskSequence;
-					me.r.task.randomiseTask;
-					fprintf('\t…taskSequence created\n');
-				else
-					me.r.task = tmp.r.task;
-					for i=1:me.r.task.nVars
-						if ~isfield(me.r.task.nVar(i),'offsetstimulus') %add these to older protocols that may not contain them
-							me.r.task.nVar(i).offsetstimulus = [];
-							me.r.task.nVar(i).offsetvalue = [];
-						end
-					end
-					fprintf('\t…taskSequence assigned\n');
-				end
-				
-				set(me.h.OKtrialTime, 'Value', num2str(me.r.task.trialTime));
-				set(me.h.OKRandomSeed, 'Value', num2str(me.r.task.randomSeed));
-				set(me.h.OKisTime,'Value',sprintf('%g ',me.r.task.isTime));
-				set(me.h.OKibTime,'Value',sprintf('%g ',me.r.task.ibTime));
-				set(me.h.OKnBlocks,'Value',num2str(me.r.task.nBlocks));
-				
-				me.getScreenVals;
-				me.getTaskVals;
-				me.refreshStimulusList;
-				me.refreshVariableList;
-				me.getScreenVals;
-				me.getTaskVals;
-				
-				if me.r.task.nVars > 0
-					set(me.h.OKAddVariable,'Enable','on');
-					set(me.h.OKDeleteVariable,'Enable','on');
-					set(me.h.OKCopyVariable,'Enable','on');
-					set(me.h.OKEditVariable,'Enable','on');
-				end
-				if me.r.stimuli.n > 0
-					set(me.h.OKDeleteStimulus,'Enable','on');
-					set(me.h.OKModifyStimulus,'Enable','on');
-					set(me.h.OKInspectStimulus,'Enable','on');
-					set(me.h.OKStimulusUp,'Enable','on');
-					set(me.h.OKStimulusDown,'Enable','on');
-					set(me.h.OKStimulusRun,'Enable','on');
-					set(me.h.OKStimulusRunBenchmark,'Enable','on');
-					set(me.h.OKStimulusRunAll,'Enable','on');
-					set(me.h.OKStimulusRunAllBenchmark,'Enable','on');
-					set(me.h.OKStimulusRunSingle,'Enable','on');
-					me.store.visibleStimulus.uuid='';
-					me.editStimulus;
-				end
-				
+				fprintf('\t…legacy metaStimulus object loaded\n');
+			else
+				clear tmp;
+				warndlg('Sorry, this protocol is appears to have no stimulus objects, please remake');
+				error('No stimulus found in protocol!!!');
 			end
+			
+			%copy rE parameters
+			if isa(tmp.r,'runExperiment')
+				if strcmpi(me.r.name,'runExperiment')
+					me.r.name = [tmp.r.comment];
+				else
+					me.r.name = [tmp.r.name];
+				end
+
+				me.r.paths.stateInfoFile = '';
+				p1 = ''; p2 = ''; msg = '';
+				if isprop(tmp.r,'stateInfoFile') && ~isempty(tmp.r.stateInfoFile)
+					p1 = tmp.r.stateInfoFile;	
+				end
+				if isfield(tmp.r.paths,'stateInfoFile') && ~isempty(tmp.r.paths.stateInfoFile)
+					p2 = tmp.r.paths.stateInfoFile;	
+				end
+				if contains(p1,'DefaultStateInfo.m') && ~contains(p2,'DefaultStateInfo.m')
+					me.r.paths.stateInfoFile = p2;
+					msg = ['p2:' msg];
+				elseif ~isempty(p1) || strcmp(p1,p2)
+					me.r.paths.stateInfoFile = p1;
+					msg = ['p1:' msg];
+				elseif ~isempty(p2)
+					me.r.paths.stateInfoFile = p2;
+					msg = ['p2:' msg];
+				end
+				if ~isempty(me.r.paths.stateInfoFile) && ~exist(me.r.paths.stateInfoFile,'file') % first try to find the file in current dir
+					[~,f,e] = fileparts(me.r.paths.stateInfoFile);
+					newfile = [pwd filesep f e];
+					if exist(newfile, 'file')
+						me.r.paths.stateInfoFile = newfile;
+						msg = ['pwd:' msg];
+					end
+				end	
+				if ~isempty(me.r.paths.stateInfoFile) && ~exist(me.r.paths.stateInfoFile,'file') % then try to replace the home directory
+					me.r.paths.stateInfoFile=regexprep(tmp.r.stateInfoFile,'(.+)(.Code.opticka.+)',[getenv('HOME') '$2'],'ignorecase','once');
+					msg = ['rehome:' msg];
+				end
+				if isempty(me.r.paths.stateInfoFile) || ~exist(me.r.paths.stateInfoFile,'file')
+					warndlg(['Couldn''t find state info file! Sources were: ' p1 ' ' p2 '  --  Revert to DefaultStateInfo.m']);
+					me.r.paths.stateInfoFile = which('DefaultStateInfo.m');
+				else
+					fprintf('\t…state info file [%s] : %s\n', msg, me.r.paths.stateInfoFile);
+				end
+				if isprop(me.r,'stateInfoFile'); me.r.stateInfoFile = me.r.paths.stateInfoFile; end
+				me.getStateInfo();
+				
+				if isprop(tmp.r,'drawFixation');me.r.drawFixation=tmp.r.drawFixation;end
+				if isprop(tmp.r,'dPPMode'); me.r.dPPMode = tmp.r.dPPMode; end
+				%if isprop(tmp.r,'subjectName');me.r.subjectName = tmp.r.subjectName;me.h.OKTrainingName.Value = me.r.subjectName;end
+				%if isprop(tmp.r,'researcherName');me.r.researcherName = tmp.r.researcherName;me.h.OKTrainingResearcherName.Value=me.r.researcherName;end
+				me.r.subjectName = me.h.OKTrainingName.Value;
+				me.r.researcherName = me.h.OKTrainingResearcherName.Value;
+
+				me.h.OKuseLabJackStrobe.Checked		= 'off';
+				me.h.OKuseLabJackTStrobe.Checked	= 'off';
+				me.h.OKuseDataPixx.Checked			= 'off';
+				me.h.OKuseDisplayPP.Checked			= 'off';
+				me.h.OKuseEyelink.Checked			= 'on';
+				me.h.OKuseTobii.Checked				= 'off';
+				me.h.OKuseLabJackReward.Checked		= 'off';
+				me.h.OKuseArduino.Checked			= 'off';
+				me.h.OKuseEyeOccluder.Checked		= 'off';
+				me.h.OKuseMagStim.Checked			= 'off';
+				
+				if isprop(tmp.r,'useLabJackTStrobe'); me.r.useLabJackTStrobe = tmp.r.useLabJackTStrobe; end
+				if me.r.useLabJackTStrobe == true; me.h.OKuseLabJackTStrobe.Checked = 'on'; end
+				
+				if isprop(tmp.r,'useDisplayPP'); me.r.useDisplayPP = tmp.r.useDisplayPP; end
+				if me.r.useDisplayPP == true; me.h.OKuseDisplayPP.Checked = 'on'; end
+				
+				if isprop(tmp.r,'useDataPixx'); me.r.useDataPixx = tmp.r.useDataPixx; end
+				if me.r.useDataPixx == true; me.h.OKuseDataPixx.Checked = 'on'; end
+				
+				if isprop(tmp.r,'useArduino'); me.r.useArduino = tmp.r.useArduino; end
+				if me.r.useArduino == true; me.h.OKuseArduino.Checked = 'on'; end
+				
+				if isprop(tmp.r,'useTobii'); me.r.useTobii = tmp.r.useTobii; end
+				if me.r.useTobii == true; me.h.OKuseTobii.Checked = 'on'; me.h.OKuseEyelink.Checked = 'off';end
+				
+				if isprop(tmp.r,'useEyeLink'); me.r.useEyeLink = tmp.r.useEyeLink; end
+				if me.r.useEyeLink == true; me.h.OKuseEyelink.Checked = 'on'; me.h.OKuseTobii.Checked = 'off';end
+			end
+			
+			%copy screen parameters
+			if isa(tmp.r.screen,'screenManager')
+				me.h.OKscreenXOffset.Value = num2str(tmp.r.screen.screenXOffset);
+				me.h.OKscreenYOffset.Value = num2str(tmp.r.screen.screenYOffset);
+				
+				%set(me.h.OKNativeBeamPosition,'Value', tmp.r.screen.nativeBeamPosition);
+				
+				list = me.gi(me.h.OKGLSrc);
+				val = me.findValue(list,tmp.r.screen.srcMode);
+				if ~isempty(val) && val > 0 && val <=length(list)
+					me.r.screen.srcMode = list{val(1)};
+					me.h.OKGLSrc.Value = me.r.screen.srcMode;
+				end
+				
+				list = me.gi(me.h.OKGLDst);
+				val = me.findValue(list,tmp.r.screen.dstMode);
+				if ~isempty(val) && val > 0
+					me.r.screen.dstMode = list{val(1)};
+					me.h.OKGLDst.Value = me.r.screen.dstMode;
+				end
+				
+				list = me.gi(me.h.OKbitDepth);
+				val = me.findValue(list,tmp.r.screen.bitDepth);
+				if ~isempty(val) && val > 0
+					me.r.screen.bitDepth = list{val(1)};
+					me.h.OKbitDepth.Value = me.r.screen.bitDepth;
+				end
+				
+				set(me.h.OKOpenGLBlending,'Value', tmp.r.screen.blend);
+				set(me.h.OKAntiAliasing,'Value', num2str(tmp.r.screen.antiAlias));
+				set(me.h.OKHideFlash,'Value', tmp.r.screen.hideFlash);
+				set(me.h.OKUseRetina,'Value', tmp.r.screen.useRetina);
+				string = num2str(tmp.r.screen.backgroundColour);
+				string = regexprep(string,'\s+',' '); %collapse spaces
+				set(me.h.OKbackgroundColour,'Value',string);
+				fprintf('\t…screenManager settings copied\n');
+			else
+				fprintf('\t…No screenManager settings loaded!\n');
+			end
+			%copy task parameters
+			if isempty(tmp.r.task)
+				me.r.task = taskSequence;
+				me.r.task.randomiseTask;
+				fprintf('\t…taskSequence created\n');
+			else
+				me.r.task = tmp.r.task;
+				for i=1:me.r.task.nVars
+					if ~isfield(me.r.task.nVar(i),'offsetstimulus') %add these to older protocols that may not contain them
+						me.r.task.nVar(i).offsetstimulus = [];
+						me.r.task.nVar(i).offsetvalue = [];
+					end
+				end
+				fprintf('\t…taskSequence assigned\n');
+			end
+			
+			set(me.h.OKtrialTime, 'Value', num2str(me.r.task.trialTime));
+			set(me.h.OKRandomSeed, 'Value', num2str(me.r.task.randomSeed));
+			set(me.h.OKisTime,'Value',sprintf('%g ',me.r.task.isTime));
+			set(me.h.OKibTime,'Value',sprintf('%g ',me.r.task.ibTime));
+			set(me.h.OKnBlocks,'Value',num2str(me.r.task.nBlocks));
+			
+			if me.r.task.nVars > 0
+				set(me.h.OKAddVariable,'Enable','on');
+				set(me.h.OKDeleteVariable,'Enable','on');
+				set(me.h.OKCopyVariable,'Enable','on');
+				set(me.h.OKEditVariable,'Enable','on');
+			end
+			if me.r.stimuli.n > 0
+				set(me.h.OKDeleteStimulus,'Enable','on');
+				set(me.h.OKModifyStimulus,'Enable','on');
+				set(me.h.OKInspectStimulus,'Enable','on');
+				set(me.h.OKStimulusUp,'Enable','on');
+				set(me.h.OKStimulusDown,'Enable','on');
+				set(me.h.OKStimulusRun,'Enable','on');
+				set(me.h.OKStimulusRunBenchmark,'Enable','on');
+				set(me.h.OKStimulusRunAll,'Enable','on');
+				set(me.h.OKStimulusRunAllBenchmark,'Enable','on');
+				set(me.h.OKStimulusRunSingle,'Enable','on');
+				me.store.visibleStimulus.uuid='';
+				me.editStimulus;
+			end
+			
+			me.getScreenVals;
+			me.getTaskVals;
+			me.refreshStimulusList;
+			me.refreshVariableList;
+			me.getScreenVals;
+			%me.getTaskVals;
+			me.refreshProtocolsList;
+			me.h.propertiesToVariables;
 			
 			fprintf('---> Load finished\n');
 
@@ -1265,8 +1361,8 @@ classdef opticka < optickaCore
 			else
 				me.h.OKOptickaVersion.Text = ['Opticka Experiment Manager V' me.optickaVersion ' - ' me.comment];
 			end
-			me.refreshProtocolsList;
-			figure(me.h.OKRoot); drawnow;
+			
+			figure(me.h.OKRoot);
 		end
 		
 		% ======================================================================
@@ -1439,7 +1535,7 @@ classdef opticka < optickaCore
 				end
 				str{i} = [V(i).name ' on Stim: ' num2str(V(i).stimulus) '|' v];
 				if isfield(V, 'offsetstimulus') && ~isempty(V(i).offsetstimulus)
-					str{i} =  [str{i} ' | Stim:' num2str(V(i).offsetstimulus) ' modify:' num2str(V(i).offsetvalue)];
+					str{i} =  [str{i} ' | Mod-Stim:' num2str(V(i).offsetstimulus) ' modifier:' num2str(V(i).offsetvalue)];
 				end
 				str{i}=regexprep(str{i},'\s+',' ');
 			end
@@ -1679,13 +1775,31 @@ classdef opticka < optickaCore
 		%> @param inhandle handle to UI element
 		% ===================================================================
 		function outv = gn(inhandle)
-		%quick alias to get number value
+		% quick alias to get number value
 			if isprop(inhandle,'String')
 				outv = str2num(inhandle.String); %#ok<ST2NM>
 			elseif isprop(inhandle,'Value')
 				outv = str2num(inhandle.Value); %#ok<ST2NM>
 			elseif isprop(inhandle,'Text')
 				outv = str2num(inhandle.Text); %#ok<ST2NM>
+			else
+				outv = '';
+			end
+		end
+
+		% ===================================================================
+		%> @brief get string but eval to variable
+		%> 
+		%> @param inhandle handle to UI element
+		% ===================================================================
+		function outv = ge(inhandle)
+		% quick alias to get number value
+			if isprop(inhandle,'String')
+				outv = eval(inhandle.String); %#ok<ST2NM>
+			elseif isprop(inhandle,'Value')
+				outv = eval(inhandle.Value); %#ok<ST2NM>
+			elseif isprop(inhandle,'Text')
+				outv = eval(inhandle.Text); %#ok<ST2NM>
 			else
 				outv = '';
 			end

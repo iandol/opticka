@@ -1,16 +1,48 @@
-%% Demonstration of a manual state-machine-driven Opticka Behavioural Experiment. 
-% Opticka is an object oriented framework/GUI for the Psychophysics
-% toolbox, allowing randomised interleaved presentation of parameter
-% varying stimuli specified in experimenter-relevant values. It is designed
-% to work on Linux, macOS & Windows, and can interface via strobed words
-% (using a cheap and very reliable LabJack), or TTLs via an Arduino, and
-% ethernet with external harware for recording neurophysiological data.
+%% Demo of a state-machine-driven Opticka Behavioural Experiment. 
+% Opticka is an object-oriented framework for the Psychophysics toolbox
+% (PTB), allowing randomised interleaved presentation of parameter varying
+% stimuli specified in experimenter-relevant values. It is designed to work
+% on Linux (PTB's preferred OS), macOS & Windows, and can interface via
+% strobed words (using a cheap and very reliable LabJack), or TTLs via
+% Arduino, and ethernet with external harware for recording
+% neurophysiological data.
 %
-% In this example, Stimulus objects (myStims class cell array), task
-% sequence variables (myTask object), and screenManager (myScreen object)
-% are passed to the runExperiment object for final display. A dummy
-% eyetracker object (where the mouse input transparently replaces the eye
-% movements), is used to allow behavioural control of the paradigm.
+% In this demo, Stimulus objects (myStims object), task sequence variables
+% (myTask object), and screenManager (myScreen object) are passed to the
+% runExperiment class. runExperiment uses a stateMachine class object which
+% loads the DefaultStateInfo.m specification to run the following
+% state-based experiment:
+% 
+%    ┌───────────────────────────────────────┐
+%    │                                       ▼
+%    │                                     ┌───────────────────────────┐
+% ┌──┼───────────────────────────────────▶ │          (1) prefix       │ ◀┐
+% │  │                                     └───────────────────────────┘  │
+% │  │                                       │                            │
+% │  │                                       ▼                            │
+% │┌───────────┐ Transition                ┌───────────────────────────┐  │
+% ││ incorrect │ inFixFcn=>incorrect       │          fixate           │  │
+% ││           │◀───────────────────────── │ show(stims, 2)            │  │
+% │└───────────┘                           └───────────────────────────┘  │
+% │                                          │                            │
+% │                                          │ Transition                 │
+% └──┐                                       │ inFixFcn=>stimulus         │
+%    │                                       ▼                            │
+%  ┌───────────┐ Transition                ┌───────────────────────────┐  │
+%  │  CORRECT  │ maintainFixFcn=>correct   │         stimulus          │  │
+%  │           │◀───────────────────────── │ show(stims, [1 2])        │  │
+%  └───────────┘                           └───────────────────────────┘  │
+%                                            │                            │
+%                                            │ Transition                 │
+%                                            │ maintainFixFcn=>breakfix   │
+%                                            ▼                            │
+%                                          ┌───────────────────────────┐  │
+%                                          │         BREAKFIX          │ ─┘
+%                                          └───────────────────────────┘
+% 
+% 
+% A dummy eyetracker object (where the mouse input transparently replaces
+% the eye movements), is used to allow behavioural control of the paradigm.
 % 
 % Opticka also has a UI (type `opticka` in the command window), which is a
 % visual manager of the objects introduced here. The UI also controls other
@@ -34,15 +66,15 @@ sca %PTB screen clear all
 % each stimulus in the group and only thoses set to draw will do so. Note
 % you can control each stimulus yourself (each stimulus has its own set of
 % control functions), but using metaStimulus makes the code simpler...
-myStims		= metaStimulus();
+myStims			= metaStimulus();
 
 %%
 % first stimulus is a smoothed 5° red disc
-myStims{1}	= discStimulus('colour', [0.7 0 0], 'size', 5, 'sigma', 25);
+myStims{1}		= discStimulus('colour', [0.7 0 0], 'size', 5, 'sigma', 25);
 
 %%
 % second stimulus is an optimised 0.8° fixation cross from Thaler et al., 2013
-myStims{2}	= fixationCrossStimulus('size', 0.8);
+myStims{2}		= fixationCrossStimulus('size', 0.8);
 
 %% Task Initialisation
 % The taskSequence class defines a stimulus sequence (task) which is
@@ -57,20 +89,23 @@ myStims{2}	= fixationCrossStimulus('size', 0.8);
 % value. There are functions to handle what happens if the subject responds
 % incorrectly, where we can re-randomise the next value within the block.
 
-myTask					= taskSequence('nBlocks', 3); %new taskSequence object instance
+myTask					= taskSequence(); %new taskSequence object instance
 
 %%
-% Our variable is xPosition, applied to stimulus 1 only.
+% Our variable is xPosition, applied to stimulus 1 only. 3 different
+% position values so 3 trials per block...
 myTask.nVar(1).name		= 'xPosition';
 myTask.nVar(1).stimulus	= 1;
 myTask.nVar(1).values	= [-10 0 10];
 
 %%
-% We call the method to randomise the trials in a block structure
+% We call the method to randomise the trials into a block (3 blocks, 3
+% trials) structure.
+myTask.nBlocks			= 3;
 randomiseTask(myTask);
 
 %%
-% Lets print out a table of the stimulus values for every trial
+% Lets print out a table of the stimulus values for every trial to be run
 showLog(myTask);
 
 %% Setup screenManager Object
@@ -78,12 +113,12 @@ showLog(myTask);
 % parameters to open the PTB screen with. Note distance and pixels
 % per cm define the resultant geometry > pixel mappings. You can set
 % several screen parameters, windowing, blending etc.
-myScreen = screenManager('distance', 57.3,... %display distance from observer
-	'pixelsPerCm', 32,... %calibration value for pixel density, measure using calibrateSize()
-	'windowed', [900 700],... % use fullscreen [] or window [X Y]?
-	'backgroundColour', [0.5 0.5 0.5],... %initial background colour
-	'blend', true,... %enable OpenGL blending, you can also set blend modes when needed
-	'bitDepth', '8bit'); %FloatingPoint32bit, 8bit, FloatingPoint16bit etc.
+myScreen = screenManager('distance', 57.3,... % display distance from observer
+	'pixelsPerCm', 32,... % calibration value for pixel density, measure using calibrateSize()
+	'windowed', [1000 700],... % use fullscreen [] or window [X Y]?
+	'backgroundColour', [0.5 0.5 0.5],... % initial background colour
+	'blend', true,... % enable OpenGL blending, you can also set blend modes when needed
+	'bitDepth', '8bit'); % FloatingPoint32bit, 8bit, FloatingPoint16bit etc.
 
 %% Setup runExperiment Object
 % We now pass our stimulus, screen and task objects to the runExperiment
@@ -119,9 +154,16 @@ myExp = runExperiment('stimuli', myStims,... %stimulus objects
 runTask(myExp);
 
 %% Plot a timing log of every frame against the stimulus on/off times
-%
+% PTB has the most reliable and precise timing control of any experimental
+% control system, and we log every flip time alongside the stimulus
+% transitions. The timing log shows every recorded frame in relation to the
+% stimulus transitions.
 showTimingLog(myExp);
 
 %% Plot a timing log of all states and their function evaluation transition times
-%
+% The state machine records the timestamps when states are entered and
+% exited. In addition, it times how long each cell array of functions take
+% to run on enter/within/exit, to check for any potential timing problems
+% (you do not want enter/within states to take too long in case it causes
+% frame drops.
 showLog(myExp.stateMachine);

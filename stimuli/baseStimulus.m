@@ -7,6 +7,7 @@
 %> used during runtime, and whose values are converted from definition units like degrees to pixel
 %> values that PTB uses. The transient copies are generated on setup and removed on reset.
 %>
+%> @todo build up animatorManager functions
 %>
 %> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
@@ -43,7 +44,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> angle in degrees
 		angle double = 0
 		%> animation manager: can assign an animationManager() object that handles
-		%> more complex animation paths than simple builtin linear motion
+		%> more complex animation paths than simple builtin linear motion WIP
 		animator = []
 		%> delay time to display relative to stimulus onset, can set upper and lower range
 		%> for random interval. This allows for a group of stimuli some to be delayed relative
@@ -100,6 +101,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 		screenVals struct = struct('ifi',1/60,'fps',60,'winRect',[0 0 1920 1080])
 		%. is object set up?
 		isSetup logical = false
+		%> is panel constructed?
+		isGUI logical = false
 	end
 	
 	properties (SetAccess = protected, GetAccess = protected)
@@ -128,14 +131,16 @@ classdef baseStimulus < optickaCore & dynamicprops
 		ignorePropertiesBase char = ['handles|ppd|sM|name|comment|fullName|'...
 			'family|type|dX|dY|delta|verbose|texture|dstRect|mvRect|xOut|'...
 			'yOut|isVisible|dateStamp|paths|uuid|tick|doAnimator|doDots|mouseOverride|isRect'...
-			'dstRect|mvRect|sM|screenVals|isSetup'];
+			'dstRect|mvRect|sM|screenVals|isSetup']
+		%> Which properties to not draw in the UI panel
+		ignorePropertiesUIBase char = ['animator|fullName']
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> properties allowed to be passed on construction
 		allowedProperties char = ['xPosition|yPosition|size|colour|verbose|'...
 			'alpha|startPosition|angle|speed|delayTime|mouseOverride|isVisible'...
-			'showOnTracker|animator'];
+			'showOnTracker|animator']
 	end
 	
 	events
@@ -391,7 +396,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				if benchmark
 					Screen('DrawText', s.win, 'BENCHMARK: screen won''t update properly, see FPS in command window at end.', 5,5,[0 0 0]);
 				else
-					Screen('DrawText', s.win, sprintf('Stim will be static for 2.0 seconds (debug grid is 1deg), then animate for %.2f seconds',runtime), 5,5,[0 0 0]);
+					Screen('DrawText', s.win, sprintf('Stimulus will be static for 2 secs (debug grid = ±1°), then animate for %.2f seconds',runtime), 5,5,[0 0 0]);
 				end
 				
 				flip(s);
@@ -520,10 +525,29 @@ classdef baseStimulus < optickaCore & dynamicprops
 			
 			pr = findAttributesandType(me,'SetAccess','public','notlogical');
 			pr = sort(pr);
+			if isprop(me,'ignorePropertiesUI')
+				excl = [me.ignorePropertiesUIBase '|' me.ignorePropertiesUI];
+			else
+				excl = me.ignorePropertiesUIBase;
+			end		
+			eidx = [];
+			for i = 1:length(pr)
+				if ~isempty(regexpi(pr{i},excl, 'once'))
+					eidx = [eidx i];
+				end
+			end
+			pr(eidx) = [];
 			lp = ceil(length(pr)/2);
 			
 			pr2 = findAttributesandType(me,'SetAccess','public','logical');
 			pr2 = sort(pr2);
+			eidx = [];
+			for i = 1:length(pr2)
+				if ~isempty(regexpi(pr2{i},excl, 'once'))
+					eidx = [eidx i];
+				end
+			end
+			pr2(eidx) = [];
 			lp2 = length(pr2);
 			handles.grid3 = uigridlayout(handles.grid,[lp2 1],'Padding',[1 1 1 1],'BackgroundColor',bgcolor);
 
@@ -649,6 +673,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				'Tag','readButton',...%'Callback',@me.readPanel,...
 				'Text','Update');
 			me.handles = handles;
+			me.isGUI = true;
 		end
 		
 		% ===================================================================
@@ -674,7 +699,6 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%>
 		% ===================================================================
 		function readPanel(me,varargin)
-
 			if isempty(me.handles) || ~(isfield(me.handles, 'root') && isa(me.handles.root,'matlab.ui.container.Panel'))
 				return
 			end
@@ -753,7 +777,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 			if isfield(me.handles,'parent') && isgraphics(me.handles.parent,'figure')
 				delete(me.handles.parent)
 			end
-			me.handles = [];
+			me.cleanHandles();
+			me.isGUI = false;
 		end
 		
 		% ===================================================================
@@ -767,8 +792,9 @@ classdef baseStimulus < optickaCore & dynamicprops
 				me.handles = [];
 			end
 			if isprop(me,'h')
-				me.handles = [];
+				me.h = [];
 			end
+			me.isGUI = false;
 		end
 		
 	end %---END PUBLIC METHODS---%

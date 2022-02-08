@@ -1,12 +1,17 @@
-%RFLOCALISER state configuration file, this gets loaded by opticka via
-% runExperiment class. 
+% RFLOCALISER state configuration file, this gets loaded by opticka via
+% runExperiment class. This protocol allows you to elicit visual responses
+% while a subject maintains fixation.
 %
-% This protocol uses mouse and keyboard control of many different classes
-% of stimuli. You can change which stimulus and what variables are during
-% the task, while the subject maintains fixation. 
+% This protocol uses mouse and keyboard control of 10 different classes of
+% stimuli. You can change which stimulus and what variables are during the
+% task, while the subject maintains fixation. See Help > Keyboard Map for
+% the keys; basically < and > change stimuli, ← and → change the variable,
+% and ↑ and ↓ change the variable value (see stims.controlTable below for
+% the actual values). You can also change the fixation time etc.
 %
-% The following class objects (easily named handle copies) are already 
-% loaded and available to use. Each class has methods useful for running the task: 
+% The following class objects (easily named handle copies) are already
+% loaded and available to use. Each class has methods useful for running
+% the task:
 %
 % me		= runExperiment object
 % s			= screenManager
