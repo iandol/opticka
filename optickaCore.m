@@ -1,4 +1,5 @@
 % ========================================================================
+%> @class optickaCore
 %> @brief optickaCore base class inherited by many other opticka classes.
 %>
 %> @section intro Introduction
@@ -75,6 +76,7 @@ classdef optickaCore < handle
 	%=======================================================================
 		
 		% ===================================================================
+		function me = optickaCore(varargin)
 		%> @brief Class constructor
 		%>
 		%> The class constructor for optickaCore.
@@ -83,7 +85,6 @@ classdef optickaCore < handle
 		%> parsed.
 		%> @return instance of class.
 		% ===================================================================
-		function me = optickaCore(varargin)
 			args = me.addDefaults(varargin);
 			me.parseArgs(args,me.allowedPropertiesCore);
 			me.dateStamp = clock();
@@ -95,11 +96,11 @@ classdef optickaCore < handle
 		end
 		
 		% ===================================================================
+		function name = get.fullName(me)
 		%> @brief concatenate the name with a uuid at get.
 		%> @param
 		%> @return name the concatenated name
 		% ===================================================================
-		function name = get.fullName(me)
 			if isempty(me.name)
 				me.fullName_ = [me.className '#' me.uuid];
 			else
@@ -109,11 +110,11 @@ classdef optickaCore < handle
 		end
 		
 		% ===================================================================
+		function initialiseSaveFile(me, path)
 		%> @brief Initialise Save Dir
 		%>
 		%> For single stimulus presentation, randomise stimulus choice
 		% ===================================================================
-		function initialiseSaveFile(me, path)
 			if ~exist('path','var') || isempty(path)
 				path = me.paths.savedData;
 			else
@@ -126,6 +127,7 @@ classdef optickaCore < handle
 		end
 		
 		% ===================================================================
+		function [list, typelist] = findAttributes(me, attrName, attrValue)
 		%> @brief find properties of object with specific attributes, for
 		%> example all properties whose GetAcccess attribute is public
 		%> @param attrName attribute name, i.e. GetAccess, Transient
@@ -133,7 +135,6 @@ classdef optickaCore < handle
 		%> @return list of properties that match that attribute
 		%> @return typelist the type of the property
 		% ===================================================================
-		function [list, typelist] = findAttributes(me, attrName, attrValue)
 			% Determine if first input is object or class name
 			if ischar(me)
 				mc = meta.class.fromName(me);
@@ -185,6 +186,7 @@ classdef optickaCore < handle
 		end
 		
 		% ===================================================================
+		function list = findAttributesandType(me, attrName, attrValue, type)
 		%> @brief find properties of object with specific attributes, for
 		%> example all properties whose GetAcccess attribute is public and
 		%> type is logical
@@ -193,7 +195,6 @@ classdef optickaCore < handle
 		%> @param type logical, notlogical, string or number
 		%> @return list of properties that match that attribute
 		% ===================================================================
-		function list = findAttributesandType(me, attrName, attrValue, type)
 			% Determine if first input is object or class name
 			if ischar(me)
 				mc		= meta.class.fromName(me);
@@ -249,13 +250,13 @@ classdef optickaCore < handle
 		end
 		
 		% ===================================================================
+		function obj_out = clone(me)
 		%> @brief Use this syntax to make a deep copy of the object, i.e.
 		%> OBJ_OUT has the same field values, but will not behave as a
 		%> handle-copy of me anymore.
 		%>
 		%> @return obj_out  cloned object
 		% ===================================================================
-		function obj_out = clone(me)
 			meta = metaclass(me);
 			obj_out = feval(class(me),'cloning',true);
 			for i = 1:length(meta.Properties)
@@ -295,22 +296,22 @@ classdef optickaCore < handle
 		end
 		
 		% ===================================================================
+		function editProperties(me, properties)
 		%> @brief editProperties -- method to edit a bunch of properties
 		%>
 		%> @param properties - cell or struct of properties
 		% ===================================================================
-		function editProperties(me, properties)
 			me.addArgs(properties);
 		end
 		
 		% ===================================================================
+		function set(me, property, value)
 		%> @brief set -- method to fast change a particular value. This is
 		%> useful for use in anonymous functions, like in the state machine.
 		%>
 		%> @param property - the property to change
 		%> @param value - the value to change it to
 		% ===================================================================
-		function set(me, property, value)
 			if isprop(me,property)
 				me.(property) = value;
 			end
@@ -322,12 +323,10 @@ classdef optickaCore < handle
 	methods ( Hidden = true ) %-------HIDDEN METHODS-----%
 	%=======================================================================
 		% ===================================================================
-		%> @brief checkPaths
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
 		function checkPaths(me)
+		%> @brief checks the paths are valid
+		%>
+		% ===================================================================
 			samePath = false;
 			if isprop(me,'dir')
 				
@@ -393,20 +392,17 @@ classdef optickaCore < handle
 	%=======================================================================
 	
 		% ===================================================================
+		function args = makeArgs(args)
 		%> @brief Converts cell args to structure array
 		%> 
 		%>
 		%> @param args input data
 		%> @return args as a structure
-		% ===================================================================
-		function args = makeArgs(args)
-			
+		% ===================================================================	
 			if isstruct(args); return; end
-			
 			while iscell(args) && length(args) == 1
 				args = args{1};
 			end
-			
 			if iscell(args)
 				if mod(length(args),2) == 1 % odd
 					args = args(1:end-1); %remove last arg
@@ -415,10 +411,10 @@ classdef optickaCore < handle
 				even = logical(abs(odd-1));
 				args = cell2struct(args(even),args(odd),2);
 			end
-			
 		end
 		
 		% ===================================================================
+		function args = addDefaults(args, defs)
 		%> @brief add default options to arg input
 		%> 
 		%>
@@ -426,7 +422,6 @@ classdef optickaCore < handle
 		%> @param defs extra default settings
 		%> @return args structure
 		% ===================================================================
-		function args = addDefaults(args, defs)
 			if ~exist('args','var'); args = struct; end
 			if ~exist('defs','var'); defs = struct; end
 			if iscell(args); args = optickaCore.makeArgs(args); end
@@ -448,13 +443,13 @@ classdef optickaCore < handle
 	%=======================================================================
 		
 		% ===================================================================
+		function parseArgs(me, args, allowedProperties)
 		%> @brief Sets properties from a structure or normal arguments pairs,
 		%> ignores invalid or non-allowed properties
 		%>
 		%> @param args input structure
 		%> @param allowedProperties properties possible to set on construction
 		% ===================================================================
-		function parseArgs(me, args, allowedProperties)
 			allowedProperties = ['^(' allowedProperties ')$'];
 			
 			args = optickaCore.makeArgs(args);
@@ -476,12 +471,12 @@ classdef optickaCore < handle
 		end
 		
 		% ===================================================================
+		function addArgs(me, args)
 		%> @brief Sets properties from a structure or normal arguments pairs,
 		%> ignores invalid or non-allowed properties
 		%>
 		%> @param args input structure
 		% ===================================================================
-		function addArgs(me, args)
 			args = optickaCore.makeArgs(args);
 			if isstruct(args)
 				fnames = intersect(findAttributes(me,'SetAccess','public'),fieldnames(args));
@@ -497,11 +492,11 @@ classdef optickaCore < handle
 		end
 		
 		% ===================================================================
+		function setPaths(me)
 		%> @brief set paths for object
 		%>
 		%> @param
 		% ===================================================================
-		function setPaths(me)
 			me.paths(1).whatami = me.className;
 			me.paths.root = fileparts(which(mfilename));
 			me.paths.whereami = me.paths.root;
@@ -529,6 +524,7 @@ classdef optickaCore < handle
 		end
 		
 		% ===================================================================
+		function out=toStructure(me)
 		%> @brief Converts properties to a structure
 		%>
 		%>
@@ -536,7 +532,6 @@ classdef optickaCore < handle
 		%> @param tmp is whether to use the temporary or permanent properties
 		%> @return out the structure
 		% ===================================================================
-		function out=toStructure(me)
 			fn = fieldnames(me);
 			for j=1:length(fn)
 				out.(fn{j}) = me.(fn{j});
@@ -544,6 +539,7 @@ classdef optickaCore < handle
 		end
 
 		% ===================================================================
+		function out = getType(me, in)
 		%> @brief Give a metaproperty return the likely property class
 		%>
 		%>
@@ -551,8 +547,6 @@ classdef optickaCore < handle
 		%> @param in metaproperty
 		%> @return out class name
 		% ===================================================================
-		
-		function out = getType(me, in)
 			out = 'undefined';
 			thisClass = '';
 			if in.HasDefault
@@ -568,6 +562,7 @@ classdef optickaCore < handle
 		
 		
 		% ===================================================================
+		function salutation(me,in,message,override)
 		%> @brief Prints messages dependent on verbosity
 		%>
 		%> Prints messages dependent on verbosity
@@ -576,7 +571,6 @@ classdef optickaCore < handle
 		%> @param message additional message that needs printing to command window
 		%> @param override force logging if true even if verbose is false
 		% ===================================================================
-		function salutation(me,in,message,override)
 			if ~exist('override','var');override = false;end
 			if me.verbose==true || override == true
 				if ~exist('message','var') || isempty(message)

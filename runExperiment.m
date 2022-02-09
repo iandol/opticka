@@ -1,29 +1,35 @@
 % ========================================================================
 %> @class runExperiment
-%> @brief runExperiment is the main Experiment manager; Inherits from optickaCore
+%> @brief runExperiment is the main Experiment manager.
 %>
-%> RUNEXPERIMENT The main class which accepts a task (taskSequence) and 
-%> stimulus (metaStimulus) object and runs the stimuli based on the task object passed.
-%> This class uses the fundamental configuration of the screen (calibration, size
-%> etc. via screenManager), and manages communication to the DAQ systems
-%> using digital I/O and communication over a UDP client<->server socket (via dataConnection).
+%> RUNEXPERIMENT The main class which accepts a task «taskSequence», stimuli
+%> «metaStimulus» and for behavioural tasks a «stateMachine» state machine
+%> file, and runs the stimuli based on the task objects passed. This class
+%> uses the fundamental configuration of the screen (calibration, size etc.
+%> via «screenManager»), and manages communication to the DAQ systems using
+%> digital I/O and communication over a UDP client<->server socket (via
+%> dataConnection).
 %>
 %> There are 2 main experiment types:
-%>  1) MOC (method of constants) tasks -- uses stimuli and task objects directly to run standard
-%>     randomised variable tasks. See optickatest.m for an example. Does not use the stateMachine.
+%>  1) MOC (method of constants) tasks -- uses stimuli and task objects
+%>     directly to run standard randomised variable tasks. See optickatest.m
+%>     for an example. Does not use the «stateMachine».
 %>  2) Behavioural tasks that use state machines for control logic. These
-%>     tasks still use stimuli and task objects to provide stimuli and variable lists, 
-%>     but use a state machine to control the task structure.
+%>     tasks still use stimuli and task objects to provide stimuli and
+%>     variable lists, but use a state machine to control the task
+%>     structure.
 %>
-%>  Stimuli must be metaStimulus class, so for example:
+%> Stimuli should be «metaStimulus» class, so for example:
 %>
+%> ```
 %>  gStim = gratingStimulus('mask',1,'sf',1);
 %>  myStim = metaStimulus;
 %>  myStim{1} = gStim;
 %>  myExp = runExperiment('stimuli',myStim);
-%>  run(myExp);
+%>  runMOC(myExp);
+%> ```
 %>
-%>	will run a minimal experiment showing a 1c/d circularly masked grating
+%> will run a minimal experiment showing a 1c/d circularly masked grating
 %>
 %> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
@@ -193,22 +199,25 @@ classdef runExperiment < optickaCore
 	%=======================================================================
 		
 		% ===================================================================
-		%> @brief runExperiment constructor
+		function me = runExperiment(varargin)
+		%> @fn runExperiment
 		%>
-		%> @param args can be passed as a structure or name,arg pairs
+		%> runExperiment CONSTRUCTOR
+		%>
+		%> @param varargin can be passed as a structure or name,arg pairs
 		%> @return instance of the class.
 		% ===================================================================
-		function me = runExperiment(varargin)
 			args = optickaCore.addDefaults(varargin,struct('name','Run Experiment'));
 			me=me@optickaCore(args); %superclass constructor
 			me.parseArgs(args,me.allowedProperties);
 		end
 		
 		% ===================================================================
-		%> @brief The main run loop for method-of-constants (MOC)
+		function runMOC(me)
+		%> @fn runMOC
 		%> 
-		%> runMOC() uses built-in loop for experiment control and runs a
-		%> methods-of-constants experiment with the settings passed to it (stimuli,task
+		%> runMO uses built-in loop for experiment control and runs a
+		%> methods-of-constants (MOC) experiment with the settings passed to it (stimuli,task
 		%> and screen). This is different to the runTask method as it doesn't
 		%> use a stateMachine for experimental logic, just a minimal deterministic
 		%> trial+block loop. 
@@ -217,7 +226,6 @@ classdef runExperiment < optickaCore
 		%>
 		%> @param me required class object
 		% ===================================================================
-		function runMOC(me)
 			% we try not to use global variables, however the external eyetracker
 			% API does not easily allow us to pass objects and so we use global
 			% variables in this specific case...
@@ -248,6 +256,7 @@ classdef runExperiment < optickaCore
 			%-----------------------------------------------------------
 			try%======This is our main TRY CATCH experiment display loop
 			%-----------------------------------------------------------	
+				me.lastIndex = 0;
 				me.isRunning = true;
 				me.isRunTask = false;
 				
@@ -504,14 +513,16 @@ classdef runExperiment < optickaCore
 		end
 	
 		% ===================================================================
-		%> @brief runTask runs a state machine (behaviourally) driven task. 
+		function runTask(me)
+		%> @fn runTask
+		%>
+		%> runTask runs a state machine (behaviourally) driven task. 
 		%> 
 		%> Uses a StateInfo.m file to control the behavioural paradigm. The state
 		%> machine controls the logic of the experiment, and this method manages
 		%> the display loop.
-		% 
+		%>
 		% ===================================================================
-		function runTask(me)
 			% we try not to use global variables, however the external eyetracker
 			% API does not easily allow us to pass objects and so we use global
 			% variables in this specific case...
@@ -598,6 +609,7 @@ classdef runExperiment < optickaCore
 			%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 			try %================This is our main TASK setup=====================
 			%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+				me.lastIndex			= 0;
 				me.isRunning			= true;
 				me.isRunTask			= true;
 				
@@ -942,12 +954,14 @@ classdef runExperiment < optickaCore
 
 		end
 		% ===================================================================
-		%> @brief prepare the object for the local machine
-		%>
-		%> @param config allows excluding screen / task initialisation
-		%> @return
-		% ===================================================================
 		function initialise(me,config)
+		%> @fn initialise
+		%>
+		%> Prepares run for the local machine 
+		%>
+		%> @param config [nostimuli
+		%> | noscreen | notask] allows excluding screen / task initialisation
+		% ===================================================================
 			if ~exist('config','var')
 				config = '';
 			end
@@ -998,22 +1012,22 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief check if stateMachine has finished, set tS.stopTask true
-		%>
-		%> @param
-		% ===================================================================
 		function checkTaskEnded(me)
+		%> @fn checkTaskEnded
+		%> Check if stateMachine has finished, set me.stopTask true
+		%>
+		% ===================================================================
 			if me.stateMachine.isRunning && me.task.taskFinished
 				me.stopTask = true;
 			end
 		end
 		
 		% ===================================================================
-		%> @brief check if screenManager is in a good state
-		%>
-		%> @param
-		% ===================================================================
 		function error = checkScreenError(me)
+		%> @fn checkScreenError
+		%> check if screenManager is in a good state
+		%>
+		% ===================================================================
 			testWindowOpen(me.screen);
 			if me.isRunning && ~me.screen.isOpen
 				me.isRunning = false;
@@ -1024,11 +1038,12 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief showTimingLog Prints out the frame time plots from a run
-		%>
-		%> @param
-		% ===================================================================
 		function showTimingLog(me)
+		%> @fn showTimingLog 
+		%>
+		%> Prints out the frame time plots from a run
+		%>
+		% ===================================================================
 			if isa(me.taskLog,'timeLogger') && me.taskLog.vbl(1) ~= 0
 				me.taskLog.printRunLog;
 			elseif isa(me.runLog,'timeLogger') && me.runLog.vbl(1) ~= 0
@@ -1039,39 +1054,52 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief update eyeTracker with stimuli position
+		function updateFixationTarget(me, useStimuli, varargin)
+		%> @fn updateFixationTarget
 		%>
-		%> @param useTask 
-		%> @param varargin 
+		%> Sometimes you want the fixation to follow the position of a particular
+		%> stimulus. We can 'tag' the stimulus using metaStimulus.fixationChoice
+		%> and then use this method to get the current position and update the
+		%> eyetracker fixation window[s] to match the stimuli we tagged.
+		%>
+		%> @param useStimuli do we use the current stimuli positions or the last
+		%> known positions that are stored in me.stimuli.last[X|Y]Position.
+		%> @param varargin the rest of the parameters normally passed to 
+		%> eyeTracker.updateFixationValues: inittime,fixtime,radius,strict
 		% ===================================================================
-		function updateFixationTarget(me, useTask, varargin)
-			if ~exist('useTask','var');	useTask = false; end
-			if useTask 
+			if ~exist('useStimuli','var');	useStimuli = false; end
+			if useStimuli 
 				[me.lastXPosition,me.lastYPosition] = getFixationPositions(me.stimuli);
 				updateFixationValues(me.eyeTracker, me.lastXPosition, me.lastYPosition, varargin);
 			else
-				updateFixationValues(me.eyeTracker, me.stimuli.lastXPosition, me.stimuli.lastYPosition);
+				updateFixationValues(me.eyeTracker, me.stimuli.lastXPosition, me.stimuli.lastYPosition, varargin);
 			end
 		end
 		
 		% ===================================================================
-		%> @brief updates eyelink with stimuli position
+		function updateExclusionZones(me, useStimuli, radius)
+		%> @fn updateExclusionZones
 		%>
-		%> @param useTask
-		%> @param radius
+		%> Updates eyetracker with current stimuli tagged for exclusion
+		%> using metaStimulus.exclusionChoice
+		%>
+		%> @param useStimuli use the metaStimulus parameters
+		%> @param radius of the exclusion zone
 		% ===================================================================
-		function updateExclusionZones(me, useTask, radius)
-			if ~exist('useTask','var');	useTask = false; end
-			if useTask 
+			if ~exist('useStimuli','var');	useStimuli = false; end
+			if useStimuli 
 				[me.lastXExclusion,me.lastYExclusion] = getExclusionPositions(me.stimuli);
 				updateExclusionZones(me.eyeTracker, me.lastXExclusion, me.lastYExclusion, radius);
 			else 
-				updateExclusionZones(me.eyeTracker, me.stimuli.lastXExclusion, me.stimuli.lastYExclusion);
+				updateExclusionZones(me.eyeTracker, me.stimuli.lastXExclusion, me.stimuli.lastYExclusion, radius);
 			end
 		end
 		
 		% ===================================================================
-		%> @brief checks the variable value of a stimulus (e.g. its angle) and
+		function updateConditionalFixationTarget(me, stimulus, variable, value, varargin)
+		%> @fn updateConditionalFixationTarget
+		%>
+		%> Checks the variable value of a stimulus (e.g. its angle) and
 		%> then sets a fixation target based on that value, so you can use
 		%> multiple test stimuli and set the target to one of them in a forced
 		%> choice paradigm that matches the variable value
@@ -1081,7 +1109,6 @@ classdef runExperiment < optickaCore
 		%> @param value		which value to check for
 		%> @param varargin	additional parameters to set the fixation window
 		% ===================================================================
-		function updateConditionalFixationTarget(me, stimulus, variable, value, varargin)
 			selected = [];
 			try
 				for i = stimulus
@@ -1101,11 +1128,12 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
+		function keyOverride(me, tS)
+		%> @fn keyOverride
 		%> @brief when running allow keyboard override, so we can edit/debug things
 		%>
 		%> @param
 		% ===================================================================
-		function keyOverride(me, tS)
 			KbReleaseWait; %make sure keyboard keys are all released
 			ListenChar(0); %capture keystrokes
 			ShowCursor;
@@ -1119,11 +1147,11 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief set.verbose
+		function set.verbose(me,value)
+		%> @fn set.verbose
 		%>
 		%> Let us cascase verbosity to other classes
 		% ===================================================================
-		function set.verbose(me,value)
 			value = logical(value);
 			me.verbose = value;
 			if isa(me.task,'taskSequence') %#ok<*MCSUP>
@@ -1159,11 +1187,11 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief set.stimuli
+		function set.stimuli(me,in)
+		%> @fn set.stimuli
 		%>
 		%> Migrate to use a metaStimulus object to manage stimulus objects
 		% ===================================================================
-		function set.stimuli(me,in)
 			if isempty(me.stimuli) || ~isa(me.stimuli,'metaStimulus')
 				me.stimuli = metaStimulus();
 			end
@@ -1177,11 +1205,12 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief randomiseTrainingList
+		function randomiseTrainingList(me)
+		%> @fn randomiseTrainingList
 		%>
 		%> For single stimulus presentation, randomise stimulus choice
+		%>
 		% ===================================================================
-		function randomiseTrainingList(me)
 			if ~isempty(me.thisStim)
 				me.thisStim = randi(length(me.stimList));
 				me.stimuli.choice = me.thisStim;
@@ -1189,11 +1218,13 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief set strobe value
-		%>
-		%> 
-		% ===================================================================
 		function setStrobeValue(me, value)
+		%> @fn setStrobeValue
+		%>
+		%> Set strobe value
+		%>
+		%> @param value the value to set the I/O system
+		% ===================================================================
 			if value == Inf; value = me.stimOFFValue; end
 			if me.useDisplayPP == true
 				prepareStrobe(me.dPP, value);
@@ -1205,11 +1236,13 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief set strobe method to trigger on next flip
-		%>
-		%> 
-		% ===================================================================
 		function doStrobe(me, value)
+		%> @fn doStrobe
+		%> 
+		%> set I/O strobe to trigger on next flip
+		%>
+		%> @param value true or false
+		% ===================================================================
 			if isempty(value) || value == true
 				me.sendStrobe = true;
 			else
@@ -1218,38 +1251,46 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief send SYNCTIME message to eyelink after flip
+		function doSyncTime(me)
+		%> @fn doSyncTime
 		%>
+		%> send SYNCTIME message to eyelink after flip
 		%> 
 		% ===================================================================
-		function doSyncTime(me)
 			me.sendSyncTime = true;
 		end
 		
 		% ===================================================================
-		%> @brief enable screen flip
+		function enableFlip(me)
+		%> @fn enableFlip
 		%>
+		%> Enable screen flip
 		%> 
 		% ===================================================================
-		function enableFlip(me)
 			me.doFlip = true;
 		end
 		
 		% ===================================================================
-		%> @brief disable screen flip
-		%>
-		%> 
-		% ===================================================================
 		function disableFlip(me)
+		%> @fn disableFlip
+		%>
+		%> Disable screen flip
+		%>
+		% ===================================================================
 			me.doFlip = false;
 		end
 		
 		% ===================================================================
-		%> @brief get task run index
-		%>
-		%> 
-		% ===================================================================
 		function trial = getTaskIndex(me, index)
+		%> @fn getTaskIndex
+		%>
+		%> This method gets the unique value of the current trial from
+		%> taskSequence. This is useful for sending to the eyetracker or I/O
+		%> devices to label which variable value is being shown.
+		%>
+		%> @param the index to a particular trial
+		%> @return the unique variable number
+		% ===================================================================
 			if ~exist('index','var') || isempty(index)
 				index = me.task.totalRuns;
 			end
@@ -1261,20 +1302,27 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief get task run index
+		function logRun(me,tag)
+		%> @fn logRun
+		%> @brief print run info to command window
 		%>
-		%> 
+		%> @param tag what name to give this log printout
 		% ===================================================================
-		function window = getFixationWindow(me)
-			window = me.eyeTracker.fixWindow;
+			if me.isRunning
+				if ~exist('tag','var'); tag = '#'; end
+				t = me.infoText;
+				fprintf('===>%s:%s\n',tag,t);
+			end			
 		end
 		
 		% ===================================================================
-		%> @brief updateTask
-		%> runs the taskSequence.updateTask function
-		%> @param result an integer result, e.g. 1 = correct
-		% ===================================================================
 		function updateTask(me,result)
+		%> @fn updateTask 
+		%> Updates taskSequence with current info and the
+		%> result for that trial running the taskSequence.updateTask function
+		%>
+		%> @param result an integer result, e.g. 1 = correct or -1 = breakfix
+		% ===================================================================
 			info = '';
 			if me.useEyeLink || me.useTobii
 				info = sprintf('window = %i; isBlink = %i; isExclusion = %i; isFix = %i; isInitFail = %i; fixTotal = %g ',...
@@ -1289,7 +1337,8 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief updateNextState
+		function updateNextState(me, type)
+		%> @fn updateNextState
 		%> taskSequence can generate a trial factor, and we can set these to
 		%> the name of a state in the stateMachine. This means we can choose
 		%> a state based on the trial factor in taskSequence. This sets
@@ -1297,7 +1346,6 @@ classdef runExperiment < optickaCore
 		%>
 		%> @param type - whether to use 'trial' [default] or 'block' factor
 		% ===================================================================
-		function updateNextState(me, type)
 			if ~exist('type','var'); type = 'trial'; end
 			if me.isTask && me.isRunTask
 				switch type
@@ -1315,14 +1363,14 @@ classdef runExperiment < optickaCore
 		
 		
 		% ===================================================================
-		%> @brief updateVariables
+		function updateVariables(me, index, override, update)
+		%> @fn updateVariables
 		%> Updates the stimulus objects with the current variable set from taskSequence()
 		%> 
 		%> @param index a single value
 		%> @param override - forces updating even if it is the same trial
 		%> @param update - do we run taskSequence.updateTask() as well?
 		% ===================================================================
-		function updateVariables(me, index, override, update)
 			if ~exist('update','var') || isempty(update)
 				update = false;
 			end
@@ -1345,7 +1393,7 @@ classdef runExperiment < optickaCore
 			if me.isTask && ((index > me.lastIndex) || override == true)
 				[thisBlock, thisRun] = me.task.findRun(index);
 				stimIdx = []; 
-				t = sprintf('B#%i R#%i T#%i = ',thisBlock, thisRun, index);
+				t = sprintf('Blk#%i Run#%i Trl#%i > ',thisBlock, thisRun, index);
 				for i=1:me.task.nVars
 					valueList = cell(1); oValueList = cell(1); %#ok<NASGU>
 					doXY = false;
@@ -1421,20 +1469,18 @@ classdef runExperiment < optickaCore
 						[ovalueList{1,1:size(offsetix,2)}] = deal(val);
 						valueList = [valueList{:} ovalueList];
 					end
-				end
-				
-				a = 1;
-				for j = stimIdx %loop through our stimuli references for this variable
-					t = [t sprintf('S%i: %s: %s ',j,name,num2str(valueList{a}, '%g '))];
-					if ~doXY
-						me.stimuli{j}.(name)=valueList{a};
-					else
-						me.stimuli{j}.xPositionOut=valueList{a}(1);
-						me.stimuli{j}.yPositionOut=valueList{a}(2);
+					a = 1;
+					for j = stimIdx %loop through our stimuli references for this variable
+						t = [t sprintf('S%i:%s=%s ',j,name,num2str(valueList{a}, '%g '))];
+						if ~doXY
+							me.stimuli{j}.(name)=valueList{a};
+						else
+							me.stimuli{j}.xPositionOut=valueList{a}(1);
+							me.stimuli{j}.yPositionOut=valueList{a}(2);
+						end
+						a = a + 1;
 					end
-					a = a + 1;
 				end
-					
 				me.variableInfo = t;
 				me.behaviouralRecord.info = t;
 				me.lastIndex = index;
@@ -1442,31 +1488,34 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
+		function needEyeSample(me, value)
+		%> @fn needEyeSample
 		%> @brief set needSample if eyeManager getSample on current flip?
 		%>
-		%> @param
+		%> @param value
 		% ===================================================================
-		function needEyeSample(me, value)
 			if ~exist('value','var'); value = true; end
 			me.needSample = value;
 		end
 		
 		% ===================================================================
+		function deleteRunLog(me)
+		%> @fn deleteRunLog
 		%> @brief deletes the run logs
 		%>
 		%> @param
 		% ===================================================================
-		function deleteRunLog(me)
 			me.runLog = [];
 			me.taskLog = [];
 		end
 		
 		% ===================================================================
+		function refreshScreen(me)
+		%> @fn refreshScreen
 		%> @brief refresh the screen values stored in the object
 		%>
 		%> @param
 		% ===================================================================
-		function refreshScreen(me)
 			me.screenVals = me.screen.prepareScreen();
 			if me.screenVals.fps < 90
 				me.fInc = 6;
@@ -1474,39 +1523,26 @@ classdef runExperiment < optickaCore
 				me.fInc = 8;
 			end
 		end
-		
-		% ===================================================================
-		%> @brief print run info to command window
-		%>
-		%> @param
-		% ===================================================================
-		function logRun(me,tag)
-			if me.isRunning
-				if ~exist('tag','var'); tag = '#'; end
-				t = me.infoText;
-				fprintf('===> %s: %s\n',tag,t);
-			end			
-		end
 
 		% ===================================================================
-		%> @brief no operation, tests method call overhead
-		%>
-		%> @param
-		% ===================================================================
 		function noop(me) %#ok<MANU> 
-			% used to test any overhead of simply calling an empty method
+		%> @fn noop
+		%> no operation, tests method call overhead
+		%>
+		% ===================================================================
+			
 		end
 		
-		% ===================================================================
-		%> @brief called on save, removes opticka handle
-		%>
-		%> @param
-		% ===================================================================
+% 		% ===================================================================
 % 		function out = saveobj(me)
-% 			me.screenSettings.optickahandle = [];
-% 			fprintf('===> Saving runExperiment object...\n')
-% 			out = me;
-% 		end
+% 		%> @brief called on save, removes opticka handle
+% 		%>
+% 		%> @param
+% 		% ===================================================================
+%  			me.screenSettings.optickahandle = [];
+%  			fprintf('===> Saving runExperiment object...\n')
+%  			out = me;
+%  		end
 
 	end%-------------------------END PUBLIC METHODS--------------------------------%
 	
@@ -1515,12 +1551,12 @@ classdef runExperiment < optickaCore
 	%=======================================================================
 		
 		% ===================================================================
-		%> @brief configureEyetracker
+		function configureEyetracker(me, eT, s)
+		%> @fn configureEyetracker
 		%> Configures (calibration etc.) the eyetracker.
 		%> @param eT eyetracker object
 		%> @param s screen object
 		% ===================================================================
-		function configureEyetracker(me, eT, s)
 			if me.useTobii
 				if length(Screen('Screens')) > 1 && s.screen - 1 >= 0
 					ss					= screenManager;
@@ -1552,11 +1588,11 @@ classdef runExperiment < optickaCore
 			end
 		end
 		% ===================================================================
-		%> @brief configureIO
+		function io = configureIO(me)
+		%> @fn configureIO
 		%> Configures the IO devices.
 		%> @param
 		% ===================================================================
-		function io = configureIO(me)
 			global rM
 			%-------Set up Digital I/O (dPixx and labjack) for this task run...
 			if me.useDisplayPP
@@ -1676,11 +1712,11 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief InitialiseTask
+		function initialiseTask(me)
+		%> @fn initialiseTask
 		%> Sets up the task structure with dynamic properties
 		%> @param
 		% ===================================================================
-		function initialiseTask(me)
 			if isempty(me.task) %we have no task setup, so we generate one.
 				me.task=taskSequence;
 			end
@@ -1688,13 +1724,13 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief updateMOCVars
+		function updateMOCVars(me,thisBlock,thisRun)
+		%> @fn updateMOCVars
+		%> @brief update variables for MOC task
 		%> Updates the stimulus objects with the current variable set
 		%> @param thisBlock is the current trial
 		%> @param thisRun is the current run
-		% ===================================================================
-		function updateMOCVars(me,thisBlock,thisRun)
-			
+		% ===================================================================	
 			if thisBlock > me.task.nBlocks
 				return %we've reached the end of the experiment, no need to update anything!
 			end
@@ -1736,11 +1772,12 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
+		function updateMOCTask(me)
+		%> @fn updateMOCTask
 		%> @brief updateMOCTask
 		%> Updates the stimulus run state; update the stimulus values for the
 		%> current trial and increments the switchTime and switchTick timer
 		% ===================================================================
-		function updateMOCTask(me)
 			me.task.timeNow = GetSecs;
 			me.sendStrobe = false;
 			
@@ -1820,7 +1857,6 @@ classdef runExperiment < optickaCore
 			else %need to switch to next trial or blank
 				me.task.switched = true;
 				if me.task.isBlank == false %we come from showing a stimulus
-					%me.logMe('IntoBlank');
 					me.task.isBlank = true;
 					me.task.blankTick = 0;
 					
@@ -1838,7 +1874,6 @@ classdef runExperiment < optickaCore
 					%me.logMe('OutaBlank');
 					
 				else %we have to show the new run on the next flip
-					%me.logMe('IntoTrial');
 					me.task.switchTime=me.task.switchTime+me.task.trialTime; %update our timer
 					me.task.switchTick=me.task.switchTick+(me.task.trialTime*round(me.screenVals.fps)); %update our timer
 					me.task.isBlank = false;
@@ -1846,35 +1881,36 @@ classdef runExperiment < optickaCore
 					if me.task.totalRuns <= me.task.nRuns
 						setStrobeValue(me,me.task.outIndex(me.task.totalRuns)); %get the strobe word ready
 					end
-					%me.logMe('OutaTrial');
 				end
 			end
 		end
 		
 		% ===================================================================
+		function infoTextScreen(me)
+		%> @fn infoTextScreen
 		%> @brief infoTextScreen - draws text about frame to screen
 		%>
 		%> @param
 		%> @return
 		% ===================================================================
-		function infoTextScreen(me)
-			t=infoText(me);
-			Screen('DrawText',me.screen.win,t,5,50,[0.8 0.8 0.8 1],[0.1 0.1 0.1 1]);
+		
+			%Screen('DrawText',me.screen.win,infoText(me),5,50,[0.8 0.8 0.8 1],[0.1 0.1 0.1 1]);
+			DrawFormattedText(me.screen.win,infoText(me),5,30,[0.8 0.8 0.8]);
 		end
 		
 		% ===================================================================
-		%> @brief infoText - info string
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
 		function t = infoText(me)
+		%> @fn infoText
+		%> @brief infoText - task information as a string
+		%>
+		%> @return t info string
+		% ===================================================================
 			etinfo = '';name=''; uuid = '';
 			if me.isRunTask
 				log = me.taskLog;
 				name = [me.stateMachine.currentName ':' me.stateMachine.currentUUID];
 				if me.useEyeLink || me.useTobii
-					etinfo = sprintf('| isFix:%i isExcl:%i isFixInit:%i fixLength: %.2f',...
+					etinfo = sprintf('isFix:%i isExcl:%i isFixInit:%i fixLength: %.2f',...
 						me.eyeTracker.isFix,me.eyeTracker.isExclusion,me.eyeTracker.isInitFail,me.eyeTracker.fixLength);
 				end
 			else
@@ -1911,39 +1947,19 @@ classdef runExperiment < optickaCore
 						me.task.outVars{me.task.thisBlock,i}(me.task.thisRun))];
 				end
 			end
+			t = WrapString(t, 50);
 			if ~isempty(me.variableInfo)
 				t = [t me.variableInfo];
 			end
 		end
 		
 		% ===================================================================
-		%> @brief Logs the run loop parameters along with a calling tag
-		%>
-		%> Logs the run loop parameters along with a calling tag
-		%> @param tag the calling function
-		% ===================================================================
-		function logMe(me,tag)
-			if me.verbose == 1 && me.debug == 1
-				if ~exist('tag','var')
-					tag='#';
-				end
-				if isempty(me.task.outValues)
-					fprintf('Tick: %i | Time: %5.8g\n',tag,...
-						me.task.tick,me.task.timeNow-me.task.startTime);
-				else
-					fprintf('%s -- B:%i R:%i [%i/%i] | TT: %i | Tick: %i | Time: %5.8g\n',tag,...
-						me.task.thisBlock,me.task.thisRun,me.task.totalRuns,me.task.nRuns,...
-						me.task.isBlank,me.task.tick,me.task.timeNow-me.task.startTime);
-				end
-			end
-		end
-		
-		% ===================================================================
+		function tS = saveEyeInfo(me,sM,eT,tS)
+		%> @fn saveEyeInfo
 		%> @brief save this trial eye info
 		%>
 		%> @param
 		% ===================================================================
-		function tS = saveEyeInfo(me,sM,eT,tS)
 			switch sM.currentName
 				case 'fixate'
 					prefix = 'F';
@@ -1969,11 +1985,11 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
+		function tS = checkKeys(me,tS)
 		%> @brief manage key commands during task loop
 		%>
 		%> @param args input structure
 		% ===================================================================
-		function tS = checkKeys(me,tS)
 			tS.keyTicks = tS.keyTicks + 1;
 			%now lets check whether any keyboard commands are pressed...
 			[keyIsDown, ~, keyCode] = KbCheck(-1);
@@ -2427,12 +2443,12 @@ classdef runExperiment < optickaCore
 			zlabel('Trial')
 		end
 		
-		% ===================================================================
-		%> @brief loadobj
-		%> To be backwards compatible to older saved protocols, we have to parse 
-		%> structures / objects specifically during object load
-		%> @param in input object/structure
-		% ===================================================================
+% 		% ===================================================================
+% 		%> @brief loadobj
+% 		%> To be backwards compatible to older saved protocols, we have to parse 
+% 		%> structures / objects specifically during object load
+% 		%> @param in input object/structure
+% 		% ===================================================================
 % 		function lobj = loadobj(in)
 % 			if isa(in,'runExperiment')
 % 				lobj = in;

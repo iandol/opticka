@@ -278,17 +278,21 @@ prefixFcn = {
 
 %--------------------fixate entry
 fixEntryFcn = { 
+	% update the fixation window to initial values
 	@()updateFixationValues(eT,tS.fixX,tS.fixY,[],tS.firstFixTime); %reset fixation window
-	@()startRecording(eT); % start eyelink recording for this trial
+	@()startRecording(eT); % start eyelink recording for this trial (tobii ignores this)
+	% tracker messages that define a trial start
 	@()trackerMessage(eT,'V_RT MESSAGE END_FIX END_RT'); % Eyelink commands
 	@()trackerMessage(eT,sprintf('TRIALID %i',getTaskIndex(me))); %Eyelink start trial marker
 	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
+	% draw to the etetracker display
 	@()trackerClearScreen(eT); % blank the eyelink screen
 	@()trackerDrawFixation(eT); %draw fixation window on eyelink computer
 	@()trackerDrawStimuli(eT,stims.stimulusPositions); %draw location of stimulus on eyelink
 	@()statusMessage(eT,'Initiate Fixation...'); %status text on the eyelink
-	@()show(stims{tS.nStims}); % show only last stim in list (fix cross)
-	@()logRun(me,'INITFIX'); %fprintf current trial info to command window
+	% show the last stimulus (fixation cross)
+	@()show(stims{tS.nStims});
+	@()logRun(me,'INITFIX');
 };
 
 %--------------------fix within
@@ -307,18 +311,20 @@ inFixFcn = {
 fixExitFcn = { 
 	@()statusMessage(eT,'Show Stimulus...');
 	@()updateFixationValues(eT,[],[],[],tS.stimulusFixTime); %reset a maintained fixation of 1 second
-	@()show(stims); % show all stims)
-    @()trackerMessage(eT,'END_FIX');
+	@()show(stims); % show all stims
+	@()trackerMessage(eT,'END_FIX');
 }; 
 
 %--------------------what to run when we enter the stim presentation state
-stimEntryFcn = { 
-	@()syncTime(eT); %EDF sync message
-	@()doStrobe(me,true)
+stimEntryFcn = {
+	% send an eyeTracker sync message (reset to 0)
+	@()syncTime(eT);
+	% send stimulus value strobe
+	@()doStrobe(me,true);
 };
 
 %--------------------what to run when we are showing stimuli
-stimFcn =  { 
+stimFcn =  {
 	@()draw(stims);
 	@()drawPhotoDiode(s,[1 1 1]);
 	@()animate(stims); % animate stimuli for subsequent draw
@@ -337,7 +343,7 @@ maintainFixFcn = {
 };
 
 %as we exit stim presentation state
-stimExitFcn = { 
+stimExitFcn = {
 	@()sendStrobe(io,255);
 };
 
@@ -348,11 +354,11 @@ correctEntryFcn = {
 	@()trackerMessage(eT,'END_RT'); %send END_RT message to tracker
 	@()trackerMessage(eT,['TRIAL_RESULT ' str2double(tS.CORRECT)]); %send TRIAL_RESULT message to tracker
 	@()trackerDrawText(eT,'Correct! :-)');
-	@()stopRecording(eT); %eyelink starts/stops on every trial (for tobii this is does nothing)
-	@()setOffline(eT); %for eyelink set offline (tobii this does nothing)
+	@()stopRecording(eT); % eyelink starts/stops on every trial (for tobii this is does nothing)
+	@()setOffline(eT); % for eyelink set offline (tobii this does nothing)
 	@()needEyeSample(me,false); % no need to collect eye data until we start the next trial
-	@()hide(stims); %hide all stims
-	@()logRun(me,'CORRECT'); %fprintf current trial info
+	@()hide(stims); % hide all stims
+	@()logRun(me,'CORRECT'); % print current trial info
 };
 
 %correct stimulus
@@ -424,7 +430,10 @@ breakExitFcn = incExitFcn; % we copy the incorrect exit functions
 %--------------------change functions based on tS settings
 % this shows an example of how to use tS options to change the function
 % lists run by the state machine. We can prepend or append new functions to
-% the cell arrays...
+% the cell arrays.
+% updateTask = updates task object
+% resetRun = randomise current trial within the block
+% checkTaskEnded = see if taskSequence has finished
 if tS.includeErrors % we want to update our task even if there were errors
 	incExitFcn = [ {@()updateTask(me,tS.INCORRECT)}; incExitFcn ]; %update our taskSequence 
 	breakExitFcn = [ {@()updateTask(me,tS.BREAKFIX)}; breakExitFcn ]; %update our taskSequence 

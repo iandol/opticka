@@ -76,7 +76,7 @@ We highlight the main classes and methods that are most useful when building a p
 	Note that this command implicitly calls `resetFixation(eT)` as any previous fixation becomes invalid.
 
 - **`resetFixation(eT, removeHistory)`** / **`resetFixationTime(eT)`** / **`resetFixationHistory(eT)`** / **`resetExclusionZone(eT)`** / **`resetFixInit(eT)`**  
-	`resetFixation`: resets all fixation counters that track how long a fixation was held for. Pass `removeHistory` == true also calls `resetFixationHistory(eT)` to remove the local log of previous eye positions (used for plotting to a MATLAB figure on every trial). `resetFixationTime`: only reset the fixation window timers. `resetExclusionZone`: resets (removes) the exclusion zones. `resetFixInit`: fix init is a timer that stops a saccade away from a position to occur too quickly. This reset removes this check.
+	`resetFixation`: resets all fixation counters that track how long a fixation was held for. Pass `removeHistory` == true also calls `resetFixationHistory(eT)` to remove the temporary log of previous eye positions (usually call it only after each trial). `resetFixationTime`: only reset the fixation window timers. `resetExclusionZone`: resets (removes) the exclusion zones. `resetFixInit`: fix init is a timer that stops a saccade away from a position to occur too quickly. This reset removes this check.
 
 - **`resetOffset(eT)`**  
 	Reset the drift offset back to `X = 0; Y = 0` — see `driftOffset(eT)` for the method that sets this value.

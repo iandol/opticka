@@ -188,7 +188,7 @@ classdef behaviouralRecord < optickaCore
 				if exist('eT','var')
 					me.rt2(me.tick) = eT.fixInitLength * 1e3;
 					me.radius(me.tick) = eT.fixation.radius;
-					me.time(me.tick) = eT.fixation.time;
+					me.time(me.tick) = mean(eT.fixation.time);
 					me.inittime(me.tick) = eT.fixation.initTime;
 					me.xAll = eT.xAll;
 					me.yAll = eT.yAll;
