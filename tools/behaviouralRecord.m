@@ -115,7 +115,7 @@ classdef behaviouralRecord < optickaCore
 				mfont = 'consolas';
 			else %linux
 				nfont = 'Liberation Sans'; %get(0,'defaultAxesFontName');
-				mfont = 'Fira Code';
+				mfont = 'Liberation Mono';
 			end
 
 			me.h.root = uifigure('Name',me.fullName);
@@ -126,7 +126,7 @@ classdef behaviouralRecord < optickaCore
 			me.h.grid.RowSpacing = 2;
 			me.h.grid.Padding = [3 3 3 3];
 			me.h.panel = uipanel(me.h.grid);
-			me.h.info = uitextarea(me.h.grid, 'HorizontalAlignment', 'center');
+			me.h.info = uitextarea(me.h.grid, 'HorizontalAlignment', 'center','FontName',mfont);
 			me.h.box = tiledlayout(me.h.panel,3,3);
 			me.h.box.Padding='compact';
 			me.h.axis1 = nexttile(me.h.box, [2 2]);
@@ -164,7 +164,7 @@ classdef behaviouralRecord < optickaCore
 		%> 
 		%> 
 		% ===================================================================
-		function updatePlot(me, eT, sM, task)
+		function updatePlot(me, eT, sM, ~)
 			if ~me.plotOnly 
 				if me.tick == 1
 					reset(me);
@@ -217,16 +217,22 @@ classdef behaviouralRecord < optickaCore
 			hits = [hitmiss 100-hitmiss; avg 100-avg; breakmiss 100-breakmiss];
 			
 			%axis 1
-			set(me.h.axis1,'NextPlot','replacechildren')
-			plot(me.h.axis1, 1:length(me.response), me.response,'k.-','MarkerSize',12,'MarkerFaceColor','black');
-			set(me.h.axis1,'NextPlot','add')
+			set(me.h.axis1,'NextPlot','replacechildren');
+			colororder(me.h.axis1,[0 0 0;0.5 0.5 0.5]);
+			yyaxis(me.h.axis1,"left");
+			plot(me.h.axis1, 1:length(me.response), me.response,'k.-','MarkerSize',16,'MarkerFaceColor','black');
+			ylabel(me.h.axis1, 'Response')
+			set(me.h.axis1,'NextPlot','add');
+			yyaxis(me.h.axis1,"right");
 			if ~isempty(me.radius) && ~all(isnan(me.radius))
-				plot(me.h.axis1, 1:length(me.radius), me.radius,'r.','MarkerSize',10);
-				plot(me.h.axis1, 1:length(me.inittime), me.inittime,'g.','MarkerSize',10);
-				plot(me.h.axis1, 1:length(me.time), me.time,'b.','MarkerSize',10);
+				plot(me.h.axis1, 1:length(me.radius), me.radius,'r.','MarkerSize',15);
+				plot(me.h.axis1, 1:length(me.inittime), me.inittime,'g.','MarkerSize',15);
+				plot(me.h.axis1, 1:length(me.time), me.time,'b.','MarkerSize',15);
 			end
+			legend(me.h.axis1,{'response','radius','inittime','time'})
+			ylabel(me.h.axis1, 'Fixation Parameters (secs or degs)');
 
-			%axis 4
+			%axis 2
 			plot(me.h.axis2, 1:length(me.averages), me.averages,'k.-','MarkerSize',12);
 			ylim(me.h.axis2,[-1 101])
 			
@@ -235,7 +241,7 @@ classdef behaviouralRecord < optickaCore
 			set(me.h.axis3,'XTickLabel', {'all';'newest';'break/abort'});
 			ylim(me.h.axis3,[-1 101])
 
-			%axis 2
+			%axis 4
 			if ~isempty(me.rt1) && ~all(isnan(me.rt1))
 				if max(me.rt1) == 0 && max(me.rt2) > 0
 					histogram(me.h.axis4, [me.rt2'], 8);
@@ -276,7 +282,6 @@ classdef behaviouralRecord < optickaCore
 			%xlabel(me.h.axis3, 'Group')
 			xlabel(me.h.axis4, '#')
 			xlabel(me.h.axis5, 'x')
-			ylabel(me.h.axis1, 'Yes / No')
 			ylabel(me.h.axis2, 'Number #')
 			ylabel(me.h.axis3, '% success')
 			ylabel(me.h.axis4, '% success')
@@ -313,9 +318,9 @@ classdef behaviouralRecord < optickaCore
 			t{end+1} = sprintf('Estimated Volume at %gms TTL = %g mls', me.rewardTime, (me.rewardVolume*me.rewardTime)*hitn);
 			
 			t{end+1} = ' ';
-			t{end+1} = '=========Previous trial info=========';
+			t{end+1} = '============Logged trial info============';
 			for i = 1:length(me.trials)
-				t{end+1} = ['RUN ' num2str(i) ': ' me.trials(i).info ' <> ' me.trials(i).comment];
+				t{end+1} = ['#' num2str(i) '<' num2str(me.trials(i).response) '>: ' me.trials(i).info ' <> ' me.trials(i).comment];
 			end
 			
 			set(me.h.info,'Value', t');
@@ -341,10 +346,9 @@ classdef behaviouralRecord < optickaCore
 			me.radius = [];
 			me.time = [];
 			me.inittime = [];
-			me.comment = '';
-			me.info = '';
 			me.xAll = [];
 			me.yAll = [];
+			me.comment = '';
 		end
 		
 		% ===================================================================

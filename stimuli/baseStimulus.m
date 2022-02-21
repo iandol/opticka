@@ -13,16 +13,6 @@
 % ========================================================================
 classdef baseStimulus < optickaCore & dynamicprops
 	
-	properties (Abstract = true)
-		%> stimulus type
-		type char
-	end
-	
-	properties (Abstract = true, SetAccess = protected)
-		%> the stimulus family (grating, dots etc.)
-		family char
-	end
-	
 	properties
 		%> X Position ± degrees relative to screen center (0,0)
 		xPosition double = 0
@@ -43,15 +33,15 @@ classdef baseStimulus < optickaCore & dynamicprops
 		speed double = 0
 		%> angle in degrees
 		angle double = 0
-		%> animation manager: can assign an animationManager() object that handles
-		%> more complex animation paths than simple builtin linear motion WIP
-		animator = []
 		%> delay time to display relative to stimulus onset, can set upper and lower range
 		%> for random interval. This allows for a group of stimuli some to be delayed relative
 		%> to others for a global stimulus onset time.
 		delayTime double = 0
 		%> time to turn stimulus off, relative to stimulus onset
 		offTime double = Inf
+		%> animation manager: can assign an animationManager() object that handles
+		%> more complex animation paths than simple builtin linear motion WIP
+		animator = []
 		%> override X and Y position with mouse input? Useful for RF mapping
 		mouseOverride logical = false
 		%> true or false, whether to draw() this object
@@ -60,6 +50,16 @@ classdef baseStimulus < optickaCore & dynamicprops
 		showOnTracker logical = true
 		%> Do we print details to the commandline?
 		verbose = false
+	end
+
+	properties (Abstract = true)
+		%> stimulus type
+		type char
+	end
+	
+	properties (Abstract = true, SetAccess = protected)
+		%> the stimulus family (grating, dots etc.)
+		family char
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)

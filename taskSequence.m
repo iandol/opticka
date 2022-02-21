@@ -1,6 +1,6 @@
 % ========================================================================
 %> @class taskSequence
-%> @brief a variable randomisation manager
+%> @brief Block-based variable randomisation manager
 %>
 %> This class takes one or more variables, each with an array of values
 %> and randomly interleves them into a randomised variable list each of
@@ -9,7 +9,7 @@
 %> first 3 stimuli; in addition, the fourth stimulus will have the value
 %> offset by 45°:
 %>
-%> ```
+%> ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ {.matlab}
 %> ts = taskSequence('nBlocks',10);
 %> ts.nVar(1).name = 'angle';
 %> ts.nVar(1).values = [ -90, -45, 0, 45, 90 ];
@@ -18,12 +18,14 @@
 %> ts.nVar(1).offsetvalue = 45
 %> ts.randomiseTask;
 %> ts.showLog;
-%> ```
+%> ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 %>
+%> @todo integrate carryoverCounterbalance() as an alternative to block
+%>  randomisation...
 %> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef taskSequence < optickaCore & dynamicprops
-properties
+	properties
 		%> structure holding each independant stimulus variable name = name
 		%> of the stimulus variable values = the values as a numerical or
 		%> cell array stimulus = which stimulus to apply to? offsetstimulus
@@ -41,30 +43,42 @@ properties
 		%> will assign YES and NO to blocks with a 50:50 probability.
 		trialVar struct
 		%> number of repeated blocks to present
-		nBlocks double = 1
+		nBlocks double			= 1
 		%> whether to randomise nVar (true) or run sequentially (false)
-		randomise logical = true
+		randomise logical		= true
 		%> insert a blank condition in each block?
-		addBlank logical = false
+		addBlank logical		= false
 		%> do we follow real time or just number of ticks to get to a known time
-		realTime logical = true
+		realTime logical		= true
 		%> random seed value, we can use this to set the RNG to a known state
 		randomSeed
 		%> mersenne twister default
-		randomGenerator char = 'mt19937ar'
+		randomGenerator char	= 'mt19937ar'
 		%> verbose or not
-		verbose = false
+		verbose					= false
+	end
+	
+	properties (Dependent = true,  SetAccess = private)
+		%> number of independant variables
+		nVars
+		%> minimum number of trials within a block, depends on nVar values
+		minTrials
+		%> number of runs, blocks x trials
+		nRuns
+		%> estimate of the total number of frames this task may occupy,
+		%> requires accurate fps and assumes a MOC task
+		nFrames
 	end
 	
 	properties (Hidden = true)
 		%> used for dynamically estimating total number of frames
-		fps double = 60
+		fps double				= 60
 		%> time stimulus trial is shown
-		trialTime double = 2
+		trialTime double		= 2
 		%> inter stimulus trial time
-		isTime double = 1
+		isTime double			= 1
 		%> inter block time
-		ibTime double = 2
+		ibTime double			= 2
 		%> original index before any resetRun()s
 		startIndex
 	end
@@ -86,21 +100,15 @@ properties
 		varLabels
 		%> variable list
 		varList
-		%> minimum number of trials within a block, depends on nVar values
-		minTrials
 		%> log of within block resets
 		resetLog
 		%> have we initialised the dynamic task properties?
 		taskInitialised logical = false
 		%> has task finished
-		taskFinished logical = false
+		taskFinished logical	= false
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Transient = true, Hidden = true)
-		%> reserved for future use of multiple random stream states
-		states
-		%> reserved for future use of multiple random stream states
-		nStates = 1
 		%> old random number stream
 		oldStream
 		%> current random number stream
@@ -114,19 +122,13 @@ properties
 		h
 	end
 	
-	properties (Dependent = true,  SetAccess = private)
-		%> number of independant variables
-		nVars
-		%> number of blocks, need to rename!
-		nRuns
-		%> estimate of the total number of frames this task will occupy,
-		%> requires accurate fps
-		nFrames
-	end
-	
 	properties (SetAccess = private, GetAccess = private)
 		%> cache value for nVars
 		nVars_
+		%> cache value for minTrials
+		minTrials_
+		%> used in calculatin mintrials
+		nLevels
 		%> properties allowed during initial construction
 		allowedProperties char = ['randomise|nVar|blockVar|trialVar|nBlocks|trialTime|isTime|ibTime|realTime|randomSeed|fps'...
 			'randomGenerator|verbose|addBlank']
@@ -239,7 +241,6 @@ properties
 				me.outBlock = {};
 				me.varLabels = {};
 				me.varList = {};
-				me.minTrials = 1;
 				me.taskInitialised = false;
 				me.taskFinished = false;
 				return
@@ -247,18 +248,6 @@ properties
 			
 			if me.verbose==true;rSTime = tic;end
 			
-			me.currentState=me.taskStream.State;
-			nLevels = zeros(me.nVars_, 1);
-			for f = 1:me.nVars_
-				nLevels(f) = length(me.nVar(f).values);
-			end
-			me.minTrials = prod(nLevels);
-			if me.addBlank
-				me.minTrials = me.minTrials + 1;
-			end
-			if isempty(me.minTrials)
-				me.minTrials = 1;
-			end
 			if me.minTrials > 255
 				warning('WARNING: You are exceeding the number of variable numbers in an 8bit strobed word!')
 			end
@@ -345,7 +334,7 @@ properties
 				end
 				pos2 = 1;
 				for f = 1:me.nVars_
-					pos1 = pos1 / nLevels(f);
+					pos1 = pos1 / me.nLevels(f);
 					if size(me.nVar(f).values, 1) ~= 1
 						% ensure that factor levels are arranged in one row
 						me.nVar(f).values = reshape(me.nVar(f).values, 1, numel(me.nVar(f).values));
@@ -356,7 +345,7 @@ properties
 					if me.addBlank; mb = mb - 1; end
 					Vars{i,f} = repmat(reshape(repmat(me.nVar(f).values, pos1, pos2), mb, 1), me.nVars_, 1);
 					Vars{i,f} = Vars{i,f}(index);
-					pos2 = pos2 * nLevels(f);
+					pos2 = pos2 * me.nLevels(f);
 					if me.addBlank
 						if iscell(Vars{i,f})
 							Vars{i,f}{index==max(index)} = NaN;
@@ -496,13 +485,19 @@ properties
 		end
 		
 		% ===================================================================
-		function [block, run] = findRun(me, index)
+		function [block, run, var] = findRun(me, index)
+		%> @fn [block, run, var] = findRun(me, index)
 		%> @brief returns block and run from number of runs
 		%>
+		%> @param index the number of the trial
+		%> @return block the block this trial is in
+		%> @return run the number within the block
+		%> @return var the variable number
 		% ===================================================================
 			if ~exist('index','var') || isempty(index); index = me.totalRuns; end
 			block = floor( (index - 1) / me.minTrials ) + 1;
 			run = index - (me.minTrials * (block - 1));
+			var = me.outIndex(index);
 		end
 		
 		% ===================================================================
@@ -650,6 +645,27 @@ properties
 				nVars = length(me.nVar);
 			end
 			me.nVars_ = nVars; %cache value
+		end
+
+		% ===================================================================
+		function minTrials = get.minTrials(me)
+		%> @fn get.minTrials
+		%> @brief Dependent property for the minimum number of conditions based
+		%> on the values in nVar.
+		%>
+		% ===================================================================
+			me.nLevels = zeros(me.nVars, 1);
+			for f = 1:me.nVars_
+				me.nLevels(f) = length(me.nVar(f).values);
+			end
+			minTrials = prod(me.nLevels);
+			if isempty(minTrials)
+				minTrials = 0;
+			end
+			if me.addBlank
+				minTrials = minTrials + 1;
+			end
+			me.minTrials_ = minTrials;
 		end
 		
 		% ===================================================================

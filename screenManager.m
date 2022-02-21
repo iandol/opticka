@@ -1,114 +1,138 @@
 % ========================================================================
-%> @brief screenManager — manage opening and configuring the screen
+%> @class screenManager 
+%> @brief screenManager — manage opening and configuring the PTB screen
 %>
-%> screenManager manages the (many) PTB screen settings. You can set many
+%> screenManager manages the (many!) PTB screen settings. You can set many
 %> properties of this class to control PTB screens, and use it to open and
 %> close the screen based on those properties. This class controls the
 %> transformation from degrees into pixels, and it can offset the screen
-%> coordinates. By setting `bitDepth` you can enable Display++, DataPixx, or
-%> HDR and high bit-depth display modes. It also manages movie recording of
-%> the screen buffer. Finally it wraps some basic drawing commands like
-%> grids, text, spots or other basic things that a dedicated stimulus class
-%> would be overkill
+%> co-ordinates (i.e. you can set a global X and Y position offset, to a
+%> screen position and then all other positions will be relative to this
+%> global screen center). By setting `bitDepth` you can enable Display++,
+%> DataPixx, HDR and high bit-depth display modes. This class also manages
+%> movie recording of the screen buffer. Finally it wraps some generic
+%> drawing commands like grids, text, spots or other basic things that would
+%> be overkill for aa dedicated stimulus class.
 %>
 %> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef screenManager < optickaCore
-	
+
 	properties
 		%> the display to use, 0 is the main display on macOS/Linux
 		%> default value will be set to `max(Screen('Screens'))`
-		screen double							= []
-		%> Pixels Per Centimeter — used for calculating the number of pixels per
-		%> visual degree (ppd). Use the calibrateSize.m function to measure this value accurately for each
-		%> monitor you will use. Examples: MBP 1440x900 is 33.2x20.6cm so 44px/cm; Flexscan is
+		screen(1,1) double {mustBeInteger}
+		%> Pixels Per Centimeter — used for calculating the number of pixels
+		%> per visual degree (ppd). Use the calibrateSize.m function to
+		%> measure this value accurately for each monitor you will use.
+		%> Examples: MBP 1440x900 is 33.2x20.6cm so 44px/cm; Flexscan is
 		%> 32px/cm @1280 26px/cm @ 1024; Display++ is 27px/cm @1920x1080
-		pixelsPerCm double						= 36
+		pixelsPerCm(1,1) double				= 36
 		%> distance in centimeters of subject from Display 
 		%> rad2ang(2 * atan( size / (2 * distance) ) ) = Xdeg
 		%> when size == 1cm & distance == 57.3cm; X == 1deg
-		distance double							= 57.3
-		%> windowed: when FALSE use fullscreen; set to TRUE and it is windowed
-		%> 800x600pixels or you can add in a window width and height i.e. [800
-		%> 600] to specify windowed size. Remember that windowed presentation
-		%> should *never* be used for real experimental presentation due to poor
-		%> timing…
-		windowed								= false
-		%> enable debug for poorer temporal fidelity but no sync testing etc.
-		debug logical							= false
-		%> shows some info text and position grid during stimulus presentation if
-		%> true
-		visualDebug logical						= false
+		distance(1,1) double				= 57.3
+		%> windowed: when FALSE use fullscreen; set to TRUE and it is
+		%> windowed 800x600pixels or you can add in a window width and
+		%> height i.e. [800 600] to specify windowed size. Remember that
+		%> windowed presentation should *never* be used for real
+		%> experimental presentation due to poor timing…
+		windowed							= false
+		%> enable debug for poorer temporal fidelity but no sync testing
+		%> etc.
+		debug(1,1) logical					= false
+		%> shows some info text and position grid during stimulus
+		%> presentation if true
+		visualDebug(1,1) logical			= false
 		%> normally should be left at 1 (1 is added to this number so
 		%> doublebuffering is enabled)
-		doubleBuffer uint8						= 1
-		%> float precision and bitDepth of framebuffer/output:
-		%> '8bit' is best for old GPUs, but prefer
-		%> 'FloatingPoint32BitIfPossible' for newer GPUs. Native high bitdepths
-		%> (assumes FloatingPoint32Bit internal processing): 'PseudoGray',
-		%> 'HDR', 'Native10Bit', 'Native11Bit', 'Native16Bit',
-		%> 'Native16BitFloat' Options to enable Display++ or VPixx modes:
-		%> 'EnableBits++Bits++Output', 'EnableBits++Mono++Output',
-		%> 'EnableBits++Mono++OutputWithOverlay' or 'EnableBits++Color++Output'
-		%> 'EnableDataPixxM16Output','EnableDataPixxC48Output'
-		bitDepth char							= 'FloatingPoint32BitIfPossible'
-		%> The acceptable variance in flip timing tests performed when screen
-		%> opens, set with Screen('Preference', 'SyncTestSettings',
-		%> syncVariance) AMD cards under Ubuntu are very low variance, PTB
-		%> default is 2e-04
-		syncVariance double						= 2e-04
+		doubleBuffer(1,1) uint8				= 1
+		%> float precision and bitDepth of framebuffer/output: '8bit' is
+		%> best for old GPUs, but choose 'FloatingPoint32BitIfPossible' for
+		%> newer GPUs. Native high bitdepths (assumes FloatingPoint32Bit
+		%> internal processing): 'PseudoGray', 'HDR', 'Native10Bit',
+		%> 'Native11Bit', 'Native16Bit', 'Native16BitFloat' Options to
+		%> enable Display++ or VPixx modes: 'EnableBits++Bits++Output',
+		%> 'EnableBits++Mono++Output', 'EnableBits++Mono++OutputWithOverlay'
+		%> or 'EnableBits++Color++Output' 'EnableDataPixxM16Output',
+		%> 'EnableDataPixxC48Output'
+		bitDepth char {mustBeMember(bitDepth,{'FloatingPoint32BitIfPossible';...
+			'FloatingPoint32Bit'; '8bit'; 'HDR'; 'PseudoGray'; 'Native10Bit';...
+			'Native11Bit'; 'Native16Bit'; 'Native16BitFloat';...
+			'EnableNative10BitFrameBuffer'; 'EnableNative11BitFrameBuffer';...
+			'EnableNative16BitFrameBuffer'; 'FixedPoint16Bit'; 'FloatingPoint16Bit';...
+			'Bits++Bits++'; 'Bits++Mono++'; 'Bits++Color++';...
+			'Bits++Bits++Output'; 'Bits++Mono++Output'; 'Bits++Color++Output';...
+			'EnableBits++Bits++Output'; 'EnableBits++Color++Output';...
+			'EnableBits++Mono++Output';'EnableBits++Mono++OutputWithOverlay';...
+			'EnableDataPixxM16Output';...
+			'EnableDataPixxC48Output'})} = 'FloatingPoint32BitIfPossible'
 		%> timestamping mode 1=beamposition,kernel fallback | 2=beamposition
 		%> crossvalidate with kernel
-		timestampingMode double					= 1
+		timestampingMode double				= 1
 		%> multisampling sent to the graphics card, try values 0[disabled], 4, 8
 		%> and 16 -- useful for textures to minimise aliasing, but this does
 		%> provide extra work for the GPU
-		antiAlias double						= 0
+		antiAlias(1,1) double				= 0
 		%> background RGBA of display during stimulus presentation
-		backgroundColour double					= [0.5 0.5 0.5 1.0]
+		backgroundColour(1,:) double		= [0.5 0.5 0.5 1.0]
+		%> use OpenGL blending mode
+		blend logical						= false
+		%> OpenGL blending source mode
+		srcMode char {mustBeMember(srcMode,{'GL_ZERO'; 'GL_ONE';...
+		'GL_DST_COLOR'; 'GL_ONE_MINUS_DST_COLOR';...
+		'GL_SRC_ALPHA'; 'GL_ONE_MINUS_SRC_ALPHA'; 'GL_DST_ALPHA';...
+		'GL_ONE_MINUS_DST_ALPHA'; 'GL_SRC_ALPHA_SATURATE' })} = 'GL_SRC_ALPHA'
+		%> OpenGL blending dst mode
+		dstMode char {mustBeMember(dstMode,{'GL_ZERO'; 'GL_ONE';...
+		'GL_DST_COLOR'; 'GL_ONE_MINUS_DST_COLOR';...
+		'GL_SRC_ALPHA'; 'GL_ONE_MINUS_SRC_ALPHA'; 'GL_DST_ALPHA';...
+		'GL_ONE_MINUS_DST_ALPHA'; 'GL_SRC_ALPHA_SATURATE' })} = 'GL_ONE_MINUS_SRC_ALPHA'
 		%> shunt center by X degrees (coordinates are in degrees from centre of
 		%> monitor)
-		screenXOffset double					= 0
+		screenXOffset(1,1) double			= 0
 		%> shunt center by Y degrees (coordinates are in degrees from centre of
 		%> monitor)
-		screenYOffset double					= 0
-		%> use OpenGL blending mode
-		blend logical							= false
-		%> OpenGL blending source mode
-		srcMode char							= 'GL_SRC_ALPHA'
-		%> OpenGL blending dst mode
-		dstMode char							= 'GL_ONE_MINUS_SRC_ALPHA'
+		screenYOffset(1,1) double			= 0
 		%> show a white square in the top-right corner to trigger a photodiode
 		%> attached to screen. This is only displayed when the stimulus is
 		%> shown, not during the blank and can therefore be used for timing
 		%> validation. For stateMachine tasks you need to pass in the drawing
 		%> command for this to take effect.
-		photoDiode logical						= false
+		photoDiode logical					= false
 		%> gamma correction info saved as a calibrateLuminance object
 		gammaTable calibrateLuminance
 		%> settings for movie output
-		movieSettings							= []
+		movieSettings						= []
 		%> useful screen info and initial gamma tables and the like
-		screenVals struct						= struct('ifi',1/60,'fps',60,'winRect',[0 0 1920 1080])
+		screenVals struct					= struct('ifi',1/60,'fps',60,...
+											'winRect',[0 0 1920 1080])
 		%> verbose output?
-		verbose									= false
+		verbose								= false
 		%> level of PTB verbosity, set to 10 for full PTB logging
-		verbosityLevel double					= 3
+		verbosityLevel double				= 3
 		%> Use retina resolution natively (worse performance but double
 		%> resolution)
-		useRetina logical						= false
+		useRetina logical					= false
 		%> Screen To Head Mapping, a Nx3 vector: Screen('Preference',
 		%> 'ScreenToHead', screen, head, crtc); Each N should be a different
 		%> display
-		screenToHead							= []
+		screenToHead						= []
 		%> force framerate for Display++ (120Hz or 100Hz, empty uses the default
 		%> OS setup)
-		displayPPRefresh double					= []
+		displayPPRefresh double				= []
 		%> hide the black flash as PTB tests its refresh timing, uses a gamma
 		%> trick from Mario
-		hideFlash logical						= false
+		hideFlash logical					= false
 	end
-	
+
+	properties (SetAccess = private, GetAccess = public, Dependent = true)
+		%> dependent Pixels Per Degree property; calculated from distance and
+		%> pixelsPerCm.
+		%> pixelsPerDegree = pixelsPerCm  ×  (distance ÷ 57.3)
+		ppd
+	end
+
 	properties (Constant)
 		%> possible bitDepth or display modes
 		bitDepths cell = {'FloatingPoint32BitIfPossible'; 'FloatingPoint32Bit'; '8bit';...
@@ -127,39 +151,44 @@ classdef screenManager < optickaCore
 	end
 	
 	properties (Hidden = true)
+
 		%> The mode to use for color++ mode
-		colorMode								= 2
+		colorMode							= 2
+		%> font details
+		font struct							= struct('TextSize',18,...
+											'TextColor',[0.9 0.9 0.9 1],...
+											'TextBackgroundColor',[0.2 0.1 0 0.6],...
+											'TextStyle', 0);
 		%> an optional audioManager that experiments can use. can play samples
 		%> or simple beeps
 		audio audioManager
 		%> for some development macOS and windows machines we have to disable
 		%> sync tests, but we hide this as we should remember this is for
 		%> development ONLY!
-		disableSyncTests logical				= false
-	end
-	
-	properties (SetAccess = private, GetAccess = public, Dependent = true)
-		%> dependent Pixels Per Degree property; calculated from distance and
-		%> pixelsPerCm.
-		%> pixelsPerDegree = pixelsPerCm  ×  (distance ÷ 57.3)
-		ppd
+		disableSyncTests logical			= false
+		%> The acceptable variance in flip timing tests performed when
+		%> screen opens, set with Screen('Preference', 'SyncTestSettings',
+		%> syncVariance) AMD cards under Ubuntu are very low variance, PTB
+		%> default is 2e-04. DO NOT change this unless you know what you are
+		%> doing.
+		syncVariance double					= 2e-04
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
 		%> do we have a working PTB, if not go into a silent mode
-		isPTB logical							= false
+		isPTB logical						= false
 		%> is a window currently open?
-		isOpen logical							= false
+		isOpen logical						= false
 		%> did we ask for a bitsPlusPlus mode?
-		isPlusPlus logical						= false
+		isPlusPlus logical					= false
 		%> the handle returned by opening a PTB window
 		win
 		%> the window rectangle
 		winRect
 		%> computed X center
-		xCenter double							= 0
+		xCenter double						= 0
 		%> computed Y center
-		yCenter double							= 0
+		yCenter double						= 0
 		%> set automatically on construction
 		maxScreen
 	end
@@ -172,36 +201,35 @@ classdef screenManager < optickaCore
 			'gammaTable|useRetina|bitDepth|pixelsPerCm|distance|screen|windowed|backgroundColour|'...
 			'screenXOffset|screenYOffset|blend|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash']
 		%> the photoDiode rectangle in pixel values
-		photoDiodeRect(1,4) double				= [0, 0, 45, 45]
+		photoDiodeRect(1,4) double			= [0, 0, 45, 45]
 		%> the values computed to draw the 1deg dotted grid in visualDebug mode
 		grid
 		%> the movie pointer
-		moviePtr								= []
+		moviePtr							= []
 		%> movie mat structure
-		movieMat								= []
+		movieMat							= []
 		%screen flash logic
-		flashInterval							= 20
-		flashTick								= 0
-		flashOn									= 1
+		flashInterval						= 20
+		flashTick							= 0
+		flashOn								= 1
 		% timed spot logic
-		timedSpotTime							= 0
-		timedSpotTick							= 0
-		timedSpotNextTick						= 0
+		timedSpotTime						= 0
+		timedSpotTick						= 0
+		timedSpotNextTick					= 0
 		% async flip management
-		isInAsync								= false
+		isInAsync							= false
 	end
 	
 	methods
 		% ===================================================================
-		%> @brief Class constructor
+		function me = screenManager(varargin)
+		%> @fn screenManager(varargin)
 		%>
-		%> screenManager constructor
+		%> screenManager CONSTRUCTOR
 		%>
 		%> @param varargin can be simple name value pairs, a structure or cell array
-		%> @return instance of the class.
+		%> @return instance of the class.	
 		% ===================================================================
-		function me = screenManager(varargin)
-			
 			args = optickaCore.addDefaults(varargin,struct('name','screenManager'));
 			me=me@optickaCore(args); %superclass constructor
 			me.parseArgs(args,me.allowedProperties);
@@ -218,12 +246,13 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief prepare the Screen values on the local machine
+		function screenVals = prepareScreen(me)
+		%> @fn prepareScreen
 		%>
-		%> @param me object
+		%> prepare the initial Screen values on the local machine
+		%>
 		%> @return screenVals structure of screen values
 		% ===================================================================
-		function screenVals = prepareScreen(me)
 			if me.isPTB == false; warning('No PTB!!!'); return; end
 			me.maxScreen		= max(Screen('Screens'));
 			
@@ -246,9 +275,9 @@ classdef screenManager < optickaCore
 				sv.gammaTable	= [];
 				sv.dacBits		= [];
 				if IsWin
-					sv.lutSize		= 256;
+					sv.lutSize	= 256;
 				else
-					sv.lutSize		= 1024;
+					sv.lutSize	= 1024;
 				end
 			end
 			
@@ -284,10 +313,10 @@ classdef screenManager < optickaCore
 			
 			if IsLinux
 				try
-					sv.display		= Screen('ConfigureDisplay','Scanout',me.screen,0);
-					sv.name			= sv.display.name;
-					sv.widthMM		= sv.display.displayWidthMM;
-					sv.heightMM		= sv.display.displayHeightMM;
+					sv.display	= Screen('ConfigureDisplay','Scanout',me.screen,0);
+					sv.name		= sv.display.name;
+					sv.widthMM	= sv.display.displayWidthMM;
+					sv.heightMM	= sv.display.displayHeightMM;
 				end
 			end
 			
@@ -297,6 +326,8 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
+		function sv = open(me,debug,tL,forceScreen)
+		%> @fn open
 		%> @brief open a screen with object defined settings
 		%>
 		%> @param debug, whether we show debug status, called from runExperiment
@@ -304,7 +335,6 @@ classdef screenManager < optickaCore
 		%> @param forceScreen force a particular screen number to open
 		%> @return sv structure of basic info from the opened screen
 		% ===================================================================
-		function sv = open(me,debug,tL,forceScreen)
 			if me.isPTB == false
 				warning('No PTB found!')
 				sv = me.screenVals;
@@ -572,7 +602,11 @@ classdef screenManager < optickaCore
 					fprintf('---> screenManager: OpenGL blending now: %s | %s\n', me.srcMode, me.dstMode);
 				end
 				
-				if IsLinux
+				
+				Screen('TextSize', me.win, me.font.TextSize);
+				Screen('TextColor', me.win, me.font.TextColor);
+				Screen('TextBackgroundColor', me.win, me.font.TextBackgroundColor);
+				if IsLinux || ismac
 					Screen('Preference', 'DefaultFontName', 'Source Sans 3');
 				end
 				
@@ -592,14 +626,13 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief Small demo
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
 		function demo(me)
+		%> @fn demo
+		%> @brief Small demo of screen opening, drawing, closing
+		%>
+		% ===================================================================
 			if ~me.isOpen
-				stim = textureStimulus('speed',4,'xPosition',-3,'yPosition',0);
+				stim = dotsStimulus('mask',true,'size',10,'speed',4);
 				prepareScreen(me);
 				open(me);
 				disp('--->>> screenManager running a quick demo...')
@@ -619,6 +652,8 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
+		function [vbl, when, flipTime, missed] = flip(me, varargin)
+		%> @fn flip
 		%> @brief Flip the screen
 		%>
 		%> [VBLTimestamp StimulusOnsetTime FlipTimestamp Missed Beampos] = Screen('Flip', windowPtr [, when] [, dontclear] [, dontsync] [, multiflip]);
@@ -626,18 +661,18 @@ classdef screenManager < optickaCore
 		%> @param varargin - pass other options to screen flip
 		%> @return vbl - a vbl from this flip
 		% ===================================================================
-		function [vbl, when, flipTime, missed] = flip(me, varargin)
 			if ~me.isOpen; return; end
 			[vbl, when, flipTime, missed] = Screen('Flip',me.win,varargin{:});
 		end
 		
 		% ===================================================================
+		function vbl = asyncFlip(me, when, varargin)
+		%> @fn asyncFlip
 		%> @brief Flip the screen asynchrounously
 		%>
 		%> @param when - when to flip
 		%> @return vbl - a vbl from this flip
 		% ===================================================================
-		function vbl = asyncFlip(me, when, varargin)
 			if ~me.isOpen; return; end
 			if me.isInAsync
 				vbl = Screen('AsyncFlipCheckEnd', me.win);
@@ -652,12 +687,12 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
+		function result = asyncCheck(me)
+		%> @fn asyncCheck
 		%> @brief Check async state?
 		%>
-		%> 
 		%> @return result - is in async state?
 		% ===================================================================
-		function result = asyncCheck(me)
 			if ~me.isOpen; return; end
 			result = false;
 			if me.isInAsync
@@ -671,12 +706,13 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
+		function vbl = asyncEnd(me)
+		%> @fn asyncEnd
 		%> @brief end async state
 		%>
 		%> 
 		%> @return vbl - return time
 		% ===================================================================
-		function vbl = asyncEnd(me)
 			if ~me.isOpen; return; end
 			vbl = 0;
 			if me.isInAsync
@@ -686,12 +722,13 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
+		function forceWin(me,win)
+		%> @fn forceWin
 		%> @brief force this object to use antother window
 		%>
 		%> @param win - the window handle to bind to
 		%> @return
 		% ===================================================================
-		function forceWin(me,win)
 			me.win = win;
 			me.isOpen = true;
 			me.isPTB = true;
@@ -704,13 +741,14 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
+		function hideScreenFlash(me)
+		%> @fn hideScreenFlash
 		%> @brief This is the trick Mario told us to "hide" the colour changes
 		%> as PTB starts -- we could use backgroundcolour here to be even better
 		%>
 		%> @param
 		%> @return
 		% ===================================================================
-		function hideScreenFlash(me)
 			% This is the trick Mario told us to "hide" the colour changes as PTB
 			% intialises -- we could use backgroundcolour here to be even better
 			if me.hideFlash == true && all(me.windowed == false)
@@ -726,12 +764,13 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
+		function close(me)
+		%> @fn close
 		%> @brief close the screen when finished or on error
 		%>
 		%> @param
 		%> @return
 		% ===================================================================
-		function close(me)
 			if ~me.isPTB; return; end
 			Priority(0); ListenChar(0); ShowCursor;
 			if ~isempty(me.audio) && isa(me.audio, 'audioManager') && me.audio.isSetup
@@ -768,12 +807,13 @@ classdef screenManager < optickaCore
 		
 		
 		% ===================================================================
+		function resetScreenGamma(me)
+		%> @fn resetScreenGamma
 		%> @brief reset the gamma table
 		%>
 		%> @param
 		%> @return
 		% ===================================================================
-		function resetScreenGamma(me)
 			if me.hideFlash == true || me.windowed(1) ~= 1 || (~isempty(me.screenVals) && me.screenVals.resetGamma == true && ~isempty(me.screenVals.linearGamma))
 				fprintf('\n---> screenManager: RESET GAMMA TABLES\n');
 				Screen('LoadNormalizedGammaTable', me.screen, me.screenVals.linearGamma);
@@ -781,10 +821,11 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief Set method for bitDepth
+		function set.backgroundColour(me,value)
+		%> @fn set.backgroundColour
+		%> @brief Set method for backgroundColour
 		%>
 		% ===================================================================
-		function set.backgroundColour(me,value)
 			switch length(value)
 				case 1
 					me.backgroundColour = [value value value 1];
@@ -798,10 +839,11 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
+		function set.bitDepth(me,value)
+		%> @fn set.bitDepth
 		%> @brief Set method for bitDepth
 		%>
 		% ===================================================================
-		function set.bitDepth(me,value)
 			check = strcmpi(value,me.bitDepths);
 			if any(check)
 				me.bitDepth = me.bitDepths{check};
@@ -813,10 +855,11 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
+		function set.srcMode(me,value)
+		%> @fn set.srcMode
 		%> @brief Set method for GL blending src
 		%>
 		% ===================================================================
-		function set.srcMode(me,value)
 			check = strcmpi(value,me.blendModes);
 			if any(check)
 				me.srcMode = me.blendModes{check};
@@ -827,10 +870,12 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
+		function set.dstMode(me,value)
+		%> @fn set.dstMode
 		%> @brief Set method for GL blending dst
 		%>
+		%> @param value
 		% ===================================================================
-		function set.dstMode(me,value)
 			check = strcmpi(value,me.blendModes);
 			if any(check)
 				me.dstMode = me.blendModes{check};
@@ -841,11 +886,12 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
+		function set.distance(me,value)
+		%> @fn set.distance
 		%> @brief Set method for distance
 		%>
-		%> @param
+		%> @param value
 		% ===================================================================
-		function set.distance(me,value)
 			if ~(value > 0)
 				me.distance = 57.3;
 				error('Distance must be greater than 0!')
@@ -855,11 +901,12 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
+		function set.pixelsPerCm(me,value)
+		%> @fn set.pixelsPerCm
 		%> @brief Set method for pixelsPerCm
 		%>
-		%> @param
+		%> @param value
 		% ===================================================================
-		function set.pixelsPerCm(me,value)
 			if ~(value > 0)
 				me.pixelsPerCm = 36;
 				error('Pixels per cm must be greater than 0!')
@@ -869,11 +916,11 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
+		function ppd = get.ppd(me)
+		%> @fn get.ppd 
 		%> @brief Get method for ppd (a dependent property)
 		%>
-		%> @param
 		% ===================================================================
-		function ppd = get.ppd(me)
 			if me.useRetina %note pixelsPerCm is normally recorded using non-retina mode so we fix that here if we are now in retina mode
 				ppd = ( (me.pixelsPerCm * 2 ) * (me.distance / 57.3) ); %set the pixels per degree
 			else
@@ -883,11 +930,12 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
+		function set.windowed(me,value)
+		%> @fn set.windowed
 		%> @brief Set method for windowed
 		%>
-		%> @param
+		%> @param value
 		% ===================================================================
-		function set.windowed(me,value)
 			if length(value) == 2 && isnumeric(value)
 				me.windowed = [0 0 value];
 			elseif length(value) == 4 && isnumeric(value)
@@ -934,21 +982,22 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
+		function finishDrawing(me)
+		%> @fn finishDrawing
 		%> @brief Screen('DrawingFinished')
 		%>
-		%> @param
 		% ===================================================================
-		function finishDrawing(me)
 			if ~me.isOpen; return; end
 			Screen('DrawingFinished', me.win);
 		end
 		
 		% ===================================================================
+		function testWindowOpen(me)
+		%> @fn testWindowOpen
 		%> @brief Test if window is actully open
 		%>
 		%> @param
 		% ===================================================================
-		function testWindowOpen(me)
 			if me.isOpen
 				wk = Screen(me.win, 'WindowKind');
 				if wk == 0
@@ -962,11 +1011,12 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
+		function flashScreen(me,interval)
+		%> @fn flashScreen
 		%> @brief Flash the screen until keypress
 		%>
-		%> @param
+		%> @param interval
 		% ===================================================================
-		function flashScreen(me,interval)
 			if ~me.isOpen; return; end
 			int = round(interval / me.screenVals.ifi);
 			KbReleaseWait;
@@ -988,6 +1038,8 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
+		function drawCross(me,size,colour,x,y,lineWidth,showDisk,alpha,alpha2)
+		%> @fn drawCross
 		%> @brief draw fixation cross from Thaler L, Schütz AC, 
 		%>  Goodale MA, & Gegenfurtner KR (2013) “What is the best fixation target? 
 		%>  The effect of target shape on stability of fixational eye movements.�? 
@@ -1000,7 +1052,6 @@ classdef screenManager < optickaCore
 		%> @param lineWidth of lines in degrees (1px minimum)
 		%> @return
 		% ===================================================================
-		function drawCross(me,size,colour,x,y,lineWidth,showDisk,alpha,alpha2)
 			if ~me.isOpen; fprintf('drawCross(me,size,colour,x,y,lineWidth,showDisk,alpha)\n');return; end
 			% drawCross(me, size, colour, x, y, lineWidth)
 			if nargin < 9 || isempty(alpha2); alpha2 = 1; end
@@ -1039,6 +1090,8 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
+		function drawSimpleCross(me,size,colour,x,y,lineWidth)
+		%> @fn drawSimpleCross
 		%> @brief draw small cross
 		%>
 		%> @param size size in degrees
@@ -1048,7 +1101,6 @@ classdef screenManager < optickaCore
 		%> @param lineWidth of lines
 		%> @return
 		% ===================================================================
-		function drawSimpleCross(me,size,colour,x,y,lineWidth)
 			% drawSimpleCross(me, size, colour, x, y, lineWidth)
 			if nargin < 6 || isempty(lineWidth); lineWidth = 2; end
 			if nargin < 5 || isempty(y); y = 0; end
@@ -1161,7 +1213,7 @@ classdef screenManager < optickaCore
 		function drawTextNow(me,text)
 			% drawTextNow(me,text)
 			if ~exist('text','var');return;end
-			Screen('DrawText',me.win,text,5,10,[1 1 1],[0.3 0.3 0.1]);
+			Screen('DrawText',me.win,text,5,5);
 			flip(me,[],[],2);
 		end
 		
@@ -1174,7 +1226,25 @@ classdef screenManager < optickaCore
 		function drawText(me,text)
 			% drawText(me,text)
 			if ~exist('text','var');return;end
-			Screen('DrawText',me.win,text,5,10,[1 1 1],[0.3 0.3 0.1]);
+			Screen('DrawText',me.win,text,5,5);
+		end
+
+		% ===================================================================
+		function drawTextWrapped(me,text,wrapat)
+		%> @fn drawTextWrapped
+		%> @brief draw text and flip immediately
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+			if ~exist('text','var');return;end
+			if exist('wrapat','var'); text = WrapString(text,wrapat); end
+			c = strsplit(text,'\n');
+			a = 4;
+			for s = c
+				Screen('DrawText',me.win,s{1},4,a);
+				a = a + me.font.TextSize;
+			end
 		end
 		
 		% ===================================================================
@@ -1320,15 +1390,30 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
+		function drawBackground(me,background)
+		%> @fn drawBackground(me,background)
 		%> @brief Draw the background colour
 		%>
-		%> @param
-		%> @return
+		%> @param background an optional colour
 		% ===================================================================
-		function drawBackground(me,background)
 			% drawBackground(me,background)
 			if ~exist('background','var'); background=me.backgroundColour; end
 			Screen('FillRect',me.win,background,[]);
+		end
+
+		% ===================================================================
+		function captureScreen(me, filename)
+		%> @fn captureScreen(me,filename)
+		%> @brief Copies the window to a screenshot
+		%>
+		%> @param filename optional filename
+		% ===================================================================
+			if ~exist('filename','var') 
+				filename=[me.paths.parent filesep 'Shot' datestr(now,'YYYY-mm-DD-HH-MM-SS') '.png']; 
+			end
+			myImg = Screen('GetImage',me.win);
+			imwrite(myImg, filename);
+			fprintf('---> screenManager captureScreen saved to: %s\n', filename);
 		end
 		
 		% ===================================================================

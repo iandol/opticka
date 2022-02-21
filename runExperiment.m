@@ -216,13 +216,14 @@ classdef runExperiment < optickaCore
 		function runMOC(me)
 		%> @fn runMOC
 		%> 
-		%> runMO uses built-in loop for experiment control and runs a
-		%> methods-of-constants (MOC) experiment with the settings passed to it (stimuli,task
-		%> and screen). This is different to the runTask method as it doesn't
-		%> use a stateMachine for experimental logic, just a minimal deterministic
-		%> trial+block loop. 
+		%> runMOC uses built-in loop for experiment control and runs a
+		%> methods-of-constants (MOC) experiment with the settings passed to
+		%> it (stimuli,task and screen). This is different to the runTask
+		%> method as it doesn't use a stateMachine for experimental logic,
+		%> just a minimal deterministic trial+block loop. 
 		%>
-		%> @todo currently we can only record eye positions with the eyelink, add other tracker support
+		%> @todo currently we can only record eye positions with the
+		%> eyelink, add other tracker support
 		%>
 		%> @param me required class object
 		% ===================================================================
@@ -518,20 +519,21 @@ classdef runExperiment < optickaCore
 		%>
 		%> runTask runs a state machine (behaviourally) driven task. 
 		%> 
-		%> Uses a StateInfo.m file to control the behavioural paradigm. The state
-		%> machine controls the logic of the experiment, and this method manages
-		%> the display loop.
+		%> Uses a StateInfo.m file to control the behavioural paradigm. The
+		%> state machine controls the logic of the experiment, and this
+		%> method manages the display loop.
 		%>
 		% ===================================================================
-			% we try not to use global variables, however the external eyetracker
-			% API does not easily allow us to pass objects and so we use global
-			% variables in this specific case...
+			% we try not to use global variables, however the external
+			% eyetracker API does not easily allow us to pass objects and so
+			% we use global variables in this specific case...
 			global rM %#ok<*GVMIS> %global reward manager we can share with eyetracker 
 			global aM %global audio manager we can share with eyetracker
 			
-			% make sure we reset any state machine functions to not cause problems
-			% when they are reassigned below. For example, io interfaces can be
-			% reset unless we clear this before we open the io.
+			% make sure we reset any state machine functions to not cause
+			% problems when they are reassigned below. For example, io
+			% interfaces can be reset unless we clear this before we open
+			% the io.
 			me.stateInfo = {};
 			if isa(me.stateMachine,'stateMachine'); me.stateMachine.reset; me.stateMachine = []; end
 			
@@ -696,7 +698,7 @@ classdef runExperiment < optickaCore
 					draw(stims);
 					drawBackground(s);
 					s.drawPhotoDiodeSquare([1 1 1 1]);
-					Screen('DrawText',s.win,'Warming up the GPU, Eyetracker and I/O systems...',65,10);
+					Screen('DrawText',s.win,'Warming up the GPU, Eyetracker and I/O systems...',5,5);
 					finishDrawing(s);
 					animate(stims);
 					if ~mod(i,10); io.sendStrobe(255); end
@@ -1128,22 +1130,26 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
-		function keyOverride(me, tS)
+		function keyOverride(me)
 		%> @fn keyOverride
-		%> @brief when running allow keyboard override, so we can edit/debug things
+		%> @brief when running allow keyboard override, so we can edit/debug
+		%>  things within the loop!
 		%>
-		%> @param
 		% ===================================================================
 			KbReleaseWait; %make sure keyboard keys are all released
 			ListenChar(0); %capture keystrokes
 			ShowCursor;
-			ii = 0;
+			myVar = 0;
 			dbstop in clear
-			%uiinspect(me)
-			clear ii
+			% we have halted the debugger. You can now inspect the workspace and the
+			% various objects. me is the runExperiment instance, you can access
+			% me.screen for screenManager, me.task for taskSequence, me.stimuli for
+			% metaStimulus, me.stateMachine for stateMachine, and other objects...
+			% PRESS F5 to exit this mode and return to the experiment...
+			clear myVar
 			dbclear in clear
 			ListenChar(-1); %capture keystrokes
-			%HideCursor;
+			HideCursor;
 		end
 		
 		% ===================================================================
@@ -1231,7 +1237,7 @@ classdef runExperiment < optickaCore
 			elseif me.useDataPixx == true
 				prepareStrobe(me.dPixx, value);
 			elseif me.useLabJackTStrobe || me.useLabJackStrobe
-				prepareStrobe(me.lJack, value)
+				prepareStrobe(me.lJack, value);
 			end
 		end
 		
@@ -1367,9 +1373,9 @@ classdef runExperiment < optickaCore
 		%> @fn updateVariables
 		%> Updates the stimulus objects with the current variable set from taskSequence()
 		%> 
-		%> @param index a single value
+		%> @param index a single value of which the overall trial number is
 		%> @param override - forces updating even if it is the same trial
-		%> @param update - do we run taskSequence.updateTask() as well?
+		%> @param update - do we also run taskSequence.updateTask() as well?
 		% ===================================================================
 			if ~exist('update','var') || isempty(update)
 				update = false;
@@ -1391,9 +1397,9 @@ classdef runExperiment < optickaCore
 				end
 			end
 			if me.isTask && ((index > me.lastIndex) || override == true)
-				[thisBlock, thisRun] = me.task.findRun(index);
+				[thisBlock, thisRun, thisVar] = me.task.findRun(index);
 				stimIdx = []; 
-				t = sprintf('Blk#%i Run#%i Trl#%i > ',thisBlock, thisRun, index);
+				t = sprintf('Blk#%i Run#%i Trl#%i Var#%i>',thisBlock, thisRun, index, thisVar);
 				for i=1:me.task.nVars
 					valueList = cell(1); oValueList = cell(1); %#ok<NASGU>
 					doXY = false;
@@ -1893,9 +1899,7 @@ classdef runExperiment < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		
-			%Screen('DrawText',me.screen.win,infoText(me),5,50,[0.8 0.8 0.8 1],[0.1 0.1 0.1 1]);
-			DrawFormattedText(me.screen.win,infoText(me),5,30,[0.8 0.8 0.8]);
+			me.screen.drawTextWrapped(infoText(me));
 		end
 		
 		% ===================================================================
@@ -1947,10 +1951,10 @@ classdef runExperiment < optickaCore
 						me.task.outVars{me.task.thisBlock,i}(me.task.thisRun))];
 				end
 			end
-			t = WrapString(t, 50);
 			if ~isempty(me.variableInfo)
-				t = [t me.variableInfo];
+				t = [t ' | ' me.variableInfo];
 			end
+			t = WrapString(t, 100);
 		end
 		
 		% ===================================================================
@@ -2233,12 +2237,14 @@ classdef runExperiment < optickaCore
 							forceTransition(me.stateMachine, 'magstim');
 							return
 						end
-					case ';'
+					case ';:'
 						if tS.keyTicks > tS.keyHold
-							fprintf('===>>> Override ENGAGED!\n');
-							tS.pauseToggle = tS.pauseToggle + 1; %we go to pause after this so toggle this
-							tS.keyHold = tS.keyTicks + me.fInc;
-							forceTransition(me.stateMachine, 'override');
+							if me.debug && ~isdeployed
+								fprintf('===>>> Override ENGAGED! This is a special DEBUG mode\n');
+								tS.pauseToggle = tS.pauseToggle + 1; %we go to pause after this so toggle this
+								tS.keyHold = tS.keyTicks + me.fInc;
+								forceTransition(me.stateMachine, 'override');
+							end
 							return
 						end
 					case 'g'
@@ -2346,6 +2352,11 @@ classdef runExperiment < optickaCore
 								Eyelink('Command','binocular_enabled = NO');
 								Eyelink('Command','active_eye = LEFT');
 							end
+							tS.keyHold = tS.keyTicks + me.fInc;
+						end
+					case '0)'
+						if tS.keyTicks > tS.keyHold
+							if me.debug; me.screen.captureScreen(); end
 							tS.keyHold = tS.keyTicks + me.fInc;
 						end
 				end

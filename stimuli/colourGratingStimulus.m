@@ -25,22 +25,22 @@ classdef colourGratingStimulus < baseStimulus
 	
 	properties %--------------------PUBLIC PROPERTIES----------%
 		%> family type, can be 'sinusoid' or 'square'
-		type char				= 'sinusoid'
+		type char 				= 'sinusoid'
 		%> spatial frequency of the grating
-		sf double				= 1
+		sf(1,1) double			= 1
 		%> temporal frequency of the grating
-		tf double				= 1
+		tf(1,1) double			= 1
 		%> second colour of a colour grating stimulus
-		colour2 double			= [0 1 0 1]
+		colour2(1,:) double		= [0 1 0 1]
 		%> base colour from which colour and colour2 are blended via contrast value
 		%> if empty [default], uses the background colour from screenManager
-		baseColour double		= []
+		baseColour(1,:) double		= []
 		%> rotate the grating patch (false) or the grating texture within the patch (default = true)?
 		rotateTexture logical	= true
 		%> phase of grating
-		phase double			= 0
+		phase(1,1) double			= 0
 		%> contrast of grating (technically the contrast from the baseColour)
-		contrast double			= 0.5
+		contrast(1,1) double			= 0.5
 		%> use a circular mask for the grating (default = true).
 		mask logical			= true
 		%> direction of the drift; default = false means drift left>right when angle is 0deg.
@@ -54,13 +54,13 @@ classdef colourGratingStimulus < baseStimulus
 		%> phase stays identical at the centre of the object (where we would imagine our RF)
 		correctPhase logical	= false
 		%> Reverse phase of grating X times per second? Useful with a static grating for linearity testing
-		phaseReverseTime double = 0
+		phaseReverseTime(1,1) double = 0
 		%> What phase to use for reverse?
-		phaseOfReverse double	= 180
+		phaseOfReverse(1,1) double	= 180
 		%> sigma of square wave smoothing, use -1 for sinusoidal gratings
-		sigma double			= -1
+		sigma(1,1) double			= -1
 		%> aspect ratio of the grating
-		aspectRatio double		= 1;
+		aspectRatio(1,1) double		= 1;
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -72,7 +72,7 @@ classdef colourGratingStimulus < baseStimulus
 		phaseIncrement double	= 0
 	end
 	
-	properties (SetAccess = private, GetAccess = public, Hidden = true)
+	properties (Constant)
 		typeList cell			= {'sinusoid';'square'}
 	end
 	

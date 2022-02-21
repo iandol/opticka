@@ -332,7 +332,9 @@ correctExitFcn = {
 	@()correct(io);
 	@()trackerMessage(eT,['TRIAL_RESULT ' num2str(tS.CORRECT)]);
 	@()stopRecording(eT); %stops recording (eyelink, tobii ignores this)
+	@()setOffline(eT); %set eyelink offline
 	% tell taskSequence to update to the next trial.
+	@()updatePlot(bR, eT, sM); %update our behavioural plot
 	@()updateTask(task, tS.CORRECT);
 	% modify our stimuli based on updated trial (find the values from
 	% taskSequence and set them on metaStimulus), sets strobe value for new
@@ -342,7 +344,6 @@ correctExitFcn = {
 	% stimuli based on updated variables
 	@()update(stims);
 	@()drawTimedSpot(s, 0.5, [0 1 0 1], 0.2, true); %reset the timer on the green spot
-	@()updatePlot(bR, eT, sM); %update our behavioural plot
 	@()checkTaskEnded(me); %check if task is finished
 	@()drawnow;
 };
@@ -367,11 +368,10 @@ incExitFcn = {
 	@()incorrect(io);
 	@()trackerMessage(eT,['TRIAL_RESULT ' num2str(tS.INCORRECT)]); %trial incorrect message
 	@()stopRecording(eT); %stop eyelink recording data
-	@()setOffline(eT); %set eyelink offline
-	@()resetRun(task);... %we randomise the run within this block to make it harder to guess next trial
-	@()updateVariables(me,[],true,false); %update the variables
-	@()update(stims); %update our stimuli ready for display
 	@()updatePlot(bR, eT, sM); %update our behavioural plot;
+	@()resetRun(task);... %we randomise the run within this block to make it harder to guess next trial
+	@()updateVariables(me,[],true,false); %update the variables via taskSequence if used
+	@()update(stims); %update our stimuli ready for display
 	@()checkTaskEnded(me); %check if task is finished
 	@()drawnow;
 };
@@ -392,10 +392,10 @@ breakExitFcn = {
 	@()trackerMessage(eT,['TRIAL_RESULT ' num2str(tS.BREAKFIX)]);
 	@()stopRecording(eT);
 	@()setOffline(eT); %set eyelink offline
+	@()updatePlot(bR, eT, sM); %update our behavioural plot;
 	@()resetRun(task);... %we randomise the run within this block to make it harder to guess next trial
 	@()updateVariables(me,[],true,false); %update the variables
 	@()update(stims); %update our stimuli ready for display
-	@()updatePlot(bR, eT, sM); %update our behavioural plot;
 	@()checkTaskEnded(me); %check if task is finished
 	@()drawnow;
 };
@@ -419,7 +419,11 @@ driftFcn = {
 };
 
 %--------------------debug override
-overrideFcn = { @()keyOverride(me); }; %a special mode which enters a matlab debug state so we can manually edit object values
+overrideFcn = {
+	% a special mode which enters a matlab debug state so we can manually edit
+	% object values
+	@()keyOverride(me);
+}; 
 
 %--------------------screenflash
 flashFcn = { 
