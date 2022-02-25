@@ -163,9 +163,9 @@ correctFcn = {
 %when we exit the correct state
 correctExitFcn = {
 	@()setOffline(eT); %set eyelink offline
+	@()updatePlot(bR, me); %update our behavioural plot
 	@()updateVariables(me,[],[],true); %randomise our stimuli, set strobe value too
 	@()update(me.stimuli); %update our stimuli ready for display
-	@()updatePlot(bR, eT, sM); %update our behavioural plot
 	@()getStimulusPositions(me.stimuli); %make a struct the eT can use for drawing stim positions
 	@()trackerClearScreen(eT); 
 	@()trackerDrawFixation(eT); %draw fixation window on eyelink computer
@@ -189,9 +189,9 @@ incFcn = [];
 %incorrect / break exit
 incExitFcn = { 
 	@()setOffline(eT); %set eyelink offline
+	@()updatePlot(bR, me); %update our behavioural plot, must come before updateTask() / updateVariables()
 	@()updateVariables(me,[],[],false);
 	@()update(me.stimuli); %update our stimuli ready for display
-	@()updatePlot(bR, eT, sM); %update our behavioural plot;
 	@()trackerClearScreen(eT); 
 	@()trackerDrawFixation(eT); %draw fixation window on eyelink computer
 	@()trackerDrawStimuli(eT); %draw location of stimulus on eyelink

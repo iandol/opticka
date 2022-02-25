@@ -136,7 +136,6 @@ classdef fixationCrossStimulus < baseStimulus
 			
 			setupFlash(me);
 			computePosition(me);
-			setAnimationDelta(me);
 		end
 		
 		% ===================================================================
@@ -151,7 +150,6 @@ classdef fixationCrossStimulus < baseStimulus
 			me.stopLoop = false;
 			me.inSetup = false;
 			computePosition(me);
-			setAnimationDelta(me);
 			if me.doFlash; me.setupFlash; end
 		end
 		

@@ -1,0 +1,35 @@
+{
+	"_schemaVersion": "1.0.0",
+	"optickaCore":
+	{
+		"inputs":
+		[
+			{"name":"name", "kind":"namevalue", "type":["char"], "purpose":"Object name"},
+			{"name":"comment", "kind":"namevalue", "type":["char"], "purpose":"Comment"},
+			{"name":"verbose", "kind":"namevalue", "type":["logical"], "purpose":"Verbose logging"}
+		]
+	},
+	"optickaCore":
+	{
+		"inputs":
+		[
+			{"name":"instructure", "kind":"optional", "type":["struct"], "purpose":"Properties passed as a structure"}
+		]
+	},
+	"screenManager.screenManager":
+	{
+		"inputs":
+		[
+			{"name":"in1", "kind":"namevalue", "type":["double"], "purpose":"Properties passed as name value pairs"},
+			{"name":"in2", "kind":"namevalue", "type":["double"], "purpose":"Properties passed as name value pairs"},
+			{"name":"in3", "kind":"namevalue", "type":["double"], "purpose":"Properties passed as name value pairs"}
+		]
+	},
+	"screenManager.screenManager":
+	{
+		"inputs":
+		[
+			{"name":"instructure", "kind":"optional", "type":["struct"], "purpose":"Properties passed as a structure"}
+		]
+	}
+}

@@ -1,11 +1,12 @@
 % ========================================================================
+classdef behaviouralRecord < optickaCore
+%> @class behaviouralRecord
 %> @brief Create a GUI and update behavioural record for a behavioural
 %> task
 %> 
 %>
 %> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
-classdef behaviouralRecord < optickaCore
 	
 	%--------------------PUBLIC PROPERTIES----------%
 	properties
@@ -160,12 +161,15 @@ classdef behaviouralRecord < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief 
+		function updatePlot(me, rE)
+		%> @fn  updatePlot 
+		%> @brief updates the behaviouralRecord plot
 		%> 
-		%> 
+		%> @param rE runExperiment object
 		% ===================================================================
-		function updatePlot(me, eT, sM, ~)
-			if ~me.plotOnly 
+			sM = rE.stateMachine;
+			eT = rE.eyeTracker;
+			if ~me.plotOnly
 				if me.tick == 1
 					reset(me);
 					me.startTime = clock;

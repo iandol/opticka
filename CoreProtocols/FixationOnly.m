@@ -1,18 +1,27 @@
-%FIXATION ONLY state configuration file, this gets loaded by opticka via runExperiment class
-% The following class objects (easily named handle copies) are already 
-% loaded and available to use. Each class has methods useful for running the task: 
+% FIXATION ONLY state configuration file, this gets loaded by opticka via
+% runExperiment class
+% 
+% This task only contains a fixation cross, by default it uses
+% stims.stimulusTable (see below) to randomise the position of the timulus
+% on each trial. This randomisation is dynamic, and not saved in any data
+% stream; use this technique for training not for data collection. You can
+% also control some variable like size manually.
 %
-% me		= runExperiment object
-% s			= screenManager
-% aM		= audioManager
-% sM		= State Machine
+% The following class objects (easily named handle copies) are already
+% loaded and available to use. Each class has methods useful for running the
+% task: 
+%
+% me		= runExperiment object ('self' in OOP terminology)
+% s			= screenManager object
+% aM		= audioManager object
+% stims		= our list of stimuli (metaStimulus class)
+% sM		= State Machine (stateMachine class)
 % task		= task sequence (taskSequence class)
 % eT		= eyetracker manager
 % io		= digital I/O to recording system
 % rM		= Reward Manager (LabJack or Arduino TTL trigger to reward system/Magstim)
-% bR		= behavioural record plot (on screen GUI during task run)
-% stims		= our list of stimuli
-% tS		= general structure to hold general variables, will be saved as part of the data
+% bR		= behavioural record plot (on-screen GUI during a task run)
+% tS		= structure to hold general variables, will be saved as part of the data
 
 %==================================================================
 %------------General Settings-----------------
@@ -31,58 +40,83 @@ tS.BREAKFIX					= -1;		%==the code to send eyetracker for break fix trials
 tS.INCORRECT				= -5;		%==the code to send eyetracker for incorrect trials
 
 %==================================================================
-%------------Debug logging to command window-----------------
-%io.verbose					= true;	%==print out io commands for debugging
-%eT.verbose					= true;	%==print out eyelink commands for debugging
-%rM.verbose					= true;	%==print out reward commands for debugging
+%----------------Debug logging to command window------------------
+% uncomment each line to get specific verbose logging from each of these
+% components; you can also set verbose in the opticka GUI to enable all of
+% these…
+%sM.verbose					= true;		%==print out stateMachine info for debugging
+%stims.verbose				= true;		%==print out metaStimulus info for debugging
+%io.verbose					= true;		%==print out io commands for debugging
+%eT.verbose					= true;		%==print out eyelink commands for debugging
+%rM.verbose					= true;		%==print out reward commands for debugging
+%task.verbose				= true;		%==print out task info for debugging
 
 %==================================================================
 %-----------------INITIAL Eyetracker Settings----------------------
 tS.fixX						= 0;		% X position in degrees
 tS.fixY						= 0;		% X position in degrees
 tS.firstFixInit				= 3;		% time to search and enter fixation window
-tS.firstFixTime				= 0.5;		% time to maintain fixation within windo
+tS.firstFixTime				= [0.5 1];	% time to maintain fixation within windo
 tS.firstFixRadius			= 2;		% radius in degrees
 tS.strict					= true;		% do we forbid eye to enter-exit-reenter fixation window?
 tS.exclusionZone			= [];		% do we add an exclusion zone where subject cannot saccade to...
-tS.stimulusFixTime			= 2;		% time to fix on the stimulus
 me.lastXPosition			= tS.fixX;
 me.lastYPosition			= tS.fixY;
 
 %==================================================================
 %---------------------------Eyetracker setup-----------------------
+% NOTE: the opticka GUI can set eyetracker options too, if you set options
+% here they will OVERRIDE the GUI ones; if they are commented then the GUI
+% options are used. me.elsettings and me.tobiisettings contain the GUI
+% settings you can test if they are empty or not and set them based on
+% that...
+eT.name 					= tS.name;
+if tS.saveData == true;		eT.recordData = true; end %===save ET data?
 if me.useEyeLink
-	eT.name 					= tS.name;
-	eT.sampleRate 				= 250;		% sampling rate
-	eT.calibrationStyle 		= 'HV5';	% calibration style
-	eT.calibrationProportion	= [0.4 0.4]; %the proportion of the screen occupied by the calibration stimuli
-	if tS.saveData == true;		eT.recordData = true; end %===save EDF file?
-	if me.dummyMode;			eT.isDummy = true; end %===use dummy or real eyetracker? 
-	%-----------------------
-	% remote calibration enables manual control and selection of each fixation
-	% this is useful for a baby or monkey who has not been trained for fixation
-	% use 1-9 to show each dot, space to select fix as valid, INS key ON EYELINK KEYBOARD to
-	% accept calibration!
-	eT.remoteCalibration		= false; 
-	%-----------------------
-	eT.modify.calibrationtargetcolour = [1 1 1]; % calibration target colour
-	eT.modify.calibrationtargetsize = 2;		% size of calibration target as percentage of screen
-	eT.modify.calibrationtargetwidth = 0.15;	% width of calibration target's border as percentage of screen
-	eT.modify.waitformodereadytime	= 500;
-	eT.modify.devicenumber 			= -1;		% -1 = use any attachedkeyboard
-	eT.modify.targetbeep 			= 1;		% beep during calibration
+	eT.name 						= tS.name;
+	if me.dummyMode;				eT.isDummy = true; end %===use dummy or real eyetracker? 
+	if tS.saveData == true;			eT.recordData = true; end %===save EDF file?
+	if isempty(me.elsettings)		%==check if GUI settings are empty
+		eT.sampleRate				= 250;		%==sampling rate
+		eT.calibrationStyle			= 'HV5';	%==calibration style
+		eT.calibrationProportion	= [0.4 0.4]; %==the proportion of the screen occupied by the calibration stimuli
+		%-----------------------
+		% remote calibration enables manual control and selection of each
+		% fixation this is useful for a baby or monkey who has not been trained
+		% for fixation use 1-9 to show each dot, space to select fix as valid,
+		% INS key ON EYELINK KEYBOARD to accept calibration!
+		eT.remoteCalibration				= false; 
+		%-----------------------
+		eT.modify.calibrationtargetcolour	= [1 1 1]; %==calibration target colour
+		eT.modify.calibrationtargetsize		= 2;		%==size of calibration target as percentage of screen
+		eT.modify.calibrationtargetwidth	= 0.15;	%==width of calibration target's border as percentage of screen
+		eT.modify.waitformodereadytime		= 500;
+		eT.modify.devicenumber				= -1;		%==-1 = use any attachedkeyboard
+		eT.modify.targetbeep				= 1;		%==beep during calibration
+	end
 elseif me.useTobii
-	eT.name 					= tS.name;
-	eT.model					= 'Tobii Pro Spectrum';
-	eT.trackingMode				= 'human';
-	eT.calPositions				= [ .2 .5; .5 .5; .8 .5];
-	eT.valPositions				= [ .5 .5 ];
-	if me.dummyMode;			eT.isDummy = true; end %===use dummy or real eyetracker? 
+	eT.name 						= tS.name;
+	if me.dummyMode;				eT.isDummy = true; end %===use dummy or real eyetracker? 
+	if isempty(me.tobiisettings)	%==check if GUI settings are empty
+		eT.model					= 'Tobii Pro Spectrum';
+		eT.sampleRate				= 300;
+		eT.trackingMode				= 'human';
+		eT.calibrationStimulus		= 'animated';
+		eT.autoPace					= true;
+		%-----------------------
+		% remote calibration enables manual control and selection of each
+		% fixation this is useful for a baby or monkey who has not been trained
+		% for fixation
+		eT.manualCalibration		= false;
+		%-----------------------
+		eT.calPositions				= [ .2 .5; .5 .5; .8 .5];
+		eT.valPositions				= [ .5 .5 ];
+	end
 end
 
 %Initialise the eyeTracker object with X, Y, FixInitTime, FixTime, Radius, StrictFix
 eT.updateFixationValues(tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
-%make sure we don't start with any exclusion zones set up
+%Ensure we don't start with any fixation exclusion zones set up
 eT.resetExclusionZones();
 
 %==================================================================
@@ -92,7 +126,7 @@ bR.correctStateName				= '^correct';
 bR.breakStateName				= '^(breakfix|incorrect)';
 
 %==================================================================
-%-------------------randomise stimulus variables every trial?-----------
+%--------------randomise stimulus variables every trial?-----------
 % if you want to have some randomisation of stimuls variables without
 % using taskSequence task, you can uncomment this and runExperiment can
 % use this structure to change e.g. X or Y position, size, angle
@@ -104,13 +138,13 @@ bR.breakStateName				= '^(breakfix|incorrect)';
 stims.choice				= [];
 n							= 1;
 in(n).name					= 'xyPosition';
-in(n).values					= [6 6; 6 -6; -6 6; -6 -6; -6 0; 6 0];
-in(n).stimuli					= 1;
-in(n).offset					= [];
+in(n).values				= [6 6; 6 -6; -6 6; -6 -6; -6 0; 6 0];
+in(n).stimuli				= 1;
+in(n).offset				= [];
 stims.stimulusTable			= in;
 
 %==================================================================
-%-------------allows using arrow keys to control variables?-------------
+%-------------allows using arrow keys to control variables?--------
 % another option is to enable manual control of a table of variables
 % this is useful to probe RF properties or other features while still
 % allowing for fixation or other behavioural control.
@@ -118,14 +152,24 @@ stims.stimulusTable			= in;
 stims.tableChoice 				= 1;
 n								= 1;
 stims.controlTable(n).variable	= 'size';
+stims.controlTable(n).delta		= 0.2;
+stims.controlTable(n).stimuli	= 1;
+stims.controlTable(n).limits	= [0.2 10];
+n								= 2;
+stims.controlTable(n).variable	= 'xPosition';
 stims.controlTable(n).delta		= 0.5;
 stims.controlTable(n).stimuli	= 1;
-stims.controlTable(n).limits	= [0.25 20];
+stims.controlTable(n).limits	= [-10 10];
+n								= 3;
+stims.controlTable(n).variable	= 'yPosition';
+stims.controlTable(n).delta		= 0.5;
+stims.controlTable(n).stimuli	= 1;
+stims.controlTable(n).limits	= [-10 10];
 
 %==================================================================
 %this allows us to enable subsets from our stimulus list
 % 1 = grating | 2 = fixation cross
-stims.stimulusSets			= {[1]};
+stims.stimulusSets			= { 1 };
 stims.setChoice				= 1;
 hide(stims);
 
@@ -134,8 +178,8 @@ hide(stims);
 %the subject must fixate this stimulus (the saccade target is #1 in the list) to get the
 %reward. Also which stimulus to set an exclusion zone around (where a
 %saccade into this area causes an immediate break fixation).
-me.stimuli.fixationChoice = 1;
-me.stimuli.exclusionChoice = [];
+stims.fixationChoice = 1;
+stims.exclusionChoice = [];
 
 %===================================================================
 %-----------------State Machine State Functions---------------------
@@ -164,30 +208,40 @@ pauseEntryFcn = {
 };
 
 %prestim entry
-psEntryFcn = { 
+psEntryFcn = {
 	@()setOffline(eT);
-	@()trackerDrawFixation(eT);
+	@()enableFlip(me);
+	@()needEyeSample(me,true);
 	@()resetFixation(eT);
-	@()startRecording(eT)
+	@()resetFixationHistory(eT); %reset the stored X and Y values
+	@()startRecording(eT);
+	% the fixation cross is moving around, so we need to find its current
+	% position and update the fixation window
+	@()updateFixationTarget(me, true, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius);
+	@()update(stims);
+	@()trackerDrawFixation(eT);
+	@()logRun(me,'PRESTIM'); %fprintf current trial info
 };
 
 %prestimulus blank
-prestimulusFcn = { @()drawBackground(s) };
+prestimulusFcn = { };
 
 %exiting prestimulus state
-psExitFcn = { 
-	@()update(me.stimuli);
+psExitFcn = {
+	@()show(stims);
 	@()statusMessage(eT,'Showing Fixation Spot...');
 };
 
 %what to run when we enter the stim presentation state
-stimEntryFcn = {};
+stimEntryFcn = {
+	@()logRun(me,'STIM'); 
+};
 
 %what to run when we are showing stimuli
 stimFcn = {
-	@()draw(me.stimuli); 
-	%@()drawEyePosition(eT);
-	@()animate(me.stimuli); % animate stimuli for subsequent draw
+	@()draw(stims); 
+	@()drawEyePosition(eT); % this shows the eye position on acreen
+	@()animate(stims); % animate stimuli for subsequent draw
 };
 
 %test we are maintaining fixation
@@ -196,10 +250,13 @@ maintainFixFcn = {
 };
 
 %as we exit stim presentation state
-stimExitFcn = {};
+stimExitFcn = {
+	@()hide(stims); 
+	@()needEyeSample(me,false); 
+};
 
 %if the subject is correct (small reward)
-correctEntryFcn = { 
+correctEntryFcn = {
 	@()timedTTL(rM, tS.rewardPin, tS.rewardTime); % send a reward TTL
 	@()statusMessage(eT,'Correct! :-)');
 	@()logRun(me,'CORRECT'); %fprintf current trial info
@@ -208,9 +265,8 @@ correctEntryFcn = {
 %correct stimulus
 correctFcn = { @()drawBackground(s); };
 
-
 %break entry
-breakEntryFcn = { 
+breakEntryFcn = {
 	@()statusMessage(eT,'Broke Fixation :-(');
 	@()logRun(me,'BREAK'); %fprintf current trial info
 };
@@ -222,18 +278,19 @@ inEntryFcn = {
 };
 
 %our incorrect stimulus
-breakFcn =  {
+breakFcn = {
 	@()drawBackground(s);
 };
 
 %when we exit the breakfix/incorrect state
 ExitFcn = {
-	@()updatePlot(bR, eT, sM);
+	@()randomise(stims); %uses stimulusTable to give new values to variables (not saved in data, used for training)
+	@()updatePlot(bR, me);
 	@()drawnow;
 };
 
 %--------------------calibration function
-calibrateFcn = { 
+calibrateFcn = {
 	@()drawBackground(s); %blank the display
 	@()stopRecording(eT); % stop eyelink recording data
 	@()setOffline(eT); % set eyelink offline
@@ -241,7 +298,7 @@ calibrateFcn = {
 };
 
 %--------------------drift offset function
-offsetFcn = { 
+offsetFcn = {
 	@()drawBackground(s); %blank the display
 	@()stopRecording(eT); % stop eyelink recording data
 	@()setOffline(eT); % set eyelink offline
@@ -249,7 +306,7 @@ offsetFcn = {
 };
 
 %--------------------drift correction function
-driftFcn = { 
+driftFcn = {
 	@()drawBackground(s); %blank the display
 	@()stopRecording(eT); % stop eyelink recording data
 	@()setOffline(eT); % set eyelink offline
@@ -257,45 +314,44 @@ driftFcn = {
 };
 
 %--------------------screenflash
-flashFcn = { 
+flashFcn = {
 	@()drawBackground(s);
 	@()flashScreen(s, 0.2); % fullscreen flash mode for visual background activity detection
 };
 
 %----------------------allow override
-overrideFcn = { 
+overrideFcn = {
 	@()keyOverride(me); 
 };
 
 %----------------------show 1deg size grid
-gridFcn = { 
+gridFcn = {
 	@()drawGrid(s); 
 	@()drawScreenCenter(s);
 };
 
+%==============================================================================
 %----------------------State Machine Table-------------------------
-% this table defines the states and relationships and function sets
-%==================================================================
-disp('================>> Building state info file <<================')
-%specify our cell array that is read by the stateMachine
+% specify our cell array that is read by the stateMachine
 stateInfoTmp = {
 'name'		'next'			'time'	'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn';
-'pause'		'blank'			[inf] 	pauseEntryFcn	[]				[]				[];
-'blank'		'stimulus'		[1 ]	psEntryFcn		prestimulusFcn	[]				psExitFcn;
-'stimulus'	'incorrect'		4		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn;
-'incorrect'	'blank'			1		inEntryFcn		breakFcn		[]				ExitFcn;
-'breakfix'	'blank'			2		breakEntryFcn	breakFcn		[]				ExitFcn;
-'correct'	'blank'			1		correctEntryFcn	correctFcn		[]				correctExitFcn;
-'calibrate' 'pause'			0.5		calibrateFcn	[]				[]				[];
-'drift'		'pause'			0.5		driftFcn		[]				[]				[];
-'flash'		'pause'			0.5		[]				flashFcn		[]				[];
-'override'	'pause'			0.5		[]				overrideFcn		[]				[];
-'showgrid'	'pause'			1		[]				gridFcn			[]				[];
+'pause'		'blank'			inf		pauseEntryFcn	{}				{}				{};
+'blank'		'stimulus'		0.5		psEntryFcn		prestimulusFcn	{}				psExitFcn;
+'stimulus'	'incorrect'		2		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn;
+'incorrect'	'timeout'		0.25	inEntryFcn		breakFcn		{}				ExitFcn;
+'breakfix'	'timeout'		0.25	breakEntryFcn	breakFcn		{}				ExitFcn;
+'correct'	'blank'			0.25	correctEntryFcn	correctFcn		{}				ExitFcn;
+'timeout'	'blank'			tS.tOut	{}				{}				{}				{};
+'calibrate'	'pause'			0.5		calibrateFcn	{}				{}				{};
+'drift'		'pause'			0.5		driftFcn		{}				{}				{};
+'flash'		'pause'			0.5		{}				flashFcn		{}				{};
+'override'	'pause'			0.5		{}				overrideFcn		{}				{};
+'showgrid'	'pause'			1		{}				gridFcn			{}				{};
 };
-
+%----------------------State Machine Table-------------------------
+%==============================================================================
+disp('================>> Building state info file <<================')
 disp(stateInfoTmp)
-disp('================>> Loaded state info file <<================')
-clear maintainFixFcn prestimulusFcn singleStimulus pauseEntryFcn ...
-	prestimulusFcn stimFcn stimEntryFcn stimExitfcn correctEntry ...
-	correctWithin correctExitFcn breakFcn maintainFixFcn psExitFcn ...
-	incorrectFcn calibrateFcn offsetFcn driftFcn gridFcn overrideFcn flashFcn breakFcn
+disp('=================>> Loaded state info file <<=================')
+clearvars -regexp '.+Fcn$' % clear the cell array Fcns in the current workspace
+

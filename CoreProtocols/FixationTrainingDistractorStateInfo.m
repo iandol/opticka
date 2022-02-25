@@ -308,7 +308,7 @@ correctExitFcn = {
 	@()updateVariables(me,[],[],true); %update the task variables
 	@()update(stims); %update our stimuli ready for display
 	@()updateFixationTarget(me, true); % make sure the fixation follows stims.fixationChoice
-	@()updatePlot(bR, eT, sM); % update the behavioural report plot
+	@()updatePlot(bR, me); % update the behavioural report plot
 	@()drawnow; % ensure we update the figure
 	@()checkTaskEnded(me); ... %check if task is finished
 };
@@ -347,7 +347,7 @@ breakFcn =  {
 breakExitFcn = { 
 	@()update(stims); %update our stimuli ready for display
 	@()updateFixationTarget(me, true); % make sure the fixation follows stims.fixationChoice
-	@()updatePlot(bR, eT, sM);
+	@()updatePlot(bR, me);
 	@()drawnow;
 	@()checkTaskEnded(me); %check if task is finished
 };

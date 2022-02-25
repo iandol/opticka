@@ -381,7 +381,7 @@ correctExitFcn = {
 	@()update(stims); %update our stimuli ready for display
 	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions
 	@()resetExclusionZones(eT); %reset the exclusion zones
-	@()updatePlot(bR, eT, sM); %update our behavioural plot
+	@()updatePlot(bR, me); %update our behavioural plot
 	@()drawnow;
 	@()checkTaskEnded(me); %check if task is finished
 };
@@ -409,7 +409,7 @@ incExitFcn = {
 	@()update(stims); %update our stimuli ready for display
 	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions
 	@()resetExclusionZones(eT); %reset the exclusion zones
-	@()updatePlot(bR, eT, sM); %update our behavioural plot;
+	@()updatePlot(bR, me); %update our behavioural plot, must come before updateTask() / updateVariables()
 	@()drawnow;
 	@()checkTaskEnded(me); %check if task is finished
 };

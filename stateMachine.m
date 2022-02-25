@@ -1,28 +1,51 @@
 % ========================================================================
-%> @brief stateMachine run behavioural task as a series of states.
+%> @class stateMachine
+%> @brief run a task via a series of states.
 %>
-%> stateMachine allows a set of 'states' to be run, with functions
-%> executed on entering state, within the state, and on
-%> exiting the state. States can be linked, so a 'middle' state can be
-%> run after a 'start' state. States can run in a loop (`run()` method) and
-%> use either real time as assesed using the clockFcn fHandle
-%> property or via tick time, where each update() to the stateMachine is a
-%> 'tick'. Tick time is useful when controlled via an external manager like
-%> the Psychophysics toolbox which uses display refresh as a natural
-%> tick timer. 
-% 
+%> stateMachine allows a set of 'states' to be run, with functions executed
+%> on entering state, within the state, and on exiting the state. States can
+%> be linked, so a 'middle' state can be run after a 'start' state. States
+%> can run in a loop (`run()` method) and use either real time as assesed
+%> using the clockFcn fHandle property or via tick time, where each update()
+%> to the stateMachine is a 'tick'. Tick time is useful when controlled via
+%> an external manager like the Psychophysics toolbox which uses display
+%> refresh as a natural tick timer. 
+%>
+%>`````````````````````
+%>╔════════════════════════════════════════════════════════════════════════════════════════════════╗
+%>║                  ┌─────────┐                                       ┌─────────┐                 ║
+%>║                  │ STATE 1 │                                       │ STATE 2 │                 ║
+%>║       ┌──────────┴─────────┴───────────┐                ┌──────────┴─────────┴──────────┐      ║
+%>║  ┌────┴────┐      ┌────────┐      ┌────┴───┐       ┌────┴────┐      ┌────────┐     ┌────┴───┐  ║
+%>╚═▶│  ENTER  │─────▶│ WITHIN │─────▶│  EXIT  │══════▶│  ENTER  │─────▶│ WITHIN │────▶│  EXIT  │══╣
+%>   └────┬────┘      └────────┘      └────┬───┘       └────┬────┘      └────────┘     └────┬───┘  ║
+%>        │          ┌──────────┐          │                │          ┌──────────┐         │      ║
+%>        └──────────┤TRANSITION├──────────┘                └──────────┤TRANSITION├─────────┘      ║
+%>                   └─────╦────┘                                      └──────────┘                ║
+%>                         ║                  ┌─────────┐                                          ║
+%>                         ║                  │ STATE 3 │                                          ║
+%>                         ║       ┌──────────┴─────────┴───────────┐                              ║
+%>                         ║  ┌────┴────┐      ┌────────┐      ┌────┴───┐                          ║
+%>                         ╚═▶│  ENTER  │─────▶│ WITHIN │─────▶│  EXIT  │══════════════════════════╝
+%>                            └────┬────┘      └────────┘      └────┬───┘
+%>                                 │          ┌──────────┐          │
+%>                                 └──────────┤TRANSITION├──────────┘
+%>                                            └──────────┘
+%>`````````````````````
+%>
 %> States have 4 fundamental evaluation points: ENTER, WITHIN, TRANSITION
 %> and EXIT. Each evaluation point takes a cell array of functions to run.
-%> TRANSITION evaluation is used to allow logic to switch from a
-%> default transition path to an alternate. For example, you can imagine a
-%> default stimulus > incorrect transition, but if the subject answers correctly
-%> you can use the transition evaluation to switch instead to the correct state.
+%> TRANSITION evaluation is used to allow logic to switch from a default
+%> transition path to an alternate. For example, you can imagine a default
+%> stimulus > incorrect transition, but if the subject answers correctly you
+%> can use the transition evaluation to switch instead to the correct state.
 %>
 %> To run a demo, try the following:
-%> ~~~
+%>
+%> ~~~~~~~~~~~~~~~~~~~~~~
 %> >> sm = stateMachine;
 %> >> runDemo(sm);
-%> ~~~
+%> ~~~~~~~~~~~~~~~~~~~~~~
 %>
 %> To see how to run the stateMacine from a PTB loop, see
 %> `runExperiment.runTask()`; and check DefaultStateInfo.m and METHODS.md
@@ -43,7 +66,7 @@ classdef stateMachine < optickaCore
 		%> controlled by an external driver that deals with timing, and without supervision
 		%> but delays may accumulate vs real timer.
 		realTime logical			= false
-		%> clock function to use
+		%> clock function to use (GetSecs from PTB is optimal…)
 		clockFcn function_handle	= @GetSecs
 		%> N x 2 cell array of strings to compare, list to skip the current -> next state's exit functions; for example
 		%> skipExitStates = {'fixate',{'incorrect','breakfix'}}; means that if the currentstate is
@@ -59,7 +82,7 @@ classdef stateMachine < optickaCore
 		tempNextState char			= ''
 		%> verbose logging to command window?
 		verbose						= false
-		%> pause function
+		%> pause function (WaitSecs from PTB is optimal…)
 		waitFcn function_handle		= @WaitSecs
 	end
 	

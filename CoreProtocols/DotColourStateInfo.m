@@ -255,7 +255,7 @@ correctExitFcn = {
 	@()update(stims); %update our stimuli ready for display
 	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions
 	@()drawTimedSpot(s, 0.5, [0 1 0 1], 0.2, true); %reset the timer on the green spot
-	@()updatePlot(bR, eT, sM); %update our behavioural plot
+	@()updatePlot(bR, me); %update our behavioural plot
 	@()drawnow;
 	@()checkTaskEnded(me); %check if task is finished
 };
@@ -286,7 +286,7 @@ incExitFcn = {
 	@()update(stims); %update our stimuli ready for display
 	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions
 	@()checkTaskEnded(me); %check if task is finished
-	@()updatePlot(bR, eT, sM); %update our behavioural plot;
+	@()updatePlot(bR, me); %update our behavioural plot, must come before updateTask() / updateVariables()
 	@()drawnow;
 };
 

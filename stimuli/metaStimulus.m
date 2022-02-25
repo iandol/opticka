@@ -1,5 +1,6 @@
 % ========================================================================
-%> @brief metaStimulus is a manager for multiple opticka stimuli
+%> @class metaStimulus
+%> @brief Manager for multiple opticka stimuli.
 %> 
 %> METASTIMULUS manages a collection of stimuli, wrapped in one object. It
 %> allows you to treat this group of heterogenous stimuli as if they are a
@@ -279,8 +280,9 @@ classdef metaStimulus < optickaCore
 		% ===================================================================
 		%> @brief randomise wrapper
 		%>
-		%> @param
-		%> @return
+		%> if stimulusTable is set, then we use the table to assign stimulus
+		%> values to each stimulus
+		%>
 		% ===================================================================
 		function randomise(me)
 			if ~isempty(me.stimulusTable)

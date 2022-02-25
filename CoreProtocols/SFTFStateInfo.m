@@ -136,7 +136,7 @@ correctExitFcn = {
 	@()setOffline(eT); ... %set eyelink offline
 	@()updateVariables(obj,[],[],true); ... %randomise our stimuli, set strobe value too
 	@()update(obj.stimuli); ... %update our stimuli ready for display
-	@()updatePlot(bR, eT, sM); ... %update our behavioural plot
+	@()updatePlot(bR, me); ... %update our behavioural plot
 	@()trackerClearScreen(eT); ... 
 	@()trackerDrawFixation(eT); ... %draw fixation window on eyelink computer
 	@()trackerDrawStimuli(eT); ... %draw location of stimulus on eyelink
@@ -159,7 +159,7 @@ incExitFcn = {
 	@()setOffline(eT); ... %set eyelink offline
 	@()updateVariables(obj,[],[],false); ...
 	@()update(obj.stimuli); ... %update our stimuli ready for display
-	@()updatePlot(bR, eT, sM); ... %update our behavioural plot;
+	@()updatePlot(bR, me); ... %update our behavioural plot, must come before updateTask() / updateVariables()
 	@()trackerClearScreen(eT); ... 
 	@()trackerDrawFixation(eT); ... %draw fixation window on eyelink computer
 	@()trackerDrawStimuli(eT); ... %draw location of stimulus on eyelink

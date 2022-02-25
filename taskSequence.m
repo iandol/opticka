@@ -241,7 +241,6 @@ classdef taskSequence < optickaCore & dynamicprops
 				me.outBlock = {};
 				me.varLabels = {};
 				me.varList = {};
-				me.taskInitialised = false;
 				me.taskFinished = false;
 				return
 			end
@@ -403,26 +402,14 @@ classdef taskSequence < optickaCore & dynamicprops
 		end
 		
 		% ===================================================================
-		function initialise(me)
+		function initialise(me, randomise)
 		%> @fn initialise
 		%> @brief Initialise the variables and task together
 		%>
 		% ===================================================================
-			me.randomiseTask();
-			me.initialiseTask();
-			me.backup();
-			fprintf('---> taskSequence.initialise: Randomised and Initialised!\n');
-		end
-		
-		% ===================================================================
-		function initialiseTask(me)
-		%> @fn initialiseTask
-		%> @brief Initialise the properties used to track the run
-		%>
-		%> Initialise the properties used to track the run. These are dynamic
-		%> props.
-		% ===================================================================
+			if ~exist('randomise','var'); randomise = false; end
 			resetTask(me);
+			if randomise; randomiseTask(me); end
 			t = me.tProp;
 			for i = 1:2:length(t)
 				if isempty(me.findprop(t{i}))
@@ -431,8 +418,10 @@ classdef taskSequence < optickaCore & dynamicprops
 				me.(t{i}) = t{i+1}; %#ok<*MCNPR>
 			end
 			me.taskInitialised = true;
-			me.makeLabels();
+			makeLabels(me);
 			randomiseTimes(me);
+			backup(me);
+			fprintf('---> taskSequence.initialise: Initialised!\n');
 		end
 		
 		% ===================================================================
@@ -478,7 +467,7 @@ classdef taskSequence < optickaCore & dynamicprops
 				me.totalRuns = me.totalRuns + 1;
 				[me.thisBlock, me.thisRun] = findRun(me);
 				randomiseTimes(me);
-			elseif me.totalRuns == me.nRuns
+			elseif me.totalRuns >= me.nRuns
 				me.taskFinished = true;
 				fprintf('---> taskSequence.updateTask: Task FINISHED, no more updates allowed\n');
 			end
@@ -494,6 +483,10 @@ classdef taskSequence < optickaCore & dynamicprops
 		%> @return run the number within the block
 		%> @return var the variable number
 		% ===================================================================
+			if me.nVars == 0
+				block = 1; run = 1; var = 1;
+				return
+			end
 			if ~exist('index','var') || isempty(index); index = me.totalRuns; end
 			block = floor( (index - 1) / me.minTrials ) + 1;
 			run = index - (me.minTrials * (block - 1));
@@ -698,8 +691,14 @@ classdef taskSequence < optickaCore & dynamicprops
 		% ===================================================================
 			me.makeLabels();
 			me.h = struct();
-			build_gui();
 			outvals = me.outValues;
+			if me.nRuns > 17
+				build_gui(0.7);
+			elseif me.nRuns > 10
+				build_gui(0.4);
+			else
+				build_gui(0.25);
+			end
 			data = cell(size(outvals,1),(size(outvals,2)*2)+3);
 			a = 1;
 			for i = 1:size(outvals,1)
@@ -740,7 +739,7 @@ classdef taskSequence < optickaCore & dynamicprops
 			end
 			set(me.h.uitable1,'Data',data);
 			
-			function build_gui()
+			function build_gui(heightin)
 				fsmall = 12;
 				if ismac
 					mfont = 'menlo';
@@ -752,7 +751,7 @@ classdef taskSequence < optickaCore & dynamicprops
 				me.h.figure1 = uifigure( ...
 					'Tag', 'sSLog', ...
 					'Units', 'normalized', ...
-					'Position', [0 0.2 0.25 0.7], ...
+					'Position', [0.75 0 0.25 heightin], ...
 					'Name', ['Log: ' me.fullName], ...
 					'MenuBar', 'none', ...
 					'NumberTitle', 'off', ...

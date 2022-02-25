@@ -77,12 +77,14 @@ classdef optickaCore < handle
 		
 		% ===================================================================
 		function me = optickaCore(varargin)
+		%> @fn optickaCore
 		%> @brief Class constructor
 		%>
 		%> The class constructor for optickaCore.
 		%>
-		%> @param args are passed as a structure of properties which is
-		%> parsed.
+		%> @param args are passed as name-value pairs or a structure of properties
+		%> which is parsed.
+		%>
 		%> @return instance of class.
 		% ===================================================================
 			args = me.addDefaults(varargin);
@@ -97,6 +99,7 @@ classdef optickaCore < handle
 		
 		% ===================================================================
 		function name = get.fullName(me)
+		%> @fn get.fullName
 		%> @brief concatenate the name with a uuid at get.
 		%> @param
 		%> @return name the concatenated name
@@ -111,9 +114,10 @@ classdef optickaCore < handle
 		
 		% ===================================================================
 		function initialiseSaveFile(me, path)
+		%> @fn initialiseSaveFile(me, path)
 		%> @brief Initialise Save Dir
 		%>
-		%> For single stimulus presentation, randomise stimulus choice
+		%> @param path - the path to use.
 		% ===================================================================
 			if ~exist('path','var') || isempty(path)
 				path = me.paths.savedData;
@@ -128,15 +132,18 @@ classdef optickaCore < handle
 		
 		% ===================================================================
 		function [list, typelist] = findAttributes(me, attrName, attrValue)
+		% [list, typelist] = findAttributes(me, attrName, attrValue)
+		%> @fn [list, typelist] = findAttributes (me, attrName, attrValue)
 		%> @brief find properties of object with specific attributes, for
-		%> example all properties whose GetAcccess attribute is public
+		%> example all properties whose GetAcccess attribute is public.
+		%>
 		%> @param attrName attribute name, i.e. GetAccess, Transient
 		%> @param attrValue value of that attribute, i.e. public, true
+		%>
 		%> @return list of properties that match that attribute
 		%> @return typelist the type of the property
 		% ===================================================================
-			% Determine if first input is object or class name
-			if ischar(me)
+			if ischar(me) % Determine if first input is object or class name
 				mc = meta.class.fromName(me);
 			elseif isobject(me)
 				mc = metaclass(me);
@@ -187,16 +194,18 @@ classdef optickaCore < handle
 		
 		% ===================================================================
 		function list = findAttributesandType(me, attrName, attrValue, type)
+		%> @fn list = findAttributesandType(me, attrName, attrValue, type)
 		%> @brief find properties of object with specific attributes, for
 		%> example all properties whose GetAcccess attribute is public and
-		%> type is logical
+		%> type is logical.
+		%>
 		%> @param attrName attribute name, i.e. GetAccess, Transient
 		%> @param attrValue value of that attribute, i.e. public, true
 		%> @param type logical, notlogical, string or number
+		%>
 		%> @return list of properties that match that attribute
 		% ===================================================================
-			% Determine if first input is object or class name
-			if ischar(me)
+			if ischar(me) % Determine if first input is object or class name
 				mc		= meta.class.fromName(me);
 			elseif isobject(me)
 				mc		= metaclass(me);
@@ -297,20 +306,22 @@ classdef optickaCore < handle
 		
 		% ===================================================================
 		function editProperties(me, properties)
-		%> @brief editProperties -- method to edit a bunch of properties
+		%> @fn editProperties
+		%> @brief method to modify a set of properties
 		%>
-		%> @param properties - cell or struct of properties
+		%> @param properties - cell or struct of properties to modify
 		% ===================================================================
 			me.addArgs(properties);
 		end
 		
 		% ===================================================================
 		function set(me, property, value)
-		%> @brief set -- method to fast change a particular value. This is
+		%> @fn set
+		%> @brief method to fast change a particular value. This is
 		%> useful for use in anonymous functions, like in the state machine.
 		%>
-		%> @param property - the property to change
-		%> @param value - the value to change it to
+		%> @param property — the property to change
+		%> @param value — the value to change it to
 		% ===================================================================
 			if isprop(me,property)
 				me.(property) = value;
@@ -324,6 +335,7 @@ classdef optickaCore < handle
 	%=======================================================================
 		% ===================================================================
 		function checkPaths(me)
+		%> @fn checkPaths
 		%> @brief checks the paths are valid
 		%>
 		% ===================================================================

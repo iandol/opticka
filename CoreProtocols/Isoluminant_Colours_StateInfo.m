@@ -360,7 +360,7 @@ correctExitFcn = {
 	@()update(me.stimuli); %update our stimuli ready for display
 	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions
 	@()trackerClearScreen(eT); 
-	@()updatePlot(bR, eT, sM); %update our behavioural plot
+	@()updatePlot(bR, me); %update our behavioural plot
 	@()checkTaskEnded(me); %check if task is finished
 	@()resetFixation(eT); %resets the fixation state timers	
 	@()resetFixationHistory(eT); %reset the stored X and Y values
@@ -390,7 +390,7 @@ incExitFcn = {
 	@()update(stims); %update our stimuli ready for display
 	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions
 	@()trackerClearScreen(eT); 
-	@()updatePlot(bR, eT, sM); %update our behavioural plot;
+	@()updatePlot(bR, me); %update our behavioural plot, must come before updateTask() / updateVariables()
 	@()resetFixation(eT); %resets the fixation state timers
 	@()resetFixationHistory(eT); %reset the stored X and Y values
 	@()drawnow;

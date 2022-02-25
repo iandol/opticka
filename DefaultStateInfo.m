@@ -96,7 +96,7 @@ tS.INCORRECT 				= -5;		%==the code to send eyetracker for incorrect trials
 % the subject entering a specific set of display areas etc.)
 %
 % initial fixation X position in degrees (0° is screen centre)
-tS.fixX						= 0;	
+tS.fixX						= 0;
 % initial fixation Y position in degrees
 tS.fixY						= 0;
 % time to search and enter fixation window
@@ -118,7 +118,6 @@ me.lastYPosition			= tS.fixY;
 me.lastXExclusion			= [];
 me.lastYExclusion			= [];
 
-
 %==================================================================
 %---------------------------Eyetracker setup-----------------------
 % NOTE: the opticka GUI can set eyetracker options too, if you set options
@@ -127,7 +126,7 @@ me.lastYExclusion			= [];
 % settings you can test if they are empty or not and set them based on
 % that...
 eT.name 					= tS.name;
-if tS.saveData == true;		eT.recordData = true; end %===save ET data?					
+if tS.saveData == true;		eT.recordData = true; end %===save ET data?
 if me.useEyeLink
 	eT.name 						= tS.name;
 	if me.dummyMode;				eT.isDummy = true; end %===use dummy or real eyetracker? 
@@ -141,19 +140,19 @@ if me.useEyeLink
 		% fixation this is useful for a baby or monkey who has not been trained
 		% for fixation use 1-9 to show each dot, space to select fix as valid,
 		% INS key ON EYELINK KEYBOARD to accept calibration!
-		eT.remoteCalibration		= false; 
+		eT.remoteCalibration				= false; 
 		%-----------------------
-		eT.modify.calibrationtargetcolour = [1 1 1]; %==calibration target colour
-		eT.modify.calibrationtargetsize = 2;		%==size of calibration target as percentage of screen
-		eT.modify.calibrationtargetwidth = 0.15;	%==width of calibration target's border as percentage of screen
-		eT.modify.waitformodereadytime	= 500;
-		eT.modify.devicenumber 			= -1;		%==-1 = use any attachedkeyboard
-		eT.modify.targetbeep 			= 1;		%==beep during calibration
+		eT.modify.calibrationtargetcolour	= [1 1 1]; %==calibration target colour
+		eT.modify.calibrationtargetsize		= 2;		%==size of calibration target as percentage of screen
+		eT.modify.calibrationtargetwidth	= 0.15;	%==width of calibration target's border as percentage of screen
+		eT.modify.waitformodereadytime		= 500;
+		eT.modify.devicenumber				= -1;		%==-1 = use any attachedkeyboard
+		eT.modify.targetbeep				= 1;		%==beep during calibration
 	end
 elseif me.useTobii
 	eT.name 						= tS.name;
 	if me.dummyMode;				eT.isDummy = true; end %===use dummy or real eyetracker? 
-	if isempty(me.tobiisettings) 	%==check if GUI settings are empty
+	if isempty(me.tobiisettings)	%==check if GUI settings are empty
 		eT.model					= 'Tobii Pro Spectrum';
 		eT.sampleRate				= 300;
 		eT.trackingMode				= 'human';
@@ -206,7 +205,7 @@ stims.stimulusTable				= [];
 % another option is to enable manual control of a table of variables
 % this is useful to probe RF properties or other features while still
 % allowing for fixation or other behavioural control.
-% Use arrow keys <- -> to control value and up/down to control variable
+% Use arrow keys <- -> to control value and ↑ ↓ to control variable.
 stims.controlTable			= [];
 stims.tableChoice			= 1;
 
@@ -285,12 +284,12 @@ fixEntryFcn = {
 	@()trackerMessage(eT,'V_RT MESSAGE END_FIX END_RT'); % Eyelink commands
 	@()trackerMessage(eT,sprintf('TRIALID %i',getTaskIndex(me))); %Eyelink start trial marker
 	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
-	% draw to the etetracker display
+	% draw to the eyetracker display
 	@()trackerClearScreen(eT); % blank the eyelink screen
 	@()trackerDrawFixation(eT); %draw fixation window on eyelink computer
 	@()trackerDrawStimuli(eT,stims.stimulusPositions); %draw location of stimulus on eyelink
 	@()statusMessage(eT,'Initiate Fixation...'); %status text on the eyelink
-	% show the last stimulus (fixation cross)
+	% show the LAST stimulus in the list (should be a fixation cross)
 	@()show(stims{tS.nStims});
 	@()logRun(me,'INITFIX');
 };
@@ -362,18 +361,18 @@ correctEntryFcn = {
 };
 
 %correct stimulus
-correctFcn = { 
+correctFcn = {
 	@()drawBackground(s);
 };
 
 %when we exit the correct state
 correctExitFcn = {
 	@()updateTask(me,tS.CORRECT); %make sure our taskSequence is moved to the next trial
+	@()updatePlot(bR, me); %update our behavioural plot, MUST be done before we update variables
 	@()updateVariables(me); %randomise our stimuli, and set strobe value too
 	@()update(me.stimuli); %update our stimuli ready for display
 	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions
 	@()trackerClearScreen(eT); 
-	@()updatePlot(bR, eT, sM); %update our behavioural plot
 	@()checkTaskEnded(me); %check if task is finished
 	@()resetFixation(eT); %resets the fixation state timers	
 	@()resetFixationHistory(eT); %reset the stored X and Y values
@@ -398,12 +397,12 @@ incFcn = {
 };
 
 %--------------------incorrect exit
-incExitFcn = { 
+incExitFcn = {
 	@()updateVariables(me); %randomise our stimuli, set strobe value too
+	@()updatePlot(bR, me); %update our behavioural plot, must come before updateTask() / updateVariables()
 	@()update(stims); %update our stimuli ready for display
 	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions
 	@()trackerClearScreen(eT); 
-	@()updatePlot(bR, eT, sM); %update our behavioural plot;
 	@()resetFixation(eT); %resets the fixation state timers
 	@()resetFixationHistory(eT); %reset the stored X and Y values
 	@()drawnow;
@@ -447,7 +446,6 @@ if tS.useTask %we are using task
 		breakExitFcn = [ {@()resetRun(task)}; breakExitFcn ]; %we randomise the run within this block to make it harder to guess next trial
 	end
 end
-	
 
 %--------------------calibration function
 calibrateFcn = {
@@ -467,44 +465,38 @@ driftFcn = {
 	@()driftCorrection(eT) % enter drift correct
 };
 
-%--------------------debug override
+%--------------------DEBUGGER override
 overrideFcn = { @()keyOverride(me) }; %a special mode which enters a matlab debug state so we can manually edit object values
 
 %--------------------screenflash
 flashFcn = { @()flashScreen(s, 0.2) }; % fullscreen flash mode for visual background activity detection
 
-%--------------------magstim
-magstimFcn = { 
-	@()drawBackground(s);
-	@()stimulate(mS); % run the magstim
-};
-
 %--------------------show 1deg size grid
 gridFcn = {@()drawGrid(s)};
 
-%==================================================================
+%==============================================================================
 %----------------------State Machine Table-------------------------
-disp('================>> Building state info file <<================')
-%specify our cell array that is read by the stateMachine
+% specify our cell array that is read by the stateMachine
 stateInfoTmp = {
 'name'		'next'		'time'	'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn';
-'pause'		'prefix'	inf		pauseEntryFcn	[]				[]				pauseExitFcn;
-'prefix'	'fixate'	0.5		prefixEntryFcn	[]				[]				[];
-'fixate'	'incorrect'	5	 	fixEntryFcn		fixFcn			inFixFcn		fixExitFcn;
-'stimulus'  'incorrect'	5		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn;
-'incorrect'	'prefix'	2		incEntryFcn		incFcn			[]				incExitFcn;
-'breakfix'	'prefix'	tS.tOut	breakEntryFcn	incFcn			[]				breakExitFcn;
-'correct'	'prefix'	1		correctEntryFcn	correctFcn		[]				correctExitFcn;
-'calibrate' 'pause'		0.5		calibrateFcn	[]				[]				[];
-'drift'		'pause'		0.5		driftFcn		[]				[]				[];
-'override'	'pause'		0.5		overrideFcn		[]				[]				[];
-'flash'		'pause'		0.5		flashFcn		[]				[]				[];
-'magstim'	'prefix'	0.5		[]				magstimFcn		[]				[];
-'showgrid'	'pause'		10		[]				gridFcn			[]				[];
+'pause'		'prefix'	inf		pauseEntryFcn	{}				{}				pauseExitFcn;
+'prefix'	'fixate'	0.5		prefixEntryFcn	{}				{}				{};
+'fixate'	'incorrect'	5		fixEntryFcn		fixFcn			inFixFcn		fixExitFcn;
+'stimulus'	'incorrect'	5		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn;
+'incorrect'	'timeout'	0.5		incEntryFcn		incFcn			{}				incExitFcn;
+'breakfix'	'timeout'	0.5		breakEntryFcn	incFcn			{}				breakExitFcn;
+'correct'	'prefix'	0.5		correctEntryFcn	correctFcn		{}				correctExitFcn;
+'timeout'	'prefix'	tS.tOut	{}				incFcn			{}				{};
+'calibrate'	'pause'		0.5		calibrateFcn	{}				{}				{};
+'drift'		'pause'		0.5		driftFcn		{}				{}				{};
+'override'	'pause'		0.5		overrideFcn		{}				{}				{};
+'flash'		'pause'		0.5		flashFcn		{}				{}				{};
+'magstim'	'prefix'	0.5		{}				magstimFcn		{}				{};
+'showgrid'	'pause'		10		{}				gridFcn			{}				{};
 };
 %----------------------State Machine Table-------------------------
-%==================================================================
-
+%==============================================================================
+disp('================>> Building state info file <<================')
 disp(stateInfoTmp)
-disp('================>> Loaded state info file  <<================')
-clearvars -regexp '.+Fcn$' % clear the cell arrays in the current workspace
+disp('=================>> Loaded state info file <<=================')
+clearvars -regexp '.+Fcn$' % clear the cell array Fcns in the current workspace

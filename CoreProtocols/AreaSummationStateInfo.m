@@ -269,13 +269,13 @@ correctFcn = {
 %--------------------when we exit the correct state
 correctExitFcn = {
 	@()sendStrobe(io,250);
+	@()updatePlot(bR, me); %update our behavioural plot
 	@()updateTask(me,tS.CORRECT); %make sure our taskSequence is moved to the next trial
 	@()updateVariables(me); %randomise our stimuli, and set strobe value too
 	@()update(stims); %update our stimuli ready for display
 	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions
 	@()trackerClearScreen(eT); 
 	@()checkTaskEnded(me); %check if task is finished
-	@()updatePlot(bR, eT, sM); %update our behavioural plot
 	@()drawnow;
 };
 
@@ -315,12 +315,12 @@ incFcn = {
 %--------------------incorrect / break exit
 incExitFcn = { 
 	@()sendStrobe(io,251);
+	@()updatePlot(bR, me); %update our behavioural plot, must come before updateTask() / updateVariables()
 	@()resetRun(task); %we randomise the run within this block to make it harder to guess next trial
 	@()updateVariables(me); %randomise our stimuli, set strobe value too
 	@()update(stims); %update our stimuli ready for display
 	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions
 	@()checkTaskEnded(me); %check if task is finished
-	@()updatePlot(bR, eT, sM); %update our behavioural plot;
 	@()drawnow;
 };
 
@@ -357,9 +357,9 @@ magstimFcn = {
 %--------------------show 1deg size grid
 gridFcn = {@()drawGrid(s)};
 
+%==============================================================================
 %----------------------State Machine Table-------------------------
-disp('================>> Building state info file <<================')
-%specify our cell array that is read by the stateMachine
+% specify our cell array that is read by the stateMachine
 stateInfoTmp = {
 'name'		'next'		'time'	'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn';
 'pause'		'prefix'	inf		pauseEntryFcn	[]				[]				pauseExitFcn;
@@ -376,9 +376,9 @@ stateInfoTmp = {
 'magstim'	'prefix'	0.5		[]				magstimFcn		[]				[];
 'showgrid'	'pause'		10		[]				gridFcn			[]				[];
 };
-
+%----------------------State Machine Table-------------------------
+%==============================================================================
+disp('================>> Building state info file <<================')
 disp(stateInfoTmp)
-disp('================>> Loaded state info file  <<================')
-clear pauseEntryFcn fixEntryFcn fixFcn inFixFcn fixExitFcn stimFcn maintainFixFcn incEntryFcn ...
-	incFcn incExitFcn breakEntryFcn breakFcn correctEntryFcn correctFcn correctExitFcn ...
-	calibrateFcn overrideFcn flashFcn gridFcn
+disp('=================>> Loaded state info file <<=================')
+clearvars -regexp '.+Fcn$' % clear the cell array Fcns in the current workspace

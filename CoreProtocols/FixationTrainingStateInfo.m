@@ -279,9 +279,9 @@ correctFcn = {
 
 %----------------------when we exit the correct state
 correctExitFcn = {
+	@()updatePlot(bR, me); % update the behavioural report plot
 	@()updateVariables(me,[],[],true); ... %update the task variables
 	@()update(stims); ... %update our stimuli ready for display
-	@()updatePlot(bR, eT, sM); % update the behavioural report plot
 	@()checkTaskEnded(me);
 	@()drawnow; % ensure we update the figure
 };
@@ -318,9 +318,9 @@ breakFcn =  {
 
 %----------------------break exit
 breakExitFcn = { 
+	@()updatePlot(bR, me);
 	@()updateVariables(me,[],[],false); ... %update the task variables
 	@()update(stims); %update our stimuli ready for display
-	@()updatePlot(bR, eT, sM);
 	@()checkTaskEnded(me);
 	@()drawnow;
 };
@@ -378,26 +378,27 @@ sM.skipExitStates = {'fixate','incorrect|breakfix'};
 %----------------------State Machine Table-------------------------
 % this table defines the states and relationships and function sets
 %==================================================================
-disp('================>> Building state info file <<================')
 stateInfoTmp = {
 'name'		'next'		'time' 'entryFcn'		'withinFcn'		'transitionFcn'		'exitFcn';
-'pause'		'blank'		inf		pauseEntryFcn	[]				[]					pauseExitFcn;
-'blank'		'stimulus'	0.5		psEntryFcn		prestimulusFcn	[]					psExitFcn;
+'pause'		'blank'		inf		pauseEntryFcn	{}				{}					pauseExitFcn;
+'blank'		'stimulus'	0.5		psEntryFcn		prestimulusFcn	{}					psExitFcn;
 'stimulus'	'incorrect'	5		stimEntryFcn	stimFcn			maintainFixFcn		stimExitFcn;
-'incorrect'	'blank'		2		incEntryFcn		breakFcn		[]					breakExitFcn;
-'breakfix'	'blank'		2		breakEntryFcn	breakFcn		[]					breakExitFcn;
-'correct'	'blank'		0.5		correctEntryFcn	correctFcn		[]					correctExitFcn;
-'calibrate' 'pause'		0.5		calibrateFcn	[]				[]					[];
-'offset'	'pause'		0.5		offsetFcn		[]				[]					[];
-'drift'		'pause'		0.5		driftFcn		[]				[]					[];
-'flash'		'pause'		0.5		[]				flashFcn		[]					[];
-'override'	'pause'		0.5		[]				overrideFcn		[]					[];
-'showgrid'	'pause'		1		[]				gridFcn			[]					[];
+'incorrect'	'timeout'	2		incEntryFcn		breakFcn		{}					breakExitFcn;
+'breakfix'	'timeout'	2		breakEntryFcn	breakFcn		{}					breakExitFcn;
+'correct'	'blank'		0.5		correctEntryFcn	correctFcn		{}					correctExitFcn;
+'timeout'	'blank'		tS.tOut	{}				{}				{}					{};
+'calibrate' 'pause'		0.5		calibrateFcn	{}				{}					{};
+'offset'	'pause'		0.5		offsetFcn		{}				{}					{};
+'drift'		'pause'		0.5		driftFcn		{}				{}					{};
+'flash'		'pause'		0.5		{}				flashFcn		{}					{};
+'override'	'pause'		0.5		{}				overrideFcn		{}					{};
+'showgrid'	'pause'		1		{}				gridFcn			{}					{};
 };
 %----------------------State Machine Table-------------------------
 %==================================================================
-
+disp('================>> Building state info file <<================')
 disp(stateInfoTmp)
-clear -regexp '.+Fcn'
-disp('================>> Loaded state info file <<================')
+disp('=================>> Loaded state info file <<=================')
+
+clearvars -regexp '.+Fcn'
 

@@ -368,13 +368,13 @@ correctFcn = {
 
 %when we exit the correct state
 correctExitFcn = {
+	@()updatePlot(bR, me); %update our behavioural plot, must come before updateTask() / updateVariables()
 	@()updateTask(me,tS.CORRECT); %make sure our taskSequence is moved to the next trial
 	@()updateVariables(me); %randomise our stimuli, and set strobe value too
 	@()update(stims); %update the stimuli ready for display
 	@()resetExclusionZones(eT); %reset the exclusion zones
-	@()updatePlot(bR, eT, sM); %update our behavioural plot
-	@()drawnow;
 	@()checkTaskEnded(me); %check if task is finished
+	@()drawnow();
 };
 
 %incorrect entry
@@ -396,12 +396,12 @@ incFcn = {
 
 %incorrect / break exit
 incExitFcn = {
+	@()updatePlot(bR, me); %update our behavioural plot, must come before updateTask() / updateVariables()
 	@()updateVariables(me); %randomise our stimuli, don't run updateTask(task), and set strobe value too
 	@()update(stims); %update our stimuli ready for display
 	@()resetExclusionZones(eT); %reset the exclusion zones
-	@()updatePlot(bR, eT, sM); %update our behavioural plot;
-	@()drawnow;
 	@()checkTaskEnded(me); %check if task is finished
+	@()drawnow();
 };
 if tS.includeErrors
 	incExitFcn = [ {@()updateTask(me,tS.BREAKFIX)}; incExitFcn ]; % make sure our taskSequence is moved to the next trial
@@ -452,38 +452,36 @@ overrideFcn = { @()keyOverride(me) }; %a special mode which enters a matlab debu
 %screenflash
 flashFcn = { @()flashScreen(s, 0.2) }; % fullscreen flash mode for visual background activity detection
 
-%magstim
-magstimFcn = { 
-	@()drawBackground(s);
-	@()stimulate(mS); % run the magstim
-};
-
 %show 1deg size grid
 gridFcn = {@()drawGrid(s)};
 
+%==============================================================================
 %----------------------State Machine Table-------------------------
-disp('================>> Building state info file <<================')
-%specify our cell array that is read by the stateMachine
+% specify our cell array that is read by the stateMachine
+% remember that transitionFcn can override the time value, so for example
+% stimulus shows 2 seconds time, but the transitionFcn can jump to other
+% states (correct or breakfix) sooner than this, so this is an upper limit.
 stateInfoTmp = {
 'name'      'next'		'time'  'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn';
-'pause'		'prefix'	inf		pauseEntryFcn	[]				[]				pauseExitFcn;
-'prefix'	'fixate'	0.5		prefixEntryFcn	prefixFcn		[]				[];
-'fixate'	'incorrect'	5	 	fixEntryFcn		fixFcn			inFixFcn		fixExitFcn;
-'stimulus'  'incorrect'	5		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn;
-'incorrect'	'prefix'	3		incEntryFcn		incFcn			[]				incExitFcn;
-'breakfix'	'prefix'	tS.tOut	breakEntryFcn	incFcn			[]				incExitFcn;
-'exclusion'	'prefix'	tS.tOut	exclEntryFcn	incFcn			[]				incExitFcn;
-'correct'	'prefix'	0.5		correctEntryFcn	correctFcn		[]				correctExitFcn;
-'calibrate' 'pause'		0.5		calibrateFcn	[]				[]				[];
-'drift'		'pause'		0.5		driftFcn		[]				[]				[];
-'override'	'pause'		0.5		overrideFcn		[]				[]				[];
-'flash'		'pause'		0.5		flashFcn		[]				[]				[];
-'magstim'	'prefix'	0.5		[]				magstimFcn		[]				[];
-'showgrid'	'pause'		10		[]				gridFcn			[]				[];
+'pause'		'prefix'	inf		pauseEntryFcn	{}				{}				pauseExitFcn;
+'prefix'	'fixate'	0.5		prefixEntryFcn	prefixFcn		{}				{};
+'fixate'	'incorrect'	5		fixEntryFcn		fixFcn			inFixFcn		fixExitFcn;
+'stimulus'	'incorrect'	5		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn;
+'correct'	'prefix'	0.25	correctEntryFcn	correctFcn		{}				correctExitFcn;
+'incorrect'	'timeout'	0.25	incEntryFcn		incFcn			{}				incExitFcn;
+'breakfix'	'timeout'	0.25	breakEntryFcn	incFcn			{}				incExitFcn;
+'exclusion'	'timeout'	0.25	exclEntryFcn	incFcn			{}				incExitFcn;
+'timeout'	'prefix'	tS.tOut	{}				{}				{}				{};
+'calibrate'	'pause'		0.5		calibrateFcn	{}				{}				{};
+'drift'		'pause'		0.5		driftFcn		{}				{}				{};
+'override'	'pause'		0.5		overrideFcn		{}				{}				{};
+'flash'		'pause'		0.5		flashFcn		{}				{}				{};
+'showgrid'	'pause'		10		{}				gridFcn			{}				{};
 };
+%----------------------State Machine Table-------------------------
+%==============================================================================
 
+disp('================>> Building state info file <<================')
 disp(stateInfoTmp)
-disp('================>> Loaded state info file  <<================')
-clear pauseEntryFcn fixEntryFcn fixFcn inFixFcn fixExitFcn stimFcn maintainFixFcn incEntryFcn ...
-	incFcn incExitFcn breakEntryFcn breakFcn correctEntryFcn correctFcn correctExitFcn ...
-	calibrateFcn overrideFcn flashFcn gridFcn
+disp('=================>> Loaded state info file <<=================')
+clearvars -regexp '.+Fcn$' % clear the cell array Fcns in the current workspace

@@ -1,5 +1,6 @@
 % ======================================================================
-%> @brief Opticka stimulus generator GUI
+%> @class opticka
+%> @brief Stimulus generator GUI
 %>
 %> Opticka is an object-oriented experiment manager wrapping the Psychophysics
 %> toolbox See http://iandol.github.com/opticka/ for more details. This
@@ -85,12 +86,13 @@ classdef opticka < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief Route calls to private methods
+		%> @brief Route to private methods
 		%>
 		%> @param in switch to route to correct method.
 		%> @param vars additional vars to pass.
 		% ===================================================================
 		function router(me,in,vars)
+			% router(me,in,vars)
 			if ~exist('vars','var')
 				vars=[];
 			end
@@ -182,7 +184,7 @@ classdef opticka < optickaCore
 			end
 			if me.oc.checkStatus > 0
 				%flush read buffer
-				data=me.oc.read('all');
+				data = me.oc.read('all');
 				tLog=[];
 				if me.oc.checkStatus > 0 %check again to make sure we are still open
 					me.oc.write('--readStimulus--');
@@ -469,11 +471,13 @@ classdef opticka < optickaCore
 		% ===================================================================
 		%> @brief getTaskVals
 		%> Gets the settings from the UI and updates our task object
-		%> @param 
+		%> @param randomise do we run randomiseTask()? [default=FALSE]
 		% ===================================================================
-		function getTaskVals(me)
+		function getTaskVals(me, randomise)
+			if ~exist('randomise','var'); randomise = true; end
 			if isempty(me.r.task)
 				me.r.task = taskSequence;
+				me.r.task.initialise;
 			end
 			if isfield(me.r.screenVals,'fps')
 				me.r.task.fps = me.r.screenVals.fps;
@@ -489,13 +493,19 @@ classdef opticka < optickaCore
 			if ~isempty(me.r.task.blockVar)
 				me.r.task.blockVar.values = me.ge(me.h.OKBlockValues);
 				me.r.task.blockVar.probability = me.gn(me.h.OKBlockProbability);
+				if length(me.r.task.blockVar.values) ~= length(me.r.task.blockVar.probability)
+					randomise = false;
+				end
 			end
 			if ~isempty(me.r.task.trialVar)
 				me.r.task.trialVar.values = me.ge(me.h.OKBlockValues);
 				me.r.task.trialVar.probability = me.gn(me.h.OKBlockProbability);
+				if length(me.r.task.trialVar.values) ~= length(me.r.task.trialVar.probability)
+					randomise = false;
+				end
 			end
 			if isempty(me.r.task.taskStream); me.r.task.initialiseGenerator; end
-			me.r.task.randomiseTask;
+			if randomise; me.r.task.randomiseTask; end
 		end
 		
 		% ===================================================================
@@ -547,14 +557,15 @@ classdef opticka < optickaCore
 			end
 			fn = fieldnames(me.store);
 			for i = 1:length(fn)
-				if isa(fn{i},'baseStimulus')
-					closePanel(me.r.stimuli{i})
+				if isa(me.store.(fn{i}),'baseStimulus')
+					try closePanel(me.store.(fn{i})); end
+					try me.store = rmfield(me.store, fn{i}); end
 				end
 			end
 			ch = get(me.h.OKPanelStimulus,'Children');
 			for i = 1:length(ch)
 				if strcmpi(get(ch(i),'Type'),'uipanel')
-					delete(ch(i))
+					delete(ch(i));
 				end
 			end
 			me.h.OKStimList.Items = {}; me.h.OKStimList.Value = {};
@@ -638,7 +649,7 @@ classdef opticka < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function readPanel(me,src,~)
+		function readPanel(me,src)
 			me.salutation('readPanel',['Triggered by: ' src.fullName],true);
 			me.refreshStimulusList;
 		end
@@ -655,12 +666,13 @@ classdef opticka < optickaCore
 					v = 1;
 					me.store.visibleStimulus = me.r.stimuli{1};
 				else
-					v = me.gp(me.h.OKStimList); if v==0;v=1;end
+					v = me.gp(me.h.OKStimList); 
+					if isempty(v) || v==0;v=1;end
 					if strcmpi(me.r.stimuli{v}.uuid,me.store.visibleStimulus.uuid)
 						skip = true;
 					end
 				end
-				if v <= me.r.stimuli.n && skip == false
+				if v <= me.r.stimuli.n && ~skip
 					if isfield(me.store,'evnt')
 						delete(me.store.evnt);
 						me.store = rmfield(me.store,'evnt');
@@ -734,10 +746,11 @@ classdef opticka < optickaCore
 		function updateVariable(me)	
 			try
 				pos = me.gp(me.h.OKVarList);
+				if isempty(pos) || pos == 0; return; end
 				me.r.task.nVar(pos).name = me.gs(me.h.OKVariableName);
 				
 				s = me.gs(me.h.OKVariableValues);
-				if isempty(regexpi(s,'^\{'))
+				if isempty(regexpi(s,'^\{', 'once'))
 					me.r.task.nVar(pos).values = str2num(s);
 				else
 					me.r.task.nVar(pos).values = eval(s);
@@ -1116,32 +1129,34 @@ classdef opticka < optickaCore
 			if ui == true
 				v = me.gv(me.h.OKProtocolsList);
 				if isempty(v)
-					[file,p] = uigetfile('*.mat','Select an Opticka Protocol (saved as a .mat)');
+					[fileName,p] = uigetfile('*.mat','Select an Opticka Protocol (saved as a .mat)');
 				else
-					file = v;
+					fileName = v;
 					p = me.paths.protocols;
 				end
 			else
-				[file,p] = uigetfile('*.mat','Select an Opticka Protocol (saved as a .mat)'); %cd([me.paths.root filesep 'CoreProtocols'])
+				[fileName,p] = uigetfile('*.mat','Select an Opticka Protocol (saved as a .mat)'); %cd([me.paths.root filesep 'CoreProtocols'])
 			end
 			
-			if isempty(file) | file == 0
+			if isempty(fileName) | fileName == 0
 				disp('--->>> Opticka loadProtocol: No file specified...')
 				return
 			end
 			me.h.OKOptickaVersion.Text = 'Loading Protocol, please wait...';
 			cd(p);
-			load(file);
+			load(fileName, 'tmp');
 			
 			if ~isa(tmp,'opticka');warndlg('This is not an opticka protocol file...');return;end
 
 			me.paths.protocols = p;
 			
-			me.comment = ['Protocol: ' file];
-			me.store.protocolName = file;
+			me.comment = ['Protocol: ' fileName];
+			me.store.protocolName = fileName;
+
+			clearStimulusList(me);
+			clearVariableList(me);
 			
 			salutation(me,sprintf('Routing Protocol FROM %s TO %s',tmp.fullName,me.fullName),[],true);
-			
 			
 			fprintf('===> Load status:\n');
 			if isprop(tmp.r,'stimuli')

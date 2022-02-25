@@ -232,7 +232,7 @@ prefixEntryFcn = {
 	% make sure we set offline (only for eyelink, ignored by tobii)
 	@()setOffline(eT);
 	%reset all fixation counters ready for a new trial
-	@()resetFixation(eT);
+	@()resetFixationHistory(eT); %reset the stored X and Y values
 	@()updateFixationValues(eT,tS.fixX,tS.fixY,tS.firstFixInit,tS.firstFixTime,tS.firstFixRadius);
 	@()show(stims);
 	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions
@@ -280,7 +280,11 @@ initFixFcn = {
 
 %--------------------exit fixation phase
 fixExitFcn = { 
-	@()updateFixationTarget(me, true, tS.targetFixInit, tS.targetFixTime, tS.targetRadius); %use our stimuli values for next fix X and Y
+	% updateFixationTarget(me) checks the current X and Y position of the
+	% stimuli assigned by stims.fixationChoice and sets fixation windows
+	% around those stimuli. This allows you to move the fixation from the
+	% fixation cross to a stimulus target very easily.
+	@()updateFixationTarget(me, true, tS.targetFixInit, tS.targetFixTime, tS.targetRadius);
 	@()edit(stims,4,'colourOut',[0.6 0.6 0.5 0.5]); %dim fix spot
 	@()trackerDrawFixation(eT);
 	@()trackerMessage(eT,'END_FIX');
@@ -334,7 +338,7 @@ correctExitFcn = {
 	@()stopRecording(eT); %stops recording (eyelink, tobii ignores this)
 	@()setOffline(eT); %set eyelink offline
 	% tell taskSequence to update to the next trial.
-	@()updatePlot(bR, eT, sM); %update our behavioural plot
+	@()updatePlot(bR, me); %update our behavioural plot
 	@()updateTask(task, tS.CORRECT);
 	% modify our stimuli based on updated trial (find the values from
 	% taskSequence and set them on metaStimulus), sets strobe value for new
@@ -361,14 +365,16 @@ incEntryFcn = {
 }; 
 
 %--------------------our incorrect stimulus
-incFcn = { @()draw(stims); };
+incFcn = {
+	@()draw(stims); %we draw but don't animate, therefore static dots…
+};
 
 %--------------------incorrect / break exit
 incExitFcn = { 
 	@()incorrect(io);
 	@()trackerMessage(eT,['TRIAL_RESULT ' num2str(tS.INCORRECT)]); %trial incorrect message
 	@()stopRecording(eT); %stop eyelink recording data
-	@()updatePlot(bR, eT, sM); %update our behavioural plot;
+	@()updatePlot(bR, me); %update our behavioural plot, must come before updateTask() / updateVariables()
 	@()resetRun(task);... %we randomise the run within this block to make it harder to guess next trial
 	@()updateVariables(me,[],true,false); %update the variables via taskSequence if used
 	@()update(stims); %update our stimuli ready for display
@@ -392,7 +398,7 @@ breakExitFcn = {
 	@()trackerMessage(eT,['TRIAL_RESULT ' num2str(tS.BREAKFIX)]);
 	@()stopRecording(eT);
 	@()setOffline(eT); %set eyelink offline
-	@()updatePlot(bR, eT, sM); %update our behavioural plot;
+	@()updatePlot(bR, me); %update our behavioural plot, must come before updateTask() / updateVariables()
 	@()resetRun(task);... %we randomise the run within this block to make it harder to guess next trial
 	@()updateVariables(me,[],true,false); %update the variables
 	@()update(stims); %update our stimuli ready for display
@@ -431,12 +437,6 @@ flashFcn = {
 	@()flashScreen(s, 0.2); % fullscreen flash mode for visual background activity detection
 };
 
-%--------------------run magstim
-magstimFcn = { 
-	@()drawBackground(s);
-	@()stimulate(mS); % run the magstim
-};
-
 %--------------------show 1deg size grid
 gridFcn = { @()drawGrid(s); };
 
@@ -446,31 +446,31 @@ gridFcn = { @()drawGrid(s); };
 % state. Add multiple rows for skipping multiple state's exit states.
 sM.skipExitStates = {'fixate',{'incorrect','breakfix'}};
 
-%==================================================================
+%==============================================================================
 %----------------------State Machine Table-------------------------
-disp('================>> Building state info file <<================')
-%specify our cell array that is read by the stateMachine
+% specify our cell array that is read by the stateMachine
+% remember that transitionFcn can override the time value, so for example
+% stimulus shows 2 seconds time, but the transitionFcn can jump to other
+% states (correct or breakfix) sooner than this, so this is an upper limit.
 stateInfoTmp = {
 'name'		'next'		'time'	'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn';
 'pause'		'prefix'	inf		pauseEntryFcn	{}				{}				pauseExitFcn;
 'prefix'	'fixate'	2		prefixEntryFcn	prefixFcn		{}				prefixExitFcn;
 'fixate'	'incorrect'	2		fixEntryFcn		fixFcn			initFixFcn		fixExitFcn;
-'stimulus'  'incorrect'	2		stimEntryFcn	stimFcn			testFixFcn		stimExitFcn;
-'incorrect'	'prefix'	1.25	incEntryFcn		incFcn			{}				incExitFcn;
-'breakfix'	'prefix'	tS.tOut	breakEntryFcn	incFcn			{}				breakExitFcn;
+'stimulus'	'incorrect'	2		stimEntryFcn	stimFcn			testFixFcn		stimExitFcn;
+'incorrect'	'timeout'	0.25	incEntryFcn		incFcn			{}				incExitFcn;
+'breakfix'	'timeout'	0.25	breakEntryFcn	incFcn			{}				breakExitFcn;
 'correct'	'prefix'	0.5		correctEntryFcn correctFcn		{}				correctExitFcn;
-'calibrate' 'pause'		0.5		calibrateFcn	{}				{}				{};
-'drift'		'pause'		0.5		driftFcn		[]				[]				[];
+'timeout'	'prefix'	tS.tOut	{}				incFcn			{}				{};
+'calibrate'	'pause'		0.5		calibrateFcn	{}				{}				{};
+'drift'		'pause'		0.5		driftFcn		{}				{}				{};
 'override'	'pause'		0.5		overrideFcn		{}				{}				{};
 'flash'		'pause'		0.5		flashFcn		{}				{}				{};
-'magstim'	'prefix'	0.5		{}				magstimFcn		{}				{};
 'showgrid'	'pause'		10		{}				gridFcn			{}				{};
 };
 %----------------------State Machine Table-------------------------
-%==================================================================
-
+%==============================================================================
+disp('================>> Building state info file <<================')
 disp(stateInfoTmp)
 disp('================>> Loaded state info file  <<================')
-clear pauseEntryFcn fixEntryFcn fixFcn initFixFcn fixExitFcn stimFcn maintainFixFcn incEntryFcn ...
-	incFcn incExitFcn breakEntryFcn breakFcn correctEntryFcn correctFcn correctExitFcn ...
-	calibrateFcn overrideFcn flashFcn gridFcn
+clearvars -regexp '.+Fcn$' % clear the cell array Fcns in the current workspace

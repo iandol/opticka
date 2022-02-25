@@ -293,13 +293,13 @@ correctFcn = {
 %--------------------when we exit the correct state
 correctExitFcn = {
 	@()sendStrobe(io,250);
+	@()updatePlot(bR, me); %update our behavioural plot, must come before updateTask() / updateVariables()
 	@()updateTask(me,tS.CORRECT); %make sure our taskSequence is moved to the next trial
 	@()updateVariables(me); %randomise our stimuli, and set strobe value too
 	@()update(stims); %update our stimuli ready for display
 	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions
 	@()trackerClearScreen(eT); 
 	@()checkTaskEnded(me); %check if task is finished
-	@()updatePlot(bR, eT, sM); %update our behavioural plot
 	@()drawnow;
 };
 
@@ -325,11 +325,11 @@ incFcn = {
 %--------------------incorrect / break exit
 incExitFcn = { 
 	@()sendStrobe(io,251);
+	@()updatePlot(bR, me); %update our behavioural plot, must come before updateTask() / updateVariables()
 	@()resetRun(task); %we randomise the run within this block to make it harder to guess next trial
 	@()updateVariables(me); %randomise our stimuli, set strobe value too
 	@()update(stims); %update our stimuli ready for display
 	@()checkTaskEnded(me); %check if task is finished
-	@()updatePlot(bR, eT, sM); %update our behavioural plot;
 	@()drawnow;
 };
 
@@ -364,7 +364,6 @@ driftFcn = {
 	@()driftCorrection(eT) % enter drift correct
 };
 
-
 %--------------------debug override
 overrideFcn = { @()keyOverride(me) }; %a special mode which enters a matlab debug state so we can manually edit object values
 
@@ -380,16 +379,16 @@ magstimFcn = {
 %--------------------show 1deg size grid
 gridFcn = {@()drawGrid(s)};
 
+%==============================================================================
 %----------------------State Machine Table-------------------------
-disp('================>> Building state info file <<================')
-%specify our cell array that is read by the stateMachine
+% specify our cell array that is read by the stateMachine
 stateInfoTmp = {
 'name'		'next'		'time'	'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn';
 'pause'		'prefix'	inf		pauseEntryFcn	[]				[]				pauseExitFcn;
 'prefix'	'fixate'	0.5		prefixEntryFcn	prefixFcn		[]				prefixExitFcn;
 'fixate'	'incorrect'	5		fixEntryFcn		fixFcn			inFixFcn		fixExitFcn;
 'stimulus'	'incorrect'	5		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn;
-'incorrect'	'prefix'	3		incEntryFcn		incFcn			[]				incExitFcn;
+'incorrect'	'prefix'	tS.tOut	incEntryFcn		incFcn			[]				incExitFcn;
 'breakfix'	'prefix'	tS.tOut	breakEntryFcn	incFcn			[]				incExitFcn;
 'correct'	'prefix'	0.5		correctEntryFcn	correctFcn		[]				correctExitFcn;
 'calibrate' 'pause'		0.5		calibrateFcn	[]				[]				[];
@@ -399,9 +398,10 @@ stateInfoTmp = {
 'magstim'	'prefix'	0.5		[]				magstimFcn		[]				[];
 'showgrid'	'pause'		10		[]				gridFcn			[]				[];
 };
-
+%----------------------State Machine Table-------------------------
+%==============================================================================
+disp('================>> Building state info file <<================')
 disp(stateInfoTmp)
-disp('================>> Loaded state info file  <<================')
-clear pauseEntryFcn fixEntryFcn fixFcn inFixFcn fixExitFcn stimFcn maintainFixFcn incEntryFcn ...
-	incFcn incExitFcn breakEntryFcn breakFcn correctEntryFcn correctFcn correctExitFcn ...
-	calibrateFcn overrideFcn flashFcn gridFcn
+disp('=================>> Loaded state info file <<=================')
+clearvars -regexp '.+Fcn$' % clear the cell array Fcns in the current workspace
+
