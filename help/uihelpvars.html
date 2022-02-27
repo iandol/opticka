@@ -30,6 +30,9 @@
         font-size: 0.9em;
         padding: 1em;
       }
+      h1 {
+        font-size: 1.8em;
+      }
     }
     @media print {
       body {
@@ -134,6 +137,12 @@
     #TOC li {
       list-style: none;
     }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
     #TOC a:not(:hover) {
       text-decoration: none;
     }
@@ -145,17 +154,31 @@
     ul.task-list{list-style: none;}
     .display.math{display: block; text-align: center; margin: 0.5rem auto;}
   </style>
+  <style>
+       html {font-family: Avenir Next,Avenir,Gill Sans,Helvetica,sans-serif;}
+       body {padding: 0px 50px;}
+       p {text-align: justify;}
+       pre {font-family: consolas, menlo, monospace; line-height: 0.8em !important; background-color: #F0F0F0}
+       pre code {font-size: 0.8em !important; white-space: pre}
+   </style>
   <!--[if lt IE 9]>
     <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
   <![endif]-->
 </head>
 <body>
 <h1 id="configuring-variables">Configuring Variables</h1>
-<p>Opticka uses the taskSequence class to specify one or variable names
-and values that can be applied to stimuli. The taskSequence class can
-also specify independent trial level [<code>trialVar</code>] and block
-level [<code>blockVar</code>] randomisation values.</p>
-<h2 id="variable-modifiers">Variable modifiers</h2>
+<p>Opticka uses the taskSequence class to specify one or more variable
+names and values [<code>nVar</code>] that can be randomised using
+blocked repetition and applied to stimuli during a task. The
+taskSequence class can also specify independent trial level
+[<code>trialVar</code>] and block level [<code>blockVar</code>]
+randomisation values.</p>
+<h1 id="log-or-linear-interpolation">Log or Linear interpolation</h1>
+<p>You can enter 3 values, <code>start | end | steps</code>, and press
+the [log] or the [lin] buttons to interpolate a log or linear range, for
+example <code>1 2 5</code> would get converted to
+<code>1 1.1892 1.4142 1.6818 2</code> when pressing the log button.</p>
+<h1 id="variable-modifiers">Variable modifiers</h1>
 <p>Variables can have modifiers, best explained by example:</p>
 <ol type="1">
 <li>Name = <code>angle</code></li>

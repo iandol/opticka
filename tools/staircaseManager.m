@@ -1,4 +1,4 @@
-% ========================================================================
+	% ========================================================================
 %> @brief [WIP] staircaseManager links a taskSequence to Palamedes staircase
 %>
 %> Use a taskSequence to randomise a variable, then for each value of

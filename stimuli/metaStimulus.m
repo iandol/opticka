@@ -36,9 +36,6 @@ classdef metaStimulus < optickaCore
 		stimulusSets		= []
 		%> which set of stimuli to display when calling showSet()
 		setChoice			= 0;
-		%> choice allows to 'filter' a subset of stimulus in the group when 
-		%> calling draw, update, animate and reset
-		choice				= []
 		%> which stimuli should getFixationPositions() return the positions for?
 		fixationChoice		= []
 		%> which stimuli should etExclusionPositions() return the positions for?
@@ -55,6 +52,12 @@ classdef metaStimulus < optickaCore
 		screen
 		%> verbose?
 		verbose				= false
+	end
+
+	properties (Hidden = true)
+		%> choice allows to 'filter' a subset of stimulus in the group when 
+		%> calling draw, update, animate and reset
+		choice				= []
 	end
 	
 	%--------------------DEPENDENT PROPERTIES----------%
@@ -144,31 +147,20 @@ classdef metaStimulus < optickaCore
 		% ===================================================================
 		function update(me,choice,mask)
 			%tic
-			if ~exist('mask','var');mask=false;end
-			if exist('choice','var') && isnumeric(choice) %user forces a single stimulus
-				
+			if ~exist('choice','var'); choice = me.choice; end
+			if ~exist('mask','var'); mask = false; end
+			if ~isempty(choice) && isnumeric(choice) %user forces specific stimuli
 				for i = choice
 					update(me.stimuli{i});
 				end
-				
-			elseif ~isempty(me.choice) && isnumeric(me.choice) %object forces a single stimulus
-				
-				for i = me.choice
-					update(me.stimuli{me.choice});
-				end
-				
 			elseif mask && me.showMask == true && me.nMask_ > 0 %draw mask instead
-				
 				for i = 1:me.nMask
 					update(me.maskStimuli{i});
 				end
-				
 			else
-		
 				for i = 1:me.n_
 					update(me.stimuli{i});
 				end
-				
 			end
 			%me.updateLog = [me.updateLog toc*1000];
 		end
@@ -285,46 +277,45 @@ classdef metaStimulus < optickaCore
 		%>
 		% ===================================================================
 		function randomise(me)
-			if ~isempty(me.stimulusTable)
-				logs = '--->>> RANDOMISE Stimulus: ';
-				for i = 1:length(me.stimulusTable)
-					
-					stims = me.stimulusTable(i).stimuli;
-					name = me.stimulusTable(i).name;
-					offset = me.stimulusTable(i).offset;
-					
-					if ~isempty(stims) && ~isempty(name)
-	
-						[r,c] = size(me.stimulusTable(i).values);
-						if r > 1 && c > 1
-							values = me.stimulusTable(i).values(randi(r),:);
-						elseif r > 1
-							values = me.stimulusTable(i).values(randi(r),1);
-						else
-							values = me.stimulusTable(i).values(1,randi(c));
-						end
+			if isempty(me.stimulusTable); return; end
+			logs = '--->>> RANDOMISE Stimulus: ';
+			for i = 1:length(me.stimulusTable)
+				
+				stims = me.stimulusTable(i).stimuli;
+				name = me.stimulusTable(i).name;
+				offset = me.stimulusTable(i).offset;
+				
+				if ~isempty(stims) && ~isempty(name)
 
-						for j=1:length(stims)
-							if strcmpi(name,'xyPosition')
-								me.stimuli{stims(j)}.xPositionOut = values(1);
-								me.stimuli{stims(j)}.yPositionOut = values(2);
-								me.lastXPosition = values(1);
-								me.lastYPosition = values(2);
-								logs = [logs 'XY: ' num2str(stims(j)) ];
-							elseif isprop(me.stimuli{stims(j)}, [name 'Out'])
-								me.stimuli{stims(j)}.([name 'Out']) = values;
-								logs = [logs ' || ' name 'Out: ' num2str(values)];
-								if ~isempty(offset)
-									me.stimuli{offset(1)}.([name 'Out']) = values + offset(2);
-									logs = [logs ' || OFFSET' name 'Out: ' num2str(values + offset(2))];
-								end
+					[r,c] = size(me.stimulusTable(i).values);
+					if r > 1 && c > 1
+						values = me.stimulusTable(i).values(randi(r),:);
+					elseif r > 1
+						values = me.stimulusTable(i).values(randi(r),1);
+					else
+						values = me.stimulusTable(i).values(1,randi(c));
+					end
+
+					for j=1:length(stims)
+						if strcmpi(name,'xyPosition')
+							me.stimuli{stims(j)}.xPositionOut = values(1);
+							me.stimuli{stims(j)}.yPositionOut = values(2);
+							me.lastXPosition = values(1);
+							me.lastYPosition = values(2);
+							logs = [logs 'XY: ' num2str(stims(j)) ];
+						elseif isprop(me.stimuli{stims(j)}, [name 'Out'])
+							me.stimuli{stims(j)}.([name 'Out']) = values;
+							logs = [logs ' || ' name 'Out: ' num2str(values)];
+							if ~isempty(offset)
+								me.stimuli{offset(1)}.([name 'Out']) = values + offset(2);
+								logs = [logs ' || OFFSET' name 'Out: ' num2str(values + offset(2))];
 							end
 						end
-					
 					end
+				
 				end
-				me.salutation(logs);
 			end
+			me.salutation(logs);
 		end
 		
 		% ===================================================================

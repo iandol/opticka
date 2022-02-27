@@ -39,6 +39,12 @@ echo; echo "---> Ran doxygen"
 [ -f debug.txt ] && rm debug.txt
 sleep 1
 mv html/ docs/
+
+pandoc --metadata title="Variables" -s help/uihelpvars.md > help/uihelpvars.
+html
+pandoc --metadata title="Stimuli" -s help/uihelpstims.md > help/uihelpstims.
+html
+
 if [[ "$(uname -s)" = "Darwin" ]]; then 
 	open docs/index.html
 	open docs/optickaTest.html

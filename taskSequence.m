@@ -81,6 +81,8 @@ classdef taskSequence < optickaCore & dynamicprops
 		ibTime double			= 2
 		%> original index before any resetRun()s
 		startIndex
+		%> staircase manager
+		staircase
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -245,7 +247,7 @@ classdef taskSequence < optickaCore & dynamicprops
 				return
 			end
 			
-			if me.verbose==true;rSTime = tic;end
+			rSTime = tic;
 			
 			if me.minTrials > 255
 				warning('WARNING: You are exceeding the number of variable numbers in an 8bit strobed word!')
@@ -397,7 +399,7 @@ classdef taskSequence < optickaCore & dynamicprops
 				end
 			end
 			
-			if me.verbose; me.salutation(sprintf('randomiseTask took %g ms\n',toc(rSTime)*1000)); end
+			me.salutation('randomiseTask', sprintf('Took %g ms',toc(rSTime)*1000), true);
 			
 		end
 		

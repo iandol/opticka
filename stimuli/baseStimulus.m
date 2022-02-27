@@ -376,7 +376,11 @@ classdef baseStimulus < optickaCore & dynamicprops
 				if benchmark
 					s.windowed = false;
 				elseif forceScreen > -1
-					s.windowed = [0 0 s.screenVals.width/2 s.screenVals.height/2]; %half of screen
+					if ~isempty(s.windowed) && (length(s.windowed) == 2 || length(s.windowed) == 4)
+						% use existing setting
+					else
+						s.windowed = [0 0 s.screenVals.screenWidth/2 s.screenVals.screenHeight/2]; %half of screen
+					end
 				end
 				
 				if ~s.isOpen

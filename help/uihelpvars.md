@@ -1,8 +1,25 @@
+---
+document-css: true
+header-includes:
+    - |
+       <style>
+            html {font-family: Avenir Next,Avenir,Gill Sans,Helvetica,sans-serif;}
+            body {padding: 0px 50px;}
+            p {text-align: justify;}
+            pre {font-family: consolas, menlo, monospace; line-height: 0.8em !important; background-color: #F0F0F0}
+            pre code {font-size: 0.8em !important; white-space: pre}
+        </style>
+---
+
 # Configuring Variables
 
-Opticka uses the taskSequence class to specify one or variable names and values that can be applied to stimuli. The taskSequence class can also specify independent trial level [`trialVar`] and block level [`blockVar`] randomisation values. 
+Opticka uses the taskSequence class to specify one or more variable names and values [`nVar`] that can be randomised using blocked repetition and applied to stimuli during a task. The taskSequence class can also specify independent trial level [`trialVar`] and block level [`blockVar`] randomisation values. 
 
-## Variable modifiers
+# Log or Linear interpolation
+
+You can enter 3 values, `start | end | steps`, and press the \[log\] or the \[lin\] buttons to interpolate a log or linear range, for example `1 2 5` would get converted to `1 1.1892 1.4142 1.6818 2` when pressing the log button.
+
+# Variable modifiers
 
 Variables can have modifiers, best explained by example:
 

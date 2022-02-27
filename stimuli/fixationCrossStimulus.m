@@ -10,16 +10,17 @@ classdef fixationCrossStimulus < baseStimulus
 	
 	properties %--------------------PUBLIC PROPERTIES----------%
 		%> type can be "simple" or "flash"
-		type = 'simple'
+		type char				= 'simple'
 		%> time to flash on and off in seconds
-		flashTime = [0.25 0.25]
+		flashTime double		= [0.25 0.1]
 		%> is the ON flash the first flash we see?
-		flashOn = true
+		flashOn logical			= true
 		%> colour for flash, empty to inherit from screen background with 0 alpha
 		flashColour = []
 		%> second colour, used for the cross
 		colour2 = [0 0 0 1]
-		%> alpha for second colour, can be controlled independently of alpha for colour
+		%> alpha for cross colour, can be controlled independently of alpha for
+		%> disc
 		alpha2 = 1
 		%> width of the cross lines in degrees
 		lineWidth = 0.1
@@ -43,21 +44,21 @@ classdef fixationCrossStimulus < baseStimulus
 	end
 
 	properties (SetAccess = protected, GetAccess = ?baseStimulus)
-		ignorePropertiesUI = 'speed|startPosition'
+		ignorePropertiesUI = 'speed|startPosition|angle'
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> current flash state
 		flashState
 		%> internal counter
-		flashCounter = 1
+		flashCounter				= 1
 		%> the OFF colour of the flash, usually this is set to the screen background
-		flashBG = [0.5 0.5 0.5]
+		flashBG						= [0.5 0.5 0.5]
 		%> ON flash colour, reset on setup
-		flashFG = [1 1 1]
-		currentColour = [1 1 1]
-		colourOutTemp = [1 1 1]
-		colour2OutTemp = [1 1 1]
+		flashFG						= [1 1 1]
+		currentColour				= [1 1 1]
+		colourOutTemp				= [1 1 1]
+		colour2OutTemp				= [1 1 1]
 		stopLoop = false
 		allowedProperties='showDisk|type|flashTime|flashOn|flashColour|colour2|alpha2|lineWidth'
 		ignoreProperties = 'flashSwitch'
@@ -78,7 +79,8 @@ classdef fixationCrossStimulus < baseStimulus
 		% ===================================================================
 		function me = fixationCrossStimulus(varargin)
 			args = optickaCore.addDefaults(varargin,...
-				struct('name','fix','colour',[1 1 1 1],'size',0.8));
+				struct('name','fix','colour',[1 1 1 1],'alpha', 0.75, ...
+				'size',0.8,'comment','colour/alpha apply to disk, colour2/alpha2 apply to cross'));
 			me=me@baseStimulus(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
 			
@@ -134,7 +136,6 @@ classdef fixationCrossStimulus < baseStimulus
 			
 			me.inSetup = false;
 			
-			setupFlash(me);
 			computePosition(me);
 		end
 		

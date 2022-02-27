@@ -38,7 +38,7 @@
 % updateTask() for correct responses. 'false' is useful during training.
 tS.includeErrors			= false; 
 % is this run a 'saccade' or 'anti-saccade' task run?
-tS.type						= 'anti-saccade';
+tS.type						= 'saccade';
 if strcmpi(tS.type,'saccade')
 	% a flag to conditionally set visualisation on the eye tracker interface
 	stims{1}.showOnTracker	= true;
@@ -53,7 +53,7 @@ else
 	% anti-saccade target towards to place where the pro-saccade target is, so
 	% starting training keeping the pro-saccade target visible helps the
 	% subject understand the task
-	tS.targetAlpha			= 0.15; 
+	tS.targetAlpha			= 0.1; 
 end
 
 %==================================================================

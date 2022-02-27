@@ -30,11 +30,11 @@ tS.includeErrors			= false;
 % we use taskSequence to randomise which state to switch to (independent
 % trial-level factor). The idea is we we call
 % @()updateNextState(me,'trial') in the prefixation state; this sets one of
-% these two trialVar.values as the next state. The fixateOS and fixateTS
+% these two trialVar.values as the next state. The fix1Step and fix2Step
 % states will then call onestep or twostep stimulus states. Therefore we can
 % call different experiment structures based on this trial-level factor.
-task.trialVar.values		= {'fixateOS','fixateTS'};
-task.trialVar.probability	= [0.6 0.4];
+%task.trialVar.values		= {'fix1Step','fix2Step'};
+%task.trialVar.probability	= [0.6 0.4];
 task.trialVar.comment		= 'one or twostep trial based on 60:40 probability';
 tL.stimStateNames			= {'onestep','twostep'};
 
@@ -144,15 +144,8 @@ bR.breakStateName				= '^(breakfix|incorrect)';
 % experiments use taskSequence to define proper randomised and balanced
 % variable sets and triggers to send to recording equipment etc...
 %
-% stims.choice				= [];
-% n							= 1;
-% in(n).name				= 'xyPosition';
-% in(n).values				= [6 6; 6 -6; -6 6; -6 -6; -6 0; 6 0];
-% in(n).stimuli				= 1;
-% in(n).offset				= [];
-% stims.stimulusTable		= in;
-stims.choice 				= [];
 stims.stimulusTable 		= [];
+stims.choice 				= [];
 
 %==================================================================
 %-------------allows using arrow keys to control variables?-------------
@@ -250,7 +243,9 @@ prefixExitFcn = {
 	@()trackerDrawFixation(eT); % draw fixation window on eyetracker display
 	@()trackerDrawStimuli(eT,stims.stimulusPositions); %draw location of stimulus on eyetracker
 	@()needEyeSample(me,true); % make sure we start measuring eye position
-	@()updateNextState(me,'trial'); % we use the trial/block factor in task to select which state to transition to next
+	% IMPORTANT! updateNextState uses the trial/block factor in task to select
+	% which state to transition to next
+	@()updateNextState(me,'trial');
 };
 
 %====================================================ONESTEP FIXATION + STIMULATION
@@ -376,12 +371,12 @@ correctFcn = {
 
 %when we exit the correct state
 correctExitFcn = {
+	@()updatePlot(bR, me); %update our behavioural plot
 	@()updateTask(me,tS.CORRECT); %make sure our taskSequence is moved to the next trial
 	@()updateVariables(me); %randomise our stimuli, and set strobe value too
 	@()update(stims); %update our stimuli ready for display
 	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions
 	@()resetExclusionZones(eT); %reset the exclusion zones
-	@()updatePlot(bR, me); %update our behavioural plot
 	@()drawnow;
 	@()checkTaskEnded(me); %check if task is finished
 };
@@ -405,11 +400,11 @@ incFcn = {
 
 %incorrect / break exit
 incExitFcn = {
+	@()updatePlot(bR, me); %update our behavioural plot, must come before updateTask() / updateVariables()
 	@()updateVariables(me); %randomise our stimuli, don't run updateTask(task), and set strobe value too
 	@()update(stims); %update our stimuli ready for display
 	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions
 	@()resetExclusionZones(eT); %reset the exclusion zones
-	@()updatePlot(bR, me); %update our behavioural plot, must come before updateTask() / updateVariables()
 	@()drawnow;
 	@()checkTaskEnded(me); %check if task is finished
 };
@@ -477,12 +472,6 @@ flashFcn = {
 	@()flashScreen(s, 0.2) % fullscreen flash mode for visual background activity detection
 };
 
-%magstim, can only be triggered from keyboard
-magstimFcn = { 
-	@()drawBackground(s);
-	@()stimulate(mS); % run the magstim
-};
-
 %show 1deg size grid
 gridFcn = { 
 	@()drawBackground(s); %blank the display
@@ -493,32 +482,32 @@ gridFcn = {
 	@()drawGrid(s);
 };
 
+%==============================================================================
 %----------------------State Machine Table-------------------------
-disp('================>> Building state info file <<================')
-%specify our cell array that is read by the stateMachine
+% specify our cell array that is read by the stateMachine
 stateInfoTmp = {
 'name'      'next'		'time'  'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn';
-'pause'		'prefix'	inf		pauseEntryFcn	[]				[]				pauseExitFcn;
-'prefix'	'UseTemp'	2		prefixEntryFcn	prefixFcn		[]				prefixExitFcn;
-'fixateOS'	'incorrect'	5	 	fixOSEntryFcn	fixOSFcn		inFixOSFcn		fixOSExitFcn;
-'fixateTS'	'incorrect'	5	 	fixTSEntryFcn	fixTSFcn		inFixTSFcn		fixTSExitFcn;
+'pause'		'prefix'	inf		pauseEntryFcn	{}				{}				pauseExitFcn;
+'prefix'	'UseTemp'	2		prefixEntryFcn	prefixFcn		{}				prefixExitFcn;
+'fix1Step' 'incorrect'	5	 	fixOSEntryFcn	fixOSFcn		inFixOSFcn		fixOSExitFcn;
+'fix2Step' 'incorrect'	5	 	fixTSEntryFcn	fixTSFcn		inFixTSFcn		fixTSExitFcn;
 'onestep'	'incorrect'	5		osEntryFcn		osFcn			maintainFixFcn	sExitFcn;
 'twostep'	'incorrect'	5		tsEntryFcn		tsFcn			maintainFixFcn	sExitFcn;
-'incorrect'	'prefix'	3		incEntryFcn		incFcn			[]				incExitFcn;
-'breakfix'	'prefix'	tS.tOut	breakEntryFcn	incFcn			[]				incExitFcn;
-'exclusion'	'prefix'	tS.tOut	exclEntryFcn	incFcn			[]				incExitFcn;
-'correct'	'prefix'	0.5		correctEntryFcn	correctFcn		[]				correctExitFcn;
-'useTemp'	'prefix'	0.5		[]				[]				[]				[];
-'calibrate' 'pause'		0.5		calibrateFcn	[]				[]				[];
-'drift'		'pause'		0.5		driftFcn		[]				[]				[];
-'override'	'pause'		0.5		overrideFcn		[]				[]				[];
-'flash'		'pause'		0.5		flashFcn		[]				[]				[];
-'magstim'	'prefix'	0.5		[]				magstimFcn		[]				[];
-'showgrid'	'pause'		10		[]				gridFcn			[]				[];
+'incorrect'	'timeout'	0.5		incEntryFcn		incFcn			{}				incExitFcn;
+'breakfix'	'timeout'	0.5		breakEntryFcn	incFcn			{}				incExitFcn;
+'exclusion'	'timeout'	0.5		exclEntryFcn	incFcn			{}				incExitFcn;
+'correct'	'prefix'	0.5		correctEntryFcn	correctFcn		{}				correctExitFcn;
+'useTemp'	'prefix'	0.5		{}				{}				{}				{};
+'timeout'	'prefix'	tS.tOut	{}				{}				{}				{};
+'calibrate' 'pause'		0.5		calibrateFcn	{}				{}				{};
+'drift'		'pause'		0.5		driftFcn		{}				{}				{};
+'override'	'pause'		0.5		overrideFcn		{}				{}				{};
+'flash'		'pause'		0.5		flashFcn		{}				{}				{};
+'showgrid'	'pause'		10		{}				gridFcn			{}				{};
 };
-
+%----------------------State Machine Table-------------------------
+%==============================================================================
+disp('================>> Building state info file <<================')
 disp(stateInfoTmp)
-disp('================>> Loaded state info file  <<================')
-clear pauseEntryFcn fixEntryFcn fixFcn inFixFcn fixExitFcn stimFcn maintainFixFcn incEntryFcn ...
-	incFcn incExitFcn breakEntryFcn breakFcn correctEntryFcn correctFcn correctExitFcn ...
-	calibrateFcn overrideFcn flashFcn gridFcn
+disp('=================>> Loaded state info file <<=================')
+clearvars -regexp '.+Fcn$' % clear the cell array Fcns in the current workspace

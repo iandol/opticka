@@ -574,7 +574,7 @@ classdef optickaCore < handle
 		
 		
 		% ===================================================================
-		function salutation(me,in,message,override)
+		function salutation(me, in, message, override)
 		%> @brief Prints messages dependent on verbosity
 		%>
 		%> Prints messages dependent on verbosity

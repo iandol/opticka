@@ -498,8 +498,8 @@ classdef opticka < optickaCore
 				end
 			end
 			if ~isempty(me.r.task.trialVar)
-				me.r.task.trialVar.values = me.ge(me.h.OKBlockValues);
-				me.r.task.trialVar.probability = me.gn(me.h.OKBlockProbability);
+				me.r.task.trialVar.values = me.ge(me.h.OKTrialValues);
+				me.r.task.trialVar.probability = me.gn(me.h.OKTrialProbability);
 				if length(me.r.task.trialVar.values) ~= length(me.r.task.trialVar.probability)
 					randomise = false;
 				end
@@ -600,7 +600,7 @@ classdef opticka < optickaCore
 			end
 			me.store.evnt = addlistener(me.r.stimuli{nidx},'readPanelUpdate',@me.readPanel);
 			if isfield(me.store,'visibleStimulus')
-				if ~me.store.visibleStimulus.isGUI
+				if ~strcmp(me.r.stimuli{nidx}.uuid,me.store.visibleStimulus.uuid) || ~me.store.visibleStimulus.isGUI
 					me.store.visibleStimulus.closePanel();
 					makePanel(me.r.stimuli{nidx},me.h.OKPanelStimulus);
 					me.store.visibleStimulus = me.r.stimuli{nidx};
@@ -649,7 +649,7 @@ classdef opticka < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function readPanel(me,src)
+		function readPanel(me,src,varargin)
 			me.salutation('readPanel',['Triggered by: ' src.fullName],true);
 			me.refreshStimulusList;
 		end
@@ -793,7 +793,7 @@ classdef opticka < optickaCore
 				
 				v=me.r.task.nVar(pos).values;
 				if iscell(v)
-					v = me.cell2str(v);
+					v = me.cellAsString(v);
 				else
 					v = num2str(me.r.task.nVar(pos).values);
 				end
@@ -1158,7 +1158,7 @@ classdef opticka < optickaCore
 			
 			salutation(me,sprintf('Routing Protocol FROM %s TO %s',tmp.fullName,me.fullName),[],true);
 			
-			fprintf('===> Load status:\n');
+			fprintf('---> Opticka Protocol loading:\n');
 			if isprop(tmp.r,'stimuli')
 				if isa(tmp.r.stimuli,'metaStimulus')
 					me.r.stimuli = tmp.r.stimuli;
@@ -1317,7 +1317,8 @@ classdef opticka < optickaCore
 			else
 				fprintf('\t…No screenManager settings loaded!\n');
 			end
-			%copy task parameters
+			
+			%===================copy task parameters taskSequence()
 			if isempty(tmp.r.task)
 				me.r.task = taskSequence;
 				me.r.task.randomiseTask;
@@ -1333,11 +1334,25 @@ classdef opticka < optickaCore
 				fprintf('\t…taskSequence assigned\n');
 			end
 			
-			set(me.h.OKtrialTime, 'Value', num2str(me.r.task.trialTime));
-			set(me.h.OKRandomSeed, 'Value', num2str(me.r.task.randomSeed));
-			set(me.h.OKisTime,'Value',sprintf('%g ',me.r.task.isTime));
-			set(me.h.OKibTime,'Value',sprintf('%g ',me.r.task.ibTime));
-			set(me.h.OKnBlocks,'Value',num2str(me.r.task.nBlocks));
+			if isprop(me.r.task,'blockVar') && isfield(me.r.task.blockVar,'values') && isfield(me.r.task.blockVar,'probability')
+				if iscell(me.r.task.blockVar.values)
+					me.h.OKBlockValues.Value = opticka.cellAsString(me.r.task.blockVar.values);
+				end
+				me.h.OKBlockProbability.Value = num2str(me.r.task.blockVar.probability);
+			end
+			if isprop(me.r.task,'trialVar') && isfield(me.r.task.trialVar,'values') && isfield(me.r.task.trialVar,'probability')
+				if iscell(me.r.task.trialVar.values)
+					me.h.OKTrialValues.Value = opticka.cellAsString(me.r.task.trialVar.values);
+				end
+				me.h.OKTrialProbability.Value = num2str(me.r.task.trialVar.probability);
+			end
+			me.h.OKRandomise.Value = logical(me.r.task.randomise);
+			me.h.OKrealTime.Value = logical(me.r.task.realTime);
+			me.h.OKtrialTime.Value = num2str(me.r.task.trialTime);
+			me.h.OKRandomSeed.Value = num2str(me.r.task.randomSeed);
+			me.h.OKisTime.Value = sprintf('%g ',me.r.task.isTime);
+			me.h.OKibTime.Value = sprintf('%g ',me.r.task.ibTime);
+			me.h.OKnBlocks.Value = num2str(me.r.task.nBlocks);
 			
 			if me.r.task.nVars > 0
 				set(me.h.OKAddVariable,'Enable','on');
@@ -1345,10 +1360,10 @@ classdef opticka < optickaCore
 				set(me.h.OKCopyVariable,'Enable','on');
 				set(me.h.OKEditVariable,'Enable','on');
 			end
+
 			if me.r.stimuli.n > 0
 				set(me.h.OKDeleteStimulus,'Enable','on');
 				set(me.h.OKModifyStimulus,'Enable','on');
-				set(me.h.OKInspectStimulus,'Enable','on');
 				set(me.h.OKStimulusUp,'Enable','on');
 				set(me.h.OKStimulusDown,'Enable','on');
 				set(me.h.OKStimulusRun,'Enable','on');
@@ -1365,11 +1380,10 @@ classdef opticka < optickaCore
 			me.refreshStimulusList;
 			me.refreshVariableList;
 			me.getScreenVals;
-			%me.getTaskVals;
 			me.refreshProtocolsList;
 			me.h.propertiesToVariables;
 			
-			fprintf('---> Load finished\n');
+			fprintf('---> Protocol load finished…\n');
 
 			if isdeployed
 				me.h.OKOptickaVersion.Text = ['Opticka Experiment Manager [D] V' me.optickaVersion ' - ' me.comment];
@@ -1544,7 +1558,7 @@ classdef opticka < optickaCore
 			V = me.r.task.nVar;
 			for i=1:me.r.task.nVars
 				if iscell(V(i).values)
-					v = me.cell2str(V(i).values);
+					v = me.cellAsString(V(i).values);
 				else
 					v = num2str(V(i).values);
 				end
@@ -1697,23 +1711,6 @@ classdef opticka < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief cell2str converts cell string to single string
-		%> 
-		%> @param in cell variable
-		%> @return string
-		% ===================================================================
-		function str = cell2str(in)
-			str = [];
-			if iscell(in)
-				str = '{';
-				for i = 1:length(in)
-					str = [str '[' num2str(in{i}) '],'];
-				end
-				str = regexprep(str,',$','}');
-			end
-		end
-		
-		% ===================================================================
 		%> @brief gs (getstring)
 		%> 
 		%> @param inhandle handle to UI element
@@ -1850,6 +1847,32 @@ classdef opticka < optickaCore
 			if x < 1; x=0; end
 			if y < 1; y=0; end
 			set(uihandle,'Position',[x y size(1) size(2)]);
+		end
+
+		% ===================================================================
+		%> @fn cellAsString
+		%> @brief convert a cell into a string to display in UI that we can eval
+		%> back to a cell array. It collapses nested cells.
+		%> 
+		%> @param c cell array of strings
+		%> @param addBrackets; add { } around string or not?
+		%> @return s the string representation
+		% ===================================================================
+		function s = cellAsString(c, addBrackets)
+			if ~exist('addBrackets','var'); addBrackets = true; end
+			s = '';
+			if ~iscell(c); return; end
+			for i = 1:length(c)
+				if ischar(c{i})
+					s = [s '''' c{i} ''', '];
+				elseif isnumeric(c{i})
+					s = [s '[' num2str(c{i}) '], '];
+				elseif iscell(c{i})
+					s = [s  opticka.cellAsString(c{i}, false) ', '];
+				end
+			end
+			s = regexprep(s,',\s*$','');
+			if addBrackets; s = ['{' s '}']; end
 		end
 		
 		% ===================================================================

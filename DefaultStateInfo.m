@@ -10,32 +10,35 @@
 %> fixation [inFixFcn], and for stimulus there is a check if the subject
 %> maintains fixation for an additional time [maintainFixfcn].
 %>
-%>    ┌───────────────────────────────────────┐
-%>    │                                       ▼
-%>    │                                     ┌───────────────────────────┐
-%> ┌──┼───────────────────────────────────▶ │          prefix           │ ◀┐
-%> │  │                                     └───────────────────────────┘  │
-%> │  │                                       │                            │
-%> │  │                                       ▼                            │
-%> │┌───────────┐ Transition                ┌───────────────────────────┐  │
-%> ││ incorrect │ inFixFcn=>incorrect       │          fixate           │  │
-%> ││           │◀───────────────────────── │ show(stims, 2)            │  │
-%> │└───────────┘                           └───────────────────────────┘  │
-%> │                                          │                            │
-%> │                                          │ Transition                 │
-%> └──┐                                       │ inFixFcn=>stimulus         │
-%>    │                                       ▼                            │
-%>  ┌───────────┐ Transition                ┌───────────────────────────┐  │
-%>  │  CORRECT  │ maintainFixFcn=>correct   │         stimulus          │  │
-%>  │           │◀───────────────────────── │ show(stims, [1 2])        │  │
-%>  └───────────┘                           └───────────────────────────┘  │
-%>                                            │                            │
-%>                                            │ Transition                 │
-%>                                            │ maintainFixFcn=>breakfix   │
-%>                                            ▼                            │
-%>                                          ┌───────────────────────────┐  │
-%>                                          │         BREAKFIX          │ ─┘
-%>                                          └───────────────────────────┘
+%>                                                       ┌───────────────────┐
+%>                                                       │      prefix       │
+%>  ┌──────────────────────────────────────────────────▶ │    hide(stims)    │ ◀┐
+%>  │                                                    └───────────────────┘  │
+%>  │                                                      │                    │
+%>  │                                                      ▼                    │
+%>  │                         ┌───────────┐  inFixFcn:   ┌───────────────────┐  │
+%>  │                         │ incorrect │  incorrect   │      fixate       │  │
+%>  │                         │           │ ◀─────────── │   show(stims,2)   │  │
+%>  │                         └───────────┘              └───────────────────┘  │
+%>  │                           │                          │ inFixFcn:          │
+%>  │ reward!                   │                          │ stimulus           │
+%>  │                           │                          ▼                    │
+%>┌─────────┐  maintainFixFcn:  │                        ┌───────────────────┐  │
+%>│ correct │  correct          │                        │     stimulus      │  │
+%>│         │ ◀─────────────────┼─────────────────────── │ show(stims,[1 2]) │  │
+%>└─────────┘                   │                        └───────────────────┘  │
+%>                              │                          │ maintainFixFcn:    │
+%>                              │                          │ breakfix           │
+%>                              │                          ▼                    │
+%>                              │                        ┌───────────────────┐  │
+%>                              │                        │     breakfix      │  │
+%>                              │                        └───────────────────┘  │
+%>                              │                          │                    │
+%>                              │                          ▼                    │
+%>                              │                        ┌───────────────────┐  │
+%>                              │                        │      timeout      │  │
+%>                              └──────────────────────▶ │      tS.tOut      │ ─┘
+%>                                                       └───────────────────┘
 %>
 %> State files control the logic of a behavioural task, switching between
 %> states and executing functions on ENTER, WITHIN and on EXIT of states. In
@@ -48,9 +51,9 @@
 %> methods (functions) useful for running the task:
 %>
 %> me		= runExperiment object ('self' in OOP terminology) 
-%> s			= screenManager object
+%> s		= screenManager object
 %> aM		= audioManager object
-%> stims		= our list of stimuli (metaStimulus class)
+%> stims	= our list of stimuli (metaStimulus class)
 %> sM		= State Machine (stateMachine class)
 %> task		= task sequence (taskSequence class)
 %> eT		= eyetracker manager
@@ -474,8 +477,11 @@ flashFcn = { @()flashScreen(s, 0.2) }; % fullscreen flash mode for visual backgr
 %--------------------show 1deg size grid
 gridFcn = {@()drawGrid(s)};
 
-%==============================================================================
-%----------------------State Machine Table-------------------------
+
+%==========================================================================
+%==========================================================================
+%==========================================================================
+%--------------------------State Machine Table-----------------------------
 % specify our cell array that is read by the stateMachine
 stateInfoTmp = {
 'name'		'next'		'time'	'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn';
@@ -491,12 +497,12 @@ stateInfoTmp = {
 'drift'		'pause'		0.5		driftFcn		{}				{}				{};
 'override'	'pause'		0.5		overrideFcn		{}				{}				{};
 'flash'		'pause'		0.5		flashFcn		{}				{}				{};
-'magstim'	'prefix'	0.5		{}				magstimFcn		{}				{};
 'showgrid'	'pause'		10		{}				gridFcn			{}				{};
 };
-%----------------------State Machine Table-------------------------
-%==============================================================================
-disp('================>> Building state info file <<================')
+%--------------------------State Machine Table-----------------------------
+%==========================================================================
+
+disp('=================>> Built state info file <<==================')
 disp(stateInfoTmp)
 disp('=================>> Loaded state info file <<=================')
 clearvars -regexp '.+Fcn$' % clear the cell array Fcns in the current workspace
