@@ -3,7 +3,7 @@
   <!-- Navigation index tabs for HTML output -->
   <navindex>
     <tab type="mainpage" visible="yes" title="Opticka Experiment Manager"/>
-    <tab type="pages" visible="yes" title="" intro="">
+    <tab type="pages" visible="yes" title="" intro="Pages">
       <tab type="user" url="optickaBehaviourTest.html" title="Opticka State Machine Test Output"/>
       <tab type="user" url="optickaTest.html" title="Opticka MOC Test Output"/>
       <tab type="user" url="https://github.com/iandol/opticka" title="Github Source Repo"/>
@@ -37,11 +37,11 @@
       <tab type="exceptionindex" visible="$ALPHABETICAL_INDEX" title=""/> 
       <tab type="exceptionhierarchy" visible="yes" title="" intro=""/>
     </tab>
-    <tab type="files" visible="yes" title="">
+    <tab type="files" visible="yes" title="Files">
       <tab type="filelist" visible="yes" title="" intro=""/>
       <tab type="globals" visible="yes" title="" intro=""/>
     </tab>
-    <tab type="examples" visible="yes" title="" intro=""/>  
+    <tab type="examples" visible="yes" title="Examples" intro=""/>  
   </navindex>
 
   <!-- Layout definition for a class page -->

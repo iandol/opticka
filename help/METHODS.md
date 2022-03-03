@@ -26,7 +26,7 @@ The state machine defines a set of states and the connections between them. The 
 
 In addition, it is preferable to use methods to evaluate properties method evaluation occurs during the experiment rather than at first load.  
 
-For those unfamiliar with object-oriented design, a *CLASS* (e.g. `stateMachine`) is created as a variable *OBJECT* (named `sM` in this case, it is an *instance* of the class). ALL Opticka classes are **handle classes**; this means if we set `sM2 = sM` — both of these instances point to the same object. Below we list the class name and the object name. 
+For those unfamiliar with object-oriented design, a *CLASS* (e.g. `stateMachine`) is created as a variable *OBJECT* (named `sM` in this case, it is an *instance* of the class). ALL Opticka classes are **handle classes**; this means if we set `sM2 = sM` — both of these instances point to the same object. Below we list the class name and the object name.  
 
 As experiments are run **within** the `runExperiment` class `runTask()` method, this object refers to *itself* as `me`, and so methods that belong to `runExperiment` can be called by using `myMethod(me)` (or you can also use `me.myMethod()`, both forms are equivalent). Other object instances are given short names, for example the `screenManager` class is instantiated as `s`, so to call a method from screenManager we use `myOtherMethod(s)`. You will see below the object names that are available as we run the experiment from `runExperiment`.  
 
