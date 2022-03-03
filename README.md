@@ -6,7 +6,7 @@ Opticka is an object-oriented framework with optional GUI for the [Psychophysics
 
 ## Sample hardware setup
 
-The diagram below shows an sample Opticka configuration setup; note that the eyetracker, display and electrophysiology systems can be swapped for other hardware ([see the list below](#Hardware-currently-supported)):  
+The diagram below shows a sample Opticka configuration setup. Note that the eyetracker, display, synchronisation and electrophysiology systems can be swapped for other hardware ([see the list below](#Hardware-currently-supported)). While I prefer using a Display++ or a DataPixx/ViewPixx to ensure temporal fidelity, you can use a LabJack or arduino for synchronisation (where a photodiode becomes more important):  
 
 ![Example hardware setup to run Opticka](https://github.com/iandol/opticka/raw/gh-pages/images/Opticka-Setup.png)
 
@@ -48,7 +48,7 @@ runDemo(sM);
 There is also auto-generated class documentation here: [Opticka Class Docs](http://iandol.github.io/OptickaDocs/inherits.html), that details the major classes and their methods and properties. This is generated from the comments in the code, which as always could be improved…  
 
 ## Basic Install Instructions
-See [**Detailed instructions**](INSTALL.md) for full install details…
+See [**Detailed instructions**](help/INSTALL.md) for full install details…
 
 Opticka prefers the latest Psychophysics Toolbox (V3.0.17+) and at least Matlab 2017a (it uses object-oriented property validation introduced in that version). It has been tested on 64bit Ubuntu 20.04 & macOS 12.x with **MATLAB 2021b** (newer versions are generally faster). You can simply download the [GitHub ZIP File](https://github.com/iandol/opticka/archive/refs/heads/master.zip), unzip and CD to the folder and run `addOptickaToPath.m`. Or to keep easily up-to-date if you have git installed, clone this Github repo, CD to the folder then run `addOptickaToPath.m`.
 
