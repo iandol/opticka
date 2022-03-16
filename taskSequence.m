@@ -452,18 +452,21 @@ classdef taskSequence < optickaCore & dynamicprops
 				fprintf('---> taskSequence.updateTask: Task FINISHED, no more updates allowed\n');
 				return
 			end
-			
-			if nargin > 1
-				if isempty(thisResponse); thisResponse = NaN; end
-				if ~exist('runTime','var') || isempty(runTime); runTime = GetSecs; end
-				if ~exist('info','var') || isempty(info); info = 'none'; end
-				me.response(me.totalRuns) = thisResponse;
-				me.responseInfo{me.totalRuns} = info;
-				me.runTimeList(me.totalRuns) = runTime - me.startTime;
-				if me.verbose
-					me.salutation(sprintf('Task Run %i: response = %.2g @ %.2g secs',...
-						me.totalRuns, thisResponse, me.runTimeList(me.totalRuns)));
-				end
+			if ~exist('thisResponse','var') || isempty(thisResponse); thisResponse = NaN; end
+			if ~exist('runTime','var') || isempty(runTime); runTime = GetSecs; end
+			if ~exist('info','var') || isempty(info); info = 'none'; end
+
+			me.response(me.totalRuns) = thisResponse;
+			me.responseInfo{me.totalRuns} = info;
+			me.runTimeList(me.totalRuns) = runTime - me.startTime;
+
+			if ~isempty(me.resetLog) && me.resetLog(end).totalRuns == me.totalRuns && me.resetLog(end).success == true
+				me.responseInfo{me.totalRuns} = {me.resetLog(end).message, me.responseInfo{me.totalRuns}};
+			end
+
+			if me.verbose
+				me.salutation(sprintf('Trial = %i Response = %.2g @ %.2g secs',...
+					me.totalRuns, thisResponse, me.runTimeList(me.totalRuns)));
 			end
 			
 			if me.totalRuns < me.nRuns
@@ -477,7 +480,7 @@ classdef taskSequence < optickaCore & dynamicprops
 		end
 		
 		% ===================================================================
-		function [block, run, var] = findRun(me, index)
+		function [block, run, var, index] = findRun(me, index)
 		%> @fn [block, run, var] = findRun(me, index)
 		%> @brief returns block and run from number of runs
 		%>
@@ -485,6 +488,7 @@ classdef taskSequence < optickaCore & dynamicprops
 		%> @return block the block this trial is in
 		%> @return run the number within the block
 		%> @return var the variable number
+		%> @return index the index used
 		% ===================================================================
 			if me.nVars == 0
 				block = 1; run = 1; var = 1;
@@ -528,11 +532,10 @@ classdef taskSequence < optickaCore & dynamicprops
 		%> @return success did we manage to randomise?
 		%> @return message details of the swapped trials
 		% ===================================================================
-			success = false;
-			message = '';
+			success = false; message = '';
 			if me.taskInitialised
-				[b,r,v] = me.findRun;
-				message = sprintf('--->>> taskSequence.resetRun() Blk/Run/Var %i/%i/%i ',b,r,v);
+				[b,r,v,ix] = me.findRun;
+				message = sprintf('--->>> taskSequence.resetRun() Blk/Run/Var/Idx %i/%i/%i/%i ',b,r,v,ix);
 				iLow = me.totalRuns; % select from this run...
 				iHigh = me.thisBlock * me.minTrials; %...to the last run in the current block
 				iRange = (iHigh - iLow) + 1;
@@ -542,7 +545,13 @@ classdef taskSequence < optickaCore & dynamicprops
 				randomChoice = randi(iRange); %random from 0 to range
 				trialToSwap = me.totalRuns + (randomChoice - 1);
 				if trialToSwap == me.totalRuns
-					message = sprintf('%s no change made...',message);
+					message = sprintf('%s >>> no change made...',message);
+					if isempty(me.resetLog); myN = 1; else; myN = length(me.resetLog)+1; end
+					me.resetLog(myN).success = success;
+					me.resetLog(myN).totalRuns = me.totalRuns;
+					me.resetLog(myN).trialToSwap = trialToSwap;
+					me.resetLog(myN).randomChoice = randomChoice;
+					me.resetLog(myN).message = message;
 					if me.verbose; disp(message); end
 					return;
 				end
@@ -551,10 +560,10 @@ classdef taskSequence < optickaCore & dynamicprops
 				blockDestination = trialToSwap - blockOffset;
 				
 				%outValues
-				aTrial = me.outValues(me.totalRuns,:);
-				bTrial = me.outValues(trialToSwap,:);
-				me.outValues(me.totalRuns,:) = bTrial;
-				me.outValues(trialToSwap,:) = aTrial;
+				aValue = me.outValues(me.totalRuns,:);
+				bValue = me.outValues(trialToSwap,:);
+				me.outValues(me.totalRuns,:) = bValue;
+				me.outValues(trialToSwap,:) = aValue;
 				
 				%outTrial
 				aTrial = me.outTrial(me.totalRuns,:);
@@ -583,23 +592,26 @@ classdef taskSequence < optickaCore & dynamicprops
 				me.outMap(trialToSwap,:) = aMap;
 				
 				%log this change
+				success = true;
 				if isempty(me.resetLog); myN = 1; else; myN = length(me.resetLog)+1; end
-				me.resetLog(myN).randomChoice = randomChoice;
+				me.resetLog(myN).success = success;
 				me.resetLog(myN).totalRuns = me.totalRuns;
 				me.resetLog(myN).trialToSwap = trialToSwap;
+				me.resetLog(myN).randomChoice = randomChoice;
 				me.resetLog(myN).blockSource = blockSource;
 				me.resetLog(myN).blockDestination = blockDestination;
-				me.resetLog(myN).aTrial = aTrial;
-				me.resetLog(myN).bTrial = bTrial;
 				me.resetLog(myN).aIdx = aIdx;
 				me.resetLog(myN).bIdx = bIdx;
-				success = true;
-				[b,r,v] = me.findRun;
-				message = sprintf('%s >> %i/%i/%i ',message,b,r,v);
+				me.resetLog(myN).aTrial = aTrial;
+				me.resetLog(myN).bTrial = bTrial;
+				me.resetLog(myN).newIndex = me.outIndex;
+				[b,r,v,ix] = me.findRun;
+				message = sprintf('%s >> %i/%i/%i/%i ',message,b,r,v,ix);
 				message = sprintf('%s | Run=%i swap trial %i(v=%i) with %i(v=%i) : trialToSwap=%i (random choice trial %i)', ...
-					message, me.totalRuns, blockSource, bIdx, blockDestination,...
-					aIdx, trialToSwap, randomChoice);
-				if me.verbose;disp(message);end
+					message, me.totalRuns, blockSource, aIdx, blockDestination,...
+					bIdx, trialToSwap, randomChoice);
+				me.resetLog(myN).message = message;
+				disp(message);
 			end
 		end
 		

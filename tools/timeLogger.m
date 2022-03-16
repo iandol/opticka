@@ -108,8 +108,18 @@ classdef timeLogger < optickaCore
 		% ===================================================================
 		%> @brief 
 		% ===================================================================
-		function addMessage(me, tick, message)
-			
+		function addMessage(me, tick, vbl, message)
+			if ~exist('message','var'); return; end
+			if ~exist('tick','var') || isempty(tick); tick = me.tick; end
+			if (~exist('vbl','var') || isempty(vbl)) && ~isempty(me.vbl)
+				vbl = me.vbl(end); 
+			else
+				vbl = GetSecs;
+			end
+			if isempty(me.messages); N = 1; else; N = length(me.messages)+1; end
+			me.messages(N).tick = tick;
+			me.messages(N).message = message;
+			me.messages(N).vbl = vbl;
 		end
 		
 		% ===================================================================

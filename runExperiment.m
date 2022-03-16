@@ -735,7 +735,7 @@ classdef runExperiment < optickaCore
 				if me.isTask 
 					updateVariables(me, task.totalRuns, true, false); % set to first variable
 					update(stims); %update our stimuli ready for display
-					if me.debug; showLog(task); end
+					if me.debug; showLog(task); drawnow(); end
 				else
 					updateVariables(me, 1, false, false); % set to first variable
 					update(stims); %update our stimuli ready for display
@@ -745,6 +745,9 @@ classdef runExperiment < optickaCore
 				tS.totalTicks			= 1; % a tick counter
 				tS.pauseToggle			= 1; %toggle pause/unpause
 				tS.eyePos				= []; %locally record eye position
+				tS.initialTaskIdx.comment	= 'This is the task index before the task starts, it may be modified by resetRun() during task...';
+				tS.initialTaskIdx.index		= task.outIndex;
+				tS.initialTaskIdx.vars		= task.outValues;
 				
 				%-----double check the labJackT handle is still valid
 				% (sometimes it disconnects)
@@ -757,11 +760,11 @@ classdef runExperiment < optickaCore
 				%-----take over the keyboard!
 				KbReleaseWait; %make sure keyboard keys are all released
 				if ~isdeployed; commandwindow; end
-				WaitSecs(0.1);drawnow;WaitSecs(0.1);
 				if me.debug == false
 					%warning('off'); %#ok<*WNOFF>
 					ListenChar(-1); %2=capture all keystrokes
 				end
+				drawnow;WaitSecs(0.25);
 				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
 				
 				%-----profiling starts here
@@ -835,6 +838,8 @@ classdef runExperiment < optickaCore
 						if me.logFrames; logStim(tL,sM.currentName,tS.totalTicks); end
 						%----- increment our global tick counter
 						tS.totalTicks = tS.totalTicks + 1; tL.tick = tS.totalTicks;
+					else
+						WaitSecs('YieldSecs', s.screenVals.ifi);
 					end
 					
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1313,8 +1318,13 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 			if me.isRunning
 				if ~exist('tag','var'); tag = '#'; end
-				t = me.infoText;
-				fprintf('===>%s:%s\n',tag,t);
+				t = sprintf('===>%s:%s\n',tag,me.infoText);
+				fprintf('%s\n',t);
+				if me.isRunTask
+					me.taskLog.addMessage([],[],t);
+				else
+					me.runLog.addMessage([],[],t);
+				end
 			end			
 		end
 		
@@ -1384,7 +1394,7 @@ classdef runExperiment < optickaCore
 				index = me.task.totalRuns;
 			end
 			if ~exist('override','var') || isempty(override)
-				override = false;
+				override = true;
 			end
 			if me.useDataPixx || me.useDisplayPP || me.useLabJackTStrobe
 				if me.isTask
