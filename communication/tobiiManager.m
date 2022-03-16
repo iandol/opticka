@@ -21,6 +21,7 @@
 %> screen. fixInit allows you to define a minimum time with which the subject
 %> must initiate a saccade away from a position (which stops a subject cheating).
 %>
+%> @todo refactor this and eyelinkManager to inherit from a common eyelinkManager
 %>
 %> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================

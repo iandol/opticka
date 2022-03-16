@@ -100,7 +100,7 @@ classdef ioManager < optickaCore
 			obj.lastValue = obj.sendValue;
 			obj.sendValue = value;
 		end
-		
+
 		% ===================================================================
 		%> @brief 
 		%> 
@@ -110,7 +110,7 @@ classdef ioManager < optickaCore
 			obj.lastValue = obj.sendValue;
 			obj.sendValue = value;
 		end
-		
+
 		% ===================================================================
 		%> @brief 
 		%> 

@@ -1,7 +1,15 @@
 % ========================================================================
 %> @brief LABJACKT Connects and manages a LabJack T4 / T7
 %> This class handles digital I/O and analog I/O and analog streaming.
-%> Connection can be USB or network.
+%> Connection can be USB or network. Network is slightly lower latency than USB
+%>
+%> Example:
+%>
+%> ```
+%> l = labJackT('openNow', true);
+%> l.sendStrobe(128); % sends 128 via EIO 8 bits
+%> l.close;
+%> ```
 %>
 %> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
@@ -326,18 +334,6 @@ classdef labJackT < handle
 				me.isValid = true;
 			end
 			result = me.isValid;
-		end
-		
-		% ===================================================================
-		%> @brief sends a value to RAMAddress, requires the Lua server to
-		%> be running, 0-255 control EIO, 256-271 controls CIO
-		%>	
-		% ===================================================================
-		function strobeServer(me, value)
-			if me.silentMode || isempty(me.handle); return; end
-			if ~exist('value','var'); value = me.sendValue; end
-			calllib(me.libName, 'LJM_eWriteAddress', me.handle, me.RAMAddress, me.LJM_FLOAT32, value);
-			if me.verbose;fprintf('--->>> LabjackT:strobeServer Sending strobe: %i\n',value);end
 		end
 		
 		% ===================================================================
@@ -683,6 +679,18 @@ classdef labJackT < handle
 		% ===================================================================
 		function sendTTL(me, varargin)
 			
+		end
+
+		% ===================================================================
+		%> @brief sends a value to RAMAddress, requires the Lua server to
+		%> be running, 0-255 control EIO, 256-271 controls CIO
+		%>	
+		% ===================================================================
+		function strobeServer(me, value)
+			if me.silentMode || isempty(me.handle); return; end
+			if ~exist('value','var'); value = me.sendValue; end
+			calllib(me.libName, 'LJM_eWriteAddress', me.handle, me.RAMAddress, me.LJM_FLOAT32, value);
+			if me.verbose;fprintf('--->>> LabjackT:strobeServer Sending strobe: %i\n',value);end
 		end
 		
 		% ===================================================================

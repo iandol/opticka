@@ -47,6 +47,8 @@
 %> a reward systems during calibration / validation to improve subject
 %> performance compared to the eyelink toolbox alone.
 %>
+%> @todo refactor this and tobiiManager to inherit from a common eyelinkManager
+%> 
 %> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef eyelinkManager < optickaCore

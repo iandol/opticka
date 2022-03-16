@@ -34,10 +34,16 @@ tS.BREAKFIX					= -1;		%==the code to send eyetracker for break fix trials
 tS.INCORRECT				= -5;		%==the code to send eyetracker for incorrect trials
 
 %==================================================================
-%------------Debug logging to command window-----------------
-%io.verbose					= true; %print out io commands for debugging
-%eT.verbose					= true; %print out eyetracker commands for debugging
-%rM.verbose					= true; %print out reward commands for debugging
+%----------------Debug logging to command window------------------
+% uncomment each line to get specific verbose logging from each of these
+% components; you can also set verbose in the opticka GUI to enable all of
+% these…
+%sM.verbose					= true;		%==print out stateMachine info for debugging
+%stims.verbose				= true;		%==print out metaStimulus info for debugging
+%io.verbose					= true;		%==print out io commands for debugging
+%eT.verbose					= true;		%==print out eyelink commands for debugging
+%rM.verbose					= true;		%==print out reward commands for debugging
+%task.verbose				= true;		%==print out task info for debugging
 
 %==================================================================
 %-----------------INITIAL Eyetracker Settings----------------------
@@ -54,38 +60,58 @@ me.lastYPosition			= tS.fixY;
 
 %==================================================================
 %---------------------------Eyetracker setup-----------------------
+% NOTE: the opticka GUI can set eyetracker options too, if you set options
+% here they will OVERRIDE the GUI ones; if they are commented then the GUI
+% options are used. me.elsettings and me.tobiisettings contain the GUI
+% settings you can test if they are empty or not and set them based on
+% that...
+eT.name 					= tS.name;
+if tS.saveData == true;		eT.recordData = true; end %===save ET data?
 if me.useEyeLink
-	eT.name 					= tS.name;
-	eT.sampleRate 				= 250;		% sampling rate
-	eT.calibrationStyle 		= 'HV5';	% calibration style
-	eT.calibrationProportion	= [0.4 0.4]; %the proportion of the screen occupied by the calibration stimuli
-	if tS.saveData == true;		eT.recordData = true; end %===save EDF file?
-	if me.dummyMode;			eT.isDummy = true; end %===use dummy or real eyetracker? 
-	%-----------------------
-	% remote calibration enables manual control and selection of each fixation
-	% this is useful for a baby or monkey who has not been trained for fixation
-	% use 1-9 to show each dot, space to select fix as valid, INS key ON EYELINK KEYBOARD to
-	% accept calibration!
-	eT.remoteCalibration		= false; 
-	%-----------------------
-	eT.modify.calibrationtargetcolour = [1 1 1]; % calibration target colour
-	eT.modify.calibrationtargetsize = 2;		% size of calibration target as percentage of screen
-	eT.modify.calibrationtargetwidth = 0.15;	% width of calibration target's border as percentage of screen
-	eT.modify.waitformodereadytime	= 500;
-	eT.modify.devicenumber 			= -1;		% -1 = use any attachedkeyboard
-	eT.modify.targetbeep 			= 1;		% beep during calibration
+	eT.name 						= tS.name;
+	if me.dummyMode;				eT.isDummy = true; end %===use dummy or real eyetracker? 
+	if tS.saveData == true;			eT.recordData = true; end %===save EDF file?
+	if isempty(me.elsettings)		%==check if GUI settings are empty
+		eT.sampleRate				= 250;		%==sampling rate
+		eT.calibrationStyle			= 'HV5';	%==calibration style
+		eT.calibrationProportion	= [0.4 0.4]; %==the proportion of the screen occupied by the calibration stimuli
+		%-----------------------
+		% remote calibration enables manual control and selection of each
+		% fixation this is useful for a baby or monkey who has not been trained
+		% for fixation use 1-9 to show each dot, space to select fix as valid,
+		% INS key ON EYELINK KEYBOARD to accept calibration!
+		eT.remoteCalibration				= false; 
+		%-----------------------
+		eT.modify.calibrationtargetcolour	= [1 1 1]; %==calibration target colour
+		eT.modify.calibrationtargetsize		= 2;		%==size of calibration target as percentage of screen
+		eT.modify.calibrationtargetwidth	= 0.15;	%==width of calibration target's border as percentage of screen
+		eT.modify.waitformodereadytime		= 500;
+		eT.modify.devicenumber				= -1;		%==-1 = use any attachedkeyboard
+		eT.modify.targetbeep				= 1;		%==beep during calibration
+	end
 elseif me.useTobii
-	eT.name 					= tS.name;
-	eT.model					= 'Tobii Pro Spectrum';
-	eT.trackingMode				= 'human';
-	eT.calPositions				= [ .2 .5; .5 .5; .8 .5 ];
-	eT.valPositions				= [ .5 .5 ];
-	if me.dummyMode;			eT.isDummy = true; end %===use dummy or real eyetracker? 
+	eT.name 						= tS.name;
+	if me.dummyMode;				eT.isDummy = true; end %===use dummy or real eyetracker? 
+	if isempty(me.tobiisettings)	%==check if GUI settings are empty
+		eT.model					= 'Tobii Pro Spectrum';
+		eT.sampleRate				= 300;
+		eT.trackingMode				= 'human';
+		eT.calibrationStimulus		= 'animated';
+		eT.autoPace					= true;
+		%-----------------------
+		% remote calibration enables manual control and selection of each
+		% fixation this is useful for a baby or monkey who has not been trained
+		% for fixation
+		eT.manualCalibration		= false;
+		%-----------------------
+		eT.calPositions				= [ .2 .5; .5 .5; .8 .5];
+		eT.valPositions				= [ .5 .5 ];
+	end
 end
 
 %Initialise the eyeTracker object with X, Y, FixInitTime, FixTime, Radius, StrictFix
 eT.updateFixationValues(tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
-%make sure we don't start with any exclusion zones set up
+%Ensure we don't start with any exclusion zones set up
 eT.resetExclusionZones();
 
 %==================================================================
@@ -348,12 +374,6 @@ overrideFcn = { @()keyOverride(me) }; %a special mode which enters a matlab debu
 %--------------------screenflash
 flashFcn = { @()flashScreen(s, 0.2) }; % fullscreen flash mode for visual background activity detection
 
-%--------------------magstim
-magstimFcn = { 
-	@()drawBackground(s);
-	@()stimulate(mS); % run the magstim
-};
-
 %--------------------show 1deg size grid
 gridFcn = {@()drawGrid(s)};
 
@@ -366,15 +386,14 @@ stateInfoTmp = {
 'prefix'	'fixate'	0.5		prefixEntryFcn	prefixFcn		[]				prefixExitFcn;
 'fixate'	'incorrect'	5		fixEntryFcn		fixFcn			inFixFcn		fixExitFcn;
 'stimulus'	'incorrect'	5		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn;
-'incorrect'	'prefix'	0.5		incEntryFcn		incFcn			[]				incExitFcn;
-'breakfix'	'prefix'	0.5		breakEntryFcn	incFcn			[]				incExitFcn;
+'incorrect'	'timeout'	0.5		incEntryFcn		incFcn			[]				incExitFcn;
+'breakfix'	'timeout'	0.5		breakEntryFcn	incFcn			[]				incExitFcn;
 'correct'	'prefix'	0.5		correctEntryFcn	correctFcn		[]				correctExitFcn;
 'timeout'	'prefix'	tS.tOut	{}				{}				{}				{};
 'calibrate' 'pause'		0.5		calibrateFcn	[]				[]				[];
 'drift'		'pause'		0.5		driftFcn		[]				[]				[];
 'override'	'pause'		0.5		overrideFcn		[]				[]				[];
 'flash'		'pause'		0.5		flashFcn		[]				[]				[];
-'magstim'	'prefix'	0.5		[]				magstimFcn		[]				[];
 'showgrid'	'pause'		10		[]				gridFcn			[]				[];
 };
 %----------------------State Machine Table-------------------------

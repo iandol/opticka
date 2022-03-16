@@ -520,15 +520,15 @@ classdef optickaCore < handle
 			else
 				me.paths.home = 'C:';
 			end
-			me.paths.parent = [me.paths.home filesep 'MatlabFiles'];
+			me.paths.parent = [me.paths.home filesep 'OptickaFiles'];
 			if ~isfolder(me.paths.parent)
 				status = mkdir(me.paths.parent);
-				if status == 0;warning('Could not create MatlabFiles folder');end
+				if status == 0; warning('Could not create OptickaFiles folder'); end
 			end
 			me.paths.savedData = [me.paths.parent filesep 'SavedData'];
 			if ~isfolder(me.paths.savedData)
 				status = mkdir(me.paths.savedData);
-				if status == 0;warning('Could not create savedData folder');end
+				if status == 0; warning('Could not create SavedData folder'); end
 			end
 			if isdeployed
 				me.paths.deploypath = ctfroot;

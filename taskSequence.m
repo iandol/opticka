@@ -4,10 +4,11 @@
 %>
 %> This class takes one or more variables, each with an array of values
 %> and randomly interleves them into a randomised variable list each of
-%> which has a unique index number. This example creates an `angle` varible
-%> that is randomised over 5 different values and will be applied to the
-%> first 3 stimuli; in addition, the fourth stimulus will have the value
-%> offset by 45°:
+%> which has a unique index number. 
+%> 
+%> This example creates an `angle` varible that is randomised over 5
+%> different values and will be applied to the first 3 stimuli; in addition,
+%> the fourth stimulus will have the value offset by 45°:
 %>
 %> ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ {.matlab}
 %> ts = taskSequence('nBlocks',10);
@@ -268,9 +269,9 @@ classdef taskSequence < optickaCore & dynamicprops
 				end
 				
 				[~,b] = sort(me.blockVar.probability);
-				me.blockVar.probability = me.blockVar.probability(b);
-				me.blockVar.values = me.blockVar.values(b);
-				prob = cumsum(me.blockVar.probability); %cumulative sum
+				p = me.blockVar.probability(b);
+				v = me.blockVar.values(b);
+				prob = cumsum(p); %cumulative sum
 				
 				Vals = cell(me.nBlocks, 1);
 				for i = 1:length(Vals)
@@ -278,7 +279,7 @@ classdef taskSequence < optickaCore & dynamicprops
 					a = 1;
 					while isempty(Vals{i}) && a <= length(prob)
 						if thisR <= prob(a)
-							Vals{i} = me.blockVar.values{a};
+							Vals{i} = v{a};
 						end
 						a = a + 1;
 					end
@@ -296,9 +297,9 @@ classdef taskSequence < optickaCore & dynamicprops
 				end
 				
 				[~,b] = sort(me.trialVar.probability);
-				me.trialVar.probability = me.trialVar.probability(b);
-				me.trialVar.values = me.trialVar.values(b);
-				prob = cumsum(me.trialVar.probability); %cumulative sum
+				p = me.trialVar.probability(b);
+				v = me.trialVar.values(b);
+				prob = cumsum(p); %cumulative sum
 	
 				Vals = cell(me.nRuns, 1);
 				for i = 1:length(Vals)
@@ -306,7 +307,7 @@ classdef taskSequence < optickaCore & dynamicprops
 					a = 1;
 					while isempty(Vals{i}) && a <= length(prob)
 						if thisR <= prob(a)
-							Vals{i} = me.trialVar.values{a};
+							Vals{i} = v{a};
 						end
 						a = a + 1;
 					end
@@ -530,6 +531,8 @@ classdef taskSequence < optickaCore & dynamicprops
 			success = false;
 			message = '';
 			if me.taskInitialised
+				[b,r,v] = me.findRun;
+				message = sprintf('--->>> taskSequence.resetRun() Blk/Run/Var %i/%i/%i ',b,r,v);
 				iLow = me.totalRuns; % select from this run...
 				iHigh = me.thisBlock * me.minTrials; %...to the last run in the current block
 				iRange = (iHigh - iLow) + 1;
@@ -539,7 +542,7 @@ classdef taskSequence < optickaCore & dynamicprops
 				randomChoice = randi(iRange); %random from 0 to range
 				trialToSwap = me.totalRuns + (randomChoice - 1);
 				if trialToSwap == me.totalRuns
-					message = sprintf('--->>> taskSequence.resetRun() no change made...');
+					message = sprintf('%s no change made...',message);
 					if me.verbose; disp(message); end
 					return;
 				end
@@ -591,7 +594,11 @@ classdef taskSequence < optickaCore & dynamicprops
 				me.resetLog(myN).aIdx = aIdx;
 				me.resetLog(myN).bIdx = bIdx;
 				success = true;
-				message = sprintf('--->>> taskSequence.resetRun() Run=%i swap trial %i(v=%i) with %i(v=%i) : trialToSwap=%i (random choice trial %i)',me.totalRuns, blockSource, bIdx, blockDestination, aIdx, trialToSwap, randomChoice);
+				[b,r,v] = me.findRun;
+				message = sprintf('%s >> %i/%i/%i ',message,b,r,v);
+				message = sprintf('%s | Run=%i swap trial %i(v=%i) with %i(v=%i) : trialToSwap=%i (random choice trial %i)', ...
+					message, me.totalRuns, blockSource, bIdx, blockDestination,...
+					aIdx, trialToSwap, randomChoice);
 				if me.verbose;disp(message);end
 			end
 		end
@@ -941,7 +948,7 @@ classdef taskSequence < optickaCore & dynamicprops
 				warning('---! TaskSequence.blockVar not properly formatted — it should be a structure with ''values'' and ''probabilitiy'' of the same length! N values = %i, probability = %.2f',length(me.blockVar.values),me.blockVar.probability)
 			end
 			if ~isfield(me.trialVar,'values'); me.trialVar = me.trialTemplate; end
-			if ~isfield(me.trialVar,'probability') || length(me.trialVar.values)~= length(me.trialVar.probability)
+			if ~isfield(me.trialVar,'probability') || length(me.trialVar.values)~=length(me.trialVar.probability)
 				me.trialVar.probability = repmat((1/length(me.trialVar.values)),1,length(me.trialVar.values));
 				warning('---! TaskSequence.trialVar not properly formatted — it should be a structure with ''values'' and ''probabilitiy'' of the same length! N values = %i, probability = %.2f',length(me.trialVar.values),me.trialVar.probability)
 				me.trialVar = me.trialTemplate;

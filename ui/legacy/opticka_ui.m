@@ -869,7 +869,7 @@ function OKMenuLoadGamma_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
-	uiopen('~/MatlabFiles/Calibration')
+	uiopen('~/OptickaFiles/Calibration')
 	if exist('tmp','var') && isa(tmp,'calibrateLuminance')
 		o.r.screen.gammaTable = tmp;
 		clear tmp;

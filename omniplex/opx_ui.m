@@ -204,8 +204,8 @@ if isappdata(0,['opx' num2str(handles.opxUIFigure)])
 	if ispc
 		printpreview(handles.opxUIFigure)
 	elseif ismac
-		if ~exist('~/MatlabFiles/Print/','dir')
-			mkdir('~/MatlabFiles/Print/')
+		if ~exist('~/OptickaFiles/Print/','dir')
+			mkdir('~/OptickaFiles/Print/')
 		end
 		print(handles.opxUIFigure, '-dpng', 'myPrint.png');
 	end

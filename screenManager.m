@@ -1473,10 +1473,10 @@ classdef screenManager < optickaCore
 				else
 					homep = 'c:';
 				end
-				if ~exist([homep filesep 'MatlabFiles' filesep 'Movie' filesep],'dir')
-					mkdir([homep filesep 'MatlabFiles' filesep 'Movie' filesep])
+				if ~exist([me.paths.parent filesep 'Movie' filesep],'dir')
+					mkdir([me.paths.parent filesep 'Movie' filesep])
 				end
-				me.movieSettings.moviepath = [homep filesep 'MatlabFiles' filesep 'Movie' filesep];
+				me.movieSettings.moviepath = [me.paths.parent filesep 'Movie' filesep];
 				switch me.movieSettings.type
 					case 1
 						if isempty(me.movieSettings.codec)

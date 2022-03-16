@@ -9,7 +9,7 @@ classdef colourManager < optickaCore
 		%> verbosity
 		verbose = true
 		%>
-		deviceSPD char = '/home/psychww/MatlabFiles/Calibration/PhosphorsDisplay++Color++.mat'
+		deviceSPD char = [me.paths.parent '/Calibration/PhosphorsDisplay++Color++.mat'];
 		%>
 		sensitivities char = 'ConeSensitivities_SS_2degELin3908301.mat'
 		%> 
