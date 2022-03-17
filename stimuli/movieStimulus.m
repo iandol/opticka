@@ -94,7 +94,7 @@ classdef movieStimulus < baseStimulus
 		mdstMode			= 'GL_ONE_MINUS_SRC_ALPHA'
 		%> allowed properties passed to object upon construction
 		allowedProperties='fileName|blocking|pixelFormat|preloadSecs|specialFlagsOpen|specialFlagsFrame|specialFlags2Frame|loopStrategy|mask|maskTolerance|enforceBlending|direction';
-		%>properties to not create transient copies of during setup phase
+		%> properties to not create transient copies of during setup phase
 		ignoreProperties = 'buffertex|shader|screenVals|movie|duration|fps|width|height|count|scale|fileName|pixelFormat|preloadSecs|specialFlagsOpen|specialFlagsFrame|specialFlags2Frame|loopStrategy'
 	end
 	

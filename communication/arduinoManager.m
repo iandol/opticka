@@ -185,7 +185,7 @@ classdef arduinoManager < optickaCore
 				if ~exist('line','var') || isempty(line); line = me.rewardPin; end
 				if ~exist('time','var') || isempty(time); time = me.rewardTime; end
 				switch me.mode
-					case 'original'
+					case 'default'
 						timedTTL(me.device, line, time);
 					otherwise
 						time = time - 30; %there is an arduino 30ms delay
@@ -218,7 +218,7 @@ classdef arduinoManager < optickaCore
 				end
 				if time < 0; time = 0;end
 				switch me.mode
-					case 'original'
+					case 'default'
 						timedTTL(me.device, line, 10);
 						WaitSecs('Yieldsecs',time/1e3);
 						timedTTL(me.device, line, 10);
@@ -243,7 +243,7 @@ classdef arduinoManager < optickaCore
 			if me.silentMode || isempty(me.device); return; end
 			if ~exist('line','var') || isempty(line); line = 2; end
 			switch me.mode
-				case 'original'
+				case 'default'
 					digitalWrite(me.device, line, 0);
 					for ii = 1:20
 						digitalWrite(me.device, line, mod(ii,2));
@@ -650,7 +650,7 @@ classdef arduinoManager < optickaCore
 		function setLow(me)
 			if me.silentMode || ~me.isOpen; return; end
 			switch me.mode
-				case 'original'
+				case 'default'
 					for i = me.availablePins{1} : me.availablePins{end}
 						me.device.pinMode(i,'output');
 						me.device.digitalWrite(i,0);
