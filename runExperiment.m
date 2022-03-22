@@ -108,6 +108,8 @@ classdef runExperiment < optickaCore
 		elsettings 
 		%> initial tobii settings
 		tobiisettings
+		%> turn diary on for runTask, saved to the same folder as the data
+		diaryMode logical		= false
 	end
 
 	properties (Transient = true, Hidden = true)
@@ -525,11 +527,28 @@ classdef runExperiment < optickaCore
 			% we use global variables in this specific case...
 			global rM %#ok<*GVMIS> %global reward manager we can share with eyetracker 
 			global aM %global audio manager we can share with eyetracker
-			
-			% make sure we reset any state machine functions to not cause
-			% problems when they are reassigned below. For example, io
-			% interfaces can be reset unless we clear this before we open
-			% the io.
+
+
+			refreshScreen(me);
+			initialiseSaveFile(me); %generate a savePrefix for this run
+			me.name = [me.subjectName '-' me.savePrefix]; %give us a run name
+			if isempty(me.screen) || isempty(me.task)
+				me.initialise; %we set up screenManager and taskSequence objects
+			end
+			if me.screen.isPTB == false %NEED PTB!
+				errordlg('There is no working PTB available!')
+				error('There is no working PTB available!')
+			end
+
+			%------enable diary logging if requested
+			if me.diaryMode
+				diary off
+				diary([me.paths.savedData filesep me.name '.log']);
+			end
+
+			%------make sure we reset any state machine functions to not cause
+			% problems when they are reassigned below. For example, io interfaces
+			% can be reset unless we clear this before we open the io.
 			me.stateInfo = {};
 			if isa(me.stateMachine,'stateMachine'); me.stateMachine.reset; me.stateMachine = []; end
 			
@@ -551,17 +570,6 @@ classdef runExperiment < optickaCore
 			
 			if isempty(regexpi(me.comment, '^Protocol','once'))
 				me.comment = '';
-			end
-			
-			refreshScreen(me);
-			initialiseSaveFile(me); %generate a savePrefix for this run
-			me.name = [me.subjectName '-' me.savePrefix]; %give us a run name
-			if isempty(me.screen) || isempty(me.task)
-				me.initialise; %we set up screenManager and taskSequence objects
-			end
-			if me.screen.isPTB == false %NEED PTB!
-				errordlg('There is no working PTB available!')
-				error('There is no working PTB available!')
 			end
 			
 			fprintf('\n\n\n===>>>>>> Start task: %s <<<<<<===\n\n\n',me.name);
@@ -910,13 +918,17 @@ classdef runExperiment < optickaCore
 				
 				me.tS = tS; %copy our tS structure for backup
 				
+				%------SAVE the DATA
 				if tS.saveData
 					sname = [me.paths.savedData filesep me.name '.mat'];
 					rE = me;
-					assignin('base', 'tS', tS);
 					save(sname,'rE','tS');
 					fprintf('\n\n===>>> SAVED DATA to: %s\n\n',sname)
+					assignin('base', 'tS', tS);
 				end
+
+				%------disable diary logging 
+				if me.diaryMode; diary off; end
 				
 				me.stateInfo = [];
 				if isa(me.stateMachine,'stateMachine'); me.stateMachine.reset; end

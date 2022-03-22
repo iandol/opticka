@@ -23,6 +23,7 @@
 %>
 %> @todo integrate carryoverCounterbalance() as an alternative to block
 %>  randomisation...
+%> 
 %> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef taskSequence < optickaCore & dynamicprops
@@ -52,7 +53,7 @@ classdef taskSequence < optickaCore & dynamicprops
 		%> do we follow real time or just number of ticks to get to a known time
 		realTime logical		= true
 		%> random seed value, we can use this to set the RNG to a known state
-		randomSeed
+		randomSeed double		= []
 		%> mersenne twister default
 		randomGenerator char	= 'mt19937ar'
 		%> verbose or not
@@ -109,6 +110,8 @@ classdef taskSequence < optickaCore & dynamicprops
 		taskInitialised logical = false
 		%> has task finished
 		taskFinished logical	= false
+		%> which seed values were used?
+		usedSeeds double		= []
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Transient = true, Hidden = true)
@@ -253,6 +256,8 @@ classdef taskSequence < optickaCore & dynamicprops
 			if me.minTrials > 255
 				warning('WARNING: You are exceeding the number of variable numbers in an 8bit strobed word!')
 			end
+
+			me.usedSeeds = [me.usedSeeds me.taskStream.Seed];
 
 			checkBlockTrialVars(me);
 			% ---- deal with block level factor randomisation

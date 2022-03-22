@@ -414,6 +414,7 @@ classdef opticka < optickaCore
 			me.verbose = me.r.verbose;
 			me.r.screen.debug = logical(me.gv(me.ui.OKDebug));
 			me.r.debug = me.r.screen.debug;
+			me.r.diaryMode = logical(me.gv(me.ui.OKDiaryMode));
 			me.r.screen.visualDebug = me.r.screen.debug;
 			me.r.screen.backgroundColour = me.gn(me.ui.OKbackgroundColour);
 			%deprecated me.r.screen.nativeBeamPosition = logical(me.gv(me.h.OKNativeBeamPosition));
