@@ -167,8 +167,10 @@ classdef behaviouralRecord < optickaCore
 		%> 
 		%> @param rE runExperiment object
 		% ===================================================================
-			sM = rE.stateMachine;
-			eT = rE.eyeTracker;
+			if exist('rE','var') && isa(rE,"runExperiment")
+				sM = rE.stateMachine;
+				eT = rE.eyeTracker;
+			end
 			if ~me.plotOnly
 				if me.tick == 1
 					reset(me);

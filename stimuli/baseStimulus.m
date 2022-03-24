@@ -20,7 +20,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		yPosition double = 0
 		%> Size in degrees
 		size double = 4
-		%> Colour as a 0-1 range RGB
+		%> Colour as a 0-1 range RGB or RGBA vector
 		colour double = [1 1 1]
 		%> Alpha as a 0-1 range, this gets added to the RGB colour
 		alpha double = 1
@@ -129,9 +129,10 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> Which properties to ignore to clone when making transient copies in
 		%> the setup method
 		ignorePropertiesBase char = ['handles|ppd|sM|name|comment|fullName|'...
-			'family|type|dX|dY|delta|verbose|texture|dstRect|mvRect|xOut|'...
-			'yOut|isVisible|dateStamp|paths|uuid|tick|doAnimator|doDots|mouseOverride|isRect'...
-			'dstRect|mvRect|sM|screenVals|isSetup']
+			'family|type|dX|dY|delta|verbose|texture|dstRect|xOut|yOut|'...
+			'isVisible|dateStamp|paths|uuid|tick|mouseOverride|isRect|'...
+			'dstRect|mvRect|sM|screenVals|isSetup|'...
+			'doDots|doMotion|doDrift|doFlash|doAnimator']
 		%> Which properties to not draw in the UI panel
 		ignorePropertiesUIBase char = ['animator|fullName']
 	end
@@ -190,20 +191,24 @@ classdef baseStimulus < optickaCore & dynamicprops
 			len=length(value);
 			switch len
 				case 4
-					me.colour = value(1:4);
+					c = value(1:4);
 					me.alpha = value(4);
 				case 3
-					me.colour = [value(1:3) me.alpha]; %force our alpha to override
+					c = [value(1:3) me.alpha]; %force our alpha to override
 				case 1
-					me.colour = [value value value me.alpha]; %construct RGBA
+					c = [value value value me.alpha]; %construct RGBA
 				otherwise
 					if isa(me,'gaborStimulus') || isa(me,'gratingStimulus')
-						me.colour = []; %return no colour to procedural gratings
+						c = []; %return no colour to procedural gratings
 					else
-						me.colour = [1 1 1 me.alpha]; %return white for everything else
+						c = [1 1 1 me.alpha]; %return white for everything else
 					end		
 			end
-			me.colour(me.colour<0)=0; me.colour(me.colour>1)=1;
+			c(c<0)=0; c(c>1)=1;
+			me.colour = c;
+			if isprop(me,'correctBaseColour') && me.correctBaseColour %#ok<*MCSUP> 
+				me.baseColour = (me.colour(1:3) + me.colour2(1:3))/2;
+			end
 			me.isInSetColour = false;
 		end
 		
@@ -218,6 +223,9 @@ classdef baseStimulus < optickaCore & dynamicprops
 				me.colour = me.colour(1:3); %force colour to be regenerated
 				if isprop(me,'colour2')
 					me.colour2 = me.colour2(1:3);
+				end
+				if isprop(me,'baseColour')
+					me.baseColour = me.baseColour(1:3);
 				end
 			end
 		end
@@ -737,10 +745,25 @@ classdef baseStimulus < optickaCore & dynamicprops
 			
 			if strcmpi(tagName,'alpha')
 				me.handles.colour_num.Value = num2str(me.colour, '%g ');
+				if isprop(me,'colour2')
+					me.handles.colour2_num.Value = num2str(me.colour2, '%g ');
+				end
+				if isprop(me,'baseColour') 
+					me.handles.baseColour_num.Value = num2str(me.baseColour, '%g ');
+				end
 			end
 			
 			if strcmpi(tagName,'colour')
 				me.handles.alpha_num.Value = num2str(me.alpha, '%g ');
+				if isprop(me,'correctBaseColour') && me.correctBaseColour
+					me.handles.baseColour_num.Value = num2str(me.baseColour, '%g ');
+				end
+			end
+
+			if strcmpi(tagName,'colour2')
+				if isprop(me,'correctBaseColour') && me.correctBaseColour
+					me.handles.baseColour_num.Value = num2str(me.baseColour, '%g ');
+				end
 			end
 			
 			notify(me,'readPanelUpdate');

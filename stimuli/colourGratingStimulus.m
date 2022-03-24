@@ -3,12 +3,14 @@
 %> COLOURGRATINGSTIMULUS colour grating stimulus, inherits from baseStimulus
 %>   The basic properties are:
 %>   type = 'sinusoid' or 'square', if square you should set sigma which
-%>     smoothes the interface and stops pixel motion artifacts that normally
-%>     inflict square wave gratings, set sigma to 0 to remove smoothing.
+%>		smoothes the interface and stops pixel motion artifacts that normally
+%>		inflict square wave gratings, set sigma to 0 to remove smoothing.
 %>	 colour = first grating colour
 %>   colour2 = second grating colour
 %>   baseColour = the midpoint between the two from where contrast works,
-%        defult just inherits the background colour from screenManager
+%>		defult just inherits the background colour from screenManager
+%>   correctBaseColour = automatically generate baseColour as the average
+%>		of colour and colour2
 %>   contrast = contrast from 0 - 1
 %>   sf = spatial frequency in degrees
 %>   tf = temporal frequency in degs/s
@@ -53,6 +55,10 @@ classdef colourGratingStimulus < baseStimulus
 		%> centre surround stimuli are phase matched, and if we enlarge a grating object its
 		%> phase stays identical at the centre of the object (where we would imagine our RF)
 		correctPhase logical	= false
+		%> In certain cases the base colour should be calculated
+		%> dynamically from colour and colour2, and this enables this to
+		%> occur blend
+		correctBaseColour logical = false
 		%> Reverse phase of grating X times per second? Useful with a static grating for linearity testing
 		phaseReverseTime(1,1) double = 0
 		%> What phase to use for reverse?
@@ -87,7 +93,7 @@ classdef colourGratingStimulus < baseStimulus
 			'contrast|mask|reverseDirection|speed|startPosition|aspectRatio|' ... 
 			'sigma|correctPhase|phaseReverseTime|phaseOfReverse']
 		%>properties to not create transient copies of during setup phase
-		ignoreProperties = 'name|type|scale|phaseIncrement|correctPhase|contrastMult|mask'
+		ignoreProperties = 'type|scale|phaseIncrement|correctPhase|contrastMult|mask|typeList'
 		%> how many frames between phase reverses
 		phaseCounter			= 0
 		%> mask value (radius for the procedural shader)
@@ -164,15 +170,17 @@ classdef colourGratingStimulus < baseStimulus
 
 			fn = fieldnames(me);
 			for j=1:length(fn)
-				if isempty(me.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},me.ignoreProperties, 'once')) %create a temporary dynamic property
+				if isempty(me.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j}, me.ignoreProperties, 'once')) %create a temporary dynamic property
 					p=me.addprop([fn{j} 'Out']);
-					p.Transient = true;p.Hidden = true;
+					p.Transient = true;p.Hidden = false;
 					if strcmp(fn{j},'sf');p.SetMethod = @set_sfOut;end
 					if strcmp(fn{j},'tf');p.SetMethod = @set_tfOut;end
 					if strcmp(fn{j},'reverseDirection');p.SetMethod = @set_reverseDirectionOut;end
 					if strcmp(fn{j},'size');p.SetMethod = @set_sizeOut;end
 					if strcmp(fn{j},'xPosition');p.SetMethod = @set_xPositionOut;end
 					if strcmp(fn{j},'yPosition');p.SetMethod = @set_yPositionOut;end
+					if strcmp(fn{j},'colour');p.SetMethod = @set_colourOut;end
+					if strcmp(fn{j},'colour2');p.SetMethod = @set_colour2Out;end
 				end
 				if isempty(regexp(fn{j},me.ignoreProperties, 'once'))
 					me.([fn{j} 'Out']) = me.(fn{j}); %copy our property value to our tempory copy
@@ -226,8 +234,13 @@ classdef colourGratingStimulus < baseStimulus
 			end
 			
 			if isempty(me.baseColour)
-				me.baseColourOut = me.sM.backgroundColour;
-				me.baseColourOut(4) = me.alpha;
+				if me.correctBaseColour
+					me.baseColourOut = (me.colourOut(1:3)+me.colour2Out(1:3))/2;
+					me.baseColourOut(4) = me.alpha;
+				else
+					me.baseColourOut = me.sM.backgroundColour;
+					me.baseColourOut(4) = me.alpha;
+				end
 			end
 			
 			if strcmpi(me.type,'square')
@@ -263,9 +276,9 @@ classdef colourGratingStimulus < baseStimulus
 				~all(me.colour2Cache(1:3) == me.colour2Out(1:3))
 				glUseProgram(me.shader);
 				glUniform4f(glGetUniformLocation(me.shader, 'color1'),...
-					me.colourOut(1),me.colourOut(2),me.colourOut(3),me.colourOut(4));
+					me.colourOut(1),me.colourOut(2),me.colourOut(3),me.alphaOut);
 				glUniform4f(glGetUniformLocation(me.shader, 'color2'),...
-					me.colour2Out(1),me.colour2Out(2),me.colour2Out(3),me.colour2Out(4));
+					me.colour2Out(1),me.colour2Out(2),me.colour2Out(3),me.alphaOut);
 				if me.mask == true
 					me.maskValue = me.sizeOut/2;
 				else
@@ -364,6 +377,9 @@ classdef colourGratingStimulus < baseStimulus
 					me.colour2 = [1 1 1 me.alpha]; %return white for everything else
 			end
 			me.colour2(me.colour2<0)=0; me.colour2(me.colour2>1)=1;
+			if isprop(me, 'baseColour') && me.correctBaseColour %#ok<*MCSUP> 
+				me.baseColour = (me.colour(1:3) + me.colour2(1:3))/2;
+			end
 		end
 		
 		% ===================================================================
@@ -460,6 +476,74 @@ classdef colourGratingStimulus < baseStimulus
 				me.sfRecurse = false;
 			end
 			%fprintf('\nSET SFOut: %d | cache: %d | in: %d\n', me.sfOut, me.sfCache, value);
+		end
+
+		% ===================================================================
+		%> @brief set_colourOut Set method
+		%>
+		% ===================================================================
+		function set_colourOut(me, value)
+			me.isInSetColour = true; %#ok<*MCSUP>
+			len=length(value);
+			switch len
+				case {4,3}
+					c = [value(1:3) me.alpha]; %force our alpha to override
+				case 1
+					c = [value value value me.alpha]; %construct RGBA
+				otherwise
+					c = [1 1 1 me.alpha]; %return white for everything else
+			end
+			c(c<0)=0; c(c>1)=1;
+			me.colourOut = c;
+			if me.correctBaseColour %#ok<*MCSUP> 
+				if isprop(me, 'colour2Out') 
+					me.baseColour = (me.colourOut(1:3) + me.colour2Out(1:3))/2;
+				else
+					me.baseColour = (me.colourOut(1:3) + me.colour2(1:3))/2;
+				end
+				if isprop(me, 'baseColourOut')
+					if isprop(me, 'colour2Out') 
+						me.baseColourOut = [(me.colourOut(1:3) + me.colour2Out(1:3))/2 me.alpha];
+					else
+						me.baseColourOut = [(me.colour(1:3) + me.colour2(1:3))/2 me.alpha];
+					end
+				end
+			end
+			if me.verbose; fprintf('\nSET colour/colour2/base: %g %g %g / %g %g %g / %g %g %g\n', me.colourOut(1), me.colourOut(2), me.colourOut(3),...
+				me.colour2Out(1), me.colour2Out(2), me.colour2Out(3),...
+				me.baseColourOut(1), me.baseColourOut(2), me.baseColourOut(3)); end
+		end
+
+		% ===================================================================
+		%> @brief set_colour2Out Set method
+		%>
+		% ===================================================================
+		function set_colour2Out(me, value)
+			len=length(value);
+			switch len
+				case {4,3}
+					c = [value(1:3) me.alpha]; %force our alpha to override
+				case 1
+					c = [value value value me.alpha]; %construct RGBA
+				otherwise
+					c = [1 1 1 me.alpha]; %return white for everything else
+			end
+			c(c<0)=0; c(c>1)=1;
+			me.colour2Out = c;
+			if me.correctBaseColour %#ok<*MCSUP> 
+				if isprop(me, 'colourOut') 
+					me.baseColour = (me.colourOut(1:3) + me.colour2Out(1:3))/2;
+				else
+					me.baseColour = (me.colour(1:3) + me.colour2Out(1:3))/2;
+				end
+				if isprop(me, 'baseColourOut')
+					if isprop(me, 'colourOut') 
+						me.baseColourOut = (me.colourOut(1:3) + me.colour2Out(1:3))/2;
+					else
+						me.baseColourOut = (me.colour(1:3) + me.colour2Out(1:3))/2;
+					end
+				end
+			end
 		end
 		
 		% ===================================================================

@@ -382,7 +382,7 @@ correctExitFcn = {
 	@()drawnow;
 };
 
-%incorrect entry
+%--------------------incorrect entry
 incEntryFcn = { 
 	@()beep(aM,400,0.5,1);
 	@()trackerClearScreen(eT);
@@ -394,7 +394,7 @@ incEntryFcn = {
 	@()logRun(me,'INCORRECT'); %fprintf current trial info
 }; 
 
-%our incorrect/breakfix stimulus
+%--------------------our incorrect/breakfix stimulus
 incFcn = {
 	@()drawBackground(s);
 };
