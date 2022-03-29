@@ -70,7 +70,7 @@ classdef arduinoIOPort < handle
 					warning('===> The port is occupied, please release it first!');
 				end
 			else
-				me.allPorts = seriallist; me.avPorts = [];
+				me.allPorts = seriallist; me.avPorts = []; %#ok<*SERLL> 
 				if any(strcmpi(me.allPorts, port))
 					fprintf('===> Your specified port is present\n')
 				else

@@ -105,13 +105,6 @@ classdef gratingStimulus < baseStimulus
 		changeBlend				= false
 	end
 
-	events (ListenAccess = 'protected', NotifyAccess = 'protected') %only this class can access these
-		%> triggered when changing size, so we can change sf etc to compensate
-		changeScale
-		%> triggered when changing tf or drift direction
-		changePhaseIncrement
-	end
-
 	%=======================================================================
 	methods %------------------PUBLIC METHODS
 	%=======================================================================
@@ -134,7 +127,7 @@ classdef gratingStimulus < baseStimulus
 			me.isRect = true; %uses a rect for drawing
 
 			me.ignoreProperties = ['^(' me.ignorePropertiesBase '|' me.ignoreProperties ')$'];
-			me.salutation('constructor method','Stimulus initialisation complete');
+			me.salutation('constructor','Initialisation complete');
 		end
 
 		% ===================================================================
@@ -158,28 +151,33 @@ classdef gratingStimulus < baseStimulus
 			if isempty(me.isVisible)
 				show(me);
 			end
-			addlistener(me,'changeScale',@me.calculateScale); %use an event to keep scale accurate
-			addlistener(me,'changePhaseIncrement',@me.calculatePhaseIncrement);
-
+			
 			me.sM = sM;
 			me.ppd=sM.ppd;
 
 			me.texture = []; %we need to reset this
 
-			fn = fieldnames(me);
-			for j=1:length(fn)
-				if isempty(me.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},me.ignoreProperties, 'once')) %create a temporary dynamic property
-					p=me.addprop([fn{j} 'Out']);
-					p.Transient = true;p.Hidden = true;
-					if strcmp(fn{j},'sf');p.SetMethod = @set_sfOut;end
-					if strcmp(fn{j},'tf');p.SetMethod = @set_tfOut;end
-					if strcmp(fn{j},'reverseDirection');p.SetMethod = @set_reverseDirectionOut;end
-					if strcmp(fn{j},'size');p.SetMethod = @set_sizeOut;end
-					if strcmp(fn{j},'xPosition');p.SetMethod = @set_xPositionOut;end
-					if strcmp(fn{j},'yPosition');p.SetMethod = @set_yPositionOut;end
-				end
-				if isempty(regexp(fn{j},me.ignoreProperties, 'once'))
-					me.([fn{j} 'Out']) = me.(fn{j}); %copy our property value to our tempory copy
+			props = properties(me);
+			for pn = 1:numel(props)
+				pr = props{pn};
+				if isempty(regexp(pr, me.ignoreProperties, 'once')) %create a temporary dynamic property
+					p=me.addprop([pr 'Out']);
+					if strcmp(pr,'sf'); p.SetMethod = @set_sfOut; end
+					if strcmp(pr,'tf'); ...
+							p.SetMethod = @set_tfOut; ...
+							p.SetObservable = true; ...
+							addlistener(me, [pr 'Out'], 'PostSet', @me.calculatePhaseIncrement); end
+					if strcmp(pr,'reverseDirection'); ...
+							p.SetMethod = @set_reverseDirectionOut; ...
+							p.SetObservable = true; ...
+							addlistener(me, [pr 'Out'], 'PostSet', @me.calculatePhaseIncrement); end
+					if strcmp(pr,'size'); ...
+							p.SetMethod = @set_sizeOut; ...
+							p.SetObservable = true; ...
+							addlistener(me, [pr 'Out'], 'PostSet', @me.calculateScale); end
+					if strcmp(pr,'xPosition');p.SetMethod = @set_xPositionOut;end
+					if strcmp(pr,'yPosition');p.SetMethod = @set_yPositionOut;end
+					me.([pr 'Out']) = me.(pr); %copy our property value to our temporary copy
 				end
 			end
 
@@ -258,6 +256,29 @@ classdef gratingStimulus < baseStimulus
 			computePosition(me);
 			setRect(me);
 
+			function set_sfOut(me,value)
+				if me.sfRecurse == false
+					me.sfCache = (value/me.ppd);
+					me.sfOut = me.sfCache * me.scale;
+				else
+					me.sfOut = value;
+					me.sfRecurse = false;
+				end
+				%fprintf('\nSET SFOut: %d | cache: %d | in: %d\n', me.sfOut, me.sfCache, value);
+			end
+
+			function set_tfOut(me,value)
+				me.tfOut = value;
+			end
+
+			function set_reverseDirectionOut(me,value)
+				me.reverseDirectionOut = value;
+			end
+
+			function set_sizeOut(me,value)
+				me.sizeOut = value*me.ppd;
+			end
+
 		end
 
 		% ===================================================================
@@ -288,7 +309,7 @@ classdef gratingStimulus < baseStimulus
 				Screen('DrawTexture', me.sM.win, me.texture, [],me.mvRect,...
 					me.angleOut, [], [], me.modulateColor, [], me.rotateMode,...
 					[me.driftPhase, me.sfOut, me.contrastOut, me.sigmaOut]);
-				if me.changeBlend;Screen('BlendFunction', me.sM.win, me.sM.srcMode, me.sM.dstMode);end
+				if me.changeBlend; Screen('BlendFunction', me.sM.win, me.sM.srcMode, me.sM.dstMode); end
 			end
 			me.tick = me.tick + 1;
 		end
@@ -398,13 +419,13 @@ classdef gratingStimulus < baseStimulus
 			if me.mouseOverride && me.mouseValid
 				me.dstRect = CenterRectOnPointd(me.dstRect, me.mouseX, me.mouseY);
 			else
-				if isempty(me.findprop('directionOut'))
+				if isprop(me, 'directionOut')
 					[sx, sy]=pol2cart(me.d2r(me.direction),me.startPosition);
 				else
 					[sx, sy]=pol2cart(me.d2r(me.directionOut),me.startPosition);
 				end
 				me.dstRect=CenterRectOnPointd(me.dstRect,me.sM.xCenter,me.sM.yCenter);
-				if isempty(me.findprop('xPositionOut'))
+				if isprop(me, 'xPositionOut')
 					me.dstRect=OffsetRect(me.dstRect,(me.xPosition)*me.ppd,(me.yPosition)*me.ppd);
 				else
 					me.dstRect=OffsetRect(me.dstRect,me.xPositionOut+(sx*me.ppd),me.yPositionOut+(sy*me.ppd));
@@ -412,39 +433,6 @@ classdef gratingStimulus < baseStimulus
 			end
 			me.mvRect=me.dstRect;
 			me.setAnimationDelta();
-		end
-
-		% ===================================================================
-		%> @brief sfOut Set method
-		%>
-		% ===================================================================
-		function set_sfOut(me,value)
-			if me.sfRecurse == false
-				me.sfCache = (value/me.ppd);
-				me.sfOut = me.sfCache * me.scale;
-			else
-				me.sfOut = value;
-				me.sfRecurse = false;
-			end
-			%fprintf('\nSET SFOut: %d | cache: %d | in: %d\n', me.sfOut, me.sfCache, value);
-		end
-
-		% ===================================================================
-		%> @brief tfOut Set method
-		%>
-		% ===================================================================
-		function set_tfOut(me,value)
-			me.tfOut = value;
-			notify(me,'changePhaseIncrement');
-		end
-
-		% ===================================================================
-		%> @brief reverseDirectionOut Set method
-		%>
-		% ===================================================================
-		function set_reverseDirectionOut(me,value)
-			me.reverseDirectionOut = value;
-			notify(me,'changePhaseIncrement');
 		end
 
 		% ===================================================================
@@ -456,8 +444,8 @@ classdef gratingStimulus < baseStimulus
 			me.scale = me.sizeOut/(me.size*me.ppd);
 			me.sfRecurse = true;
 			me.sfOut = me.sfCache * me.scale;
-			me.setRect();
-			%fprintf('\nCalculate SFOut: %d | in: %d | scale: %d\n', me.sfOut, me.sfCache, me.scale);
+			setRect(me);
+			%fprintf('\nCalculate SF ScaleOut: %d | in: %d | scale: %d\n', me.sfOut, me.sfCache, me.scale);
 		end
 
 		% ===================================================================
@@ -466,24 +454,14 @@ classdef gratingStimulus < baseStimulus
 		%> many more times), than an event which is only called on update
 		% ===================================================================
 		function calculatePhaseIncrement(me,~,~)
-			if ~isempty(me.findprop('tfOut'))
+			if isprop(me,'tfOut')
 				me.phaseIncrement = (me.tfOut * 360) * me.sM.screenVals.ifi;
-				if ~isempty(me.findprop('reverseDirectionOut'))
+				if isprop(me,'reverseDirectionOut')
 					if me.reverseDirectionOut == false
 						me.phaseIncrement = -me.phaseIncrement;
 					end
 				end
 			end
-		end
-
-		% ===================================================================
-		%> @brief sizeOut Set method
-		%> we also need to change scale when sizeOut is changed, used for both
-		%> setting sfOut and the dstRect properly
-		% ===================================================================
-		function set_sizeOut(me,value)
-			me.sizeOut = value*me.ppd;
-			notify(me,'changeScale');
 		end
 		
 		% ===================================================================

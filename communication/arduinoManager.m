@@ -91,7 +91,7 @@ classdef arduinoManager < optickaCore
 		%===============OPEN DEVICE================%
 		function open(me)
 			if me.isOpen;disp('-->arduinoManager: Already open!');return;end
-			close(me); me.ports = seriallist;
+			close(me); me.ports = serialportlist('available');
 			if me.silentMode==false && isempty(me.device)
 				try
 					if strcmpi(me.mode, 'default')
@@ -622,7 +622,11 @@ classdef arduinoManager < optickaCore
 			me.deviceID = '';
 			me.availablePins = '';
 			me.isOpen = false;
-			me.ports = seriallist;
+			if ~verLessThan('matlab','9.7')
+				me.ports = serialportlist('available');
+			else
+				me.ports = seriallist;
+			end
 		end
 		
 		%===============RESET================%

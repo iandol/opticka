@@ -19,7 +19,9 @@
 %>   phase = phase of grating
 %>   mask = use circular mask (true) or not (false)
 %>
-%> See docs for more property details
+%> See docs for more property details.
+%>
+%> @todo phase appears different to gratingStimulus, work out why
 %>
 %> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
@@ -106,13 +108,6 @@ classdef colourGratingStimulus < baseStimulus
 		colour2Cache
 	end
 	
-	events (ListenAccess = 'protected', NotifyAccess = 'protected') %only this class can access these
-		%> triggered when changing size, so we can change sf etc to compensate
-		changeScale 
-		%> triggered when changing tf or drift direction
-		changePhaseIncrement
-	end
-	
 	%=======================================================================
 	methods %------------------PUBLIC METHODS
 	%=======================================================================
@@ -155,63 +150,76 @@ classdef colourGratingStimulus < baseStimulus
 		% ===================================================================
 		function setup(me,sM)
 			
-			reset(me); %reset it back to its initial state
+			reset(me); %reset object back to its initial state
 			me.inSetup = true;
 			if isempty(me.isVisible)
 				show(me);
 			end
-			addlistener(me,'changeScale',@me.calculateScale); %use an event to keep scale accurate
-			addlistener(me,'changePhaseIncrement',@me.calculatePhaseIncrement);
 			
 			me.sM = sM;
-			me.ppd=sM.ppd;			
+			me.ppd = sM.ppd;			
 
 			me.texture = []; %we need to reset this
 
-			fn = fieldnames(me);
-			for j=1:length(fn)
-				if isempty(me.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j}, me.ignoreProperties, 'once')) %create a temporary dynamic property
-					p=me.addprop([fn{j} 'Out']);
-					p.Transient = true;p.Hidden = false;
-					if strcmp(fn{j},'sf');p.SetMethod = @set_sfOut;end
-					if strcmp(fn{j},'tf');p.SetMethod = @set_tfOut;end
-					if strcmp(fn{j},'reverseDirection');p.SetMethod = @set_reverseDirectionOut;end
-					if strcmp(fn{j},'size');p.SetMethod = @set_sizeOut;end
-					if strcmp(fn{j},'xPosition');p.SetMethod = @set_xPositionOut;end
-					if strcmp(fn{j},'yPosition');p.SetMethod = @set_yPositionOut;end
-					if strcmp(fn{j},'colour');p.SetMethod = @set_colourOut;end
-					if strcmp(fn{j},'colour2');p.SetMethod = @set_colour2Out;end
-				end
-				if isempty(regexp(fn{j},me.ignoreProperties, 'once'))
-					me.([fn{j} 'Out']) = me.(fn{j}); %copy our property value to our tempory copy
+			props = properties(me);
+			for p = 1:numel(props)
+				pr = props{p};
+				if isempty(regexp(pr, me.ignoreProperties, 'once')) 
+					m = me.addprop([pr 'Out']);
+					%m.Transient = true; m.Hidden = false;
+					if strcmp(pr, 'sf'); m.SetMethod = @set_sfOut; end
+					if strcmp(pr, 'tf')
+						m.SetMethod = @set_tfOut;
+						m.SetObservable = true;
+						addlistener(me, [pr 'Out'], 'PostSet', @me.calculatePhaseIncrement);
+					end
+					if strcmp(pr, 'reverseDirection')
+						m.SetMethod = @set_reverseDirectionOut; 
+						m.SetObservable = true;
+						addlistener(me, [pr 'Out'], 'PostSet', @me.calculatePhaseIncrement);
+					end
+					if strcmp(pr, 'size') 
+						m.SetMethod = @set_sizeOut;
+						m.SetObservable = true;
+						addlistener(me, [pr 'Out'], 'PostSet', @me.calculateScale);
+					end
+					if strcmp(pr, 'xPosition'); m.SetMethod = @set_xPositionOut; end
+					if strcmp(pr, 'yPosition'); m.SetMethod = @set_yPositionOut; end
+					if strcmp(pr, 'colour')
+						m.SetMethod = @set_cOut;
+						m.SetObservable = true;
+						addlistener(me, [pr 'Out'], 'PostSet', @me.fixBaseColour);
+					end
+					if strcmp(pr, 'colour2')
+						m.SetMethod = @set_c2Out;
+						m.SetObservable = true;
+						addlistener(me, [pr 'Out'], 'PostSet', @me.fixBaseColour);
+					end
+					me.([pr 'Out']) = me.(pr); %copy our property value to our temporary copy
 				end
 			end
 			
 			doProperties(me);
 			
-			if isempty(me.findprop('rotateMode'));p=me.addprop('rotateMode');p.Transient=true;p.Hidden=true;end
+			if isempty(me.findprop('rotateMode')); me.addprop('rotateMode'); end
 			if me.rotateTexture
 				me.rotateMode = kPsychUseTextureMatrixForRotation;
 			else
 				me.rotateMode = [];
 			end
 			
-			if isempty(me.findprop('gratingSize'));p=me.addprop('gratingSize');p.Transient=true;end
+			if isempty(me.findprop('gratingSize')); me.addprop('gratingSize'); end
 			me.gratingSize = round(me.ppd*me.size); %virtual support larger than initial size
 			
-			if isempty(me.findprop('phaseIncrement'))
-				p=me.addprop('phaseIncrement');
-			end
-			
-			if isempty(me.findprop('driftPhase'));p=me.addprop('driftPhase');p.Transient=true;end
+			if isempty(me.findprop('driftPhase')); me.addprop('driftPhase'); end
 			if me.correctPhase
-				ps=me.calculatePhase;
-				me.driftPhase=me.phaseOut-ps;
+				ps = me.calculatePhase;
+				me.driftPhase = me.phaseOut-ps;
 			else
-				me.driftPhase=me.phaseOut;
+				me.driftPhase = me.phaseOut;
 			end
 			
-			if isempty(me.findprop('res'));p=me.addprop('res');p.Transient=true;end
+			if isempty(me.findprop('res')); me.addprop('res'); end
 			
 			switch length(me.aspectRatio)
 				case 1
@@ -235,7 +243,7 @@ classdef colourGratingStimulus < baseStimulus
 			
 			if isempty(me.baseColour)
 				if me.correctBaseColour
-					me.baseColourOut = (me.colourOut(1:3)+me.colour2Out(1:3))/2;
+					me.baseColourOut = (me.colourOut(1:3) + me.colour2Out(1:3)) / 2;
 					me.baseColourOut(4) = me.alpha;
 				else
 					me.baseColourOut = me.sM.backgroundColour;
@@ -244,8 +252,9 @@ classdef colourGratingStimulus < baseStimulus
 			end
 			
 			if strcmpi(me.type,'square')
-				if me.sigma < 0; me.sigma = 0.05;me.sigmaOut=me.sigma;end
+				if me.sigma < 0; me.sigma = 0.05; me.sigmaOut = me.sigma; end
 			else
+				me.salutation('SETUP', 'Reset sigma to -1 as type=squarewave', true)
 				me.sigmaOut = -1; %just make sure type overrides sigma if conflict
 			end
 				
@@ -257,6 +266,57 @@ classdef colourGratingStimulus < baseStimulus
 			me.inSetup = false;
 			computePosition(me);
 			setRect(me);
+
+			function set_cOut(me, value)
+				len=length(value);
+				switch len
+					case {4,3}
+						c = [value(1:3) me.alpha]; %force our alpha to override
+					case 1
+						c = [value value value me.alpha]; %construct RGBA
+					otherwise
+						c = [1 1 1 me.alpha]; %return white for everything else
+				end
+				c(c<0)=0; c(c>1)=1;
+				me.colourOut = c;
+			end
+	
+			function set_c2Out(me, value) %#ok<*MCSGP> 
+				len=length(value);
+				switch len
+					case {4,3}
+						c = [value(1:3) me.alpha]; %force our alpha to override
+					case 1
+						c = [value value value me.alpha]; %construct RGBA
+					otherwise
+						c = [1 1 1 me.alpha]; %return white for everything else
+				end
+				c(c<0)=0; c(c>1)=1;
+				me.colour2Out = c;
+			end
+
+			function set_sfOut(me,value)
+				if me.sfRecurse == false
+					me.sfCache = (value / me.ppd);
+					me.sfOut = me.sfCache * me.scale;
+				else
+					me.sfOut = value;
+					me.sfRecurse = false;
+				end
+				%fprintf('\nSET SFOut: %d | cache: %d | in: %d\n', me.sfOut, me.sfCache, value);
+			end
+			
+			function set_tfOut(me,value)
+				me.tfOut = value;
+			end
+			
+			function set_reverseDirectionOut(me,value)
+				me.reverseDirectionOut = value;
+			end
+
+			function set_sizeOut(me,value)
+				me.sizeOut = value*me.ppd;
+			end
 			
 		end
 		
@@ -299,7 +359,7 @@ classdef colourGratingStimulus < baseStimulus
 		% ===================================================================
 		function draw(me)
 			if me.isVisible && me.tick >= me.delayTicks && me.tick < me.offTicks
-				Screen('DrawTexture', me.sM.win, me.texture, [],me.mvRect,...
+				Screen('DrawTexture', me.sM.win, me.texture, [], me.mvRect,...
 					me.angleOut, [], [], me.baseColourOut, [], me.rotateMode,...
 					[me.driftPhase, me.sfOut, me.contrastOut, me.sigmaOut]);
 			end
@@ -348,6 +408,27 @@ classdef colourGratingStimulus < baseStimulus
 			end
 			me.maskValue = [];
 			me.removeTmpProperties;
+			list = {'res','gratingSize','driftPhase','rotateMode'};
+			for l = list; if isprop(me,l{1});delete(me.findprop(l{1}));end;end
+		end
+
+		% ===================================================================
+		%> @brief calculate phase offset
+		%>
+		% ===================================================================
+		function phase = calculatePhase(me)
+			phase = 0;
+			if me.correctPhase > 0
+				ppd		= me.ppd;
+				size	= (me.sizeOut / 2); %divide by 2 to get the 0 point
+				sfTmp	= (me.sfOut / me.scale) * ppd;
+				md		= size / (ppd / sfTmp);
+				md		= md - floor(md);
+				% note for some reason colourgratings are 180° different to
+				% gratings, so we compensate here so they should align if
+				% correctPhase is true
+				phase	= (360 * md) + 180;
+			end
 		end
 		
 		% ===================================================================
@@ -369,14 +450,17 @@ classdef colourGratingStimulus < baseStimulus
 		function set.colour2(me,value)
 			len=length(value);
 			switch len
-				case {4,3}
-					me.colour2 = [value(1:3) me.alpha]; %force our alpha to override
+				case 4
+					c = value;
+				case 3
+					c = [value(1:3) me.alpha]; %force our alpha to override
 				case 1
-					me.colour2 = [value value value me.alpha]; %construct RGBA
+					c = [value value value me.alpha]; %construct RGBA
 				otherwise
-					me.colour2 = [1 1 1 me.alpha]; %return white for everything else
+					c = [1 1 1 me.alpha]; %return white for everything else
 			end
-			me.colour2(me.colour2<0)=0; me.colour2(me.colour2>1)=1;
+			c(c<0)=0; c(c>1)=1;
+			me.colour2 = c;
 			if isprop(me, 'baseColour') && me.correctBaseColour %#ok<*MCSUP> 
 				me.baseColour = (me.colour(1:3) + me.colour2(1:3))/2;
 			end
@@ -390,33 +474,19 @@ classdef colourGratingStimulus < baseStimulus
 			len=length(value);
 			switch len
 				case 4
-					me.baseColour = value;
+					c = value;
 				case 3
-					me.baseColour = [value(1:3) me.alpha]; %force our alpha to override
+					c = [value(1:3) me.alpha]; %force our alpha to override
 				case 1
-					me.baseColour = [value value value me.alpha]; %construct RGBA
+					c = [value value value me.alpha]; %construct RGBA
 				otherwise
-					me.baseColour = [1 1 1 me.alpha]; %return white for everything else	
+					c = [1 1 1 me.alpha]; %return white for everything else	
 			end
-			me.baseColour(me.baseColour<0)=0; me.baseColour(me.baseColour>1)=1;
+			c(c<0)=0; c(c>1)=1;
+			me.baseColour = c;
 		end
-			
-		% ===================================================================
-		%> @brief calculate phase offset
-		%>
-		% ===================================================================
-		function phase = calculatePhase(me)
-			phase = 0;
-			if me.correctPhase > 0
-				ppd = me.ppd;
-				size = (me.sizeOut/2); %divide by 2 to get the 0 point
-				sfTmp = (me.sfOut/me.scale)*me.ppd;
-				md = size / (ppd/sfTmp);
-				md=md-floor(md);
-				phase = (360*md);
-			end
-		end
-		
+
+
 		% ===================================================================
 		%> @brief sfOut Pseudo Get method
 		%>
@@ -427,9 +497,8 @@ classdef colourGratingStimulus < baseStimulus
 				sf = me.sfCache * me.ppd;
 			end
 		end
-		
+
 	end %---END PUBLIC METHODS---%
-	
 	
 	%=======================================================================
 	methods ( Access = protected ) %-------PROTECTED METHODS-----%
@@ -447,121 +516,20 @@ classdef colourGratingStimulus < baseStimulus
 			if me.mouseOverride && me.mouseValid
 					me.dstRect = CenterRectOnPointd(me.dstRect, me.mouseX, me.mouseY);
 			else
-				if isempty(me.findprop('directionOut'))
-					[sx, sy]=pol2cart(me.d2r(me.direction),me.startPosition);
-				else
+				if isprop(me, 'directionOut')
 					[sx, sy]=pol2cart(me.d2r(me.directionOut),me.startPosition);
+				else
+					[sx, sy]=pol2cart(me.d2r(me.direction),me.startPosition);
 				end
 				me.dstRect=CenterRectOnPointd(me.dstRect,me.sM.xCenter,me.sM.yCenter);
-				if isempty(me.findprop('xPositionOut'))
-					me.dstRect=OffsetRect(me.dstRect,(me.xPosition)*me.ppd,(me.yPosition)*me.ppd);
-				else
+				if isprop(me, 'xPositionOut')
 					me.dstRect=OffsetRect(me.dstRect,me.xPositionOut+(sx*me.ppd),me.yPositionOut+(sy*me.ppd));
+				else
+					me.dstRect=OffsetRect(me.dstRect,(me.xPosition)*me.ppd,(me.yPosition)*me.ppd);
 				end
 			end
 			me.mvRect=me.dstRect;
 			me.setAnimationDelta();
-		end
-		
-		% ===================================================================
-		%> @brief sfOut Set method
-		%>
-		% ===================================================================
-		function set_sfOut(me,value)
-			if me.sfRecurse == false
-				me.sfCache = (value/me.ppd);
-				me.sfOut = me.sfCache * me.scale;
-			else
-				me.sfOut = value;
-				me.sfRecurse = false;
-			end
-			%fprintf('\nSET SFOut: %d | cache: %d | in: %d\n', me.sfOut, me.sfCache, value);
-		end
-
-		% ===================================================================
-		%> @brief set_colourOut Set method
-		%>
-		% ===================================================================
-		function set_colourOut(me, value)
-			me.isInSetColour = true; %#ok<*MCSUP>
-			len=length(value);
-			switch len
-				case {4,3}
-					c = [value(1:3) me.alpha]; %force our alpha to override
-				case 1
-					c = [value value value me.alpha]; %construct RGBA
-				otherwise
-					c = [1 1 1 me.alpha]; %return white for everything else
-			end
-			c(c<0)=0; c(c>1)=1;
-			me.colourOut = c;
-			if me.correctBaseColour %#ok<*MCSUP> 
-				if isprop(me, 'colour2Out') 
-					me.baseColour = (me.colourOut(1:3) + me.colour2Out(1:3))/2;
-				else
-					me.baseColour = (me.colourOut(1:3) + me.colour2(1:3))/2;
-				end
-				if isprop(me, 'baseColourOut')
-					if isprop(me, 'colour2Out') 
-						me.baseColourOut = [(me.colourOut(1:3) + me.colour2Out(1:3))/2 me.alpha];
-					else
-						me.baseColourOut = [(me.colour(1:3) + me.colour2(1:3))/2 me.alpha];
-					end
-				end
-			end
-			if me.verbose; fprintf('\nSET colour/colour2/base: %g %g %g / %g %g %g / %g %g %g\n', me.colourOut(1), me.colourOut(2), me.colourOut(3),...
-				me.colour2Out(1), me.colour2Out(2), me.colour2Out(3),...
-				me.baseColourOut(1), me.baseColourOut(2), me.baseColourOut(3)); end
-		end
-
-		% ===================================================================
-		%> @brief set_colour2Out Set method
-		%>
-		% ===================================================================
-		function set_colour2Out(me, value)
-			len=length(value);
-			switch len
-				case {4,3}
-					c = [value(1:3) me.alpha]; %force our alpha to override
-				case 1
-					c = [value value value me.alpha]; %construct RGBA
-				otherwise
-					c = [1 1 1 me.alpha]; %return white for everything else
-			end
-			c(c<0)=0; c(c>1)=1;
-			me.colour2Out = c;
-			if me.correctBaseColour %#ok<*MCSUP> 
-				if isprop(me, 'colourOut') 
-					me.baseColour = (me.colourOut(1:3) + me.colour2Out(1:3))/2;
-				else
-					me.baseColour = (me.colour(1:3) + me.colour2Out(1:3))/2;
-				end
-				if isprop(me, 'baseColourOut')
-					if isprop(me, 'colourOut') 
-						me.baseColourOut = (me.colourOut(1:3) + me.colour2Out(1:3))/2;
-					else
-						me.baseColourOut = (me.colour(1:3) + me.colour2Out(1:3))/2;
-					end
-				end
-			end
-		end
-		
-		% ===================================================================
-		%> @brief tfOut Set method
-		%>
-		% ===================================================================
-		function set_tfOut(me,value)
-			me.tfOut = value;
-			notify(me,'changePhaseIncrement');
-		end
-		
-		% ===================================================================
-		%> @brief reverseDirectionOut Set method
-		%>
-		% ===================================================================
-		function set_reverseDirectionOut(me,value)
-			me.reverseDirectionOut = value;
-			notify(me,'changePhaseIncrement');
 		end
 		
 		% ===================================================================
@@ -592,15 +560,19 @@ classdef colourGratingStimulus < baseStimulus
 				end
 			end
 		end
-		
+
 		% ===================================================================
-		%> @brief sizeOut Set method
-		%> we also need to change scale when sizeOut is changed, used for both
-		%setting sfOut and the dstRect properly
+		%> @brief fixBaseColour POST SET
+		%> 
 		% ===================================================================
-		function set_sizeOut(me,value)
-			me.sizeOut = value*me.ppd;
-			notify(me,'changeScale');
+		function fixBaseColour(me,varargin)
+			if me.correctBaseColour %#ok<*MCSUP> 
+				if isprop(me, 'baseColourOut')
+					me.baseColourOut = (me.getP('colour',[1:3]) + me.getP('colour2',[1:3])) / 2;
+				else
+					me.baseColour = (me.getP('colour',[1:3]) + me.getP('colour2',[1:3])) / 2;
+				end
+			end
 		end
 		
 	end

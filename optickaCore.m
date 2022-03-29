@@ -315,7 +315,7 @@ classdef optickaCore < handle
 		end
 		
 		% ===================================================================
-		function set(me, property, value)
+		function setProp(me, property, value)
 		%> @fn set
 		%> @brief method to fast change a particular value. This is
 		%> useful for use in anonymous functions, like in the state machine.

@@ -9,7 +9,7 @@
 %> using the clockFcn fHandle property or via tick time, where each update()
 %> to the stateMachine is a 'tick'. Tick time is useful when controlled via
 %> an external manager like the Psychophysics toolbox which uses display
-%> refresh as a natural tick timer. 
+%> refresh as a natural tick timer.  
 %>
 %>`````````````````````
 %>╔════════════════════════════════════════════════════════════════════════════════════════════════╗

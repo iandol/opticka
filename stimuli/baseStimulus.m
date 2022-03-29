@@ -126,12 +126,14 @@ classdef baseStimulus < optickaCore & dynamicprops
 		dY_
 		% deal with interaction of colour and alpha
 		isInSetColour logical = false
+		% workaround set method bug for dynamic properties
+		setLoop = 0;
 		%> Which properties to ignore to clone when making transient copies in
 		%> the setup method
 		ignorePropertiesBase char = ['handles|ppd|sM|name|comment|fullName|'...
 			'family|type|dX|dY|delta|verbose|texture|dstRect|xOut|yOut|'...
 			'isVisible|dateStamp|paths|uuid|tick|mouseOverride|isRect|'...
-			'dstRect|mvRect|sM|screenVals|isSetup|'...
+			'dstRect|mvRect|sM|screenVals|isSetup|isGUI|showOnTracker|'...
 			'doDots|doMotion|doDrift|doFlash|doAnimator']
 		%> Which properties to not draw in the UI panel
 		ignorePropertiesUIBase char = ['animator|fullName']
@@ -809,7 +811,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		end
 		
 		% ===================================================================
-		%> @brief checkPaths
+		%> @brief clean any handles
 		%>
 		%> @param
 		%> @return
@@ -823,6 +825,33 @@ classdef baseStimulus < optickaCore & dynamicprops
 			end
 			me.isGUI = false;
 		end
+
+		% ===================================================================
+		%> @brief gets a propery copy or original property
+		%>
+		%> When stimuli are run, their properties are copied, so e.g. angle
+		%> is copied to angleOut and this is used during the task. This
+		%> method checks if the copy is available and returns that, otherwise
+		%> return the original.
+		%>
+		%> @param name of property
+		%> @param range of property to return 
+		%> @return value of property
+		% ===================================================================
+		function value = getP(me, name, range)
+			if isprop(me, name)
+				if isprop(me,[name 'Out'])
+					value = me.([name 'Out']);
+				else
+					value = me.(name);
+				end
+				if exist('range','var'); value = value(range); end
+			else
+				warning('Property doesn''t exist!!!')
+				value = [];
+			end
+		end
+
 		
 	end %---END PUBLIC METHODS---%
 	
@@ -880,11 +909,11 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> these are transient properties that specify actions during runtime
 		% ===================================================================
 		function doProperties(me)
-			if isempty(me.findprop('doFlash'));p=me.addprop('doFlash');p.Transient = true;end
-			if isempty(me.findprop('doDots'));p=me.addprop('doDots');p.Transient = true;end
-			if isempty(me.findprop('doMotion'));p=me.addprop('doMotion');p.Transient = true;end
-			if isempty(me.findprop('doDrift'));p=me.addprop('doDrift');p.Transient = true;end
-			if isempty(me.findprop('doAnimator'));p=me.addprop('doAnimator');p.Transient = true;end
+			if isempty(me.findprop('doFlash'));p=me.addprop('doFlash');end
+			if isempty(me.findprop('doDots'));p=me.addprop('doDots');end
+			if isempty(me.findprop('doMotion'));p=me.addprop('doMotion');end
+			if isempty(me.findprop('doDrift'));p=me.addprop('doDrift');end
+			if isempty(me.findprop('doAnimator'));p=me.addprop('doAnimator');end
 			
 			me.doDots		= false;
 			me.doMotion		= false;
@@ -994,20 +1023,21 @@ classdef baseStimulus < optickaCore & dynamicprops
 		end
 		
 		% ===================================================================
-		%> @brief Finds and removes transient properties
+		%> @brief Finds and removes dynamic properties
 		%>
 		%> @param me
 		%> @return
 		% ===================================================================
 		function removeTmpProperties(me)
-			fn=fieldnames(me);
-			for i=1:length(fn)
-				if isempty(regexp(fn{i},'^xOut$|^yOut$','once')) && ~isempty(regexp(fn{i},'Out$','once'))
-					delete(me.findprop(fn{i}));
+			allprops = properties(me);
+			for i=1:numel(allprops)
+        		m = findprop(me, allprops{i});
+        		if isa(m,'meta.DynamicProperty')
+            		delete(m)
 				end
 			end
 		end
-		
+
 		% ===================================================================
 		%> @brief Delete method
 		%>

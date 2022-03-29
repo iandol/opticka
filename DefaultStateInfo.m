@@ -96,16 +96,21 @@ tS.INCORRECT 				= -5;		%==the code to send eyetracker for incorrect trials
 % These settings define the initial fixation window and set up for the
 % eyetracker. They may be modified during the task (i.e. moving the
 % fixation window towards a target, enabling an exclusion window to stop
-% the subject entering a specific set of display areas etc.)
+% the subject entering a specific set of display areas etc.).
 %
+% IMPORTANT: you need to make sure that the global state time is larger
+% than the fixation timers specified here. Each state has a global timer,
+% so if the state timer is 5 seconds but your fixation timer is 6 seconds,
+% then the state will finish before the fixation time was completed!
+
 % initial fixation X position in degrees (0° is screen centre)
 tS.fixX						= 0;
 % initial fixation Y position in degrees
 tS.fixY						= 0;
 % time to search and enter fixation window
 tS.firstFixInit				= 3;
-% time to maintain fixation within window, can be single value or a range
-% to randomise between
+% time to maintain initial fixation within window, can be single value or a
+% range to randomise between
 tS.firstFixTime				= [0.5 0.9];
 % circular fixation window radius in degrees
 tS.firstFixRadius			= 2;
@@ -114,8 +119,9 @@ tS.strict					= true;
 % do we add an exclusion zone where subject cannot saccade to...
 tS.exclusionZone			= [];
 % time to fix on the stimulus
-tS.stimulusFixTime			= 0.5;
-% historical log of X and Y position, and exclusion zone
+tS.stimulusFixTime			= 1.5;
+% log of recent X and Y position, and exclusion zone, here set ti initial
+% values
 me.lastXPosition			= tS.fixX;
 me.lastYPosition			= tS.fixY;
 me.lastXExclusion			= [];
@@ -275,7 +281,7 @@ prefixEntryFcn = {
 };
 
 prefixFcn = {
-	@()drawBackground(s);
+	@()drawPhotoDiode(s,[0 0 0]);
 };
 
 %--------------------fixate entry
@@ -287,6 +293,8 @@ fixEntryFcn = {
 	@()trackerMessage(eT,'V_RT MESSAGE END_FIX END_RT'); % Eyelink commands
 	@()trackerMessage(eT,sprintf('TRIALID %i',getTaskIndex(me))); %Eyelink start trial marker
 	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
+	% you can add any other messages, such as stimulus values as needed,
+	% e.g. @()trackerMessage(eT,['MSG:ANGLE' num2str(stims{1}.angleOut)])
 	% draw to the eyetracker display
 	@()trackerClearScreen(eT); % blank the eyelink screen
 	@()trackerDrawFixation(eT); %draw fixation window on eyelink computer
@@ -305,21 +313,29 @@ fixFcn = {
 };
 
 %--------------------test we are fixated for a certain length of time
-inFixFcn = { 
+inFixFcn = {
+	% this command performs the logic to search and then maintain fixation
+	% inside the fixation window. The eyetracker parameters are defined above.
+	% If the subject does initiate and then maintain fixation, then 'correct'
+	% is returned and the state machine will jump to the correct state,
+	% otherwise 'breakfix' is returned and the state machine will jump to the
+	% breakfix state. If neither condition matches, then the state table below
+	% defines that after 5 seconds we will switch to the incorrect state.
 	@()testSearchHoldFixation(eT,'stimulus','incorrect')
 };
 
 %--------------------exit fixation phase
 fixExitFcn = { 
 	@()statusMessage(eT,'Show Stimulus...');
-	@()updateFixationValues(eT,[],[],[],tS.stimulusFixTime); %reset a maintained fixation of 1 second
+	% reset fixation timers to maintain fixation for tS.stimulusFixTime seconds
+	@()updateFixationValues(eT,[],[],[],tS.stimulusFixTime); 
 	@()show(stims); % show all stims
 	@()trackerMessage(eT,'END_FIX');
 }; 
 
 %--------------------what to run when we enter the stim presentation state
 stimEntryFcn = {
-	% send an eyeTracker sync message (reset to 0)
+	% send an eyeTracker sync message (reset time to 0)
 	@()syncTime(eT);
 	% send stimulus value strobe
 	@()doStrobe(me,true);
@@ -365,7 +381,7 @@ correctEntryFcn = {
 
 %correct stimulus
 correctFcn = {
-	@()drawBackground(s);
+	@()drawPhotoDiode(s,[0 0 0]);
 };
 
 %when we exit the correct state
@@ -396,7 +412,7 @@ incEntryFcn = {
 
 %--------------------our incorrect/breakfix stimulus
 incFcn = {
-	@()drawBackground(s);
+	@()drawPhotoDiode(s,[0 0 0]);
 };
 
 %--------------------incorrect exit
@@ -475,8 +491,7 @@ overrideFcn = { @()keyOverride(me) }; %a special mode which enters a matlab debu
 flashFcn = { @()flashScreen(s, 0.2) }; % fullscreen flash mode for visual background activity detection
 
 %--------------------show 1deg size grid
-gridFcn = {@()drawGrid(s)};
-
+gridFcn = { @()drawGrid(s) };
 
 %==========================================================================
 %==========================================================================
@@ -487,8 +502,8 @@ stateInfoTmp = {
 'name'		'next'		'time'	'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn';
 'pause'		'prefix'	inf		pauseEntryFcn	{}				{}				pauseExitFcn;
 'prefix'	'fixate'	0.5		prefixEntryFcn	{}				{}				{};
-'fixate'	'incorrect'	5		fixEntryFcn		fixFcn			inFixFcn		fixExitFcn;
-'stimulus'	'incorrect'	5		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn;
+'fixate'	'incorrect'	10		fixEntryFcn		fixFcn			inFixFcn		fixExitFcn;
+'stimulus'	'incorrect'	10		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn;
 'incorrect'	'timeout'	0.5		incEntryFcn		incFcn			{}				incExitFcn;
 'breakfix'	'timeout'	0.5		breakEntryFcn	incFcn			{}				breakExitFcn;
 'correct'	'prefix'	0.5		correctEntryFcn	correctFcn		{}				correctExitFcn;
