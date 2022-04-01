@@ -795,7 +795,7 @@ classdef opticka < optickaCore
 			if isobject(me.r.task) && me.r.task.nVars > 0
 				
 				pos = me.gp(me.ui.OKVarList);
-				
+				if isempty(pos);pos = 1; end
 				me.ui.OKVariableName.Value = me.r.task.nVar(pos).name;
 				
 				v=me.r.task.nVar(pos).values;
@@ -1376,7 +1376,7 @@ classdef opticka < optickaCore
 			me.getTaskVals;
 			me.refreshStimulusList;
 			me.refreshVariableList;
-			me.getScreenVals;
+			me.editVariable;
 			me.refreshProtocolsList;
 			me.ui.propertiesToVariables;
 			
