@@ -183,7 +183,7 @@ classdef seditor < handle
 					end
 				end
 				fprintf('\n');
-				o.modifyStimulus; %flush the opticka UI and do what's needed
+				o.refreshStimulusList; %flush the opticka UI and do what's needed
 			end
 		end
 		

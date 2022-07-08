@@ -73,7 +73,7 @@ classdef screenManager < optickaCore
 		%> multisampling sent to the graphics card, try values 0[disabled], 4, 8
 		%> and 16 -- useful for textures to minimise aliasing, but this does
 		%> provide extra work for the GPU
-		antiAlias(1,1) double				= 0
+		antiAlias(1,1) double 				= 0
 		%> background RGBA of display during stimulus presentation
 		backgroundColour(1,:) double		= [0.5 0.5 0.5 1.0]
 		%> use OpenGL blending mode
@@ -104,7 +104,8 @@ classdef screenManager < optickaCore
 		gammaTable calibrateLuminance
 		%> settings for movie output
 		movieSettings						= []
-		%> useful screen info and initial gamma tables and the like
+		%> populated on window open; useful screen info, initial gamma tables 
+		%> and the like
 		screenVals struct					= struct('ifi',1/60,'fps',60,...
 											'winRect',[0 0 1920 1080])
 		%> verbose output?
@@ -464,7 +465,7 @@ classdef screenManager < optickaCore
 					end
 				end
 				
-				if me.useRetina == true
+				if me.useRetina
 					fprintf('---> screenManager: Retina mode enabled\n');
 					PsychImaging('AddTask', 'General', 'UseRetinaResolution');
 				end
@@ -477,9 +478,14 @@ classdef screenManager < optickaCore
 					end
 				end
 				
+				% deal with windowed or full-screen
 				if isempty(me.windowed); me.windowed = false; end
-				thisScreen = me.screen;
-				if me.windowed == false %fullscreen
+				if ~isempty(forceScreen)
+					thisScreen = forceScreen;
+				else
+					thisScreen = me.screen;
+				end
+				if me.windowed == false %full-screen
 					winSize = [];
 				else %windowed
 					if length(me.windowed) == 2
@@ -490,17 +496,31 @@ classdef screenManager < optickaCore
 						winSize=[0 0 800 800];
 					end
 				end
-				if ~isempty(forceScreen)
-					thisScreen = forceScreen;
-				end
 				
-				[me.win, me.winRect] = PsychImaging('OpenWindow', thisScreen, me.backgroundColour, winSize, [], me.doubleBuffer+1,[],me.antiAlias);
+				% ==============================================================
+				[me.win, me.winRect] = PsychImaging('OpenWindow', thisScreen, ...
+					me.backgroundColour, winSize, [], me.doubleBuffer+1,[], me.antiAlias);
+				% ==============================================================
+				
+				sv.win			= me.win; % make a copy
+				sv.winRect		= me.winRect;
+				sv.useRetina	= me.useRetina;
+				sv				= setScreenSize(me, sv);
+
 				if me.verbose; fprintf('===>>>Made win: %i kind: %i\n',me.win,Screen(me.win,'WindowKind')); end
+				
 				tL.screenLog.postOpenWindow=GetSecs;
 				tL.screenLog.deltaOpenWindow=(tL.screenLog.postOpenWindow-tL.screenLog.preOpenWindow)*1000;
 				
-				me.screenVals = setScreenSize(me, me.screenVals);
-			
+				% check we have GLSL
+				try
+					AssertGLSL;
+				catch
+					close(me);
+					error('GLSL Shading support is required for Opticka!');
+				end
+
+				% get HDR properties
 				if strcmpi(me.bitDepth,'HDR') && isHDR
 					sv.hdrProperties = PsychHDR('GetHDRProperties', me.win);
 					if IsWin; oldDim = PsychHDR('HDRLocalDimming', me.win, 0); end
@@ -508,27 +528,19 @@ classdef screenManager < optickaCore
 					sv.hdrProperties = [];
 				end
 				
-				try
-					AssertGLSL;
-				catch
-					close(me);
-					error('GLSL Shading support is required for Opticka!');
-				end
-				
+				% Linux can give us some more information
 				if IsLinux && ~isHDR
-					d=Screen('ConfigureDisplay','Scanout',me.screen,0);
+					d			= Screen('ConfigureDisplay','Scanout',me.screen,0);
 					sv.name		= d.name;
 					sv.widthMM	= d.displayWidthMM;
 					sv.heightMM = d.displayHeightMM;
 					sv.display	= d;
 				end
 				
-				sv.win			= me.win; %make a copy
-				sv.winRect		= me.winRect; %make a copy
-				
+				% get timing info
 				sv.ifi			= Screen('GetFlipInterval', me.win);
 				sv.fps			= Screen('NominalFramerate', me.win);
-				%find our fps if not defined above
+				% find our fps if not defined above
 				if sv.fps == 0
 					sv.fps=round(1/sv.ifi);
 					if sv.fps == 0 || (sv.fps == 59 && IsWin)
@@ -538,9 +550,9 @@ classdef screenManager < optickaCore
 					sv.fps = 60;
 					sv.ifi = 1 / 60;
 				end
-				if me.windowed == false %fullscreen
-					sv.halfifi = sv.ifi/2;
-                    sv.halfisi = sv.halfifi;
+				
+				if me.windowed == false % full-screen
+					sv.halfifi = sv.ifi/2; sv.halfisi = sv.halfifi;
 				else
 					% windowed presentation doesn't handle the preferred method
 					% of specifying lastvbl+halfifi properly so we set halfifi to 0 which
@@ -548,9 +560,14 @@ classdef screenManager < optickaCore
 					sv.halfifi = 0; sv.halfisi = 0;
 				end
                 
-                me.photoDiodeRect = [me.winRect(3)-45 0 me.winRect(3) 45];
+				%configure photodiode to top right
+				if me.useRetina
+					me.photoDiodeRect = [me.winRect(3)-90 0 me.winRect(3) 90];
+				else
+					me.photoDiodeRect = [me.winRect(3)-45 0 me.winRect(3) 45];
+				end
 				
-				
+				% get gamma table and info
 				[sv.originalGamma, sv.dacBits, sv.lutSize]=Screen('ReadNormalizedGammaTable', me.win);
 				sv.linearGamma  = repmat(linspace(0,1,sv.lutSize)',1,3);
 				sv.gammaTable	= sv.originalGamma;
@@ -602,8 +619,12 @@ classdef screenManager < optickaCore
 					fprintf('---> screenManager: OpenGL blending now: %s | %s\n', me.srcMode, me.dstMode);
 				end
 				
-				
-				Screen('TextSize', me.win, me.font.TextSize);
+				% set up text defaults
+				if me.useRetina
+					Screen('TextSize', me.win, me.font.TextSize*2);
+				else
+					Screen('TextSize', me.win, me.font.TextSize);
+				end
 				Screen('TextColor', me.win, me.font.TextColor);
 				Screen('TextBackgroundColor', me.win, me.font.TextBackgroundColor);
 				if IsLinux || ismac
@@ -620,7 +641,7 @@ classdef screenManager < optickaCore
 				close(me);
 				Priority(0);
 				prepareScreen(me);
-				rethrow(ME)
+				rethrow(ME);
 			end
 			
 		end
@@ -640,6 +661,7 @@ classdef screenManager < optickaCore
 				setup(stim, me);
 				vbl = flip(me);
 				for i = 1:me.screenVals.fps*2
+					drawText(me,'Running a quick demo of screenManager...')
 					draw(stim);
 					finishDrawing(me);
 					animate(stim);
@@ -1719,7 +1741,11 @@ classdef screenManager < optickaCore
 				swin = me.screen;
 			end
 			[sv.screenWidth, sv.screenHeight] = Screen('WindowSize',swin);
-			if ~isempty(me.windowed) && length(me.windowed)==4
+			if me.useRetina 
+				sv.width = sv.screenWidth;
+				sv.height = sv.screenHeight;
+				me.winRect = Screen('Rect',swin);
+			elseif ~isempty(me.windowed) && length(me.windowed)==4
 				sv.width = me.windowed(end-1);
 				sv.height = me.windowed(end);
 				me.winRect = me.windowed;

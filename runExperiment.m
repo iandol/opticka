@@ -3,12 +3,12 @@ classdef runExperiment < optickaCore
 %> @class runExperiment
 %> @brief The main experiment manager.
 %>
-%> RUNEXPERIMENT accepts a task «taskSequence», stimuli «metaStimulus» and
-%> for behavioural tasks a «stateMachine» state machine file, and runs the
+%> RUNEXPERIMENT accepts a task « taskSequence », stimuli « metaStimulus » and
+%> for behavioural tasks a « stateMachine » state machine file, and runs the
 %> stimuli based on the task objects passed. This class uses the fundamental
-%> configuration of the screen (calibration, size etc. via «screenManager»),
+%> configuration of the screen (calibration, size etc. via « screenManager »),
 %> and manages communication to the DAQ systems using digital I/O and
-%> communication over a UDP client<->server socket (via dataConnection).
+%> communication over a UDP client⇄server socket (via « dataConnection »).
 %>
 %> There are 2 main experiment types:
 %>  1) MOC (method of constants) tasks -- uses stimuli and task objects
@@ -19,14 +19,15 @@ classdef runExperiment < optickaCore
 %>     variable lists, but use a state machine to control the task
 %>     structure.
 %>
-%> Stimuli should be «metaStimulus» class, so for example:
+%> Stimuli should be « metaStimulus » class, so for example:
 %>
 %> ```
-%>  gStim = gratingStimulus('mask',1,'sf',1);
-%>  myStim = metaStimulus;
-%>  myStim{1} = gStim;
-%>  myExp = runExperiment('stimuli',myStim);
-%>  runMOC(myExp);
+%> myStim = metaStimulus;
+%> myStim{1} = gratingStimulus('mask',true,'sf',1);
+%> task = taskSequence; % this creates randomised variable lists
+%> task.nVar = struct('name','angle','stimulus',1,'values',[-90 0 90]);
+%> myExp = runExperiment('stimuli', myStim,'task', task);
+%> runMOC(myExp); % run method of constants type experiment
 %> ```
 %>
 %> will run a minimal experiment showing a 1c/d circularly masked grating
@@ -246,7 +247,7 @@ classdef runExperiment < optickaCore
 			initialiseSaveFile(me); %generate a savePrefix for this run
 			me.name = [me.subjectName '-' me.savePrefix]; %give us a run name
 
-			%initialise runLog for this run
+			%------initialise runLog for this run
 			me.previousInfo.runLog = me.runLog;
 			me.taskLog = timeLogger();
 			me.runLog = timeLogger();
@@ -269,18 +270,18 @@ classdef runExperiment < optickaCore
 				setup(me.stimuli); %run setup() for each stimulus
 				if s.movieSettings.record; prepareMovie(s); end
 				
-				%configure IO
+				%------configure IO
 				io = configureIO(me);
 				
 				if me.useDataPixx || me.useDisplayPP
 					startRecording(io);
 					WaitSecs(0.5);
 				elseif me.useLabJackStrobe
-					%Trigger the omniplex (TTL on FIO1) into paused mode
+					% Trigger the omniplex (TTL on FIO1) into paused mode
 					io.setDIO([2,0,0]);WaitSecs(0.001);io.setDIO([0,0,0]);
 				end
 
-				% set up the eyelink interface
+				%------set up the eyelink interface
 				if me.useEyeLink || me.useTobii
 					if me.useTobii
 						warning('Tobii not valid for a MOC task, switching to eyelink dummy mode')
@@ -294,11 +295,12 @@ classdef runExperiment < optickaCore
 					trackerSetup(eT);
 				end
 				
-				me.updateMOCVars(1,1); %set the variables for the very first run;
+				initialise(t); %------initialise the task for this run
+				me.updateMOCVars(1,1); %------set the variables for the very first run;
 				
-				KbReleaseWait; %make sure keyboard keys are all released
+				KbReleaseWait; %------make sure keyboard keys are all released
 				
-				%bump our priority to maximum allowed
+				%------bump our priority to maximum allowed
 				Priority(MaxPriority(s.win));
 				
 				%--------------unpause Plexon-------------------------

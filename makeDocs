@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/usr/bin/env zsh
 # This script builds the documentation
 
 echo; echo "---> Deleting old directories"; echo
@@ -19,7 +19,7 @@ else
 fi
 
 # We scrape the version number from the main opticka file
-VER=$(grep -o -E -e "optickaVersion char\ +=\ +'[0-9\.]+'" opticka.m | grep -o -E -e "[0-9\.]+")
+VER=$(grep -o -E -e "optickaVersion\schar\s+=\s+'[0-9\.]+'" opticka.m | grep -o -E -e "[0-9\.]+")
 echo; echo "---> Opticka version = $VER"; echo
 sleep 1
 # and then auto-edit the Doxygen file
@@ -40,9 +40,9 @@ echo; echo "---> Ran doxygen"
 sleep 1
 mv html/ docs/
 
-pandoc --metadata title="" -s -t html5 help/uihelpstims.md -o help/uihelpstims.html
-pandoc --metadata title="" -s -t html5 help/uihelpvars.md -o help/uihelpvars.html
-pandoc --metadata title="" -s -t html5 help/uihelpstate.md -o help/uihelpstate.html
+pandoc --metadata title="" -s -t html5 -o help/uihelpstims.html help/uihelpstims.md
+pandoc --metadata title="" -s -t html5 -o help/uihelpvars.html help/uihelpvars.md
+pandoc --metadata title="" -s -t html5 -o help/uihelpstate.html help/uihelpstate.md
 
 if [[ "$(uname -s)" = "Darwin" ]]; then 
 	open docs/index.html

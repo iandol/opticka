@@ -196,14 +196,15 @@ showLog(myTask);
 % task background colour so you don't see the black flash on PTB screen
 % initialisation.
 myScreen = screenManager('distance', 57.3,... %display distance from observer
-	'pixelsPerCm', 32,... %calibration value for pixel density, measure using calibrateSize()
+	'pixelsPerCm', 27,... %calibration value for pixel density, measure using calibrateSize()
 	'backgroundColour', [0.5 0.5 0.5],... %initial background colour
 	'blend', true,... %enable OpenGL blending, you can also set blend modes when needed
 	'srcMode', 'GL_SRC_ALPHA',... %src blend mode
 	'dstMode', 'GL_ONE_MINUS_SRC_ALPHA',... %dst blend mode
 	'debug', false,...
-	'windowed', [1000 800],... %set to a widthxheight for debugging i.e. [800 600]; set to empty for fullscreen
-	'bitDepth', 'FloatingPoint32bitIfPossible');
+	'windowed', [],... %set to a widthxheight for debugging i.e. [800 600]; set to empty for fullscreen
+	'bitDepth', '8bit');
+if ismac; myScreen.useRetina = true; end
 
 %% Setup runExperiment Object
 % We now pass our stimulus screen and sequence objects to the

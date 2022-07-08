@@ -114,11 +114,12 @@ showLog(myTask);
 % per cm define the resultant geometry > pixel mappings. You can set
 % several screen parameters, windowing, blending etc.
 myScreen = screenManager('distance', 57.3,... % display distance from observer
-	'pixelsPerCm', 32,... % calibration value for pixel density, measure using calibrateSize()
-	'windowed', [1000 700],... % use fullscreen [] or window [X Y]?
+	'pixelsPerCm', 27,... % calibration value for pixel density, measure using calibrateSize()
+	'windowed', [],... % use fullscreen [] or window [X Y]?
 	'backgroundColour', [0.5 0.5 0.5],... % initial background colour
 	'blend', true,... % enable OpenGL blending, you can also set blend modes when needed
 	'bitDepth', '8bit'); % FloatingPoint32bit, 8bit, FloatingPoint16bit etc.
+if ismac; myScreen.useRetina = true; end
 
 %% Setup runExperiment Object
 % We now pass our stimulus, screen and task objects to the runExperiment

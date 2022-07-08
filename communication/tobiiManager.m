@@ -22,6 +22,7 @@
 %> must initiate a saccade away from a position (which stops a subject cheating).
 %>
 %> @todo refactor this and eyelinkManager to inherit from a common eyelinkManager
+%> @todo handle new eye-openness signals in new SDK https://developer.tobiipro.com/commonconcepts/eyeopenness.html
 %>
 %> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
@@ -205,7 +206,7 @@ classdef tobiiManager < optickaCore
 		%>
 		% ===================================================================
 		function me = tobiiManager(varargin)
-			args = optickaCore.addDefaults(varargin,struct('name','tobii manager'));
+			args = optickaCore.addDefaults(varargin,struct('name','Tobii manager'));
 			me=me@optickaCore(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
 			

@@ -10,10 +10,7 @@
 %> taskSequence, stateMachine etc.)
 %>
 %> @todo expose maskStimulus settings in the optickaGUI
-%> @todo improve the variable list editor: live updating
-%> @todo add trialVar and blockVar from taskSequene to the GUI
-%> @todo make a html-based help button for different parts of the GUI
-%> @todo more flexible specification for arduino settings
+%> @todo more flexible tweaking of arduino settings
 %>
 %> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ======================================================================
@@ -71,14 +68,14 @@ classdef opticka < optickaCore
 	%=======================================================================
 	
 		% ===================================================================
+		function me = opticka(varargin)
+		%> @fn opticka
 		%> @brief Class constructor
 		%>
 		%> @param varargin are passed as a structure of properties which is
 		%> parsed.
 		%> @return instance of opticka class.
-		% ===================================================================
-		function me = opticka(varargin)
-			
+		% ===================================================================	
 			args = optickaCore.addDefaults(varargin,struct('name','opticka'));
 			me=me@optickaCore(args); %superclass constructor
 			me.parseArgs(args,me.allowedProperties);
@@ -92,12 +89,13 @@ classdef opticka < optickaCore
 		end
 		
 		% ===================================================================
+		function router(me,in,vars)
+		%> @fn router
 		%> @brief Route to private methods
 		%>
 		%> @param in switch to route to correct method.
 		%> @param vars additional vars to pass.
 		% ===================================================================
-		function router(me,in,vars)
 			% router(me,in,vars)
 			if ~exist('vars','var')
 				vars=[];
@@ -117,22 +115,21 @@ classdef opticka < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief Check if we are remote by checking existance of UI
-		%>
-		%> @param me self object
-		% ===================================================================
 		function amIRemote(me)
+		%> @fn amIRemote
+		%> @brief Check if we are remote by checking existance of UI
+		% ===================================================================
 			if ~ishandle(me.ui.output)
 				me.remote = true;
 			end
 		end
 
 		% ===================================================================
-		%> @brief connectToOmniplex
-		%> Gets the settings from the UI and connects to omniplex
-		%> @param 
-		% ===================================================================
 		function connectToOmniplex(me)
+		%> @fn connectToOmniplex
+		%>
+		%> Gets the settings from the UI and connects to omniplex
+		% ===================================================================
 			rPort = me.gn(me.ui.OKOmniplexPort);
 			rAddress = me.gs(me.ui.OKOmniplexIP);
 			status = me.ping(rAddress);
@@ -180,11 +177,13 @@ classdef opticka < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief sendOmniplexStimulus
-		%> Gets the settings from the UI and connects to omniplex
-		%> @param 
-		% ===================================================================
 		function sendOmniplexStimulus(me,sendLog)
+		%> @fn sendOmniplexStimulus
+		%>
+		%> Gets the settings from the UI and connects to omniplex.
+		%>
+		%> @param sendLog send the run log [default = false] 
+		% ===================================================================
 			if ~exist('sendLog','var')
 				sendLog = false;
 			end
@@ -230,11 +229,11 @@ classdef opticka < optickaCore
 	%========================================================
 		
 		% ===================================================================
-		%> @brief Start the UI
-		%>
-		%> @param 
-		% ===================================================================
 		function initialiseUI(me)
+		%> @fn initialiseUI
+		%>
+		%> @brief Start the UI
+		% ===================================================================
 			try
 				me.ss = SplashScreen(['Opticka V' me.optickaVersion],'opticka.png');
 				if isdeployed
@@ -346,12 +345,12 @@ classdef opticka < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief getScreenVals
-		%> Gets the settings from the UI and updates our runExperiment object
-		%> @param 
-		% ===================================================================
 		function getScreenVals(me)
-			
+		%> @fn getScreenVals
+		%>
+		%> Gets the settings from the UI and updates our runExperiment
+		%> object.
+		% ===================================================================	
 			if isempty(me.r)
 				if ~isdeployed || ~ismcc
 					olds = me.ui.OKOptickaVersion.Text;
@@ -476,11 +475,13 @@ classdef opticka < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief getTaskVals
-		%> Gets the settings from the UI and updates our task object
+		function getTaskVals(me, randomise)
+		%> @fn getTaskVals
+		%>
+		%> Gets the settings from the UI and updates our task object.
+		%>
 		%> @param randomise do we run randomiseTask()? [default=FALSE]
 		% ===================================================================
-		function getTaskVals(me, randomise)
 			if ~exist('randomise','var'); randomise = true; end
 			if isempty(me.r.task)
 				me.r.task = taskSequence;
@@ -516,11 +517,11 @@ classdef opticka < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief getStateInfo Load the training state info file into the UI
-		%> 
-		%> @param 
-		% ===================================================================
 		function getStateInfo(me)
+		%> @fn getStateInfo 
+		%>
+		%> Load the training state info file into the UI.
+		% ===================================================================
 			if ~isempty(me.r.paths.stateInfoFile) && ischar(me.r.paths.stateInfoFile)
 				if ~exist(me.r.paths.stateInfoFile,'file')
 					if ~isempty(regexpi(me.r.paths.stateInfoFile,'^\w:\\')) %is it a windows path?
@@ -552,11 +553,11 @@ classdef opticka < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief clearStimulusList
+		function clearStimulusList(me)
+		%> @fn clearStimulusList
 		%> Erase any stimuli in the list.
 		%> @param 
 		% ===================================================================
-		function clearStimulusList(me)
 			if ~isempty(me.r)
 				if isempty(me.r.stimuli)
 					me.r.stimuli = metaStimulus();
@@ -579,11 +580,11 @@ classdef opticka < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief getScreenVals
+		function clearVariableList(me)
+		%> @fn getScreenVals
 		%> Gets the settings from th UI and updates our runExperiment object
 		%> @param 
 		% ===================================================================
-		function clearVariableList(me)
 			if ~isempty(me.r)
 				if ~isempty(me.r.task) && me.r.task.nVars > 0
 					me.r.task = taskSequence();
@@ -593,11 +594,11 @@ classdef opticka < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief addStimulus
+		function addStimulus(me)
+		%> @fn addStimulus
 		%> Run when we've added a new stimulus
 		%> @param 
 		% ===================================================================
-		function addStimulus(me)
 			me.refreshStimulusList;
 			nidx = me.r.stimuli.n;
 			me.ui.OKStimList.Value = me.ui.OKStimList.Items{end};
@@ -621,11 +622,11 @@ classdef opticka < optickaCore
 		end
 
 		% ===================================================================
-		%> @brief deleteStimulus
+		function deleteStimulus(me)
+		%> @fn deleteStimulus
 		%> 
 		%> @param 
 		% ===================================================================
-		function deleteStimulus(me)
 			if ~isempty(me.r.stimuli.n) && me.r.stimuli.n > 0
 				v=me.gp(me.ui.OKStimList);
 				if isfield(me.store,'visibleStimulus')
@@ -652,21 +653,22 @@ classdef opticka < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief readPanel
+		function readPanel(me, src, varargin)
+		%> @fn readPanel
 		%> 
-		%> @param 
+		%> @param src source object
+		%> @param varargin
 		% ===================================================================
-		function readPanel(me,src,varargin)
-			me.salutation('readPanel',['Triggered by: ' src.fullName],true);
+			me.salutation('readPanel', ['Triggered by: ' src.fullName], true);
 			me.refreshStimulusList;
 		end
 		 
 		% ===================================================================
-		%> @brief editStimulus
-		%> Gets the settings from the UI and updates our runExperiment object
-		%> @param 
-		% ===================================================================
 		function editStimulus(me)
+		%> @fn editStimulus
+		%> Gets the settings from the UI and updates our runExperiment
+		%> object.
+		% ===================================================================
 			if me.r.stimuli.n > 0
 				skip = false;
 				if ~isfield(me.store, 'visibleStimulus') || ~isa(me.store.visibleStimulus, 'baseStimulus')
@@ -699,11 +701,11 @@ classdef opticka < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief modifyStimulus
-		%> Gets the settings from th UI and updates our runExperiment object
+		function modifyStimulus(me)
+		%> @fn modifyStimulus
+		%> Gets the settings from the UI and updates our runExperiment object
 		%> @param 
 		% ===================================================================
-		function modifyStimulus(me)
 			me.refreshStimulusList;
 		end
 		

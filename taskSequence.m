@@ -414,10 +414,11 @@ classdef taskSequence < optickaCore & dynamicprops
 		%> @fn initialise
 		%> @brief Initialise the variables and task together
 		%>
+		%> @param randomise [default=false] do we force randomiseTask to be run
 		% ===================================================================
 			if ~exist('randomise','var'); randomise = false; end
 			resetTask(me);
-			if randomise; randomiseTask(me); end
+			if randomise || isempty(me.outIndex); randomiseTask(me); end
 			t = me.tProp;
 			for i = 1:2:length(t)
 				if isempty(me.findprop(t{i}))

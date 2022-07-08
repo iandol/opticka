@@ -1086,7 +1086,7 @@ if isappdata(handles.output,'o')
 		if o.r.stimuli.n > 0
 			set(handles.OKAddStimulus,'Enable','on');
 			set(handles.OKDeleteStimulus,'Enable','on');
-			set(handles.OKModifyStimulus,'Enable','on');
+			set(handles.OKrefreshStimulusList,'Enable','on');
 			set(handles.OKCopyStimulus,'Enable','on');
 			set(handles.OKStimulusUp,'Enable','on');
 			set(handles.OKStimulusDown,'Enable','on');
@@ -1110,7 +1110,7 @@ if isappdata(handles.output,'o')
 	if o.r.stimuli.n == 0
 		set(handles.OKAddStimulus,'Enable','off');
 		set(handles.OKDeleteStimulus,'Enable','off');
-		set(handles.OKModifyStimulus,'Enable','off');
+		set(handles.OKrefreshStimulusList,'Enable','off');
 		set(handles.OKCopyStimulus,'Enable','off');
 		set(handles.OKStimulusUp,'Enable','off');
 		set(handles.OKStimulusDown,'Enable','off');
@@ -1155,7 +1155,7 @@ if isappdata(handles.output,'o')
 		idx2(value+1) = idx2(value+1)-1;
 		o.r.stimuli(idx) = o.r.stimuli(idx2);
 		set(handles.OKStimList,'Value',value+1);
-		o.modifyStimulus;
+		o.refreshStimulusList;
 	end
 end
 
@@ -1172,7 +1172,7 @@ if isappdata(handles.output,'o')
 		idx2(value-1) = idx2(value-1)+1;
 		o.r.stimuli(idx) = o.r.stimuli(idx2);
 		set(handles.OKStimList,'Value',value-1);
-		o.modifyStimulus;
+		o.refreshStimulusList;
 	end
 end
 
@@ -1302,8 +1302,8 @@ if isappdata(handles.output,'o')
 end
 
 
-% --- Executes on button press in OKModifyStimulus.
-function OKModifyStimulus_Callback(hObject, eventdata, handles)
+% --- Executes on button press in OKrefreshStimulusList.
+function OKrefreshStimulusList_Callback(hObject, eventdata, handles)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
 	v = get(handles.OKStimList,'Value');
@@ -4072,10 +4072,10 @@ h152 = uicontrol(...
 'Units','normalized',...
 'String','Modify / Examine',...
 'Position',[0.61 0.026 0.37 0.113],...
-'Callback',@(hObject,eventdata)opticka_ui('OKModifyStimulus_Callback',hObject,eventdata,guidata(hObject)),...
+'Callback',@(hObject,eventdata)opticka_ui('OKrefreshStimulusList_Callback',hObject,eventdata,guidata(hObject)),...
 'Children',[],...
 'Enable','off',...
-'Tag','OKModifyStimulus',...
+'Tag','OKrefreshStimulusList',...
 'FontSize',msize,...
 'FontName',nfont);
 
