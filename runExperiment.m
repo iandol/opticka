@@ -689,33 +689,37 @@ classdef runExperiment < optickaCore
 				end
 
 				%------------------------------------------------------------
-				% lets draw 1 seconds worth of the stimuli we will be using
-				% covered by a blank. Primes the GPU and other components with the sorts
-				% of stimuli/tasks used...
+				% lets draw ~1 seconds worth of the stimuli we will be using
+				% covered by a blank. This primes the GPU, eyetracker, IO
+				% and other components with the same stimuli/task code used later...
 				fprintf('\n===>>> Warming up the GPU, Eyetracker and I/O systems... <<<===\n')
-				show(stims);
-				if me.useEyeLink; trackerClearScreen(eT); end
+				show(stims); % allows all child stimuli to be drawn
+				if me.useEyeLink; trackerClearScreen(eT); end % blank eyelink screen
 				for i = 1:s.screenVals.fps*1
-					draw(stims);
-					drawBackground(s);
-					s.drawPhotoDiodeSquare([1 1 1 1]);
-					Screen('DrawText',s.win,'Warming up the GPU, Eyetracker and I/O systems...',5,5);
+					draw(stims); % draw all child stimuli
+					drawBackground(s); % draw our blank background
+					drawPhotoDiodeSquare(s, [1 1 1 1]); % set our photodiode square white
+					drawText(s,'Warming up the GPU, Eyetracker and I/O systems...');
 					finishDrawing(s);
-					animate(stims);
-					if ~mod(i,10); io.sendStrobe(255); end
+					animate(stims); % run our stimulus animation routines to the next frame
+					if ~mod(i,10); io.sendStrobe(255); end % send a strobed word
 					if me.useEyeLink || me.useTobii
-						getSample(eT); 
-						if i == 1; trackerDrawText(eT,'Warming Up System'); end
-						if i == 1; trackerMessage(eT,'Warmup test'); end
+						getSample(eT); % get an eyetracker sample
+						if i == 1
+							trackerDrawText(eT,'Warming Up System'); 
+							trackerMessage(eT,'Warmup test');
+						end
 					end
 					flip(s);
 				end
-				update(stims); %make sure stimuli are set back to their start state
-				io.resetStrobe;flip(s);flip(s);
+				update(stims); %make sure all stimuli are set back to their start state
+				io.resetStrobe;flip(s);flip(s); % reset the strobe system
 				
-				%-----Premptive save in case of crash or error: SAVE IN /TMP
+				%-----Premptive save in case of crash or error: SAVES IN /TMP
 				rE = me;
-				save([tempdir filesep me.name '.mat'],'rE','tS');
+				tmpFile = [tempdir filesep me.name '.mat'];
+				fprintf('===>>> Save initial state: %s\n',tmpFile);
+				save(tmpFile,'rE','tS');
 
 				%-----ensure we open the reward manager
 				if me.useArduino && isa(rM,'arduinoManager') && ~rM.isOpen
@@ -726,7 +730,9 @@ classdef runExperiment < optickaCore
 					open(rM);
 				end
 				
-				%-----Start Plexon in paused mode
+				%-----Start Plexon in paused mode (the plexon can be
+				% controlled using specific trigger values, see the omniplex
+				% settings for details).
 				if tS.controlPlexon && (me.useDisplayPP || me.useDataPixx)
 					fprintf('\n===>>> Triggering I/O systems... <<<===\n')
 					pauseRecording(io); %make sure this is set low first
@@ -760,27 +766,26 @@ classdef runExperiment < optickaCore
 				tS.initialTaskIdx.vars		= task.outValues;
 				
 				%-----double check the labJackT handle is still valid
-				% (sometimes it disconnects)
 				if isa(io','labJackT') && ~io.isHandleValid
 					io.close;
 					io.open;
-					warning('We had to reopen the labJackT to ensure the connection is stable...')
+					warning('We had to reopen the labJackT to ensure a stable connection...')
 				end
 				
-				%-----take over the keyboard!
+				%-----take over the keyboard + bump priority
 				KbReleaseWait; %make sure keyboard keys are all released
 				if ~isdeployed; commandwindow; end
 				if me.debug == false
 					%warning('off'); %#ok<*WNOFF>
 					ListenChar(-1); %2=capture all keystrokes
 				end
-				drawnow;WaitSecs(0.25);
+				drawnow; WaitSecs(0.25);
 				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
 				
-				%-----profiling starts here
+				%-----profiling starts here if uncommented
 				%profile clear; profile on;
 				
-				%-----initialise our vbl's
+				%-----initialise our log times and vbl's
 				me.needSample				= false;
 				me.stopTask					= false;
 				tL.screenLog.beforeDisplay	= GetSecs;
@@ -789,12 +794,12 @@ classdef runExperiment < optickaCore
 				tL.vbl(1)					= Screen('Flip', s.win);
 				tL.startTime				= tL.vbl(1);
 				
-				%-----ignite the stateMachine!
+				%-----IGNITE the stateMachine!
 				start(sM); 
 
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-				% Our display loop
+				% Display + task loop
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				while me.stopTask == false
@@ -804,28 +809,36 @@ classdef runExperiment < optickaCore
 					if me.doFlip && s.visualDebug; s.drawGrid; me.infoTextScreen; end
 					if me.doFlip; s.finishDrawing(); end % potential optimisation, but note stateMachine may run non-drawing tasks in update()
 					
-					%------check eye position manually. REMEMBER eyelink will save the real eye data in
-					% the EDF this is just a backup wrapped in the PTB loop. 
+					%------check eye position manually. Also potentially log
+					% this retrieved value, but REMEMBER eyelink will save
+					% the properly sampled eye data in the EDF; this is just
+					% a backup sampled at the GPU FPS wrapped in the PTB
+					% loop.
 					if me.needSample; getSample(eT); end
 					if tS.recordEyePosition && me.useEyeLink
 						saveEyeInfo(me, sM, eT, tS);
 					end
 					
-					%------Check keyboard for commands
+					%------Check keyboard for commands (remember we can turn
+					% this off using either tS.keyExclusionPattern [per-state
+					% toggle] or tS.checkKeysDuringStimulus).
 					if tS.checkKeysDuringStimulus || ~contains(sM.currentName,tS.keyExclusionPattern)
 						tS = checkKeys(me,tS);
 					end
 					
 					%----- FLIP: Show it at correct retrace: -----%
 					if me.doFlip
-						%------Display++ or DataPixx: I/O send strobe for this screen flip
-						%------needs to be sent prior to the flip
+						%------Display++ or DataPixx: I/O send strobe
+						% command for this screen flip needs to be sent
+						% PRIOR to the flip! Also remember DPP will be
+						% delayed by one flip
 						if me.sendStrobe && me.useDisplayPP
 							sendStrobe(io); me.sendStrobe = false;
 						elseif me.sendStrobe && me.useDataPixx
 							triggerStrobe(io); me.sendStrobe = false;
 						end
-						%------Do the actual Screen flip
+						%------Do the actual Screen flip, save times if
+						% enabled.
 						nextvbl = tL.vbl(end) + me.screenVals.halfisi;
 						if me.logFrames == true
 							[tL.vbl(tS.totalTicks),tL.show(tS.totalTicks),tL.flip(tS.totalTicks),tL.miss(tS.totalTicks)] = Screen('Flip', s.win, nextvbl);
@@ -834,11 +847,14 @@ classdef runExperiment < optickaCore
 						else
 							tL.vbl = Screen('Flip', s.win, nextvbl);
 						end
-						%-----LabJack: I/O needs to send strobe immediately after this screen flip
+
+						%-----LabJack: I/O needs to send strobe immediately
+						% after screen flip
 						if me.sendStrobe && me.useLabJackTStrobe
 							sendStrobe(io); me.sendStrobe = false;
 							%Eyelink('Message', sprintf('MSG:SYNCSTROBE value:%i @ vbl:%20.40g / totalTicks: %i', io.sendValue, tL.vbl(end), tS.totalTicks));
 						end
+
 						%----- Send Eyetracker messages
 						if me.sendSyncTime % sends SYNCTIME message to eyetracker
 							syncTime(eT);
@@ -846,9 +862,11 @@ classdef runExperiment < optickaCore
 						end
 						%------Log stim / no stim condition
 						if me.logFrames; logStim(tL,sM.currentName,tS.totalTicks); end
+						
 						%----- increment our global tick counter
 						tS.totalTicks = tS.totalTicks + 1; tL.tick = tS.totalTicks;
-					else
+					else % me.doFlip == FALSE
+						% still wait for IFI time
 						WaitSecs('YieldSecs', s.screenVals.ifi);
 					end
 					
@@ -887,11 +905,11 @@ classdef runExperiment < optickaCore
 				end
 				
 				close(s); %screen
-				close(io);
+				close(io); % I/O system
 				close(eT); % eyetracker, should save the data for us we've already given it our name and folder
 				WaitSecs(0.25);
-				close(aM);
-				close(rM);
+				close(aM); % audio manager
+				close(rM); % reward manager
 				
 				fprintf('\n\n======>>> Total ticks: %g | stateMachine ticks: %g\n', tS.totalTicks, sM.totalTicks);
 				fprintf('======>>> Tracker Time: %g | PTB time: %g | Drift Offset: %g\n', ...
@@ -918,7 +936,7 @@ classdef runExperiment < optickaCore
 					end
 				end
 				
-				me.tS = tS; %copy our tS structure for backup
+				me.tS = tS; %store our tS structure for backup
 				
 				%------SAVE the DATA
 				if tS.saveData
@@ -926,7 +944,7 @@ classdef runExperiment < optickaCore
 					rE = me;
 					save(sname,'rE','tS');
 					fprintf('\n\n===>>> SAVED DATA to: %s\n\n',sname)
-					assignin('base', 'tS', tS);
+					assignin('base', 'tS', tS); % assign tS in base for manual checking
 				end
 
 				%------disable diary logging 
