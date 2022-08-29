@@ -1,59 +1,61 @@
 %% Demo of a state-machine-driven Opticka Behavioural Experiment. 
 % Opticka is an object-oriented framework for the Psychophysics toolbox
 % (PTB), allowing randomised interleaved presentation of parameter varying
-% stimuli specified in experimenter-relevant values. It is designed to work
-% on Linux (PTB's preferred OS), macOS & Windows, and can interface via
-% strobed words (using a cheap and very reliable LabJack), or TTLs via
-% Arduino, and ethernet with external harware for recording
+% stimuli specified in experimenter-relevant values. It operates under
+% Linux (PTB's preferred OS), macOS & Windows, and can interface via
+% strobed words (using  Display++, VPixx or a cheap and very reliable
+% LabJack), or TTLs via low-cost Arduino. It uses ethernet to connect with
+% Tobii or Eyelink eyetrackers and with with external harware for recording
 % neurophysiological data.
 %
-% In this demo, Stimulus objects (myStims object), task sequence variables
-% (myTask object), and screenManager (myScreen object) are passed to the
-% runExperiment class. runExperiment uses a stateMachine class object which
-% loads the DefaultStateInfo.m specification to run the following
-% state-based experiment:
+% In this demo, two stimulus objects (wrapped in a myStims manager object),
+% task sequence variables (myTask object), and a screenManager (myScreen
+% object) are passed to the runExperiment class. runExperiment uses the
+% stateMachine class object which loads the experiment specification  (for
+% this demo it uses the DefaultStateInfo.m)
+% specification to run the following state-based experiment:
+%  
+%     ┌───────────────────────────────────────┐
+%     │                                       ▼
+%     │                                     ┌───────────────────────────┐
+%  ┌──┼───────────────────────────────────▶ │          (1) prefix       │ ◀┐
+%  │  │                                     └───────────────────────────┘  │
+%  │  │                                       │                            │
+%  │  │                                       ▼                            │
+%  │┌───────────┐ Transition                ┌───────────────────────────┐  │
+%  ││ incorrect │ inFixFcn=>incorrect       │          fixate           │  │
+%  ││           │◀───────────────────────── │ show(stims, 2)            │  │
+%  │└───────────┘                           └───────────────────────────┘  │
+%  │                                          │                            │
+%  │                                          │ Transition                 │
+%  └──┐                                       │ inFixFcn=>stimulus         │
+%     │                                       ▼                            │
+%   ┌───────────┐ Transition                ┌───────────────────────────┐  │
+%   │  CORRECT  │ maintainFixFcn=>correct   │         stimulus          │  │
+%   │           │◀───────────────────────── │ show(stims, [1 2])        │  │
+%   └───────────┘                           └───────────────────────────┘  │
+%                                             │                            │
+%                                             │ Transition                 │
+%                                             │ maintainFixFcn=>breakfix   │
+%                                             ▼                            │
+%                                           ┌───────────────────────────┐  │
+%                                           │         BREAKFIX          │ ─┘
+%                                           └───────────────────────────┘
+%  
+% For this demo a dummy eyetracker object (where the mouse input
+% transparently replaces the eye movements), is used to demonstrate
+% behavioural control of the paradigm.
 % 
-%    ┌───────────────────────────────────────┐
-%    │                                       ▼
-%    │                                     ┌───────────────────────────┐
-% ┌──┼───────────────────────────────────▶ │          (1) prefix       │ ◀┐
-% │  │                                     └───────────────────────────┘  │
-% │  │                                       │                            │
-% │  │                                       ▼                            │
-% │┌───────────┐ Transition                ┌───────────────────────────┐  │
-% ││ incorrect │ inFixFcn=>incorrect       │          fixate           │  │
-% ││           │◀───────────────────────── │ show(stims, 2)            │  │
-% │└───────────┘                           └───────────────────────────┘  │
-% │                                          │                            │
-% │                                          │ Transition                 │
-% └──┐                                       │ inFixFcn=>stimulus         │
-%    │                                       ▼                            │
-%  ┌───────────┐ Transition                ┌───────────────────────────┐  │
-%  │  CORRECT  │ maintainFixFcn=>correct   │         stimulus          │  │
-%  │           │◀───────────────────────── │ show(stims, [1 2])        │  │
-%  └───────────┘                           └───────────────────────────┘  │
-%                                            │                            │
-%                                            │ Transition                 │
-%                                            │ maintainFixFcn=>breakfix   │
-%                                            ▼                            │
-%                                          ┌───────────────────────────┐  │
-%                                          │         BREAKFIX          │ ─┘
-%                                          └───────────────────────────┘
-% 
-% 
-% A dummy eyetracker object (where the mouse input transparently replaces
-% the eye movements), is used to allow behavioural control of the paradigm.
-% 
-% Opticka also has a UI (type `opticka` in the command window), which is a
-% visual manager of the objects introduced here. The UI also controls other
-% functions such as screen calibration, protocol loading/saving and
-% managing communication with neurophysiological equipment via LabJack,
-% Arduino and ethernet.
+% Opticka also offers an optional GUI (type `opticka` in the command window),
+% which is a visual manager of the objects introduced here. The UI also
+% controls other functions such as screen calibration, protocol
+% loading/saving and managing communication with neurophysiological
+% equipment via LabJack, Arduino and ethernet.
 %
-% The source of this file can be found at:
+% *The source of this file can be found at* :
 % <https://github.com/iandol/opticka/blob/master/optickaBehaviourTest.m>
 
-%% Initial clear up of previous runs
+%% Initial clear up of any previous objects
 % Make sure we start in a clean environment, not essential
 clear myStims myTask myExp myScreen
 sca %PTB screen clear all
@@ -88,7 +90,6 @@ myStims{2}		= fixationCrossStimulus('size', 0.8);
 % the state info file can use taskSequence to deterimine the next stimulus
 % value. There are functions to handle what happens if the subject responds
 % incorrectly, where we can re-randomise the next value within the block.
-
 myTask					= taskSequence(); %new taskSequence object instance
 
 %%
@@ -119,6 +120,7 @@ myScreen = screenManager('distance', 57.3,... % display distance from observer
 	'backgroundColour', [0.5 0.5 0.5],... % initial background colour
 	'blend', true,... % enable OpenGL blending, you can also set blend modes when needed
 	'bitDepth', '8bit'); % FloatingPoint32bit, 8bit, FloatingPoint16bit etc.
+% use retina mode for macOS
 if ismac; myScreen.useRetina = true; end
 
 %% Setup runExperiment Object
@@ -141,30 +143,28 @@ if ismac; myScreen.useRetina = true; end
 myExp = runExperiment('stimuli', myStims,... %stimulus objects
 	'screen', myScreen,... %screen manager object
 	'task', myTask,... % task randomised stimulus sequence
-	'stateInfoFile', 'DefaultStateInfo.m', ... % state info file
+	'stateInfoFile', 'DefaultStateInfo.m', ... % default state info file
 	'debug', true,... % enable debug mode for testing
-	'verbose', false, ... % disable verbose output in the command window
-	'useEyeLink', true, ... %use the eyelink manager
+	'useEyeLink', true, ... % use the eyelink manager
 	'dummyMode', true, ... % use dummy mode so the mouse replaces eye movements for testing
-	'comment', 'This is a test behavioural run', ... % comment
-	'subjectName', 'Simulcra', ... % subject name
+	'subjectName', 'Simulcra', ...
 	'researcherName', 'Joanna Doe');
 
-%% Run the behavioural task
-%
+%% Run the full behavioural task
+% 
 runTask(myExp);
 
 %% Plot a timing log of every frame against the stimulus on/off times
 % PTB has the most reliable and precise timing control of any experimental
-% control system, and we log every flip time alongside the stimulus
+% control system, and we therefore log every flip time alongside the stimulus
 % transitions. The timing log shows every recorded frame in relation to the
 % stimulus transitions.
 showTimingLog(myExp);
 
 %% Plot a timing log of all states and their function evaluation transition times
-% The state machine records the timestamps when states are entered and
+% The state machine also records the timestamps when states are entered and
 % exited. In addition, it times how long each cell array of functions take
 % to run on enter/within/exit, to check for any potential timing problems
 % (you do not want enter/within states to take too long in case it causes
-% frame drops.
+% frame drops, this can be seen via these plots).
 showLog(myExp.stateMachine);

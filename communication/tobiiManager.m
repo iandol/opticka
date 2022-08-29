@@ -62,8 +62,8 @@ classdef tobiiManager < optickaCore
 		%> Spectrum Pro: [60, 120, 150, 300, 600 or 1200]
 		%> 4C: 90
 		sampleRate double {mustBeMember(sampleRate,[60 90 120 150 300 600 1200])} = 300
-		%> use human, macaque, Default or other tracking mode
-		trackingMode char {mustBeMember(trackingMode,{'human','macaque','Default', ...
+		%> use human, monkey, great_ape, Default or other tracking mode
+		trackingMode char {mustBeMember(trackingMode,{'human','monkey', 'great_ape', 'Default', ...
 			'Infant', 'Bright light'})} = 'human'
 		%> options for online smoothing of peeked data {'median','heuristic','savitsky-golay'}
 		smoothing struct				= struct('nSamples',8,'method','median','window',3,...
@@ -1672,7 +1672,7 @@ classdef tobiiManager < optickaCore
 					me.trackingMode = 'Default';
 				otherwise
 					me.sampleRate = 300; 
-					me.trackingMode = 'macaque';
+					me.trackingMode = 'human';
 			end
 		end
 		
