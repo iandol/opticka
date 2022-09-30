@@ -485,7 +485,7 @@ classdef arduinoIOPort < handle
 		end % roundtrip
 		
 		%===================================================
-		function val=checkSketch(a)
+		function val = checkSketch(a)
 			% checkSketch(a); checks what type of sketch is running on the
 			% arduino. 0 is the standard adio sketch.
 			if a.isDemo; return; end
@@ -501,7 +501,7 @@ classdef arduinoIOPort < handle
 		end
 		
 		%===================================================
-		function val=rawCommand(a,str)
+		function val = rawCommand(a,str)
 			% rawCommand(a); send a raw command (e.g.'2c1')
 			if a.isDemo; return; end
 			val = [];

@@ -13,23 +13,24 @@ classdef arduinoManager < optickaCore
 	% arduino interface by Mathworks), which provide much better performance
 	% than MATLAB's hardware package.
 	properties
-		%> arduino port, if left empty it will make a guess
+		%> arduino port, if left empty it will make a guess during open
 		port char				= ''
 		%> board type; uno [default] is a generic arduino, xiao is the seeduino xiao
 		board char {mustBeMember(board,{'Uno','Xiao'})}	= 'Uno' 
-		%> run with no arduino attached
+		%> run with no arduino attached, useful for debugging
 		silentMode logical		= false
+		%> output logging info
 		verbose					= false
+		%> open a GUI to drive a reward directly
 		openGUI logical			= true
-		%> default uses adio sketch, otherwise uses the slower arduino hardware package
-		mode char				= 'default'
 		%> which pin to trigger the reward TTL?
 		rewardPin double		= 2
 		%> time of the TTL sent?
 		rewardTime double		= 300
 		%> specify the available pins to use; 2-13 is the default for an Uno
+		%> 0-10 for the xiao
 		availablePins cell		= {2,3,4,5,6,7,8,9,10,11,12,13}
-		%> the arduino device object
+		%> the arduino device object,
 		device					= []
 	end
 	properties (SetAccess = private, GetAccess = public)
@@ -37,6 +38,7 @@ classdef arduinoManager < optickaCore
 		ports
 		%> could we succesfully open the arduino?
 		isOpen logical			= false
+		%> ID from device
 		deviceID				= ''
 	end
 	properties (SetAccess = private, GetAccess = private, Transient = true)
@@ -46,7 +48,7 @@ classdef arduinoManager < optickaCore
 		screen screenManager
 	end
 	properties (SetAccess = private, GetAccess = private)
-		allowedProperties char	= ['availablePins|rewardPin|rewardTime|openGUI|board|mode|'...
+		allowedProperties char	= ['availablePins|rewardPin|rewardTime|openGUI|board|'...
 			'port|silentMode|verbose']
 	end
 	
@@ -73,99 +75,89 @@ classdef arduinoManager < optickaCore
 					me.silentMode = true;
 				end
 			end
-			switch me.mode
-				case 'default'
-					if ~exist('arduinoIOPort','file')
-						me.comment = 'Cannot find arduinoIOPort, check opticka path!';
-						warning(me.comment)
-						me.silentMode = true;
-					end
-				otherwise
-					if ~exist('arduino','file')
-						me.comment = 'You need to Install Arduino Support files!';
-						warning(me.comment)
-						me.silentMode = true;
-					end
+			if ~exist('arduinoIOPort','file')
+				me.comment = 'Cannot find arduinoIOPort, check opticka path!';
+				warning(me.comment)
+				me.silentMode = true;
 			end
 		end
 		
 		%===============OPEN DEVICE================%
 		function open(me)
-			if me.isOpen;disp('-->arduinoManager: Already open!');return;end
+			if me.isOpen || ~isempty(me.device);disp('-->arduinoManager: Already open!');return;end
+			if me.silentMode;disp('-->arduinoManager: In silent mode, try to close() then open()!');me.isOpen=false;return;end
+			if isempty(me.port);warning('--->arduinoManager: Please specify the port to use!');return;end
 			close(me); me.ports = serialportlist('available');
-			if me.silentMode==false && isempty(me.device)
-				try
-					if strcmpi(me.mode, 'default')
-						if ~isempty(me.port)
-							if IsWin && ~isempty(regexp(me.port, '^/dev/', 'once'))
-								warning('--->arduinoManager: Linux/macOS port specified but running on windows!')
-								me.port = '';
-							elseif (IsLinux||IsOSX) && ~isempty(regexp(me.port, '^COM', 'once'))
-								warning('--->arduinoManager: Windows port specified but running on Linux/macOS!')
-								me.port = '';
-							end
-							if isempty(me.board)
-								me.board = 'Uno';
-							end
-							switch me.board
-								case {'Xiao','xiao'}
-									if isempty(me.availablePins)
-										me.availablePins = {0,1,2,3,4,5,6,7,8,9,10}; %XIAO board
-									end
-								otherwise
-									if isempty(me.availablePins)
-										me.availablePins = {2,3,4,5,6,7,8,9,10,11,12,13}; %UNO board
-									end
-							end
-							endPin = max(cell2mat(me.availablePins));
-							startPin = min(cell2mat(me.availablePins));
-							me.device = arduinoIOPort(me.port,endPin,startPin);
-							if me.device.isDemo
-								me.isOpen = false; me.silentMode = true;
-								warning('--->arduinoManager: IOport couldn''t open the port, going into silent mode!');
-								return
-							else
-								me.deviceID = me.port;
-								me.isOpen = true;setLow(me);
-							end
-							
-						else
-							warning('--->arduinoManager: Please specify the port to use, going into silent mode!')
-							me.isOpen = false; me.silentMode = true;
-							return;
-						end
-							
-					elseif ~isdeployed
-							if ~isempty(me.port)
-								me.device = arduino(me.port);
-							else
-								me.device = arduino;
-							end
-							me.port = me.device.Port;
-							me.board = me.device.Board;
-							me.deviceID = me.device.Port;
-							me.availablePins = me.device.AvailablePins;
-							me.isOpen = true;setLow(me);
-					else
-						me.isOpen = false; me.silentMode = true;
-						warning('--->arduinoManager: couldn''t open, going into silent mode!');
-						return
-					end
-					if me.openGUI; GUI(me); end
-					me.silentMode = false;
-				catch ME
-					me.silentMode = true; me.isOpen = false;
-					fprintf('\n\nCouldn''t open Arduino: %s\n',ME.message)
-					getReport(ME)
+			try
+				if IsWin && ~isempty(regexp(me.port, '^/dev/', 'once'))
+					warning('--->arduinoManager: Linux/macOS port specified but running on windows!')
+					me.port = '';
+				elseif (IsLinux||IsOSX) && ~isempty(regexp(me.port, '^COM', 'once'))
+					warning('--->arduinoManager: Windows port specified but running on Linux/macOS!')
+					me.port = '';
 				end
-			elseif ~isempty(me.device)
-				fprintf('--->>> arduinoManager: arduino appears open already...\n');
-			else
-				fprintf('--->>> arduinoManager open: silentMode engaged...\n');
-				me.isOpen = false;
+				if isempty(me.board)
+					me.board = 'Uno';
+				end
+				switch me.board
+					case {'Xiao','xiao'}
+						if isempty(me.availablePins);me.availablePins = {0,1,2,3,4,5,6,7,8,9,10};end
+					otherwise
+						if isempty(me.availablePins);me.availablePins = {2,3,4,5,6,7,8,9,10,11,12,13};end
+				end
+				endPin = max(cell2mat(me.availablePins));
+				startPin = min(cell2mat(me.availablePins));
+				me.device = arduinoIOPort(me.port,endPin,startPin);
+				if me.device.isDemo
+					me.isOpen = false; me.silentMode = true;
+					warning('--->arduinoManager: IOport couldn''t open the port, going into silent mode!');
+					return
+				else
+					me.deviceID = me.port;
+					me.isOpen = true;
+					setLow(me);
+				end
+				if me.openGUI; GUI(me); end
+				me.silentMode = false;
+			catch ME
+				me.silentMode = true; me.isOpen = false;
+				fprintf('\n\nCouldn''t open Arduino: %s\n',ME.message)
+				getReport(ME)
 			end
 		end
 
+		%===============CLOSE PORT================%
+		function close(me)
+			setLow(me);
+			try close(me.handles.parent);me.handles=[];end
+			me.device = [];
+			me.deviceID = '';
+			me.availablePins = '';
+			me.isOpen = false;
+			if ~verLessThan('matlab','9.7')
+				me.ports = serialportlist('available');
+			else
+				me.ports = seriallist;
+			end
+		end
+		
+		%===============RESET================%
+		function reset(me)
+			close(me);
+			me.silentMode = false;
+			notinlist = true;
+			if ~isempty(me.ports)
+				for i = 1:length(me.ports)
+					if strcmpi(me.port,me.ports{i})
+						notinlist = false;
+					end
+				end
+			end
+			if notinlist && ~isempty(me.ports)
+				me.port = me.ports{end};
+			end
+		end
+		
 		%===============PIN MODE================%
 		function pinMode(me, line, mode)
 			if ~me.isOpen || me.silentMode; return; end
@@ -179,33 +171,37 @@ classdef arduinoManager < optickaCore
 		end
 		
 		%===============ANALOG READ================%
-		function val = analogRead(me, line)
+		function value = analogRead(me, line)
 			if ~me.isOpen || me.silentMode; return; end
 			if ~exist('line','var') || isempty(line); line = me.rewardPin; end
-			val = analogRead(me.device, line);
+			value = analogRead(me.device, line);
+			if me.verbose;fprintf('===>>> ANALOGREAD: pin %i = %i \n',line,value);end
 		end
 
 		%===============ANALOG WRITE================%
-		function analogWrite(me,line,value)
+		function analogWrite(me, line, value)
 			if ~me.isOpen || me.silentMode; return; end
 			if ~exist('line','var') || isempty(line); line = me.rewardPin; end
-			if ~exist('value','var') || isempty(value); value = 255; end
+			if ~exist('value','var') || isempty(value); value = 128; end
 			analogWrite(me.device, line, value);
+			if me.verbose;fprintf('===>>> ANALOGWRITE: pin %i = %i \n',line,value);end
 		end
 
 		%===============DIGITAL READ================%
-		function val = digitalRead(me, line)
+		function value = digitalRead(me, line)
 			if ~me.isOpen || me.silentMode; return; end
 			if ~exist('line','var') || isempty(line); line = me.rewardPin; end
-			val = analogRead(me.device, line, value);
+			value = analogRead(me.device, line);
+			if me.verbose;fprintf('===>>> DIGREAD: pin %i = %i \n',line,value);end
 		end
 		
 		%===============DIGITAL WRITE================%
-		function digitalWrite(me,line,value)
+		function digitalWrite(me, line, value)
 			if ~me.isOpen || me.silentMode; return; end
 			if ~exist('line','var') || isempty(line); line = me.rewardPin; end
-			if ~exist('value','var') || isempty(value); value = 255; end
-			analogWrite(me.device, line, value);
+			if ~exist('value','var') || isempty(value); value = 0; end
+			digitalWrite(me.device, line, value);
+			if me.verbose;fprintf('===>>> DIGWRITE: pin %i = %i \n',line,value);end
 		end
 		
 		%===============SEND TTL (legacy)================%
@@ -216,60 +212,40 @@ classdef arduinoManager < optickaCore
 		%===============TIMED TTL================%
 		function timedTTL(me, line, time)
 			if ~me.isOpen; return; end
-			if me.silentMode == false
+			if ~me.silentMode
 				if ~exist('line','var') || isempty(line); line = me.rewardPin; end
 				if ~exist('time','var') || isempty(time); time = me.rewardTime; end
-				switch me.mode
-					case 'default'
-						timedTTL(me.device, line, time);
-					otherwise
-						time = time - 30; %there is an arduino 30ms delay
-						if time < 0; time = 0; end
-						writeDigitalPin(me.device,['D' num2str(line)],1);
-						WaitSecs(time/1e3);
-						writeDigitalPin(me.device,['D' num2str(line)],0);
-				end
-				if me.verbose;fprintf('===>>> REWARD GIVEN: TTL pin %i for %i ms\n',line,time);end
+				timedTTL(me.device, line, time);
+				if me.verbose;fprintf('===>>> timedTTL: TTL pin %i for %i ms\n',line,time);end
 			else
-				if me.verbose;fprintf('===>>> REWARD GIVEN: Silent Mode\n');end
+				if me.verbose;fprintf('===>>> timedTTL: Silent Mode\n');end
 			end
 		end
 		
+		%===============STROBED WORD================%
 		function strobeWord(me, value)
 			if ~me.isOpen; return; end
-			if me.silentMode == false
+			if ~me.silentMode
 				strobeWord(me.device, value);
-				if me.verbose;fprintf('===>>> STROBE WORD: %i sent to pins 2-8\n',value);end
+				if me.verbose;fprintf('===>>> STROBED WORD: %i sent to pins 2-8\n',value);end
 			end
 		end
 		
 		%===============TIMED DOUBLE TTL================%
 		function timedDoubleTTL(me, line, time)
-			if me.silentMode == false
+			if ~me.silentMode
 				if ~exist('line','var') || isempty(line); line = me.rewardPin; end
 				if ~exist('time','var') || isempty(time); time = me.rewardTime; end
 				if ~strcmp(me.mode,'original')
 					time = time - 30; %there is an arduino 30ms delay
 				end
 				if time < 0; time = 0;end
-				switch me.mode
-					case 'default'
-						timedTTL(me.device, line, 10);
-						WaitSecs('Yieldsecs',time/1e3);
-						timedTTL(me.device, line, 10);
-					otherwise
-						writeDigitalPin(me.device,['D' num2str(line)],1);
-						WaitSecs(0.03);
-						writeDigitalPin(me.device,['D' num2str(line)],0);
-						WaitSecs(time/1e3);
-						writeDigitalPin(me.device,['D' num2str(line)],1);
-						WaitSecs(0.03);
-						writeDigitalPin(me.device,['D' num2str(line)],0);
-				end
-				
-				if me.verbose;fprintf('===>>> REWARD GIVEN: double TTL pin %i for %i ms\n',line,time);end
+				timedTTL(me.device, line, 10);
+				WaitSecs('Yieldsecs',time/1e3);
+				timedTTL(me.device, line, 10);
+				if me.verbose;fprintf('===>>> timedTTL: double TTL pin %i for %i ms\n',line,time);end
 			else
-				if me.verbose;fprintf('===>>> REWARD GIVEN: Silent Mode\n');end
+				if me.verbose;fprintf('===>>> timedTTL: Silent Mode\n');end
 			end
 		end
 		
@@ -277,17 +253,9 @@ classdef arduinoManager < optickaCore
 		function test(me,line)
 			if me.silentMode || isempty(me.device); return; end
 			if ~exist('line','var') || isempty(line); line = 2; end
-			switch me.mode
-				case 'default'
-					digitalWrite(me.device, line, 0);
-					for ii = 1:20
-						digitalWrite(me.device, line, mod(ii,2));
-					end
-				otherwise
-					writeDigitalPin(me.device,['D' num2str(line)],0);
-					for ii = 1:20
-						writeDigitalPin(me.device,['D' num2str(line)],mod(ii,2));
-					end
+			digitalWrite(me.device, line, 0);
+			for ii = 1:20
+				digitalWrite(me.device, line, mod(ii,2));
 			end
 		end
 		
@@ -400,6 +368,7 @@ classdef arduinoManager < optickaCore
 			
 			me.handles = handles;
 			
+			% internal function to engage timedTTL
 			function doReward(varargin)
 				if me.silentMode || ~me.isOpen; disp('Not open!'); return; end
 				val = str2num(get(me.handles.value,'String'));
@@ -416,6 +385,7 @@ classdef arduinoManager < optickaCore
 				end
 			end
 			
+			% simple loop controlled using bluetooth keyboard
 			function doLoop(varargin)
 				if me.silentMode || ~me.isOpen; disp('Not open!'); return; end
 				fprintf('===>>> Entering Loop mode, press - to exit!!!\n');
@@ -491,6 +461,7 @@ classdef arduinoManager < optickaCore
 				set(me.handles.loopButton,'ForegroundColor',[1 0.5 0]);
 			end
 			
+			% training loop with stimulus controlled using keyboard
 			function doLoop2(varargin)
 				if me.silentMode || ~me.isOpen; disp('Not open!'); return; end
 				PsychDefaultSetup(2);
@@ -647,40 +618,7 @@ classdef arduinoManager < optickaCore
 				RestrictKeysForKbCheck([]);
 				set(me.handles.loop2Button,'ForegroundColor',[1 0.5 0]);
 			end
-		end
-		
-		%===============CLOSE PORT================%
-		function close(me)
-			setLow(me);
-			try close(me.handles.parent);me.handles=[];end
-			me.device = [];
-			me.deviceID = '';
-			me.availablePins = '';
-			me.isOpen = false;
-			if ~verLessThan('matlab','9.7')
-				me.ports = serialportlist('available');
-			else
-				me.ports = seriallist;
-			end
-		end
-		
-		%===============RESET================%
-		function reset(me)
-			close(me);
-			me.silentMode = false;
-			notinlist = true;
-			if ~isempty(me.ports)
-				for i = 1:length(me.ports)
-					if strcmpi(me.port,me.ports{i})
-						notinlist = false;
-					end
-				end
-			end
-			if notinlist && ~isempty(me.ports)
-				me.port = me.ports{end};
-			end
-		end
-		
+		end	
 	end
 	
 	methods ( Access = private ) %----------PRIVATE METHODS---------%
