@@ -29,13 +29,14 @@ classdef arduinoManager < optickaCore
 		rewardTime double		= 300
 		%> specify the available pins to use; 2-13 is the default for an Uno
 		availablePins cell		= {2,3,4,5,6,7,8,9,10,11,12,13}
+		%> the arduino device object
+		device					= []
 	end
 	properties (SetAccess = private, GetAccess = public)
 		%> which ports are available
 		ports
 		%> could we succesfully open the arduino?
 		isOpen logical			= false
-		device					= []
 		deviceID				= ''
 	end
 	properties (SetAccess = private, GetAccess = private, Transient = true)
@@ -164,9 +165,43 @@ classdef arduinoManager < optickaCore
 				me.isOpen = false;
 			end
 		end
+
+		%===============PIN MODE================%
+		function pinMode(me, line, mode)
+			if ~me.isOpen || me.silentMode; return; end
+			if nargin == 3 && isstring(mode)
+				pinMode(me.device, line, mode);
+			elseif nargin == 2
+				pinMode(me.device, line);
+			else
+				pinMode(me.device)
+			end
+		end
 		
+		%===============ANALOG READ================%
+		function val = analogRead(me, line)
+			if ~me.isOpen || me.silentMode; return; end
+			if ~exist('line','var') || isempty(line); line = me.rewardPin; end
+			val = analogRead(me.device, line);
+		end
+
 		%===============ANALOG WRITE================%
 		function analogWrite(me,line,value)
+			if ~me.isOpen || me.silentMode; return; end
+			if ~exist('line','var') || isempty(line); line = me.rewardPin; end
+			if ~exist('value','var') || isempty(value); value = 255; end
+			analogWrite(me.device, line, value);
+		end
+
+		%===============DIGITAL READ================%
+		function val = digitalRead(me, line)
+			if ~me.isOpen || me.silentMode; return; end
+			if ~exist('line','var') || isempty(line); line = me.rewardPin; end
+			val = analogRead(me.device, line, value);
+		end
+		
+		%===============DIGITAL WRITE================%
+		function digitalWrite(me,line,value)
 			if ~me.isOpen || me.silentMode; return; end
 			if ~exist('line','var') || isempty(line); line = me.rewardPin; end
 			if ~exist('value','var') || isempty(value); value = 255; end
