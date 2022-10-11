@@ -6,24 +6,25 @@ classdef arduinoIOPort < handle
 %> asynchronous TTL output (i.e. returns immediately to MATLAB even if the
 %> TTL is for a long time).
 %
-% This class defines an "arduino" object, MATLAB Legacy toolbox.
-% Giampiero Campa, Aug 2013, Copyright 2013 The MathWorks, Inc.
+%> This class defines an "arduino" object, MATLAB Legacy toolbox.
+%> Giampiero Campa, Aug 2013, Copyright 2013 The MathWorks, Inc.
 %
 %% Modified for use with PTB
-% This version uses IOPort from PTB, as it is faster:
-%   https://psychtoolbox.discourse.group/t/serial-port-interface-code-a-performance-comparison/3781
+%> This version uses IOPort from PTB, as it is faster:
+%>   https://psychtoolbox.discourse.group/t/serial-port-interface-code-a-performance-comparison/3781
 %
-% Also added a timedTTL function, which performs the TTL timing on the arduino
-% and allows PTB to continue its display loop without interupption.
-% Requires a compatible arduino sketch: 
-%   https://github.com/iandol/opticka/blob/master/communication/arduino/adio/adio.ino
-%
-% We also define a startPin and endPin so we can use it with other boards
-% like the Xiao which has a different pin number...
+%> Also added a timedTTL function, which performs the TTL timing on the arduino
+%> and allows PTB to continue its display loop without interupption.
+%> Requires a compatible arduino sketch: 
+%>   https://github.com/iandol/opticka/blob/master/communication/arduino/adio/adio.ino
+%>
+%> We also define a startPin and endPin so we can use it with other boards
+%> like the Xiao which has a different pin number...
+% ========================================================================
 	
 	properties (SetAccess=private,GetAccess=public)
 		startPin = 2 % First addressable pin (arduino=2,xiao=0)
-		endPin = 13 % Number of controllable pins (arduino=13, xiao=10)
+		endPin = 13 % Number of controllable pins (arduino=13, xiao=10 or 13 (LEDS))
 		port   % The assigned port
 		conn   % IOPort connection number
 		pinn   % Pin numbers
@@ -201,45 +202,45 @@ classdef arduinoIOPort < handle
 			fprintf('===>>> Arduino object connected to %s with %i pins\n',a.port,length(a.pinn));
 			fprintf('===>>> Start pin: %i | end pin: %i\n',a.startPin,a.endPin);
 			if a.sktc==4
-				disp('Motor Shield sketch V2 (plus adioes.pde functions) running on the board');
+				disp('===>>> Motor Shield sketch V2 (plus adioes.pde functions) running on the board');
 				disp(' ');
-				disp('Servo Methods: <a href="matlab:help servoStatus">servoStatus</a> <a href="matlab:help servoAttach">servoAttach</a> <a href="matlab:help servoDetach">servoDetach</a> <a href="matlab:help servoRead">servoRead</a> <a href="matlab:help servoWrite">servoWrite</a>');
+				disp('===>>> Servo Methods: <a href="matlab:help servoStatus">servoStatus</a> <a href="matlab:help servoAttach">servoAttach</a> <a href="matlab:help servoDetach">servoDetach</a> <a href="matlab:help servoRead">servoRead</a> <a href="matlab:help servoWrite">servoWrite</a>');
 				disp(' ');
-				disp('Encoder Methods: <a href="matlab:help encoderStatus">encoderStatus</a> <a href="matlab:help encoderAttach">encoderAttach</a> <a href="matlab:help encoderDetach">encoderDetach</a> <a href="matlab:help encoderRead">encoderRead</a> <a href="matlab:help encoderReset">encoderReset</a>');
+				disp('===>>> Encoder Methods: <a href="matlab:help encoderStatus">encoderStatus</a> <a href="matlab:help encoderAttach">encoderAttach</a> <a href="matlab:help encoderDetach">encoderDetach</a> <a href="matlab:help encoderRead">encoderRead</a> <a href="matlab:help encoderReset">encoderReset</a>');
 				disp(' ');
-				disp('DC Motor and Steppers Methods: <a href="matlab:help motorSpeed">motorSpeed</a> <a href="matlab:help motorRun">motorRun</a> <a href="matlab:help stepperSpeed">stepperSpeed</a> <a href="matlab:help stepperStep">stepperStep</a>');
+				disp('===>>> DC Motor and Steppers Methods: <a href="matlab:help motorSpeed">motorSpeed</a> <a href="matlab:help motorRun">motorRun</a> <a href="matlab:help stepperSpeed">stepperSpeed</a> <a href="matlab:help stepperStep">stepperStep</a>');
 				disp(' ');
-				disp('Serial port and other Methods: <a href="matlab:help serial">serial</a> <a href="matlab:help flush">flush</a> <a href="matlab:help roundTrip">roundTrip</a>');
+				disp('===>>> Serial port and other Methods: <a href="matlab:help serial">serial</a> <a href="matlab:help flush">flush</a> <a href="matlab:help roundTrip">roundTrip</a>');
 			elseif a.sktc==3
-				disp('Motor Shield sketch V1 (plus adioes.pde functions) running on the board');
+				disp('===>>> Motor Shield sketch V1 (plus adioes.pde functions) running on the board');
 				disp(' ');
-				disp('Servo Methods: <a href="matlab:help servoStatus">servoStatus</a> <a href="matlab:help servoAttach">servoAttach</a> <a href="matlab:help servoDetach">servoDetach</a> <a href="matlab:help servoRead">servoRead</a> <a href="matlab:help servoWrite">servoWrite</a>');
+				disp('===>>> Servo Methods: <a href="matlab:help servoStatus">servoStatus</a> <a href="matlab:help servoAttach">servoAttach</a> <a href="matlab:help servoDetach">servoDetach</a> <a href="matlab:help servoRead">servoRead</a> <a href="matlab:help servoWrite">servoWrite</a>');
 				disp(' ');
-				disp('Encoder Methods: <a href="matlab:help encoderStatus">encoderStatus</a> <a href="matlab:help encoderAttach">encoderAttach</a> <a href="matlab:help encoderDetach">encoderDetach</a> <a href="matlab:help encoderRead">encoderRead</a> <a href="matlab:help encoderReset">encoderReset</a>');
+				disp('===>>> Encoder Methods: <a href="matlab:help encoderStatus">encoderStatus</a> <a href="matlab:help encoderAttach">encoderAttach</a> <a href="matlab:help encoderDetach">encoderDetach</a> <a href="matlab:help encoderRead">encoderRead</a> <a href="matlab:help encoderReset">encoderReset</a>');
 				disp(' ');
-				disp('DC Motor and Steppers Methods: <a href="matlab:help motorSpeed">motorSpeed</a> <a href="matlab:help motorRun">motorRun</a> <a href="matlab:help stepperSpeed">stepperSpeed</a> <a href="matlab:help stepperStep">stepperStep</a>');
+				disp('===>>> DC Motor and Steppers Methods: <a href="matlab:help motorSpeed">motorSpeed</a> <a href="matlab:help motorRun">motorRun</a> <a href="matlab:help stepperSpeed">stepperSpeed</a> <a href="matlab:help stepperStep">stepperStep</a>');
 				disp(' ');
-				disp('Serial port and other Methods: <a href="matlab:help serial">serial</a> <a href="matlab:help flush">flush</a> <a href="matlab:help roundTrip">roundTrip</a>');
+				disp('===>>> Serial port and other Methods: <a href="matlab:help serial">serial</a> <a href="matlab:help flush">flush</a> <a href="matlab:help roundTrip">roundTrip</a>');
 			elseif a.sktc==2
-				disp('Analog & Digital I/O + Encoders + Servos (adioes.pde) sketch running on the board');
+				disp('===>>> Analog & Digital I/O + Encoders + Servos (adioes.pde) sketch running on the board');
 				disp(' ');
-				disp('Pin IO Methods: <a href="matlab:help pinMode">pinMode</a> <a href="matlab:help digitalRead">digitalRead</a> <a href="matlab:help digitalWrite">digitalWrite</a> <a href="matlab:help analogRead">analogRead</a> <a href="matlab:help analogWrite">analogWrite</a> <a href="matlab:help analogReference">analogReference</a>');
+				disp('===>>> Pin IO Methods: <a href="matlab:help pinMode">pinMode</a> <a href="matlab:help digitalRead">digitalRead</a> <a href="matlab:help digitalWrite">digitalWrite</a> <a href="matlab:help analogRead">analogRead</a> <a href="matlab:help analogWrite">analogWrite</a> <a href="matlab:help analogReference">analogReference</a>');
 				disp(' ');
-				disp('Servo Methods: <a href="matlab:help servoStatus">servoStatus</a> <a href="matlab:help servoAttach">servoAttach</a> <a href="matlab:help servoDetach">servoDetach</a> <a href="matlab:help servoRead">servoRead</a> <a href="matlab:help servoWrite">servoWrite</a>');
+				disp('===>>> Servo Methods: <a href="matlab:help servoStatus">servoStatus</a> <a href="matlab:help servoAttach">servoAttach</a> <a href="matlab:help servoDetach">servoDetach</a> <a href="matlab:help servoRead">servoRead</a> <a href="matlab:help servoWrite">servoWrite</a>');
 				disp(' ');
-				disp('Encoder Methods: <a href="matlab:help encoderStatus">encoderStatus</a> <a href="matlab:help encoderAttach">encoderAttach</a> <a href="matlab:help encoderDetach">encoderDetach</a> <a href="matlab:help encoderRead">encoderRead</a> <a href="matlab:help encoderReset">encoderReset</a>');
+				disp('===>>> Encoder Methods: <a href="matlab:help encoderStatus">encoderStatus</a> <a href="matlab:help encoderAttach">encoderAttach</a> <a href="matlab:help encoderDetach">encoderDetach</a> <a href="matlab:help encoderRead">encoderRead</a> <a href="matlab:help encoderReset">encoderReset</a>');
 				disp(' ');
-				disp('Serial port and other Methods: <a href="matlab:help serial">serial</a> <a href="matlab:help flush">flush</a> <a href="matlab:help roundTrip">roundTrip</a>');
+				disp('===>>> Serial port and other Methods: <a href="matlab:help serial">serial</a> <a href="matlab:help flush">flush</a> <a href="matlab:help roundTrip">roundTrip</a>');
 			elseif a.sktc==1
-				disp('Analog & Digital I/O + Encoders (adioe.pde) sketch running on the board');
+				disp('===>>> Analog & Digital I/O + Encoders (adioe.pde) sketch running on the board');
 				disp(' ');
 				a.pinMode
 				disp(' ');
-				disp('Pin IO Methods: <a href="matlab:help pinMode">pinMode</a> <a href="matlab:help digitalRead">digitalRead</a> <a href="matlab:help digitalWrite">digitalWrite</a> <a href="matlab:help analogRead">analogRead</a> <a href="matlab:help analogWrite">analogWrite</a> <a href="matlab:help analogReference">analogReference</a>');
+				disp('===>>> Pin IO Methods: <a href="matlab:help pinMode">pinMode</a> <a href="matlab:help digitalRead">digitalRead</a> <a href="matlab:help digitalWrite">digitalWrite</a> <a href="matlab:help analogRead">analogRead</a> <a href="matlab:help analogWrite">analogWrite</a> <a href="matlab:help analogReference">analogReference</a>');
 				disp(' ');
-				disp('Encoder Methods: <a href="matlab:help encoderStatus">encoderStatus</a> <a href="matlab:help encoderAttach">encoderAttach</a> <a href="matlab:help encoderDetach">encoderDetach</a> <a href="matlab:help encoderRead">encoderRead</a> <a href="matlab:help encoderReset">encoderReset</a>');
+				disp('===>>> Encoder Methods: <a href="matlab:help encoderStatus">encoderStatus</a> <a href="matlab:help encoderAttach">encoderAttach</a> <a href="matlab:help encoderDetach">encoderDetach</a> <a href="matlab:help encoderRead">encoderRead</a> <a href="matlab:help encoderReset">encoderReset</a>');
 				disp(' ');
-				disp('Serial port and other Methods: <a href="matlab:help serial">serial</a> <a href="matlab:help flush">flush</a> <a href="matlab:help roundTrip">roundTrip</a>');
+				disp('===>>> Serial port and other Methods: <a href="matlab:help serial">serial</a> <a href="matlab:help flush">flush</a> <a href="matlab:help roundTrip">roundTrip</a>');
 			else
 				disp('===>>> Basic Analog & Digital I/O sketch (adio.pde) running on the board');
 				disp(' ');
