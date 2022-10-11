@@ -1,5 +1,9 @@
 % ========================================================================
-%> @brief tobiiManager wraps around the Titta toolbox functions
+classdef tobiiManager < optickaCore
+%> @class tobiiManager
+%> @brief Manages the Tobii eyetrackers
+%>
+%> tobiiManager wraps around the Titta toolbox functions
 %> offering a interface consistent with eyelinkManager, offering
 %> methods to check and change fixation windows gaze contingent tasks easily.
 %>
@@ -26,7 +30,6 @@
 %>
 %> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
-classdef tobiiManager < optickaCore
 	
 	properties
 		%> fixation window:
@@ -200,12 +203,19 @@ classdef tobiiManager < optickaCore
 					'verbose|isDummy|manualCalibration|exclusionZone|fixInit']
 	end
 	
-	methods
-		% ===================================================================
-		%> @brief This is the constructor for this class
-		%>
+	%=======================================================================
+	methods %------------------PUBLIC METHODS
+	%=======================================================================
+	
 		% ===================================================================
 		function me = tobiiManager(varargin)
+		%> @fn tobiiManager
+		%>
+		%> tobiiManager CONSTRUCTOR
+		%>
+		%> @param varargin can be passed as a structure or name,arg pairs
+		%> @return instance of the class.
+		% ===================================================================
 			args = optickaCore.addDefaults(varargin,struct('name','Tobii manager'));
 			me=me@optickaCore(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);

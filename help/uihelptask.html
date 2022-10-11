@@ -185,29 +185,156 @@
   </style>
 </head>
 <body>
-<h1 id="configuring-variables">Configuring Variables</h1>
-<p>Opticka uses the taskSequence class to specify one or more variable
-names and values [<code>nVar</code>] that can be randomised using
-blocked repetition and applied to stimuli during a task. The
-taskSequence class can also specify independent trial level
-[<code>trialVar</code>] and block level [<code>blockVar</code>]
-randomisation values.</p>
-<h1 id="log-or-linear-interpolation">Log or Linear interpolation</h1>
-<p>You can enter 3 values, <code>start | end | steps</code>, and press
-the <kbd>log</kbd> or the <kbd>lin</kbd> buttons to interpolate a log or
-linear range, for example <code>1 2 5</code> would get converted to
-<code>1 1.1892 1.4142 1.6818 2</code> when pressing the <kbd>log</kbd>
-button.</p>
-<h1 id="variable-modifiers">Variable modifiers</h1>
-<p>Variables can have modifiers, best explained by example:</p>
-<ol type="1">
-<li>Name = <code>angle</code></li>
-<li>Values = <code>[-90 90]</code></li>
-<li>Affects = <code>1</code></li>
-<li>Modifier = <code>2; 90</code></li>
-</ol>
-<p>In this case, angle is varied -90° and 90° for stimulus 1. Stimulus 2
-has the modifier 90 applied, so for example if stimulus 1 =
-<code>-90°</code> then stimulus 2 = <code>-90° + 90° = 0°</code>.</p>
+<h1 id="task-parameters">Task Parameters</h1>
+<p>Opticka uses the <code>taskSequence</code> class to build the
+stimulus randomisations required. This class takes a series of stimulus
+<strong>independent variables</strong> with values and builds a
+randomisation into blocks. The GUI does this using the <kbd>Ind.
+Variable List</kbd> editor, but the underlying code looks like this
+(<code>nBlocks</code> is <strong>Task Options &gt; Repeat
+Blocks</strong> in the GUI):</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">% task sequence with 5 blocks</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="va">task</span> <span class="op">=</span> <span class="va">taskSequence</span>(<span class="ss">&#39;nBlocks&#39;</span><span class="op">,</span> <span class="fl">2</span>)<span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co">% first variable: 3 angles that will be applied to stimuli 1 &amp; 2</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="va">task</span>.<span class="va">nVar</span>(<span class="fl">1</span>).<span class="va">name</span> <span class="op">=</span> <span class="ss">&#39;angle&#39;</span><span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="va">task</span>.<span class="va">nVar</span>(<span class="fl">1</span>).<span class="va">values</span> <span class="op">=</span> [<span class="op">-</span><span class="fl">25</span> <span class="fl">0</span> <span class="fl">25</span>]<span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="va">task</span>.<span class="va">nVar</span>(<span class="fl">1</span>).<span class="va">stimulus</span> <span class="op">=</span> [<span class="fl">1</span> <span class="fl">2</span>]<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co">% second variable: 3 colours that will be applied to stimulus 3</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="va">task</span>.<span class="va">nVar</span>(<span class="fl">2</span>).<span class="va">name</span> <span class="op">=</span> <span class="ss">&#39;colour&#39;</span><span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="va">task</span>.<span class="va">nVar</span>(<span class="fl">2</span>).<span class="va">values</span> <span class="op">=</span> {[<span class="fl">1</span> <span class="fl">0</span> <span class="fl">0</span>]<span class="op">,</span> [<span class="fl">0</span> <span class="fl">1</span> <span class="fl">0</span>]}<span class="op">;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="va">task</span>.<span class="va">nVar</span>(<span class="fl">2</span>).<span class="va">stimulus</span> <span class="op">=</span> <span class="fl">3</span><span class="op">;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="va">randomiseTask</span>(<span class="va">task</span>)<span class="op">;</span></span></code></pre></div>
+<p>This will generate a randomisation table like so (3 angles x 2
+colours per block = <strong>6</strong> conditions; 2 block =
+<strong>12</strong> total trials):</p>
+<table>
+<thead>
+<tr class="header">
+<th>angle</th>
+<th>colour</th>
+<th>index</th>
+<th>idx1</th>
+<th>idx2</th>
+<th>blockVar</th>
+<th>trialVar</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>0</td>
+<td>1 0 0</td>
+<td>3</td>
+<td>2</td>
+<td>1</td>
+<td>none</td>
+<td>none</td>
+</tr>
+<tr class="even">
+<td>-25</td>
+<td>0 1 0</td>
+<td>2</td>
+<td>1</td>
+<td>2</td>
+<td>none</td>
+<td>none</td>
+</tr>
+<tr class="odd">
+<td>-25</td>
+<td>1 0 0</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td>none</td>
+<td>none</td>
+</tr>
+<tr class="even">
+<td>25</td>
+<td>0 1 0</td>
+<td>6</td>
+<td>3</td>
+<td>2</td>
+<td>none</td>
+<td>none</td>
+</tr>
+<tr class="odd">
+<td>0</td>
+<td>0 1 0</td>
+<td>4</td>
+<td>2</td>
+<td>2</td>
+<td>none</td>
+<td>none</td>
+</tr>
+<tr class="even">
+<td>25</td>
+<td>1 0 0</td>
+<td>5</td>
+<td>3</td>
+<td>1</td>
+<td>none</td>
+<td>none</td>
+</tr>
+<tr class="odd">
+<td>25</td>
+<td>0 1 0</td>
+<td>6</td>
+<td>3</td>
+<td>2</td>
+<td>none</td>
+<td>none</td>
+</tr>
+<tr class="even">
+<td>-25</td>
+<td>1 0 0</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td>none</td>
+<td>none</td>
+</tr>
+<tr class="odd">
+<td>0</td>
+<td>1 0 0</td>
+<td>3</td>
+<td>2</td>
+<td>1</td>
+<td>none</td>
+<td>none</td>
+</tr>
+<tr class="even">
+<td>25</td>
+<td>1 0 0</td>
+<td>5</td>
+<td>3</td>
+<td>1</td>
+<td>none</td>
+<td>none</td>
+</tr>
+<tr class="odd">
+<td>-25</td>
+<td>0 1 0</td>
+<td>2</td>
+<td>1</td>
+<td>2</td>
+<td>none</td>
+<td>none</td>
+</tr>
+<tr class="even">
+<td>0</td>
+<td>0 1 0</td>
+<td>4</td>
+<td>2</td>
+<td>2</td>
+<td>none</td>
+<td>none</td>
+</tr>
+</tbody>
+</table>
+<h2 id="block-level-and-trial-level-factors">Block Level and Trial Level
+Factors</h2>
 </body>
 </html>

@@ -28,6 +28,7 @@ classdef arduinoIOPort < handle
 		isDemo = false
 		allPorts = []
 		avPorts = []
+		verbose = false
 	end
 	
 	methods
@@ -55,26 +56,26 @@ classdef arduinoIOPort < handle
 				return
 			end
 			if ~verLessThan('matlab','9.7')	% use the nice serialport list command
-				me.allPorts = serialportlist('all');
-				me.avPorts = serialportlist('available');
+				a.allPorts = sort(serialportlist('all'));
+				a.avPorts = sort(serialportlist('available'));
 				fprintf('===> All possible serial ports: ');
-				fprintf(' %s ',me.allPorts); fprintf('\n');
-				if any(strcmpi(me.allPorts, port))
-					fprintf('===> Your specified port is present\n')
+				fprintf(' %s ',a.allPorts); fprintf('\n');
+				if any(strcmpi(a.allPorts, port))
+					fprintf('===> Your specified port %s is present\n', port)
 				else
-					warning('===> No port with the specified name is present on the system!');
+					error('===> No port %s is present on the system!', port);
 				end
-				if any(strcmpi(me.avPorts, port))
-					fprintf('===> Your specified port is available\n')
+				if any(strcmpi(a.avPorts, port))
+					fprintf('===> Your specified port %s is available\n', port)
 				else
-					warning('===> The port is occupied, please release it first!');
+					error('===> The port is occupied, please release it first!');
 				end
 			else
-				me.allPorts = seriallist; me.avPorts = []; %#ok<*SERLL> 
-				if any(strcmpi(me.allPorts, port))
-					fprintf('===> Your specified port is present\n')
+				a.allPorts = seriallist; a.avPorts = []; %#ok<*SERLL> 
+				if any(strcmpi(a.allPorts, port))
+					fprintf('===> Your specified port %s is present\n', port)
 				else
-					warning('===> No port with the specified name is present on the system!');
+					error('===> No port %s is present on the system!', port);
 				end
 			end
 			% define IOPort serial object
@@ -267,7 +268,7 @@ classdef arduinoIOPort < handle
 		end  % flush
 		
 		% pin mode, changes pin mode
-		function pinMode(a,pin,str)
+		function pinMode(a, pin, str)
 			% pinMode(a,pin,str); reads or sets the I/O mode of a digital pin.
 			% The first argument, a, is the arduino object.
 			% The second argument, pin, is the number of the digital pin (2 to a.endPin).
@@ -292,6 +293,7 @@ classdef arduinoIOPort < handle
 			%%%%%%%%%%%%%%%%%%%%%%%%% ARGUMENT CHECKING %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 			if a.isDemo; return; end
 			if exist('pin','var') && (pin < a.startPin || pin > a.endPin); warning('Pin is not in range!!!');return;end
+			mode={'UNASSIGNED','set as INPUT','set as OUTPUT'};
 			if nargin == 3
 				if ischar(str)
 					if lower(str(1))=='o'; val = 1; else; val = 0; end
@@ -301,10 +303,8 @@ classdef arduinoIOPort < handle
 				IOPort('Write',a.conn,uint8([48 97+pin 48+val]),1);
 				a.pins(a.pinn==pin)=val;
 			elseif nargin == 2
-				mode={'UNASSIGNED','set as INPUT','set as OUTPUT'};
 				disp(['Digital Pin ' num2str(pin) ' is currently ' mode{2+a.pins(a.pinn==pin)}]);
 			else
-				mode={'UNASSIGNED','set as INPUT','set as OUTPUT'};
 				for i=a.pinn
 					disp(['Digital Pin ' num2str(i,'%02d') ' is currently ' mode{2+a.pins(a.pinn==i)}]);
 				end
@@ -327,9 +327,19 @@ classdef arduinoIOPort < handle
 			% val=a.digitalRead(4); % just as above (reads pin #4)
 			%
 			if a.isDemo; return; end
-			val = [];
-			IOPort('Write',a.conn,uint8([49 97+pin]),1);
-			val=IOPort('Read',a.conn); val = str2double(char(val(1)));
+			[n, ~, err] = IOPort('Write',a.conn,uint8([49 97+pin]),2);
+			if n ~= 2; warning(['digitalRead send command went wrong?']); end
+			[val, ~, err] = IOPort('Read',a.conn, 1, 3);
+			if isempty(val)
+				if ~isempty(err)
+					warning(['arduinoIOPort.digitalRead() failed:' err]); 
+				else
+					warning('arduinoIOPort.digitalRead() was empty');
+				end
+				val = NaN; return
+			else
+				val = str2double(char(val(1)));
+			end
 		end % digitalread
 		
 		%==========================================digital write
@@ -351,7 +361,7 @@ classdef arduinoIOPort < handle
 			% a.digitalWrite(13,0); % just as above (sets pin #13 to low)
 			%
 			if a.isDemo; return; end
-			if pin < a.startPin || pin > a.endPin; warning('Pin is not in range!!!');return;end
+			if pin < a.startPin || pin > a.endPin; warning('Pin is not in range!!!');end
 			IOPort('Write',a.conn,uint8([50 97+pin 48+val]),1);
 		end % digitalwrite
 		
@@ -361,7 +371,7 @@ classdef arduinoIOPort < handle
 			% long low-high-low transition time (in ms, max=65535ms) interval without 
 			% blocking matlab, using modified adio sketch code.
 			if a.isDemo; return; end
-			if pin < a.startPin || pin > a.endPin; warning('Pin is not in range!!!');return;end
+			if pin < a.startPin || pin > a.endPin; warning('Pin is not in range!!!');end
 			if time <= 0; return; end
 			if time > 2^16-1; time = 2^16-1; end
 			time = typecast(uint16(time),'uint8'); %convert to 2 uint8 bytes
@@ -401,8 +411,8 @@ classdef arduinoIOPort < handle
 			% val=a.analogRead(0); % just as above, reads analog input pin # 0
 			%
 			if a.isDemo; return; end
-			IOPort('Write',a.conn,uint8([51 97+pin]),1);
-			val=IOPort('Read',a.conn,1,1);
+			[n, ~, err] = IOPort('Write',a.conn,uint8([51 97+pin]),1);
+			[val, ~, err] = IOPort('Read',a.conn,1,1);
 		end % analogread
 		
 		%===================================================function analog write
@@ -421,7 +431,7 @@ classdef arduinoIOPort < handle
 			% a.analogWrite(3,10); % sets pin #3 to 10/255
 			%
 			if a.isDemo; return; end
-			if pin<a.startPin || pin > a.endPin;warning('Pin is not in range!!!');return;end
+			if pin<a.startPin || pin > a.endPin;warning('Pin may not be in range!!!');end
 			IOPort('Write',a.conn,uint8([52 97+pin val]),1);
 		end % analogwrite
 		
@@ -472,8 +482,8 @@ classdef arduinoIOPort < handle
 			if ischar(byte); byte = uint8(byte(1)); end
 			if ~isa(byte,'uint8');byte=uint8(byte); end
 			flush(a);
-			tin=GetSecs;
 			nl=0;
+			tin=GetSecs;
 			IOPort('Write',a.conn,[uint8(88) byte],1);
 			while isempty(val) && GetSecs < tin + 0.5
 				nl = nl + 1;
@@ -481,7 +491,7 @@ classdef arduinoIOPort < handle
 					val=IOPort('Read',a.conn);
 				end
 			end
-			if verbose;fprintf('Roundtrip %i took %.4f ms\n',nl,(GetSecs-tin)*1e3);end
+			if verbose;fprintf('Roundtrip for value:%i took %i loops & %.4f ms\n',val,nl,(GetSecs-tin)*1e3);end
 		end % roundtrip
 		
 		%===================================================

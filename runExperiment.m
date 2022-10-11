@@ -41,8 +41,10 @@ classdef runExperiment < optickaCore
 		task taskSequence
 		%> a screenManager class instance managing the PTB Screen
 		screen screenManager
-		%> filename for a stateMachine state info
+		%> filename for a stateMachine state info file
 		stateInfoFile char			= ''
+		%> user functions file that can be passed to the state machine
+		userFunctionsFile			= ''
 		%> use a Display++ for strobed digital I/O?
 		useDisplayPP logical		= false
 		%> use a dataPixx for strobed digital I/O?
@@ -146,6 +148,8 @@ classdef runExperiment < optickaCore
 		lJack 
 		%> Arduino control object
 		arduino 
+		%> user functions object
+		userFunctions
 		%> state machine control cell array
 		stateInfo cell				= {}
 		%> general computer info retrieved using PTB Screen('computer')
@@ -182,9 +186,9 @@ classdef runExperiment < optickaCore
 		%> properties allowed to be modified during construction
 		allowedProperties char = ['useDisplayPP|useDataPixx|useEyeLink|'...
 			'useArduino|dummyMode|logFrames|subjectName|researcherName'...
-			'useTobii|stateInfoFile|dummyMode|stimuli|task|'...
-			'screen|visualDebug|useLabJack|debug|'...
-			'verbose|screenSettings|benchmark']
+			'useTobii|stateInfoFile|userFunctionFile|dummyMode|stimuli|task|'...
+			'screen|visualDebug|useLabJack|useLabJackTStrobe|useLabJackStrobe|debug|'...
+		'useEyeOccluder|verbose|screenSettings|benchmark']
 	end
 	
 	events %causing a major MATLAB 2019a crash when loading .mat files that contain events, removed for the moment
@@ -656,11 +660,30 @@ classdef runExperiment < optickaCore
 				%---------initialise and set up I/O
 				io						= configureIO(me);
 				
+				%---------initialise the user functions object
+				if ~exist(me.userFunctionsFile,'file')
+					me.userFunctionsFile = [me.paths.root filesep 'userFunctions.m'];
+				end
+				[p,f,e] = fileparts(me.userFunctionsFile);
+				if ~matches(f,"userFunctions")
+					copyfile(me.userFunctionsFile,[p filesep 'userFunctions.m']);
+					run([p filesep 'userFunctions.m']);
+				else	
+					run(me.userFunctionsFile)
+				end
+				me.userFunctions = ans;
+				uF = me.userFunctions;
+				uF.rE = me; uF.s = s; uF.task = task; uF.eT = eT;
+				uF.stims = stims; uF.io = io; uF.rM = rM;
+
 				%---------initialise the state machine
 				sM						= stateMachine('verbose',me.verbose,'realTime',true,'timeDelta',1e-4,'name',me.name); 
 				me.stateMachine			= sM;
-				if ~isempty(me.stateInfoFile); me.paths.stateInfoFile = me.stateInfoFile; end
-				if isempty(me.paths.stateInfoFile) || ~exist(me.paths.stateInfoFile,'file')
+				if isempty(me.stateInfoFile) || ~exist(me.stateInfoFile,'file') || strcmp(me.stateInfoFile, 'DefaultStateInfo.m')
+					me.stateInfoFile = [me.paths.root filesep 'DefaultStateInfo.m'];
+					me.paths.stateInfoFile = me.stateInfoFile; 
+				end
+				if ~exist(me.stateInfoFile,'file')
 					errordlg('runExperiment.runTask(): Please specify a valid State Machine file!!!')
 				else
 					me.paths.stateInfoFile = regexprep(me.paths.stateInfoFile,'\s+','\\ ');
@@ -674,6 +697,7 @@ classdef runExperiment < optickaCore
 					me.stateInfo = stateInfoTmp;
 					addStates(sM, me.stateInfo);
 				end
+				uF.sM = sM;
 				
 				%---------set up the eyetracker interface
 				configureEyetracker(me, eT, s);

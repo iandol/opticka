@@ -1,4 +1,5 @@
 % ========================================================================
+classdef screenManager < optickaCore
 %> @class screenManager 
 %> @brief screenManager — manage opening and configuring the PTB screen
 %>
@@ -16,7 +17,6 @@
 %>
 %> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
-classdef screenManager < optickaCore
 
 	properties
 		%> the display to use, 0 is the main display on macOS/Linux

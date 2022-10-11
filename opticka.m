@@ -37,7 +37,7 @@ classdef opticka < optickaCore
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> version number
-		optickaVersion char		= '2.07'
+		optickaVersion char		= '2.08'
 		%> is this a remote instance?
 		remote					= false
 	end
@@ -109,8 +109,6 @@ classdef opticka < optickaCore
 					me.loadProtocol(vars);
 				case 'deleteProtocol'
 					me.deleteProtocol();
-				case 'LoadStateInfo'
-					me.loadStateInfo();
 			end
 		end
 		
@@ -323,12 +321,18 @@ classdef opticka < optickaCore
 				%addlistener(me.r,'endAllRuns',@me.endRunEvent);
 				%addlistener(me.r,'runInfo',@me.runInfoEvent);
 				
-				if exist([me.paths.protocols filesep 'DefaultStateInfo.m'],'file')
-					me.paths.stateInfoFile = [me.paths.protocols filesep 'DefaultStateInfo.m'];
+				if exist([me.paths.root filesep 'DefaultStateInfo.m'],'file')
+					me.paths.stateInfoFile = [me.paths.root filesep 'DefaultStateInfo.m'];
 					me.r.stateInfoFile = me.paths.stateInfoFile;
 				elseif ~isdeployed
 					me.paths.stateInfoFile = [me.paths.whereami filesep 'DefaultStateInfo.m'];
 					me.r.stateInfoFile = me.paths.stateInfoFile;
+				end
+
+				if exist([me.paths.protocols filesep 'userFunctions.m'],'file')
+					me.r.userFunctionsFile = [me.paths.protocols filesep 'userFunctions.m'];
+				elseif ~isdeployed
+					me.r.userFunctionsFile = [me.paths.whereami filesep 'userFunctions.m'];
 				end
 				
 				me.r.researcherName = me.ui.OKTrainingResearcherName.Value;
@@ -520,35 +524,55 @@ classdef opticka < optickaCore
 		function getStateInfo(me)
 		%> @fn getStateInfo 
 		%>
-		%> Load the training state info file into the UI.
+		%> Load the state info and user function files into the UI.
 		% ===================================================================
-			if ~isempty(me.r.paths.stateInfoFile) && ischar(me.r.paths.stateInfoFile)
-				if ~exist(me.r.paths.stateInfoFile,'file')
-					if ~isempty(regexpi(me.r.paths.stateInfoFile,'^\w:\\')) %is it a windows path?
-						f = split(me.r.paths.stateInfoFile,'\');
+			if ~isempty(me.r.stateInfoFile) && ischar(me.r.stateInfoFile)
+				if ~exist(me.r.stateInfoFile,'file')
+					if ~isempty(regexpi(me.r.stateInfoFile,'^\w:\\')) %is it a windows path?
+						f = split(me.r.stateInfoFile,'\');
 						f = f{end};
 					else
-						[~,f,e] = fileparts(me.r.paths.stateInfoFile);
+						[~,f,e] = fileparts(me.r.stateInfoFile);
 						f = [f e];
 					end
-					me.r.paths.stateInfoFile = [pwd filesep f];
+					me.r.stateInfoFile = [pwd filesep f];
 				end
-				if exist(me.r.paths.stateInfoFile,'file')
-					fid = fopen(me.r.paths.stateInfoFile);
+				if exist(me.r.stateInfoFile,'file')
+					o.store.statetext = {};
+					fid = fopen(me.r.stateInfoFile);
 					tline = fgetl(fid);
 					i=1;
 					while ischar(tline)
+						tline = regexprep(tline,'\t','  ');
 						o.store.statetext{i} = tline;
 						tline = fgetl(fid);
 						i=i+1;
 					end
 					fclose(fid);
 					set(me.ui.OKTrainingText,'Value',o.store.statetext);
-					set(me.ui.OKTrainingFileName,'Text',['FileName:' me.r.paths.stateInfoFile]);
+					set(me.ui.OKTrainingFileName,'Text',['State-Machine File:  ' me.r.paths.stateInfoFile]);
 				else
 					set(me.ui.OKTrainingText,'Value','');
 					set(me.ui.OKTrainingFileName,'Text','No File Specified...');
 				end
+			end
+			if ~isempty(me.r.userFunctionsFile) && exist(me.r.userFunctionsFile,'file')
+				o.store.usertext = {};
+				fid = fopen(me.r.userFunctionsFile);
+				tline = fgetl(fid);
+				i=1;
+				while ischar(tline)
+					tline = regexprep(tline,'\t','  ');
+					o.store.usertext{i} = tline;
+					tline = fgetl(fid);
+					i=i+1;
+				end
+				fclose(fid);
+				set(me.ui.OKFunctionsText,'Value',o.store.usertext);
+				set(me.ui.OKFunctionsFileName,'Text',['User-Functions File:' me.r.userFunctionsFile]);
+			else
+				set(me.ui.OKFunctionsText,'Value','');
+				set(me.ui.OKFunctionsFileName,'Text','No File Specified...');
 			end
 		end
 		
@@ -1037,22 +1061,22 @@ classdef opticka < optickaCore
 				for i = 1:tmp.r.stimuli.n
 					cleanHandles(tmp.r.stimuli{i}); %just in case!
 				end
-				[~, ff, ee] = fileparts(me.r.paths.stateInfoFile);
+				[~, ff, ee] = fileparts(me.r.stateInfoFile);
 				if copy == true
-					tmp.r.paths.stateInfoFile = [pwd filesep ff ee];
-					if ~strcmpi(me.r.paths.stateInfoFile,tmp.r.paths.stateInfoFile)
-						[status, msg] = copyfile(me.r.paths.stateInfoFile, tmp.r.paths.stateInfoFile, 'f');
+					tmp.r.stateInfoFile = [pwd filesep ff ee];
+					if ~strcmpi(me.r.stateInfoFile,tmp.r.stateInfoFile)
+						[status, msg] = copyfile(me.r.stateInfoFile, tmp.r.stateInfoFile, 'f');
 						if status ~= 1
 							warning(['Couldn''t copy state info file: ' msg]);
 						else
-							me.r.paths.stateInfoFile = tmp.r.paths.stateInfoFile;
-							me.r.stateInfoFile = me.r.paths.stateInfoFile;
+							me.r.stateInfoFile = tmp.r.stateInfoFile;
+							me.r.paths.stateInfoFile = me.r.stateInfoFile;
 						end
 					end
 					save(f,'tmp');
 					fprintf('\n---> Saving Protocol %s as copy (with state file) to %s\n', f, pwd);
-					if exist(tmp.r.paths.stateInfoFile,'file')
-						fprintf('\tState file path: %s\n', me.r.paths.stateInfoFile);
+					if exist(tmp.r.stateInfoFile,'file')
+						fprintf('\tState file path: %s\n', me.r.stateInfoFile);
 					end
 					getStateInfo(me);
 				else
@@ -1083,7 +1107,7 @@ classdef opticka < optickaCore
 			if f ~= 0
 				cd(p);
 				data = clone(me);
-				data.r.paths.stateInfoFile = me.r.paths.stateInfoFile;
+				data.r.stateInfoFile = me.r.stateInfoFile;
 				data.ui = struct(); %this property is supposed to be transient, but just in case remove the handles to the UI which will not be valid on reload
 				for i = 1:data.r.stimuli.n
 					cleanHandles(data.r.stimuli{i}); %just in case!
@@ -1095,24 +1119,6 @@ classdef opticka < optickaCore
 				clear data f p
 			end
 			cd(me.paths.currentPath);
-		end
-		
-		% ===================================================================
-		%> @brief Load State Info 
-		%> Save Protocol
-		%> @param 
-		% ===================================================================
-		function loadStateInfo(me)
-			me.paths.currentPath = pwd;
-			cd(me.paths.protocols);
-			[fname,fpath] = uigetfile({'.m'},'Load State Info file (.m)');
-			if ~ischar(fname) || isempty(fname)
-				disp('No file selected...')
-				return
-			end
-			me.paths.stateInfoFile = [fpath fname];
-			me.r.paths.stateInfoFile = me.paths.stateInfoFile;
-			me.r.stateInfoFile = me.r.paths.stateInfoFile;
 		end
 		
 		% ===================================================================
@@ -1201,7 +1207,8 @@ classdef opticka < optickaCore
 					me.r.name = [tmp.r.name];
 				end
 
-				me.r.paths.stateInfoFile = '';
+				% state info file
+				me.r.stateInfoFile = '';
 				p1 = ''; p2 = ''; msg = '';
 				if isprop(tmp.r,'stateInfoFile') && ~isempty(tmp.r.stateInfoFile)
 					p1 = tmp.r.stateInfoFile;	
@@ -1228,7 +1235,7 @@ classdef opticka < optickaCore
 					end
 				end	
 				if ~isempty(me.r.paths.stateInfoFile) && ~exist(me.r.paths.stateInfoFile,'file') % then try to replace the home directory
-					me.r.paths.stateInfoFile=regexprep(tmp.r.stateInfoFile,'(.+)(.Code.opticka.+)',[getenv('HOME') '$2'],'ignorecase','once');
+					me.r.paths.stateInfoFile=regexprep(me.r.paths.stateInfoFile,'(.+)(.Code.opticka.+)',[getenv('HOME') '$2'],'ignorecase','once');
 					msg = ['rehome:' msg];
 				end
 				if isempty(me.r.paths.stateInfoFile) || ~exist(me.r.paths.stateInfoFile,'file')
@@ -1238,6 +1245,26 @@ classdef opticka < optickaCore
 					fprintf('\t…state info file [%s] : %s\n', msg, me.r.paths.stateInfoFile);
 				end
 				if isprop(me.r,'stateInfoFile'); me.r.stateInfoFile = me.r.paths.stateInfoFile; end
+				
+				%user functions file
+				if isprop(tmp.r,'userFunctionsFile') && ~isempty(tmp.r.userFunctionsFile)
+					me.r.userFunctionsFile = tmp.r.userFunctionsFile;
+				end
+				if ~exist(me.r.userFunctionsFile,'file') % first try to find the file in current dir
+					[~,f,e] = fileparts(me.r.userFunctionsFile);
+					newfile = [pwd filesep f e];
+					if exist(newfile, 'file')
+						me.r.userFunctionsFile = newfile;
+					end
+				end	
+				if ~exist(me.r.userFunctionsFile,'file') % then try to replace the home directory
+					me.r.userFunctionsFile=regexprep(me.r.userFunctionsFile,'(.+)(.Code.opticka.+)',[getenv('HOME') '$2'],'ignorecase','once');
+					msg = ['rehome:' msg];
+				end
+				if ~exist(me.r.userFunctionsFile,'file')
+					warndlg(['Couldn''t find userFunctions file! Revert to default userFunctions.m']);
+					me.r.userFunctionsFile = which('userFunctions.m');
+				end
 				me.getStateInfo();
 				
 				if isprop(tmp.r,'drawFixation');me.r.drawFixation=tmp.r.drawFixation;end
@@ -1247,13 +1274,13 @@ classdef opticka < optickaCore
 				me.r.subjectName = me.ui.OKTrainingName.Value;
 				me.r.researcherName = me.ui.OKTrainingResearcherName.Value;
 
-				me.ui.OKuseLabJackStrobe.Checked		= 'off';
+				me.ui.OKuseLabJackStrobe.Checked	= 'off';
 				me.ui.OKuseLabJackTStrobe.Checked	= 'off';
 				me.ui.OKuseDataPixx.Checked			= 'off';
-				me.ui.OKuseDisplayPP.Checked			= 'off';
+				me.ui.OKuseDisplayPP.Checked		= 'off';
 				me.ui.OKuseEyelink.Checked			= 'on';
-				me.ui.OKuseTobii.Checked				= 'off';
-				me.ui.OKuseLabJackReward.Checked		= 'off';
+				me.ui.OKuseTobii.Checked			= 'off';
+				me.ui.OKuseLabJackReward.Checked	= 'off';
 				me.ui.OKuseArduino.Checked			= 'off';
 				me.ui.OKuseEyeOccluder.Checked		= 'off';
 				me.ui.OKuseMagStim.Checked			= 'off';

@@ -3,9 +3,14 @@
   <!-- Navigation index tabs for HTML output -->
   <navindex>
     <tab type="mainpage" visible="yes" title="Opticka Experiment Manager"/>
-    <tab type="pages" visible="yes" title="" intro="Pages">
+    <tab type="pages" visible="yes" title="" intro="Examples / Documentation">
       <tab type="user" url="optickaBehaviourTest.html" title="Opticka State Machine Test Output"/>
       <tab type="user" url="optickaTest.html" title="Opticka MOC Test Output"/>
+      <tab type="user" url="uihelpstate.html" title="Opticka UI help: State-machine"/>
+      <tab type="user" url="uihelpfunctions.html" title="Opticka UI help: User Functions"/>
+      <tab type="user" url="uihelptask.html" title="Opticka UI help: Task"/>
+      <tab type="user" url="uihelpstims.html" title="Opticka UI help: Stimuli"/>
+      <tab type="user" url="uihelpvars.html" title="Opticka UI help: Variables"/>
       <tab type="user" url="https://github.com/iandol/opticka" title="Github Source Repo"/>
       <tab type="user" url="https://psychtoolbox.discourse.group/" title="PTB User Forum"/>
       <tab type="user" url="http://psychtoolbox.org" title="PTB Home Page"/>
@@ -41,7 +46,9 @@
       <tab type="filelist" visible="yes" title="" intro=""/>
       <tab type="globals" visible="yes" title="" intro=""/>
     </tab>
-    <tab type="examples" visible="yes" title="Examples" intro=""/>  
+    <tab type="examples" visible="yes" title="Examples/Tests" intro="">
+    </tab>
+
   </navindex>
 
   <!-- Layout definition for a class page -->

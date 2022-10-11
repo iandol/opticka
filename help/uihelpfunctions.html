@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-GB" xml:lang="en-GB">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title> </title>
+  <style>
+  html {font-family: Hoefler Text, Palatino, Georgia, serif;
+    color: #1a1a1a;
+    background-color: #fdfdfd;}
+
+  body {margin: 0 auto;
+    max-width: 40em;
+    padding-left: 15px;
+    padding-right: 15px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    hyphens: auto;
+    overflow-wrap: break-word;
+    text-rendering: optimizeLegibility;
+    font-kerning: normal;
+  }
+
+  @media (max-width: 600px) {body {font-size: 0.9em;
+    padding: 1em;}
+    h1 {font-size: 1.8em;}
+  }
+
+  @media print {body {background-color: transparent;
+    color: black;
+    font-size: 12pt;}
+    p, h2, h3 {	orphans: 3;
+    widows: 3;}
+    h2, h3, h4 {	page-break-after: avoid;}
+  }
+
+  header {display: none;}
+  kbd {margin: 0px 0.1em;
+    padding: 0.1em 0.6em;
+    border-radius: 3px;
+    border: 1px solid rgb(204, 204, 204);
+    color: rgb(51, 51, 51);
+    line-height: 1.4;
+    font-family: Menlo, monospace;
+    font-size: 11px;
+    display: inline-block;
+    box-shadow: 0px 1px 0px rgba(0,0,0,0.3);
+    background-color: rgb(247, 247, 247);
+    text-shadow: 0 1px 0 #fff;
+  }
+  kbd:hover {box-shadow: 0 1px 0 0.5px;}
+  p {font-size: 18px;margin: 0.8em 0;line-height: 1.5;}
+  a {color: #1a1a1a;}
+  a:visited {color: #1a1a1a;}
+  img {max-width: 100%;}
+  h1, h2, h3, h4, h5, h6 {margin-top: 1.4em;}
+  h5, h6 {font-size: 1em;
+  font-style: italic;}
+  h6 {font-weight: normal;}
+  ol, ul {font-size: 18px;
+    line-height: 1.2em;
+    padding-left: 1.7em;
+    margin-top: 1em;}
+  li > ol, li > ul {margin-top: 0;}
+  blockquote {margin: 1em 0 1em 1.7em;
+    padding-left: 1em;
+    border-left: 2px solid #e6e6e6;
+    color: #606060;
+    font-style: italic;}
+  code {font-family: Fira Code, Menlo, Consolas, monospace;
+    font-size: 14px;
+    margin: 0;
+    background-color: #F0F0F0;
+    color:rgb(145, 16, 42);
+  }
+  pre {margin: 1em 0;
+    overflow: auto;
+  }
+  pre code {padding: 0;
+    overflow: visible;
+    overflow-wrap: normal;
+    background-color:transparent;
+    color: black;
+  }
+  pre.smaller code {font-size: 60% !important; line-height: .75rem !important;}
+  .sourceCode {background-color: transparent;
+    overflow: visible;
+  }
+  hr {background-color: #1a1a1a;
+    border: none;
+    height: 1px;
+    margin: 1em 0;
+  }
+  table {margin: 1em 0;
+    border-collapse: collapse;
+    width: 100%;
+    overflow-x: auto;
+    display: block;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+  table caption {margin-bottom: 0.75em;}
+  tbody {margin-top: 0.5em;
+    border-top: 1px solid #1a1a1a;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  th {border-top: 1px solid #1a1a1a;
+    padding: 0.25em 0.5em 0.25em 0.5em;
+  }
+  td {padding: 0.125em 0.5em 0.25em 0.5em;}
+  header {margin-bottom: 4em;
+    text-align: center;
+  }
+  #TOC li {list-style: none;}
+  #TOC ul {padding-left: 1.3em;}
+  #TOC > ul {padding-left: 0;}
+  #TOC a:not(:hover) {text-decoration: none;}
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+  pre > code.sourceCode { white-space: pre; position: relative;}
+  pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+  pre > code.sourceCode > span:empty { height: 1.2em; }
+  .sourceCode { overflow: visible; }
+  code.sourceCode > span { color: inherit; text-decoration: inherit; }
+  div.sourceCode { margin: 2em 0; }
+  pre.sourceCode { margin: 0; }
+  @media screen {
+  div.sourceCode { overflow: auto; background-color: #F0F0F0;}
+  }
+  @media print {
+  pre > code.sourceCode { white-space: pre-wrap;}
+  pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+  }
+  pre.numberSource code
+    { counter-reset: source-line 0; }
+  pre.numberSource code > span
+    { position: relative; left: -4em; counter-increment: source-line; }
+  pre.numberSource code > span > a:first-child::before
+    { content: counter(source-line);
+      position: relative; left: -1em; text-align: right; vertical-align: baseline;
+      border: none; display: inline-block;
+      -webkit-touch-callout: none; -webkit-user-select: none;
+      -khtml-user-select: none; -moz-user-select: none;
+      -ms-user-select: none; user-select: none;
+      padding: 0 4px; width: 4em;
+      color: #aaaaaa;
+    }
+  pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+  @media screen {
+  pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+  }
+  code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+  code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+  code span.at { color: #7d9029; } /* Attribute */
+  code span.bn { color: #40a070; } /* BaseN */
+  code span.bu { color: #008000; } /* BuiltIn */
+  code span.cf { color: #0044a3; font-weight: bold; } /* ControlFlow */
+  code span.ch { color: #4070a0; } /* Char */
+  code span.cn { color: #880000; } /* Constant */
+  code span.co { color: #779097; font-style: italic; } /* Comment */
+  code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+  code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+  code span.dt { color: #902000; } /* DataType */
+  code span.dv { color: #40a070; } /* DecVal */
+  code span.er { color: #ff0000; font-weight: bold; } /* Error */
+  code span.fl { color: #40a070; } /* Float */
+  code span.fu { color: #06287e; } /* Function */
+  code span.im { color: #008000; font-weight: bold; } /* Import */
+  code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+  code span.kw { color: #00338a; font-weight: bold; } /* Keyword */
+  code span.op { color: #666666; } /* Operator */
+  code span.ot { color: #007020; } /* Other */
+  code span.pp { color: #bc7a00; } /* Preprocessor */
+  code span.sc { color: #4070a0; } /* SpecialChar */
+  code span.ss { color: #bb6688; } /* SpecialString */
+  code span.st { color: #4070a0; } /* String */
+  code span.va { color: #201f45; } /* Variable */
+  code span.vs { color: #4070a0; } /* VerbatimString */
+  code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+</head>
+<body>
+<h1 id="adding-user-functions">Adding User Functions</h1>
+<p>For behavioural tasks, <a href="uihelpstate.html">state-machine
+files</a> specify the experiment states and functions that run on
+<code>enter</code>/<code>within</code>/<code>transition</code> and
+<code>exit</code> of <em>each</em> state. Most functions are specified
+by the built-in classes like <code>screenManager</code>,
+<code>taskSequence</code> etc. <strong><em>BUT</em></strong> a user can
+add functions and store information using a <code>userFunctions.m</code>
+file.</p>
+<p>You use <kbd>Load Functions File…</kbd> to load this file; this will
+be used when you run your task. You can also use the <kbd>Edit Functions
+File…</kbd> button to open it in the MATLAB editor.</p>
+<h2 id="how-to-use-these-functions">How to Use these Functions</h2>
+<p>Lets add a new function:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="va">drawSomething</span>(<span class="va">me</span>)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">% use screenManager (me.s) to draw some text to the PTB screen</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="va">me</span>.<span class="va">s</span>.<span class="va">drawText</span>(<span class="ss">&#39;Hello from UserFunctions&#39;</span>)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">end</span></span></code></pre></div>
+<p><strong>Remember</strong>: <code>me</code> refers to itself, in this
+case <code>userFunctions</code>. So <code>me.s</code> refers to the
+<code>s</code> property which is set as a handle to
+<code>screenManager</code>.</p>
+<p>Now lets say we want to run this function during the
+<code>fixate</code> state (on every frame, so we use
+<code>withinFcn</code>); find the cell array of functions for this state
+in the <code>stateInfo.m</code> file you are using and add our new
+function to the cell array. Because cell arrays use <code>@()</code>
+function handles, so you will need to insert
+<code>@()drawSomething(uF)</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">%--------------------fix within</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="va">fixFcn</span> <span class="op">=</span> {</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">@</span>()<span class="va">drawSomething</span>(<span class="va">uF</span>)<span class="op">;</span> <span class="co">% our new custom function from our uF object</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">@</span>()<span class="va">draw</span>(<span class="va">stims</span>)<span class="op">;</span> <span class="co">%draw stimuli</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">@</span>()<span class="va">drawPhotoDiode</span>(<span class="va">s</span><span class="op">,</span>[<span class="fl">0</span> <span class="fl">0</span> <span class="fl">0</span>])<span class="op">;</span> <span class="co">% black square for photodiode</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">@</span>()<span class="va">animate</span>(<span class="va">stims</span>)<span class="op">;</span> <span class="co">% animate stimuli for subsequent draw</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span></code></pre></div>
+<p>This will now run where the <code>fixFcn</code> array is, in this
+case we can see that is <code>fixate</code> &gt;
+<code>withinFcn</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="va">stateInfoTmp</span> <span class="op">=</span> {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ss">&#39;name&#39;</span>      <span class="ss">&#39;next&#39;</span>      <span class="ss">&#39;time&#39;</span>  <span class="ss">&#39;entryFcn&#39;</span>      <span class="ss">&#39;withinFcn&#39;</span>     <span class="ss">&#39;transitionFcn&#39;</span> <span class="ss">&#39;exitFcn&#39;</span><span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="ss">&#39;fixate&#39;</span>    <span class="ss">&#39;incorrect&#39;</span> <span class="fl">10</span>      <span class="va">fixEntryFcn</span>     <span class="va">fixFcn</span>          <span class="va">inFixFcn</span>        <span class="va">fixExitFcn</span><span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="using-variables-properties">Using Variables (Properties)</h3>
+<p>When using <code>@()</code> function handles, you cannot change class
+variables (properties) directly. Instead you can use functions that set
+the properties. Examples of these kinds of functions from the core
+classes are <code>show(stims, 3)</code>. To see how we do this with our
+customised userFunctions, lets add a new property to our custom
+<code>userFunctions.m</code> file:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">properties</span> <span class="co">% ADD YOUR OWN VARIABLES HERE</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>        <span class="va">myToggle</span> <span class="op">=</span> <span class="va">false</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">end</span></span></code></pre></div>
+<p>…and then make a new function to set this property:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">% Add your functions here!</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">function</span> <span class="va">doToggle</span>(<span class="va">me</span><span class="op">,</span><span class="va">value</span>)</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">me</span>.<span class="va">myToggle</span> <span class="op">=</span> <span class="va">value</span><span class="op">;</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">end</span></span></code></pre></div>
+<p>You can now add this function in your state file:
+<code>@()doToggle(uF, true)</code>.</p>
+<p>This should allow you to add many custom functions, and store
+information in variables without needing to edit any of the core opticka
+classes. If you think you need something more advanced then you can open
+an issue on github to add functions to the core classes or add a new
+dedicated class.</p>
+</body>
+</html>

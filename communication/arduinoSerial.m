@@ -4,6 +4,8 @@ classdef arduinoSerial < handle
 	% Giampiero Campa, Aug 2013, Copyright 2013 The MathWorks, Inc.
 	
 	properties (SetAccess=private,GetAccess=public)
+		startPin = 2 % First addressable pin (arduino=2,xiao=0)
+		endPin = 13 % Number of controllable pins (arduino=13, xiao=10)
 		conn   % Serial Connection
 		nPins = 13 % number of controllable pins
 		pins   % Pin Status Vector
@@ -26,7 +28,7 @@ classdef arduinoSerial < handle
 	methods
 		
 		% constructor, connects to the board and creates an arduino object
-		function a=arduinoSerial(comPort,nPins)
+		function a=arduinoSerial(comPort,endPin,startPin)
 			
 			% check nargin
 			if nargin<1
@@ -36,6 +38,11 @@ classdef arduinoSerial < handle
 				disp('Use a com port, e.g. ''/dev/ttyACM0'' as input argument to connect to the real board');
 			elseif nargin == 2
 				a.nPins = nPins;
+				a.endPin = a.nPins;
+			elseif nargin == 3
+				a.startPin = startPin;
+				a.endPin = endPin;
+				a.nPins = endPin;
 			end
 			
 			% check port
@@ -151,10 +158,10 @@ classdef arduinoSerial < handle
 			a.conn.Tag='ok';
 			
 			% initialize pin vector (-1 is unassigned, 0 is input, 1 is output)
-			a.pins=-1*ones(1,a.nPins);
+			a.pins=repmat(-1,size(a.startPin:a.endPin));
 			
 			% initialize servo vector (0 is detached, 1 is attached)
-			a.srvs=0*ones(1,a.nPins);
+			a.srvs=0*ones(1,a.endPin);
 			
 			% initialize encoder vector (0 is detached, 1 is attached)
 			a.encs=0*ones(1,3);
@@ -353,7 +360,7 @@ classdef arduinoSerial < handle
 				
 				% if pin argument is there check it
 				if nargin>1
-					errstr=arduinoSerial.checknum(pin,'pin number',2:a.nPins);
+					errstr=arduinoSerial.checknum(pin,'pin number',a.startPin:a.endPin);
 					if ~isempty(errstr), error(errstr); end
 				end
 				
@@ -418,8 +425,10 @@ classdef arduinoSerial < handle
 				% print pin mode for each pin
 				
 				mode={'UNASSIGNED','set as INPUT','set as OUTPUT'};
-				for i=2:a.nPins
-					disp(['Digital Pin ' num2str(i,'%02d') ' is currently ' mode{2+a.pins(i)}]);
+				j = 1;
+				for i = a.startPin:a.endPin
+					disp(['Digital Pin ' num2str(i,'%02d') ' is currently ' mode{2+a.pins(j)}]);
+					j = j + 1;
 				end
 				
 			end
@@ -914,7 +923,7 @@ classdef arduinoSerial < handle
 				end
 				
 				% check servo number
-				errstr=arduinoSerial.checknum(pin,'servo number',2:a.nPins);
+				errstr=arduinoSerial.checknum(pin,'servo number',a.startPin:a.endPin);
 				if ~isempty(errstr), error(errstr); end
 				
 			end

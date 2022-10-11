@@ -12,8 +12,11 @@
 % task sequence variables (myTask object), and a screenManager (myScreen
 % object) are passed to the runExperiment class. runExperiment uses the
 % stateMachine class object which loads the experiment specification  (for
-% this demo it uses the DefaultStateInfo.m)
-% specification to run the following state-based experiment:
+% this demo it uses DefaultStateInfo.m)
+%
+% DefaultStateInfo.m specifies the following experiment with six states
+% (prefix, fixate, stimulus, correct, incorrect, breakfix), and uses the
+% eyetracker (here using the mouse functions to transition from fixate.
 %  
 %     ┌───────────────────────────────────────┐
 %     │                                       ▼
@@ -143,7 +146,7 @@ if ismac; myScreen.useRetina = true; end
 myExp = runExperiment('stimuli', myStims,... %stimulus objects
 	'screen', myScreen,... %screen manager object
 	'task', myTask,... % task randomised stimulus sequence
-	'stateInfoFile', 'DefaultStateInfo.m', ... % default state info file
+	'stateInfoFile', 'DefaultStateInfo.m', ... % use the default state info file
 	'debug', true,... % enable debug mode for testing
 	'useEyeLink', true, ... % use the eyelink manager
 	'dummyMode', true, ... % use dummy mode so the mouse replaces eye movements for testing

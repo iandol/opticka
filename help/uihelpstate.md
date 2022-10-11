@@ -1,8 +1,14 @@
-# Background
+---
+toc: true
+---
 
-For behavioural tasks, opticka uses `StateInfo.m` files that are loaded below and are used to specify the stateMachine structure. For example the `DefaultStateInfo.m` file defines several states and how the task switches between them:
+# StateMachine Info Files
 
-```
+For behavioural tasks, opticka uses `StateInfo.m` files that are used to specify the [state machine structure](#useful-task-methods).  
+
+For example the `DefaultStateInfo.m` file defines several experimental states and how the task switches between them:
+
+```{.smaller}
                                                        ┌───────────────────┐
                                                        │      prefix       │
   ┌──────────────────────────────────────────────────▶ │    hide(stims)    │ ◀┐
@@ -34,7 +40,7 @@ For behavioural tasks, opticka uses `StateInfo.m` files that are loaded below an
                                                        └───────────────────┘
 ```
 
-State info files, being plain `.m` files should be edited in the MATLAB editor. You can use the class object methods from the screen manager `[s]`, state machine `[sM]`, task sequence `[task]`, stimulus list `[stims]`, eyetracker `[eT]`, digital I/O `[io]`. The most useful methods are listed below…
+State info files, being plain `.m` files, should be edited in the MATLAB editor. You can use the class methods from the screen manager (`s`), state machine (`sM`), task sequence (`task`), stimulus list (`stims`), eyetracker (`eT`), digital I/O (`io`). You can also add custom functions to a [userFunctions](uihelpfunctions.html) file. The most important built-in methods are shown below…
 
 ----------------------------------------------
 

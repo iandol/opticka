@@ -1,8 +1,9 @@
-# Useful Behavioural Task Methods
+# Useful Task Methods
 
-The state machine (stateMachine class) defines states and the connections between them. The state machine can run cell arrays of methods (anoymous functions) when states are entered, within and exited. In addition there are ways to transition (i.e. *jump*) out of a state if some condition is met.  
+The state machine (`stateMachine` class) defines states and the connections between them. The state machine can run cell arrays of methods (`@()` anonymous functions) when states are entered (run once), within (repeated on every screen redraw) and exited (run once). In addition there are ways to transition *out* of a state if some condition is met. For example if we are in a `[STATE 1]` state and the eyetracker tells us the subject has fixated for the correct time, then transition functions can jump us to another state to e.g. show a stimulus.
 
-```
+
+```{.smaller}
 ╔════════════════════════════════════════════════════════════════════════════════════════════════╗
 ║                  ┌─────────┐                                       ┌─────────┐                 ║
 ║                  │ STATE 1 │                                       │ STATE 2 │                 ║
@@ -24,21 +25,29 @@ The state machine (stateMachine class) defines states and the connections betwee
                                             └──────────┘
 ```
 
-These various methods control the logic and flow of experiments. This document lists the most important ones used in flexible behavioural task design. It is preferable for these methods to evaluate properties (properties are data/variables managed by a class object). Because of this we choose to create methods that alter the properties of each class. For example, `show(stims)` is a method that allows the stimulus manager to show all stimuli, it does this by setting each stimulus `isVisible` property to `true`.
+These various methods control the logic and flow of experiments. This document lists the most important ones used in flexible behavioural task design. It is better for these methods to evaluate properties (properties are the variables managed by the class object). Because of this we choose to create methods that alter the properties of each class. For example, `show(stims)` is a method that allows the stimulus manager to show all stimuli in the list; it does this by setting each stimulus' `isVisible` property to `true`. `hide(stims)` hides all stimuli bby setting `isVisible` property to `false`, or you could just hide the 3rd stimulus in the list: `hide(stims, 3)`.
 
-For those unfamiliar with object-oriented design, a *CLASS* (e.g. `stateMachine`) is initiated as an *OBJECT* variable (named `sM` in our case, it is an *instance* of the class). ALL Opticka classes are [**handle classes**](https://www.mathworks.com/help/matlab/handle-classes.html); this means if we assign `sM2 = sM` — both of these named instances point to the **same** object. 
+For those unfamiliar with object-oriented design, a *CLASS* (e.g. `stateMachine`) is initiated as an *OBJECT* variable (named `sM` during the experiment run, it is an *instance* of the class). **ALL** Opticka classes are [**handle classes**](https://www.mathworks.com/help/matlab/handle-classes.html); this means if we assign `sM2 = sM` — **both** of these named instances point to the **same** object. 
 
-As experiments are run **within** the `runExperiment` class `runTask()` method, the object refers to *itself* as `me`, and so methods that *belong* to `runExperiment` can be called by using `me.myMethod()` (or you can also use `myMethod(me)`; both forms are equivalent for MATLAB). Other object instances are given short handle names, for example the `screenManager` class is *instantiated* as `s`, so to call a method `myOtherMethod` from our screenManager instance `s` we use `myOtherMethod(s)`. You will see below the object names that are available as we run the experiment from `runExperiment`. The `runExperiment` object `me` keeps most of the objects as properties, so `me.screen` is a handle that can also be called using `s`, `me.stateMachine` is a handle that can also be accessed using `sM`: they are the same handle objects callable via different names.
+As experiments are run **_inside_** the `runExperiment.runTask()` method, this class refers to *itself* as `me`, so methods that *belong* to `runExperiment` can be called by using `me.myMethod()` or `myMethod(me)` (both forms are equivalent to MATLAB). Other important object instances, for example the `screenManager` class is called via `s`, so to call the method `drawSpot` from our `screenManager` instance `s`, we can use `drawSpot(s)` (or `s.drawSpot()`). You will see below the object names that are available as we run the experiment from `runExperiment`. The `runExperiment` object `me` keeps most of the objects as properties: so `s` is actually also stored in the property `me.screen`, `sM` is stored in the property `me.stateMachine` etc.
 
-In some cases `runExperiment` manages other classes with similar named methods. For example `runExperiment.updateTask()` will manage the call to `taskSequence.updateTask()`, this is often so that runExperiment can *co-ordinate* among objects and maintain state (when information needs to be shared between objects). If this is not required then we just call the object methods directly, e.g. `drawBackground(s)` uses `screenManager` to run the PTB Screen() functions to draw a background colour to the screen. See `DefaultStateInfo.m` and other CoreProtocols state info files for examples of their use…  
+### Similar named methods?
 
-We highlight the main classes and methods that are most useful when building a particular paradigm:  
+In some cases `runExperiment` manages an object with similar named methods. For example `runExperiment.updateTask()` will manage the call to `taskSequence.updateTask()`, this is often so that runExperiment can *co-ordinate* among objects and maintain state (when information needs to be shared between objects). If this is not required then we just call the object methods directly, e.g. `drawBackground(s)` uses `screenManager` to run the PTB Screen() functions to draw a background colour (the property `s.backgroundColour`) to the screen. See `DefaultStateInfo.m` and other CoreProtocols state info files for examples of their use…  
+
+### User Functions Files
+
+If you want to write your own functions to be called by the `stateMachine`, then you can add them to a `userFunctions.m` file, [see the docs](uihelpfunctions.html) for details.
 
 ---------------------------------------
 
-## runExperiment (object name "me" in the state file)
+# List of Methods
 
-The main class object that 'runs' the experiment.
+We highlight the main classes and methods that are most useful when building your paradigm:  
+
+## runExperiment ("me" in the state file)
+
+The principal class object that 'runs' the experiment.
 
 - `enableFlip(me)` || `disableFlip(me)`  
 	Enable or disable the PTB screen flip during the update loop.  
@@ -132,3 +141,14 @@ This class manages groups of stimuli as a single object. Each stimulus can be sh
 
 - `drawBackground(s)`  
 	Draws the s.backgroundColour to screen.
+
+# Definitions
+
+Class
+: A class is a way to combine a set of related variables (properties) and functions (methods) in a unified object. In MATLAB we use `classdef` to build a class.
+
+Object
+: A class is a kind of thing, but when we want to use that thing, we *instantiate* it into a 'real' object. So calling `s = screenManager` *instantiates* the `screenManager` class as an object called `s`.
+
+Method
+: The name given by MATLAB to a function contined in a class.

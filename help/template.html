@@ -1,10 +1,22 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en-GB" xml:lang="en-GB">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="$lang$" xml:lang="$lang$"$if(dir)$ dir="$dir$"$endif$>
 <head>
   <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
-  <title> </title>
+$for(author-meta)$
+  <meta name="author" content="$author-meta$" />
+$endfor$
+$if(date-meta)$
+  <meta name="dcterms.date" content="$date-meta$" />
+$endif$
+$if(keywords)$
+  <meta name="keywords" content="$for(keywords)$$keywords$$sep$, $endfor$" />
+$endif$
+$if(description-meta)$
+  <meta name="description" content="$description-meta$" />
+$endif$
+  <title>$if(title-prefix)$$title-prefix$ – $endif$$pagetitle$</title>
   <style>
   html {font-family: Hoefler Text, Palatino, Georgia, serif;
     color: #1a1a1a;
@@ -183,31 +195,31 @@
   code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
   .display.math{display: block; text-align: center; margin: 0.5rem auto;}
   </style>
+$for(css)$
+  <link rel="stylesheet" href="$css$" />
+$endfor$
+$for(header-includes)$
+  $header-includes$
+$endfor$
+$if(math)$
+  $math$
+$endif$
 </head>
 <body>
-<h1 id="configuring-variables">Configuring Variables</h1>
-<p>Opticka uses the taskSequence class to specify one or more variable
-names and values [<code>nVar</code>] that can be randomised using
-blocked repetition and applied to stimuli during a task. The
-taskSequence class can also specify independent trial level
-[<code>trialVar</code>] and block level [<code>blockVar</code>]
-randomisation values.</p>
-<h1 id="log-or-linear-interpolation">Log or Linear interpolation</h1>
-<p>You can enter 3 values, <code>start | end | steps</code>, and press
-the <kbd>log</kbd> or the <kbd>lin</kbd> buttons to interpolate a log or
-linear range, for example <code>1 2 5</code> would get converted to
-<code>1 1.1892 1.4142 1.6818 2</code> when pressing the <kbd>log</kbd>
-button.</p>
-<h1 id="variable-modifiers">Variable modifiers</h1>
-<p>Variables can have modifiers, best explained by example:</p>
-<ol type="1">
-<li>Name = <code>angle</code></li>
-<li>Values = <code>[-90 90]</code></li>
-<li>Affects = <code>1</code></li>
-<li>Modifier = <code>2; 90</code></li>
-</ol>
-<p>In this case, angle is varied -90° and 90° for stimulus 1. Stimulus 2
-has the modifier 90 applied, so for example if stimulus 1 =
-<code>-90°</code> then stimulus 2 = <code>-90° + 90° = 0°</code>.</p>
+$for(include-before)$
+$include-before$
+$endfor$
+$if(toc)$
+<nav id="$idprefix$TOC" role="doc-toc">
+$if(toc-title)$
+<h2 id="$idprefix$toc-title">$toc-title$</h2>
+$endif$
+$table-of-contents$
+</nav>
+$endif$
+$body$
+$for(include-after)$
+$include-after$
+$endfor$
 </body>
 </html>

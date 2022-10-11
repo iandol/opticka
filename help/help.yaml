@@ -1,0 +1,12 @@
+standalone: true
+verbosity: INFO
+from: markdown
+to: html5
+template: ${.}/template.html
+filters: 
+  - ${.}/include-files.lua
+toc: false
+metadata:
+  title: " "
+  lang: 'en-GB'
+  toc-title: Contents

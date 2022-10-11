@@ -60,6 +60,7 @@
 %> io		= digital I/O to recording system
 %> rM		= Reward Manager (LabJack or Arduino TTL trigger to reward system/Magstim)
 %> bR		= behavioural record plot (on-screen GUI during a task run)
+%> uF       = user functions - add your own functions to this class
 %> tS		= structure to hold general variables, will be saved as part of the data
 
 %==================================================================
@@ -244,7 +245,7 @@ sM.skipExitStates			= {'fixate','incorrect|breakfix'};
 %===================================================================
 %===================================================================
 %===================================================================
-%-----------------State Machine Task Functions---------------------
+%------------------State Machine Task Functions---------------------
 % Each cell {array} holds a set of anonymous function handles which are
 % executed by the state machine to control the experiment. The state
 % machine can run sets at entry ['entryFcn'], during ['withinFcn'], to
@@ -254,6 +255,10 @@ sM.skipExitStates			= {'fixate','incorrect|breakfix'};
 % also add global variables/objects then use these. The values entered here
 % are set on load, if you want up-to-date values then you need to use
 % methods/function wrappers to retrieve/set them.
+%===================================================================
+%===================================================================
+%===================================================================
+
 
 %====================================================PAUSE
 %pause entry
@@ -284,14 +289,16 @@ pauseExitFcn = {
 prefixEntryFcn = { 
 	@()enableFlip(me); 
 	@()needEyeSample(me, true); % make sure we start measuring eye position
-	@()hide(stims);
+	@()hide(stims); % hide all stimuli
+	% an example function from the UserFunctions file
+	@()testFunction(uF);
 };
 
 prefixFcn = {
 	@()drawPhotoDiode(s,[0 0 0]);
 };
 
-%--------------------fixate entry
+%====================================================FIXATE
 fixEntryFcn = { 
 	% update the fixation window to initial values
 	@()updateFixationValues(eT,tS.fixX,tS.fixY,[],tS.firstFixTime); %reset fixation window
@@ -307,8 +314,8 @@ fixEntryFcn = {
 	@()trackerDrawFixation(eT); %draw fixation window on eyelink computer
 	@()trackerDrawStimuli(eT,stims.stimulusPositions); %draw location of stimulus on eyelink
 	@()statusMessage(eT,'Initiate Fixation...'); %status text on the eyelink
-	% show the LAST stimulus in the list (should be a fixation cross)
-	@()show(stims{tS.nStims});
+	% show the LAST stimulus in the list (should be the fixation cross)
+	@()show(stims{tS.nStims}); 
 	@()logRun(me,'INITFIX');
 };
 
@@ -340,7 +347,7 @@ fixExitFcn = {
 	@()trackerMessage(eT,'END_FIX');
 }; 
 
-%--------------------what to run when we enter the stim presentation state
+%====================================================STIMULUS
 stimEntryFcn = {
 	% send an eyeTracker sync message (reset time to 0)
 	@()syncTime(eT);
@@ -372,7 +379,8 @@ stimExitFcn = {
 	@()sendStrobe(io,255);
 };
 
-%if the subject is correct (small reward)
+%====================================================CORRECT
+% if the subject is correct (small reward)
 correctEntryFcn = {
 	@()timedTTL(rM, tS.rewardPin, tS.rewardTime); % send a reward TTL
 	@()beep(aM,2000); % correct beep
@@ -405,6 +413,8 @@ correctExitFcn = {
 	@()drawnow;
 };
 
+%====================================================INCORRECT
+
 %--------------------incorrect entry
 incEntryFcn = { 
 	@()beep(aM,400,0.5,1);
@@ -415,7 +425,7 @@ incEntryFcn = {
 	@()needEyeSample(me,false);
 	@()hide(stims);
 	@()logRun(me,'INCORRECT'); %fprintf current trial info
-}; 
+};
 
 %--------------------our incorrect/breakfix stimulus
 incFcn = {
@@ -473,6 +483,7 @@ if tS.useTask %we are using task
 	end
 end
 
+%====================================================EYETRACKER
 %--------------------calibration function
 calibrateFcn = {
 	@()drawBackground(s); %blank the display
@@ -490,6 +501,8 @@ driftFcn = {
 	@()rstop(io); 
 	@()driftCorrection(eT) % enter drift correct
 };
+
+%====================================================GENERAL
 
 %--------------------DEBUGGER override
 overrideFcn = { @()keyOverride(me) }; %a special mode which enters a matlab debug state so we can manually edit object values

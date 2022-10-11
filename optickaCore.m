@@ -422,6 +422,10 @@ classdef optickaCore < handle
 				odd = logical(mod(1:length(args),2));
 				even = logical(abs(odd-1));
 				args = cell2struct(args(even),args(odd),2);
+			elseif isstruct(args)
+				return
+			else
+				error('---> makeArgs: You need to pass name:value pairs / structure of name:value fields!')
 			end
 		end
 		
@@ -526,6 +530,11 @@ classdef optickaCore < handle
 				if status == 0; warning('Could not create OptickaFiles folder'); end
 			end
 			me.paths.savedData = [me.paths.parent filesep 'SavedData'];
+			if ~isfolder(me.paths.savedData)
+				status = mkdir(me.paths.savedData);
+				if status == 0; warning('Could not create SavedData folder'); end
+			end
+			me.paths.protocols = [me.paths.parent filesep 'protocols'];
 			if ~isfolder(me.paths.savedData)
 				status = mkdir(me.paths.savedData);
 				if status == 0; warning('Could not create SavedData folder'); end

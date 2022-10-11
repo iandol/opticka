@@ -62,7 +62,7 @@ classdef arduinoManager < optickaCore
 			me.parseArgs(args, me.allowedProperties);
 			if isempty(me.port)
 				if ~verLessThan('matlab','9.7')	% use the nice serialport list command
-					me.ports = serialportlist;
+					me.ports = serialportlist('available');
 				else
 					me.ports = seriallist;
 				end
@@ -86,7 +86,7 @@ classdef arduinoManager < optickaCore
 		function open(me)
 			if me.isOpen || ~isempty(me.device);disp('-->arduinoManager: Already open!');return;end
 			if me.silentMode;disp('-->arduinoManager: In silent mode, try to close() then open()!');me.isOpen=false;return;end
-			if isempty(me.port);warning('--->arduinoManager: Please specify the port to use!');return;end
+			if isempty(me.port);warning('--->arduinoManager: Better specify the port to use; will try to select one from available ports!');return;end
 			close(me); me.ports = serialportlist('available');
 			try
 				if IsWin && ~isempty(regexp(me.port, '^/dev/', 'once'))
@@ -101,7 +101,7 @@ classdef arduinoManager < optickaCore
 				end
 				switch me.board
 					case {'Xiao','xiao'}
-						if isempty(me.availablePins);me.availablePins = {0,1,2,3,4,5,6,7,8,9,10};end
+						if isempty(me.availablePins);me.availablePins = {0,1,2,3,4,5,6,7,8,9,10,11,12,13};end
 					otherwise
 						if isempty(me.availablePins);me.availablePins = {2,3,4,5,6,7,8,9,10,11,12,13};end
 				end
@@ -134,6 +134,7 @@ classdef arduinoManager < optickaCore
 			me.deviceID = '';
 			me.availablePins = '';
 			me.isOpen = false;
+			me.silentMode = false;
 			if ~verLessThan('matlab','9.7')
 				me.ports = serialportlist('available');
 			else
@@ -161,7 +162,7 @@ classdef arduinoManager < optickaCore
 		%===============PIN MODE================%
 		function pinMode(me, line, mode)
 			if ~me.isOpen || me.silentMode; return; end
-			if nargin == 3 && isstring(mode)
+			if nargin == 3 && ischar(mode)
 				pinMode(me.device, line, mode);
 			elseif nargin == 2
 				pinMode(me.device, line);
@@ -236,9 +237,6 @@ classdef arduinoManager < optickaCore
 			if ~me.silentMode
 				if ~exist('line','var') || isempty(line); line = me.rewardPin; end
 				if ~exist('time','var') || isempty(time); time = me.rewardTime; end
-				if ~strcmp(me.mode,'original')
-					time = time - 30; %there is an arduino 30ms delay
-				end
 				if time < 0; time = 0;end
 				timedTTL(me.device, line, 10);
 				WaitSecs('Yieldsecs',time/1e3);
@@ -626,17 +624,18 @@ classdef arduinoManager < optickaCore
 		%===========setLow Method==========%
 		function setLow(me)
 			if me.silentMode || ~me.isOpen; return; end
-			switch me.mode
-				case 'default'
-					for i = me.availablePins{1} : me.availablePins{end}
-						me.device.pinMode(i,'output');
-						me.device.digitalWrite(i,0);
-					end
-				otherwise
-					for i = me.availablePins{1} : me.availablePins{end}
-						configurePin(me.device,['D' num2str(i)],'unset')
-						writeDigitalPin(me.device,['D' num2str(i)],0);
-					end
+			for i = me.availablePins{1} : me.availablePins{end}
+				me.device.pinMode(i,'output');
+				me.device.digitalWrite(i,0);
+			end
+		end
+
+		%===========setHigh Method==========%
+		function setHigh(me)
+			if me.silentMode || ~me.isOpen; return; end
+			for i = me.availablePins{1} : me.availablePins{end}
+				me.device.pinMode(i,'output');
+				me.device.digitalWrite(i,0);
 			end
 		end
 

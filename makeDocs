@@ -40,9 +40,11 @@ echo; echo "---> Ran doxygen"
 sleep 1
 mv html/ docs/
 
-pandoc --metadata title="" -s -t html5 -o help/uihelpstims.html help/uihelpstims.md
-pandoc --metadata title="" -s -t html5 -o help/uihelpvars.html help/uihelpvars.md
-pandoc --metadata title="" -s -t html5 -o help/uihelpstate.html help/uihelpstate.md
+list=("uihelpvars" "uihelpstims" "uihelpstate" "uihelpfunctions" "uihelptask")
+for x in $list; do
+	pandoc -d "help/help.yaml" -o "help/${x}.html" "help/${x}.md"
+done
+cp help/*.html docs/
 
 if [[ "$(uname -s)" = "Darwin" ]]; then 
 	open docs/index.html

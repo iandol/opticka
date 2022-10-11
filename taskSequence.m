@@ -1,4 +1,5 @@
 % ========================================================================
+classdef taskSequence < optickaCore & dynamicprops
 %> @class taskSequence
 %> @brief Block-based variable randomisation manager
 %>
@@ -10,7 +11,7 @@
 %> different values and will be applied to the first 3 stimuli; in addition,
 %> the fourth stimulus will have the value offset by 45°:
 %>
-%> ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ {.matlab}
+%> ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.matlab}
 %> ts = taskSequence('nBlocks',10);
 %> ts.nVar(1).name = 'angle';
 %> ts.nVar(1).values = [ -90, -45, 0, 45, 90 ];
@@ -26,7 +27,7 @@
 %> 
 %> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
-classdef taskSequence < optickaCore & dynamicprops
+
 	properties
 		%> structure holding each independant stimulus variable name = name
 		%> of the stimulus variable values = the values as a numerical or
@@ -42,7 +43,7 @@ classdef taskSequence < optickaCore & dynamicprops
 		blockVar struct
 		%> independent trial level identifying factor
 		%> trialVar.values={'YES','NO'} + trialVar.probability = [0.5 0.5];
-		%> will assign YES and NO to blocks with a 50:50 probability.
+		%> will assign YES and NO to trials with a 50:50 probability.
 		trialVar struct
 		%> number of repeated blocks to present
 		nBlocks double			= 1
@@ -53,8 +54,9 @@ classdef taskSequence < optickaCore & dynamicprops
 		%> do we follow real time or just number of ticks to get to a known time
 		realTime logical		= true
 		%> random seed value, we can use this to set the RNG to a known state
+		%> default is empty to use the unique current date+time
 		randomSeed double		= []
-		%> mersenne twister default
+		%> mersenne twister default, see MATLAB docs for other options
 		randomGenerator char	= 'mt19937ar'
 		%> verbose or not
 		verbose					= false
@@ -778,7 +780,7 @@ classdef taskSequence < optickaCore & dynamicprops
 				me.h.figure1 = uifigure( ...
 					'Tag', 'sSLog', ...
 					'Units', 'normalized', ...
-					'Position', [0.75 0 0.25 heightin], ...
+					'Position', [0.6 0 0.4 heightin], ...
 					'Name', ['Log: ' me.fullName], ...
 					'MenuBar', 'none', ...
 					'NumberTitle', 'off', ...
