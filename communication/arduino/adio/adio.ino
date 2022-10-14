@@ -2,8 +2,9 @@
 /* Analog and Digital Input and Output Server for MATLAB     
    Giampiero Campa, Copyright 2013 The MathWorks, Inc        
                                                              
-   This version is modified for timed TTLs (see command 50)  
-   Version V1.01                                             
+   This version is modified for timed TTLs (see command 50)
+   and strobed 8bit words (see command 60)
+   Version V1.02                                             
 
 
    This file is meant to be used with the MATLAB arduino IO
@@ -43,10 +44,6 @@
 void setup() {
   Serial.begin(115200);
   while (!Serial) { } // wait for serial to come up
-  for (byte i = 2; i < 11; i++) { //safe range of 2-10, uno can't access pins 0 1
-    pinMode(i,OUTPUT); // assume we want TTL output by default
-    digitalWrite(i,LOW);
-  }
 }
 
 void loop() {
@@ -55,6 +52,7 @@ void loop() {
   static int  pin = 13;    // generic pin number             
   static byte rbyte[2] = {0,0}; //two bytes used to encode the timedTTL time
   static word pausetime = 0;   // calculated time
+  
   int  val =  0;           // generic value read from serial 
   int  agv =  0;           // generic analog value           
   int  dgv =  0;           // generic digital value          
@@ -92,6 +90,7 @@ void loop() {
             s=0 is change-pin mode;
             s=10 is DI;  s=20 is DO;  s=30 is AI;  s=40 is AO;
             s=50 sends a timed TTL
+            s=60 send strobed word
             s=90 is query script type (1 basic, 2 motor);
             s=340 is change analog reference;
             s=400 example echo returning the input argument;
@@ -104,23 +103,23 @@ void loop() {
         if ((s > 60 && s < 90) || (s > 90 && s != 340 && s != 400)) {
           s = -1;
         }
-        /* the break statements gets out of the switch-case, so
-          /* we go back and wait for new serial data             */
-        break; /* s=-1 (initial state) taken care of           */
+        // the break statements gets out of the switch-case, so
+        // we go back and wait for new serial data             
+        break; // s=-1 (initial state) taken care of          
 
       /*=====================================================*/
-      /* s = 0 to 2 means CHANGE PIN MODE                      */
+      /* s = 0 or 1 means CHANGE PIN MODE                    */
       case 0:
-        /* the second received value indicates the pin
-          from abs('a')=97, pin 0, to abs('¦')=166, pin 69    */
+        // the second received value indicates the pin
+        //  from abs('a')=97, pin 0, to abs('¦')=166, pin 69    
         if (val > 96 && val < 167) {
-          pin = val - 97;            /* calculate pin          */
-          s = 1; /* next we will need to get 0 or 1 from serial  */
+          pin = val - 97;            // calculate pin         
+          s = 1; // next we will need to get 0 or 1 from serial  
         }
         else {
-          s = -1; /* if value is not a pin then return to -1     */
+          s = -1; // if value is not a pin then return to -1     
         }
-        break; /* s=0 taken care of                            */
+        break; // s=0 taken care of                            
       case 1:
         /* the third received value indicates the value 0 or 1 */
         if (val > 47 && val < 50) {
@@ -130,7 +129,7 @@ void loop() {
           }
           else {
             pinMode(pin, OUTPUT);
-          }
+          }                            
         }
         s = -1; /* we are done with CHANGE PIN so go to -1      */
         break; /* s=1 taken care of                            */
@@ -145,7 +144,7 @@ void loop() {
         if (val > 96 && val < 167) {
           pin = val - 97;            /* calculate pin          */
           dgv = digitalRead(pin);    /* perform Digital Input  */
-          Serial.write(dgv);       /* send value via serial  */
+          Serial.println(dgv);       /* send value via serial  */
         }
         s = -1; /* we are done with DI so next state is -1      */
         break; /* s=10 taken care of                           */
@@ -184,7 +183,7 @@ void loop() {
         if (val > 96 && val < 113) {
           pin = val - 97;            /* calculate pin          */
           agv = analogRead(pin);     /* perform Analog Input   */
-          Serial.write(agv);       /* send value via serial  */
+          Serial.println(agv);       /* send value via serial  */
         }
         s = -1; /* we are done with AI so next state is -1      */
         break; /* s=30 taken care of                           */
@@ -320,7 +319,7 @@ void loop() {
            value of its first argument. It is provided as an
            example for people that want to add their own code  
            your own code goes here instead of the serial print */
-          Serial.write(val);
+          Serial.println(val);
           s = -1; /* we are done with the aux function so -1   */
           break; /* s=400 taken care of                        */
       /*=====================================================*/
