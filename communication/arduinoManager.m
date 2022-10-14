@@ -192,7 +192,7 @@ classdef arduinoManager < optickaCore
 		function value = digitalRead(me, line)
 			if ~me.isOpen || me.silentMode; return; end
 			if ~exist('line','var') || isempty(line); line = me.rewardPin; end
-			value = analogRead(me.device, line);
+			value = digitalRead(me.device, line);
 			if me.verbose;fprintf('===>>> DIGREAD: pin %i = %i \n',line,value);end
 		end
 		
