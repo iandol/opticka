@@ -286,7 +286,7 @@ classdef arduinoIOPort < handle
 			% val=a.analogRead(0); % just as above, reads analog input pin # 0
 			%
 			if a.isDemo; return; end
-			tic;purge(a);
+			purge(a);
 			n = IOPort('Write',a.conn,uint8([51 97+pin]),1);
 			if n ~= 2; warning('arduinoIOPort.analogRead() send command went wrong?'); end
 			val = [];
@@ -296,7 +296,7 @@ classdef arduinoIOPort < handle
 				nBytes = bytesAvailable(a);
 			end
 			val = a.cleanup(val);
-			val = str2double(char(val)); toc
+			val = str2double(char(val));
 		end % analogread
 		
 		%===================================================ANALOG WRITE
