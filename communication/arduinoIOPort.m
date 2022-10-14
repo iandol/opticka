@@ -225,10 +225,9 @@ classdef arduinoIOPort < handle
 			% val=a.digitalRead(4); % just as above (reads pin #4)
 			%
 			if a.isDemo; return; end
-			%purge(a);
+			purge(a);
 			n = IOPort('Write',a.conn,uint8([49 97+pin]),2);
-			if n ~= 2; warning('arduinoIOPort.digitalRead() send command went wrong?'); end
-			WaitSecs(0.001);
+			if n ~= 2; warning('arduinoIOPort.digitalRead() WRITE command went wrong?'); end
 			[val, ~, err] = IOPort('Read',a.conn,1,3);
 			if isempty(val)
 				val = NaN;
@@ -286,16 +285,19 @@ classdef arduinoIOPort < handle
 			% val=a.analogRead(0); % just as above, reads analog input pin # 0
 			%
 			if a.isDemo; return; end
-			purge(a);
+			purge(a); %make sure we remove any stale data
 			n = IOPort('Write',a.conn,uint8([51 97+pin]),1);
-			if n ~= 2; warning('arduinoIOPort.analogRead() send command went wrong?'); end
+			if n ~= 2; warning('arduinoIOPort.analogRead() WRITE command went wrong?'); end
 			val = [];
 			nBytes = Inf;
+			% we do not know how many bytes the arduino will return; it
+			% could be 3 to 6 so we have to use a loop to read bytes
+			% one-by-one until the queue is empty...
 			while nBytes > 0
 				val(end+1) = IOPort('Read',a.conn,1,1);
 				nBytes = bytesAvailable(a);
 			end
-			val = a.cleanup(val);
+			val = a.cleanup(val); %remove CR (13) and NL (10)
 			val = str2double(char(val));
 		end % analogread
 		
