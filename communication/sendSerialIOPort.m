@@ -2,31 +2,30 @@ classdef sendSerialIOPort < handle
 	%SENDSERIAL Connects and manages Serial port communication
 	%   Connects and manages Serial port communication
 	properties
-		name='pci-serial0'
-		baudRate=115200
-		silentMode=0 %this allows us to be called even if no serial port is attached
-		verbosity=1
-		openNow=1 %allows the constructor to run the open method immediately
+		name = '/dev/ttyUSB0'
+		baudRate = 115200
+		silentMode = 0 %this allows us to be called even if no serial port is attached
+		verbosity = 1
+		openNow = false %allows the constructor to run the open method immediately
 	end
 	properties (SetAccess = private, GetAccess = public)
 		portHandle
 		deviceID
-		toggleRTS=0 %keep the state here to toggle on succesive calls
-		toggleDTR=0
+		toggleRTS = 0 %keep the state here to toggle on succesive calls
+		toggleDTR = 0
 	end
 	properties (SetAccess = private, GetAccess = private)
-		%defaultName='usbserial-A600drIC';
-		defaultName = 'pci-serial0';
-		allowedPropertiesBase='^(name|baudRate|silentMode|verbosity|openNow)$'
+		defaultName = '/dev/ttyUSB0';
+		allowedPropertiesBase = '^(name|baudRate|silentMode|verbosity|openNow)$'
 	end
 	methods%------------------PUBLIC METHODS--------------%
 		
 		%==============CONSTRUCTOR============%
-		function obj = sendSerial(args)
+		function obj = sendSerialIOPort(args)
 			if nargin>0 && isstruct(args)
 				if nargin>0 && isstruct(args)
 					fnames = fieldnames(args); %find our argument names
-					for i=1:length(fnames);
+					for i=1:length(fnames)
 						if regexp(fnames{i},obj.allowedPropertiesBase) %only set if allowed property
 							obj.salutation(fnames{i},'Configuring property in sendSerial constructor');
 							obj.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
@@ -52,13 +51,12 @@ classdef sendSerialIOPort < handle
 		
 		%===============OPEN PORT================%
 		function open(obj)
-			if obj.silentMode==0
-				obj.portHandle=IOPort('OpenSerialport', obj.deviceID, sprintf(' BaudRate=%i',obj.baudRate));
-				IOPort('Verbosity', obj.verbosity);
-				if isempty(obj.portHandle)
-					obj.salutation('','Couldn''t open Serial Port, try the open method with another name');
-					obj.silentMode=1;
-				end
+			if obj.silentMode; return; end
+			obj.portHandle=IOPort('OpenSerialport', obj.deviceID, sprintf(' BaudRate=%i',obj.baudRate));
+			IOPort('Verbosity', obj.verbosity);
+			if isempty(obj.portHandle)
+				obj.salutation('','Couldn''t open Serial Port, try the open method with another name');
+				obj.silentMode=1;
 			end
 		end
 		
@@ -69,9 +67,13 @@ classdef sendSerialIOPort < handle
 					obj.name=name;
 				end
 			end
-			obj.deviceID=FindSerialPort(obj.name,1,1);
+			if ~isempty(regexpi(obj.name, '^/dev/', 'once'))
+				obj.deviceID = obj.name;
+			else
+				obj.deviceID=FindSerialPort(obj.name,1,1);
+			end
 			if isempty(obj.deviceID)
-				obj.salutation('','Couldn''t find Serial Port, try the find method with another name');
+				warning('Couldn''t find Serial Port, try the find method with another name');
 				obj.silentMode=1;
 			else
 				obj.silentMode=0;

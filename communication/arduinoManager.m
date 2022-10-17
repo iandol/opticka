@@ -13,7 +13,7 @@ classdef arduinoManager < optickaCore
 	% arduino interface by Mathworks), which provide much better performance
 	% than MATLAB's hardware package.
 	properties
-		%> arduino port, if left empty it will make a guess during open
+		%> arduino port, if left empty it will make a guess during open()
 		port char				= ''
 		%> board type; uno [default] is a generic arduino, xiao is the seeduino xiao
 		board char {mustBeMember(board,{'Uno','Xiao'})}	= 'Uno' 
@@ -22,15 +22,16 @@ classdef arduinoManager < optickaCore
 		%> output logging info
 		verbose					= false
 		%> open a GUI to drive a reward directly
-		openGUI logical			= true
-		%> which pin to trigger the reward TTL?
+		openGUI logical			= false
+		%> which pin to trigger the reward TTL by default?
 		rewardPin double		= 2
-		%> time of the TTL sent?
+		%> time of the TTL sent by default?
 		rewardTime double		= 300
 		%> specify the available pins to use; 2-13 is the default for an Uno
-		%> 0-10 for the xiao
+		%> 0-10 for the xiao (though xiao pins 11-14 can control LEDS)
 		availablePins cell		= {2,3,4,5,6,7,8,9,10,11,12,13}
-		%> the arduino device object,
+		%> the arduinoIOPort device object, you can call the methods
+		%> directly if required.
 		device					= []
 	end
 	properties (SetAccess = private, GetAccess = public)
@@ -64,7 +65,7 @@ classdef arduinoManager < optickaCore
 				if ~verLessThan('matlab','9.7')	% use the nice serialport list command
 					me.ports = serialportlist('available');
 				else
-					me.ports = seriallist;
+					me.ports = seriallist; %#ok<SERLL> 
 				end
 				if ~isempty(me.ports)
 					fprintf('--->arduinoManager: Ports available: %s\n',me.ports);
@@ -126,11 +127,12 @@ classdef arduinoManager < optickaCore
 			end
 		end
 
-		%===============CLOSE PORT================%
+		%===============CLOSE DEVICE================%
 		function close(me)
-			setLow(me);
-			try close(me.handles.parent);me.handles=[];end
-			me.device = [];
+			try 
+				close(me.handles.parent); me.handles=[];
+				me.device = [];
+			end
 			me.deviceID = '';
 			me.availablePins = '';
 			me.isOpen = false;
@@ -138,7 +140,7 @@ classdef arduinoManager < optickaCore
 			if ~verLessThan('matlab','9.7')
 				me.ports = serialportlist('available');
 			else
-				me.ports = seriallist;
+				me.ports = seriallist; %#ok<SERLL> 
 			end
 		end
 		

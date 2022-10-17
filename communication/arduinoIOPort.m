@@ -73,19 +73,19 @@ classdef arduinoIOPort < handle
 				fprintf('===> All possible serial ports: ');
 				fprintf(' %s ',a.allPorts); fprintf('\n');
 				if any(strcmpi(a.allPorts, port))
-					fprintf('===> Your specified port %s is present\n', port)
+					fprintf('===> Your specified port %s is present\n', port);
 				else
 					error('===> No port %s is present on the system!', port);
 				end
 				if any(strcmpi(a.avPorts, port))
-					fprintf('===> Your specified port %s is available\n', port)
+					fprintf('===> Your specified port %s is available\n', port);
 				else
 					error('===> The port is occupied, please release it first!');
 				end
 			else
 				a.allPorts = seriallist; a.avPorts = []; %#ok<*SERLL> 
 				if any(strcmpi(a.allPorts, port))
-					fprintf('===> Your specified port %s is present\n', port)
+					fprintf('===> Your specified port %s is present\n', port);
 				else
 					error('===> No port %s is present on the system!', port);
 				end
@@ -93,7 +93,7 @@ classdef arduinoIOPort < handle
 			% define IOPort serial object
 			oldv = IOPort('Verbosity',0);
 			[a.conn, err] = IOPort('OpenSerialPort', port, a.params);
-			IOPort('Verbosity',oldv)
+			IOPort('Verbosity',oldv);
 			if a.conn == -1
 				warning('===>! Port CANNOT be opened: %s',err);
 				a.isDemo = true;
@@ -102,7 +102,7 @@ classdef arduinoIOPort < handle
 			end
 			% test connection
 			try
-				IOPort('Flush',a.conn);
+				IOPort('Purge',a.conn);
 			catch ME
 				disp(ME.message)
 				delete(a.conn);
@@ -128,7 +128,7 @@ classdef arduinoIOPort < handle
 				IOPort('CloseAll');
 				try delete(a.conn); end
 				try delete(a); end
-				error('Connection unsuccessful, please make sure that the board is powered on, running a sketch provided with the package, and connected to the indicated serial port. You might also try to unplug and re-plug the USB cable before attempting a reconnection.');
+				error('Connection unsuccessful!!! Please make sure that the board is powered on, \nrunning a sketch provided with the package, \nand connected to the indicated serial port. \nYou might also try to unplug and re-plug the USB cable before attempting a reconnection.');
 			end
 			a.sktc = r(1)-48; %-48 to get the numeric value from the ASCII one [char(48)==0]
 			fprintf('===> It took %.3f secs to establish response: %i...\n',tout,a.sktc);
@@ -225,7 +225,7 @@ classdef arduinoIOPort < handle
 			% val=a.digitalRead(4); % just as above (reads pin #4)
 			%
 			if a.isDemo; return; end
-			purge(a);
+			purge(a); % make sure we remove any stale data
 			n = IOPort('Write',a.conn,uint8([49 97+pin]),2);
 			if n ~= 2; warning('arduinoIOPort.digitalRead() WRITE command went wrong?'); end
 			[val, ~, err] = IOPort('Read',a.conn,1,3);
@@ -285,7 +285,7 @@ classdef arduinoIOPort < handle
 			% val=a.analogRead(0); % just as above, reads analog input pin # 0
 			%
 			if a.isDemo; return; end
-			purge(a); %make sure we remove any stale data
+			purge(a); % make sure we remove any stale data
 			n = IOPort('Write',a.conn,uint8([51 97+pin]),1);
 			if n ~= 2; warning('arduinoIOPort.analogRead() WRITE command went wrong?'); end
 			val = [];
@@ -346,7 +346,7 @@ classdef arduinoIOPort < handle
 			IOPort('Write',a.conn,uint8([54 value]),1);
 		end % strobeWord
 		
-		%===================================================function analog reference
+		%===================================================ANALOG REFERENCE
 		function analogReference(a,str)
 			% analogReference(a,str); Changes voltage reference on analog input pins
 			% The first argument, a, is the arduino object. The second argument,
@@ -368,7 +368,7 @@ classdef arduinoIOPort < handle
 			IOPort('Write',a.conn,uint8([82 48+num]),1);
 		end % analogreference
 		
-		%===================================================round trip
+		%===================================================ROUND TRIP
 		function val=roundTrip(a,byte,verbose)
 			% roundTrip(a,byte); sends something to the arduino and back
 			% The first argument, a, is the arduino object.
@@ -402,7 +402,7 @@ classdef arduinoIOPort < handle
 					val=IOPort('Read',a.conn);
 				end
 			end
-			if verbose;fprintf('Roundtrip for value:%i took %i loops & %.4f ms\n',val,nl,(GetSecs-tin)*1e3);end
+			if verbose;fprintf('Roundtrip for val:%i took %i loops & %.4f ms\n',val,nl,(GetSecs-tin)*1e3);end
 		end % roundtrip
 		
 		%%==========================================CONFIGURE
@@ -415,16 +415,18 @@ classdef arduinoIOPort < handle
 		%%==========================================DESTRUCTOR
 		function delete(a)
 			try
-				for i=a.pinn
-					a.pinMode(i,'output');
-					a.digitalWrite(i,0);
+				if ~isempty(a.conn)
+					disp('Closing arduinoIOPort device...');
+					for i=a.pinn
+						a.pinMode(i,'output');
+						a.digitalWrite(i,0);
+					end
+					IOPort('Close', a.conn); 
 				end
-				IOPort('CloseAll');
 			catch ME
-				% disp but proceed anyway
-				IOPort('CloseAll');
 				disp(ME.message);
-				disp('Proceeding to deletion anyway');
+				disp('arduinoIOPort: Proceeding to delete all serial connections!');
+				IOPort('CloseAll');
 			end
 		end % delete
 		function close(a)
@@ -442,6 +444,8 @@ classdef arduinoIOPort < handle
 			% str=evalc('a.disp'), (or str=evalc('a')), can be used to capture
 			% the output in the string 'str'.
 			if a.isDemo; disp('Arduino is in DEMO mode');return;end
+			v = IOPort('Version');
+			fprintf('===>>> IOPort Version %s\n',v.version);
 			fprintf('===>>> Arduino object connected to %s with %i pins\n',a.port,length(a.pinn));
 			fprintf('===>>> Start pin: %i | end pin: %i\n',a.startPin,a.endPin);
 			if a.sktc==4
