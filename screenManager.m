@@ -21,7 +21,7 @@ classdef screenManager < optickaCore
 	properties
 		%> the display to use, 0 is the main display on macOS/Linux
 		%> default value will be set to `max(Screen('Screens'))`
-		screen(1,1) double {mustBeInteger}
+		screen double {mustBeInteger}
 		%> Pixels Per Centimeter — used for calculating the number of pixels
 		%> per visual degree (ppd). Use the calibrateSize.m function to
 		%> measure this value accurately for each monitor you will use.
