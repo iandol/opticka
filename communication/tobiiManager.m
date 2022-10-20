@@ -1535,9 +1535,9 @@ classdef tobiiManager < optickaCore
 				size = me.stimulusPositions(i).size;
 				if isempty(size); size = 1 * me.ppd_; end
 				if me.stimulusPositions(i).selected == true
-					drawBox(me.operatorScreen,[x y],size,[0.5 1 0]);
+					drawBox(me.operatorScreen,[x; y],size,[0.5 1 0]);
 				else
-					drawBox(me.operatorScreen,[x y],size,[0.6 0.6 0]);
+					drawBox(me.operatorScreen,[x; y],size,[0.6 0.6 0]);
 				end
 			end			
 		end
