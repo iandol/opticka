@@ -126,7 +126,11 @@ classdef baseStimulus < optickaCore & dynamicprops
 		dY_
 		% deal with interaction of colour and alpha
 		isInSetColour logical = false
-		% workaround set method bug for dynamic properties
+		% workaround set method bug for dynamic properties. In theory a set
+		% method should not trigger the same set method, but there is a
+		% hard to trigger bug where indeed we get a recursion error. Here
+		% we use a loop limit so only the fisrt loop will set the value.
+		% See commit #a8bdb368928a9c5ebdb40cc66ec02be0534ce0d5
 		setLoop = 0;
 		%> Which properties to ignore to clone when making transient copies in
 		%> the setup method
@@ -986,8 +990,12 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> @brief xPositionOut Set method
 		%>
 		% ===================================================================
-		function set_xPositionOut(me,value)
-			me.xPositionOut = value*me.ppd;
+		function set_xPositionOut(me, value)
+			me.setLoop = me.setLoop + 1;
+			if me.setLoop == 1
+				me.xPositionOut = value * me.ppd;
+			end
+			me.setLoop = 0;
 			if ~me.inSetup; me.setRect; end
 		end
 		
@@ -996,7 +1004,11 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%>
 		% ===================================================================
 		function set_yPositionOut(me,value)
-			me.yPositionOut = value*me.ppd;
+			me.setLoop = me.setLoop + 1;
+			if me.setLoop == 1
+				me.yPositionOut = value*me.ppd;
+			end
+			me.setLoop = 0;	
 			if ~me.inSetup; me.setRect; end
 		end
 		

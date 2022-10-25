@@ -741,9 +741,9 @@ classdef runExperiment < optickaCore
 				
 				%-----Premptive save in case of crash or error: SAVES IN /TMP
 				rE = me;
-				tmpFile = [tempdir filesep me.name '.mat'];
-				fprintf('===>>> Save initial state: %s\n',tmpFile);
-				save(tmpFile,'rE','tS');
+				tS.tmpFile = [tempdir filesep me.name '.mat'];
+				fprintf('===>>> Save initial state: %s\n',tS.tmpFile);
+				save(tS.tmpFile,'rE','tS');
 
 				%-----ensure we open the reward manager
 				if me.useArduino && isa(rM,'arduinoManager') && ~rM.isOpen

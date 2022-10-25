@@ -152,7 +152,6 @@ classdef screenManager < optickaCore
 	end
 	
 	properties (Hidden = true)
-
 		%> The mode to use for color++ mode
 		colorMode							= 2
 		%> font details
@@ -608,15 +607,17 @@ classdef screenManager < optickaCore
 				
 				% Enable alpha blending.
 				sv.blending = false;
+				sv.newSrc = me.srcMode;
+				sv.newDst = me.dstMode;
+				sv.srcdst = [me.srcMode '|' me.dstMode];
 				if me.blend==1
-					sv.newSrc = me.srcMode;
-					sv.newDst = me.dstMode;
-					sv.srcdst = [me.srcMode '|' me.dstMode];
 					sv.blending = true;
 					[sv.oldSrc,sv.oldDst,sv.oldMask]...
 						= Screen('BlendFunction', me.win, me.srcMode, me.dstMode);
 					fprintf('\n---> screenManager: Previous OpenGL blending: %s | %s\n', sv.oldSrc, sv.oldDst);
 					fprintf('---> screenManager: OpenGL blending now: %s | %s\n', me.srcMode, me.dstMode);
+				else
+					[sv.oldSrc,sv.oldDst,sv.oldMask] = Screen('BlendFunction', me.win);
 				end
 				
 				% set up text defaults
@@ -914,10 +915,7 @@ classdef screenManager < optickaCore
 		%>
 		%> @param value
 		% ===================================================================
-			if ~(value > 0)
-				me.distance = 57.3;
-				error('Distance must be greater than 0!')
-			end
+			assert(value > 0,'Distance must be greater than 0!')
 			me.distance = value;
 			me.makeGrid();
 		end
@@ -929,10 +927,7 @@ classdef screenManager < optickaCore
 		%>
 		%> @param value
 		% ===================================================================
-			if ~(value > 0)
-				me.pixelsPerCm = 36;
-				error('Pixels per cm must be greater than 0!')
-			end
+			assert(value > 0, 'Pixels per cm must be greater than 0!');
 			me.pixelsPerCm = value;
 			me.makeGrid();
 		end
@@ -974,7 +969,7 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief Set method for pixelsPerCm
+		%> @brief Set method for screenXOffset
 		%>
 		%> @param
 		% ===================================================================
@@ -984,7 +979,7 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief Set method for pixelsPerCm
+		%> @brief Set method for screenYOffset
 		%>
 		%> @param
 		% ===================================================================
@@ -1064,7 +1059,7 @@ classdef screenManager < optickaCore
 		%> @fn drawCross
 		%> @brief draw fixation cross from Thaler L, Schütz AC, 
 		%>  Goodale MA, & Gegenfurtner KR (2013) “What is the best fixation target? 
-		%>  The effect of target shape on stability of fixational eye movements.�? 
+		%>  The effect of target shape on stability of fixational eye movements. 
 		%>  Vision research 76, 31-42 <http://doi.org/10.1016/j.visres.2012.10.012>
 		%>
 		%> @param size size in degrees
@@ -1072,10 +1067,12 @@ classdef screenManager < optickaCore
 		%> @param x position in degrees relative to screen center
 		%> @param y position in degrees relative to screen center
 		%> @param lineWidth of lines in degrees (1px minimum)
+		%> @param showDisk show background disc?
+		%> @param alpha alpha for the lines
+		%> @param alpha2 alpha for the disc
 		%> @return
 		% ===================================================================
-			if ~me.isOpen; fprintf('drawCross(me,size,colour,x,y,lineWidth,showDisk,alpha)\n');return; end
-			% drawCross(me, size, colour, x, y, lineWidth)
+			% drawCross(me,size,colour,x,y,lineWidth,showDisk,alpha,alpha2)
 			if nargin < 9 || isempty(alpha2); alpha2 = 1; end
 			if nargin < 8 || isempty(alpha); alpha = 1; end
 			if nargin < 7 || isempty(showDisk); showDisk = true; end
@@ -1112,8 +1109,8 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
-		function drawSimpleCross(me,size,colour,x,y,lineWidth)
-		%> @fn drawSimpleCross
+		function drawSimpleCross(me, size, colour, x, y, lineWidth)
+		%> @fn drawSimpleCross(me, size, colour, x, y, lineWidth)
 		%> @brief draw small cross
 		%>
 		%> @param size size in degrees
@@ -1121,9 +1118,7 @@ classdef screenManager < optickaCore
 		%> @param x position in degrees relative to screen center
 		%> @param y position in degrees relative to screen center
 		%> @param lineWidth of lines
-		%> @return
 		% ===================================================================
-			% drawSimpleCross(me, size, colour, x, y, lineWidth)
 			if nargin < 6 || isempty(lineWidth); lineWidth = 2; end
 			if nargin < 5 || isempty(y); y = 0; end
 			if nargin < 4 || isempty(x); x = 0; end
@@ -1145,6 +1140,8 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
+		function drawSpot(me, size, colour, x, y)
+		%> @fn drawSpot(me, size, colour, x, y)
 		%> @brief draw small spot centered on the screen
 		%>
 		%> @param radius size in degrees
@@ -1153,7 +1150,6 @@ classdef screenManager < optickaCore
 		%> @param y position in degrees relative to screen center
 		%> @return
 		% ===================================================================
-		function drawSpot(me,size,colour,x,y)
 			if nargin < 5 || isempty(y); y = 0; end
 			if nargin < 4 || isempty(x); x = 0; end
 			if nargin < 3 || isempty(colour); colour = [1 1 1 1]; end
@@ -1171,7 +1167,6 @@ classdef screenManager < optickaCore
 		%> @brief draw timed small spot centered on the screen
 		%>
 		%> @param
-		%> @return
 		% ===================================================================
 		function drawTimedSpot(me,size,colour,time,reset)
 			% drawTimedSpot(me,size,colour,time,reset)

@@ -101,6 +101,7 @@ classdef discStimulus < baseStimulus
 			if isempty(me.isVisible); me.show; end
 			
 			me.sM = sM;
+			if ~sM.isOpen; warning('Screen needs to be Open!'); end
 			me.ppd=sM.ppd;
 			
 			me.texture = []; %we need to reset this
@@ -297,7 +298,7 @@ classdef discStimulus < baseStimulus
 		%> requirements.
 		% ===================================================================
 		function setRect(me)
-			dstRect=Screen('Rect', me.texture);
+			
 			me.dstRect = ScaleRect(Screen('Rect',me.texture), me.scale, me.scale);
 			if me.mouseOverride && me.mouseValid
 					me.dstRect = CenterRectOnPointd(me.dstRect, me.mouseX, me.mouseY);
