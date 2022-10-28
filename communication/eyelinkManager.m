@@ -891,34 +891,6 @@ classdef eyelinkManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief testWithinFixationWindow simply tests we are in fixwindow
-		%> 
-		%>
-		% ===================================================================
-		function out = testWithinFixationWindow(me, yesString, noString)
-			if isFixated(me)
-				out = yesString;
-			else
-				out = noString;
-			end
-		end
-		
-		% ===================================================================
-		%> @brief Checks if we've maintained fixation for correct time, if
-		%> true return yesString, if not return noString. This allows an
-		%> external code to quickly select a string based on this.
-		%>
-		% ===================================================================
-		function out = testFixationTime(me, yesString, noString)
-			[fix,fixtime] = isFixated(me);
-			if fix && fixtime
-				out = yesString; %me.salutation(sprintf('Fixation Time: %g',me.fixLength),'TESTFIXTIME');
-			else
-				out = noString;
-			end
-		end
-		
-		% ===================================================================
 		%> @brief Checks for both searching and then maintaining fix. Input is
 		%> 2 strings, either one is returned depending on success or
 		%> failure, 'searching' may also be returned meaning the fixation
@@ -1025,6 +997,37 @@ classdef eyelinkManager < optickaCore
 				return
 			end
 		end
+
+		% ===================================================================
+		%> @brief testWithinFixationWindow simply tests we are in fixwindow
+		%> 
+		%>
+		% ===================================================================
+		function out = testWithinFixationWindow(me, yesString, noString)
+			if isFixated(me)
+				out = yesString;
+			else
+				out = noString;
+			end
+		end
+		
+		% ===================================================================
+		%> @brief Checks if we've maintained fixation for correct time, if
+		%> true return yesString, if not return noString. This allows an
+		%> external code to quickly select a string based on this. Use
+		% testHoldFixation() if you want to maintain fixation with a window
+		% for a certain time...
+		%>
+		% ===================================================================
+		function out = testFixationTime(me, yesString, noString)
+			[fix,fixtime] = isFixated(me);
+			if fix && fixtime
+				out = yesString; %me.salutation(sprintf('Fixation Time: %g',me.fixLength),'TESTFIXTIME');
+			else
+				out = noString;
+			end
+		end
+		
 		
 		% ===================================================================
 		%> @brief checks which eye is available, force left eye if

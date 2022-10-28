@@ -664,7 +664,7 @@ classdef runExperiment < optickaCore
 				if ~exist(me.userFunctionsFile,'file')
 					me.userFunctionsFile = [me.paths.root filesep 'userFunctions.m'];
 				end
-				[p,f,e] = fileparts(me.userFunctionsFile);
+				[p,f] = fileparts(me.userFunctionsFile);
 				if ~matches(f,"userFunctions")
 					copyfile(me.userFunctionsFile,[p filesep 'userFunctions.m']);
 					run([p filesep 'userFunctions.m']);
@@ -686,16 +686,17 @@ classdef runExperiment < optickaCore
 				if ~exist(me.stateInfoFile,'file')
 					errordlg('runExperiment.runTask(): Please specify a valid State Machine file!!!')
 				else
-					me.paths.stateInfoFile = regexprep(me.paths.stateInfoFile,'\s+','\\ ');
-					disp(['======>>> Loading State File: ' me.paths.stateInfoFile]);
-					clear(me.paths.stateInfoFile);
+					me.stateInfoFile = regexprep(me.stateInfoFile,'\s+','\\ ');
+					disp(['======>>> Loading State File: ' me.stateInfoFile]);
+					clear(me.stateInfoFile);
 					if ~isdeployed
-						run(me.paths.stateInfoFile);
+						run(me.stateInfoFile);
 					else
-						runDeployed(me.paths.stateInfoFile);
+						runDeployed(me.stateInfoFile);
 					end
 					me.stateInfo = stateInfoTmp;
 					addStates(sM, me.stateInfo);
+					me.paths.stateInfoFile = me.stateInfoFile;
 				end
 				uF.sM = sM;
 				
@@ -1218,31 +1219,28 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 			value = logical(value);
 			me.verbose = value;
-			if isa(me.task,'taskSequence') %#ok<*MCSUP>
+			if isa(me.task,'taskSequence') && ~isempty(me.task) %#ok<*MCSUP>
 				me.task.verbose = value;
 			end
-			if isa(me.screen,'screenManager')
+			if isa(me.screen,'screenManager') && ~isempty(me.screen)
 				me.screen.verbose = value;
 			end
-			if isa(me.stateMachine,'stateMachine')
+			if isa(me.stateMachine,'stateMachine') && ~isempty(me.stateMachine)
 				me.stateMachine.verbose = value;
 			end
-			if isa(me.eyeTracker,'eyelinkManager')
+			if (isa(me.eyeTracker,'eyelinkManager') || isa(me.eyeTracker,'tobiiManager')) && ~isempty(me.eyeTracker)
 				me.eyeTracker.verbose = value;
 			end
-			if isa(me.eyeTracker,'tobiiManager')
-				me.eyeTracker.verbose = value;
-			end
-			if isa(me.lJack,'labJack')
+			if isa(me.lJack,'labJack') && ~isempty(me.lJack)
 				me.lJack.verbose = value;
 			end
-			if isa(me.dPixx,'dPixxManager')
+			if isa(me.dPixx,'dPixxManager') && ~isempty(me.dPixx)
 				me.dPixx.verbose = value;
 			end
-			if isa(me.dPP,'plusplusManager')
+			if isa(me.dPP,'plusplusManager')  && ~isempty(me.dPP)
 				me.dPP.verbose = value;
 			end
-			if isa(me.stimuli,'metaStimulus') && me.stimuli.n > 0
+			if isa(me.stimuli,'metaStimulus') && ~isempty(me.stimuli) && me.stimuli.n > 0
 				for i = 1:me.stimuli.n
 					me.stimuli{i}.verbose = value;
 				end

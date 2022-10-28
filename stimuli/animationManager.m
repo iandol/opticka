@@ -7,11 +7,11 @@
 % ========================================================================	
 classdef animationManager < optickaCore
 	properties
-		%> type of animation path, linear | brownian | circular
+		%> type of animation path, linear | sinusoidal | brownian | circular
 		type char ...
-			{mustBeMember(type,{'linear','brownian','circular'})} = 'linear'
-		%> length of the animation in seconds
-		length double = 2
+			{mustBeMember(type,{'linear','sinusoidal','brownian','circular'})} = 'linear'
+		%> parameters for each animation type
+		params struct
 		%> for random walks what is the variance in angle?
 		angleVariance double = 0
 		%> what happens at edge of screen [wrap | bounce | none]
@@ -21,6 +21,8 @@ classdef animationManager < optickaCore
 		verbose = true
 		%> seed for random walks
 		seed uint32
+		%> length of the animation in seconds
+		length double = inf
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -57,6 +59,8 @@ classdef animationManager < optickaCore
 		ppd double = 36
 		%> stimulus position defined as rect [true] or point [false]
 		isRect logical = true
+		%> screen manager link
+		screen
 	end
 	
 	properties (SetAccess = private, Dependent = true)
@@ -84,10 +88,9 @@ classdef animationManager < optickaCore
 		%> @return instance of class.
 		% ===================================================================
 		function me = animationManager(varargin)
-			if nargin == 0; varargin.name = 'animationManager'; end
-			me=me@optickaCore(varargin); %superclass constructor
-			me.parseArgs(varargin, me.allowedProperties);
-			
+			args = optickaCore.addDefaults(varargin,struct('name','animationManager'));
+			me=me@optickaCore(args); %superclass constructor
+			me.parseArgs(args,me.allowedProperties);
 		end
 		
 		function setup(me, stimulus)
@@ -107,8 +110,11 @@ classdef animationManager < optickaCore
 			me.screenVals = stimulus.sM.screenVals;
 		end
 		
-		
+		function animate
+			
+		end
 		function pos = update(me)
+
 			if me.isRect
 				me.mvRect=OffsetRect(me.mvRect,me.dX,me.dY);
 				pos = me.mvRect;

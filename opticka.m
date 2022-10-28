@@ -37,7 +37,7 @@ classdef opticka < optickaCore
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> version number
-		optickaVersion char		= '2.08'
+		optickaVersion char		= '2.09'
 		%> is this a remote instance?
 		remote					= false
 	end
@@ -78,37 +78,11 @@ classdef opticka < optickaCore
 		% ===================================================================	
 			args = optickaCore.addDefaults(varargin,struct('name','opticka'));
 			me=me@optickaCore(args); %superclass constructor
-			me.parseArgs(args,me.allowedProperties);
+			me.parseArgs(args, me.allowedProperties);
 			
 			if me.cloning == false
-				if ~exist('OKStartTask_image.png','file');addOptickaToPath;end
-				if me.initUI
-					me.initialiseUI;
-				end
-			end
-		end
-		
-		% ===================================================================
-		function router(me,in,vars)
-		%> @fn router
-		%> @brief Route to private methods
-		%>
-		%> @param in switch to route to correct method.
-		%> @param vars additional vars to pass.
-		% ===================================================================
-			% router(me,in,vars)
-			if ~exist('vars','var')
-				vars=[];
-			end
-			switch in
-				case 'saveData'
-					me.saveData();
-				case 'saveProtocol'
-					me.saveProtocol(vars);
-				case 'loadProtocol'
-					me.loadProtocol(vars);
-				case 'deleteProtocol'
-					me.deleteProtocol();
+				if ~exist('OKStartTask_image.png','file'); addOptickaToPath; end
+				if me.initUI; me.initialiseUI; end
 			end
 		end
 		
@@ -521,14 +495,15 @@ classdef opticka < optickaCore
 		end
 		
 		% ===================================================================
-		function getStateInfo(me)
+		function getStateInfo(me, kind)
 		%> @fn getStateInfo 
 		%>
 		%> Load the state info and user function files into the UI.
 		% ===================================================================
-			if ~isempty(me.r.stateInfoFile) && ischar(me.r.stateInfoFile)
+			if ~exist('kind','var'); kind = 'b'; end
+			if contains(kind,{'b','s'}) && ~isempty(me.r.stateInfoFile) && ischar(me.r.stateInfoFile)
 				if ~exist(me.r.stateInfoFile,'file')
-					if ~isempty(regexpi(me.r.stateInfoFile,'^\w:\\')) %is it a windows path?
+					if ~isempty(regexpi(me.r.stateInfoFile,'^\w:\\', 'once')) %is it a windows path?
 						f = split(me.r.stateInfoFile,'\');
 						f = f{end};
 					else
@@ -550,13 +525,13 @@ classdef opticka < optickaCore
 					end
 					fclose(fid);
 					set(me.ui.OKTrainingText,'Value',o.store.statetext);
-					set(me.ui.OKTrainingFileName,'Text',['State-Machine File:  ' me.r.paths.stateInfoFile]);
+					set(me.ui.OKTrainingFileName,'Text',['State-Machine File:  ' me.r.stateInfoFile]);
 				else
 					set(me.ui.OKTrainingText,'Value','');
 					set(me.ui.OKTrainingFileName,'Text','No File Specified...');
 				end
 			end
-			if ~isempty(me.r.userFunctionsFile) && exist(me.r.userFunctionsFile,'file')
+			if contains(kind,{'b','f'}) && ~isempty(me.r.userFunctionsFile) && exist(me.r.userFunctionsFile,'file')
 				o.store.usertext = {};
 				fid = fopen(me.r.userFunctionsFile);
 				tline = fgetl(fid);
@@ -570,9 +545,9 @@ classdef opticka < optickaCore
 				fclose(fid);
 				set(me.ui.OKFunctionsText,'Value',o.store.usertext);
 				set(me.ui.OKFunctionsFileName,'Text',['User-Functions File:' me.r.userFunctionsFile]);
-			else
+			elseif ~exist(me.r.userFunctionsFile,'file')
 				set(me.ui.OKFunctionsText,'Value','');
-				set(me.ui.OKFunctionsFileName,'Text','No File Specified...');
+				set(me.ui.OKFunctionsFileName,'Text','No Valid File Specified...');
 			end
 		end
 		
@@ -1018,6 +993,30 @@ classdef opticka < optickaCore
 	%========================================================
 		
 		% ===================================================================
+		function router(me,in,vars)
+		%> @fn router
+		%> @brief Route to private methods
+		%>
+		%> @param in switch to route to correct method.
+		%> @param vars additional vars to pass.
+		% ===================================================================
+			% router(me,in,vars)
+			if ~exist('vars','var')
+				vars=[];
+			end
+			switch in
+				case 'saveData'
+					me.saveData();
+				case 'saveProtocol'
+					me.saveProtocol(vars);
+				case 'loadProtocol'
+					me.loadProtocol(vars);
+				case 'deleteProtocol'
+					me.deleteProtocol();
+			end
+		end
+
+		% ===================================================================
 		%> @brief Delete Protocol
 		%> Delete Protocol
 		%> @param 
@@ -1262,7 +1261,7 @@ classdef opticka < optickaCore
 					msg = ['rehome:' msg];
 				end
 				if ~exist(me.r.userFunctionsFile,'file')
-					warndlg(['Couldn''t find userFunctions file! Revert to default userFunctions.m']);
+					warndlg('Couldn''t find userFunctions file! Revert to default userFunctions.m');
 					me.r.userFunctionsFile = which('userFunctions.m');
 				end
 				me.getStateInfo();
@@ -1839,11 +1838,11 @@ classdef opticka < optickaCore
 		function outv = ge(inhandle)
 		% quick alias to get number value
 			if isprop(inhandle,'String')
-				outv = eval(inhandle.String); %#ok<ST2NM>
+				outv = eval(inhandle.String); 
 			elseif isprop(inhandle,'Value')
-				outv = eval(inhandle.Value); %#ok<ST2NM>
+				outv = eval(inhandle.Value); 
 			elseif isprop(inhandle,'Text')
-				outv = eval(inhandle.Text); %#ok<ST2NM>
+				outv = eval(inhandle.Text); 
 			else
 				outv = '';
 			end

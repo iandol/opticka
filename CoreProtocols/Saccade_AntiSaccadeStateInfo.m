@@ -38,8 +38,9 @@
 % updateTask() for correct responses. 'false' is useful during training.
 tS.includeErrors			= false; 
 % is this run a 'saccade' or 'anti-saccade' task run?
-tS.type						= 'saccade';
-if strcmpi(tS.type,'saccade')
+tS.type						= 'anti-saccade';
+disp(['===>>> Task Type:' tS.type ' <<<==='])
+if strcmp(tS.type,'saccade')
 	% a flag to conditionally set visualisation on the eye tracker interface
 	stims{1}.showOnTracker	= true;
 	stims{2}.showOnTracker	= false;
@@ -53,7 +54,7 @@ else
 	% anti-saccade target towards to place where the pro-saccade target is, so
 	% starting training keeping the pro-saccade target visible helps the
 	% subject understand the task
-	tS.targetAlpha			= 0.1; 
+	tS.targetAlpha			= 0.05;
 end
 
 %==================================================================
@@ -100,7 +101,7 @@ tS.fixY						= 0;
 tS.firstFixInit				= 3;
 % time to maintain fixation within window, can be single value or a range
 % to randomise between
-tS.firstFixTime				= [0.5 1.25];
+tS.firstFixTime				= 0.5;
 % circular fixation window radius in degrees
 tS.firstFixRadius			= 1;
 % do we forbid eye to enter-exit-reenter fixation window?
@@ -108,23 +109,25 @@ tS.strict					= true;
 % do we add an exclusion zone where subject cannot saccade to...
 tS.exclusionZone			= [];
 % time to fix on the stimulus
-tS.stimulusFixTime			= 0.5;
-% historical log of X and Y position, and exclusion zone
-me.lastXPosition			= tS.fixX;
-me.lastYPosition			= tS.fixY;
-me.lastXExclusion			= [];
-me.lastYExclusion			= [];
-% this task will establish an exclusion zone against the anti-saccade
-% target for the pro and anti-saccade task. We can change the size of the
-% exclusion zone, here set to 5° around the X and Y position of the
-% anti-saccade target.
-tS.exclusionRadius			= 5; 
+tS.stimulusFixTime			= 0.25;
+% time to show both fix and stim
+tS.fixstimTime				= 1.5;
 % in this task the subject must saccade to the pro-saccade target location.
 % These settings define the rules to "accept" the target fixation as
 % correct
 tS.targetFixInit			= 1; % time to find the target
 tS.targetFixTime			= 0.5; % to to maintain fixation on target 
 tS.targetRadius				= 5; %radius to fix within.
+% this task will establish an exclusion zone against the anti-saccade
+% target for the pro and anti-saccade task. We can change the size of the
+% exclusion zone, here set to 5° around the X and Y position of the
+% anti-saccade target.
+tS.exclusionRadius			= 5; 
+% historical log of X and Y position, and exclusion zone
+me.lastXPosition			= tS.fixX;
+me.lastYPosition			= tS.fixY;
+me.lastXExclusion			= [];
+me.lastYExclusion			= [];
 
 %==================================================================
 %---------------------------Eyetracker setup-----------------------
@@ -134,7 +137,7 @@ tS.targetRadius				= 5; %radius to fix within.
 % contain the GUI settings you can test if they are empty or not and set
 % them based on that...
 eT.name 					= tS.name;
-if tS.saveData == true;		eT.recordData = true; end %===save ET data?					
+if tS.saveData == true;	eT.recordData = true; end %===save ET data?					
 if me.useEyeLink
 	warning('Note this protocol file is optimised for the Tobii eyetracker...')
 	if isempty(me.elsettings)
@@ -212,25 +215,28 @@ stims.controlTable			= [];
 stims.tableChoice			= 1;
 
 %==================================================================
-%this allows us to enable subsets from our stimulus list
+% this allows us to enable subsets from our stimulus list
 % 1 = saccade target | 2 = anti-saccade target | 3 = fixation cross
-stims.stimulusSets			= {[3], [1], [2], [1 2]};
+stims.stimulusSets			= {3, [1 3], [1 2 3], [1 2]};
 stims.setChoice				= 1;
 hide(stims);
 
 %==================================================================
-%which stimulus in the list is used for a fixation target? For this protocol it means
-%the subject must fixate this stimulus (the saccade target is #1 in the list) to get the
-%reward. Also which stimulus to set an exclusion zone around (where a
-%saccade into this area causes an immediate break fixation).
+% which stimulus in the list is used for a fixation target? For this
+% protocol it means the subject must saccade this stimulus (the saccade
+% target is #1 in the list) to get the reward. Also which stimulus to set an
+% exclusion zone around (where a saccade into this area causes an immediate
+% break fixation).
 stims.fixationChoice		= 1;
 stims.exclusionChoice		= 2;
 
 %==================================================================
-% N x 2 cell array of regexpi strings, list to skip the current -> next state's exit functions; for example
-% skipExitStates = {'fixate','incorrect|breakfix'}; means that if the currentstate is
-% 'fixate' and the next state is either incorrect OR breakfix, then skip the FIXATE exit
-% state. Add multiple rows for skipping multiple state's exit states.
+% N x 2 cell array of regexpi strings, list to skip the current -> next
+% state's exit functions; for example skipExitStates =
+% {'fixate','incorrect|breakfix'}; means that if the currentstate is
+% 'fixate' and the next state is either incorrect OR breakfix, then skip
+% the FIXATE exit state. Add multiple rows for skipping multiple state's
+% exit states.
 sM.skipExitStates			= {'fixate','incorrect|breakfix'};
 
 %===================================================================
@@ -249,7 +255,7 @@ sM.skipExitStates			= {'fixate','incorrect|breakfix'};
 
 %====================================================PAUSE
 %pause entry
-pauseEntryFcn = { 
+pauseEntry = { 
 	@()hide(stims);
 	@()drawBackground(s); %blank the subject display
 	@()drawTextNow(s,'PAUSED, press [p] to resume...');
@@ -264,27 +270,27 @@ pauseEntryFcn = {
 };
 
 %pause exit
-pauseExitFcn = {
+pauseExit = {
 	@()startRecording(eT, true); %start recording eye position data again
 }; 
 
-%====================================================PREFIXATION
-prefixEntryFcn = { 
+%====================================================PRE-FIXATION
+pfEntry = { 
 	@()enableFlip(me); 
 };
 
-prefixFcn = {
+pfWithin = {
 	@()drawBackground(s);
 };
 
-prefixExitFcn = {
+pfExit = {
 	@()edit(stims,3,'alphaOut',0.5); 
 	@()edit(stims,3,'alpha2Out',1);
 };
 
 %====================================================FIXATION
 %fixate entry
-fixEntryFcn = { 
+fixEntry = { 
 	@()startRecording(eT);
 	@()resetFixationHistory(eT); % reset the recent eye position history
 	@()resetExclusionZones(eT); % reset the exclusion zones on eyetracker
@@ -295,53 +301,77 @@ fixEntryFcn = {
 	@()trackerClearScreen(eT); % blank the eyelink screen
 	@()trackerDrawFixation(eT); % draw fixation window on eyetracker display
 	@()trackerDrawStimuli(eT,stims.stimulusPositions); %draw location of stimulus on eyetracker
-	@()showSet(stims, 1);
+	@()show(stims, 3);
 	@()needEyeSample(me,true); % make sure we start measuring eye position
 	@()logRun(me,'INITFIX'); %fprintf current trial info to command window
 };
 
-%fix within
-fixFcn = {
+% fix within
+fixWithin = {
 	@()draw(stims); %draw stimulus
 };
 
-%test we are fixated for a certain length of time
-inFixFcn = { 
-	@()testSearchHoldFixation(eT,'stimulus','incorrect')
+% test we are fixated for a certain length of time
+initFix = { 
+	@()testSearchHoldFixation(eT,'fixstim','incorrect')
 };
 
-%exit fixation phase
-fixExitFcn = { 
-	@()updateFixationTarget(me, tS.useTask, tS.targetFixInit, tS.targetFixTime, tS.targetRadius, tS.strict); ... %use our stimuli values for next fix X and Y
-	@()updateExclusionZones(me, tS.useTask, tS.exclusionRadius);
-	@()trackerDrawFixation(eT); % draw fixation window on eyetracker display
-	@()trackerMessage(eT,'END_FIX');
-}; 
+% exit fixation phase
 if strcmpi(tS.type,'saccade')
-	fixExitFcn = [ fixExitFcn; {@()showSet(stims, 2)} ];
+	fixExit = { @()show(stims, [1 3]); };
 else
-	fixExitFcn = [ fixExitFcn; {@()showSet(stims, 4); @()edit(stims,1,'alphaOut',tS.targetAlpha)} ];
+	fixExit = { @()show(stims, [1 2 3]); @()edit(stims,1,'alphaOut',tS.targetAlpha) };
 end
 
-%====================================================TARGET STIMULUS
-%what to run when we enter the stim presentation state
-stimEntryFcn = { 
-	@()doStrobe(me,true);
+%====================================================FIX + TARGET STIMULUS
+
+fsEntry = {
+	@()updateFixationValues(eT,[],[],[],0.5); %reset the fixation timer for 0.5 secs
+	@()logRun(me,'FIX+STIM'); %fprintf current trial info to command window
 };
 
-%what to run when we are showing stimuli
-stimFcn =  { 
+fsWithin = {
+	@()draw(stims); %draw stimulus
+};
+
+% test we are fixated for a certain length of time, testHoldFixation assumes
+% we are already fixated which we are coming from the fixate state...
+fsFix = { 
+	@()testHoldFixation(eT,'stimulus','incorrect')
+};
+
+% exit fixation phase
+fsExit = { 
+	% use our saccade target stimulus for next fix X and Y, see
+	% stims.fixationChoice above
+	@()updateFixationTarget(me, tS.useTask, tS.targetFixInit, tS.targetFixTime, tS.targetRadius, tS.strict);
+	% use our antisaccade target to define the exclusion zone, see
+	% stims.exclusionChoice above
+	@()updateExclusionZones(me, tS.useTask, tS.exclusionRadius);
+	@()trackerMessage(eT,'END_FIX');
+	@()hide(stims, 3);
+}; 
+
+%====================================================TARGET STIMULUS ALONE
+% what to run when we enter the stim presentation state
+stimEntry = { 
+	@()doStrobe(me,true);
+	@()logRun(me,'STIMULUS'); %fprintf current trial info to command window
+};
+
+% what to run when we are showing stimuli
+stimWithin =  { 
 	@()draw(stims);
 	@()animate(stims); % animate stimuli for subsequent draw
 };
 
-%test we are maintaining fixation
-maintainFixFcn = {
+% test we are finding the new target (stimulus 1, the saccade target)
+targetFix = {
 	@()testSearchHoldFixation(eT,'correct','breakfix'); % tests finding and maintaining fixation
 };
 
 %as we exit stim presentation state
-stimExitFcn = { 
+stimExit = { 
 	@()setStrobeValue(me,255); 
 	@()doStrobe(me,true);
 };
@@ -349,7 +379,7 @@ stimExitFcn = {
 %====================================================DECISION
 
 %if the subject is correct (small reward)
-correctEntryFcn = { 
+correctEntry = { 
 	@()timedTTL(rM, tS.rewardPin, tS.rewardTime); % send a reward TTL
 	@()beep(aM,2000); % correct beep
 	@()trackerMessage(eT,'END_RT');
@@ -362,12 +392,12 @@ correctEntryFcn = {
 };
 
 %correct stimulus
-correctFcn = { 
+correctWithin = { 
 	@()drawBackground(s); % draw background alone
 };
 
 %when we exit the correct state
-correctExitFcn = {
+correctExit = {
 	@()updatePlot(bR, me); %update our behavioural plot, must come before updateTask() / updateVariables()
 	@()updateTask(me,tS.CORRECT); %make sure our taskSequence is moved to the next trial
 	@()updateVariables(me); %randomise our stimuli, and set strobe value too
@@ -378,7 +408,7 @@ correctExitFcn = {
 };
 
 %incorrect entry
-incEntryFcn = { 
+incEntry = { 
 	@()beep(aM,200,0.5,1);
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,['TRIAL_RESULT ' str2double(tS.INCORRECT)]);
@@ -390,12 +420,12 @@ incEntryFcn = {
 }; 
 
 %our incorrect stimulus
-incFcn = {
+incWithin = {
 	@()drawBackground(s);
 };
 
 %incorrect / break exit
-incExitFcn = {
+incExit = {
 	@()updatePlot(bR, me); %update our behavioural plot, must come before updateTask() / updateVariables()
 	@()updateVariables(me); %randomise our stimuli, don't run updateTask(task), and set strobe value too
 	@()update(stims); %update our stimuli ready for display
@@ -404,13 +434,13 @@ incExitFcn = {
 	@()drawnow();
 };
 if tS.includeErrors
-	incExitFcn = [ {@()updateTask(me,tS.BREAKFIX)}; incExitFcn ]; % make sure our taskSequence is moved to the next trial
+	incExit = [ {@()updateTask(me,tS.BREAKFIX)}; incExit ]; % make sure our taskSequence is moved to the next trial
 else
-	incExitFcn = [ {@()resetRun(task)}; incExitFcn ]; % we randomise the run within this block to make it harder to guess next trial
+	incExit = [ {@()resetRun(task)}; incExit ]; % we randomise the run within this block to make it harder to guess next trial
 end
 
 %break entry
-breakEntryFcn = {
+breakEntry = {
 	@()beep(aM, 400, 0.5, 1);
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,['TRIAL_RESULT ' str2double(tS.BREAKFIX)]);
@@ -421,7 +451,7 @@ breakEntryFcn = {
 	@()logRun(me,'BREAKFIX'); %fprintf current trial info
 };
 
-exclEntryFcn = {
+exclEntry = {
 	@()beep(aM, 400, 0.5, 1);
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,['TRIAL_RESULT ' str2double(tS.BREAKFIX)]);
@@ -433,13 +463,13 @@ exclEntryFcn = {
 };
 
 %calibration function
-calibrateFcn = { 
+calibrateFn = { 
 	@()rstop(io);
 	@()trackerSetup(eT);  %enter tracker calibrate/validate setup mode
 };
 
 %--------------------drift correction function
-driftFcn = {
+driftFn = {
 	@()drawBackground(s); %blank the display
 	@()stopRecording(eT); % stop eyelink recording data
 	@()setOffline(eT); % set eyelink offline
@@ -447,41 +477,46 @@ driftFcn = {
 };
 
 %debug override
-overrideFcn = { @()keyOverride(me) }; %a special mode which enters a matlab debug state so we can manually edit object values
+overrideFn = { @()keyOverride(me) }; %a special mode which enters a matlab debug state so we can manually edit object values
 
 %screenflash
-flashFcn = { @()flashScreen(s, 0.2) }; % fullscreen flash mode for visual background activity detection
+flashFn = { @()flashScreen(s, 0.2) }; % fullscreen flash mode for visual background activity detection
 
 %show 1deg size grid
-gridFcn = {@()drawGrid(s)};
+gridFn = {@()drawGrid(s)};
 
 %==============================================================================
-%----------------------State Machine Table-------------------------
-% specify our cell array that is read by the stateMachine
-% remember that transitionFcn can override the time value, so for example
+%-----------------------------State Machine Table------------------------------
+% specify the cell array that is read by the stateMachine.
+% REMEMBER that transitionFcn can override the time value, so for example
 % stimulus shows 2 seconds time, but the transitionFcn can jump to other
-% states (correct or breakfix) sooner than this, so this is an upper limit.
+% states (correct or breakfix) sooner than this, so this is an upper limit!
+% initial state should be a pause, and keep calibrate, drift, override, 
+% flash, showgrid as these generic states are controlled by the keyboard.
+%
 stateInfoTmp = {
 'name'      'next'		'time'  'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn';
-'pause'		'prefix'	inf		pauseEntryFcn	{}				{}				pauseExitFcn;
-'prefix'	'fixate'	0.5		prefixEntryFcn	prefixFcn		{}				{};
-'fixate'	'incorrect'	5		fixEntryFcn		fixFcn			inFixFcn		fixExitFcn;
-'stimulus'	'incorrect'	5		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn;
-'correct'	'prefix'	0.25	correctEntryFcn	correctFcn		{}				correctExitFcn;
-'incorrect'	'timeout'	0.25	incEntryFcn		incFcn			{}				incExitFcn;
-'breakfix'	'timeout'	0.25	breakEntryFcn	incFcn			{}				incExitFcn;
-'exclusion'	'timeout'	0.25	exclEntryFcn	incFcn			{}				incExitFcn;
+'pause'		'prefix'	inf		pauseEntry		{}				{}				pauseExit;
+'prefix'	'fixate'	0.5		pfEntry			pfWithin		{}				pfExit;
+'fixate'	'incorrect'	5		fixEntry		fixWithin		initFix			fixExit;
+'fixstim'	'incorrect' 1		fsEntry			fsWithin		fsFix			fsExit
+'stimulus'	'incorrect'	5		stimEntry		stimWithin		targetFix		stimExit;
+'correct'	'prefix'	0.25	correctEntry	correctWithin	{}				correctExit;
+'incorrect'	'timeout'	0.25	incEntry		incWithin		{}				incExit;
+'breakfix'	'timeout'	0.25	breakEntry		incWithin		{}				incExit;
+'exclusion'	'timeout'	0.25	exclEntry		incWithin		{}				incExit;
 'timeout'	'prefix'	tS.tOut	{}				{}				{}				{};
-'calibrate'	'pause'		0.5		calibrateFcn	{}				{}				{};
-'drift'		'pause'		0.5		driftFcn		{}				{}				{};
-'override'	'pause'		0.5		overrideFcn		{}				{}				{};
-'flash'		'pause'		0.5		flashFcn		{}				{}				{};
-'showgrid'	'pause'		10		{}				gridFcn			{}				{};
+'calibrate'	'pause'		0.5		calibrateFn		{}				{}				{};
+'drift'		'pause'		0.5		driftFn			{}				{}				{};
+'override'	'pause'		0.5		overrideFn		{}				{}				{};
+'flash'		'pause'		0.5		flashFn			{}				{}				{};
+'showgrid'	'pause'		10		{}				gridFn			{}				{};
 };
-%----------------------State Machine Table-------------------------
+%
+%-----------------------------State Machine Table------------------------------
 %==============================================================================
 
 disp('================>> Building state info file <<================')
 disp(stateInfoTmp)
 disp('=================>> Loaded state info file <<=================')
-clearvars -regexp '.+Fcn$' % clear the cell array Fcns in the current workspace
+clearvars -regexp '.+Fn$' % clear the cell array Fcns in the current workspace

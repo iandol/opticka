@@ -108,9 +108,10 @@ classdef discStimulus < baseStimulus
 			
 			fn = fieldnames(me);
 			for j=1:length(fn)
-				if isempty(me.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},me.ignoreProperties, 'once'))%create a temporary dynamic property
-					p=me.addprop([fn{j} 'Out']);
-					p.Transient = true;%p.Hidden = true;
+				prop = [fn{j} 'Out'];
+				if isempty(me.findprop(prop)) && isempty(regexp(fn{j},me.ignoreProperties, 'once'))%create a temporary dynamic property
+					p = addprop(me, prop);
+					p.Transient = true;
 					if strcmp(fn{j},'size');p.SetMethod = @set_sizeOut;end
 					if strcmp(fn{j},'xPosition');p.SetMethod = @set_xPositionOut;end
 					if strcmp(fn{j},'yPosition');p.SetMethod = @set_yPositionOut;end
@@ -120,7 +121,7 @@ classdef discStimulus < baseStimulus
 					if strcmp(fn{j},'contrast');p.SetMethod = @set_contrastOut;end
 				end
 				if isempty(regexp(fn{j},me.ignoreProperties, 'once'))
-					me.([fn{j} 'Out']) = me.(fn{j}); %copy our property value to our tempory copy
+					me.(prop) = me.(fn{j}); %copy our property value to our tempory copy
 				end
 			end
 			
@@ -150,7 +151,7 @@ classdef discStimulus < baseStimulus
 				setupFlash(me);
 			end
 			
-			if strcmpi(me.sM.srcMode,'GL_SRC_ALPHA') && strcmpi(me.sM.dstMode,'GL_ONE_MINUS_SRC_ALPHA')
+			if me.sM.blend && strcmpi(me.sM.srcMode,'GL_SRC_ALPHA') && strcmpi(me.sM.dstMode,'GL_ONE_MINUS_SRC_ALPHA')
 				me.changeBlend = false;
 			else
 				me.changeBlend = true;
@@ -409,6 +410,7 @@ classdef discStimulus < baseStimulus
 		function set_alphaOut(me, value)
 			if me.isInSetColour; return; end
 			me.alphaOut = value;
+			disp(['AlphaOut is ' num2str(me.alphaOut)])
 			if isempty(me.findprop('colourOut'))
 				me.colour = [me.colour(1:3) me.alphaOut];
 			else

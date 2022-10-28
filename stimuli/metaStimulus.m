@@ -319,35 +319,41 @@ classdef metaStimulus < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief Shorthand to set isVisible=true.
+		%> @brief show sets isVisible=true.
 		%>
+		%> @param choice a numeric array of stimulus numbers, e.g. [1 3]
 		% ===================================================================
 		function show(me, choice)
-			if exist('choice','var') && isnumeric(choice) %user forces a stimulus
-				for i = choice
-					show(me.stimuli{i});
-				end
-			else
-				for i = 1:me.n_
-					show(me.stimuli{i});
-				end
+			if ~exist('choice','var'); choice = 1:me.n_; end
+			for i = choice
+				show(me.stimuli{i});
 			end
+			if me.verbose;me.salutation('Show',['Show stimuli: ' num2str(choice)],true); end
 		end
 				
 		% ===================================================================
-		%> @brief Shorthand to set isVisible=false.
+		%> @brief hide sets isVisible=false.
 		%>
+		%> @param choice a numeric array of stimulus numbers, e.g. [1 3]
 		% ===================================================================
 		function hide(me, choice)
-			if exist('choice','var') && isnumeric(choice) %user forces a stimulus
-				for i = choice
-					hide(me.stimuli{i});
-				end
-			else
-				for i = 1:me.n_
-					hide(me.stimuli{i});
-				end
+			if ~exist('choice','var'); choice = 1:me.n_; end
+			for i = choice
+				hide(me.stimuli{i});
 			end
+			if me.verbose;me.salutation('Hide',['Hide stimuli: ' num2str(choice)],true); end
+		end
+
+		% ===================================================================
+		%> @brief Toggle show/hide for particular sets of stimuli
+		%>
+		%> @param set which set to show, note all other stimuli are hidden
+		% ===================================================================
+		function showSet(me, set)
+			if ~exist('set','var'); set = me.setChoice; end
+			if set == 0 || isempty(me.stimulusSets) || set > length(me.stimulusSets); return; end			
+			hide(me);
+			show(me, me.stimulusSets{set});
 		end
 		
 		% ===================================================================
@@ -369,6 +375,7 @@ classdef metaStimulus < optickaCore
 					me.maskStimuli{stims(i)}.(var) = value;
 				end
 			end
+			if me.verbose;me.salutation('Edit',['Edited: ' num2str(stims) ' Var:' var],true); end
 		end
 		
 		% ===================================================================
@@ -454,19 +461,6 @@ classdef metaStimulus < optickaCore
 			if ~isempty(me.stimulusPositions)
 				out = me.stimulusPositions;
 			end
-		end
-		
-		% ===================================================================
-		%> @brief Toggle show/hide for particular sets of stimuli
-		%>
-		%> @param set which set to show, note all other stimuli are hidden
-		% ===================================================================
-		function showSet(me, set)
-			if ~exist('set','var'); set = me.setChoice; end
-			if set == 0 || isempty(me.stimulusSets) || set > length(me.stimulusSets); return; end			
-			hide(me);
-			show(me, me.stimulusSets{set});
-			if me.verbose;me.salutation('ShowSet',['Show stimuli: ' num2str(me.stimulusSets{set})],true); end
 		end
 
 		% ===================================================================

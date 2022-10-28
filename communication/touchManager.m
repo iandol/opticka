@@ -1,8 +1,10 @@
 classdef touchManager < optickaCore
-	%UNTITLED Summary of this class goes here
-	%   Detailed explanation goes here
-
+	
 	%--------------------PUBLIC PROPERTIES----------%
+	properties
+		nTouchScreens = 1;
+	end
+	
 	properties
 		devices
 	end
@@ -25,7 +27,6 @@ classdef touchManager < optickaCore
 			args = optickaCore.addDefaults(varargin,struct('name','touchManager'));
 			me = me@optickaCore(args); %superclass constructor
 			me.parseArgs(args,me.allowedProperties);
-			
 			devices = GetTouchDeviceIndices([], 1);
 		end
 
