@@ -1460,7 +1460,7 @@ classdef runExperiment < optickaCore
 			if me.isTask && ((index > me.lastIndex) || override == true)
 				[thisBlock, thisRun, thisVar] = me.task.findRun(index);
 				stimIdx = []; 
-				t = sprintf('Blk#%i Run#%i Trl#%i Var#%i>',thisBlock, thisRun, index, thisVar);
+				t = sprintf('updateVariables: B:%i R:%i T:%i V:%i>',thisBlock, thisRun, index, thisVar);
 				for i=1:me.task.nVars
 					valueList = cell(1); oValueList = cell(1); %#ok<NASGU>
 					doXY = false;
@@ -1959,7 +1959,7 @@ classdef runExperiment < optickaCore
 		%>
 		%> @return t info string
 		% ===================================================================
-			etinfo = '';name=''; uuid = '';
+			etinfo = ''; name = '';
 			if me.isRunTask
 				log = me.taskLog;
 				name = [me.stateMachine.currentName ':' me.stateMachine.currentUUID];

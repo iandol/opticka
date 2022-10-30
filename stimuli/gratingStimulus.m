@@ -266,17 +266,24 @@ classdef gratingStimulus < baseStimulus
 				end
 				%fprintf('\nSET SFOut: %d | cache: %d | in: %d\n', me.sfOut, me.sfCache, value);
 			end
-
 			function set_tfOut(me,value)
 				me.tfOut = value;
 			end
-
 			function set_reverseDirectionOut(me,value)
 				me.reverseDirectionOut = value;
 			end
-
 			function set_sizeOut(me,value)
 				me.sizeOut = value*me.ppd;
+			end
+			function set_xPositionOut(me, value)
+				me.setLoop = me.setLoop + 1;
+				if me.setLoop == 1; me.xPositionOut = value * me.ppd; else; warning('Recursion: xPositionOut'); end
+				me.setLoop = 0;
+			end
+			function set_yPositionOut(me,value)
+				me.setLoop = me.setLoop + 1;
+				if me.setLoop == 1; me.yPositionOut = value*me.ppd; else; warning('Recursion: yPositionOut'); end
+				me.setLoop = 0;	
 			end
 
 		end
@@ -346,6 +353,8 @@ classdef gratingStimulus < baseStimulus
 		% ===================================================================
 		function reset(me)
 			resetTicks(me);
+			me.setLoop = 0;
+			me.inSetup = false; me.isSetup = false;
 			if isprop(me,'texture')
 				if ~isempty(me.texture) && me.texture > 0 && Screen(me.texture,'WindowKind') == -1
 					try Screen('Close',me.texture); end %#ok<*TRYNC>
@@ -414,19 +423,15 @@ classdef gratingStimulus < baseStimulus
 		% ===================================================================
 		function setRect(me)
 			if isempty(me.texture);return;end
-			me.dstRect=Screen('Rect',me.texture);
-			me.dstRect=ScaleRect(me.dstRect,me.scale,me.scale);
+			me.dstRect=ScaleRect(Screen('Rect',me.texture),me.scale,me.scale);
 			if me.mouseOverride && me.mouseValid
 				me.dstRect = CenterRectOnPointd(me.dstRect, me.mouseX, me.mouseY);
 			else
-				if isprop(me, 'directionOut')
-					[sx, sy]=pol2cart(me.d2r(me.direction),me.startPosition);
-				else
-					[sx, sy]=pol2cart(me.d2r(me.directionOut),me.startPosition);
-				end
+				[~, name] = getP(me, 'direction');
+				[sx, sy]=pol2cart(me.d2r(me.(name)),me.startPosition);
 				me.dstRect=CenterRectOnPointd(me.dstRect,me.sM.xCenter,me.sM.yCenter);
-				if isprop(me, 'xPositionOut')
-					me.dstRect=OffsetRect(me.dstRect,(me.xPosition)*me.ppd,(me.yPosition)*me.ppd);
+				if ~isprop(me,'xPositionOut')
+					me.dstRect=OffsetRect(me.dstRect, me.xPosition*me.ppd, me.yPosition*me.ppd);
 				else
 					me.dstRect=OffsetRect(me.dstRect,me.xPositionOut+(sx*me.ppd),me.yPositionOut+(sy*me.ppd));
 				end

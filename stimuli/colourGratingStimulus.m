@@ -280,7 +280,6 @@ classdef colourGratingStimulus < baseStimulus
 				c(c<0)=0; c(c>1)=1;
 				me.colourOut = c;
 			end
-	
 			function set_c2Out(me, value) %#ok<*MCSGP> 
 				len=length(value);
 				switch len
@@ -294,7 +293,6 @@ classdef colourGratingStimulus < baseStimulus
 				c(c<0)=0; c(c>1)=1;
 				me.colour2Out = c;
 			end
-
 			function set_sfOut(me,value)
 				if me.sfRecurse == false
 					me.sfCache = (value / me.ppd);
@@ -305,19 +303,25 @@ classdef colourGratingStimulus < baseStimulus
 				end
 				%fprintf('\nSET SFOut: %d | cache: %d | in: %d\n', me.sfOut, me.sfCache, value);
 			end
-			
 			function set_tfOut(me,value)
 				me.tfOut = value;
 			end
-			
 			function set_reverseDirectionOut(me,value)
 				me.reverseDirectionOut = value;
 			end
-
 			function set_sizeOut(me,value)
 				me.sizeOut = value*me.ppd;
 			end
-			
+			function set_xPositionOut(me, value)
+				me.setLoop = me.setLoop + 1;
+				if me.setLoop == 1; me.xPositionOut = value * me.ppd; else; warning('Recursion: xPositionOut'); end
+				me.setLoop = 0;
+			end
+			function set_yPositionOut(me,value)
+				me.setLoop = me.setLoop + 1;
+				if me.setLoop == 1; me.yPositionOut = value*me.ppd; else; warning('Recursion: yPositionOut'); end
+				me.setLoop = 0;	
+			end
 		end
 		
 		% ===================================================================
@@ -398,6 +402,8 @@ classdef colourGratingStimulus < baseStimulus
 		% ===================================================================
 		function reset(me)
 			resetTicks(me);
+			me.setLoop = 0;
+			me.inSetup = false; me.isSetup = false;
 			if ~isempty(me.texture) && Screen(me.texture,'WindowKind') == -1
 				try Screen('Close',me.texture); end %#ok<*TRYNC>
 			end

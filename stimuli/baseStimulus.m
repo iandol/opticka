@@ -193,6 +193,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> Allow 1 (R=G=B) 3 (RGB) or 4 (RGBA) value colour
 		% ===================================================================
 		function set.colour(me,value)
+			if me.isSetup; warning('You should set colourOut to affect drawing...'); end
 			me.isInSetColour = true; %#ok<*MCSUP>
 			len=length(value);
 			switch len
@@ -223,6 +224,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> 
 		% ===================================================================
 		function set.alpha(me,value)
+			if me.isSetup; warning('You should set alphaOut to affect drawing...'); end
 			if value<0; value=0;elseif value>1; value=1; end
 			me.alpha = value;
 			if ~me.isInSetColour
@@ -508,8 +510,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 			
 			bgcolor = [0.95 0.95 0.95];
 			bgcoloredit = [1 1 1];
-			fsmall = 10;
-			fmed = 11;
+			fsmall = 11;
+			fmed = 12;
 			if ismac
 				SansFont = 'Avenir next';
 				MonoFont = 'Menlo';
@@ -842,17 +844,39 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> @param range of property to return 
 		%> @return value of property
 		% ===================================================================
-		function value = getP(me, name, range)
+		function [value, name] = getP(me, name, range)
 			if isprop(me, name)
 				if isprop(me,[name 'Out'])
-					value = me.([name 'Out']);
-				else
-					value = me.(name);
+					name = [name 'Out'];
 				end
+				value = me.(name);
 				if exist('range','var'); value = value(range); end
 			else
-				warning('Property doesn''t exist!!!')
+				warning('Property %s doesn''t exist!!!',name)
 				value = [];
+			end
+		end
+
+		% ===================================================================
+		%> @brief gets a propery copy or original property
+		%>
+		%> When stimuli are run, their properties are copied, so e.g. angle
+		%> is copied to angleOut and this is used during the task. This
+		%> method checks if the copy is available and returns that, otherwise
+		%> return the original.
+		%>
+		%> @param name of property
+		%> @param range of property to return 
+		%> @return value of property
+		% ===================================================================
+		function setP(me, name, value)
+			if isprop(me, name)
+				if isprop(me,[name 'Out'])
+					name = [name 'Out'];
+				end
+				me.(name) = value;
+			else
+				warning('Property %s doesn''t exist!!!',name)
 			end
 		end
 
@@ -984,32 +1008,6 @@ classdef baseStimulus < optickaCore & dynamicprops
 				if me.verbose; fprintf('---> computePosition: %s X = %gpx / %gpx / %gdeg | Y = %gpx / %gpx / %gdeg\n',me.fullName, me.xOut, me.xPositionOut, dx, me.yOut, me.yPositionOut, dy); end
 			end
 			setAnimationDelta(me);
-		end
-		
-		% ===================================================================
-		%> @brief xPositionOut Set method
-		%>
-		% ===================================================================
-		function set_xPositionOut(me, value)
-			me.setLoop = me.setLoop + 1;
-			if me.setLoop == 1
-				me.xPositionOut = value * me.ppd;
-			end
-			me.setLoop = 0;
-			if ~me.inSetup; me.setRect; end
-		end
-		
-		% ===================================================================
-		%> @brief yPositionOut Set method
-		%>
-		% ===================================================================
-		function set_yPositionOut(me,value)
-			me.setLoop = me.setLoop + 1;
-			if me.setLoop == 1
-				me.yPositionOut = value*me.ppd;
-			end
-			me.setLoop = 0;	
-			if ~me.inSetup; me.setRect; end
 		end
 		
 		% ===================================================================

@@ -59,7 +59,6 @@ classdef fixationCrossStimulus < baseStimulus
 		currentColour				= [1 1 1]
 		colourOutTemp				= [1 1 1]
 		colour2OutTemp				= [1 1 1]
-		stopLoop = false
 		allowedProperties='showDisk|type|flashTime|flashOn|flashColour|colour2|alpha2|lineWidth'
 		ignoreProperties = 'flashSwitch'
 	end
@@ -137,6 +136,94 @@ classdef fixationCrossStimulus < baseStimulus
 			me.inSetup = false;
 			
 			computePosition(me);
+
+			function set_xPositionOut(me, value)
+				me.setLoop = me.setLoop + 1;
+				if me.setLoop == 1;me.xPositionOut = value * me.ppd;else;warning('Recursion: xPositionOut');end
+				me.setLoop = 0;
+				if ~me.inSetup; me.setRect; end
+			end
+			function set_yPositionOut(me,value)
+				me.setLoop = me.setLoop + 1;
+				if me.setLoop == 1; me.yPositionOut = value*me.ppd; else; warning('Recursion: yPositionOut'); end
+				me.setLoop = 0;	
+				if ~me.inSetup; me.setRect; end
+			end
+			function set_alphaOut(me, value)
+				if me.isInSetColour; return; end
+				me.setLoop = me.setLoop + 1;
+				if me.setLoop == 1; me.alphaOut = value; else; warning('Recursion: alphaOut'); end
+				me.setLoop = 0;
+				[~,name] = getP(me,'colour');
+				me.(name) = [me.(name)(1:3) value];
+				[val,name] = getP(me,'flashColour');
+				if ~isempty(val)
+					me.(name) = [me.(name)(1:3) value];
+				end
+			end
+			function set_alpha2Out(me, value)
+				if me.isInSetColour; return; end
+				me.setLoop = me.setLoop + 1;
+				if me.setLoop == 1; me.alpha2Out = value; else; warning('Recursion: alpha2Out'); end
+				me.setLoop = 0;
+				[~,name] = getP(me,'colour');
+				me.(name) = [me.(name)(1:3) value];
+				[val,name] = getP(me,'flashColour');
+				if ~isempty(val)
+					me.(name) = [me.(name)(1:3) value];
+				end
+			end
+			function set_sizeOut(me,value)
+				me.sizeOut = value * me.ppd; %divide by 2 to get diameter
+			end
+			function set_lineWidthOut(me,value)
+				me.lineWidthOut = value * me.ppd; %divide by 2 to get diameter
+				if me.lineWidthOut < 2; me.lineWidthOut = 2; end
+			end
+			function set_colourOut(me, value)
+				me.isInSetColour = true;
+				[aold,name] = getP(me,'alpha');
+				if length(value)==4 && value(4) ~= aold
+					alpha = value(4);
+				else
+					alpha = aold;
+				end
+				switch length(value)
+					case 4
+						if alpha ~= aold; me.(name) = alpha; end
+					case 3
+						value = [value(1:3) alpha];
+					case 1
+						value = [value value value alpha];
+				end
+				if isempty(me.colourOutTemp);me.colourOutTemp = value;end
+				me.setLoop = me.setLoop + 1;
+				if me.setLoop == 1; me.colourOut = value; else; warning('Recursion: colourOut'); end
+				me.setLoop = 0;
+				me.isInSetColour = false;
+			end
+			function set_colour2Out(me, value)
+				me.isInSetColour = true;
+				[aold,name] = getP(me,'alpha');
+				if length(value)==4 && value(4) ~= aold
+					alpha = value(4);
+				else
+					alpha = aold;
+				end
+				switch length(value)
+					case 4
+						if alpha ~= aold; me.(name) = alpha; end
+					case 3
+						value = [value(1:3) alpha];
+					case 1
+						value = [value value value alpha];
+				end
+				if isempty(me.colour2OutTemp);me.colour2OutTemp = value;end
+				me.setLoop = me.setLoop + 1;
+				if me.setLoop == 1; me.colour2Out = value; else; warning('Recursion: colour2Out'); end
+				me.setLoop = 0;
+				me.isInSetColour = false;
+			end
 		end
 		
 		% ===================================================================
@@ -148,7 +235,6 @@ classdef fixationCrossStimulus < baseStimulus
 		function update(me)
 			resetTicks(me);
 			me.colourOutTemp = [];
-			me.stopLoop = false;
 			me.inSetup = false;
 			computePosition(me);
 			if me.doFlash; me.setupFlash; end
@@ -277,114 +363,6 @@ classdef fixationCrossStimulus < baseStimulus
 	%=======================================================================
 	methods ( Access = protected ) %-------PROTECTED METHODS-----%
 	%=======================================================================
-		% ===================================================================
-		%> @brief sizeOut Set method
-		%>
-		% ===================================================================
-		function set_sizeOut(me,value)
-			me.sizeOut = value * me.ppd; %divide by 2 to get diameter
-		end
-		
-		% ===================================================================
-		%> @brief sizeOut Set method
-		%>
-		% ===================================================================
-		function set_lineWidthOut(me,value)
-			me.lineWidthOut = value * me.ppd; %divide by 2 to get diameter
-			if me.lineWidthOut < 2; me.lineWidthOut = 2; end
-		end
-		
-		% ===================================================================
-		%> @brief colourOut SET method
-		%>
-		% ===================================================================
-		function set_colourOut(me, value)
-			me.isInSetColour = true;
-			if length(value)==4 
-				alpha = value(4);
-			elseif isempty(me.findprop('alphaOut'))
-				alpha = me.alpha;
-			else
-				alpha = me.alphaOut;
-			end
-			switch length(value)
-				case 4
-					if isempty(me.findprop('alphaOut'))
-						me.alpha = alpha;
-					else
-						me.alphaOut = alpha;
-					end
-				case 3
-					value = [value(1:3) alpha];
-				case 1
-					value = [value value value alpha];
-			end
-			me.colourOut = value;
-			me.colourOutTemp = value;
-			me.isInSetColour = false;
-		end
-		
-		% ===================================================================
-		%> @brief colourOut SET method
-		%>
-		% ===================================================================
-		function set_colour2Out(me, value)
-			me.isInSetColour = true;
-			if length(value)==4 
-				alpha = value(4);
-			elseif isempty(me.findprop('alpha2Out'))
-				alpha = me.alpha2;
-			else
-				alpha = me.alpha2Out;
-			end
-			switch length(value)
-				case {4}
-					if isempty(me.findprop('alpha2Out'))
-						me.alpha2 = alpha;
-					else
-						me.alpha2Out = alpha;
-					end
-				case {3}
-					value = [value(1:3) alpha];
-				case 1
-					value = [value value value alpha];
-			end
-			me.colour2Out = value;
-			me.colour2OutTemp = value;
-			me.isInSetColour = false;
-		end
-		
-		% ===================================================================
-		%> @brief alphaOut SET method
-		%>
-		% ===================================================================
-		function set_alphaOut(me, value)
-			if value < 0 || value > 1; return; end
-			if ~me.isInSetColour
-				me.alphaOut = value;
-				if isempty(me.findprop('colourOut'))
-					me.colour = [me.colour(1:3) me.alphaOut];
-				else
-					me.colourOut = [me.colourOut(1:3) me.alphaOut];
-				end
-			end
-		end
-		
-		% ===================================================================
-		%> @brief alphaOut SET method
-		%>
-		% ===================================================================
-		function set_alpha2Out(me, value)
-			if value < 0 || value > 1; return; end
-			if ~me.isInSetColour
-				me.alpha2Out = value;
-				if isempty(me.findprop('colour2Out'))
-					me.colour2 = [me.colour2(1:3) me.alpha2Out];
-				else
-					me.colour2Out = [me.colour2Out(1:3) me.alpha2Out];
-				end
-			end
-		end
 		
 		% ===================================================================
 		%> @brief setupFlash

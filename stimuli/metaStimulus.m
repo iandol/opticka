@@ -375,7 +375,7 @@ classdef metaStimulus < optickaCore
 					me.maskStimuli{stims(i)}.(var) = value;
 				end
 			end
-			if me.verbose;me.salutation('Edit',['Edited: ' num2str(stims) ' Var:' var],true); end
+			if me.verbose;me.salutation('Edit',['Edited stim: ' num2str(stims) ' Var:' var ' Value: ' num2str(value)],true); end
 		end
 		
 		% ===================================================================

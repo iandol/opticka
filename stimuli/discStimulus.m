@@ -54,8 +54,8 @@ classdef discStimulus < baseStimulus
 		currentColour = [1 1 1]
 		colourOutTemp = [1 1 1]
 		flashColourOutTemp = [1 1 1]
-		stopLoop = false
-		scale = 1;
+		stopLoop = 0
+		scale = 1
 		allowedProperties='type|flashTime|flashOn|flashColour|contrast|sigma|useAlpha|smoothMethod'
 		ignoreProperties = 'flashSwitch';
 	end
@@ -161,6 +161,101 @@ classdef discStimulus < baseStimulus
 			computePosition(me);
 			setRect(me);
 			if me.doAnimator;setup(me.animator, me);end
+
+			% a super annoying bug in matlab: if set methods are
+			% standard protected or private, they trigger recursions.
+			% Placing them as inline functions like here and they work!
+			function set_sizeOut(me, value)
+				me.setLoop = me.setLoop + 1;
+				if me.setLoop == 1; me.sizeOut = value * me.ppd; else; warning('Recursion: sizeOut'); end
+				me.setLoop = 0;
+				if isprop(me,'discSize') && ~isempty(me.discSize) && ~isempty(me.texture)
+					me.scale = me.sizeOut / me.discSize;
+					setRect(me);
+				end
+			end
+			function set_alphaOut(me, value)
+				if me.isInSetColour; return; end
+				me.setLoop = me.setLoop + 1;
+				if me.setLoop == 1; me.alphaOut = value; else; warning('Recursion: alphaOut'); end
+				me.setLoop = 0;
+				[~,name] = getP(me,'colour');
+				me.(name) = [me.(name)(1:3) value];
+				[val,name] = getP(me,'flashColour');
+				if ~isempty(val)
+					me.(name) = [me.(name)(1:3) value];
+				end
+			end
+			function set_contrastOut(me, value)
+				if iscell(value); value = value{1}; end
+				me.setLoop = me.setLoop + 1;
+				if me.setLoop == 1; me.contrastOut = value; else; warning('Recursion: contrastOut'); end
+				if ~me.inSetup && ~me.stopLoop && value < 1
+					computeColour(me);
+				end
+				me.setLoop = 0;
+			end
+			function set_xPositionOut(me, value)
+				me.setLoop = me.setLoop + 1;
+				if me.setLoop == 1;me.xPositionOut = value * me.ppd;else;warning('Recursion: xPositionOut');end
+				me.setLoop = 0;
+			end
+			function set_yPositionOut(me,value)
+				me.setLoop = me.setLoop + 1;
+				if me.setLoop == 1; me.yPositionOut = value*me.ppd; else; warning('Recursion: yPositionOut'); end
+				me.setLoop = 0;	
+			end
+			function set_colourOut(me, value)
+				me.isInSetColour = true;
+				[aold,name] = getP(me,'alpha');
+				if length(value)==4 && value(4) ~= aold
+					alpha = value(4);
+				else
+					alpha = aold;
+				end
+				switch length(value)
+					case 4
+						if alpha ~= aold; me.(name) = alpha; end
+					case 3
+						value = [value(1:3) alpha];
+					case 1
+						value = [value value value alpha];
+				end
+				if isempty(me.colourOutTemp);me.colourOutTemp = value;end
+				me.setLoop = me.setLoop + 1;
+				if me.setLoop == 1; me.colourOut = value; else; warning('Recursion: colourOut'); end
+				me.setLoop = 0;
+				me.isInSetColour = false;
+				contrast = getP(me,'contrast');
+				if ~me.inSetup && ~me.stopLoop && contrast < 1
+					computeColour(me);
+				end
+			end
+			function set_flashColourOut(me, value)
+				if isempty(value);me.flashColourOut=value;me.setLoop = 0;return;end
+				me.isInSetColour = true;
+				[aold,name] = getP(me,'alpha');
+				if length(value)==4 && value(4) ~= aold
+					alpha = value(4);
+				else
+					alpha = aold;
+				end
+				switch length(value)
+					case 3
+						value = [value(1:3) alpha];
+					case 1
+						value = [value value value alpha];
+				end
+				if isempty(me.flashColourOutTemp);me.flashColourOutTemp = value;end
+				me.setLoop = me.setLoop + 1;
+				if me.setLoop == 1; me.flashColourOut = value; else; warning('Recursion: flashColourOut'); end
+				me.setLoop = 0;
+				me.isInSetColour = false;
+				contrast = getP(me,'contrast');
+				if ~isempty(value) && ~me.inSetup && ~me.stopLoop && contrast < 1
+					computeColour(me);
+				end
+			end
 			
 		end
 		
@@ -254,8 +349,8 @@ classdef discStimulus < baseStimulus
 		% ===================================================================
 		function reset(me)
 			resetTicks(me);
-			me.stopLoop = false;
-			me.inSetup = false;
+			me.stopLoop = false; me.setLoop = 0;
+			me.inSetup = false; me.isSetup = false;
 			me.colourOutTemp = [];
 			me.flashColourOutTemp = [];
 			me.flashFG = [];
@@ -321,125 +416,6 @@ classdef discStimulus < baseStimulus
 		end
 		
 		% ===================================================================
-		%> @brief sizeOut Set method
-		%>
-		% ===================================================================
-		function set_sizeOut(me,value)
-			me.sizeOut = value * me.ppd; %divide by 2 to get diameter
-			if isprop(me,'discSize') && ~isempty(me.discSize) && ~isempty(me.texture)
-				me.scale = me.sizeOut / me.discSize;
-				setRect(me);
-			end
-		end
-		
-		% ===================================================================
-		%> @brief colourOut SET method
-		%>
-		% ===================================================================
-		function set_colourOut(me, value)
-			me.isInSetColour = true;
-			if length(value)==4 
-				alpha = value(4);
-			elseif isempty(me.findprop('alphaOut'))
-				alpha = me.alpha;
-			else
-				alpha = me.alphaOut;
-			end
-			switch length(value)
-				case 4
-					if isempty(me.findprop('alphaOut'))
-						me.alpha = alpha;
-					else
-						me.alphaOut = alpha;
-					end
-				case 3
-					value = [value(1:3) alpha];
-				case 1
-					value = [value value value alpha];
-			end
-			if isempty(me.colourOutTemp);me.colourOutTemp = value;end
-			me.colourOut = value;
-			me.isInSetColour = false;
-			if isempty(me.findprop('contrastOut'))
-				contrast = me.contrast; %#ok<*PROPLC>
-			else
-				contrast = me.contrastOut;
-			end
-			if ~me.inSetup && ~me.stopLoop && contrast < 1
-				computeColour(me);
-			end
-		end
-		
-		% ===================================================================
-		%> @brief colourOut SET method
-		%>
-		% ===================================================================
-		function set_flashColourOut(me, value)
-			if isempty(value);me.flashColourOut=value;return;end
-			me.isInSetColour = true;
-			if length(value)==4 
-				alpha = value(4);
-			elseif isempty(me.findprop('alphaOut'))
-				alpha = me.alpha;
-			else
-				alpha = me.alphaOut;
-			end
-			switch length(value)
-				case 3
-					value = [value(1:3) alpha];
-				case 1
-					value = [value value value alpha];
-			end
-			if isempty(me.flashColourOutTemp);me.flashColourOutTemp = value;end
-			me.flashColourOut = value;
-			me.isInSetColour = false;
-			if isempty(me.findprop('contrastOut'))
-				contrast = me.contrast; %#ok<*PROPLC>
-			else
-				contrast = me.contrastOut;
-			end
-			if ~isempty(value) && ~me.inSetup && ~me.stopLoop && contrast < 1
-				computeColour(me);
-			end
-		end
-		
-		% ===================================================================
-		%> @brief alphaOut SET method
-		%>
-		% ===================================================================
-		function set_alphaOut(me, value)
-			if me.isInSetColour; return; end
-			me.alphaOut = value;
-			disp(['AlphaOut is ' num2str(me.alphaOut)])
-			if isempty(me.findprop('colourOut'))
-				me.colour = [me.colour(1:3) me.alphaOut];
-			else
-				me.colourOut = [me.colourOut(1:3) me.alphaOut];
-			end
-			if isempty(me.findprop('flashColourOut'))
-				if ~isempty(me.flashColour)
-					me.flashColour = [me.flashColour(1:3) me.alphaOut];
-				end
-			else
-				if ~isempty(me.flashColourOut)
-					me.flashColourOut = [me.flashColourOut(1:3) me.alphaOut];
-				end
-			end
-		end
-		
-		% ===================================================================
-		%> @brief contrastOut SET method
-		%>
-		% ===================================================================
-		function set_contrastOut(me, value)
-			if iscell(value); value = value{1}; end
-			me.contrastOut = value;
-			if ~me.inSetup && ~me.stopLoop && value < 1
-				computeColour(me);
-			end
-		end
-		
-		% ===================================================================
 		%> @brief computeColour triggered event
 		%> Use an event to recalculate as get method is slower (called
 		%> many more times), than an event which is only called on update
@@ -479,4 +455,5 @@ classdef discStimulus < baseStimulus
 		end
 		
 	end
+
 end

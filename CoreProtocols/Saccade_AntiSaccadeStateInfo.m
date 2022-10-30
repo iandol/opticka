@@ -318,7 +318,7 @@ initFix = {
 
 % exit fixation phase
 if strcmpi(tS.type,'saccade')
-	fixExit = { @()show(stims, [1 3]); };
+	fixExit = { @()show(stims, [1 3]); @()edit(stims,1,'alphaOut',0.25)};
 else
 	fixExit = { @()show(stims, [1 2 3]); @()edit(stims,1,'alphaOut',tS.targetAlpha) };
 end
@@ -351,6 +351,11 @@ fsExit = {
 	@()trackerMessage(eT,'END_FIX');
 	@()hide(stims, 3);
 }; 
+if strcmpi(tS.type,'saccade')
+	fsExit = [ fsExit; { @()edit(stims,1,'alphaOut',0.75) } ];
+else
+	fsExit = [ fsExit; { @()edit(stims,1,'alphaOut',tS.targetAlpha) } ];
+end
 
 %====================================================TARGET STIMULUS ALONE
 % what to run when we enter the stim presentation state
