@@ -142,6 +142,58 @@ classdef barStimulus < baseStimulus
 			me.inSetup = false;
 			computePosition(me);
 			setRect(me);
+
+			function set_xPositionOut(me, value)
+				me.xPositionOut = value * me.ppd;
+			end
+			function set_yPositionOut(me,value)
+				me.yPositionOut = value*me.ppd; 
+			end
+			function set_sizeOut(me,value)
+				me.sizeOut = value;
+				if ~me.inSetup
+					me.barHeightOut = me.sizeOut;
+					me.barWidthOut = me.sizeOut;
+				end
+			end
+			function set_scaleOut(me,value)
+				if value < 1; value = 1; end
+				me.scaleOut = round(value);
+			end
+			function set_colourOut(me, value)
+				me.isInSetColour = true;
+				[aold,name] = getP(me,'alpha');
+				if length(value)==4 && value(4) ~= aold
+					alpha = value(4);
+				else
+					alpha = aold;
+				end
+				switch length(value)
+					case 4
+						if alpha ~= aold; me.(name) = alpha; end
+					case 3
+						value = [value(1:3) alpha];
+					case 1
+						value = [value value value alpha];
+				end
+				me.colourOut = value;
+				me.isInSetColour = false;
+			end
+		
+		% ===================================================================
+		%> @brief alphaOut SET method
+		%>
+		% ===================================================================
+		function set_alphaOut(me, value)
+			if ~me.isInSetColour
+				me.alphaOut = value;
+				if isempty(me.findprop('colourOut'))
+					me.colour = [me.colour(1:3) me.alphaOut];
+				else
+					me.colourOut = [me.colourOut(1:3) me.alphaOut];
+				end
+			end
+		end
 			
 		end
 		
@@ -334,74 +386,7 @@ classdef barStimulus < baseStimulus
 	%=======================================================================
 	methods ( Access = protected ) %-------PROTECTED METHODS-----%
 	%=======================================================================
-		
-		% ===================================================================
-		%> @brief sizeOut Set method
-		%>
-		% ===================================================================
-		function set_sizeOut(me,value)
-			me.sizeOut = value;
-			if ~me.inSetup
-				me.barHeightOut = me.sizeOut;
-				me.barWidthOut = me.sizeOut;
-			end
-		end
-		
-		% ===================================================================
-		%> @brief sizeOut Set method
-		%>
-		% ===================================================================
-		function set_scaleOut(me,value)
-			if value < 1
-				value = 1;
-			end
-			me.scaleOut = round(value);
-		end
-		
-		% ===================================================================
-		%> @brief colourOut SET method
-		%>
-		% ===================================================================
-		function set_colourOut(me, value)
-			me.isInSetColour = true;
-			if length(value)==4 
-				alpha = value(4);
-			elseif isempty(me.findprop('alphaOut'))
-				alpha = me.alpha;
-			else
-				alpha = me.alphaOut;
-			end
-			switch length(value)
-				case 4
-					if isempty(me.findprop('alphaOut'))
-						me.alpha = alpha;
-					else
-						me.alphaOut = alpha;
-					end
-				case 3
-					value = [value(1:3) alpha];
-				case 1
-					value = [value value value alpha];
-			end
-			me.colourOut = value;
-			me.isInSetColour = false;
-		end
-		
-		% ===================================================================
-		%> @brief alphaOut SET method
-		%>
-		% ===================================================================
-		function set_alphaOut(me, value)
-			if ~me.isInSetColour
-				me.alphaOut = value;
-				if isempty(me.findprop('colourOut'))
-					me.colour = [me.colour(1:3) me.alphaOut];
-				else
-					me.colourOut = [me.colourOut(1:3) me.alphaOut];
-				end
-			end
-		end
-		
+
 		% ===================================================================
 		%> @brief constructMatrix makes the texture matrix to fill the bar with
 		%>

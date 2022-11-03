@@ -4,7 +4,7 @@ toc: true
 
 # StateMachine Info Files
 
-For behavioural tasks, opticka uses `StateInfo.m` files that are used to specify the [state machine structure](#useful-task-methods).  
+Any experiment can be thought of as a series of stages and transitions between them. State Machines are a widely used control system for these types of scenarios. Opticka uses a state-machine driven by `StateInfo.m` files that are used to specify the [experimetal structure](#useful-task-methods).  
 
 For example the `DefaultStateInfo.m` file defines several experimental states and how the task switches between them:
 

@@ -216,6 +216,30 @@ classdef checkerboardStimulus < baseStimulus
 			me.inSetup = false;
 			computePosition(me);
 			setRect(me);
+
+			function set_sfOut(me,value)
+				me.sfCache = value;
+				me.sfOut = me.sfCache;
+				%fprintf('SET SFOut: %.2f | in: %.2f | scale: %.2f | size: %.2f\n', me.sfOut, me.sfCache, me.scale, me.sizeOut);
+			end
+			function set_tfOut(me,value)
+				me.tfOut = value;
+				notify(me,'changePhaseIncrement');
+			end
+			function set_reverseDirectionOut(me,value)
+				me.reverseDirectionOut = value;
+				notify(me,'changePhaseIncrement');
+			end
+			function set_sizeOut(me,value)
+				me.sizeOut = ceil(value*me.ppd);
+				%fprintf('SET sizeOut: %.2f | in: %.2f \n', me.sizeOut, value);
+			end
+			function set_xPositionOut(me, value)
+				me.xPositionOut = value * me.ppd;
+			end
+			function set_yPositionOut(me,value)
+				me.yPositionOut = value*me.ppd; 
+			end
 			
 		end
 		
@@ -405,33 +429,6 @@ classdef checkerboardStimulus < baseStimulus
 			me.setAnimationDelta();
 		end
 		
-		% ===================================================================
-		%> @brief sfOut Set method
-		%>
-		% ===================================================================
-		function set_sfOut(me,value)
-			me.sfCache = value;
-			me.sfOut = me.sfCache;
-			%fprintf('SET SFOut: %.2f | in: %.2f | scale: %.2f | size: %.2f\n', me.sfOut, me.sfCache, me.scale, me.sizeOut);
-		end
-		
-		% ===================================================================
-		%> @brief tfOut Set method
-		%>
-		% ===================================================================
-		function set_tfOut(me,value)
-			me.tfOut = value;
-			notify(me,'changePhaseIncrement');
-		end
-		
-		% ===================================================================
-		%> @brief reverseDirectionOut Set method
-		%>
-		% ===================================================================
-		function set_reverseDirectionOut(me,value)
-			me.reverseDirectionOut = value;
-			notify(me,'changePhaseIncrement');
-		end
 		
 		% ===================================================================
 		%> @brief calculateScale 
@@ -460,16 +457,7 @@ classdef checkerboardStimulus < baseStimulus
 			end
 		end
 		
-		% ===================================================================
-		%> @brief sizeOut Set method
-		%> we also need to change scale when sizeOut is changed, used for both
-		%setting sfOut and the dstRect properly
-		% ===================================================================
-		function set_sizeOut(me,value)
-			me.sizeOut = ceil(value*me.ppd);
-			fprintf('SET sizeOut: %.2f | in: %.2f \n', me.sizeOut, value);
-			%notify(me,'changeScale');
-		end
+		
 		
 	end
 end

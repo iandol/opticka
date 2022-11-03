@@ -166,6 +166,30 @@ classdef dotsStimulus < baseStimulus
 			computePosition(me);
 			setRect(me);
 			updateDots(me);
+
+			function set_xPositionOut(me, value)
+				me.xPositionOut = value * me.ppd;
+			end
+			function set_yPositionOut(me,value)
+				me.yPositionOut = value*me.ppd;
+			end
+			function set_sizeOut(me,value)
+				me.sizeOut = value * me.ppd;
+				if me.mask == true
+					me.fieldSize = round(me.sizeOut + me.maskSmoothing); %mask needs to be bigger!
+				else
+					me.fieldSize = me.sizeOut;
+				end
+				me.nDots; %remake our cache
+			end
+			function set_dotSizeOut(me,value)
+				me.dotSizeOut = value * me.ppd;
+				if me.dotSizeOut < 1; me.dotSizeOut = 1; end
+			end
+			function set_densityOut(me,value)
+				me.densityOut = value;
+				me.nDots; %remake our cache
+			end
 			
 		end
 		
@@ -422,38 +446,6 @@ classdef dotsStimulus < baseStimulus
 					me.shader = 0;
 				end
 			end
-		end
-		
-		% ===================================================================
-		%> @brief sizeOut Set method
-		%>
-		% ===================================================================
-		function set_sizeOut(me,value)
-			me.sizeOut = value * me.ppd;
-			if me.mask == true
-				me.fieldSize = round(me.sizeOut + me.maskSmoothing); %mask needs to be bigger!
-			else
-				me.fieldSize = me.sizeOut;
-			end
-			me.nDots; %remake our cache
-		end
-		
-		% ===================================================================
-		%> @brief dotSizeOut Set method
-		%>
-		% ===================================================================
-		function set_dotSizeOut(me,value)
-			me.dotSizeOut = value * me.ppd;
-			if me.dotSizeOut < 1; me.dotSizeOut = 1; end
-		end
-		
-		% ===================================================================
-		%> @brief density Set method
-		%>
-		% ===================================================================
-		function set_densityOut(me,value)
-			me.densityOut = value;
-			me.nDots; %remake our cache
 		end
 		
 	end

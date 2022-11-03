@@ -188,8 +188,8 @@
 <h1 id="configuring-variables">Configuring Variables</h1>
 <p>Opticka uses the taskSequence class to specify one or more variable
 names and values [<code>nVar</code>] that can be randomised using
-blocked repetition and applied to stimuli during a task. The
-taskSequence class can also specify independent trial level
+blocked repetition and applied to one or multiple stimuli during a task.
+The taskSequence class can also specify independent trial level
 [<code>trialVar</code>] and block level [<code>blockVar</code>]
 randomisation values.</p>
 <h1 id="log-or-linear-interpolation">Log or Linear interpolation</h1>
@@ -209,5 +209,89 @@ button.</p>
 <p>In this case, angle is varied -90° and 90° for stimulus 1. Stimulus 2
 has the modifier 90 applied, so for example if stimulus 1 =
 <code>-90°</code> then stimulus 2 = <code>-90° + 90° = 0°</code>.</p>
+<h1 id="block-and-trial-level-independent-factors">Block and Trial level
+independent factors</h1>
+<p>You can set [Block Values] and [Trial Values] in the UI and assign
+probabilities. These are assigned independently of any variables. So for
+example setting trial values: <code>{'a','b'}</code> trial
+probabilities: <code>{0.3 0.7}</code> would randomly assign either
+<code>a</code> or <code>b</code> in a 30:70 proability to each trial.
+Block factors have the same assignation, but applies over the blocks. So
+for example say we have a variable with two values (-10 or +10 degrees)
+and 5 repeat blocks. The trials are randomised. Separately we assign
+<code>{'a','b'}</code> to trials and <code>{'x','y'}</code> to get an
+experiment table of 5 blocks that may look like thislike this:</p>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: center;">Var</th>
+<th style="text-align: center;">Idx</th>
+<th style="text-align: right;">TrialV</th>
+<th style="text-align: center;">BlockV</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">10</td>
+<td style="text-align: center;">2</td>
+<td style="text-align: right;">b</td>
+<td style="text-align: center;">y</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">-10</td>
+<td style="text-align: center;">1</td>
+<td style="text-align: right;">b</td>
+<td style="text-align: center;">y</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">10</td>
+<td style="text-align: center;">2</td>
+<td style="text-align: right;">a</td>
+<td style="text-align: center;">x</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">-10</td>
+<td style="text-align: center;">1</td>
+<td style="text-align: right;">b</td>
+<td style="text-align: center;">x</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">10</td>
+<td style="text-align: center;">2</td>
+<td style="text-align: right;">a</td>
+<td style="text-align: center;">x</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">-10</td>
+<td style="text-align: center;">1</td>
+<td style="text-align: right;">b</td>
+<td style="text-align: center;">x</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">10</td>
+<td style="text-align: center;">2</td>
+<td style="text-align: right;">a</td>
+<td style="text-align: center;">x</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">-10</td>
+<td style="text-align: center;">1</td>
+<td style="text-align: right;">b</td>
+<td style="text-align: center;">x</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">10</td>
+<td style="text-align: center;">2</td>
+<td style="text-align: right;">a</td>
+<td style="text-align: center;">y</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">-10</td>
+<td style="text-align: center;">1</td>
+<td style="text-align: right;">a</td>
+<td style="text-align: center;">y</td>
+</tr>
+</tbody>
+</table>
 </body>
 </html>

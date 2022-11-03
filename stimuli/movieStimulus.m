@@ -192,6 +192,13 @@ classdef movieStimulus < baseStimulus
 			me.isSetup = true;
 			computePosition(me)
 			setRect(me);
+
+			function set_xPositionOut(me, value)
+				me.xPositionOut = value * me.ppd;
+			end
+			function set_yPositionOut(me,value)
+				me.yPositionOut = value*me.ppd; 
+			end
 		end
 
 		% ===================================================================

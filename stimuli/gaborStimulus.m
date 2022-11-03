@@ -206,6 +206,35 @@ classdef gaborStimulus < baseStimulus
 			me.inSetup = false;
 			computePosition(me);
 			me.setRect();
+
+			function set_xPositionOut(me, value)
+				me.xPositionOut = value * me.ppd;
+			end
+			function set_yPositionOut(me,value)
+				me.yPositionOut = value*me.ppd;
+			end
+			function set_sfOut(me,value)
+				if me.sfRecurse == false
+					me.sfCache = (value/me.ppd);
+					me.sfOut = me.sfCache * me.scale;
+				else
+					me.sfOut = value;
+					me.sfRecurse = false;
+				end
+				%fprintf('\nSET SFOut: %d | cachce: %d | in: %d\n', me.sfOut, me.sfCache, value);
+			end
+			function set_tfOut(me,value)
+				me.tfOut = value;
+				notify(me,'changePhaseIncrement');
+			end
+			function set_driftDirectionOut(me,value)
+				me.driftDirectionOut = value;
+				notify(me,'changePhaseIncrement');
+			end
+			function set_sizeOut(me,value)
+				me.sizeOut = value*me.ppd;
+				notify(me,'changeScale');
+			end
 			
 		end
 		
@@ -354,39 +383,6 @@ classdef gaborStimulus < baseStimulus
 	%=======================================================================
 		
 		% ===================================================================
-		%> @brief sfOut Set method
-		%>
-		% ===================================================================
-		function set_sfOut(me,value)
-			if me.sfRecurse == false
-				me.sfCache = (value/me.ppd);
-				me.sfOut = me.sfCache * me.scale;
-			else
-				me.sfOut = value;
-				me.sfRecurse = false;
-			end
-			%fprintf('\nSET SFOut: %d | cachce: %d | in: %d\n', me.sfOut, me.sfCache, value);
-		end
-		
-		% ===================================================================
-		%> @brief tfOut Set method
-		%>
-		% ===================================================================
-		function set_tfOut(me,value)
-			me.tfOut = value;
-			notify(me,'changePhaseIncrement');
-		end
-		
-		% ===================================================================
-		%> @brief driftDirectionOut Set method
-		%>
-		% ===================================================================
-		function set_driftDirectionOut(me,value)
-			me.driftDirectionOut = value;
-			notify(me,'changePhaseIncrement');
-		end
-		
-		% ===================================================================
 		%> @brief calculateScale 
 		%> Use an event to recalculate scale as get method is slower (called
 		%> many more times), than an event which is only called on update
@@ -413,16 +409,6 @@ classdef gaborStimulus < baseStimulus
 					end
 				end
 			end
-		end
-		
-		% ===================================================================
-		%> @brief sizeOut Set method
-		%> we also need to change scale when sizeOut is changed, used for both
-		%setting sfOut and the dstRect properly
-		% ===================================================================
-		function set_sizeOut(me,value)
-			me.sizeOut = value*me.ppd;
-			notify(me,'changeScale');
 		end
 		
 	end

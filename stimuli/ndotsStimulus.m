@@ -227,6 +227,24 @@ classdef ndotsStimulus < baseStimulus
 			obj.inSetup = false;
 			initialiseDots(obj);
 			computeNextFrame(obj);
+
+			function set_xPositionOut(me, value)
+				me.xPositionOut = value * me.ppd;
+			end
+			function set_yPositionOut(me,value)
+				me.yPositionOut = value*me.ppd;
+			end
+			function set_sizeOut(obj,value)
+				obj.sizeOut = value * obj.ppd;
+				if obj.mask == 1
+					obj.fieldSize = obj.sizeOut * obj.fieldScale; %for masking!
+				else
+					obj.fieldSize = obj.sizeOut;
+				end
+			end
+			function set_dotSizeOut(obj,value)
+				obj.dotSizeOut = value * obj.ppd;
+			end
 			
 		end
 		
@@ -465,29 +483,8 @@ classdef ndotsStimulus < baseStimulus
 			obj.normalizedXY = XY;
 			obj.pixelXY = XY*obj.pixelScale;
 		end
-		% ===================================================================
-		%> @brief sfOut Set method
-		%>
-		% ===================================================================
-		function set_sizeOut(obj,value)
-			obj.sizeOut = value * obj.ppd;
-			if obj.mask == 1
-				obj.fieldSize = obj.sizeOut * obj.fieldScale; %for masking!
-			else
-				obj.fieldSize = obj.sizeOut;
-			end
-		end
-		
-		% ===================================================================
-		%> @brief sfOut Set method
-		%>
-		% ===================================================================
-		function set_dotSizeOut(obj,value)
-			obj.dotSizeOut = value * obj.ppd;
-		end
 		
 	end
-	
 	
 end
 

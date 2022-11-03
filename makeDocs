@@ -10,11 +10,11 @@ MATLAB=`which matlab`
 #Auto-run Matlab, publishing HTML output from optickatest.m
 if [[ "$(uname -s)" = "Darwin" ]]; then 
 	if [ -f $MATLAB ]; then
-		$MATLAB -nodesktop -nosplash -r "Screen('Preference', 'SkipSyncTests', 2);publish('optickaTest.m');close all;publish('optickaBehaviourTest.m');pause(1);exit"
+		$MATLAB -nodesktop -nosplash -r "Screen('Preference', 'SkipSyncTests', 2);publish('optickaTest.m');close all;clear all;pause(1);publish('optickaBehaviourTest.m');pause(1);exit"
 	fi
 else
 	if [ -f $MATLAB ]; then
-		$MATLAB -nodesktop -nosplash -r "publish('optickatest.m');close all;publish('optickaBehaviourTest.m');pause(1);exit"
+		$MATLAB -nodesktop -nosplash -r "publish('optickaTest.m');close all;clear all;pause(1);publish('optickaBehaviourTest.m');pause(1);exit"
 	fi
 fi
 

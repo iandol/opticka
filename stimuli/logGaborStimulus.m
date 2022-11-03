@@ -188,6 +188,21 @@ classdef logGaborStimulus < baseStimulus
 			computePosition(me);
 			setRect(me);
 			if me.doAnimator; setup(me.animator,me); end
+
+			function set_xPositionOut(me, value)
+				me.xPositionOut = value * me.ppd;
+			end
+			function set_yPositionOut(me,value)
+				me.yPositionOut = value*me.ppd;
+			end
+			function set_sizeOut(me,value)
+				me.sizeOut = value * me.ppd;
+				if me.mask == true
+					me.fieldSize = round(me.sizeOut + me.maskSmoothing); %mask needs to be bigger!
+				else
+					me.fieldSize = me.sizeOut;
+				end
+			end
 		end
 		
 		% ===================================================================
@@ -470,19 +485,6 @@ classdef logGaborStimulus < baseStimulus
 					end
 					me.maskRect=dstRect2;
 				end
-			end
-		end
-		
-		% ===================================================================
-		%> @brief sizeOut Set method
-		%>
-		% ===================================================================
-		function set_sizeOut(me,value)
-			me.sizeOut = value * me.ppd;
-			if me.mask == true
-				me.fieldSize = round(me.sizeOut + me.maskSmoothing); %mask needs to be bigger!
-			else
-				me.fieldSize = me.sizeOut;
 			end
 		end
 		

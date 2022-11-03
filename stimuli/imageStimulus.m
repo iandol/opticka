@@ -11,7 +11,7 @@ classdef imageStimulus < baseStimulus
 		type char = 'picture'
 		%> filename to load
 		fileName char = ''
-		%> if N > 0, then this is a number of images from 1:N, e.g.
+		%> multipleImages if N > 0, then this is a number of images from 1:N, e.g.
 		%> fileName = base.jpg, multipleImages=5, then base1.jpg - base5.jpg
 		%> update() will randomly select one from this group.
 		multipleImages double = 0
@@ -30,7 +30,9 @@ classdef imageStimulus < baseStimulus
 		matrix
 		%> current randomly selected image
 		currentImage = ''
+		%>
 		width
+		%>
 		height
 	end
 	
@@ -40,6 +42,8 @@ classdef imageStimulus < baseStimulus
 		interpMethodList = {'nearest','linear','spline','cubic'}
 		%> list of imagenames if multipleImages > 0
 		fileNames = {};
+		%> properties to ignore in the UI
+		ignorePropertiesUI='colour|alpha'
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -155,6 +159,13 @@ classdef imageStimulus < baseStimulus
 			
 			computePosition(me);
 			setRect(me);
+
+			function set_xPositionOut(me, value)
+				me.xPositionOut = value * me.ppd;
+			end
+			function set_yPositionOut(me,value)
+				me.yPositionOut = value*me.ppd; 
+			end
 			
 		end
 		

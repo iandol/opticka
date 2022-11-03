@@ -166,9 +166,7 @@ classdef discStimulus < baseStimulus
 			% standard protected or private, they trigger recursions.
 			% Placing them as inline functions like here and they work!
 			function set_sizeOut(me, value)
-				me.setLoop = me.setLoop + 1;
-				if me.setLoop == 1; me.sizeOut = value * me.ppd; else; warning('Recursion: sizeOut'); end
-				me.setLoop = 0;
+				me.sizeOut = value * me.ppd;
 				if isprop(me,'discSize') && ~isempty(me.discSize) && ~isempty(me.texture)
 					me.scale = me.sizeOut / me.discSize;
 					setRect(me);
@@ -176,9 +174,7 @@ classdef discStimulus < baseStimulus
 			end
 			function set_alphaOut(me, value)
 				if me.isInSetColour; return; end
-				me.setLoop = me.setLoop + 1;
-				if me.setLoop == 1; me.alphaOut = value; else; warning('Recursion: alphaOut'); end
-				me.setLoop = 0;
+				me.alphaOut = value;
 				[~,name] = getP(me,'colour');
 				me.(name) = [me.(name)(1:3) value];
 				[val,name] = getP(me,'flashColour');
@@ -188,22 +184,16 @@ classdef discStimulus < baseStimulus
 			end
 			function set_contrastOut(me, value)
 				if iscell(value); value = value{1}; end
-				me.setLoop = me.setLoop + 1;
-				if me.setLoop == 1; me.contrastOut = value; else; warning('Recursion: contrastOut'); end
+				me.contrastOut = value;
 				if ~me.inSetup && ~me.stopLoop && value < 1
 					computeColour(me);
 				end
-				me.setLoop = 0;
 			end
 			function set_xPositionOut(me, value)
-				me.setLoop = me.setLoop + 1;
-				if me.setLoop == 1;me.xPositionOut = value * me.ppd;else;warning('Recursion: xPositionOut');end
-				me.setLoop = 0;
+				me.xPositionOut = value * me.ppd;
 			end
 			function set_yPositionOut(me,value)
-				me.setLoop = me.setLoop + 1;
-				if me.setLoop == 1; me.yPositionOut = value*me.ppd; else; warning('Recursion: yPositionOut'); end
-				me.setLoop = 0;	
+				me.yPositionOut = value*me.ppd;
 			end
 			function set_colourOut(me, value)
 				me.isInSetColour = true;
@@ -222,9 +212,7 @@ classdef discStimulus < baseStimulus
 						value = [value value value alpha];
 				end
 				if isempty(me.colourOutTemp);me.colourOutTemp = value;end
-				me.setLoop = me.setLoop + 1;
-				if me.setLoop == 1; me.colourOut = value; else; warning('Recursion: colourOut'); end
-				me.setLoop = 0;
+				me.colourOut = value;
 				me.isInSetColour = false;
 				contrast = getP(me,'contrast');
 				if ~me.inSetup && ~me.stopLoop && contrast < 1
@@ -247,9 +235,7 @@ classdef discStimulus < baseStimulus
 						value = [value value value alpha];
 				end
 				if isempty(me.flashColourOutTemp);me.flashColourOutTemp = value;end
-				me.setLoop = me.setLoop + 1;
-				if me.setLoop == 1; me.flashColourOut = value; else; warning('Recursion: flashColourOut'); end
-				me.setLoop = 0;
+				me.flashColourOut = value;
 				me.isInSetColour = false;
 				contrast = getP(me,'contrast');
 				if ~isempty(value) && ~me.inSetup && ~me.stopLoop && contrast < 1

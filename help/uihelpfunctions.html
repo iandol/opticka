@@ -187,18 +187,24 @@
 <body>
 <h1 id="adding-user-functions">Adding User Functions</h1>
 <p>For behavioural tasks, <a href="uihelpstate.html">state-machine
-files</a> specify the experiment states and functions that run on
+files</a> specify the experimental states (prefx, correct, incorrect
+etc.) and functions that run on
 <code>enter</code>/<code>within</code>/<code>transition</code> and
-<code>exit</code> of <em>each</em> state. Most functions are specified
-by the built-in classes like <code>screenManager</code>,
-<code>taskSequence</code> etc. <strong><em>BUT</em></strong> a user can
-add functions and store information using a <code>userFunctions.m</code>
-file.</p>
-<p>You use <kbd>Load Functions File…</kbd> to load this file; this will
-be used when you run your task. You can also use the <kbd>Edit Functions
-File…</kbd> button to open it in the MATLAB editor.</p>
-<h2 id="how-to-use-these-functions">How to Use these Functions</h2>
-<p>Lets add a new function:</p>
+<code>exit</code> of <em>each</em> state. <em>Most functions</em> are
+specified in the built-in classes like <code>screenManager</code>,
+<code>taskSequence</code> etc.</p>
+<p><strong><em>BUT</em></strong> a user can add any extra functions and
+store information using a customised <code>userFunctions.m</code> file.
+You should edit the standard <code>userFunctions.m</code> and copy it to
+a folder with your protocol. This custom class will be loaded during the
+task, called <code>uF</code>, and you can call functions as your
+experiment runs, and store variables in properties etc.</p>
+<p>You use the <kbd>Load Functions File…</kbd> to load this file into
+your protocol; this will be used when you run your task. You can also
+use the <kbd>Edit Functions File…</kbd> button to open the file in the
+MATLAB editor.</p>
+<h2 id="how-to-use-these-functions">How to Use these Functions?</h2>
+<p>Let’s add a new function:</p>
 <div class="sourceCode" id="cb1"><pre
 class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="va">drawSomething</span>(<span class="va">me</span>)</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">% use screenManager (me.s) to draw some text to the PTB screen</span></span>
@@ -206,23 +212,24 @@ class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb1-1"><a hr
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">end</span></span></code></pre></div>
 <p><strong>Remember</strong>: <code>me</code> refers to itself, in this
 case <code>userFunctions</code>. So <code>me.s</code> refers to the
-<code>s</code> property which is set as a handle to
-<code>screenManager</code>.</p>
-<p>Now lets say we want to run this function during the
-<code>fixate</code> state (on every frame, so we use
-<code>withinFcn</code>); find the cell array of functions for this state
+<code>s</code> property which is automatically set as a handle to
+<code>screenManager</code> the experiment is running under. From the
+<code>runExperiment.runTask()</code>, the userFunctions object is called
+<code>uF</code>.</p>
+<p>Lets say we want to run our new <code>drawSomething()</code> function
+during the <code>fixate</code> state (on every frame, so we use
+<code>withinFcn</code>). Find the cell array of functions for this state
 in the <code>stateInfo.m</code> file you are using and add our new
-function to the cell array. Because cell arrays use <code>@()</code>
-function handles, so you will need to insert
-<code>@()drawSomething(uF)</code>:</p>
+function to the cell array. Because these cell arrays contain function
+handles(<code>@()</code>), you will need to insert the function name
+like so: <code>@()drawSomething(uF)</code>:</p>
 <div class="sourceCode" id="cb2"><pre
 class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">%--------------------fix within</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="va">fixFcn</span> <span class="op">=</span> {</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">@</span>()<span class="va">drawSomething</span>(<span class="va">uF</span>)<span class="op">;</span> <span class="co">% our new custom function from our uF object</span></span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">@</span>()<span class="va">draw</span>(<span class="va">stims</span>)<span class="op">;</span> <span class="co">%draw stimuli</span></span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">@</span>()<span class="va">drawPhotoDiode</span>(<span class="va">s</span><span class="op">,</span>[<span class="fl">0</span> <span class="fl">0</span> <span class="fl">0</span>])<span class="op">;</span> <span class="co">% black square for photodiode</span></span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">@</span>()<span class="va">animate</span>(<span class="va">stims</span>)<span class="op">;</span> <span class="co">% animate stimuli for subsequent draw</span></span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span></code></pre></div>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">@</span>()<span class="va">draw</span>(<span class="va">stims</span>)<span class="op">;</span> <span class="co">%draw our stimuli</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">@</span>()<span class="va">animate</span>(<span class="va">stims</span>)<span class="op">;</span> <span class="co">% animate stimuli for subsequent draw</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span></code></pre></div>
 <p>This will now run where the <code>fixFcn</code> array is, in this
 case we can see that is <code>fixate</code> &gt;
 <code>withinFcn</code>:</p>
@@ -233,10 +240,10 @@ class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb3-1"><a hr
 <span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
 <h3 id="using-variables-properties">Using Variables (Properties)</h3>
 <p>When using <code>@()</code> function handles, you cannot change class
-variables (properties) directly. Instead you can use functions that set
-the properties. Examples of these kinds of functions from the core
-classes are <code>show(stims, 3)</code>. To see how we do this with our
-customised userFunctions, lets add a new property to our custom
+variables (properties) directly. Instead you can use “setter” functions
+that set the properties. Examples of these kinds of functions from the
+core classes are <code>show(stims, 3)</code>. To see how we do this with
+our customised userFunctions, lets add a new property to our custom
 <code>userFunctions.m</code> file:</p>
 <div class="sourceCode" id="cb4"><pre
 class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">properties</span> <span class="co">% ADD YOUR OWN VARIABLES HERE</span></span>
@@ -250,11 +257,17 @@ class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb5-1"><a hr
 <span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">me</span>.<span class="va">myToggle</span> <span class="op">=</span> <span class="va">value</span><span class="op">;</span></span>
 <span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">end</span></span></code></pre></div>
 <p>You can now add this function in your state file:
-<code>@()doToggle(uF, true)</code>.</p>
+<code>@()doToggle(uF, true)</code> or
+<code>@()doToggle(uF, false)</code>.</p>
 <p>This should allow you to add many custom functions, and store
 information in variables without needing to edit any of the core opticka
 classes. If you think you need something more advanced then you can open
 an issue on github to add functions to the core classes or add a new
 dedicated class.</p>
+<p><strong>IMPORTANT</strong>: please don’t store important experimental
+data in the object itself, as although <code>uF</code> will be saved
+into a MAT file, the currect userFunctions.m may not be present when
+loading on a different machine. You can use the structure
+<code>tS</code> or use your own save data function / file.</p>
 </body>
 </html>

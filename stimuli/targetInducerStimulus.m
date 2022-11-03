@@ -246,6 +246,37 @@ classdef targetInducerStimulus < baseStimulus
 			
 			obj.inSetup = false;
 			obj.setRect();
+
+			function set_sfOut(obj,value)
+				if obj.sfRecurse == false
+					obj.sfCache = (value/obj.ppd);
+					obj.sfOut = obj.sfCache * obj.scale;
+				else
+					obj.sfOut = value;
+					obj.sfRecurse = false;
+				end
+				%fprintf('\nSET SFOut: %d | cachce: %d | in: %d\n', obj.sfOut, obj.sfCache, value);
+			end
+			function set_tfOut(obj,value)
+				obj.tfOut = value;
+				notify(obj,'changePhaseIncrement');
+			end
+			function set_driftDirectionOut(obj,value)
+				obj.driftDirectionOut = value;
+				notify(obj,'changePhaseIncrement');
+			end
+			function set_sizeOut(obj,value)
+				obj.sizeOut = value*obj.ppd;
+				notify(obj,'changeScale');
+			end
+			function set_xPositionOut(obj,value)
+				obj.xPositionOut = value*obj.ppd;
+				if ~isempty(obj.texture);obj.setRect;end
+			end
+			function set_yPositionOut(obj,value)
+				obj.yPositionOut = value*obj.ppd;
+				if ~isempty(obj.texture);obj.setRect;end
+			end
 			
 		end
 		
@@ -384,39 +415,6 @@ classdef targetInducerStimulus < baseStimulus
 		end
 		
 		% ===================================================================
-		%> @brief sfOut Set method
-		%>
-		% ===================================================================
-		function set_sfOut(obj,value)
-			if obj.sfRecurse == false
-				obj.sfCache = (value/obj.ppd);
-				obj.sfOut = obj.sfCache * obj.scale;
-			else
-				obj.sfOut = value;
-				obj.sfRecurse = false;
-			end
-			%fprintf('\nSET SFOut: %d | cachce: %d | in: %d\n', obj.sfOut, obj.sfCache, value);
-		end
-		
-		% ===================================================================
-		%> @brief tfOut Set method
-		%>
-		% ===================================================================
-		function set_tfOut(obj,value)
-			obj.tfOut = value;
-			notify(obj,'changePhaseIncrement');
-		end
-		
-		% ===================================================================
-		%> @brief driftDirectionOut Set method
-		%>
-		% ===================================================================
-		function set_driftDirectionOut(obj,value)
-			obj.driftDirectionOut = value;
-			notify(obj,'changePhaseIncrement');
-		end
-		
-		% ===================================================================
 		%> @brief calculateScale 
 		%> Use an event to recalculate scale as get method is slower (called
 		%> many more times), than an event which is only called on update
@@ -442,34 +440,6 @@ classdef targetInducerStimulus < baseStimulus
 					end
 				end
 			end
-		end
-		
-		% ===================================================================
-		%> @brief sizeOut Set method
-		%> we also need to change scale when sizeOut is changed, used for both
-		%setting sfOut and the dstRect properly
-		% ===================================================================
-		function set_sizeOut(obj,value)
-			obj.sizeOut = value*obj.ppd;
-			notify(obj,'changeScale');
-		end
-		
-		% ===================================================================
-		%> @brief xPositionOut Set method
-		%>
-		% ===================================================================
-		function set_xPositionOut(obj,value)
-			obj.xPositionOut = value*obj.ppd;
-			if ~isempty(obj.texture);obj.setRect;end
-		end
-		
-		% ===================================================================
-		%> @brief yPositionOut Set method
-		%>
-		% ===================================================================
-		function set_yPositionOut(obj,value)
-			obj.yPositionOut = value*obj.ppd;
-			if ~isempty(obj.texture);obj.setRect;end
 		end
 		
 	end
