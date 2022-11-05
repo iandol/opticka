@@ -167,7 +167,7 @@ stims.controlTable(n).limits	= [0 1];
 
 %==================================================================
 %this allows us to enable subsets from our stimulus list
-stims.stimulusSets				= {[1,2],[1]};
+stims.stimulusSets				= {[1,2,3],3,1};
 stims.setChoice					= 1;
 hide(stims);
 
