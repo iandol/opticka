@@ -776,7 +776,6 @@ classdef runExperiment < optickaCore
 				if me.isTask 
 					updateVariables(me, task.totalRuns, true, false); % set to first variable
 					update(stims); %update our stimuli ready for display
-					if me.debug; showLog(task); drawnow(); end
 				else
 					updateVariables(me, 1, false, false); % set to first variable
 					update(stims); %update our stimuli ready for display
@@ -804,7 +803,7 @@ classdef runExperiment < optickaCore
 					%warning('off'); %#ok<*WNOFF>
 					ListenChar(-1); %2=capture all keystrokes
 				end
-				drawnow; WaitSecs(0.25);
+				drawnow; 
 				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
 				
 				%-----profiling starts here if uncommented

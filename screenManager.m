@@ -47,6 +47,10 @@ classdef screenManager < optickaCore
 		%> normally should be left at 1 (1 is added to this number so
 		%> doublebuffering is enabled)
 		doubleBuffer(1,1) uint8				= 1
+		%> Mirror the content to a second window. In this case we need a
+		%screen 0 and screen 1 and the main output to screen 1. We will get
+		%and overlay window for this too we can draw to
+		mirrorDisplay(1,1) logical			= false
 		%> float precision and bitDepth of framebuffer/output: '8bit' is
 		%> best for old GPUs, but choose 'FloatingPoint32BitIfPossible' for
 		%> newer GPUs. Native high bitdepths (assumes FloatingPoint32Bit
@@ -125,6 +129,13 @@ classdef screenManager < optickaCore
 		%> hide the black flash as PTB tests its refresh timing, uses a gamma
 		%> trick from Mario
 		hideFlash logical					= false
+		%> Details for drawing fonts, either sets defaults if window is closed or
+		%> or updates values if window open...
+		font struct							= struct('TextSize',24,...
+											'TextColor',[0.9 0.9 0.9 1],...
+											'TextBackgroundColor',[0.15 0.075 0 0.75],...
+											'TextRenderer', 1,...
+											'FontName', 'Source Sans 3');
 	end
 
 	properties (SetAccess = private, GetAccess = public, Dependent = true)
@@ -154,11 +165,6 @@ classdef screenManager < optickaCore
 	properties (Hidden = true)
 		%> The mode to use for color++ mode
 		colorMode							= 2
-		%> font details
-		font struct							= struct('TextSize',18,...
-											'TextColor',[0.9 0.9 0.9 1],...
-											'TextBackgroundColor',[0.2 0.1 0 0.6],...
-											'TextStyle', 0);
 		%> an optional audioManager that experiments can use. can play samples
 		%> or simple beeps
 		audio audioManager
@@ -172,6 +178,9 @@ classdef screenManager < optickaCore
 		%> default is 2e-04. DO NOT change this unless you know what you are
 		%> doing.
 		syncVariance double					= 2e-04
+		%> overlay window if mirrorDisplay was enabled
+		overlayWin							= -1
+		specialFlags						= []
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -495,11 +504,22 @@ classdef screenManager < optickaCore
 						winSize=[0 0 800 800];
 					end
 				end
+
+				if thisScreen > 0 && me.mirrorDisplay
+					PsychImaging('AddTask', 'General', 'MirrorDisplayTo2ndOutputHead', ...
+						0, [0 0 900 600], kPsychGUIWindow, 1);
+				end
 				
 				% ==============================================================
 				[me.win, me.winRect] = PsychImaging('OpenWindow', thisScreen, ...
-					me.backgroundColour, winSize, [], me.doubleBuffer+1,[], me.antiAlias);
+					me.backgroundColour, winSize, [], me.doubleBuffer+1,[], me.antiAlias, ...
+					[], me.specialFlags);
+				me.isOpen = true;
 				% ==============================================================
+
+				if thisScreen > 0 && me.mirrorDisplay
+					me.overlayWin = PsychImaging('GetMirrorOverlayWindow', me.win);
+				end
 				
 				sv.win			= me.win; % make a copy
 				sv.winRect		= me.winRect;
@@ -621,23 +641,13 @@ classdef screenManager < optickaCore
 				end
 				
 				% set up text defaults
-				if me.useRetina
-					Screen('TextSize', me.win, me.font.TextSize*2);
-				else
-					Screen('TextSize', me.win, me.font.TextSize);
-				end
-				Screen('TextColor', me.win, me.font.TextColor);
-				Screen('TextBackgroundColor', me.win, me.font.TextBackgroundColor);
-				if IsLinux || ismac
-					Screen('Preference', 'DefaultFontName', 'Source Sans 3');
-				end
+				updateFontValues(me);
 				
 				sv.white = WhiteIndex(me.screen);
 				sv.black = BlackIndex(me.screen);
 				sv.gray = GrayIndex(me.screen);
 				
 				me.screenVals = sv;
-				me.isOpen = true;
 			catch ME
 				close(me);
 				Priority(0);
@@ -840,6 +850,13 @@ classdef screenManager < optickaCore
 			if me.hideFlash == true || me.windowed(1) ~= 1 || (~isempty(me.screenVals) && me.screenVals.resetGamma == true && ~isempty(me.screenVals.linearGamma))
 				fprintf('\n---> screenManager: RESET GAMMA TABLES\n');
 				Screen('LoadNormalizedGammaTable', me.screen, me.screenVals.linearGamma);
+			end
+		end
+
+		function set.font(me,varargin)
+			if ~isempty(varargin{1}) && isstruct(varargin{1})
+				me.font = varargin{1};
+				updateFontValues(me);
 			end
 		end
 		
@@ -1224,42 +1241,48 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		%> @brief draw text and flip immediately
 		%>
-		%> @param
-		%> @return
+		%> @param text text to draw
 		% ===================================================================
-		function drawTextNow(me,text)
-			% drawTextNow(me,text)
+		function drawTextNow(me,text,x,y)
+			% drawTextNow(me,text,x,y)
 			if ~exist('text','var');return;end
-			Screen('DrawText',me.win,text,5,5);
+			if ~exist('x','var');x = (-me.xCenter / me.ppd_) + 0.25;end
+			if ~exist('y','var');y = (-me.xCenter / me.ppd_) + 0.25;end
+			Screen('DrawText', me.win, text, (x * me.ppd_) + me.xCenter, (y * me.ppd_) + me.yCenter);
 			flip(me,[],[],2);
 		end
 		
 		% ===================================================================
-		%> @brief draw text and flip immediately
+		%> @brief draw text
 		%>
-		%> @param
-		%> @return
+		%> @param text text to draw
 		% ===================================================================
-		function drawText(me,text)
-			% drawText(me,text)
+		function drawText(me, text, x, y)
+			% drawText(me,text,x,y)
 			if ~exist('text','var');return;end
-			Screen('DrawText',me.win,text,5,5);
+			if ~exist('x','var');x = (-me.xCenter / me.ppd_) + 0.25;end
+			if ~exist('y','var');y = (-me.xCenter / me.ppd_) + 0.25;end
+			
+			Screen('DrawText', me.win, text, (x * me.ppd_) + me.xCenter, (y * me.ppd_) + me.yCenter);
 		end
 
 		% ===================================================================
-		function drawTextWrapped(me,text,wrapat)
+		function drawTextWrapped(me, text, wrapat, x, y)
 		%> @fn drawTextWrapped
 		%> @brief draw text and flip immediately
 		%>
-		%> @param
-		%> @return
+		%> @param text text to draw
+		%> @param wrapat character to wrap at
 		% ===================================================================
 			if ~exist('text','var');return;end
-			if exist('wrapat','var'); text = WrapString(text,wrapat); end
+			if exist('wrapat','var') && ~isempty(wrapat); text = WrapString(text,wrapat); end
+			if ~exist('x','var');x = (-me.xCenter / me.ppd_) + 0.25;end
+			if ~exist('y','var');y = (-me.xCenter / me.ppd_) + 0.25;end
 			c = strsplit(text,'\n');
-			a = 4;
+			x = (x * me.ppd_) + me.xCenter;
+			a = (y * me.ppd_) + me.yCenter;
 			for s = c
-				Screen('DrawText',me.win,s{1},4,a);
+				Screen('DrawText',me.win,s{1},x,a);
 				a = a + me.font.TextSize;
 			end
 		end
@@ -1752,6 +1775,8 @@ classdef screenManager < optickaCore
 			updateCenter(me);
 			sv.xCenter = me.xCenter;
 			sv.yCenter = me.yCenter;
+			sv.topInDegrees = -me.yCenter / me.ppd;
+			sv.leftInDegrees = -me.xCenter / me.ppd;
 		end
 		
 		% ===================================================================
@@ -1836,6 +1861,33 @@ classdef screenManager < optickaCore
 					out = (in * me.ppd_) + me.xCenter;
 				case 'y'
 					out = (in * me.ppd_) + me.yCenter;
+			end
+		end
+
+		% ===================================================================
+		%> @brief
+		%>
+		% ===================================================================
+		function updateFontValues(me)
+			if me.isOpen
+				if me.useRetina
+					Screen('TextSize', me.win, me.font.TextSize*2);
+				else
+					Screen('TextSize', me.win, me.font.TextSize);
+				end
+				o = Screen('TextColor', me.win, me.font.TextColor);
+				o = Screen('TextBackgroundColor', me.win, me.font.TextBackgroundColor);
+				o = Screen('TextFont', me.win, me.font.FontName);
+				o = Screen('Preference', 'DefaultFontName', me.font.FontName);
+				o = Screen('Preference', 'TextRenderer', me.font.TextRenderer);
+			else
+				if me.useRetina
+					o = Screen('Preference', 'DefaultFontSize', me.font.TextSize*2);
+				else
+					o = Screen('Preference', 'DefaultFontSize', me.font.TextSize);
+				end
+				o = Screen('Preference', 'DefaultFontName', me.font.FontName);
+				o = Screen('Preference', 'TextRenderer', me.font.TextRenderer);
 			end
 		end
 		
