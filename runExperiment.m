@@ -759,7 +759,7 @@ classdef runExperiment < optickaCore
 				% controlled using specific trigger values, see the omniplex
 				% settings for details).
 				if tS.controlPlexon && (me.useDisplayPP || me.useDataPixx)
-					fprintf('\n===>>> Triggering I/O systems... <<<===\n')
+					fprintf('===>>> Triggering I/O systems... <<<===\n')
 					pauseRecording(io); %make sure this is set low first
 					startRecording(io);
 					WaitSecs(1);
@@ -819,7 +819,8 @@ classdef runExperiment < optickaCore
 				tL.startTime				= tL.vbl(1);
 				
 				%-----IGNITE the stateMachine!
-				start(sM); 
+				fprintf('\n===>>> Igniting the State Machine... <<<===\n');
+				start(sM);
 
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

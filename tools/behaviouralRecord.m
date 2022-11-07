@@ -86,7 +86,7 @@ classdef behaviouralRecord < optickaCore
 		%> 
 		%> 
 		% ===================================================================
-		function createPlot(me, eL);
+		function createPlot(me, eL)
 			if ~me.plotOnly
 				reset(me);
 				me.date = datestr(now);
