@@ -1554,6 +1554,18 @@ classdef eyelinkManager < optickaCore
 				if me.verbose; fprintf('-+-+->EDF Message: %s\n',message);end
 			end
 		end
+
+		function trackerFlip(me)
+
+		end
+
+		function trackerDrawEyePosition(me)
+
+		end
+
+		function trackerDrawEyePositions(me)
+
+		end
 		
 	
 	end

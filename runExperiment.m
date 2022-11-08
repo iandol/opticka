@@ -736,6 +736,7 @@ classdef runExperiment < optickaCore
 						end
 					end
 					flip(s);
+					if eT.secondScreen; eT.operatorScreen.flip; end
 				end
 				update(stims); %make sure all stimuli are set back to their start state
 				io.resetStrobe;flip(s);flip(s); % reset the strobe system
@@ -1625,10 +1626,11 @@ classdef runExperiment < optickaCore
 		%> @param s screen object
 		% ===================================================================
 			if me.useTobii
-				if length(Screen('Screens')) > 1 && s.screen - 1 >= 0
+				if eT.useOperatorScreen && length(Screen('Screens')) > 1 && s.screen - 1 >= 0
 					ss					= screenManager;
 					ss.screen			= 0;
-					ss.windowed			= [0 0 1000 1000];
+					ss.windowed			= [0 0 800 650];
+					ss.specialFlags		= kPsychGUIWindow;
 					ss.backgroundColour	= s.backgroundColour;
 					ss.bitDepth			= '8bit';
 					ss.blend			= true;

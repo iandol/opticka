@@ -507,18 +507,23 @@ classdef screenManager < optickaCore
 
 				if thisScreen > 0 && me.mirrorDisplay
 					PsychImaging('AddTask', 'General', 'MirrorDisplayTo2ndOutputHead', ...
-						0, [0 0 900 600], kPsychGUIWindow, 1);
+						0, [0 0 900 600], [], 1);
 				end
 				
 				% ==============================================================
 				[me.win, me.winRect] = PsychImaging('OpenWindow', thisScreen, ...
-					me.backgroundColour, winSize, [], me.doubleBuffer+1,[], me.antiAlias, ...
-					[], me.specialFlags);
+					me.backgroundColour, winSize, [], me.doubleBuffer+1,[], ...
+					me.antiAlias, [], me.specialFlags);
 				me.isOpen = true;
 				% ==============================================================
 
 				if thisScreen > 0 && me.mirrorDisplay
 					me.overlayWin = PsychImaging('GetMirrorOverlayWindow', me.win);
+					sv.mirror = true;
+					sv.overlayWin = me.overlayWin;
+				else
+					sv.mirror = false;
+					sv.overlayWin= [];
 				end
 				
 				sv.win			= me.win; % make a copy
@@ -585,6 +590,7 @@ classdef screenManager < optickaCore
 				else
 					me.photoDiodeRect = [me.winRect(3)-45 0 me.winRect(3) 45];
 				end
+				sv.photoDiodeRect = me.photoDiodeRect;
 				
 				% get gamma table and info
 				[sv.originalGamma, sv.dacBits, sv.lutSize]=Screen('ReadNormalizedGammaTable', me.win);
@@ -1247,7 +1253,7 @@ classdef screenManager < optickaCore
 			% drawTextNow(me,text,x,y)
 			if ~exist('text','var');return;end
 			if ~exist('x','var');x = (-me.xCenter / me.ppd_) + 0.25;end
-			if ~exist('y','var');y = (-me.xCenter / me.ppd_) + 0.25;end
+			if ~exist('y','var');y = (-me.yCenter / me.ppd_) + 0.25;end
 			Screen('DrawText', me.win, text, (x * me.ppd_) + me.xCenter, (y * me.ppd_) + me.yCenter);
 			flip(me,[],[],2);
 		end
@@ -1261,8 +1267,7 @@ classdef screenManager < optickaCore
 			% drawText(me,text,x,y)
 			if ~exist('text','var');return;end
 			if ~exist('x','var');x = (-me.xCenter / me.ppd_) + 0.25;end
-			if ~exist('y','var');y = (-me.xCenter / me.ppd_) + 0.25;end
-			
+			if ~exist('y','var');y = (-me.yCenter / me.ppd_) + 0.25;end
 			Screen('DrawText', me.win, text, (x * me.ppd_) + me.xCenter, (y * me.ppd_) + me.yCenter);
 		end
 
@@ -1277,7 +1282,7 @@ classdef screenManager < optickaCore
 			if ~exist('text','var');return;end
 			if exist('wrapat','var') && ~isempty(wrapat); text = WrapString(text,wrapat); end
 			if ~exist('x','var');x = (-me.xCenter / me.ppd_) + 0.25;end
-			if ~exist('y','var');y = (-me.xCenter / me.ppd_) + 0.25;end
+			if ~exist('y','var');y = (-me.yCenter / me.ppd_) + 0.25;end
 			c = strsplit(text,'\n');
 			x = (x * me.ppd_) + me.xCenter;
 			a = (y * me.ppd_) + me.yCenter;

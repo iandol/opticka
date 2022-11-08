@@ -92,6 +92,8 @@ classdef tobiiManager < optickaCore
 		eyeUsed char {mustBeMember(eyeUsed,{'both','left','right'})} = 'both'
 		%> which movie to use for calibration, empty uses default
 		calibrationMovie movieStimulus
+		%> use an operator screen for calibration etc.
+		useOperatorScreen				= false;
 	end
 	
 	properties (Hidden = true)
@@ -257,6 +259,9 @@ classdef tobiiManager < optickaCore
 				end
 				me.screen			= sM;
 			end
+			if me.useOperatorScreen && ~exist('sM2','var')
+				sM2 = screenManager('windowed',[0 0 1000 1000],'pixelsPerCm',25,'backgroundColour',sM.backgroundColour);
+			end
 			if ~exist('sM2','var') || ~isa(sM2,'screenManager')
 				me.secondScreen		= false;
 			else
@@ -379,12 +384,18 @@ classdef tobiiManager < optickaCore
 				me.isConnected = false;
 				me.isRecording_ = false;
 				resetFixation(me);
+				if me.secondScreen && ~isempty(me.operatorScreen) && isa(me.operatorScreen,'screenManager')
+					me.operatorScreen.close;
+				end
 			catch ME
 				me.salutation('Close Method','Couldn''t stop recording, forcing shutdown...',true)
 				me.tobii.deInit();
 				me.isConnected = false;
 				me.isRecording_ = false;
 				resetFixation(me);
+				if me.secondScreen && ~isempty(me.operatorScreen) && isa(me.operatorScreen,'screenManager')
+					me.operatorScreen.close;
+				end
 				getReport(ME);
 			end
 		end
@@ -486,7 +497,20 @@ classdef tobiiManager < optickaCore
 		% ===================================================================
 		function cal = trackerSetup(me,incal)
 			cal = [];
-			if ~me.isConnected || ~me.screen.isOpen || me.isDummy; return; end
+			if ~me.isConnected 
+				warning('Eyetracker not connected, cannot calibrate!');
+				return
+			end
+			if me.isDummy
+				if me.secondScreen && ~me.closeSecondScreen
+					me.operatorScreen.open();
+					disp('--->>> Tobii Dummy Mode: calibration skipped')
+					return;
+				end
+			end
+			if ~me.screen.isOpen 
+				open(me.screen);
+			end
 			fprintf('\n===>>> CALIBRATING TOBII... <<<===\n');
 			if ~exist('incal','var');incal=[];end
 			wasRecording = me.isRecording;
@@ -528,7 +552,7 @@ classdef tobiiManager < optickaCore
 					end
 				end
 			else
-				disp('---!!! The calibration was unsuccesful or skipped !!!---')
+% 				disp('---!!! The calibration was unsuccesful or skipped !!!---')
 			end
 			if me.secondScreen && me.closeSecondScreen && me.operatorScreen.isOpen
 				close(me.operatorScreen); 
@@ -1560,7 +1584,7 @@ classdef tobiiManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief draw the fixation box on the tracker display
+		%> @brief draw the fixation position on the tracker display
 		%>
 		% ===================================================================
 		function trackerDrawEyePosition(me)
@@ -1572,7 +1596,7 @@ classdef tobiiManager < optickaCore
 					drawSpot(me.operatorScreen,0.3,[0.75 0.25 0.75 0.75],me.x,me.y);
 				end
 			else
-				drawSpot(me.operatorScreen,0.3,[0.7 0.5 0 0.75],me.x,me.y);
+				drawSpot(me.operatorScreen,0.3,[0.7 0.5 0 0.5],me.x,me.y);
 			end
 		end
 		
@@ -1608,6 +1632,16 @@ classdef tobiiManager < optickaCore
 		function trackerDrawText(me,textIn)
 			if ~me.isConnected || ~me.operatorScreen.isOpen || ~exist('textIn','var'); return; end
 			drawText(me.operatorScreen,textIn);
+		end
+
+		% ===================================================================
+		%> @brief draw the fixation box on the tracker display
+		%>
+		% ===================================================================
+		function trackerFlip(me,clear)
+			if ~me.isConnected || ~me.operatorScreen.isOpen; return; end
+			if ~exist('clear','var');clear = 0; end
+			me.operatorScreen.flip([],clear,2);
 		end
 		
 		% ===================================================================

@@ -80,9 +80,9 @@ tS.INCORRECT				= -5;		%==the code to send eyetracker for incorrect trials
 % components; you can also set verbose in the opticka GUI to enable all of
 % these…
 %sM.verbose					= true;		%==print out stateMachine info for debugging
-stims.verbose				= true;		%==print out metaStimulus info for debugging
+%stims.verbose				= true;		%==print out metaStimulus info for debugging
 %io.verbose					= true;		%==print out io commands for debugging
-eT.verbose					= true;		%==print out eyelink commands for debugging
+%eT.verbose					= true;		%==print out eyelink commands for debugging
 %rM.verbose					= true;		%==print out reward commands for debugging
 %task.verbose				= true;		%==print out task info for debugging
 
@@ -120,9 +120,9 @@ tS.fixstimTime				= 1.5;
 % in this task the subject must saccade to the pro-saccade target location.
 % These settings define the rules to "accept" the target fixation as
 % correct
-tS.targetFixInit			= 1; % time to find the target
-tS.targetFixTime			= 0.5; % to to maintain fixation on target 
-tS.targetRadius				= 5; %radius to fix within.
+tS.targetFixInit			= 3; % time to find the target
+tS.targetFixTime			= 1; % to to maintain fixation on target 
+tS.targetRadius				= 4; %radius to fix within.
 % this task will establish an exclusion zone against the anti-saccade
 % target for the pro and anti-saccade task. We can change the size of the
 % exclusion zone, here set to 5° around the X and Y position of the
@@ -271,9 +271,10 @@ pauseEntry = {
 	@()drawBackground(s); %blank the subject display
 	@()drawTextNow(s,'PAUSED, press [p] to resume...');
 	@()disp('PAUSED, press [p] to resume...');
-	@()trackerClearScreen(eT); % blank the eyelink screen
 	@()statusMessage(eT,me.name);
+	@()trackerClearScreen(eT); % blank the eyetracker screen
 	@()trackerDrawText(eT,'PAUSED, press [P] to resume...');
+	@()trackerFlip(eT);
 	@()trackerMessage(eT,'TRIAL_RESULT -100'); %store message in EDF
 	@()stopRecording(eT, true); %stop recording eye position data
 	@()disableFlip(me); % no need to flip the PTB screen
@@ -288,6 +289,8 @@ pauseExit = {
 %====================================================PRE-FIXATION
 pfEntry = { 
 	@()enableFlip(me); 
+	@()trackerClearScreen(eT); % blank the eyetracker screen
+	@()trackerFlip(eT);
 };
 
 pfWithin = {
@@ -312,9 +315,11 @@ fixEntry = {
 	% you can add any other messages, such as stimulus values as needed,
 	% e.g. @()trackerMessage(eT,['MSG:ANGLE' num2str(stims{1}.angleOut)])
 	% draw to the eyetracker display
-	@()trackerClearScreen(eT); % blank the eyelink screen
+	@()trackerClearScreen(eT); % blank the eyetracker screen
 	@()trackerDrawFixation(eT); % draw fixation window on eyetracker display
 	@()trackerDrawStimuli(eT,stims.stimulusPositions); %draw location of stimulus on eyetracker
+	@()trackerDrawExclusion(eT);
+	@()trackerFlip(eT, 1);
 	% show stimulus 3 = fixation cross
 	@()show(stims, 3);
 	@()needEyeSample(me,true); % make sure we start measuring eye position
@@ -324,6 +329,8 @@ fixEntry = {
 %--------------------fix within
 fixWithin = {
 	@()draw(stims); %draw stimulus
+	@()trackerDrawEyePosition(eT);
+	@()trackerFlip(eT, 1);
 };
 
 %--------------------test we are fixated for a certain length of time
@@ -353,6 +360,8 @@ fsEntry = {
 
 fsWithin = {
 	@()draw(stims); %draw stimulus
+	@()trackerDrawEyePosition(eT);
+	@()trackerFlip(eT, 1);
 };
 
 % test we are fixated for a certain length of time, testHoldFixation assumes
@@ -389,6 +398,8 @@ stimEntry = {
 stimWithin =  { 
 	@()draw(stims);
 	@()animate(stims); % animate stimuli for subsequent draw
+	@()trackerDrawEyePosition(eT);
+	@()trackerFlip(eT, 1);
 };
 
 % test we are finding the new target (stimulus 1, the saccade target)
@@ -412,6 +423,11 @@ correctEntry = {
 	@()trackerMessage(eT,['TRIAL_RESULT ' str2double(tS.CORRECT)]);
 	@()trackerClearScreen(eT);
 	@()trackerDrawText(eT,'Correct! :-)');
+	@()trackerDrawFixation(eT); % draw fixation window on eyetracker display
+	@()trackerDrawStimuli(eT,stims.stimulusPositions); %draw location of stimulus on eyetracker
+	@()trackerDrawExclusion(eT);
+	@()trackerDrawEyePositions(eT);
+	@()trackerFlip(eT);
 	@()needEyeSample(me,false); % no need to collect eye data until we start the next trial
 	@()hide(stims);
 	@()logRun(me,'CORRECT'); %fprintf current trial info
@@ -439,7 +455,12 @@ incEntry = {
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,['TRIAL_RESULT ' str2double(tS.INCORRECT)]);
 	@()trackerClearScreen(eT);
+	@()trackerDrawEyePositions(eT);
 	@()trackerDrawText(eT,'Incorrect! :-(');
+	@()trackerDrawFixation(eT); % draw fixation window on eyetracker display
+	@()trackerDrawStimuli(eT,stims.stimulusPositions); %draw location of stimulus on eyetracker
+	@()trackerDrawExclusion(eT);
+	@()trackerFlip(eT);
 	@()needEyeSample(me,false);
 	@()hide(stims);
 	@()logRun(me,'INCORRECT'); %fprintf current trial info
@@ -472,6 +493,11 @@ breakEntry = {
 	@()trackerMessage(eT,['TRIAL_RESULT ' str2double(tS.BREAKFIX)]);
 	@()trackerClearScreen(eT);
 	@()trackerDrawText(eT,'Fail to Saccade to Target! :-(');
+	@()trackerDrawEyePositions(eT);
+	@()trackerDrawFixation(eT); % draw fixation window on eyetracker display
+	@()trackerDrawStimuli(eT,stims.stimulusPositions); %draw location of stimulus on eyetracker
+	@()trackerDrawExclusion(eT);
+	@()trackerFlip(eT);
 	@()needEyeSample(me,false);
 	@()hide(stims);
 	@()logRun(me,'BREAKFIX'); %fprintf current trial info
@@ -525,7 +551,7 @@ stateInfoTmp = {
 'pause'		'prefix'	inf		pauseEntry		{}				{}				pauseExit;
 'prefix'	'fixate'	0.5		pfEntry			pfWithin		{}				pfExit;
 'fixate'	'incorrect'	5		fixEntry		fixWithin		initFix			fixExit;
-'fixstim'	'incorrect' 1		fsEntry			fsWithin		fsFix			fsExit
+'fixstim'	'incorrect' 5		fsEntry			fsWithin		fsFix			fsExit
 'stimulus'	'incorrect'	5		stimEntry		stimWithin		targetFix		stimExit;
 'correct'	'prefix'	0.25	correctEntry	correctWithin	{}				correctExit;
 'incorrect'	'timeout'	0.25	incEntry		incWithin		{}				incExit;
