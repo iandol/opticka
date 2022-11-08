@@ -165,9 +165,6 @@ classdef screenManager < optickaCore
 	properties (Hidden = true)
 		%> The mode to use for color++ mode
 		colorMode							= 2
-		%> an optional audioManager that experiments can use. can play samples
-		%> or simple beeps
-		audio audioManager
 		%> for some development macOS and windows machines we have to disable
 		%> sync tests, but we hide this as we should remember this is for
 		%> development ONLY!
@@ -812,9 +809,6 @@ classdef screenManager < optickaCore
 		% ===================================================================
 			if ~me.isPTB; return; end
 			Priority(0); ListenChar(0); ShowCursor;
-			if ~isempty(me.audio) && isa(me.audio, 'audioManager') && me.audio.isSetup
-				me.audio.reset();
-			end
 			if me.screenVals.resetGamma && isfield(me.screenVals,'originalGamma') && ~isempty(me.screenVals.originalGamma)
 				Screen('LoadNormalizedGammaTable', me.win, me.screenVals.originalGamma);
 				fprintf('\n---> screenManager: REVERT GAMMA TABLES\n');

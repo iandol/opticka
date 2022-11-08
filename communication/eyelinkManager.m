@@ -139,6 +139,7 @@ classdef eyelinkManager < optickaCore
 		driftMaximum double			= 15
 		%> custom calibration target
 		customTarget				= []
+		secondScreen				= false
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -1555,7 +1556,7 @@ classdef eyelinkManager < optickaCore
 			end
 		end
 
-		function trackerFlip(me)
+		function trackerFlip(me, varargin)
 
 		end
 
