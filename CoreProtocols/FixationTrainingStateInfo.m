@@ -1,14 +1,15 @@
 %FIXATION TRAINING state configuration file
 %
 % This presents a fixation cross with a stimulus in a loop to train for
-% fixation. stims should contain 2 stimuli: stims{1} is a stimulus, stims{2} is
-% the fixation cross. Adjust eyetracker setting values over training to refine
-% behaviour The following class objects are already loaded and available to use:
+% fixation. stims should contain 2 stimuli: stims{1} is a attention
+% grabber, stims{2} is the fixation cross. Adjust stimulus sizes and
+% eyetracker setting values over training to refine behaviour The following
+% class objects are already loaded and available to use:
 % 
 %
-% me		= runExperiment class object
-% s			= screenManager class object
-% aM		= audioManager class object
+% me		= runExperiment object ('self' in OOP terminology) 
+% s			= screenManager object
+% aM		= audioManager object
 % stims		= our list of stimuli (metaStimulus class)
 % sM		= State Machine (stateMachine class)
 % task		= task sequence (taskSequence class)
@@ -16,11 +17,12 @@
 % io		= digital I/O to recording system
 % rM		= Reward Manager (LabJack or Arduino TTL trigger to reward system/Magstim)
 % bR		= behavioural record plot (on-screen GUI during a task run)
+% uF		= user defined functions
 % tS		= structure to hold general variables, will be saved as part of the data
 
 %==================================================================
 %----------------------General Settings----------------------------
-tS.useTask					= true;		%==use taskSequence (randomises stimulus variables)
+tS.useTask					= false;	%==use taskSequence (randomises stimulus variables)
 tS.rewardTime				= 250;		%==TTL time in milliseconds
 tS.rewardPin				= 2;		%==Output pin, 2 by default with Arduino.
 tS.checkKeysDuringStimulus  = true;		%==allow keyboard control within stimulus state? Slight drop in performance…
@@ -40,7 +42,7 @@ tS.INCORRECT				= -5;		%==the code to send eyetracker for incorrect trials
 % components; you can also set verbose in the opticka GUI to enable all of
 % these…
 %sM.verbose					= true;		%==print out stateMachine info for debugging
-stims.verbose				= true;		%==print out metaStimulus info for debugging
+%stims.verbose				= true;		%==print out metaStimulus info for debugging
 %io.verbose					= true;		%==print out io commands for debugging
 eT.verbose					= true;		%==print out eyelink commands for debugging
 %rM.verbose					= true;		%==print out reward commands for debugging
@@ -63,12 +65,12 @@ tS.firstFixInit				= 3;
 % to randomise between
 tS.firstFixTime				= 0.5;
 % circular fixation window radius in degrees
-tS.firstFixRadius			= 1;
+tS.firstFixRadius			= 5;
 % do we forbid eye to enter-exit-reenter fixation window?
 tS.strict					= true;
 % do we add an exclusion zone where subject cannot saccade to...
 tS.exclusionZone			= [];
-tS.stimulusFixTime			= 0.5;		%==time to fix on the stimulus
+%tS.stimulusFixTime			= 0.5;		%==time to fix on the stimulus
 % historical log of X and Y position, and exclusion zone
 me.lastXPosition			= tS.fixX;
 me.lastYPosition			= tS.fixY;
@@ -80,12 +82,11 @@ me.lastYExclusion			= [];
 % NOTE: the opticka GUI can set eyetracker options too, if you set options here
 % they will OVERRIDE the GUI ones; if they are commented then the GUI options
 % are used. runExperiment.elsettings and runExperiment.tobiisettings
-% contain the GUI settings you can test if they are empty or not and set
-% them based on that...
+% contain the GUI settings; we test if they are empty or not and set
+% defaults based on that...
 eT.name 					= tS.name;
 if tS.saveData == true;	eT.recordData = true; end %===save ET data?					
 if me.useEyeLink
-	warning('Note this protocol file is optimised for the Tobii eyetracker...')
 	if isempty(me.elsettings)
 		eT.sampleRate 				= 250; % sampling rate
 		eT.calibrationStyle 		= 'HV5'; % calibration style
@@ -157,14 +158,14 @@ stims.stimulusTable				= [];
 % this is useful to probe RF properties or other features while still
 % allowing for fixation or other behavioural control.
 stims.tableChoice				= 1;
-n									= 1;
-stims.controlTable(n).variable = 'size';
-stims.controlTable(n).delta	= 0.5;
+n								= 1;
+stims.controlTable(n).variable	= 'size';
+stims.controlTable(n).delta		= 0.5;
 stims.controlTable(n).stimuli	= [1];
 stims.controlTable(n).limits	= [0.5 20];
-n									= n + 1;
-stims.controlTable(n).variable = 'angle';
-stims.controlTable(n).delta	= 0.5;
+n								= n + 1;
+stims.controlTable(n).variable	= 'angle';
+stims.controlTable(n).delta		= 0.5;
 stims.controlTable(n).stimuli	= [2];
 stims.controlTable(n).limits	= [0 180];
 
@@ -172,7 +173,7 @@ stims.controlTable(n).limits	= [0 180];
 %this allows us to enable subsets from our stimulus list
 stims.stimulusSets			= {[1,2],[2]};
 stims.setChoice				= 1;
-showSet(stims);
+hide(stims);
 
 %==================================================================
 % which stimulus in the list is used for a fixation target? For this
@@ -215,6 +216,7 @@ pauseEntryFn = {
 	@()disp('PAUSED, press [p] to resume...');
 	@()trackerClearScreen(eT); % blank the eyelink screen
 	@()trackerDrawText(eT,'PAUSED, press [P] to resume...');
+	@()trackerFlip(eT); %for tobii show info if operator screen enabled
 	@()trackerMessage(eT,'TRIAL_RESULT -100'); %store message in EDF
 	@()setOffline(eT); % make sure we set offline, only works on eyelink, ignored by tobii
 	@()stopRecording(eT, true); %stop recording eye position data
@@ -226,7 +228,7 @@ pauseEntryFn = {
 pauseExitFn = {
 	@()fprintf('\n===>>>EXIT PAUSE STATE\n')
 	@()enableFlip(me); % start PTB screen flips
-	@()startRecording(eT, true); % start eyelink recording for this trial
+	@()startRecording(eT, true); % start eyetracker recording for this trial
 };
 
 %---------------------prestim entry
@@ -240,6 +242,7 @@ psEntryFn = {
 	@()statusMessage(eT,'Pre-fixation...'); %status text on the eyelink
 	@()trackerClearScreen(eT); % blank the eyelink screen
 	@()trackerDrawFixation(eT); % draw the fixation window
+	@()trackerFlip(eT,1); %for tobii show info if operator screen enabled
 	@()needEyeSample(me,true); % make sure we start measuring eye position
 	@()showSet(stims); % make sure we prepare to show the stimulus set
 	@()logRun(me,'PREFIX'); %fprintf current trial info to command window
@@ -248,6 +251,8 @@ psEntryFn = {
 %---------------------prestimulus blank
 prestimulusFn = {
 	@()drawBackground(s); % only draw a background colour to the PTB screen
+	@()trackerDrawEyePosition(eT); % draw the fixation window
+	@()trackerFlip(eT,1); %for tobii show info if operator screen enabled
 };
 
 %---------------------exiting prestimulus state
@@ -263,8 +268,9 @@ stimEntryFn = {
 %---------------------stimulus within state
 stimFn = {
 	@()draw(stims); % draw the stimuli
-	%@()drawEyePosition(eT); % draw the eye position to PTB screen
 	@()animate(stims); % animate stimuli for subsequent draw
+	@()trackerDrawEyePosition(eT); % draw the fixation window
+	@()trackerFlip(eT,1); %for tobii show info if operator screen enabled
 };
 
 %-----------------------test we are maintaining fixation
@@ -293,6 +299,8 @@ correctEntryFn = {
 	@()statusMessage(eT,'Correct! :-)'); %show it on the eyelink screen
 	@()trackerClearScreen(eT);
 	@()trackerDrawText(eT,'Correct! :-)');
+	@()trackerDrawEyePositions(eT); % draw the fixation window
+	@()trackerFlip(eT); %for tobii show info if operator screen enabled
 	@()stopRecording(eT); % stop recording for this trial
 	@()setOffline(eT); %set eyelink offline
 	@()needEyeSample(me,false); % no need to collect eye data until we start the next trial
@@ -319,6 +327,8 @@ breakEntryFn = {
 	@()beep(aM,200,0.5,1);
 	@()trackerClearScreen(eT);
 	@()trackerDrawText(eT,'Broke fix! :-(');
+	@()trackerDrawEyePositions(eT); % draw the fixation window
+	@()trackerFlip(eT); %for tobii show info if operator screen enabled
 	@()trackerMessage(eT,['TRIAL_RESULT ' num2str(tS.BREAKFIX)]); %trial incorrect message
 	@()stopRecording(eT); %stop eyelink recording data
 	@()setOffline(eT); %set eyelink offline
@@ -331,6 +341,8 @@ incEntryFn = {
 	@()beep(aM,200,0.5,1);
 	@()trackerClearScreen(eT);
 	@()trackerDrawText(eT,'Incorrect! :-(');
+	@()trackerDrawEyePositions(eT); % draw the fixation window
+	@()trackerFlip(eT); %for tobii show info if operator screen enabled
 	@()trackerMessage(eT,['TRIAL_RESULT ' num2str(tS.INCORRECT)]); %trial incorrect message
 	@()stopRecording(eT); % stop eyelink recording data
 	@()setOffline(eT); % set eyelink offline
