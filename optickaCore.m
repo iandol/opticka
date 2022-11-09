@@ -275,7 +275,9 @@ classdef optickaCore < handle
 						obj_out.(prop.Name) = me.(prop.Name).clone;
 					else
 						try
-							obj_out.(prop.Name) = me.(prop.Name);
+							if ~matches(prop.Name,'font')
+								obj_out.(prop.Name) = me.(prop.Name);
+							end
 						catch %#ok<CTCH>
 							warning('optickaCore:clone', 'Problem copying property "%s"',prop.Name)
 						end

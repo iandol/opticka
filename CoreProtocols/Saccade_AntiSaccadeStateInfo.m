@@ -39,12 +39,12 @@
 tS.includeErrors			= false; 
 % is this run a 'saccade' or 'anti-saccade' task run?
 tS.type						= 'saccade';
-disp(['\n===>>> Task Type:' tS.type ' <<<===\n'])
 if strcmp(tS.type,'saccade')
 	% a flag to conditionally set visualisation on the eye tracker interface
 	stims{1}.showOnTracker	= true;
 	stims{2}.showOnTracker	= false;
-	tS.targetAlpha			= 1;
+	tS.targetAlpha1			= 0.25;
+	tS.targetAlpha2			= 0.75;
 else
 	% a flag to conditionally set visualisation on the eye tracker interface
 	stims{1}.showOnTracker	= false;
@@ -54,8 +54,12 @@ else
 	% anti-saccade target towards to place where the pro-saccade target is, so
 	% starting training keeping the pro-saccade target visible helps the
 	% subject understand the task
-	tS.targetAlpha			= 0.05;
+	tS.targetAlpha1			= 0.15;
+	tS.targetAlpha2			= 0.05;
+	tS.antitargetAlpha1		= 0.5;
+	tS.antitargetAlpha2		= 0.75;
 end
+disp(['\n===>>> Task Type:' tS.type ' <<<===\n'])
 
 %==================================================================
 %----------------------General Settings----------------------------
@@ -298,8 +302,7 @@ pfWithin = {
 };
 
 pfExit = {
-	@()edit(stims,3,'alphaOut',0.5); 
-	@()edit(stims,3,'alpha2Out',1);
+	
 };
 
 %====================================================FIXATION
@@ -311,15 +314,11 @@ fixEntry = {
 	@()getStimulusPositions(stims,true); %make a struct the eT can use for drawing stim positions
 	@()updateFixationValues(eT,tS.fixX,tS.fixY,tS.firstFixInit,tS.firstFixTime,tS.firstFixRadius); %reset fixation window
 	@()trackerMessage(eT,sprintf('TRIALID %i',getTaskIndex(me))); %Eyelink start trial marker
-	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
 	% you can add any other messages, such as stimulus values as needed,
 	% e.g. @()trackerMessage(eT,['MSG:ANGLE' num2str(stims{1}.angleOut)])
-	% draw to the eyetracker display
-	@()trackerClearScreen(eT); % blank the eyetracker screen
-	@()trackerDrawFixation(eT); % draw fixation window on eyetracker display
-	@()trackerDrawStimuli(eT,stims.stimulusPositions); %draw location of stimulus on eyetracker
-	@()trackerDrawExclusion(eT);
-	@()trackerFlip(eT, 1);
+	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
+	% draw general state to the eyetracker display (eyelink or tobii)
+	@()trackerDrawStatus(eT,'Fixating...', stims.stimulusPositions);
 	% show stimulus 3 = fixation cross
 	@()show(stims, 3);
 	@()needEyeSample(me,true); % make sure we start measuring eye position
@@ -347,9 +346,16 @@ initFix = {
 
 %--------------------exit fixation phase
 if strcmpi(tS.type,'saccade')
-	fixExit = { @()show(stims, [1 3]); @()edit(stims,1,'alphaOut',0.25)};
+	fixExit = { 
+		@()show(stims, [1 3]); 
+		@()edit(stims,1,'alphaOut',tS.targetAlpha1);
+	};
 else
-	fixExit = { @()show(stims, [1 2 3]); @()edit(stims,1,'alphaOut',tS.targetAlpha) };
+	fixExit = { 
+		@()show(stims, [1 2 3]); 
+		@()edit(stims,1,'alphaOut',tS.targetAlpha1);
+		@()edit(stims,2,'alphaOut',tS.antitargetAlpha1)
+	};
 end
 
 %====================================================FIX + TARGET STIMULUS
@@ -382,9 +388,9 @@ fsExit = {
 	@()hide(stims, 3);
 }; 
 if strcmpi(tS.type,'saccade')
-	fsExit = [ fsExit; { @()edit(stims,1,'alphaOut',0.75) } ];
+	fsExit = [ fsExit; { @()edit(stims,1,'alphaOut',tS.targetAlpha2) } ];
 else
-	fsExit = [ fsExit; { @()edit(stims,1,'alphaOut',tS.targetAlpha) } ];
+	fsExit = [ fsExit; { @()edit(stims,1,'alphaOut',tS.targetAlpha2); @()edit(stims,2,'alphaOut',tS.antitargetAlpha2) } ];
 end
 
 %====================================================TARGET STIMULUS ALONE
@@ -421,13 +427,7 @@ correctEntry = {
 	@()beep(aM,2000); % correct beep
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,['TRIAL_RESULT ' str2double(tS.CORRECT)]);
-	@()trackerClearScreen(eT);
-	@()trackerDrawText(eT,'Correct! :-)');
-	@()trackerDrawFixation(eT); % draw fixation window on eyetracker display
-	@()trackerDrawStimuli(eT,stims.stimulusPositions); %draw location of stimulus on eyetracker
-	@()trackerDrawExclusion(eT);
-	@()trackerDrawEyePositions(eT);
-	@()trackerFlip(eT);
+	@()trackerDrawStatus(eT,'Correct! :-)', stims.stimulusPositions);
 	@()needEyeSample(me,false); % no need to collect eye data until we start the next trial
 	@()hide(stims);
 	@()logRun(me,'CORRECT'); %fprintf current trial info
@@ -454,13 +454,7 @@ incEntry = {
 	@()beep(aM,200,0.5,1);
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,['TRIAL_RESULT ' str2double(tS.INCORRECT)]);
-	@()trackerClearScreen(eT);
-	@()trackerDrawEyePositions(eT);
-	@()trackerDrawText(eT,'Incorrect! :-(');
-	@()trackerDrawFixation(eT); % draw fixation window on eyetracker display
-	@()trackerDrawStimuli(eT,stims.stimulusPositions); %draw location of stimulus on eyetracker
-	@()trackerDrawExclusion(eT);
-	@()trackerFlip(eT);
+	@()trackerDrawStatus(eT,'Incorrect! :-(', stims.stimulusPositions);
 	@()needEyeSample(me,false);
 	@()hide(stims);
 	@()logRun(me,'INCORRECT'); %fprintf current trial info
@@ -491,13 +485,7 @@ breakEntry = {
 	@()beep(aM, 400, 0.5, 1);
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,['TRIAL_RESULT ' str2double(tS.BREAKFIX)]);
-	@()trackerClearScreen(eT);
-	@()trackerDrawText(eT,'Fail to Saccade to Target! :-(');
-	@()trackerDrawEyePositions(eT);
-	@()trackerDrawFixation(eT); % draw fixation window on eyetracker display
-	@()trackerDrawStimuli(eT,stims.stimulusPositions); %draw location of stimulus on eyetracker
-	@()trackerDrawExclusion(eT);
-	@()trackerFlip(eT);
+	@()trackerDrawStatus(eT,'Fail to Saccade to Target! :-(', stims.stimulusPositions);
 	@()needEyeSample(me,false);
 	@()hide(stims);
 	@()logRun(me,'BREAKFIX'); %fprintf current trial info
@@ -507,8 +495,9 @@ exclEntry = {
 	@()beep(aM, 400, 0.5, 1);
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,['TRIAL_RESULT ' str2double(tS.BREAKFIX)]);
-	@()trackerClearScreen(eT);
-	@()trackerDrawText(eT,'Exclusion Zone entered! :-(');
+	%@()trackerClearScreen(eT);
+	%@()trackerDrawText(eT,'Exclusion Zone entered! :-(');
+	@()trackerDrawStatus(eT,'Exclusion Zone entered! :-(', stims.stimulusPositions);
 	@()needEyeSample(me,false);
 	@()hide(stims);
 	@()logRun(me,'EXCLUSION'); %fprintf current trial info

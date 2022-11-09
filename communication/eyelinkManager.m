@@ -1151,9 +1151,24 @@ classdef eyelinkManager < optickaCore
 		%>
 		% ===================================================================
 		function trackerClearScreen(me)
-			if me.isConnected
-				Eyelink('Command', 'clear_screen 0');
-			end
+			if ~me.isConnected; return; end
+			Eyelink('Command', 'clear_screen 0');
+		end
+
+		% ===================================================================
+		%> @brief draw general status
+		%>
+		% ===================================================================
+		function trackerDrawStatus(me, comment, stimPos)
+			if ~me.isConnected; return; end
+			if ~exist('comment','var'); comment=''; end
+			if ~exist('stimPos','var'); stimPos = struct; end
+			trackerClearScreen(me);
+			trackerDrawExclusion(me);
+			trackerDrawFixation(me);
+			trackerDrawStimuli(me,stimPos);
+			trackerDrawEyePositions(me);
+			if ~isempty(comment);trackerDrawText(me, comment);end
 		end
 		
 		% ===================================================================

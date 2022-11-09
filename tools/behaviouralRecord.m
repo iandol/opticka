@@ -227,7 +227,11 @@ classdef behaviouralRecord < optickaCore
 			colororder(me.h.axis1,[0 0 0;0.5 0.5 0.5]);
 			yyaxis(me.h.axis1,"left");
 			plot(me.h.axis1, 1:length(me.response), me.response,'k.-','MarkerSize',16,'MarkerFaceColor','black');
-			ylabel(me.h.axis1, 'Response')
+			ylim(me.h.axis1,[-1.25 1.25])
+			yticks(me.h.axis1,[-1 0 1]);
+			yticklabels(me.h.axis1,{'incorrect','undefined','correct'});
+			ytickangle(me.h.axis1,75);
+			ylabel(me.h.axis1, 'Response');
 			set(me.h.axis1,'NextPlot','add');
 			yyaxis(me.h.axis1,"right");
 			if ~isempty(me.radius) && ~all(isnan(me.radius))

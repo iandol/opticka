@@ -29,7 +29,7 @@ tS.checkKeysDuringStimulus  = true;		%==allow keyboard control within stimulus s
 tS.recordEyePosition		= true;		%==record local copy of eye position, **in addition** to the eyetracker?
 tS.askForComments			= false;	%==UI requestor asks for comments before/after run
 tS.saveData					= true;		%==save behavioural and eye movement data?
-tS.name						= 'fixation training'; %==name of this protocol
+tS.name						= 'animated fixation training'; %==name of this protocol
 tS.nStims					= stims.n;	%==number of stimuli, taken from metaStimulus object
 tS.tOut						= 5;		%==if wrong response, how long to time out before next trial
 tS.CORRECT					= 1;		%==the code to send eyetracker for correct trials
@@ -142,14 +142,15 @@ bR.breakStateName				= '^(breakfix|incorrect)';
 % experiments use taskSequence to define proper randomised and balanced
 % variable sets and triggers to send to recording equipment etc...
 %
+% stims.choice					= [];
 % n								= 1;
-% in(n).name						= 'xyPosition';
+% in(n).name					= 'xyPosition';
 % in(n).values					= [6 6; 6 -6; -6 6; -6 -6; -6 0; 6 0];
 % in(n).stimuli					= 1;
 % in(n).offset					= [];
-% stims.stimulusTable				= in;
-stims.stimulusTable				= [];
+% stims.stimulusTable			= in;
 stims.choice					= [];
+stims.stimulusTable				= [];
 
 %==================================================================
 %-------------allows using arrow keys to control variables?-------------
@@ -160,22 +161,17 @@ stims.tableChoice				= 1;
 n								= 1;
 stims.controlTable(n).variable	= 'size';
 stims.controlTable(n).delta		= 0.5;
-stims.controlTable(n).stimuli	= [1 2];
+stims.controlTable(n).stimuli	= [1];
 stims.controlTable(n).limits	= [0.5 20];
 n								= n + 1;
-stims.controlTable(n).variable	= 'xPosition';
-stims.controlTable(n).delta		= 1;
-stims.controlTable(n).stimuli	= [1 2];
-stims.controlTable(n).limits	= [-15 15];
-n								= n + 1;
-stims.controlTable(n).variable	= 'yPosition';
-stims.controlTable(n).delta		= 1;
-stims.controlTable(n).stimuli	= [1 2];
-stims.controlTable(n).limits	= [-15 15];
+stims.controlTable(n).variable	= 'angle';
+stims.controlTable(n).delta		= 0.5;
+stims.controlTable(n).stimuli	= [2];
+stims.controlTable(n).limits	= [0 180];
 
 %==================================================================
 %this allows us to enable subsets from our stimulus list
-stims.stimulusSets			= {[1,2]};
+stims.stimulusSets			= {[1,2],[2]};
 stims.setChoice				= 1;
 hide(stims);
 
@@ -248,6 +244,7 @@ psEntryFn = {
 	@()trackerDrawFixation(eT); % draw the fixation window
 	@()trackerFlip(eT,1); %for tobii show info if operator screen enabled
 	@()needEyeSample(me,true); % make sure we start measuring eye position
+	@()showSet(stims); % make sure we prepare to show the stimulus set
 	@()logRun(me,'PREFIX'); %fprintf current trial info to command window
 };
 
@@ -260,7 +257,6 @@ prestimulusFn = {
 
 %---------------------exiting prestimulus state
 psExitFn = {
-	@()show(stims); % make sure we prepare to show the stimulus set
 	@()statusMessage(eT,'Stimulus...'); % show eyetracker status message
 };
 
@@ -314,7 +310,7 @@ correctEntryFn = {
 %-----------------------correct stimulus
 correctFn = {
 	@()drawBackground(s); % draw background colour
-	@()drawText(s,'Correct! :-)'); % draw text
+	@()drawText(s,'Correct'); % draw text
 };
 
 %----------------------when we exit the correct state

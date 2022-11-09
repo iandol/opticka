@@ -1542,6 +1542,23 @@ classdef tobiiManager < optickaCore
 			if ~me.isConnected || ~me.operatorScreen.isOpen; return;end
 			drawBackground(me.operatorScreen);
 		end
+
+		% ===================================================================
+		%> @brief draw general status
+		%>
+		% ===================================================================
+		function trackerDrawStatus(me, comment, stimPos)
+			if ~me.isConnected || ~me.operatorScreen.isOpen; return;end
+			if ~exist('comment','var'); comment=''; end
+			if ~exist('stimPos','var'); stimPos = struct; end
+			trackerClearScreen(me);
+			trackerDrawExclusion(me);
+			trackerDrawFixation(me);
+			trackerDrawStimuli(me,stimPos);
+			trackerDrawEyePositions(me);
+			if ~isempty(comment);trackerDrawText(me, comment);end
+			trackerFlip(me,1);
+		end
 		
 		% ===================================================================
 		%> @brief draw the stimuli boxes on the tracker display
@@ -1552,7 +1569,11 @@ classdef tobiiManager < optickaCore
 			if exist('ts','var') && isstruct(ts)
 				me.stimulusPositions = ts;
 			end
-			if ~exist('clearScreen','var');clearScreen = false;end
+			if isempty(me.stimulusPositions) || isempty(fieldnames(me.stimulusPositions));return;end
+			if ~exist('clearScreen','var')
+				clearScreen = false;
+			end
+			if clearScreen; trackerClearScreen(me); end
 			for i = 1:length(me.stimulusPositions)
 				x = me.stimulusPositions(i).x; 
 				y = me.stimulusPositions(i).y; 
