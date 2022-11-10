@@ -22,7 +22,7 @@
 
 %==================================================================
 %----------------------General Settings----------------------------
-tS.useTask					= false;	%==use taskSequence (randomises stimulus variables)
+tS.useTask					= true;	%==use taskSequence (randomises stimulus variables)
 tS.rewardTime				= 250;		%==TTL time in milliseconds
 tS.rewardPin				= 2;		%==Output pin, 2 by default with Arduino.
 tS.checkKeysDuringStimulus  = true;		%==allow keyboard control within stimulus state? Slight drop in performance…
@@ -343,11 +343,8 @@ breakEntryFn = {
 %----------------------inc entry
 incEntryFn = { 
 	@()beep(aM,200,0.5,1);
-	@()trackerClearScreen(eT);
-	@()trackerDrawText(eT,'Incorrect! :-(');
-	@()trackerDrawEyePositions(eT); % draw the fixation window
-	@()trackerFlip(eT); %for tobii show info if operator screen enabled
 	@()trackerMessage(eT,['TRIAL_RESULT ' num2str(tS.INCORRECT)]); %trial incorrect message
+	@()trackerDrawStatus(eT,'Incorrect! :-(', stims.stimulusPositions);
 	@()stopRecording(eT); % stop eyelink recording data
 	@()setOffline(eT); % set eyelink offline
 	@()needEyeSample(me,false);
@@ -423,20 +420,21 @@ sM.skipExitStates = {'fixate','incorrect|breakfix'};
 % this table defines the states and relationships and function sets
 %==================================================================
 stateInfoTmp = {
-'name'		'next'		'time' 'entryFn'		'withinFn'		'transitionFn'		'exitFn';
-'pause'		'blank'		inf		pauseEntryFn	{}				{}					pauseExitFn;
-'blank'		'stimulus'	0.5		psEntryFn		prestimulusFn	{}					psExitFn;
-'stimulus'	'incorrect'	5		stimEntryFn	stimFn			maintainFixFn		stimExitFn;
-'incorrect'	'timeout'	2		incEntryFn		breakFn		{}					breakExitFn;
-'breakfix'	'timeout'	2		breakEntryFn	breakFn		{}					breakExitFn;
-'correct'	'blank'		0.5		correctEntryFn	correctFn		{}					correctExitFn;
-'timeout'	'blank'		tS.tOut	{}				{}				{}					{};
-'calibrate' 'pause'		0.5		calibrateFn	{}				{}					{};
-'offset'	'pause'		0.5		offsetFn		{}				{}					{};
-'drift'		'pause'		0.5		driftFn		{}				{}					{};
-'flash'		'pause'		0.5		{}				flashFn		{}					{};
-'override'	'pause'		0.5		{}				overrideFn		{}					{};
-'showgrid'	'pause'		1		{}				gridFn			{}					{};
+'name'		'next'		'time' 'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn';
+%---------------------------------------------------------------------------------------------
+'pause'		'blank'		inf		pauseEntryFn	{}				{}				pauseExitFn;
+'blank'		'stimulus'	0.5		psEntryFn		prestimulusFn	{}				psExitFn;
+'stimulus'	'incorrect'	5		stimEntryFn		stimFn			maintainFixFn	stimExitFn;
+'incorrect'	'timeout'	2		incEntryFn		breakFn			{}				breakExitFn;
+'breakfix'	'timeout'	2		breakEntryFn	breakFn			{}				breakExitFn;
+'correct'	'blank'		0.5		correctEntryFn	correctFn		{}				correctExitFn;
+'timeout'	'blank'		tS.tOut	{}				{}				{}				{};
+'calibrate' 'pause'		0.5		calibrateFn		{}				{}				{};
+'offset'	'pause'		0.5		offsetFn		{}				{}				{};
+'drift'		'pause'		0.5		driftFn			{}				{}				{};
+'flash'		'pause'		0.5		{}				flashFn			{}				{};
+'override'	'pause'		0.5		{}				overrideFn		{}				{};
+'showgrid'	'pause'		1		{}				gridFn			{}				{};
 };
 %----------------------State Machine Table-------------------------
 %==================================================================

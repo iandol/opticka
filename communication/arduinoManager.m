@@ -110,17 +110,17 @@ classdef arduinoManager < optickaCore
 				startPin = min(cell2mat(me.availablePins));
 				me.device = arduinoIOPort(me.port,endPin,startPin);
 				if me.device.isDemo
-					me.isOpen = false; me.silentMode = true;
+					me.isOpen = false; me.silentMode = true; me.device = [];
 					warning('--->arduinoManager: IOport couldn''t open the port, going into silent mode!');
 					return
 				else
 					me.deviceID = me.port;
 					me.isOpen = true;
-					setLow(me);
 				end
 				if me.openGUI; GUI(me); end
 				me.silentMode = false;
 			catch ME
+				me.device = [];
 				me.silentMode = true; me.isOpen = false;
 				fprintf('\n\nCouldn''t open Arduino: %s\n',ME.message)
 				getReport(ME)
@@ -129,9 +129,10 @@ classdef arduinoManager < optickaCore
 
 		%===============CLOSE DEVICE================%
 		function close(me)
+			me.device = [];
 			try 
-				close(me.handles.parent); me.handles=[];
-				me.device = [];
+				close(me.handles.parent); 
+				me.handles=[];
 			end
 			me.deviceID = '';
 			me.availablePins = '';

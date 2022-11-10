@@ -419,20 +419,21 @@ sM.skipExitStates = {'fixate','incorrect|breakfix'};
 % this table defines the states and relationships and function sets
 %==================================================================
 stateInfoTmp = {
-'name'		'next'		'time' 'entryFn'		'withinFn'		'transitionFn'		'exitFn';
-'pause'		'blank'		inf		pauseEntryFn	{}				{}					pauseExitFn;
-'blank'		'stimulus'	0.5		psEntryFn		prestimulusFn	{}					psExitFn;
-'stimulus'	'incorrect'	5		stimEntryFn	stimFn			maintainFixFn		stimExitFn;
-'incorrect'	'timeout'	2		incEntryFn		breakFn		{}					breakExitFn;
-'breakfix'	'timeout'	2		breakEntryFn	breakFn		{}					breakExitFn;
-'correct'	'blank'		0.5		correctEntryFn	correctFn		{}					correctExitFn;
-'timeout'	'blank'		tS.tOut	{}				{}				{}					{};
-'calibrate' 'pause'		0.5		calibrateFn	{}				{}					{};
-'offset'	'pause'		0.5		offsetFn		{}				{}					{};
-'drift'		'pause'		0.5		driftFn		{}				{}					{};
-'flash'		'pause'		0.5		{}				flashFn		{}					{};
-'override'	'pause'		0.5		{}				overrideFn		{}					{};
-'showgrid'	'pause'		1		{}				gridFn			{}					{};
+'name'		'next'		'time' 'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn';
+%-------------------------------------------------------------------------------
+'pause'		'blank'		inf		pauseEntryFn	{}				{}				pauseExitFn;
+'blank'		'stimulus'	0.5		psEntryFn		prestimulusFn	{}				psExitFn;
+'stimulus'	'incorrect'	5		stimEntryFn		stimFn			maintainFixFn	stimExitFn;
+'incorrect'	'timeout'	2		incEntryFn		breakFn			{}				breakExitFn;
+'breakfix'	'timeout'	2		breakEntryFn	breakFn			{}				breakExitFn;
+'correct'	'blank'		0.5		correctEntryFn	correctFn		{}				correctExitFn;
+'timeout'	'blank'		tS.tOut	{}				{}				{}				{};
+'calibrate' 'pause'		0.5		calibrateFn		{}				{}				{};
+'offset'	'pause'		0.5		offsetFn		{}				{}				{};
+'drift'		'pause'		0.5		driftFn			{}				{}				{};
+'flash'		'pause'		0.5		{}				flashFn			{}				{};
+'override'	'pause'		0.5		{}				overrideFn		{}				{};
+'showgrid'	'pause'		1		{}				gridFn			{}				{};
 };
 %----------------------State Machine Table-------------------------
 %==================================================================
