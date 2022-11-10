@@ -1825,7 +1825,7 @@ classdef tobiiManager < optickaCore
 		%>
 		% ===================================================================
 		function syncTime(me)
-			
+			trackerMessage(me,'SYNCTIME');
 		end
 		
 		

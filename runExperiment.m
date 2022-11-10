@@ -719,7 +719,7 @@ classdef runExperiment < optickaCore
 				% and other components with the same stimuli/task code used later...
 				fprintf('\n===>>> Warming up the GPU, Eyetracker and I/O systems... <<<===\n')
 				show(stims); % allows all child stimuli to be drawn
-				if me.useEyeLink; trackerClearScreen(eT); end % blank eyelink screen
+				if me.useEyeLink || me.useTobii; trackerClearScreen(eT); end % blank eyelink screen
 				for i = 1:s.screenVals.fps*1
 					draw(stims); % draw all child stimuli
 					drawBackground(s); % draw our blank background
@@ -731,12 +731,13 @@ classdef runExperiment < optickaCore
 					if me.useEyeLink || me.useTobii
 						getSample(eT); % get an eyetracker sample
 						if i == 1
-							trackerDrawText(eT,'Warming Up System'); 
 							trackerMessage(eT,'Warmup test');
 						end
+						trackerDrawEyePosition(eT);
+						trackerDrawText(eT,'Warming Up System'); 
 					end
 					flip(s);
-					if eT.secondScreen; eT.operatorScreen.flip; end
+					if eT.secondScreen; trackerFlip(eT,1); end
 				end
 				update(stims); %make sure all stimuli are set back to their start state
 				io.resetStrobe;flip(s);flip(s); % reset the strobe system
@@ -765,9 +766,6 @@ classdef runExperiment < optickaCore
 					startRecording(io);
 					WaitSecs(1);
 				end
-				
-				%---------set up our behavioural plot
-				createPlot(bR, eT);
 
 				%-----initialise our various counters
 				task.tick					= 1;
@@ -807,6 +805,9 @@ classdef runExperiment < optickaCore
 				drawnow; 
 				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
 				
+				%---------set up our behavioural plot
+				createPlot(bR, eT);
+
 				%-----profiling starts here if uncommented
 				%profile clear; profile on;
 				

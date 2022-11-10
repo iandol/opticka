@@ -302,26 +302,23 @@ pfWithin = {
 };
 
 pfExit = {
-	
+	@()startRecording(eT);
+	@()needEyeSample(me,true); % make sure we start measuring eye position
+	@()updateFixationValues(eT,tS.fixX,tS.fixY,tS.firstFixInit,tS.firstFixTime,tS.firstFixRadius,tS.strict); %reset fixation window
+	@()resetFixationHistory(eT); % reset the recent eye position history
+	@()resetExclusionZones(eT); % reset the exclusion zones on eyetracker
+	@()getStimulusPositions(stims,true); %make a struct the eT can use for drawing stim positions
 };
 
 %====================================================FIXATION
 %--------------------fixate entry
 fixEntry = { 
-	@()startRecording(eT);
-	@()resetFixationHistory(eT); % reset the recent eye position history
-	@()resetExclusionZones(eT); % reset the exclusion zones on eyetracker
-	@()getStimulusPositions(stims,true); %make a struct the eT can use for drawing stim positions
-	@()updateFixationValues(eT,tS.fixX,tS.fixY,tS.firstFixInit,tS.firstFixTime,tS.firstFixRadius); %reset fixation window
 	@()trackerMessage(eT,sprintf('TRIALID %i',getTaskIndex(me))); %Eyelink start trial marker
-	% you can add any other messages, such as stimulus values as needed,
-	% e.g. @()trackerMessage(eT,['MSG:ANGLE' num2str(stims{1}.angleOut)])
 	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
 	% draw general state to the eyetracker display (eyelink or tobii)
 	@()trackerDrawStatus(eT,'Fixating...', stims.stimulusPositions);
 	% show stimulus 3 = fixation cross
 	@()show(stims, 3);
-	@()needEyeSample(me,true); % make sure we start measuring eye position
 	@()logRun(me,'INITFIX'); %fprintf current trial info to command window
 };
 
@@ -428,6 +425,8 @@ correctEntry = {
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,['TRIAL_RESULT ' str2double(tS.CORRECT)]);
 	@()trackerDrawStatus(eT,'Correct! :-)', stims.stimulusPositions);
+	@()stopRecording(eT); % stop recording for this trial
+	@()setOffline(eT); %set eyelink offline
 	@()needEyeSample(me,false); % no need to collect eye data until we start the next trial
 	@()hide(stims);
 	@()logRun(me,'CORRECT'); %fprintf current trial info
@@ -440,12 +439,12 @@ correctWithin = {
 
 %when we exit the correct state
 correctExit = {
-	@()updatePlot(bR, me); %update our behavioural plot, must come before updateTask() / updateVariables()
 	@()updateTask(me,tS.CORRECT); %make sure our taskSequence is moved to the next trial
 	@()updateVariables(me); %randomise our stimuli, and set strobe value too
 	@()update(stims); %update the stimuli ready for display
 	@()resetExclusionZones(eT); %reset the exclusion zones
 	@()checkTaskEnded(me); %check if task is finished
+	@()updatePlot(bR, me); %update our behavioural plot, must come before updateTask() / updateVariables()
 	@()drawnow();
 };
 
@@ -455,8 +454,10 @@ incEntry = {
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,['TRIAL_RESULT ' str2double(tS.INCORRECT)]);
 	@()trackerDrawStatus(eT,'Incorrect! :-(', stims.stimulusPositions);
-	@()needEyeSample(me,false);
+	@()stopRecording(eT); %stop eyelink recording data
+	@()setOffline(eT); %set eyelink offline@()needEyeSample(me,false);
 	@()hide(stims);
+	@()needEyeSample(me,false);
 	@()logRun(me,'INCORRECT'); %fprintf current trial info
 }; 
 
@@ -467,11 +468,11 @@ incWithin = {
 
 %incorrect / break exit
 incExit = {
-	@()updatePlot(bR, me); %update our behavioural plot, must come before updateTask() / updateVariables()
 	@()updateVariables(me); %randomise our stimuli, don't run updateTask(task), and set strobe value too
 	@()update(stims); %update our stimuli ready for display
 	@()resetExclusionZones(eT); %reset the exclusion zones
 	@()checkTaskEnded(me); %check if task is finished
+	@()updatePlot(bR, me); %update our behavioural plot, must come before updateTask() / updateVariables()
 	@()drawnow();
 };
 if tS.includeErrors
@@ -495,8 +496,6 @@ exclEntry = {
 	@()beep(aM, 400, 0.5, 1);
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,['TRIAL_RESULT ' str2double(tS.BREAKFIX)]);
-	%@()trackerClearScreen(eT);
-	%@()trackerDrawText(eT,'Exclusion Zone entered! :-(');
 	@()trackerDrawStatus(eT,'Exclusion Zone entered! :-(', stims.stimulusPositions);
 	@()needEyeSample(me,false);
 	@()hide(stims);
@@ -506,6 +505,9 @@ exclEntry = {
 %calibration function
 calibrateFn = { 
 	@()rstop(io);
+	@()drawBackground(s); %blank the display
+	@()stopRecording(eT); % stop eyelink recording data
+	@()setOffline(eT); % set eyelink offline
 	@()trackerSetup(eT);  %enter tracker calibrate/validate setup mode
 };
 
@@ -537,6 +539,7 @@ gridFn = {@()drawGrid(s)};
 %
 stateInfoTmp = {
 'name'		'next'		'time'  'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn';
+%---------------------------------------------------------------------------------------------
 'pause'		'prefix'	inf		pauseEntry		{}				{}				pauseExit;
 'prefix'	'fixate'	0.5		pfEntry			pfWithin		{}				pfExit;
 'fixate'	'incorrect'	5		fixEntry		fixWithin		initFix			fixExit;
@@ -560,4 +563,3 @@ stateInfoTmp = {
 disp('================>> Building state info file <<================')
 disp(stateInfoTmp)
 disp('=================>> Loaded state info file <<=================')
-clearvars -regexp '.+Fn$' % clear the cell array Fcns in the current workspace

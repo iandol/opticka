@@ -65,13 +65,13 @@
 
 %==================================================================
 %------------------------General Settings--------------------------
-% These settings are collected here to make changing the behaviour of the
-% protocol easier. tS is just a struct(), so you can add your own switches
-% or values here and use them lower down. Some basic switches like
-% saveData, useTask, checkKeysDuringstimulus will influence the
-% runeExperiment.runTask() functionality, not just the state machine. Other
-% switches like includeErrors are referenced in this state machine file to
-% change with functions are added to the state machine states…
+% These settings are make changing the behaviour of the protocol easier. tS
+% is just a struct(), so you can add your own switches or values here and
+% use them lower down. Some basic switches like saveData, useTask,
+% checkKeysDuringstimulus will influence the runeExperiment.runTask()
+% functionality, not just the state machine. Other switches like
+% includeErrors are referenced in this state machine file to change with
+% functions are added to the state machine states…
 tS.useTask					= true;		%==use taskSequence (randomises stimulus variables)
 tS.rewardTime				= 250;		%==TTL time in milliseconds
 tS.rewardPin				= 2;		%==Output pin, 2 by default with Arduino.
@@ -264,6 +264,7 @@ pauseEntryFn = {
 	@()disp('PAUSED, press [p] to resume...');
 	@()trackerClearScreen(eT); % blank the eyelink screen
 	@()trackerDrawText(eT,'PAUSED, press [P] to resume...');
+	@()trackerFlip(eT); %for tobii show info if operator screen enabled
 	@()trackerMessage(eT,'TRIAL_RESULT -100'); %store message in EDF
 	@()setOffline(eT); % make sure we set offline, only works on eyelink, ignored by tobii
 	@()stopRecording(eT, true); %stop recording eye position data
@@ -519,6 +520,7 @@ gridFn = { @()drawGrid(s) };
 % specify our cell array that is read by the stateMachine
 stateInfoTmp = {
 'name'		'next'		'time'	'entryFn'		'withinFn'		'transitionFn'	'exitFn';
+%---------------------------------------------------------------------------------------------
 'pause'		'prefix'	inf		pauseEntryFn	{}				{}				pauseExitFn;
 'prefix'	'fixate'	0.5		prefixEntryFn	{}				{}				{};
 'fixate'	'incorrect'	10		fixEntryFn		fixFn			inFixFn			fixExitFn;

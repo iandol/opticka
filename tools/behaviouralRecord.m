@@ -287,18 +287,17 @@ classdef behaviouralRecord < optickaCore
 			set([me.h.axis1 me.h.axis2 me.h.axis3 me.h.axis4 me.h.axis5], ...
 				'Box','on','XGrid','on','YGrid','on');
 			
-			xlabel(me.h.axis1, 'Run Number')
-			xlabel(me.h.axis2, 'Time (ms)')
-			%xlabel(me.h.axis3, 'Group')
-			xlabel(me.h.axis4, '#')
-			xlabel(me.h.axis5, 'x')
-			ylabel(me.h.axis2, 'Number #')
+			xlabel(me.h.axis1, 'Trial Number')
+			xlabel(me.h.axis2, 'Averaged Point')
+			xlabel(me.h.axis4, 'Time (ms)')
+			xlabel(me.h.axis5, 'X')
+			ylabel(me.h.axis2, '% success')
 			ylabel(me.h.axis3, '% success')
-			ylabel(me.h.axis4, '% success')
-			ylabel(me.h.axis5, 'y')
+			ylabel(me.h.axis4, 'N')
+			ylabel(me.h.axis5, 'Y')
 			title(me.h.axis1,['Success (' num2str(hitn) ') / Fail (all=' num2str(missn) ' | break=' num2str(breakn) ' | abort=' num2str(missn-breakn) ')'])
 			title(me.h.axis4,sprintf('Time:  total: %g | fixinit: %g',mean(me.rt1),mean(me.rt2)));
-			title(me.h.axis3,'Hit (blue) / Miss (red) / Break (blue) / Abort (red)')
+			title(me.h.axis3,'Hit (blue) / Miss (red)')
 			title(me.h.axis2,'Average (n=10) Hit / Miss %')
 			title(me.h.axis5,'Last Eye Position');
 			

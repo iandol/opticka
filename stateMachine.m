@@ -194,7 +194,9 @@ classdef stateMachine < optickaCore
 			newStateIndexes = zeros(1,sz(1)-1);
 			for ii = 2:sz(1)
 				newState = cell2struct(newStates(ii,:), newStates(1,:), 2);
-				newStateIndexes(ii-1) = me.addState(newState);
+				if isfield(newState,'name') && ~isempty(newState.name)
+					newStateIndexes(ii-1) = me.addState(newState);
+				end
 			end
 		end
 		
@@ -209,6 +211,8 @@ classdef stateMachine < optickaCore
 			
 			% pick newState fields that match allowed fields
 			infoFields = fieldnames(newState);
+			wrongFields = setdiff(infoFields, allowedFields);
+			if ~isempty(wrongFields);warning('There are some unexpected items in your state info!');end
 			infoValues = struct2cell(newState);
 			[~, validIndices, defaultIndices] = intersect(infoFields, allowedFields);
 			

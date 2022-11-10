@@ -21,7 +21,14 @@
 % tS		= structure to hold general variables, will be saved as part of the data
 
 %==================================================================
-%----------------------General Settings----------------------------
+%------------------------General Settings--------------------------
+% These settings are make changing the behaviour of the protocol easier. tS
+% is just a struct(), so you can add your own switches or values here and
+% use them lower down. Some basic switches like saveData, useTask,
+% checkKeysDuringstimulus will influence the runeExperiment.runTask()
+% functionality, not just the state machine. Other switches like
+% includeErrors are referenced in this state machine file to change with
+% functions are added to the state machine states…
 tS.useTask					= false;	%==use taskSequence (randomises stimulus variables)
 tS.rewardTime				= 250;		%==TTL time in milliseconds
 tS.rewardPin				= 2;		%==Output pin, 2 by default with Arduino.
@@ -84,7 +91,8 @@ me.lastYExclusion			= [];
 % are used. runExperiment.elsettings and runExperiment.tobiisettings
 % contain the GUI settings; we test if they are empty or not and set
 % defaults based on that...
-eT.name 					= tS.name;
+eT.name 				= tS.name;
+if me.dummyMode;		eT.isDummy = true; end %===use dummy or real eyetracker? 
 if tS.saveData == true;	eT.recordData = true; end %===save ET data?					
 if me.useEyeLink
 	if isempty(me.elsettings)
@@ -161,17 +169,22 @@ stims.tableChoice				= 1;
 n								= 1;
 stims.controlTable(n).variable	= 'size';
 stims.controlTable(n).delta		= 0.5;
-stims.controlTable(n).stimuli	= [1];
+stims.controlTable(n).stimuli	= [1 2];
 stims.controlTable(n).limits	= [0.5 20];
 n								= n + 1;
-stims.controlTable(n).variable	= 'angle';
-stims.controlTable(n).delta		= 0.5;
-stims.controlTable(n).stimuli	= [2];
-stims.controlTable(n).limits	= [0 180];
+stims.controlTable(n).variable	= 'xPosition';
+stims.controlTable(n).delta		= 5;
+stims.controlTable(n).stimuli	= [1 2];
+stims.controlTable(n).limits	= [-20 20];
+n								= n + 1;
+stims.controlTable(n).variable	= 'yPosition';
+stims.controlTable(n).delta		= 5;
+stims.controlTable(n).stimuli	= [1 2];
+stims.controlTable(n).limits	= [-20 20];
 
 %==================================================================
 %this allows us to enable subsets from our stimulus list
-stims.stimulusSets			= {[1,2],[2]};
+stims.stimulusSets			= {[1,2]};
 stims.setChoice				= 1;
 hide(stims);
 
@@ -231,20 +244,21 @@ pauseExitFn = {
 	@()startRecording(eT, true); % start eyetracker recording for this trial
 };
 
+%====================================================PRESTIMULUS
 %---------------------prestim entry
 psEntryFn = {
+	@()startRecording(eT); % start eyelink recording for this trial
+	@()updateFixationValues(eT,tS.fixX,tS.fixY,tS.firstFixInit,tS.firstFixTime,tS.firstFixRadius,tS.strict); %reset fixation window
 	@()resetFixation(eT); %reset the fixation counters ready for a new trial
 	@()resetFixationHistory(eT); %reset the fixation counters ready for a new trial
-	@()startRecording(eT); % start eyelink recording for this trial
+	@()getStimulusPositions(stims,true); %make a struct the eT can use for drawing stim positions
 	@()trackerMessage(eT,'V_RT MESSAGE END_FIX END_RT'); % Eyelink commands
 	@()trackerMessage(eT,sprintf('TRIALID %i',getTaskIndex(me))); %Eyelink start trial marker
 	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
-	@()statusMessage(eT,'Pre-fixation...'); %status text on the eyelink
-	@()trackerClearScreen(eT); % blank the eyelink screen
-	@()trackerDrawFixation(eT); % draw the fixation window
-	@()trackerFlip(eT,1); %for tobii show info if operator screen enabled
+	@()trackerDrawStatus(eT,'Prestim...', stims.stimulusPositions);
+	@()enableFlip(me); % start PTB screen flips
 	@()needEyeSample(me,true); % make sure we start measuring eye position
-	@()showSet(stims); % make sure we prepare to show the stimulus set
+	@()show(stims); % make sure we prepare to show the stimulus set
 	@()logRun(me,'PREFIX'); %fprintf current trial info to command window
 };
 
@@ -260,9 +274,11 @@ psExitFn = {
 	@()statusMessage(eT,'Stimulus...'); % show eyetracker status message
 };
 
+%====================================================TARGET STIMULUS ALONE
 %---------------------stimulus entry state
 stimEntryFn = {
-	@()logRun(me,'SHOW Fixation Spot'); % log start to command window
+	@()logRun(me,'SHOW Fixation Target'); % log start to command window
+	@()syncTime(eT);
 };
 
 %---------------------stimulus within state
@@ -291,19 +307,18 @@ stimExitFn = {
 	@()trackerMessage(eT,'END_RT'); % tell EDF we finish reaction time
 };
 
+%====================================================DECISION
+
 %-----------------------if the subject is correct (small reward)
 correctEntryFn = {
 	@()timedTTL(rM, tS.rewardPin, tS.rewardTime); % send a reward TTL
 	@()beep(aM,2000); % correct beep
 	@()trackerMessage(eT,['TRIAL_RESULT ' num2str(tS.CORRECT)]); % tell EDF trial was a correct
-	@()statusMessage(eT,'Correct! :-)'); %show it on the eyelink screen
-	@()trackerClearScreen(eT);
-	@()trackerDrawText(eT,'Correct! :-)');
-	@()trackerDrawEyePositions(eT); % draw the fixation window
-	@()trackerFlip(eT); %for tobii show info if operator screen enabled
+	@()trackerDrawStatus(eT,'Correct! :-)', stims.stimulusPositions);
 	@()stopRecording(eT); % stop recording for this trial
 	@()setOffline(eT); %set eyelink offline
 	@()needEyeSample(me,false); % no need to collect eye data until we start the next trial
+	@()hide(stims);
 	@()logRun(me,'CORRECT'); %fprintf current trial info
 };
 
@@ -315,38 +330,35 @@ correctFn = {
 
 %----------------------when we exit the correct state
 correctExitFn = {
-	@()updatePlot(bR, me); % update the behavioural report plot
+	@()updateTask(me,tS.CORRECT); %make sure our taskSequence is moved to the next trial
 	@()updateVariables(me,[],[],true); ... %update the task variables
 	@()update(stims); ... %update our stimuli ready for display
 	@()checkTaskEnded(me);
+	@()updatePlot(bR, me); % update the behavioural report plot
 	@()drawnow; % ensure we update the figure
 };
 
 %----------------------break entry
 breakEntryFn = {
-	@()beep(aM,200,0.5,1);
-	@()trackerClearScreen(eT);
-	@()trackerDrawText(eT,'Broke fix! :-(');
-	@()trackerDrawEyePositions(eT); % draw the fixation window
-	@()trackerFlip(eT); %for tobii show info if operator screen enabled
+	@()beep(aM,400,0.5,1);
 	@()trackerMessage(eT,['TRIAL_RESULT ' num2str(tS.BREAKFIX)]); %trial incorrect message
+	@()trackerDrawStatus(eT,'BREAK! :-(', stims.stimulusPositions);
 	@()stopRecording(eT); %stop eyelink recording data
 	@()setOffline(eT); %set eyelink offline
 	@()needEyeSample(me,false);
+	@()hide(stims);
 	@()logRun(me,'BREAKFIX'); %fprintf current trial info
 };
 
 %----------------------inc entry
 incEntryFn = { 
-	@()beep(aM,200,0.5,1);
-	@()trackerClearScreen(eT);
-	@()trackerDrawText(eT,'Incorrect! :-(');
-	@()trackerDrawEyePositions(eT); % draw the fixation window
-	@()trackerFlip(eT); %for tobii show info if operator screen enabled
+	@()beep(aM,400,0.5,1);
 	@()trackerMessage(eT,['TRIAL_RESULT ' num2str(tS.INCORRECT)]); %trial incorrect message
-	@()stopRecording(eT); % stop eyelink recording data
-	@()setOffline(eT); % set eyelink offline
+	@()trackerDrawStatus(eT,'BREAK! :-(', stims.stimulusPositions);
+	@()stopRecording(eT); %stop eyelink recording data
+	@()setOffline(eT); %set eyelink offline
 	@()needEyeSample(me,false);
+	@()hide(stims);
 	@()logRun(me,'INCORRECT'); %fprintf current trial info
 };
 
@@ -358,10 +370,11 @@ breakFn =  {
 
 %----------------------break exit
 breakExitFn = { 
-	@()updatePlot(bR, me);
+	@()updateTask(me,tS.BREAKFIX); %make sure our taskSequence is moved to the next trial
 	@()updateVariables(me,[],[],false); ... %update the task variables
 	@()update(stims); %update our stimuli ready for display
 	@()checkTaskEnded(me);
+	@()updatePlot(bR, me);
 	@()drawnow;
 };
 
@@ -419,21 +432,21 @@ sM.skipExitStates = {'fixate','incorrect|breakfix'};
 % this table defines the states and relationships and function sets
 %==================================================================
 stateInfoTmp = {
-'name'		'next'		'time' 'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn';
-%-------------------------------------------------------------------------------
-'pause'		'blank'		inf		pauseEntryFn	{}				{}				pauseExitFn;
-'blank'		'stimulus'	0.5		psEntryFn		prestimulusFn	{}				psExitFn;
-'stimulus'	'incorrect'	5		stimEntryFn		stimFn			maintainFixFn	stimExitFn;
-'incorrect'	'timeout'	2		incEntryFn		breakFn			{}				breakExitFn;
-'breakfix'	'timeout'	2		breakEntryFn	breakFn			{}				breakExitFn;
-'correct'	'blank'		0.5		correctEntryFn	correctFn		{}				correctExitFn;
-'timeout'	'blank'		tS.tOut	{}				{}				{}				{};
-'calibrate' 'pause'		0.5		calibrateFn		{}				{}				{};
-'offset'	'pause'		0.5		offsetFn		{}				{}				{};
-'drift'		'pause'		0.5		driftFn			{}				{}				{};
-'flash'		'pause'		0.5		{}				flashFn			{}				{};
-'override'	'pause'		0.5		{}				overrideFn		{}				{};
-'showgrid'	'pause'		1		{}				gridFn			{}				{};
+'name'		'next'		'time' 'entryFcn'		'withinFcn'		'transitionFcn'		'exitFcn';
+%---------------------------------------------------------------------------------------------
+'pause'		'prestim'	inf		pauseEntryFn	{}				{}					pauseExitFn;
+'prestim'	'stimulus'	1		psEntryFn		prestimulusFn	{}					psExitFn;
+'stimulus'	'incorrect'	5		stimEntryFn		stimFn			maintainFixFn		stimExitFn;
+'incorrect'	'timeout'	0.25	incEntryFn		breakFn			{}					breakExitFn;
+'breakfix'	'timeout'	0.25	breakEntryFn	breakFn			{}					breakExitFn;
+'correct'	'prestim'	0.25	correctEntryFn	correctFn		{}					correctExitFn;
+'timeout'	'prestim'	tS.tOut	{}				{}				{}					{};
+'calibrate' 'pause'		0.5		calibrateFn		{}				{}					{};
+'offset'	'pause'		0.5		offsetFn		{}				{}					{};
+'drift'		'pause'		0.5		driftFn			{}				{}					{};
+'flash'		'pause'		0.5		{}				flashFn			{}					{};
+'override'	'pause'		0.5		{}				overrideFn		{}					{};
+'showgrid'	'pause'		1		{}				gridFn			{}					{};
 };
 %----------------------State Machine Table-------------------------
 %==================================================================
