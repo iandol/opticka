@@ -245,6 +245,11 @@ classdef movieStimulus < baseStimulus
 				if me.tick == 0 || (me.delayTicks > 0 && me.tick == me.delayTicks) 
 					Screen('PlayMovie', me.movie, 1, me.loopStrategy); 
 				end
+				if me.mouseOverride && ~me.mouseValid
+					fprintf('II %i\n',me.tick);me.tick = me.tick + 1;return; 
+				elseif me.mouseOverride && me.mouseValid
+					fprintf('XX %i\n',me.tick)
+				end
 				if ~isempty(me.lockAngle); angle = me.directionOut+me.lockAngle; else; angle = me.angleOut; end
 				if me.enforceBlending; Screen('BlendFunction', me.sM.win, me.msrcMode, me.mdstMode); end
 				me.texture = Screen('GetMovieImage', me.sM.win, me.movie, me.blocking);
@@ -263,8 +268,9 @@ classdef movieStimulus < baseStimulus
 						angle,[],[],[],me.shader)
 				end
 				if me.enforceBlending; Screen('BlendFunction', me.sM.win, me.sM.srcMode, me.sM.dstMode); end
-				me.tick = me.tick + 1;
+				me.drawTick = me.drawTick + 1;
 			end
+			if me.isVisible; me.tick = me.tick + 1; end
 		end
 		
 		% ===================================================================
@@ -276,8 +282,9 @@ classdef movieStimulus < baseStimulus
 				if me.mouseOverride
 					getMousePosition(me);
 					if me.mouseValid
-						me.mvRect = CenterRectOnPointd(me.mvRect, me.mouseX, me.mouseY);
+						me.mvRect = CenterRectOnPoint(me.mvRect, me.mouseX, me.mouseY);
 					end
+					return
 				end
 				if me.doMotion == 1
 					me.mvRect=OffsetRect(me.mvRect,me.dX_,me.dY_);

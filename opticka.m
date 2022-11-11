@@ -1050,6 +1050,12 @@ classdef opticka < optickaCore
 			end
 			[f,p] = uiputfile('*.mat','Save Opticka Protocol',fname);
 			if f ~= 0
+				if contains(p,[filesep 'opticka' filesep])
+					resp=questdlg('Are you sure you want write to the Opticka folder!? You should save protocols outside the program folder as they will be overwritten on an update...','Opticka','Yes','No','No');
+					if matches(resp,'No')
+						disp('Didn''t save protocol...'); return
+					end
+				end
 				cd(p);
 				tmp = clone(me);
 				tmp.name = f;

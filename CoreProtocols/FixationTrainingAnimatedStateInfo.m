@@ -29,7 +29,7 @@
 % functionality, not just the state machine. Other switches like
 % includeErrors are referenced in this state machine file to change with
 % functions are added to the state machine states…
-tS.useTask					= false;	%==use taskSequence (randomises stimulus variables)
+tS.useTask					= true;		%==use taskSequence (randomises stimulus variables)
 tS.rewardTime				= 250;		%==TTL time in milliseconds
 tS.rewardPin				= 2;		%==Output pin, 2 by default with Arduino.
 tS.checkKeysDuringStimulus  = true;		%==allow keyboard control within stimulus state? Slight drop in performance…
@@ -49,11 +49,11 @@ tS.INCORRECT				= -5;		%==the code to send eyetracker for incorrect trials
 % components; you can also set verbose in the opticka GUI to enable all of
 % these…
 %sM.verbose					= true;		%==print out stateMachine info for debugging
-%stims.verbose				= true;		%==print out metaStimulus info for debugging
+stims.verbose				= true;		%==print out metaStimulus info for debugging
 %io.verbose					= true;		%==print out io commands for debugging
 eT.verbose					= true;		%==print out eyelink commands for debugging
 %rM.verbose					= true;		%==print out reward commands for debugging
-%task.verbose				= true;		%==print out task info for debugging
+task.verbose				= true;		%==print out task info for debugging
 
 %==================================================================
 %-----------------INITIAL Eyetracker Settings----------------------
@@ -227,9 +227,7 @@ pauseEntryFn = {
 	@()drawBackground(s); %blank the subject display
 	@()drawTextNow(s,'PAUSED, press [p] to resume...');
 	@()disp('PAUSED, press [p] to resume...');
-	@()trackerClearScreen(eT); % blank the eyelink screen
-	@()trackerDrawText(eT,'PAUSED, press [P] to resume...');
-	@()trackerFlip(eT); %for tobii show info if operator screen enabled
+	@()trackerDrawStatus(eT,'PAUSED, press [p] to resume', stims.stimulusPositions);
 	@()trackerMessage(eT,'TRIAL_RESULT -100'); %store message in EDF
 	@()setOffline(eT); % make sure we set offline, only works on eyelink, ignored by tobii
 	@()stopRecording(eT, true); %stop recording eye position data
@@ -241,14 +239,17 @@ pauseEntryFn = {
 pauseExitFn = {
 	@()fprintf('\n===>>>EXIT PAUSE STATE\n')
 	@()enableFlip(me); % start PTB screen flips
+	@()needEyeSample(me,true); % make sure we start measuring eye position
 	@()startRecording(eT, true); % start eyetracker recording for this trial
 };
 
 %====================================================PRESTIMULUS
 %---------------------prestim entry
 psEntryFn = {
+	@()enableFlip(me); % start PTB screen flips
+	@()needEyeSample(me,true); % make sure we start measuring eye position
 	@()startRecording(eT); % start eyelink recording for this trial
-	@()updateFixationValues(eT,tS.fixX,tS.fixY,tS.firstFixInit,tS.firstFixTime,tS.firstFixRadius,tS.strict); %reset fixation window
+	@()updateFixationTarget(me, tS.useTask, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
 	@()resetFixation(eT); %reset the fixation counters ready for a new trial
 	@()resetFixationHistory(eT); %reset the fixation counters ready for a new trial
 	@()getStimulusPositions(stims,true); %make a struct the eT can use for drawing stim positions
@@ -256,9 +257,6 @@ psEntryFn = {
 	@()trackerMessage(eT,sprintf('TRIALID %i',getTaskIndex(me))); %Eyelink start trial marker
 	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
 	@()trackerDrawStatus(eT,'Prestim...', stims.stimulusPositions);
-	@()enableFlip(me); % start PTB screen flips
-	@()needEyeSample(me,true); % make sure we start measuring eye position
-	@()show(stims); % make sure we prepare to show the stimulus set
 	@()logRun(me,'PREFIX'); %fprintf current trial info to command window
 };
 
@@ -271,6 +269,7 @@ prestimulusFn = {
 
 %---------------------exiting prestimulus state
 psExitFn = {
+	@()show(stims); % make sure we prepare to show the stimulus set
 	@()statusMessage(eT,'Stimulus...'); % show eyetracker status message
 };
 
@@ -331,7 +330,7 @@ correctFn = {
 %----------------------when we exit the correct state
 correctExitFn = {
 	@()updateTask(me,tS.CORRECT); %make sure our taskSequence is moved to the next trial
-	@()updateVariables(me,[],[],true); ... %update the task variables
+	@()updateVariables(me); ... %update the task variables
 	@()update(stims); ... %update our stimuli ready for display
 	@()checkTaskEnded(me);
 	@()updatePlot(bR, me); % update the behavioural report plot
@@ -371,7 +370,7 @@ breakFn =  {
 %----------------------break exit
 breakExitFn = { 
 	@()updateTask(me,tS.BREAKFIX); %make sure our taskSequence is moved to the next trial
-	@()updateVariables(me,[],[],false); ... %update the task variables
+	@()updateVariables(me); ... %update the task variables
 	@()update(stims); %update our stimuli ready for display
 	@()checkTaskEnded(me);
 	@()updatePlot(bR, me);

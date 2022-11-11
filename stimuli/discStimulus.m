@@ -274,6 +274,7 @@ classdef discStimulus < baseStimulus
 				%Screen('DrawTexture', windowPointer, texturePointer [,sourceRect] [,destinationRect] 
 				%[,rotationAngle] [, filterMode] [, globalAlpha] [, modulateColor] [, textureShader] 
 				%[, specialFlags] [, auxParameters]);
+				if me.mouseOverride && ~me.mouseValid; fprintf('II %i\n',me.tick);me.tick = me.tick + 1;return; end
 				if me.changeBlend;Screen('BlendFunction', me.sM.win, 'GL_SRC_ALPHA', 'GL_ONE_MINUS_SRC_ALPHA');end
 				if me.doFlash == false
 					Screen('DrawTexture', me.sM.win, me.texture, [], me.mvRect,...
@@ -285,7 +286,6 @@ classdef discStimulus < baseStimulus
 					[]);
 				end
 				if me.changeBlend;Screen('BlendFunction', me.sM.win, me.sM.srcMode, me.sM.dstMode);end
-				%if me.verbose;fprintf('%s: %i of %i\n',me.name, me.drawTick, me.tick); end
 				me.drawTick = me.drawTick + 1;
 			end
 			if me.isVisible; me.tick = me.tick + 1; end
@@ -302,7 +302,7 @@ classdef discStimulus < baseStimulus
 				if me.mouseOverride
 					getMousePosition(me);
 					if me.mouseValid
-						me.mvRect = CenterRectOnPointd(me.mvRect, me.mouseX, me.mouseY);
+						me.mvRect = CenterRectOnPoint(me.mvRect, me.mouseX, me.mouseY);
 					end
 					return
 				end

@@ -9,6 +9,15 @@
 classdef fixationCrossStimulus < baseStimulus
 	
 	properties %--------------------PUBLIC PROPERTIES----------%
+		%> alpha for cross colour, can be controlled independently of alpha for
+		%> disc
+		alpha2 = 1
+		%> second colour, used for the cross
+		colour2 = [0 0 0 1]
+		%> width of the cross lines in degrees
+		lineWidth = 0.1
+		%> show background disk
+		showDisk = true
 		%> type can be "simple" or "flash"
 		type char				= 'simple'
 		%> time to flash on and off in seconds
@@ -17,15 +26,6 @@ classdef fixationCrossStimulus < baseStimulus
 		flashOn logical			= true
 		%> colour for flash, empty to inherit from screen background with 0 alpha
 		flashColour = []
-		%> second colour, used for the cross
-		colour2 = [0 0 0 1]
-		%> alpha for cross colour, can be controlled independently of alpha for
-		%> disc
-		alpha2 = 1
-		%> width of the cross lines in degrees
-		lineWidth = 0.1
-		%> show background disk
-		showDisk = true
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -78,7 +78,7 @@ classdef fixationCrossStimulus < baseStimulus
 		% ===================================================================
 		function me = fixationCrossStimulus(varargin)
 			args = optickaCore.addDefaults(varargin,...
-				struct('name','fix','colour',[1 1 1 1],'alpha', 0.75, ...
+				struct('name','fix','colour',[1 1 1 0.75],'alpha', 0.75, ...
 				'size',0.8,'comment','colour/alpha apply to disk, colour2/alpha2 apply to cross'));
 			me=me@baseStimulus(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
@@ -166,12 +166,8 @@ classdef fixationCrossStimulus < baseStimulus
 				me.setLoop = me.setLoop + 1;
 				if me.setLoop == 1; me.alpha2Out = value; else; warning('Recursion: alpha2Out'); end
 				me.setLoop = 0;
-				[~,name] = getP(me,'colour');
+				[~,name] = getP(me,'colour2');
 				me.(name) = [me.(name)(1:3) value];
-				[val,name] = getP(me,'flashColour');
-				if ~isempty(val)
-					me.(name) = [me.(name)(1:3) value];
-				end
 			end
 			function set_sizeOut(me,value)
 				me.sizeOut = value * me.ppd; %divide by 2 to get diameter
@@ -204,7 +200,7 @@ classdef fixationCrossStimulus < baseStimulus
 			end
 			function set_colour2Out(me, value)
 				me.isInSetColour = true;
-				[aold,name] = getP(me,'alpha');
+				[aold,name] = getP(me,'alpha2');
 				if length(value)==4 && value(4) ~= aold
 					alpha = value(4);
 				else

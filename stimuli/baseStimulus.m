@@ -297,7 +297,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%>
 		% ===================================================================
 		function resetTicks(me)
-			global mouseTick mouseGlobalX mouseGlobalY %shared across all stimuli
+			global mouseTick mouseGlobalX mouseGlobalY mouseValid %shared across all stimuli
 			if max(me.delayTime) > 0 %delay display a number of frames 
 				if length(me.delayTime) == 1
 					me.delayTicks = round(me.delayTime/me.screenVals.ifi);
@@ -318,7 +318,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 			else
 				me.offTicks = Inf;
 			end
-			mouseTick = 0; mouseGlobalX = 0; mouseGlobalY = 0;
+			mouseTick = 0; mouseGlobalX = 0; mouseGlobalY = 0; mouseValid = false;
 			me.mouseX = 0; me.mouseY = 0;
 			me.tick = 0; 
 			me.drawTick = 0;
@@ -333,22 +333,25 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> PTB screen (useful for mouse override positioning for stimuli)
 		% ===================================================================
 		function getMousePosition(me)
-			global mouseTick mouseGlobalX mouseGlobalY
-			me.mouseValid = false;
+			global mouseTick mouseGlobalX mouseGlobalY mouseValid
 			if me.tick > mouseTick
 				if ~isempty(me.sM) && isa(me.sM,'screenManager') && me.sM.isOpen
 					[me.mouseX,me.mouseY] = GetMouse(me.sM.win);
-					if me.mouseX > 0 && me.mouseY > 0 && me.mouseX <= me.sM.screenVals.width && me.mouseY <= me.sM.screenVals.height
+					if me.mouseX > -1 && me.mouseY > -1
 						me.mouseValid = true;
+					else
+						me.mouseValid = false;
 					end
 				else
 					[me.mouseX,me.mouseY] = GetMouse;
 				end
 				mouseTick = me.tick; %set global so no other object with same tick number can call this again
+				mouseValid = me.mouseValid;
 				mouseGlobalX = me.mouseX; mouseGlobalY = me.mouseY;
 			else
 				if ~isempty(mouseGlobalX) && ~isempty(mouseGlobalY)
-					me.mouseX = mouseGlobalX; me.mouseY = mouseGlobalY; me.mouseValid = true;
+					me.mouseX = mouseGlobalX; me.mouseY = mouseGlobalY;
+					me.mouseValid = mouseValid;
 				end
 			end
 		end
@@ -756,12 +759,13 @@ classdef baseStimulus < optickaCore & dynamicprops
 			
 			if strcmpi(tagName,'alpha')
 				me.handles.colour_num.Value = num2str(me.colour, '%g ');
-				if isprop(me,'colour2')
-					me.handles.colour2_num.Value = num2str(me.colour2, '%g ');
-				end
 				if isprop(me,'baseColour') 
 					me.handles.baseColour_num.Value = num2str(me.baseColour, '%g ');
 				end
+			end
+
+			if strcmpi(tagName,'alpha2')
+				if isprop(me,'colour2');me.handles.colour2_num.Value = num2str(me.colour2, '%g ');end
 			end
 			
 			if strcmpi(tagName,'colour')
@@ -772,6 +776,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 			end
 
 			if strcmpi(tagName,'colour2')
+				if isprop(me,'alpha2');me.handles.alpha2_num.Value = num2str(me.alpha2, '%g ');end
 				if isprop(me,'correctBaseColour') && me.correctBaseColour
 					me.handles.baseColour_num.Value = num2str(me.baseColour, '%g ');
 				end
