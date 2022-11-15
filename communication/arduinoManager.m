@@ -33,6 +33,7 @@ classdef arduinoManager < optickaCore
 		%> the arduinoIOPort device object, you can call the methods
 		%> directly if required.
 		device					= []
+		delaylength             = 0.03;
 	end
 	properties (SetAccess = private, GetAccess = public)
 		%> which ports are available
@@ -110,17 +111,17 @@ classdef arduinoManager < optickaCore
 				startPin = min(cell2mat(me.availablePins));
 				me.device = arduinoIOPort(me.port,endPin,startPin);
 				if me.device.isDemo
-					me.isOpen = false; me.silentMode = true; me.device = [];
+					me.isOpen = false; me.silentMode = true;
 					warning('--->arduinoManager: IOport couldn''t open the port, going into silent mode!');
 					return
 				else
 					me.deviceID = me.port;
 					me.isOpen = true;
+					setLow(me);
 				end
 				if me.openGUI; GUI(me); end
 				me.silentMode = false;
 			catch ME
-				me.device = [];
 				me.silentMode = true; me.isOpen = false;
 				fprintf('\n\nCouldn''t open Arduino: %s\n',ME.message)
 				getReport(ME)
@@ -129,10 +130,9 @@ classdef arduinoManager < optickaCore
 
 		%===============CLOSE DEVICE================%
 		function close(me)
-			me.device = [];
 			try 
-				close(me.handles.parent); 
-				me.handles=[];
+				close(me.handles.parent); me.handles=[];
+				me.device = [];
 			end
 			me.deviceID = '';
 			me.availablePins = '';
@@ -258,6 +258,101 @@ classdef arduinoManager < optickaCore
 			for ii = 1:20
 				digitalWrite(me.device, line, mod(ii,2));
 			end
+		end
+		%==================DRIVE STEPPER MOTOR============%
+		function stepper(me,ndegree)
+% 			     delaylength = 0.03;
+				 ncycle      = floor(ndegree/(1.8*4));
+                 nstep       = round((rem(ndegree,(1.8*4))/7.2)*4);
+				 
+		     for i=1:ncycle
+			     cycleStepper(me)
+			 end
+			 switch nstep 
+				 case 1
+					me.digitalWrite(9, 0);    %//ENABLE CH A 
+  					me.digitalWrite(8, 1);    %//DISABLE CH B
+  					me.digitalWrite(12,1);   %//Sets direction of CH A
+  					me.digitalWrite(3, 1);    %//Moves CH A
+  					pause(me.delaylength);
+				 case 2
+					me.digitalWrite(9, 0);    %//ENABLE CH A 
+  					me.digitalWrite(8, 1);    %//DISABLE CH B
+  					me.digitalWrite(12,1);   %//Sets direction of CH A
+  					me.digitalWrite(3, 1);    %//Moves CH A
+  					pause(me.delaylength);
+  				
+		
+  					me.digitalWrite(9, 1);    %//DISABLE CH A
+  					me.digitalWrite(8, 0);    %//ENABLE CH B
+  					me.digitalWrite(13,0);   %//Sets direction of CH B
+  					me.digitalWrite(11,1);   %//Moves CH B
+  					pause(me.delaylength);
+				 case 3
+			    	me.digitalWrite(9, 0);    %//ENABLE CH A 
+  					me.digitalWrite(8, 1);    %//DISABLE CH B
+  					me.digitalWrite(12,1);   %//Sets direction of CH A
+  					me.digitalWrite(3, 1);    %//Moves CH A
+  					pause(me.delaylength);
+  				
+		
+  					me.digitalWrite(9, 1);    %//DISABLE CH A
+  					me.digitalWrite(8, 0);    %//ENABLE CH B
+  					me.digitalWrite(13,0);   %//Sets direction of CH B
+  					me.digitalWrite(11,1);   %//Moves CH B
+  					pause(me.delaylength);
+  				
+				
+  					me.digitalWrite(9, 0);     %//ENABLE CH A-
+  					me.digitalWrite(8, 1);     %//DISABLE CH B
+  					me.digitalWrite(12,0);    %//Sets direction of CH A
+  					me.digitalWrite(3, 1);     %//Moves CH A
+  					pause(me.delaylength);
+				 case 4
+					cycleStepper(me)
+			 end
+                stopStepper(me)
+			 end
+	    %================STEPPER CYCLR==========
+		function  cycleStepper(me)
+			   
+			    me.digitalWrite(9, 0);    %//ENABLE CH A 
+  				me.digitalWrite(8, 1);    %//DISABLE CH B
+  				me.digitalWrite(12,1);   %//Sets direction of CH A
+  				me.digitalWrite(3, 1);    %//Moves CH A
+  				pause(me.delaylength);
+  				
+		
+  				me.digitalWrite(9, 1);    %//DISABLE CH A
+  				me.digitalWrite(8, 0);    %//ENABLE CH B
+  				me.digitalWrite(13,0);   %//Sets direction of CH B
+  				me.digitalWrite(11,1);   %//Moves CH B
+  				pause(me.delaylength);
+  				
+				
+  				me.digitalWrite(9, 0);     %//ENABLE CH A-
+  				me.digitalWrite(8, 1);     %//DISABLE CH B
+  				me.digitalWrite(12,0);    %//Sets direction of CH A
+  				me.digitalWrite(3, 1);     %//Moves CH A
+  				pause(me.delaylength);
+			 
+  	
+ 				
+  				me.digitalWrite(9, 1);   %//DISABLE CH A
+  				me.digitalWrite(8, 0);   %//ENABLE CH B-
+  				me.digitalWrite(13,1);  %//Sets direction of CH B
+  				me.digitalWrite(11,1);  %//Moves CH B
+  				pause(me.delaylength);
+
+		end
+		%================STOP STEPPER================
+		function stopStepper(me)
+% 				delaylength    = 0.01;    % in seconds
+        		me.digitalWrite(9,1);        %//DISABLE CH A
+        		me.digitalWrite(3, 0);       %//stop Move CH A
+        		me.digitalWrite(8,1);        %//DISABLE CH B
+        		me.digitalWrite(11,0);      %//stop Move CH B 
+        		pause(me.delaylength);
 		end
 		
 		%===============Manual Reward GUI================%
