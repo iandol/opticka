@@ -671,7 +671,7 @@ classdef runExperiment < optickaCore
 				else	
 					run(me.userFunctionsFile)
 				end
-				me.userFunctions = ans;
+				me.userFunctions = ans; %#ok<NOANS> 
 				uF = me.userFunctions;
 				uF.rE = me; uF.s = s; uF.task = task; uF.eT = eT;
 				uF.stims = stims; uF.io = io; uF.rM = rM;
@@ -795,6 +795,9 @@ classdef runExperiment < optickaCore
 					warning('We had to reopen the labJackT to ensure a stable connection...')
 				end
 				
+				%---------set up our behavioural plot
+				createPlot(bR, eT); drawnow;
+
 				%-----take over the keyboard + bump priority
 				KbReleaseWait; %make sure keyboard keys are all released
 				if ~isdeployed; commandwindow; end
@@ -802,11 +805,7 @@ classdef runExperiment < optickaCore
 					%warning('off'); %#ok<*WNOFF>
 					ListenChar(-1); %2=capture all keystrokes
 				end
-				drawnow; 
 				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
-				
-				%---------set up our behavioural plot
-				createPlot(bR, eT);
 
 				%-----profiling starts here if uncommented
 				%profile clear; profile on;
@@ -837,18 +836,18 @@ classdef runExperiment < optickaCore
 					if me.doFlip; s.finishDrawing(); end % potential optimisation, but note stateMachine may run non-drawing tasks in update()
 					
 					%------check eye position manually. Also potentially log
-					% this retrieved value, but REMEMBER eyelink will save
-					% the properly sampled eye data in the EDF; this is just
-					% a backup sampled at the GPU FPS wrapped in the PTB
-					% loop.
+					% this retrieved value, but REMEMBER eyetracker will save
+					% the properly sampled eye data in the EDF; this is
+					% just a backup sampled at the GPU FPS wrapped in the
+					% PTB loop.
 					if me.needSample; getSample(eT); end
 					if tS.recordEyePosition && me.useEyeLink
 						saveEyeInfo(me, sM, eT, tS);
 					end
 					
 					%------Check keyboard for commands (remember we can turn
-					% this off using either tS.keyExclusionPattern [per-state
-					% toggle] or tS.checkKeysDuringStimulus).
+					% this off using either tS.keyExclusionPattern
+					% [per-state toggle] or tS.checkKeysDuringStimulus).
 					if tS.checkKeysDuringStimulus || ~contains(sM.currentName,tS.keyExclusionPattern)
 						tS = checkKeys(me,tS);
 					end
@@ -905,17 +904,22 @@ classdef runExperiment < optickaCore
 				tL.screenLog.trackerEndTime = getTrackerTime(eT);
 				tL.screenLog.trackerEndOffset = getTimeOffset(eT);
 				
-				updatePlot(bR, me); %update our behavioural plot for final state
-				show(stims); %make all stimuli visible again, useful for editing 
-				drawBackground(s);
-				trackerClearScreen(eT);
-				trackerDrawText(eT,['FINISHED TASK:' me.name]);
-				Screen('Flip', s.win);
-				Priority(0);
-				ListenChar(0);
-				RestrictKeysForKbCheck([]);
-				ShowCursor;
-				warning('on');
+				try %#ok<*TRYNC> 
+					drawBackground(s);
+					trackerClearScreen(eT);
+					trackerDrawText(eT,['FINISHED TASK:' me.name]);
+					Screen('Flip', s.win);
+					Priority(0);
+					ListenChar(0);
+					RestrictKeysForKbCheck([]);
+					ShowCursor;
+					warning('on');
+				end
+
+				try
+					updatePlot(bR, me); %update our behavioural plot for final state
+					show(stims); %make all stimuli visible again, useful for editing 
+				end
 				
 				%notify(me,'endAllRuns');
 				me.isRunning = false;
@@ -931,13 +935,13 @@ classdef runExperiment < optickaCore
 					close(io);
 				end
 				
-				close(s); %screen
-				close(io); % I/O system
-				close(eT); % eyetracker, should save the data for us we've already given it our name and folder
-				WaitSecs(0.25);
-				close(aM); % audio manager
-				close(rM); % reward manager
+				try close(s); end %screen
+				try close(io); end % I/O system
+				try close(eT); end % eyetracker, should save the data for us we've already given it our name and folder
+				try close(aM); end % audio manager
+				try close(rM); end % reward manager
 				
+				WaitSecs(0.25);
 				fprintf('\n\n======>>> Total ticks: %g | stateMachine ticks: %g\n', tS.totalTicks, sM.totalTicks);
 				fprintf('======>>> Tracker Time: %g | PTB time: %g | Drift Offset: %g\n', ...
 					tL.screenLog.trackerEndTime-tL.screenLog.trackerStartTime, ...
@@ -978,9 +982,11 @@ classdef runExperiment < optickaCore
 				if me.diaryMode; diary off; end
 				
 				me.stateInfo = [];
-				if isa(me.stateMachine,'stateMachine'); me.stateMachine.reset; end
-				if isa(me.stimuli,'metaStimulus'); me.stimuli.reset; end
-				
+				try
+					if isa(me.stateMachine,'stateMachine'); me.stateMachine.reset; end
+					if isa(me.stimuli,'metaStimulus'); me.stimuli.reset; end
+				end
+
 				clear rE tL s tS bR rM eT io sM	task
 				
 			catch ME

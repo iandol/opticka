@@ -325,8 +325,8 @@ fixEntry = {
 %--------------------fix within
 fixWithin = {
 	@()draw(stims); %draw stimulus
-	@()trackerDrawEyePosition(eT);
-	@()trackerFlip(eT, 1);
+	@()trackerDrawEyePosition(eT); % for tobii
+	@()trackerFlip(eT, 1); % for tobii
 };
 
 %--------------------test we are fixated for a certain length of time
@@ -383,7 +383,7 @@ fsExit = {
 	@()updateExclusionZones(me, tS.useTask, tS.exclusionRadius);
 	@()trackerMessage(eT,'END_FIX');
 	@()hide(stims, 3);
-}; 
+};
 if strcmpi(tS.type,'saccade')
 	fsExit = [ fsExit; { @()edit(stims,1,'alphaOut',tS.targetAlpha2) } ];
 else

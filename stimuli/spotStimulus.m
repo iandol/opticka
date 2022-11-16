@@ -89,13 +89,14 @@ classdef spotStimulus < baseStimulus
 			if isempty(me.isVisible); me.show; end
 			
 			me.sM = sM;
+			if ~sM.isOpen; warning('Screen needs to be Open!'); end
 			me.ppd=sM.ppd;
 			
 			fn = fieldnames(spotStimulus);
 			for j=1:length(fn)
 				if isempty(me.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},me.ignoreProperties, 'once'))%create a temporary dynamic property
 					p=me.addprop([fn{j} 'Out']);
-					p.Transient = true;%p.Hidden = true;
+					p.Transient = true;
 					if strcmp(fn{j},'size');p.SetMethod = @set_sizeOut;end
 					if strcmp(fn{j},'xPosition');p.SetMethod = @set_xPositionOut;end
 					if strcmp(fn{j},'yPosition');p.SetMethod = @set_yPositionOut;end
@@ -125,6 +126,102 @@ classdef spotStimulus < baseStimulus
 			computeColour(me);
 			computePosition(me);
 			setAnimationDelta(me);
+			if me.doAnimator;setup(me.animator, me);end
+
+			function set_xPositionOut(me, value)
+				me.xPositionOut = value * me.ppd;
+			end
+			function set_yPositionOut(me,value)
+				me.yPositionOut = value*me.ppd;
+			end
+			function set_sizeOut(me,value)
+				me.sizeOut = value * me.ppd; %divide by 2 to get diameter
+			end
+			function set_colourOut(me, value)
+				me.isInSetColour = true;
+				if length(value)==4 
+					alpha = value(4);
+				elseif isempty(me.findprop('alphaOut'))
+					alpha = me.alpha;
+				else
+					alpha = me.alphaOut;
+				end
+				switch length(value)
+					case 4
+						if isempty(me.findprop('alphaOut'))
+							me.alpha = alpha;
+						else
+							me.alphaOut = alpha;
+						end
+					case 3
+						value = [value(1:3) alpha];
+					case 1
+						value = [value value value alpha];
+				end
+				if isempty(me.colourOutTemp);me.colourOutTemp = value;end
+				me.colourOut = value;
+				me.isInSetColour = false;
+				if isempty(me.findprop('contrastOut'))
+					contrast = me.contrast; %#ok<*PROPLC>
+				else
+					contrast = me.contrastOut;
+				end
+				if ~me.inSetup && ~me.stopLoop && contrast < 1
+					computeColour(me);
+				end
+			end
+			function set_flashColourOut(me, value)
+				me.isInSetColour = true;
+				if length(value)==4 
+					alpha = value(4);
+				elseif isempty(me.findprop('alphaOut'))
+					alpha = me.alpha;
+				else
+					alpha = me.alphaOut;
+				end
+				switch length(value)
+					case 3
+						value = [value(1:3) alpha];
+					case 1
+						value = [value value value alpha];
+				end
+				if isempty(me.flashColourOutTemp);me.flashColourOutTemp = value;end
+				me.flashColourOut = value;
+				me.isInSetColour = false;
+				if isempty(me.findprop('contrastOut'))
+					contrast = me.contrast; %#ok<*PROPLC>
+				else
+					contrast = me.contrastOut;
+				end
+				if ~me.inSetup && ~me.stopLoop && contrast < 1
+					computeColour(me);
+				end
+			end
+			function set_alphaOut(me, value)
+				if me.isInSetColour; return; end
+				me.alphaOut = value;
+				if isempty(me.findprop('colourOut'))
+					me.colour = [me.colour(1:3) me.alphaOut];
+				else
+					me.colourOut = [me.colourOut(1:3) me.alphaOut];
+				end
+				if isempty(me.findprop('flashColourOut'))
+					if ~isempty(me.flashColour)
+						me.flashColour = [me.flashColour(1:3) me.alphaOut];
+					end
+				else
+					if ~isempty(me.flashColourOut)
+						me.flashColourOut = [me.flashColourOut(1:3) me.alphaOut];
+					end
+				end
+			end
+			function set_contrastOut(me, value)
+				if iscell(value); value = value{1}; end
+				me.contrastOut = value;
+				if ~me.inSetup && ~me.stopLoop && value < 1
+					computeColour(me);
+				end
+			end
 		end
 		
 		% ===================================================================
@@ -232,118 +329,6 @@ classdef spotStimulus < baseStimulus
 	%=======================================================================
 	methods ( Access = protected ) %-------PROTECTED METHODS-----%
 	%=======================================================================
-		% ===================================================================
-		%> @brief sizeOut Set method
-		%>
-		% ===================================================================
-		function set_sizeOut(me,value)
-			me.sizeOut = value * me.ppd; %divide by 2 to get diameter
-		end
-		
-		% ===================================================================
-		%> @brief colourOut SET method
-		%>
-		% ===================================================================
-		function set_colourOut(me, value)
-			me.isInSetColour = true;
-			if length(value)==4 
-				alpha = value(4);
-			elseif isempty(me.findprop('alphaOut'))
-				alpha = me.alpha;
-			else
-				alpha = me.alphaOut;
-			end
-			switch length(value)
-				case 4
-					if isempty(me.findprop('alphaOut'))
-						me.alpha = alpha;
-					else
-						me.alphaOut = alpha;
-					end
-				case 3
-					value = [value(1:3) alpha];
-				case 1
-					value = [value value value alpha];
-			end
-			if isempty(me.colourOutTemp);me.colourOutTemp = value;end
-			me.colourOut = value;
-			me.isInSetColour = false;
-			if isempty(me.findprop('contrastOut'))
-				contrast = me.contrast; %#ok<*PROPLC>
-			else
-				contrast = me.contrastOut;
-			end
-			if ~me.inSetup && ~me.stopLoop && contrast < 1
-				computeColour(me);
-			end
-		end
-		
-		% ===================================================================
-		%> @brief colourOut SET method
-		%>
-		% ===================================================================
-		function set_flashColourOut(me, value)
-			me.isInSetColour = true;
-			if length(value)==4 
-				alpha = value(4);
-			elseif isempty(me.findprop('alphaOut'))
-				alpha = me.alpha;
-			else
-				alpha = me.alphaOut;
-			end
-			switch length(value)
-				case 3
-					value = [value(1:3) alpha];
-				case 1
-					value = [value value value alpha];
-			end
-			if isempty(me.flashColourOutTemp);me.flashColourOutTemp = value;end
-			me.flashColourOut = value;
-			me.isInSetColour = false;
-			if isempty(me.findprop('contrastOut'))
-				contrast = me.contrast; %#ok<*PROPLC>
-			else
-				contrast = me.contrastOut;
-			end
-			if ~me.inSetup && ~me.stopLoop && contrast < 1
-				computeColour(me);
-			end
-		end
-		
-		% ===================================================================
-		%> @brief alphaOut SET method
-		%>
-		% ===================================================================
-		function set_alphaOut(me, value)
-			if me.isInSetColour; return; end
-			me.alphaOut = value;
-			if isempty(me.findprop('colourOut'))
-				me.colour = [me.colour(1:3) me.alphaOut];
-			else
-				me.colourOut = [me.colourOut(1:3) me.alphaOut];
-			end
-			if isempty(me.findprop('flashColourOut'))
-				if ~isempty(me.flashColour)
-					me.flashColour = [me.flashColour(1:3) me.alphaOut];
-				end
-			else
-				if ~isempty(me.flashColourOut)
-					me.flashColourOut = [me.flashColourOut(1:3) me.alphaOut];
-				end
-			end
-		end
-		
-		% ===================================================================
-		%> @brief contrastOut SET method
-		%>
-		% ===================================================================
-		function set_contrastOut(me, value)
-			if iscell(value); value = value{1}; end
-			me.contrastOut = value;
-			if ~me.inSetup && ~me.stopLoop && value < 1
-				computeColour(me);
-			end
-		end
 		
 		% ===================================================================
 		%> @brief computeColour triggered event

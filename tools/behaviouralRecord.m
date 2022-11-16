@@ -1,7 +1,7 @@
 % ========================================================================
 classdef behaviouralRecord < optickaCore
 %> @class behaviouralRecord
-%> @brief Create a GUI and update behavioural record for a behavioural
+%> @brief Create a GUI and update performance plots for a behavioural
 %> task
 %> 
 %>
@@ -87,9 +87,10 @@ classdef behaviouralRecord < optickaCore
 		%> 
 		% ===================================================================
 		function createPlot(me, eL)
+			tt=tic;
 			if ~me.plotOnly
 				reset(me);
-				me.date = datestr(now);
+				me.date = datetime('now');
 			end
 			if isfield(me.h,'root') && ~isempty(findobj(me.h.root))
 				close(me.h.root);
@@ -100,7 +101,7 @@ classdef behaviouralRecord < optickaCore
 				eL.fixation.time = 1;
 				eL.fixation.initTime = 1;
 			end
-			tx = {['INFORMATION @ ' me.date]};
+			tx = {['START @ ' char(me.date)]};
 			tx{end+1} = ['RUN = ' me.comment];
 			tx{end+1} = ['RADIUS = ' num2str(eL.fixation.radius)];
 			tx{end+1} = ' ';
@@ -127,7 +128,8 @@ classdef behaviouralRecord < optickaCore
 			me.h.grid.RowSpacing = 2;
 			me.h.grid.Padding = [3 3 3 3];
 			me.h.panel = uipanel(me.h.grid);
-			me.h.info = uitextarea(me.h.grid, 'HorizontalAlignment', 'center','FontName',mfont);
+			me.h.info = uitextarea(me.h.grid, 'HorizontalAlignment', 'center',...
+				'FontName', mfont, 'Editable', 'off', 'WordWrap', 'off');
 			me.h.box = tiledlayout(me.h.panel,3,3);
 			me.h.box.Padding='compact';
 			me.h.axis1 = nexttile(me.h.box, [2 2]);
@@ -141,23 +143,21 @@ classdef behaviouralRecord < optickaCore
 			set([me.h.axis1 me.h.axis2 me.h.axis3 me.h.axis4 me.h.axis5], ...
 				{'Box','XGrid','YGrid'},{'on','on','on'});
 			
-			xlabel(me.h.axis1, 'Run Number')
-			xlabel(me.h.axis2, 'Time')
-			xlabel(me.h.axis3, 'Group')
-			xlabel(me.h.axis4, '#')
-			xlabel(me.h.axis5, 'x')
-			ylabel(me.h.axis1, 'Yes / No')
-			ylabel(me.h.axis2, 'Number #')
-			ylabel(me.h.axis3, '% success')
-			ylabel(me.h.axis4, '% success')
-			ylabel(me.h.axis5, 'y')
-			title(me.h.axis1,'Success () / Fail ()')
-			title(me.h.axis2,'Response Times')
-			title(me.h.axis3,'Hit (blue) / Miss (red)')
-			title(me.h.axis4,'Average (n=10) Hit / Miss %')
-			title(me.h.axis5,'Last Eye Position')
-			%hn = findobj(me.h.axis2,'Type','patch');
-			%set(hn,'FaceColor','k','EdgeColor','k');
+			xlabel(me.h.axis1, 'Run Number');
+			xlabel(me.h.axis2, 'Time');
+			xlabel(me.h.axis3, 'Group');
+			xlabel(me.h.axis4, '#');
+			xlabel(me.h.axis5, 'x');
+			ylabel(me.h.axis1, 'Yes / No');
+			ylabel(me.h.axis2, 'Number #');
+			ylabel(me.h.axis3, '% success');
+			ylabel(me.h.axis4, '% success');
+			ylabel(me.h.axis5, 'y');
+			title(me.h.axis1,'Success () / Fail ()');
+			title(me.h.axis2,'Response Times');
+			title(me.h.axis3,'Hit (blue) / Miss (red)');
+			title(me.h.axis4,'Average (n=10) Hit / Miss %');
+			title(me.h.axis5,'Last Eye Position');
 		end
 		
 		% ===================================================================
@@ -171,10 +171,14 @@ classdef behaviouralRecord < optickaCore
 				sM = rE.stateMachine;
 				eT = rE.eyeTracker;
 			end
+
+			%-----profiling starts here if uncommented
+			%tt = tic; profile clear; profile on; 
+
 			if ~me.plotOnly
 				if me.tick == 1
 					reset(me);
-					me.startTime = clock;
+					me.startTime = datetime('now');
 				end
 				if exist('sM','var')
 					if ~isempty(regexpi(sM.currentName,me.correctStateName,'once'))
@@ -303,7 +307,7 @@ classdef behaviouralRecord < optickaCore
 			
 			if ~me.plotOnly && ~isempty(me.response)
 				n = length(me.response);
-				me.trials(n).now = clock;
+				me.trials(n).now = datetime('now');
 				me.trials(n).info = me.info;
 				me.trials(n).tick = me.tick;
 				me.trials(n).comment = me.comment;
@@ -312,8 +316,9 @@ classdef behaviouralRecord < optickaCore
 				me.trials(n).yAll = me.yAll;
 			end
 
-			t = {['INFORMATION @ ' me.date]};
-			t{end+1} = ['RUN time = ' num2str(etime(me.trials(end).now,me.startTime)/60) 'mins'];
+			t = {['START @ ' char(me.date)]};
+			d = me.trials(end).now - me.startTime;
+			t{end+1} = ['RUN time = ' char(d)];
 			t{end+1} = ['RUN:' me.comment];
 			t{end+1} = ['INFO:' me.info];
 			t{end+1} = ['RADIUS (red) b|n = ' num2str(me.radius(end)) 'deg'];
@@ -328,11 +333,20 @@ classdef behaviouralRecord < optickaCore
 			
 			t{end+1} = ' ';
 			t{end+1} = '============Logged trial info============';
-			for i = 1:length(me.trials)
+			if me.plotOnly
+				startt = 1; endt = length(me.trials);
+			elseif length(me.trials) <= 10
+				startt = 1; endt = length(me.trials);
+			else
+				startt = length(me.trials)-10; endt = length(me.trials);
+			end
+			for i = startt:endt
 				t{end+1} = ['#' num2str(i) '<' num2str(me.trials(i).response) '>: ' me.trials(i).info ' <> ' me.trials(i).comment];
 			end
+			me.h.info.Value = t';
 			
-			set(me.h.info,'Value', t');
+			%-----get our profiling report for our task loop
+			% toc(tt); profile off; profile viewer;
 
 			if ~me.plotOnly
 				me.tick = me.tick + 1;

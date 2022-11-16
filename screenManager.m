@@ -818,7 +818,7 @@ classdef screenManager < optickaCore
 			end
 			me.isInAsync = false;
 			if me.isPlusPlus
-				BitsPlusPlus('Close');
+				try BitsPlusPlus('Close'); end
 			end
 			me.finaliseMovie(); me.moviePtr = [];
 			kind = Screen(me.win, 'WindowKind');

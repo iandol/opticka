@@ -10,19 +10,19 @@ classdef discStimulus < baseStimulus
 		%> type can be "simple" or "flash"
 		type = 'simple'
 		%> colour for flash, empty to inherit from screen background with 0 alpha
-		flashColour = []
+		flashColour double = []
 		%> time to flash on and off in seconds
-		flashTime = [0.25 0.25]
+		flashTime double {mustBeVector(flashTime)} = [0.25 0.25]
 		%> is the ON flash the first flash we see?
-		flashOn = true
+		flashOn logical = true
 		%> contrast scales from foreground to screen background colour
-		contrast = 1
+		contrast double {mustBeInRange(contrast,0,1)} = 1
 		%> cosine smoothing sigma in pixels for mask
-		sigma = 31.0
+		sigma double = 31.0
 		%> use colour or alpha [default] channel for smoothing?
-		useAlpha = true
+		useAlpha logical = true
 		%> use cosine (0), hermite (1, default), or inverse hermite (2)
-		smoothMethod = 1
+		smoothMethod double = 1
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
