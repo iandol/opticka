@@ -306,9 +306,6 @@ classdef tobiiManager < optickaCore
 				me.calStim.moveTime					= 0.75;
 				me.calStim.oscillatePeriod			= 1;
 				me.calStim.blinkCount				= 3;
-				if isempty(me.screen.audio)
-					me.screen.audio					= audioManager();
-				end
 				if isempty(me.calibrationMovie)
 					me.calibrationMovie				= movieStimulus('size',4);
 				end
@@ -1325,8 +1322,6 @@ classdef tobiiManager < optickaCore
 					s = screenManager('blend',true,'pixelsPerCm',36,'distance',60);
 				end
 				s.disableSyncTests		= false;
-				s.audio					= audioManager();
-				s.audio.setup();
 				if exist('forcescreen','var'); s.screen = forcescreen; end
 				s.backgroundColour		= [0.5 0.5 0.5 0];
 				if length(Screen('Screens'))>1 && s.screen - 1 >= 0

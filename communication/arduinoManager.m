@@ -130,10 +130,8 @@ classdef arduinoManager < optickaCore
 
 		%===============CLOSE DEVICE================%
 		function close(me)
-			try 
-				close(me.handles.parent); me.handles=[];
-				me.device = [];
-			end
+			try me.device = []; end
+			try close(me.handles.parent); me.handles=[];end
 			me.deviceID = '';
 			me.availablePins = '';
 			me.isOpen = false;
@@ -147,7 +145,7 @@ classdef arduinoManager < optickaCore
 		
 		%===============RESET================%
 		function reset(me)
-			close(me);
+			try close(me); end
 			me.silentMode = false;
 			notinlist = true;
 			if ~isempty(me.ports)
