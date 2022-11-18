@@ -515,15 +515,32 @@ classdef baseStimulus < optickaCore & dynamicprops
 			bgcoloredit = [1 1 1];
 			fsmall = 11;
 			fmed = 12;
+			lf = listfonts;
 			if ismac
-				SansFont = 'Avenir next';
-				MonoFont = 'Menlo';
+				if any(matches(lf,'Source Sans 3'))
+					SansFont = 'Source Sans 3';
+				else
+					SansFont = 'Avenir next'; %get(0,'defaultAxesFontName');
+				end
+				if any(matches(lf,'Fira Code'))
+					MonoFont = 'Fira Code';
+				else
+					MonoFont = 'Menlo';
+				end
 			elseif ispc
 				SansFont = 'Calibri';
 				MonoFont = 'Consolas';
 			else %linux
-				SansFont = 'Liberation Sans'; %get(0,'defaultAxesFontName');
-				MonoFont = 'Fira Code';
+				if any(matches(lf,'Source Sans 3'))
+					SansFont = 'Source Sans 3';
+				else
+					SansFont = 'Ubuntu'; 
+				end
+				if any(matches(lf,'Fira Code'))
+					MonoFont = 'Fira Code';
+				else
+					MonoFont = 'Ubuntu Mono';
+				end
 			end
 			
 			handles.root = uipanel('Parent',parent,...
