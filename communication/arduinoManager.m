@@ -33,6 +33,7 @@ classdef arduinoManager < optickaCore
 		%> the arduinoIOPort device object, you can call the methods
 		%> directly if required.
 		device					= []
+		%> for the stepper specify the delay between digital writes
 		delaylength             = 0.03;
 	end
 	properties (SetAccess = private, GetAccess = public)
@@ -257,100 +258,90 @@ classdef arduinoManager < optickaCore
 				digitalWrite(me.device, line, mod(ii,2));
 			end
 		end
+		
 		%==================DRIVE STEPPER MOTOR============%
 		function stepper(me,ndegree)
-% 			     delaylength = 0.03;
-				 ncycle      = floor(ndegree/(1.8*4));
-                 nstep       = round((rem(ndegree,(1.8*4))/7.2)*4);
-				 
-		     for i=1:ncycle
-			     cycleStepper(me)
-			 end
-			 switch nstep 
-				 case 1
-					me.digitalWrite(9, 0);    %//ENABLE CH A 
-  					me.digitalWrite(8, 1);    %//DISABLE CH B
-  					me.digitalWrite(12,1);   %//Sets direction of CH A
-  					me.digitalWrite(3, 1);    %//Moves CH A
-  					pause(me.delaylength);
-				 case 2
-					me.digitalWrite(9, 0);    %//ENABLE CH A 
-  					me.digitalWrite(8, 1);    %//DISABLE CH B
-  					me.digitalWrite(12,1);   %//Sets direction of CH A
-  					me.digitalWrite(3, 1);    %//Moves CH A
-  					pause(me.delaylength);
-  				
-		
-  					me.digitalWrite(9, 1);    %//DISABLE CH A
-  					me.digitalWrite(8, 0);    %//ENABLE CH B
-  					me.digitalWrite(13,0);   %//Sets direction of CH B
-  					me.digitalWrite(11,1);   %//Moves CH B
-  					pause(me.delaylength);
-				 case 3
-			    	me.digitalWrite(9, 0);    %//ENABLE CH A 
-  					me.digitalWrite(8, 1);    %//DISABLE CH B
-  					me.digitalWrite(12,1);   %//Sets direction of CH A
-  					me.digitalWrite(3, 1);    %//Moves CH A
-  					pause(me.delaylength);
-  				
-		
-  					me.digitalWrite(9, 1);    %//DISABLE CH A
-  					me.digitalWrite(8, 0);    %//ENABLE CH B
-  					me.digitalWrite(13,0);   %//Sets direction of CH B
-  					me.digitalWrite(11,1);   %//Moves CH B
-  					pause(me.delaylength);
-  				
-				
-  					me.digitalWrite(9, 0);     %//ENABLE CH A-
-  					me.digitalWrite(8, 1);     %//DISABLE CH B
-  					me.digitalWrite(12,0);    %//Sets direction of CH A
-  					me.digitalWrite(3, 1);     %//Moves CH A
-  					pause(me.delaylength);
-				 case 4
-					cycleStepper(me)
-			 end
-                stopStepper(me)
-			 end
-	    %================STEPPER CYCLR==========
-		function  cycleStepper(me)
-			   
-			    me.digitalWrite(9, 0);    %//ENABLE CH A 
-  				me.digitalWrite(8, 1);    %//DISABLE CH B
-  				me.digitalWrite(12,1);   %//Sets direction of CH A
-  				me.digitalWrite(3, 1);    %//Moves CH A
-  				pause(me.delaylength);
-  				
-		
-  				me.digitalWrite(9, 1);    %//DISABLE CH A
-  				me.digitalWrite(8, 0);    %//ENABLE CH B
-  				me.digitalWrite(13,0);   %//Sets direction of CH B
-  				me.digitalWrite(11,1);   %//Moves CH B
-  				pause(me.delaylength);
-  				
-				
-  				me.digitalWrite(9, 0);     %//ENABLE CH A-
-  				me.digitalWrite(8, 1);     %//DISABLE CH B
-  				me.digitalWrite(12,0);    %//Sets direction of CH A
-  				me.digitalWrite(3, 1);     %//Moves CH A
-  				pause(me.delaylength);
-			 
-  	
- 				
-  				me.digitalWrite(9, 1);   %//DISABLE CH A
-  				me.digitalWrite(8, 0);   %//ENABLE CH B-
-  				me.digitalWrite(13,1);  %//Sets direction of CH B
-  				me.digitalWrite(11,1);  %//Moves CH B
-  				pause(me.delaylength);
+			ncycle      = floor(ndegree/(1.8*4));
+			nstep       = round((rem(ndegree,(1.8*4))/7.2)*4);
 
+			for i=1:ncycle
+				cycleStepper(me)
+			end
+			switch nstep
+				case 1
+					me.digitalWrite(9, 0);    %//ENABLE CH A
+					me.digitalWrite(8, 1);    %//DISABLE CH B
+					me.digitalWrite(12,1);   %//Sets direction of CH A
+					me.digitalWrite(3, 1);    %//Moves CH A
+					WaitSecs('YieldSecs',me.delaylength);
+				case 2
+					me.digitalWrite(9, 0);    %//ENABLE CH A
+					me.digitalWrite(8, 1);    %//DISABLE CH B
+					me.digitalWrite(12,1);   %//Sets direction of CH A
+					me.digitalWrite(3, 1);    %//Moves CH A
+					WaitSecs('YieldSecs',me.delaylength);
+
+					me.digitalWrite(9, 1);    %//DISABLE CH A
+					me.digitalWrite(8, 0);    %//ENABLE CH B
+					me.digitalWrite(13,0);   %//Sets direction of CH B
+					me.digitalWrite(11,1);   %//Moves CH B
+					WaitSecs('YieldSecs',me.delaylength);
+				case 3
+					me.digitalWrite(9, 0);    %//ENABLE CH A
+					me.digitalWrite(8, 1);    %//DISABLE CH B
+					me.digitalWrite(12,1);   %//Sets direction of CH A
+					me.digitalWrite(3, 1);    %//Moves CH A
+					WaitSecs('YieldSecs',me.delaylength);
+
+					me.digitalWrite(9, 1);    %//DISABLE CH A
+					me.digitalWrite(8, 0);    %//ENABLE CH B
+					me.digitalWrite(13,0);   %//Sets direction of CH B
+					me.digitalWrite(11,1);   %//Moves CH B
+					WaitSecs('YieldSecs',me.delaylength);
+
+					me.digitalWrite(9, 0);     %//ENABLE CH A-
+					me.digitalWrite(8, 1);     %//DISABLE CH B
+					me.digitalWrite(12,0);    %//Sets direction of CH A
+					me.digitalWrite(3, 1);     %//Moves CH A
+					WaitSecs('YieldSecs',me.delaylength);
+				case 4
+					cycleStepper(me)
+			end
+			stopStepper(me)
+		end
+		%================STEPPER CYCLR==========
+		function  cycleStepper(me)
+			me.digitalWrite(9, 0);    %//ENABLE CH A
+			me.digitalWrite(8, 1);    %//DISABLE CH B
+			me.digitalWrite(12,1);   %//Sets direction of CH A
+			me.digitalWrite(3, 1);    %//Moves CH A
+			WaitSecs('YieldSecs',me.delaylength);
+
+			me.digitalWrite(9, 1);    %//DISABLE CH A
+			me.digitalWrite(8, 0);    %//ENABLE CH B
+			me.digitalWrite(13,0);   %//Sets direction of CH B
+			me.digitalWrite(11,1);   %//Moves CH B
+			WaitSecs('YieldSecs',me.delaylength);
+
+			me.digitalWrite(9, 0);     %//ENABLE CH A-
+			me.digitalWrite(8, 1);     %//DISABLE CH B
+			me.digitalWrite(12,0);    %//Sets direction of CH A
+			me.digitalWrite(3, 1);     %//Moves CH A
+			WaitSecs('YieldSecs',me.delaylength);
+
+			me.digitalWrite(9, 1);   %//DISABLE CH A
+			me.digitalWrite(8, 0);   %//ENABLE CH B-
+			me.digitalWrite(13,1);  %//Sets direction of CH B
+			me.digitalWrite(11,1);  %//Moves CH B
+			WaitSecs('YieldSecs',me.delaylength);
 		end
 		%================STOP STEPPER================
 		function stopStepper(me)
-% 				delaylength    = 0.01;    % in seconds
-        		me.digitalWrite(9,1);        %//DISABLE CH A
-        		me.digitalWrite(3, 0);       %//stop Move CH A
-        		me.digitalWrite(8,1);        %//DISABLE CH B
-        		me.digitalWrite(11,0);      %//stop Move CH B 
-        		pause(me.delaylength);
+			me.digitalWrite(9,1);        %//DISABLE CH A
+			me.digitalWrite(3, 0);       %//stop Move CH A
+			me.digitalWrite(8,1);        %//DISABLE CH B
+			me.digitalWrite(11,0);      %//stop Move CH B
+			WaitSecs('YieldSecs',me.delaylength);
 		end
 		
 		%===============Manual Reward GUI================%
@@ -547,7 +538,7 @@ classdef arduinoManager < optickaCore
 								end
 						end
 					end
-					WaitSecs(0.02);
+					WaitSecs('YieldSecs',0.02);
 				end
 				ListenChar(0);
 				fprintf('===>>> Exit pressed!!!\n');

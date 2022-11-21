@@ -279,7 +279,7 @@ classdef optickaCore < handle
 								obj_out.(prop.Name) = me.(prop.Name);
 							end
 						catch %#ok<CTCH>
-							warning('optickaCore:clone', 'Problem copying property "%s"',prop.Name)
+							warning('optickaCore:clone', 'Property not specified: "%s"',prop.Name)
 						end
 					end
 				end

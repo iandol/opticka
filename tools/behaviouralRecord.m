@@ -30,6 +30,7 @@ classdef behaviouralRecord < optickaCore
 	properties (GetAccess = public, SetAccess = protected)
 		trials
 		tick
+		isOpen				= false
 	end
 	
 	properties (Transient = true, SetAccess = ?runExperiment)
@@ -87,7 +88,6 @@ classdef behaviouralRecord < optickaCore
 		%> 
 		% ===================================================================
 		function createPlot(me, eL)
-			tt=tic;
 			if ~me.plotOnly
 				reset(me);
 				me.date = datetime('now');
@@ -158,15 +158,18 @@ classdef behaviouralRecord < optickaCore
 			title(me.h.axis3,'Hit (blue) / Miss (red)');
 			title(me.h.axis4,'Average (n=10) Hit / Miss %');
 			title(me.h.axis5,'Last Eye Position');
+			me.isOpen = true;
 		end
 		
 		% ===================================================================
-		function updatePlot(me, rE)
+		function updatePlot(me, rE, drawNow)
 		%> @fn  updatePlot 
 		%> @brief updates the behaviouralRecord plot
 		%> 
 		%> @param rE runExperiment object
 		% ===================================================================
+			if ~me.isOpen; return; end
+			if ~exist('drawNow','var'); drawNow = true; end
 			if exist('rE','var') && isa(rE,"runExperiment")
 				sM = rE.stateMachine;
 				eT = rE.eyeTracker;
@@ -351,6 +354,8 @@ classdef behaviouralRecord < optickaCore
 			if ~me.plotOnly
 				me.tick = me.tick + 1;
 			end
+
+			if drawNow; drawnow(); end
 
 		end
 

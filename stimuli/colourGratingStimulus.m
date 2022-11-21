@@ -83,6 +83,11 @@ classdef colourGratingStimulus < baseStimulus
 	properties (Constant)
 		typeList cell			= {'sinusoid';'square'}
 	end
+
+	properties (SetAccess = protected, GetAccess = {?baseStimulus})
+		%> properties to not show in the UI panel
+		ignorePropertiesUI = 'alpha';
+	end
 	
 	properties (SetAccess = protected, GetAccess = protected)
 		%> as get methods are slow, we cache sf, then recalculate sf whenever
@@ -94,7 +99,7 @@ classdef colourGratingStimulus < baseStimulus
 		allowedProperties = ['colour2|sf|tf|angle|direction|phase|rotateTexture|' ... 
 			'contrast|mask|reverseDirection|speed|startPosition|aspectRatio|' ... 
 			'sigma|correctPhase|phaseReverseTime|phaseOfReverse']
-		%>properties to not create transient copies of during setup phase
+		%> properties to not create transient copies of during setup phase
 		ignoreProperties = 'type|scale|phaseIncrement|correctPhase|contrastMult|mask|typeList'
 		%> how many frames between phase reverses
 		phaseCounter			= 0

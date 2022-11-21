@@ -106,7 +106,7 @@ classdef runExperiment < optickaCore
 		%> just uses simple threshold reading
 		dPPMode char				= 'plain'
 		%> which port is the arduino on?
-		arduinoPort char			= '/dev/ttyACM0'
+		arduinoPort char			= ''
 		%> initial eyelink settings
 		elsettings 
 		%> initial tobii settings
@@ -148,6 +148,8 @@ classdef runExperiment < optickaCore
 		lJack 
 		%> Arduino control object
 		arduino 
+		%> magstim manager
+		mS
 		%> user functions object
 		userFunctions
 		%> state machine control cell array
@@ -593,6 +595,7 @@ classdef runExperiment < optickaCore
 			tS.askForComments			= false;	%==little UI requestor asks for comments before/after run
 			tS.saveData					= false;	%==save behavioural and eye movement data?
 			tS.controlPlexon			= false;	%==send start/stop commands to a plexon?
+			tS.showBehaviourPlot		= true;		%==open the behaviourPlot figure? Can cause more memory use
 			tS.rewardTime				= 250;		%==TTL time in milliseconds
 			tS.rewardPin				= 2;		%==Output pin, 2 by default with Arduino.
 			tS.tOut						= 5;		%==if wrong response, how long to time out before next trial
@@ -796,7 +799,7 @@ classdef runExperiment < optickaCore
 				end
 				
 				%---------set up our behavioural plot
-				createPlot(bR, eT); drawnow;
+				if tS.showBehaviourPlot; createPlot(bR, eT); drawnow; end
 
 				%-----take over the keyboard + bump priority
 				KbReleaseWait; %make sure keyboard keys are all released
@@ -1753,7 +1756,7 @@ classdef runExperiment < optickaCore
 				if ~rM.isOpen || rM.silentMode
 					rM.reset();
 					rM.silentMode = false;
-					rM.port = me.arduinoPort;
+					if ~isempty(me.arduinoPort);rM.port = me.arduinoPort;end
 					rM.open();
 				end
 				me.arduino = rM;

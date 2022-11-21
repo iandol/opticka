@@ -88,6 +88,11 @@ classdef movieStimulus < baseStimulus
 		%> shader for masking
 		shader
 	end
+
+	properties (SetAccess = protected, GetAccess = ?baseStimulus)
+		%> properties to not show in the UI panel
+		ignorePropertiesUI = 'alpha';
+	end
 	
 	properties (SetAccess = protected, GetAccess = protected)
 		msrcMode			= 'GL_SRC_ALPHA'

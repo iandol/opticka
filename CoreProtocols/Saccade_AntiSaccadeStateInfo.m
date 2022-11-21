@@ -33,6 +33,7 @@
 
 %==================================================================
 %--------------------TASK SPECIFIC CONFIG--------------------------
+tS.name						= 'saccade-antisaccade'; %==name of this protocol
 % update the trial number for incorrect saccades: if true then we call
 % updateTask for both correct and incorrect trials, otherwise we only call
 % updateTask() for correct responses. 'false' is useful during training.
@@ -59,19 +60,18 @@ else
 	tS.antitargetAlpha1		= 0.5;
 	tS.antitargetAlpha2		= 0.75;
 end
-disp(['\n===>>> Task Type:' tS.type ' <<<===\n'])
+disp(['\n===>>> Task ' tS.name ' Type:' tS.type ' <<<===\n'])
 
 %==================================================================
 %----------------------General Settings----------------------------
 tS.useTask					= true;		%==use taskSequence (randomises stimulus variables)
 tS.rewardTime				= 250;		%==TTL time in milliseconds
 tS.rewardPin				= 2;		%==Output pin, 2 by default with Arduino.
-tS.checkKeysDuringStimulus  = true;		%==allow keyboard control within stimulus state? Slight drop in performance…
-tS.recordEyePosition		= true;		%==record local copy of eye position, **in addition** to the eyetracker?
+tS.checkKeysDuringStimulus  = false;	%==allow keyboard control within stimulus state? Slight drop in performance…
+tS.recordEyePosition		= false;	%==record local copy of eye position, **in addition** to the eyetracker?
 tS.askForComments			= false;	%==UI requestor asks for comments before/after run
 tS.saveData					= true;		%==save behavioural and eye movement data?
-tS.includeErrors			= false;	%==do we update the trial number even for incorrect saccade/fixate, if true then we call updateTask for both correct and incorrect, otherwise we only call updateTask() for correct responses
-tS.name						= 'saccade-antisaccade'; %==name of this protocol
+tS.showBehaviourPlot		= false;	%==open the behaviourPlot figure? Can cause more memory use
 tS.nStims					= stims.n;	%==number of stimuli, taken from metaStimulus object
 tS.tOut						= 5;		%==if wrong response, how long to time out before next trial
 tS.CORRECT					= 1;		%==the code to send eyetracker for correct trials
@@ -90,6 +90,53 @@ tS.INCORRECT				= -5;		%==the code to send eyetracker for incorrect trials
 %rM.verbose					= true;		%==print out reward commands for debugging
 %task.verbose				= true;		%==print out task info for debugging
 
+%==================================================================
+%---------------------------Eyetracker setup-----------------------
+% NOTE: the opticka GUI can set eyetracker options too, if you set options
+% here they will OVERRIDE the GUI ones; if they are commented then the GUI
+% options are used. me.elsettings and me.tobiisettings contain the GUI
+% settings you can test if they are empty or not and set them based on
+% that...
+eT.name				= tS.name;
+if me.dummyMode;	eT.isDummy = true; end %===use dummy or real eyetracker? 
+if tS.saveData;		eT.recordData = true; end %===save Eyetracker data?					
+if me.useEyeLink
+	warning('Note: this protocol file is optimised for the Tobii eyetracker...')
+	if isempty(me.elsettings)		%==check if GUI settings are empty
+		eT.sampleRate				= 250;		%==sampling rate
+		eT.calibrationStyle			= 'HV5';	%==calibration style
+		eT.calibrationProportion	= [0.4 0.4]; %==the proportion of the screen occupied by the calibration stimuli
+		%-----------------------
+		% remote calibration enables manual control and selection of each
+		% fixation this is useful for a baby or monkey who has not been trained
+		% for fixation use 1-9 to show each dot, space to select fix as valid,
+		% INS key ON EYELINK KEYBOARD to accept calibration!
+		eT.remoteCalibration				= false; 
+		%-----------------------
+		eT.modify.calibrationtargetcolour	= [1 1 1]; %==calibration target colour
+		eT.modify.calibrationtargetsize		= 2;		%==size of calibration target as percentage of screen
+		eT.modify.calibrationtargetwidth	= 0.15;	%==width of calibration target's border as percentage of screen
+		eT.modify.waitformodereadytime		= 500;
+		eT.modify.devicenumber				= -1;		%==-1 = use any attachedkeyboard
+		eT.modify.targetbeep				= 1;		%==beep during calibration
+	end
+elseif me.useTobii
+	if isempty(me.tobiisettings)	%==check if GUI settings are empty
+		eT.model					= 'Tobii Pro Spectrum';
+		eT.sampleRate				= 300;
+		eT.trackingMode				= 'human';
+		eT.calibrationStimulus		= 'animated';
+		eT.autoPace					= true;
+		%-----------------------
+		% remote calibration enables manual control and selection of each
+		% fixation this is useful for a baby or monkey who has not been trained
+		% for fixation
+		eT.manualCalibration		= false;
+		%-----------------------
+		eT.calPositions				= [ .2 .5; .5 .5; .8 .5];
+		eT.valPositions				= [ .5 .5 ];
+	end
+end
 %==================================================================
 %-----------------INITIAL Eyetracker Settings----------------------
 % These settings define the initial fixation window and set up for the
@@ -137,55 +184,6 @@ me.lastXPosition			= tS.fixX;
 me.lastYPosition			= tS.fixY;
 me.lastXExclusion			= [];
 me.lastYExclusion			= [];
-
-%==================================================================
-%---------------------------Eyetracker setup-----------------------
-% NOTE: the opticka GUI can set eyetracker options too, if you set options
-% here they will OVERRIDE the GUI ones; if they are commented then the GUI
-% options are used. me.elsettings and me.tobiisettings contain the GUI
-% settings you can test if they are empty or not and set them based on
-% that...
-eT.name				= tS.name;
-if me.dummyMode;	eT.isDummy = true; end %===use dummy or real eyetracker? 
-if tS.saveData;		eT.recordData = true; end %===save ET data?					
-if me.useEyeLink
-	warning('Note this protocol file is optimised for the Tobii eyetracker...')
-	if isempty(me.elsettings)		%==check if GUI settings are empty
-		eT.sampleRate				= 250;		%==sampling rate
-		eT.calibrationStyle			= 'HV5';	%==calibration style
-		eT.calibrationProportion	= [0.4 0.4]; %==the proportion of the screen occupied by the calibration stimuli
-		%-----------------------
-		% remote calibration enables manual control and selection of each
-		% fixation this is useful for a baby or monkey who has not been trained
-		% for fixation use 1-9 to show each dot, space to select fix as valid,
-		% INS key ON EYELINK KEYBOARD to accept calibration!
-		eT.remoteCalibration				= false; 
-		%-----------------------
-		eT.modify.calibrationtargetcolour	= [1 1 1]; %==calibration target colour
-		eT.modify.calibrationtargetsize		= 2;		%==size of calibration target as percentage of screen
-		eT.modify.calibrationtargetwidth	= 0.15;	%==width of calibration target's border as percentage of screen
-		eT.modify.waitformodereadytime		= 500;
-		eT.modify.devicenumber				= -1;		%==-1 = use any attachedkeyboard
-		eT.modify.targetbeep				= 1;		%==beep during calibration
-	end
-elseif me.useTobii
-	if isempty(me.tobiisettings)	%==check if GUI settings are empty
-		eT.model					= 'Tobii Pro Spectrum';
-		eT.sampleRate				= 300;
-		eT.trackingMode				= 'human';
-		eT.calibrationStimulus		= 'animated';
-		eT.autoPace					= true;
-		%-----------------------
-		% remote calibration enables manual control and selection of each
-		% fixation this is useful for a baby or monkey who has not been trained
-		% for fixation
-		eT.manualCalibration		= false;
-		%-----------------------
-		eT.calPositions				= [ .2 .5; .5 .5; .8 .5];
-		eT.valPositions				= [ .5 .5 ];
-	end
-end
-
 %Initialise the eyeTracker object with X, Y, FixInitTime, FixTime, Radius, StrictFix
 eT.updateFixationValues(tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
 %Ensure we don't start with any exclusion zones set up
@@ -439,13 +437,12 @@ correctWithin = {
 
 %when we exit the correct state
 correctExit = {
+	@()updatePlot(bR, me); %update our behavioural plot, must come before updateTask() / updateVariables()
 	@()updateTask(me,tS.CORRECT); %make sure our taskSequence is moved to the next trial
 	@()updateVariables(me); %randomise our stimuli, and set strobe value too
 	@()update(stims); %update the stimuli ready for display
 	@()resetExclusionZones(eT); %reset the exclusion zones
 	@()checkTaskEnded(me); %check if task is finished
-	@()updatePlot(bR, me); %update our behavioural plot, must come before updateTask() / updateVariables()
-	@()drawnow();
 };
 
 %incorrect entry
@@ -472,13 +469,11 @@ incExit = {
 	@()update(stims); %update our stimuli ready for display
 	@()resetExclusionZones(eT); %reset the exclusion zones
 	@()checkTaskEnded(me); %check if task is finished
-	@()updatePlot(bR, me); %update our behavioural plot, must come before updateTask() / updateVariables()
-	@()drawnow();
 };
 if tS.includeErrors
-	incExit = [ {@()updateTask(me,tS.BREAKFIX)}; incExit ]; % make sure our taskSequence is moved to the next trial
+	incExit = [ {@()updatePlot(bR, me);@()updateTask(me,tS.BREAKFIX)}; incExit ]; % make sure our taskSequence is moved to the next trial
 else
-	incExit = [ {@()resetRun(task)}; incExit ]; % we randomise the run within this block to make it harder to guess next trial
+	incExit = [ {@()updatePlot(bR, me);@()resetRun(task)}; incExit ]; % we randomise the run within this block to make it harder to guess next trial
 end
 
 %break entry

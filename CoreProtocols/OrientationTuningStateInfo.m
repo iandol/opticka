@@ -31,6 +31,7 @@ tS.checkKeysDuringStimulus  = true;		%==allow keyboard control within stimulus s
 tS.recordEyePosition		= false;	%==record local copy of eye position, **in addition** to the eyetracker?
 tS.askForComments			= false;	%==UI requestor asks for comments before/after run
 tS.saveData					= false;	%==save behavioural and eye movement data?
+tS.showBehaviourPlot		= false;	%==open the behaviourPlot figure? Can cause more memory use
 tS.name						= 'default protocol'; %==name of this protocol
 tS.nStims					= stims.n;	%==number of stimuli, taken from metaStimulus object
 tS.tOut						= 5;		%==if wrong response, how long to time out before next trial
