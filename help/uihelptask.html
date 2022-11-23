@@ -1,340 +1,532 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en-GB" xml:lang="en-GB">
-<head>
-  <meta charset="utf-8" />
-  <meta name="generator" content="pandoc" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
-  <title> </title>
-  <style>
-  html {font-family: Hoefler Text, Palatino, Georgia, serif;
-    color: #1a1a1a;
-    background-color: #fdfdfd;}
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
-  body {margin: 0 auto;
-    max-width: 40em;
-    padding-left: 15px;
-    padding-right: 15px;
-    padding-top: 5px;
-    padding-bottom: 5px;
-    hyphens: auto;
-    overflow-wrap: break-word;
-    text-rendering: optimizeLegibility;
-    font-kerning: normal;
-  }
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.2.258">
 
-  @media (max-width: 600px) {body {font-size: 0.9em;
-    padding: 1em;}
-    h1 {font-size: 1.8em;}
-  }
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
-  @media print {body {background-color: transparent;
-    color: black;
-    font-size: 12pt;}
-    p, h2, h3 {	orphans: 3;
-    widows: 3;}
-    h2, h3, h4 {	page-break-after: avoid;}
-  }
 
-  header {display: none;}
-  kbd {margin: 0px 0.1em;
-    padding: 0.1em 0.6em;
-    border-radius: 3px;
-    border: 1px solid rgb(204, 204, 204);
-    color: rgb(51, 51, 51);
-    line-height: 1.4;
-    font-family: Menlo, monospace;
-    font-size: 11px;
-    display: inline-block;
-    box-shadow: 0px 1px 0px rgba(0,0,0,0.3);
-    background-color: rgb(247, 247, 247);
-    text-shadow: 0 1px 0 #fff;
+<title>uihelptask</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1.6em;
+  vertical-align: middle;
+}
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
   }
-  kbd:hover {box-shadow: 0 1px 0 0.5px;}
-  p {font-size: 18px;margin: 0.8em 0;line-height: 1.5;}
-  a {color: #1a1a1a;}
-  a:visited {color: #1a1a1a;}
-  img {max-width: 100%;}
-  h1, h2, h3, h4, h5, h6 {margin-top: 1.4em;}
-  h5, h6 {font-size: 1em;
-  font-style: italic;}
-  h6 {font-weight: normal;}
-  ol, ul {font-size: 18px;
-    line-height: 1.2em;
-    padding-left: 1.7em;
-    margin-top: 1em;}
-  li > ol, li > ul {margin-top: 0;}
-  blockquote {margin: 1em 0 1em 1.7em;
-    padding-left: 1em;
-    border-left: 2px solid #e6e6e6;
-    color: #606060;
-    font-style: italic;}
-  code {font-family: Fira Code, Menlo, Consolas, monospace;
-    font-size: 14px;
-    margin: 0;
-    background-color: #F0F0F0;
-    color:rgb(145, 16, 42);
-  }
-  pre {margin: 1em 0;
-    overflow: auto;
-  }
-  pre code {padding: 0;
-    overflow: visible;
-    overflow-wrap: normal;
-    background-color:transparent;
-    color: black;
-  }
-  pre.smaller code {font-size: 60% !important; line-height: .75rem !important;}
-  .sourceCode {background-color: transparent;
-    overflow: visible;
-  }
-  hr {background-color: #1a1a1a;
-    border: none;
-    height: 1px;
-    margin: 1em 0;
-  }
-  table {margin: 1em 0;
-    border-collapse: collapse;
-    width: 100%;
-    overflow-x: auto;
-    display: block;
-    font-variant-numeric: lining-nums tabular-nums;
-  }
-  table caption {margin-bottom: 0.75em;}
-  tbody {margin-top: 0.5em;
-    border-top: 1px solid #1a1a1a;
-    border-bottom: 1px solid #1a1a1a;
-  }
-  th {border-top: 1px solid #1a1a1a;
-    padding: 0.25em 0.5em 0.25em 0.5em;
-  }
-  td {padding: 0.125em 0.5em 0.25em 0.5em;}
-  header {margin-bottom: 4em;
-    text-align: center;
-  }
-  #TOC li {list-style: none;}
-  #TOC ul {padding-left: 1.3em;}
-  #TOC > ul {padding-left: 0;}
-  #TOC a:not(:hover) {text-decoration: none;}
-  code{white-space: pre-wrap;}
-  span.smallcaps{font-variant: small-caps;}
-  span.underline{text-decoration: underline;}
-  div.column{display: inline-block; vertical-align: top; width: 50%;}
-  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
-  ul.task-list{list-style: none;}
-  pre > code.sourceCode { white-space: pre; position: relative;}
-  pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
-  pre > code.sourceCode > span:empty { height: 1.2em; }
-  .sourceCode { overflow: visible; }
-  code.sourceCode > span { color: inherit; text-decoration: inherit; }
-  div.sourceCode { margin: 2em 0; }
-  pre.sourceCode { margin: 0; }
-  @media screen {
-  div.sourceCode { overflow: auto; background-color: #F0F0F0;}
-  }
-  @media print {
-  pre > code.sourceCode { white-space: pre-wrap;}
-  pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
-  }
-  pre.numberSource code
-    { counter-reset: source-line 0; }
-  pre.numberSource code > span
-    { position: relative; left: -4em; counter-increment: source-line; }
-  pre.numberSource code > span > a:first-child::before
-    { content: counter(source-line);
-      position: relative; left: -1em; text-align: right; vertical-align: baseline;
-      border: none; display: inline-block;
-      -webkit-touch-callout: none; -webkit-user-select: none;
-      -khtml-user-select: none; -moz-user-select: none;
-      -ms-user-select: none; user-select: none;
-      padding: 0 4px; width: 4em;
-      color: #aaaaaa;
-    }
-  pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
-  @media screen {
-  pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
-  }
-  code span.al { color: #ff0000; font-weight: bold; } /* Alert */
-  code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
-  code span.at { color: #7d9029; } /* Attribute */
-  code span.bn { color: #40a070; } /* BaseN */
-  code span.bu { color: #008000; } /* BuiltIn */
-  code span.cf { color: #0044a3; font-weight: bold; } /* ControlFlow */
-  code span.ch { color: #4070a0; } /* Char */
-  code span.cn { color: #880000; } /* Constant */
-  code span.co { color: #779097; font-style: italic; } /* Comment */
-  code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
-  code span.do { color: #ba2121; font-style: italic; } /* Documentation */
-  code span.dt { color: #902000; } /* DataType */
-  code span.dv { color: #40a070; } /* DecVal */
-  code span.er { color: #ff0000; font-weight: bold; } /* Error */
-  code span.fl { color: #40a070; } /* Float */
-  code span.fu { color: #06287e; } /* Function */
-  code span.im { color: #008000; font-weight: bold; } /* Import */
-  code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
-  code span.kw { color: #00338a; font-weight: bold; } /* Keyword */
-  code span.op { color: #666666; } /* Operator */
-  code span.ot { color: #007020; } /* Other */
-  code span.pp { color: #bc7a00; } /* Preprocessor */
-  code span.sc { color: #4070a0; } /* SpecialChar */
-  code span.ss { color: #bb6688; } /* SpecialString */
-  code span.st { color: #4070a0; } /* String */
-  code span.va { color: #201f45; } /* Variable */
-  code span.vs { color: #4070a0; } /* VerbatimString */
-  code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
-  .display.math{display: block; text-align: center; margin: 0.5rem auto;}
-  </style>
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { color: #008000; } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { color: #008000; font-weight: bold; } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+<script src="uihelptask_files/libs/clipboard/clipboard.min.js"></script>
+<script src="uihelptask_files/libs/quarto-html/quarto.js"></script>
+<script src="uihelptask_files/libs/quarto-html/popper.min.js"></script>
+<script src="uihelptask_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="uihelptask_files/libs/quarto-html/anchor.min.js"></script>
+<link href="uihelptask_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="uihelptask_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="uihelptask_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="uihelptask_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="uihelptask_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+
 </head>
-<body>
-<h1 id="task-parameters">Task Parameters</h1>
-<p>Opticka uses the <code>taskSequence</code> class to build the
-stimulus randomisations required. This class takes a series of stimulus
-<strong>independent variables</strong> with values and builds a
-randomisation into blocks. The GUI does this using the <kbd>Ind.
-Variable List</kbd> editor, but the underlying code looks like this
-(<code>nBlocks</code> is <strong>Task Options &gt; Repeat
-Blocks</strong> in the GUI):</p>
-<div class="sourceCode" id="cb1"><pre
-class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">% task sequence with 5 blocks</span></span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="va">task</span> <span class="op">=</span> <span class="va">taskSequence</span>(<span class="ss">&#39;nBlocks&#39;</span><span class="op">,</span> <span class="fl">2</span>)<span class="op">;</span></span>
+
+<body class="fullcontent">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+
+
+<section id="optickas-two-experiment-modes" class="level1">
+<h1>Opticka’s Two Experiment Modes</h1>
+<ol type="1">
+<li><strong>Behavioural Task</strong> – a behavioural task uses a <code>stateMachine</code> to construct a series of experiment states and the transitions between them. It uses <code>StateInfo.m</code> files and <code>userFunctions.m</code> files to specify the states and any customised functions required. It can optionally use <code>taskSequence</code>, <code>metaStimulus</code>, <code>eyeTracker</code>, <code>IO</code>, and other manager classes to control stimuli, variables, and hardware interaction.</li>
+<li><strong>Method of Constants (MOC) Task</strong> – a MOC task is a task where no behavioural control is required. It uses <code>taskSequence</code> and <code>metaStimulus</code> to define a set of stimuli and the variables that will drive unique trials repeated over blocks.</li>
+</ol>
+</section>
+<section id="task-parameters" class="level1">
+<h1>Task Parameters</h1>
+<p>Opticka uses the <code>taskSequence</code> class to build the stimulus randomisation. This class takes a series of <strong>independent variables</strong> with values and builds the randomisation into repeated blocks. The GUI does this using the <kbd>Ind. Variable List</kbd> editor, but the underlying code looks like this (<code>nBlocks</code> is <strong>Task Options &gt; Repeat Blocks</strong> in the GUI):</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode matlab code-with-copy"><code class="sourceCode matlab"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">% task sequence with 5 blocks</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="va">task</span> <span class="op">=</span> <span class="va">taskSequence</span>(<span class="ss">'nBlocks'</span><span class="op">,</span> <span class="fl">2</span>)<span class="op">;</span></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co">% first variable: 3 angles that will be applied to stimuli 1 &amp; 2</span></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="va">task</span>.<span class="va">nVar</span>(<span class="fl">1</span>).<span class="va">name</span> <span class="op">=</span> <span class="ss">&#39;angle&#39;</span><span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="va">task</span>.<span class="va">nVar</span>(<span class="fl">1</span>).<span class="va">name</span> <span class="op">=</span> <span class="ss">'angle'</span><span class="op">;</span></span>
 <span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="va">task</span>.<span class="va">nVar</span>(<span class="fl">1</span>).<span class="va">values</span> <span class="op">=</span> [<span class="op">-</span><span class="fl">25</span> <span class="fl">0</span> <span class="fl">25</span>]<span class="op">;</span></span>
 <span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="va">task</span>.<span class="va">nVar</span>(<span class="fl">1</span>).<span class="va">stimulus</span> <span class="op">=</span> [<span class="fl">1</span> <span class="fl">2</span>]<span class="op">;</span></span>
 <span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co">% second variable: 3 colours that will be applied to stimulus 3</span></span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="va">task</span>.<span class="va">nVar</span>(<span class="fl">2</span>).<span class="va">name</span> <span class="op">=</span> <span class="ss">&#39;colour&#39;</span><span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="va">task</span>.<span class="va">nVar</span>(<span class="fl">2</span>).<span class="va">name</span> <span class="op">=</span> <span class="ss">'colour'</span><span class="op">;</span></span>
 <span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="va">task</span>.<span class="va">nVar</span>(<span class="fl">2</span>).<span class="va">values</span> <span class="op">=</span> {[<span class="fl">1</span> <span class="fl">0</span> <span class="fl">0</span>]<span class="op">,</span> [<span class="fl">0</span> <span class="fl">1</span> <span class="fl">0</span>]}<span class="op">;</span></span>
 <span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="va">task</span>.<span class="va">nVar</span>(<span class="fl">2</span>).<span class="va">stimulus</span> <span class="op">=</span> <span class="fl">3</span><span class="op">;</span></span>
 <span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="va">randomiseTask</span>(<span class="va">task</span>)<span class="op">;</span></span></code></pre></div>
-<p>This will generate a randomisation table like so (3 angles x 2
-colours per block = <strong>6</strong> conditions; 2 block =
-<strong>12</strong> total trials):</p>
-<table>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="va">randomiseTask</span>(<span class="va">task</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>This will generate a randomisation table like so (3 angles x 2 colours per block = <strong>6</strong> conditions; 2 block = <strong>12</strong> total trials):</p>
+<table class="table">
 <thead>
 <tr class="header">
-<th>angle</th>
-<th>colour</th>
-<th>index</th>
-<th>idx1</th>
-<th>idx2</th>
-<th>blockVar</th>
-<th>trialVar</th>
+<th>Angle</th>
+<th>Colour</th>
+<th style="text-align: left;">Index</th>
+<th style="text-align: left;">IdxAngle</th>
+<th>IdxColour</th>
+<th style="text-align: left;">Trial Factor</th>
+<th style="text-align: left;">Block Factor</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td>0</td>
-<td>1 0 0</td>
-<td>3</td>
-<td>2</td>
-<td>1</td>
-<td>none</td>
-<td>none</td>
-</tr>
-<tr class="even">
-<td>-25</td>
-<td>0 1 0</td>
-<td>2</td>
-<td>1</td>
-<td>2</td>
-<td>none</td>
-<td>none</td>
-</tr>
-<tr class="odd">
 <td>-25</td>
 <td>1 0 0</td>
+<td style="text-align: left;">1</td>
+<td style="text-align: left;">1</td>
 <td>1</td>
-<td>1</td>
-<td>1</td>
-<td>none</td>
-<td>none</td>
+<td style="text-align: left;">‘none’</td>
+<td style="text-align: left;">‘none’</td>
 </tr>
 <tr class="even">
-<td>25</td>
-<td>0 1 0</td>
-<td>6</td>
-<td>3</td>
-<td>2</td>
-<td>none</td>
-<td>none</td>
-</tr>
-<tr class="odd">
 <td>0</td>
-<td>0 1 0</td>
-<td>4</td>
-<td>2</td>
-<td>2</td>
-<td>none</td>
-<td>none</td>
-</tr>
-<tr class="even">
-<td>25</td>
 <td>1 0 0</td>
-<td>5</td>
-<td>3</td>
+<td style="text-align: left;">3</td>
+<td style="text-align: left;">2</td>
 <td>1</td>
-<td>none</td>
-<td>none</td>
+<td style="text-align: left;">‘none’</td>
+<td style="text-align: left;">‘none’</td>
 </tr>
 <tr class="odd">
 <td>25</td>
 <td>0 1 0</td>
-<td>6</td>
-<td>3</td>
+<td style="text-align: left;">6</td>
+<td style="text-align: left;">3</td>
 <td>2</td>
-<td>none</td>
-<td>none</td>
-</tr>
-<tr class="even">
-<td>-25</td>
-<td>1 0 0</td>
-<td>1</td>
-<td>1</td>
-<td>1</td>
-<td>none</td>
-<td>none</td>
-</tr>
-<tr class="odd">
-<td>0</td>
-<td>1 0 0</td>
-<td>3</td>
-<td>2</td>
-<td>1</td>
-<td>none</td>
-<td>none</td>
+<td style="text-align: left;">‘none’</td>
+<td style="text-align: left;">‘none’</td>
 </tr>
 <tr class="even">
 <td>25</td>
 <td>1 0 0</td>
-<td>5</td>
-<td>3</td>
+<td style="text-align: left;">5</td>
+<td style="text-align: left;">3</td>
 <td>1</td>
-<td>none</td>
-<td>none</td>
+<td style="text-align: left;">‘none’</td>
+<td style="text-align: left;">‘none’</td>
 </tr>
 <tr class="odd">
 <td>-25</td>
 <td>0 1 0</td>
+<td style="text-align: left;">2</td>
+<td style="text-align: left;">1</td>
 <td>2</td>
-<td>1</td>
-<td>2</td>
-<td>none</td>
-<td>none</td>
+<td style="text-align: left;">‘none’</td>
+<td style="text-align: left;">‘none’</td>
 </tr>
 <tr class="even">
 <td>0</td>
 <td>0 1 0</td>
-<td>4</td>
+<td style="text-align: left;">4</td>
+<td style="text-align: left;">2</td>
 <td>2</td>
+<td style="text-align: left;">‘none’</td>
+<td style="text-align: left;">‘none’</td>
+</tr>
+<tr class="odd">
+<td>-25</td>
+<td>0 1 0</td>
+<td style="text-align: left;">2</td>
+<td style="text-align: left;">1</td>
 <td>2</td>
-<td>none</td>
-<td>none</td>
+<td style="text-align: left;">‘none’</td>
+<td style="text-align: left;">‘none’</td>
+</tr>
+<tr class="even">
+<td>0</td>
+<td>0 1 0</td>
+<td style="text-align: left;">4</td>
+<td style="text-align: left;">2</td>
+<td>2</td>
+<td style="text-align: left;">‘none’</td>
+<td style="text-align: left;">‘none’</td>
+</tr>
+<tr class="odd">
+<td>-25</td>
+<td>1 0 0</td>
+<td style="text-align: left;">1</td>
+<td style="text-align: left;">1</td>
+<td>1</td>
+<td style="text-align: left;">‘none’</td>
+<td style="text-align: left;">‘none’</td>
+</tr>
+<tr class="even">
+<td>25</td>
+<td>0 1 0</td>
+<td style="text-align: left;">6</td>
+<td style="text-align: left;">3</td>
+<td>2</td>
+<td style="text-align: left;">‘none’</td>
+<td style="text-align: left;">‘none’</td>
+</tr>
+<tr class="odd">
+<td>0</td>
+<td>1 0 0</td>
+<td style="text-align: left;">3</td>
+<td style="text-align: left;">2</td>
+<td>1</td>
+<td style="text-align: left;">‘none’</td>
+<td style="text-align: left;">‘none’</td>
+</tr>
+<tr class="even">
+<td>25</td>
+<td>1 0 0</td>
+<td style="text-align: left;">5</td>
+<td style="text-align: left;">3</td>
+<td>1</td>
+<td style="text-align: left;">‘none’</td>
+<td style="text-align: left;">‘none’</td>
 </tr>
 </tbody>
 </table>
-<h2 id="block-level-and-trial-level-factors">Block Level and Trial Level
-Factors</h2>
-</body>
-</html>
+<section id="block-level-and-trial-level-factors" class="level2">
+<h2 class="anchored" data-anchor-id="block-level-and-trial-level-factors">Block-Level and Trial-Level Factors</h2>
+<p>In addition, you can specify independent block and trial factors. For example if we set</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode matlab code-with-copy"><code class="sourceCode matlab"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="va">task</span>.<span class="va">blockVar</span>.<span class="va">values</span><span class="op">=</span>{<span class="ss">'A'</span><span class="op">,</span><span class="ss">'B'</span>}<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="va">task</span>.<span class="va">blockVar</span>.<span class="va">probability</span> <span class="op">=</span> [<span class="fl">0.6</span> <span class="fl">0.4</span>]<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Then for each block we assign either <code>A</code> or <code>B</code> with a 60:40% probability. Trial-level factors are specified in the same way, but for each trial independently from the blocks.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode matlab code-with-copy"><code class="sourceCode matlab"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="va">task</span>.<span class="va">trialVar</span>.<span class="va">values</span><span class="op">=</span>{<span class="ss">'Y'</span><span class="op">,</span><span class="ss">'Z'</span>}<span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="va">task</span>.<span class="va">trialVar</span>.<span class="va">probability</span> <span class="op">=</span> [<span class="fl">0.5</span> <span class="fl">0.5</span>]<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<table class="table">
+<thead>
+<tr class="header">
+<th>Angle</th>
+<th>Colour</th>
+<th style="text-align: left;">Index</th>
+<th style="text-align: left;">IdxAngle</th>
+<th>IdxColour</th>
+<th style="text-align: left;">Trial Factor</th>
+<th style="text-align: left;">Block Factor</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>-25</td>
+<td>1 0 0</td>
+<td style="text-align: left;">1</td>
+<td style="text-align: left;">1</td>
+<td>1</td>
+<td style="text-align: left;">Z</td>
+<td style="text-align: left;">A</td>
+</tr>
+<tr class="even">
+<td>0</td>
+<td>1 0 0</td>
+<td style="text-align: left;">3</td>
+<td style="text-align: left;">2</td>
+<td>1</td>
+<td style="text-align: left;">Y</td>
+<td style="text-align: left;">A</td>
+</tr>
+<tr class="odd">
+<td>25</td>
+<td>0 1 0</td>
+<td style="text-align: left;">6</td>
+<td style="text-align: left;">3</td>
+<td>2</td>
+<td style="text-align: left;">Y</td>
+<td style="text-align: left;">A</td>
+</tr>
+<tr class="even">
+<td>25</td>
+<td>1 0 0</td>
+<td style="text-align: left;">5</td>
+<td style="text-align: left;">3</td>
+<td>1</td>
+<td style="text-align: left;">Y</td>
+<td style="text-align: left;">A</td>
+</tr>
+<tr class="odd">
+<td>-25</td>
+<td>0 1 0</td>
+<td style="text-align: left;">2</td>
+<td style="text-align: left;">1</td>
+<td>2</td>
+<td style="text-align: left;">Z</td>
+<td style="text-align: left;">A</td>
+</tr>
+<tr class="even">
+<td>0</td>
+<td>0 1 0</td>
+<td style="text-align: left;">4</td>
+<td style="text-align: left;">2</td>
+<td>2</td>
+<td style="text-align: left;">Y</td>
+<td style="text-align: left;">A</td>
+</tr>
+<tr class="odd">
+<td>-25</td>
+<td>0 1 0</td>
+<td style="text-align: left;">2</td>
+<td style="text-align: left;">1</td>
+<td>2</td>
+<td style="text-align: left;">Y</td>
+<td style="text-align: left;">B</td>
+</tr>
+<tr class="even">
+<td>0</td>
+<td>0 1 0</td>
+<td style="text-align: left;">4</td>
+<td style="text-align: left;">2</td>
+<td>2</td>
+<td style="text-align: left;">Z</td>
+<td style="text-align: left;">B</td>
+</tr>
+<tr class="odd">
+<td>-25</td>
+<td>1 0 0</td>
+<td style="text-align: left;">1</td>
+<td style="text-align: left;">1</td>
+<td>1</td>
+<td style="text-align: left;">Z</td>
+<td style="text-align: left;">B</td>
+</tr>
+<tr class="even">
+<td>25</td>
+<td>0 1 0</td>
+<td style="text-align: left;">6</td>
+<td style="text-align: left;">3</td>
+<td>2</td>
+<td style="text-align: left;">Y</td>
+<td style="text-align: left;">B</td>
+</tr>
+<tr class="odd">
+<td>0</td>
+<td>1 0 0</td>
+<td style="text-align: left;">3</td>
+<td style="text-align: left;">2</td>
+<td>1</td>
+<td style="text-align: left;">Y</td>
+<td style="text-align: left;">B</td>
+</tr>
+<tr class="even">
+<td>25</td>
+<td>1 0 0</td>
+<td style="text-align: left;">5</td>
+<td style="text-align: left;">3</td>
+<td>1</td>
+<td style="text-align: left;">Y</td>
+<td style="text-align: left;">B</td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    target: function(trigger) {
+      return trigger.previousElementSibling;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>

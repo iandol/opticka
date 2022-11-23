@@ -575,7 +575,7 @@ classdef optickaCore < handle
 			if in.HasDefault
 				thisClass = class(in.DefaultValue);
 				if strcmpi(thisClass,'double') && length(in.DefaultValue) > 1
-					thisClass = 'double vector';
+					thisClass = '{[double vector],[]}';
 				end
 			elseif ~isempty(in.Validation) && ~isempty(in.Validation.Class)
 				thisClass = in.Validation.Class.Name;

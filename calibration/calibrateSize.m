@@ -19,8 +19,8 @@ function [dpi, dpc] = calibrateSize(theScreen, distance, mSize, forceLCD)
 if nargin>4 || nargout>2
 	error('Usage: [dpi, dpc] = calibrateSize(theScreen, distance, mSize, forceLCD)');
 end
-if nargin<1
-	theScreen=0;
+if nargin<1 || theScreen < 0
+	theScreen=max(Screen('Screens'));
 end
 if nargin<2
 	distance = 57.3;

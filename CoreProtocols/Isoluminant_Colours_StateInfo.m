@@ -306,7 +306,7 @@ fixExitFcn = {
 
 %--------------------what to run when we enter the stim presentation state
 stimEntryFcn = { 
-	@()syncTime(eT); %EDF sync message
+	@()doSyncTime(me); %EDF sync message
 	@()doStrobe(me,true)
 };  
 

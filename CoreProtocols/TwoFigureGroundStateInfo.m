@@ -115,7 +115,7 @@ prefixExitFcn = { @()statusMessage(eT,'Initiate Fixation...'); ... %status text 
 fixEntryFcn = { @()edit(obj.stimuli,6,'colourOut',[1 1 0]); ...
 	@()show(obj.stimuli); ...
 	@()startFixation(io); ...
-	@()syncTime(eT); ... %EDF sync message
+	@()doSyncTime(me); ... %EDF sync message
 	};
 
 %fix within
@@ -133,7 +133,7 @@ fixExitFcn = { @()updateFixationTarget(obj, tS.useTask, tS.targetFixInit, tS.tar
 	}; 
 
 %what to run when we enter the stim presentation state
-stimEntryFcn = @()doStrobe(obj,true);
+stimEntryFcn = { @()doStrobe(obj,true); };
 
 %what to run when we are showing stimuli
 stimFcn =  { @()draw(obj.stimuli); ...	@()drawEyePosition(eT); ...

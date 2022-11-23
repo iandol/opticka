@@ -78,7 +78,7 @@ classdef timeLogger < optickaCore
 			me.miss(idx) = [];
 			me.stimTime(idx) = [];
 			index=min([length(me.vbl) length(me.flip) length(me.show) length(me.stimTime)]);
-			try
+			try %#ok<*TRYNC> 
 				me.vbl=me.vbl(1:index);
 				me.show=me.show(1:index);
 				me.flip=me.flip(1:index);
@@ -91,14 +91,15 @@ classdef timeLogger < optickaCore
 		%> @brief print Log of the frame timings
 		% ===================================================================
 		function plot(me)
-			me.printRunLog();
+			printRunLog(me);
+			if ~isempty(me.messages); plotMessages(me);end
 		end
 		
 		% ===================================================================
 		%> @brief 
 		% ===================================================================
 		function logStim(me, name, tick)
-			if contains(name, me.stimStateNames)
+			if matches(name, me.stimStateNames)
 				me.stimTime(tick) = 1;
 			else
 				me.stimTime(tick) = 0;
@@ -118,8 +119,9 @@ classdef timeLogger < optickaCore
 			end
 			if isempty(me.messages); N = 1; else; N = length(me.messages)+1; end
 			me.messages(N).tick = tick;
-			me.messages(N).message = message;
+			me.messages(N).stimTime = me.stimTime(end);
 			me.messages(N).vbl = vbl;
+			me.messages(N).message = message;
 		end
 		
 		% ===================================================================
@@ -207,6 +209,61 @@ classdef timeLogger < optickaCore
 			box on; grid on; grid minor;
 			
 			clear vbl show flip index miss stimTime
+		end
+
+		% ===================================================================
+		%> @brief print messages
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function plotMessages(me)
+			if isempty(me.messages);return;end
+
+			msgs = cell(length(me.messages),4);
+			for i = 1:length(me.messages)
+				msgs{i,1} = me.messages(i).tick;
+				msgs{i,2} = me.messages(i).message;
+				msgs{i,3} = me.messages(i).vbl - me.startTime;
+				msgs{i,4} = me.messages(i).stimTime;
+			end
+			msgs = cell2table(msgs,'VariableNames',{'tick','message','vbl','stim'});
+
+			h = build_gui();
+			
+			set(h.uitable1,'Data',msgs);
+
+			function h = build_gui()
+				fsmall = 12;
+				if ismac
+					mfont = 'menlo';
+				elseif ispc
+					mfont = 'consolas';
+				else %linux
+					mfont = 'Ubuntu Mono';
+				end
+				h.figure1 = uifigure( ...
+					'Tag', 'sSLog', ...
+					'Units', 'normalized', ...
+					'Position', [0.6 0 0.4 0.2], ...
+					'Name', ['Log: ' me.fullName], ...
+					'MenuBar', 'none', ...
+					'NumberTitle', 'off', ...
+					'Color', [0.94 0.94 0.94], ...
+					'Resize', 'on');
+				h.uitable1 = uitable( ...
+					'Parent', h.figure1, ...
+					'Tag', 'uitable1', ...
+					'Units', 'normalized', ...
+					'Position', [0 0 1 1], ...
+					'FontName', mfont, ...
+					'FontSize', fsmall, ...
+					'RowName', 'numbered',...
+					'BackgroundColor', [1 1 1;0.95 0.95 0.95], ...
+					'RowStriping','on', ...
+					'ColumnEditable', [], ...
+					'ColumnWidth', {'auto'});
+			end
 		end
 		
 		% ===================================================================

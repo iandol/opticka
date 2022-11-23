@@ -1542,17 +1542,18 @@ classdef tobiiManager < optickaCore
 		%> @brief draw general status
 		%>
 		% ===================================================================
-		function trackerDrawStatus(me, comment, stimPos)
+		function trackerDrawStatus(me, comment, stimPos, dontclear)
 			if ~me.isConnected || ~me.operatorScreen.isOpen; return;end
 			if ~exist('comment','var'); comment=''; end
 			if ~exist('stimPos','var'); stimPos = struct; end
+			if ~exist('dontclear','var'); dontclear = 0; end
 			trackerClearScreen(me);
 			trackerDrawExclusion(me);
 			trackerDrawFixation(me);
 			trackerDrawStimuli(me,stimPos);
 			trackerDrawEyePositions(me);
 			if ~isempty(comment);trackerDrawText(me, comment);end
-			trackerFlip(me,1);
+			trackerFlip(me,dontclear);
 		end
 		
 		% ===================================================================
@@ -1565,19 +1566,17 @@ classdef tobiiManager < optickaCore
 				me.stimulusPositions = ts;
 			end
 			if isempty(me.stimulusPositions) || isempty(fieldnames(me.stimulusPositions));return;end
-			if ~exist('clearScreen','var')
-				clearScreen = false;
-			end
+			if ~exist('clearScreen','var');clearScreen = false;end
 			if clearScreen; trackerClearScreen(me); end
 			for i = 1:length(me.stimulusPositions)
-				x = me.stimulusPositions(i).x; 
-				y = me.stimulusPositions(i).y; 
+				x = me.stimulusPositions(i).x;
+				y = me.stimulusPositions(i).y;
 				size = me.stimulusPositions(i).size;
 				if isempty(size); size = 1 * me.ppd_; end
 				if me.stimulusPositions(i).selected == true
-					drawBox(me.operatorScreen,[x; y],size,[0.5 1 0]);
+					drawBoxPx(me.operatorScreen,[x; y],size,[0.5 1 0 0.5]);
 				else
-					drawBox(me.operatorScreen,[x; y],size,[0.6 0.6 0]);
+					drawBoxPx(me.operatorScreen,[x; y],size,[0.6 0.6 0.3]);
 				end
 			end			
 		end
@@ -1654,10 +1653,10 @@ classdef tobiiManager < optickaCore
 		%> @brief draw the fixation box on the tracker display
 		%>
 		% ===================================================================
-		function trackerFlip(me,clear)
+		function trackerFlip(me,dontclear)
 			if ~me.isConnected || ~me.operatorScreen.isOpen; return; end
-			if ~exist('clear','var');clear = 0; end
-			me.operatorScreen.flip([],clear,2);
+			if ~exist('clear','var');dontclear = 0; end
+			me.operatorScreen.flip([], dontclear, 2);
 		end
 		
 		% ===================================================================

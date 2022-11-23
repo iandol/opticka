@@ -300,8 +300,8 @@ fixExitFcn = {
 
 %====================================================STIMULUS
 stimEntryFcn = {
-	% send an eyeTracker sync message (reset time to 0)
-	@()syncTime(eT);
+	% send an eyeTracker sync message (reset relative time to 0 after first flip of this state)
+	@()doSyncTime(me);
 	% send stimulus value strobe
 	@()doStrobe(me,true);
 };

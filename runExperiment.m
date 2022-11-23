@@ -134,6 +134,8 @@ classdef runExperiment < optickaCore
 		sendSyncTime logical		= false
 		%> do we flip the screen or not?
 		doFlip logical				= true
+		%> do we flip the eyetracker window? 0=no 1=yes 2=yes+clear
+		doTrackerFlip double		= 0;
 		%> stateMachine
 		stateMachine
 		%> eyetracker manager object
@@ -536,7 +538,6 @@ classdef runExperiment < optickaCore
 			global rM %#ok<*GVMIS> %global reward manager we can share with eyetracker 
 			global aM %global audio manager we can share with eyetracker
 
-
 			refreshScreen(me);
 			initialiseSaveFile(me); %generate a savePrefix for this run
 			me.name = [me.subjectName '-' me.savePrefix]; %give us a run name
@@ -657,6 +658,7 @@ classdef runExperiment < optickaCore
 					me.fInc = 8;
 				end
 				stims.verbose			= me.verbose;
+				tL.preAllocate(me.screenVals.fps*60*60);
 				setup(stims); %run setup() for each stimulus
 				task.fps				= s.screenVals.fps;
 				
@@ -682,6 +684,7 @@ classdef runExperiment < optickaCore
 				%---------initialise the state machine
 				sM						= stateMachine('verbose',me.verbose,'realTime',true,'timeDelta',1e-4,'name',me.name); 
 				me.stateMachine			= sM;
+				sM.fnTimers				= me.logFrames; %if we record flips also record fn evaluations
 				if isempty(me.stateInfoFile) || ~exist(me.stateInfoFile,'file') || strcmp(me.stateInfoFile, 'DefaultStateInfo.m')
 					me.stateInfoFile = [me.paths.root filesep 'DefaultStateInfo.m'];
 					me.paths.stateInfoFile = me.stateInfoFile; 
@@ -790,6 +793,8 @@ classdef runExperiment < optickaCore
 				tS.initialTaskIdx.comment	= 'This is the task index before the task starts, it may be modified by resetRun() during task...';
 				tS.initialTaskIdx.index		= task.outIndex;
 				tS.initialTaskIdx.vars		= task.outValues;
+				tS.tobiiFlipRate		= 5;
+				thisTobiiFlip			= 1;
 				
 				%-----double check the labJackT handle is still valid
 				if isa(io','labJackT') && ~io.isHandleValid
@@ -801,13 +806,13 @@ classdef runExperiment < optickaCore
 				%---------set up our behavioural plot
 				if tS.showBehaviourPlot; createPlot(bR, eT); drawnow; end
 
-				%-----take over the keyboard + bump priority
+				%-----take over the keyboard + max priority
 				KbReleaseWait; %make sure keyboard keys are all released
-				if ~isdeployed; commandwindow; end
 				if me.debug == false
 					%warning('off'); %#ok<*WNOFF>
 					ListenChar(-1); %2=capture all keystrokes
 				end
+				if ~isdeployed; commandwindow; end
 				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
 
 				%-----profiling starts here if uncommented
@@ -870,11 +875,13 @@ classdef runExperiment < optickaCore
 						% enabled.
 						nextvbl = tL.vbl(end) + me.screenVals.halfisi;
 						if me.logFrames == true
-							[tL.vbl(tS.totalTicks),tL.show(tS.totalTicks),tL.flip(tS.totalTicks),tL.miss(tS.totalTicks)] = Screen('Flip', s.win, nextvbl);
+							[tL.vbl(tS.totalTicks),tL.show(tS.totalTicks),...
+							tL.flip(tS.totalTicks),tL.miss(tS.totalTicks)] ...
+							= Screen('Flip', s.win, nextvbl);
 						elseif me.benchmark == true
 							tL.vbl = Screen('Flip', s.win, 0, 2, 2);
 						else
-							tL.vbl = Screen('Flip', s.win, nextvbl);
+							[tL.vbl, tL.show, tL.flip, tL.miss] = Screen('Flip', s.win, nextvbl);
 						end
 
 						%-----LabJack: I/O needs to send strobe immediately
@@ -894,10 +901,19 @@ classdef runExperiment < optickaCore
 						
 						%----- increment our global tick counter
 						tS.totalTicks = tS.totalTicks + 1; tL.tick = tS.totalTicks;
+
+						%-------If we missed a frame record it somewhere
+						if tL.miss(end) > 0; addMessage(tL,[],[],'We missed a frame'); end
 					else % me.doFlip == FALSE
 						% still wait for IFI time
-						WaitSecs('YieldSecs', s.screenVals.ifi);
+						WaitSecs(s.screenVals.ifi);
 					end
+
+					if me.doTrackerFlip > -1 && thisTobiiFlip >= tS.tobiiFlipRate
+						trackerFlip(eT, me.doTrackerFlip)
+						thisTobiiFlip = 1;
+					end
+					thisTobiiFlip = thisTobiiFlip + 1;
 					
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				end %======================END OF TASK LOOP=========================
@@ -924,11 +940,10 @@ classdef runExperiment < optickaCore
 					show(stims); %make all stimuli visible again, useful for editing 
 				end
 				
-				%notify(me,'endAllRuns');
 				me.isRunning = false;
 				
 				%-----get our profiling report for our task loop
-				%profile off; profile report; profile clear
+				%profile off; profile viewer;
 				
 				if me.useDisplayPP || me.useDataPixx
 					pauseRecording(io); %pause plexon
@@ -970,6 +985,7 @@ classdef runExperiment < optickaCore
 					end
 				end
 				
+				removeEmptyValues(tL);
 				me.tS = tS; %store our tS structure for backup
 				
 				%------SAVE the DATA
@@ -1117,9 +1133,9 @@ classdef runExperiment < optickaCore
 		%>
 		% ===================================================================
 			if isa(me.taskLog,'timeLogger') && me.taskLog.vbl(1) ~= 0
-				me.taskLog.printRunLog;
+				me.taskLog.plot;
 			elseif isa(me.runLog,'timeLogger') && me.runLog.vbl(1) ~= 0
-				me.runLog.printRunLog;
+				me.runLog.plot;
 			else
 				warndlg('No log available yet...');
 			end
@@ -1331,6 +1347,17 @@ classdef runExperiment < optickaCore
 		%> 
 		% ===================================================================
 			me.sendSyncTime = true;
+		end
+
+		% ===================================================================
+		function flipTracker(me, value)
+		%> @fn enableFlipTracker
+		%>
+		%> enables the flip for the tracker display window
+		%> @param value true or false
+		% ===================================================================
+			if ~exist('value','var'); value = 0; end
+			me.doTrackerFlip = value;
 		end
 		
 		% ===================================================================

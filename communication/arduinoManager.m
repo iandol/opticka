@@ -118,7 +118,7 @@ classdef arduinoManager < optickaCore
 				else
 					me.deviceID = me.port;
 					me.isOpen = true;
-					setLow(me);
+
 				end
 				if me.openGUI; GUI(me); end
 				me.silentMode = false;
@@ -131,7 +131,7 @@ classdef arduinoManager < optickaCore
 
 		%===============CLOSE DEVICE================%
 		function close(me)
-			try me.device = []; end
+			try me.device = []; end %#ok<*TRYNC> 
 			try close(me.handles.parent); me.handles=[];end
 			me.deviceID = '';
 			me.availablePins = '';
@@ -164,7 +164,7 @@ classdef arduinoManager < optickaCore
 		%===============PIN MODE================%
 		function pinMode(me, line, mode)
 			if ~me.isOpen || me.silentMode; return; end
-			if nargin == 3 && ischar(mode)
+			if nargin == 3
 				pinMode(me.device, line, mode);
 			elseif nargin == 2
 				pinMode(me.device, line);

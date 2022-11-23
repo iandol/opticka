@@ -114,6 +114,7 @@ classdef taskSequence < optickaCore & dynamicprops
 		taskFinished logical	= false
 		%> which seed values were used?
 		usedSeeds double		= []
+		dataTable table
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Transient = true, Hidden = true)
@@ -235,7 +236,7 @@ classdef taskSequence < optickaCore & dynamicprops
 		% ===================================================================
 		function randomiseTask(me)
 		%> @fn randomiseTask
-		%> @brief Do the randomisation
+		%> @brief Do the main randomisation
 		%>
 		%> This method will take the parameters in nVar, blockVar and
 		%> trialVar and perform the randomisation and balancing.
@@ -407,6 +408,7 @@ classdef taskSequence < optickaCore & dynamicprops
 				end
 			end
 			
+			buildTable(me); %for display
 			me.salutation('randomiseTask', sprintf('Took %g ms',toc(rSTime)*1000), true);
 			
 		end
@@ -720,7 +722,6 @@ classdef taskSequence < optickaCore & dynamicprops
 		% ===================================================================
 			me.makeLabels();
 			me.h = struct();
-			outvals = me.outValues;
 			if me.nRuns > 17
 				build_gui(0.7);
 			elseif me.nRuns > 10
@@ -728,45 +729,10 @@ classdef taskSequence < optickaCore & dynamicprops
 			else
 				build_gui(0.25);
 			end
-			data = cell(size(outvals,1),(size(outvals,2)*2)+3);
-			a = 1;
-			for i = 1:size(outvals,1)
-				for j = 1:me.nVars
-					if iscell(outvals{i,j})
-						data{i,j} = num2str(outvals{i,j}{1},'%2.3g ');
-					elseif length(outvals{i,j}) > 1
-						data{i,j} = num2str(outvals{i,j},'%2.3g ');
-					else
-						data{i,j} = outvals{i,j};
-					end
-				end
-				data{i,me.nVars+1} = me.outIndex(i);
-				for k = 1:size(me.outMap,2)
-					data{i,me.nVars+(k+1)} = me.outMap(i,k);
-				end
-				data{i,end-1} = me.outTrial{i};
-				if i > a * me.minTrials
-					a = a + 1;
-				end
-				data{i,end} = me.outBlock{a};
-			end
-		
-			if isempty(data)
-				data = table({'No task variables set!'}, 'VariableNames', {'Independent Variable'});
-			else
-				cnames = cell(1,me.nVars);
-				for ii = 1:me.nVars
-					cnames{ii} = [me.nVar(ii).name num2str(me.nVar(ii).stimulus,'-%i')];
-				end
-				cnames{end+1} = 'outIndex';
-				for ii = 1:size(me.outMap,2)
-					cnames{end+1} = ['Var' num2str(ii) 'Index'];
-				end
-				cnames{end+1} = 'Trial Factors';
-				cnames{end+1} = 'Block Factors';
-				data = cell2table(data,'VariableNames',cnames);
-			end
-			set(me.h.uitable1,'Data',data);
+
+			buildTable(me);
+			
+			set(me.h.uitable1,'Data',me.dataTable);
 			
 			function build_gui(heightin)
 				fsmall = 12;
@@ -775,7 +741,7 @@ classdef taskSequence < optickaCore & dynamicprops
 				elseif ispc
 					mfont = 'consolas';
 				else %linux
-					mfont = 'Liberation Mono';
+					mfont = 'Ubuntu Mono';
 				end
 				me.h.figure1 = uifigure( ...
 					'Tag', 'sSLog', ...
@@ -879,6 +845,52 @@ classdef taskSequence < optickaCore & dynamicprops
 	%=======================================================================
 	methods ( Access = private ) %------PRIVATE METHODS
 	%=======================================================================
+		
+		% ===================================================================
+		function buildTable(me)
+		%> @fn buildTable
+		%> @brief buildTable builds a table of the variable trials + blocks
+		%>
+		% ===================================================================
+			if me.nVars == 0
+				me.dataTable = table({'No task variables set!'}, 'VariableNames', {'Independent Variable'});
+				return
+			end
+			outvals = me.outValues;
+			data = cell(size(outvals,1),(size(outvals,2)*2)+3);
+			a = 1;
+			for i = 1:size(outvals,1)
+				for j = 1:me.nVars
+					if iscell(outvals{i,j})
+						data{i,j} = num2str(outvals{i,j}{1},'%2.3g ');
+					elseif length(outvals{i,j}) > 1
+						data{i,j} = num2str(outvals{i,j},'%2.3g ');
+					else
+						data{i,j} = outvals{i,j};
+					end
+				end
+				data{i,me.nVars+1} = me.outIndex(i);
+				for k = 1:size(me.outMap,2)
+					data{i,me.nVars+(k+1)} = me.outMap(i,k);
+				end
+				data{i,end-1} = me.outTrial{i};
+				if i > a * me.minTrials
+					a = a + 1;
+				end
+				data{i,end} = me.outBlock{a};
+			end
+			cnames = cell(1,me.nVars);
+			for ii = 1:me.nVars
+				cnames{ii} = [me.nVar(ii).name num2str(me.nVar(ii).stimulus,'-%i')];
+			end
+			cnames{end+1} = 'outIndex';
+			for ii = 1:size(me.outMap,2)
+				cnames{end+1} = ['Var' num2str(ii) 'Index'];
+			end
+			cnames{end+1} = 'Trial Factors';
+			cnames{end+1} = 'Block Factors';
+			me.dataTable = cell2table(data,'VariableNames',cnames);
+		end
 		
 		% ===================================================================
 		function makeLabels(me)

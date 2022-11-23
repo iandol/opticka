@@ -142,8 +142,10 @@ fixExitFcn = {
 
 %what to run when we enter the stim presentation state
 stimEntryFcn = {
-	@()syncTime(eT); %EDF sync message
-	@()sendStrobe(io);
+	% send an eyeTracker sync message (reset relative time to 0 after first flip of this state)
+	@()doSyncTime(me);
+	% send stimulus value strobe
+	@()doStrobe(me,true);
 };
 
 %what to run when we are showing stimuli

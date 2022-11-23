@@ -309,10 +309,7 @@ fixEntryFn = {
 	% you can add any other messages, such as stimulus values as needed,
 	% e.g. @()trackerMessage(eT,['MSG:ANGLE' num2str(stims{1}.angleOut)])
 	% draw to the eyetracker display
-	@()trackerClearScreen(eT); % blank the eyelink screen
-	@()trackerDrawFixation(eT); %draw fixation window on eyelink computer
-	@()trackerDrawStimuli(eT,stims.stimulusPositions); %draw location of stimulus on eyelink
-	@()statusMessage(eT,'Initiate Fixation...'); %status text on the eyelink
+	@()trackerDrawStatus(eT,'Init Fix...', stims.stimulusPositions);
 	% show the LAST stimulus in the list (should be the fixation cross)
 	@()show(stims{tS.nStims}); 
 	@()logRun(me,'INITFIX');
@@ -343,14 +340,14 @@ fixExitFn = {
 	% reset fixation timers to maintain fixation for tS.stimulusFixTime seconds
 	@()updateFixationValues(eT,[],[],[],tS.stimulusFixTime); 
 	@()show(stims); % show all stims
-	@()trackerMessage(eT,'END_FIX');
+	@()trackerMessage(eT,'END_FIX'); %eyetracker message saved to data stream
 }; 
 
 %====================================================STIMULUS
 stimEntryFn = {
-	% send an eyeTracker sync message (reset time to 0)
-	@()syncTime(eT);
-	% send stimulus value strobe
+	% send an eyeTracker sync message (reset relative time to 0 after first flip of this state)
+	@()doSyncTime(me);
+	% send stimulus value strobe (value set by updateVariables(me) function)
 	@()doStrobe(me,true);
 };
 

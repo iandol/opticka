@@ -1332,6 +1332,33 @@ classdef screenManager < optickaCore
 			end
 			Screen('FillRect', me.win, colour, rect);
 		end
+
+		% ===================================================================
+		%> @brief draw box specified with x and y and size in pixels
+		%>
+		%> @param xy X is row1 and Y is row2 in px
+		%> @param size in px
+		%> @param colour RGB[A], use columns for multiple colours
+		%> @return
+		% ===================================================================
+		function drawBoxPx(me,xy,boxsize,colour)
+			% drawBox(me, xy, size, colour)
+			if ~exist('xy','var');return;end
+			if ~exist('size','var') || isempty(boxsize); boxsize = 2; end
+			if ~exist('colour','var') || isempty(colour); colour = [1 1 0.75]'; end
+			if length(boxsize) == 1
+				xbs = boxsize;
+				ybs = boxsize;
+			else
+				xbs = boxsize(1);
+				ybs = boxsize(2);
+			end
+			for i = 1:size(xy,2)
+				rect(:,i) = [0 0 xbs ybs]';
+				rect(:,i) = CenterRectOnPointd(rect(:,i),xy(1,i),xy(2,i));
+			end
+			Screen('FillRect', me.win, colour, rect);
+		end
 		
 		% ===================================================================
 		%> @brief draw Rect specified in degrees

@@ -83,7 +83,7 @@ fixEntryFcn = { @()statusMessage(eT,'Initiate Fixation...'); ... %status text on
 	@()edfMessage(eT,'V_RT MESSAGE END_FIX END_RT'); ...
 	@()edfMessage(eT,['TRIALID ' num2str(getTaskIndex(obj))]); ...
 	@()startRecording(eT); ... %fire up eyelink
-	@()syncTime(eT); ... %EDF sync message
+	@()doSyncTime(me); ... %EDF sync message
 	@()draw(obj.stimuli); ... %draw stimulus
 	};
 

@@ -84,6 +84,8 @@ classdef stateMachine < optickaCore
 		verbose						= false
 		%> pause function (WaitSecs from PTB is optimal…)
 		waitFcn function_handle		= @WaitSecs
+		%> do we run timers for function evaluations?
+		fnTimers logical			= true
 	end
 	
 	properties (SetAccess = protected, GetAccess = public, Transient = true)
@@ -599,13 +601,13 @@ classdef stateMachine < optickaCore
 		%> @return
 		% ===================================================================
 		function exitCurrentState(me)
-			tt=tic;
+			if me.fnTimers; tt=tic; end
 			if ~me.currentState.skipExitFcn 
 				for i = 1:length(me.currentState.exitFcn) %nested class
 					me.currentState.exitFcn{i}();
 				end
 			end
-			me.fevalTime.exit = toc(tt)*1000;
+			if me.fnTimers; me.fevalTime.exit = toc(tt)*1000; end
 			
 			storeCurrentStateInfo(me);
 			me.tempNextState = '';
@@ -643,7 +645,7 @@ classdef stateMachine < optickaCore
 				me.nextTimeOut = me.currentEntryTime + thisState.time;
 				me.nextTickOut = round(thisState.time / me.timeDelta);
 					
-				tt=tic;	%run our enter state functions
+				if me.fnTimers; tt=tic; end	%run our enter state functions
 				for i = 1:length(thisState.entryFcn)
 					thisState.entryFcn{i}();
 				end
@@ -651,7 +653,7 @@ classdef stateMachine < optickaCore
 				for i = 1:length(thisState.withinFcn) %nested class
 					thisState.withinFcn{i}();
 				end
-				me.fevalTime.enter = toc(tt)*1000;
+				if me.fnTimers; me.fevalTime.enter = toc(tt)*1000; end
 				
 				if me.verbose; me.salutation(['Enter state: ' me.currentName ' @ ' num2str(me.currentEntryTime-me.startTime) 'secs / ' num2str(me.totalTicks) 'ticks'],'',false); end
 
@@ -681,7 +683,7 @@ classdef stateMachine < optickaCore
 			me.log(end).totalTime = me.log(end).entryTime - me.startTime;
 			me.log(end).timeError = me.log(end).tnow - me.log(end).nextTimeOut;
 			me.log(end).tickError = me.log(end).tick - me.log(end).nextTickOut;
-			me.log(end).fevalTime = me.fevalTime;
+			if ~isempty(me.fevalTime);me.log(end).fevalTime = me.fevalTime;end
 			me.log(end).tempNextState = me.tempNextState;
 		end
 		

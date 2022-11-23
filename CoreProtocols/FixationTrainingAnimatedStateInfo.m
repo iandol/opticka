@@ -257,6 +257,7 @@ psEntryFn = {
 	@()trackerMessage(eT,sprintf('TRIALID %i',getTaskIndex(me))); %Eyelink start trial marker
 	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
 	@()trackerDrawStatus(eT,'Prestim...', stims.stimulusPositions);
+	@()flipTracker(me,1); %for tobii show info if operator screen enabled
 	@()logRun(me,'PREFIX'); %fprintf current trial info to command window
 };
 
@@ -264,7 +265,6 @@ psEntryFn = {
 prestimulusFn = {
 	@()drawBackground(s); % only draw a background colour to the PTB screen
 	@()trackerDrawEyePosition(eT); % draw the fixation window
-	@()trackerFlip(eT,1); %for tobii show info if operator screen enabled
 };
 
 %---------------------exiting prestimulus state
@@ -276,8 +276,8 @@ psExitFn = {
 %====================================================TARGET STIMULUS ALONE
 %---------------------stimulus entry state
 stimEntryFn = {
-	@()logRun(me,'SHOW Fixation Target'); % log start to command window
-	@()syncTime(eT);
+	@()logRun(me,'SHOW Target'); % log start to command window
+	@()doSyncTime(me);
 };
 
 %---------------------stimulus within state
@@ -285,7 +285,6 @@ stimFn = {
 	@()draw(stims); % draw the stimuli
 	@()animate(stims); % animate stimuli for subsequent draw
 	@()trackerDrawEyePosition(eT); % draw the fixation window
-	@()trackerFlip(eT,1); %for tobii show info if operator screen enabled
 };
 
 %-----------------------test we are maintaining fixation
@@ -313,7 +312,8 @@ correctEntryFn = {
 	@()timedTTL(rM, tS.rewardPin, tS.rewardTime); % send a reward TTL
 	@()beep(aM,2000); % correct beep
 	@()trackerMessage(eT,['TRIAL_RESULT ' num2str(tS.CORRECT)]); % tell EDF trial was a correct
-	@()trackerDrawStatus(eT,'Correct! :-)', stims.stimulusPositions);
+	@()trackerDrawStatus(eT,'CORRECT! :-)', stims.stimulusPositions, 0);
+	@()flipTracker(me,0); %for tobii stop flip
 	@()stopRecording(eT); % stop recording for this trial
 	@()setOffline(eT); %set eyelink offline
 	@()needEyeSample(me,false); % no need to collect eye data until we start the next trial
@@ -341,7 +341,8 @@ correctExitFn = {
 breakEntryFn = {
 	@()beep(aM,400,0.5,1);
 	@()trackerMessage(eT,['TRIAL_RESULT ' num2str(tS.BREAKFIX)]); %trial incorrect message
-	@()trackerDrawStatus(eT,'BREAK! :-(', stims.stimulusPositions);
+	@()trackerDrawStatus(eT,'BREAK! :-(', stims.stimulusPositions, 0);
+	@()flipTracker(me,0); %for tobii stop flip
 	@()stopRecording(eT); %stop eyelink recording data
 	@()setOffline(eT); %set eyelink offline
 	@()needEyeSample(me,false);
@@ -353,7 +354,8 @@ breakEntryFn = {
 incEntryFn = { 
 	@()beep(aM,400,0.5,1);
 	@()trackerMessage(eT,['TRIAL_RESULT ' num2str(tS.INCORRECT)]); %trial incorrect message
-	@()trackerDrawStatus(eT,'BREAK! :-(', stims.stimulusPositions);
+	@()trackerDrawStatus(eT,'INCORRECT! :-(', stims.stimulusPositions, 0);
+	@()flipTracker(me,0); %for tobii stop flipping
 	@()stopRecording(eT); %stop eyelink recording data
 	@()setOffline(eT); %set eyelink offline
 	@()needEyeSample(me,false);
