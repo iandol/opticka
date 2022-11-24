@@ -12,6 +12,7 @@ classdef timeLogger < optickaCore
 		miss			= 0
 		stimTime		= 0
 		tick			= 0
+		lastvbl			= 0
 		tickInfo		= 0
 		startTime		= 0
 		startRun		= 0
@@ -113,7 +114,7 @@ classdef timeLogger < optickaCore
 			if ~exist('message','var'); return; end
 			if ~exist('tick','var') || isempty(tick); tick = me.tick; end
 			if (~exist('vbl','var') || isempty(vbl)) && ~isempty(me.vbl)
-				vbl = me.vbl(end); 
+				vbl = me.lastvbl; 
 			else
 				vbl = GetSecs;
 			end
@@ -227,7 +228,7 @@ classdef timeLogger < optickaCore
 				msgs{i,3} = me.messages(i).vbl - me.startTime;
 				msgs{i,4} = me.messages(i).stimTime;
 			end
-			msgs = cell2table(msgs,'VariableNames',{'tick','message','vbl','stim'});
+			msgs = cell2table(msgs,'VariableNames',{'Tick','Message','Time','Stimulus ON?'});
 
 			h = build_gui();
 			

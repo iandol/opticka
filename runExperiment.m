@@ -113,6 +113,8 @@ classdef runExperiment < optickaCore
 		tobiisettings
 		%> turn diary on for runTask, saved to the same folder as the data
 		diaryMode logical		= false
+		%> opticka version, passed on first use by opticka
+		optickaVersion char
 	end
 
 	properties (Transient = true, Hidden = true)
@@ -403,13 +405,16 @@ classdef runExperiment < optickaCore
 					end
 					
 					%======= FLIP: Show it at correct retrace: ========%
-					nextvbl = tL.vbl(end) + me.screenVals.halfisi;
+					nextvbl = tL.lastvbl + me.screenVals.halfisi;
 					if me.logFrames == true
 						[tL.vbl(me.task.tick),tL.show(me.task.tick),tL.flip(me.task.tick),tL.miss(me.task.tick)] = Screen('Flip', s.win, nextvbl);
+						tL.lastvbl = tL.vbl(me.task.tick);
 					elseif me.benchmark == true
 						tL.vbl = Screen('Flip', s.win, 0, 2, 2);
+						tL.lastvbl = tL.vbl;
 					else
 						tL.vbl = Screen('Flip', s.win, nextvbl);
+						tL.lastvbl = tL.vbl;
 					end
 					
 					%===================Logging=======================%
@@ -873,22 +878,25 @@ classdef runExperiment < optickaCore
 						end
 						%------Do the actual Screen flip, save times if
 						% enabled.
-						nextvbl = tL.vbl(end) + me.screenVals.halfisi;
+						nextvbl = tL.lastvbl + me.screenVals.halfisi;
 						if me.logFrames == true
 							[tL.vbl(tS.totalTicks),tL.show(tS.totalTicks),...
 							tL.flip(tS.totalTicks),tL.miss(tS.totalTicks)] ...
 							= Screen('Flip', s.win, nextvbl);
-						elseif me.benchmark == true
-							tL.vbl = Screen('Flip', s.win, 0, 2, 2);
-						else
+							tL.lastvbl = tL.vbl(tS.totalTicks);
+						elseif ~me.benchmark
 							[tL.vbl, tL.show, tL.flip, tL.miss] = Screen('Flip', s.win, nextvbl);
+							tL.lastvbl = tL.vbl;
+						else
+							tL.vbl = Screen('Flip', s.win, 0, 2, 2);
+							tL.lastvbl = tL.vbl;
 						end
 
 						%-----LabJack: I/O needs to send strobe immediately
 						% after screen flip
 						if me.sendStrobe && me.useLabJackTStrobe
 							sendStrobe(io); me.sendStrobe = false;
-							%Eyelink('Message', sprintf('MSG:SYNCSTROBE value:%i @ vbl:%20.40g / totalTicks: %i', io.sendValue, tL.vbl(end), tS.totalTicks));
+							%Eyelink('Message', sprintf('MSG:SYNCSTROBE value:%i @ vbl:%20.40g / totalTicks: %i', io.sendValue, tL.lastvbl, tS.totalTicks));
 						end
 
 						%----- Send Eyetracker messages
@@ -2012,7 +2020,7 @@ classdef runExperiment < optickaCore
 			end
 			if isempty(me.task.outValues)
 				t = sprintf('%s | Time: %3.3f (%i) | isFix: %i | isExclusion: %i | isFixInit: %i',...
-					name,(log.vbl(end)-log.startTime), log.tick,...
+					name,(log.vbl(log.tick-1)-log.startTime), log.tick-1,...
 					me.eyeTracker.isFix,me.eyeTracker.isExclusion,me.eyeTracker.isInitFail);
 				return
 			else
@@ -2022,7 +2030,7 @@ classdef runExperiment < optickaCore
 				t=sprintf('%s | B:%i R:%i [%i/%i] | V: %i | Time: %3.3f (%i) %s',...
 					name,me.task.thisBlock, me.task.thisRun, me.task.totalRuns,...
 					me.task.nRuns, var, ...
-					(log.vbl(end)-log.startTime), log.tick,...
+					(log.vbl(log.tick-1)-log.startTime), log.tick-1,...
 					etinfo);
 			else
 				t=sprintf('%s | B:%i R:%i [%i/%i] | V: %i | Time: %3.3f (%i) %s',...

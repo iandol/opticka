@@ -336,6 +336,7 @@ classdef opticka < optickaCore
 					%drawnow
 				end
 				me.r = runExperiment();
+				me.r.optickaVersion = me.optickaVersion;
 				initialise(me.r); % set up the runExperiment object
 				s=cell(me.r.screen.maxScreen+1,1);
 				for i=0:me.r.screen.maxScreen

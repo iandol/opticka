@@ -75,10 +75,11 @@ classdef behaviouralRecord < optickaCore
 		%> 
 		%> 
 		% ===================================================================
-		function plot(me)
+		function plotPerformance(me)
 			me.plotOnly = true;
 			createPlot(me);
 			updatePlot(me);
+			plot(me);
 			me.plotOnly = false;
 		end
 		
@@ -162,57 +163,68 @@ classdef behaviouralRecord < optickaCore
 		end
 		
 		% ===================================================================
-		function updatePlot(me, rE, drawNow)
+		function updatePlot(me, rE)
 		%> @fn  updatePlot 
-		%> @brief updates the behaviouralRecord plot
+		%> @brief updates the behaviouralRecord details, use drawPlot() to draw it
 		%> 
 		%> @param rE runExperiment object
 		% ===================================================================
-			if ~me.isOpen; return; end
-			if ~exist('drawNow','var'); drawNow = true; end
 			if exist('rE','var') && isa(rE,"runExperiment")
 				sM = rE.stateMachine;
 				eT = rE.eyeTracker;
+			end	
+			if me.tick == 1
+				reset(me);
+				me.startTime = datetime('now');
 			end
-
-			%-----profiling starts here if uncommented
-			%tt = tic; profile clear; profile on; 
-
-			if ~me.plotOnly
-				if me.tick == 1
-					reset(me);
-					me.startTime = datetime('now');
-				end
-				if exist('sM','var')
-					if ~isempty(regexpi(sM.currentName,me.correctStateName,'once'))
-						me.response(me.tick) = me.correctStateValue;
-						me.rt1(me.tick) = sM.log(end).stateTimeToNow * 1e3;
-					elseif ~isempty(regexpi(sM.currentName,me.breakStateName,'once'))
-						me.response(me.tick) = me.breakStateValue;
-						me.rt1(me.tick) = 0;
-					else
-						me.response(me.tick) = 0;
-						me.rt1(me.tick) = 0;
-					end
+			if exist('sM','var')
+				if ~isempty(regexpi(sM.currentName,me.correctStateName,'once'))
+					me.response(me.tick) = me.correctStateValue;
+					me.rt1(me.tick) = sM.log(end).stateTimeToNow * 1e3;
+				elseif ~isempty(regexpi(sM.currentName,me.breakStateName,'once'))
+					me.response(me.tick) = me.breakStateValue;
+					me.rt1(me.tick) = 0;
 				else
-					me.response(me.tick) = NaN;
-					me.rt1(me.tick) = NaN;
+					me.response(me.tick) = 0;
+					me.rt1(me.tick) = 0;
 				end
-				if exist('eT','var')
-					me.rt2(me.tick) = eT.fixInitLength * 1e3;
-					me.radius(me.tick) = eT.fixation.radius;
-					me.time(me.tick) = mean(eT.fixation.time);
-					me.inittime(me.tick) = eT.fixation.initTime;
-					me.xAll = eT.xAll;
-					me.yAll = eT.yAll;
-				else
-					me.rt2(me.tick) = NaN;
-					me.radius(me.tick) = NaN;
-					me.time(me.tick) = NaN;
-					me.inittime(me.tick) = NaN;
-				end
+			else
+				me.response(me.tick) = NaN;
+				me.rt1(me.tick) = NaN;
 			end
-			
+			if exist('eT','var')
+				me.rt2(me.tick) = eT.fixInitLength * 1e3;
+				me.radius(me.tick) = eT.fixation.radius;
+				me.time(me.tick) = mean(eT.fixation.time);
+				me.inittime(me.tick) = eT.fixation.initTime;
+				me.xAll = eT.xAll;
+				me.yAll = eT.yAll;
+			else
+				me.rt2(me.tick) = NaN;
+				me.radius(me.tick) = NaN;
+				me.time(me.tick) = NaN;
+				me.inittime(me.tick) = NaN;
+			end
+			if ~isempty(me.response)
+				n = length(me.response);
+				me.trials(n).now = datetime('now');
+				me.trials(n).info = me.info;
+				me.trials(n).tick = me.tick;
+				me.trials(n).comment = me.comment;
+				me.trials(n).response = me.response(n);
+				me.trials(n).xAll = me.xAll;
+				me.trials(n).yAll = me.yAll;
+			end
+		end
+
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> 
+		% ===================================================================
+		function plot(me, drawNow)
+			if ~me.isOpen; return; end
+			if ~exist('drawNow','var'); drawNow = true; end
 			hitn = length( me.response(me.response > 0) );
 			breakn = length( me.response(me.response < 0) );
 			totaln = length(me.response);
@@ -307,17 +319,6 @@ classdef behaviouralRecord < optickaCore
 			title(me.h.axis3,'Hit (blue) / Miss (red)')
 			title(me.h.axis2,'Average (n=10) Hit / Miss %')
 			title(me.h.axis5,'Last Eye Position');
-			
-			if ~me.plotOnly && ~isempty(me.response)
-				n = length(me.response);
-				me.trials(n).now = datetime('now');
-				me.trials(n).info = me.info;
-				me.trials(n).tick = me.tick;
-				me.trials(n).comment = me.comment;
-				me.trials(n).response = me.response(n);
-				me.trials(n).xAll = me.xAll;
-				me.trials(n).yAll = me.yAll;
-			end
 
 			t = {['START @ ' char(me.date)]};
 			d = me.trials(end).now - me.startTime;
@@ -348,15 +349,11 @@ classdef behaviouralRecord < optickaCore
 			end
 			me.h.info.Value = t';
 			
-			%-----get our profiling report for our task loop
-			% toc(tt); profile off; profile viewer;
-
 			if ~me.plotOnly
 				me.tick = me.tick + 1;
 			end
 
 			if drawNow; drawnow(); end
-
 		end
 
 		% ===================================================================
@@ -377,15 +374,6 @@ classdef behaviouralRecord < optickaCore
 			me.xAll = [];
 			me.yAll = [];
 			me.comment = '';
-		end
-		
-		% ===================================================================
-		%> @brief 
-		%> 
-		%> 
-		% ===================================================================
-		function plotPerformance(me)
-			plot(me);
 		end
 		
 		% ===================================================================

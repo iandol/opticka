@@ -1160,15 +1160,14 @@ classdef eyelinkManager < optickaCore
 		%> @brief draw general status
 		%>
 		% ===================================================================
-		function trackerDrawStatus(me, comment, stimPos)
+		function trackerDrawStatus(me, comment, ts)
 			if ~me.isConnected; return; end
 			if ~exist('comment','var'); comment=''; end
-			if ~exist('stimPos','var'); stimPos = struct; end
+			if ~exist('ts','var'); ts = []; end
 			trackerClearScreen(me);
 			trackerDrawExclusion(me);
 			trackerDrawFixation(me);
-			trackerDrawStimuli(me,stimPos);
-			trackerDrawEyePositions(me);
+			if ~isempty(ts);trackerDrawStimuli(me,stimPos);end
 			if ~isempty(comment);trackerDrawText(me, comment);end
 		end
 		
@@ -1177,33 +1176,34 @@ classdef eyelinkManager < optickaCore
 		%>
 		% ===================================================================
 		function trackerDrawStimuli(me, ts, clearScreen, convertToPixels)
-			if me.isConnected
-				if exist('ts','var') && isstruct(ts)
-					me.stimulusPositions = ts;
-				end
-				if ~exist('clearScreen','var')
-					clearScreen = false;
-				end
-				if ~exist('convertToPixels','var')
-					convertToPixels = false;
-				end
-				if clearScreen; Eyelink('Command', 'clear_screen 0'); end
-				for i = 1:length(me.stimulusPositions)
-					x = me.stimulusPositions(i).x; 
-					y = me.stimulusPositions(i).y; 
-					size = me.stimulusPositions(i).size;
-					if isempty(size); size = 1; end
-					rect = [0 0 size size];
-					rect = CenterRectOnPoint(rect, x, y); 
-					if convertToPixels; rect = toPixels(me, rect,'rect'); end
-					rect = round(rect);
-					if me.stimulusPositions(i).selected == true
-						Eyelink('Command', 'draw_box %d %d %d %d 10', rect(1), rect(2), rect(3), rect(4));
-					else
-						Eyelink('Command', 'draw_box %d %d %d %d 11', rect(1), rect(2), rect(3), rect(4));
-					end
-				end			
+			if ~me.isConnected; return; end
+			if exist('ts','var') && isstruct(ts) && ~isempty(fields(ts))
+				me.stimulusPositions = ts;
+			else
+				return
 			end
+			if ~exist('clearScreen','var')
+				clearScreen = false;
+			end
+			if ~exist('convertToPixels','var')
+				convertToPixels = false;
+			end
+			if clearScreen; Eyelink('Command', 'clear_screen 0'); end
+			for i = 1:length(me.stimulusPositions)
+				x = me.stimulusPositions(i).x; 
+				y = me.stimulusPositions(i).y; 
+				size = me.stimulusPositions(i).size;
+				if isempty(size); size = 1; end
+				rect = [0 0 size size];
+				rect = CenterRectOnPoint(rect, x, y); 
+				if convertToPixels; rect = toPixels(me, rect,'rect'); end
+				rect = round(rect);
+				if me.stimulusPositions(i).selected == true
+					Eyelink('Command', 'draw_box %d %d %d %d 10', rect(1), rect(2), rect(3), rect(4));
+				else
+					Eyelink('Command', 'draw_box %d %d %d %d 11', rect(1), rect(2), rect(3), rect(4));
+				end
+			end			
 		end
 		
 		% ===================================================================
