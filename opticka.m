@@ -314,9 +314,10 @@ classdef opticka < optickaCore
 				getStateInfo(me);
 				if ~isempty(me.ss); pause(0.1); delete(me.ss); me.ss = []; end
 			catch ME
-				try close(me.ui.OKRoot); me.ui = []; end %#ok<*TRYNC>
 				if ~isempty(me.ss); delete(me.ss); me.ss = []; end
 				warning('Problem initialising Opticka UI, please check errors on the commandline!');
+				try delete(me.ui.OKRoot);end %#ok<*TRYNC>
+				try me.ui = []; end
 				rethrow(ME);
 			end
 			
@@ -378,6 +379,7 @@ classdef opticka < optickaCore
 			end
 			
 			me.r.logFrames = logical(me.gv(me.ui.OKlogFrames));
+			me.r.logStateTimers = logical(me.gv(me.ui.OKlogStateTimers));
 			me.r.benchmark = logical(me.gv(me.ui.OKbenchmark));
 			me.r.screen.hideFlash = logical(me.gv(me.ui.OKHideFlash));
 			me.r.screen.useRetina = logical(me.gv(me.ui.OKUseRetina));
@@ -963,10 +965,14 @@ classdef opticka < optickaCore
 		% ===================================================================
 		function savePrefs(me)
 			if ispref('opticka'); rmpref('opticka'); end
+			if isempty(me.ui); return; end
 			anySaved = false; prefnames = '';
 			for i = 1:length(me.uiPrefsList)
 				prfname = me.uiPrefsList{i};
-				if ~isprop(me.ui,prfname); continue; end
+				if ~isprop(me.ui,prfname)
+					continue
+				end
+				try
 				myhandle = me.ui.(prfname);
 				uiType = myhandle.Type;
 				switch uiType
@@ -983,6 +989,7 @@ classdef opticka < optickaCore
 				end
 				prefnames = [prefnames ' ' prfname '«' num2str(prf) '»'];
 				if ~anySaved; anySaved = true; end
+				end
 			end
 			if anySaved; fprintf('\n===>>> Opticka saved its local preferences: %s\n', prefnames); end
 		end
@@ -1256,8 +1263,9 @@ classdef opticka < optickaCore
 				if isprop(tmp.r,'userFunctionsFile') && ~isempty(tmp.r.userFunctionsFile)
 					me.r.userFunctionsFile = tmp.r.userFunctionsFile;
 				end
+				[~,f,e] = fileparts(me.r.userFunctionsFile);
 				if ~exist(me.r.userFunctionsFile,'file') % first try to find the file in current dir
-					[~,f,e] = fileparts(me.r.userFunctionsFile);
+					
 					newfile = [pwd filesep f e];
 					if exist(newfile, 'file')
 						me.r.userFunctionsFile = newfile;
@@ -1265,7 +1273,12 @@ classdef opticka < optickaCore
 				end	
 				if ~exist(me.r.userFunctionsFile,'file') % then try to replace the home directory
 					me.r.userFunctionsFile=regexprep(me.r.userFunctionsFile,'(.+)(.Code.opticka.+)',[getenv('HOME') '$2'],'ignorecase','once');
-					msg = ['rehome:' msg];
+				end
+				if ~exist(me.r.userFunctionsFile,'file') % then try to replace the home directory
+					me.r.userFunctionsFile=regexprep(me.r.userFunctionsFile,'(\/(home|Users)\/[^\/]+\/)(.+)',[getenv('HOME') filesep '$2'],'ignorecase','once');
+				end
+				if ~exist(me.r.userFunctionsFile,'file') % then try protocols folder
+					me.r.userFunctionsFile=[me.r.paths.protocols filesep f e];
 				end
 				if ~exist(me.r.userFunctionsFile,'file')
 					warndlg('Couldn''t find userFunctions file! Revert to default userFunctions.m');

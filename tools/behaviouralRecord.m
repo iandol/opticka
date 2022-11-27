@@ -31,6 +31,12 @@ classdef behaviouralRecord < optickaCore
 		trials
 		tick
 		isOpen				= false
+		startTime
+		radius
+		time
+		inittime
+		average
+		averages
 	end
 	
 	properties (Transient = true, SetAccess = ?runExperiment)
@@ -41,12 +47,6 @@ classdef behaviouralRecord < optickaCore
 	%--------------------PRIVATE PROPERTIES----------%
 	properties (SetAccess = private, GetAccess = private)
 		plotOnly			= false
-		startTime
-		radius
-		time
-		inittime
-		average
-		averages
 		%> allowed properties passed to object upon construction
 		allowedProperties = 'verbose'
 	end
@@ -89,6 +89,7 @@ classdef behaviouralRecord < optickaCore
 		%> 
 		% ===================================================================
 		function createPlot(me, eL)
+			tt=tic;
 			if ~me.plotOnly
 				reset(me);
 				me.date = datetime('now');
@@ -160,6 +161,7 @@ classdef behaviouralRecord < optickaCore
 			title(me.h.axis4,'Average (n=10) Hit / Miss %');
 			title(me.h.axis5,'Last Eye Position');
 			me.isOpen = true;
+			fprintf('bR create took %3.2f ms\n',toc(tt)*1000);
 		end
 		
 		% ===================================================================
@@ -172,7 +174,10 @@ classdef behaviouralRecord < optickaCore
 			if exist('rE','var') && isa(rE,"runExperiment")
 				sM = rE.stateMachine;
 				eT = rE.eyeTracker;
+			else
+				return;
 			end	
+			tt = tic;
 			if me.tick == 1
 				reset(me);
 				me.startTime = datetime('now');
@@ -215,6 +220,7 @@ classdef behaviouralRecord < optickaCore
 				me.trials(n).xAll = me.xAll;
 				me.trials(n).yAll = me.yAll;
 			end
+			fprintf('bR update took %3.2f ms\n',toc(tt)*1000);
 		end
 
 		% ===================================================================
@@ -225,6 +231,7 @@ classdef behaviouralRecord < optickaCore
 		function plot(me, drawNow)
 			if ~me.isOpen; return; end
 			if ~exist('drawNow','var'); drawNow = true; end
+			tt = tic;
 			hitn = length( me.response(me.response > 0) );
 			breakn = length( me.response(me.response < 0) );
 			totaln = length(me.response);
@@ -242,22 +249,24 @@ classdef behaviouralRecord < optickaCore
 			hits = [hitmiss 100-hitmiss; avg 100-avg; breakmiss 100-breakmiss];
 			
 			%axis 1
-			set(me.h.axis1,'NextPlot','replacechildren');
-			colororder(me.h.axis1,[0 0 0;0.5 0.5 0.5]);
-			yyaxis(me.h.axis1,"left");
-			plot(me.h.axis1, 1:length(me.response), me.response,'k.-','MarkerSize',16,'MarkerFaceColor','black');
+			me.h.axis1.NextPlot = 'replaceall';
+			colororder(me.h.axis1,[0 0 0;0.5 0.2 0.2])
+			yyaxis(me.h.axis1, 'left');
+			plot(me.h.axis1, 1:length(me.response), me.response,'k.-','MarkerSize',20,'MarkerFaceColor',[0.2 0.2 0.2]);
 			ylim(me.h.axis1,[-1.25 1.25])
 			yticks(me.h.axis1,[-1 0 1]);
 			yticklabels(me.h.axis1,{'incorrect','undefined','correct'});
-			ytickangle(me.h.axis1,75);
+			ytickangle(me.h.axis1, 80);
 			ylabel(me.h.axis1, 'Response');
-			set(me.h.axis1,'NextPlot','add');
-			yyaxis(me.h.axis1,"right");
+			yyaxis(me.h.axis1, 'right');
 			if ~isempty(me.radius) && ~all(isnan(me.radius))
-				plot(me.h.axis1, 1:length(me.radius), me.radius,'r.','MarkerSize',15);
-				plot(me.h.axis1, 1:length(me.inittime), me.inittime,'g.','MarkerSize',15);
-				plot(me.h.axis1, 1:length(me.time), me.time,'b.','MarkerSize',15);
+				hold(me.h.axis1, 'on');
+				plot(me.h.axis1, 1:length(me.radius), me.radius,'ro','MarkerSize',8);
+				plot(me.h.axis1, 1:length(me.inittime), me.inittime,'go','MarkerSize',8);
+				plot(me.h.axis1, 1:length(me.time), me.time,'bo','MarkerSize',8);
+				hold(me.h.axis1, 'off');
 			end
+			ylim(me.h.axis1,[min([min(me.radius) min(me.inittime) min(me.time)])-1 max([max(me.radius) max(me.inittime) max(me.time)])+1]);
 			legend(me.h.axis1,{'response','radius','inittime','time'})
 			ylabel(me.h.axis1, 'Fixation Parameters (secs or degs)');
 
@@ -292,9 +301,9 @@ classdef behaviouralRecord < optickaCore
 				end
 			else
 				if ~isempty(me.xAll)
-					set(me.h.axis5,'NextPlot','replacechildren')
+					hold(me.h.axis5,'off');
 					plot(me.h.axis5, me.xAll, me.yAll, 'b.','MarkerSize',15,'Color',[0.5 0.5 0.8]);
-					set(me.h.axis5,'NextPlot','add')
+					hold(me.h.axis5,'on');
 					plot(me.h.axis5, me.xAll(1), me.yAll(1), 'g.','MarkerSize',18);
 					plot(me.h.axis5, me.xAll(end), me.yAll(end), 'r.','MarkerSize',18,'Color',[1 0.5 0]);
 				end
@@ -348,12 +357,13 @@ classdef behaviouralRecord < optickaCore
 				t{end+1} = ['#' num2str(i) '<' num2str(me.trials(i).response) '>: ' me.trials(i).info ' <> ' me.trials(i).comment];
 			end
 			me.h.info.Value = t';
-			
 			if ~me.plotOnly
 				me.tick = me.tick + 1;
 			end
-
+			fprintf('bR plot %3.2f ms\n',toc(tt)*1000);
+			tt=tic;
 			if drawNow; drawnow(); end
+			fprintf('bR plot drawnow %3.2f ms\n',toc(tt)*1000);
 		end
 
 		% ===================================================================

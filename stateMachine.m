@@ -534,6 +534,39 @@ classdef stateMachine < optickaCore
 			me.verbose = oldVerbose; %reset verbose back to original value
 			me.timeDelta = oldTimeDelta;
 		end
+
+		% ===================================================================
+		%> @brief warmup state machine
+		%>
+		%>
+		% ===================================================================
+		function warmUp(me)
+			oldVerbose = me.verbose;
+			oldTimers = me.fnTimers;
+			me.verbose = false;
+			me.fnTimers = true;
+			beginFcn = {@()fprintf('begin state: warmup\n');};
+			middleFcn = {@()fprintf('middle state: warmup\n');};
+			endFcn = {@()fprintf('end state: warmup\n');};
+			surpriseFcn = {@()fprintf('surprise state: warmup\n');};
+			withinFcn = {}; %don't run anything within the state
+			transitionFcn = {@()sprintf('surprise');}; %returns a valid state name and thus triggers a transition
+			exitFcn = { @()fprintf('\t--->>exit state'); @()fprintf('\n') };
+			statesInfo = {
+				'name'		'next'		'time'	'entryFcn'	'withinFcn'	'transitionFcn'	'exitFcn';
+				'begin'		'middle'	0.1		beginFcn	withinFcn	{}				exitFcn;
+				'middle'	'end'		0.1		middleFcn	withinFcn	transitionFcn	exitFcn;
+				'end'		''			0.1		endFcn		withinFcn	{}				exitFcn;
+				'surprise'	'end'		0.1		surpriseFcn	withinFcn	{}				exitFcn;
+			};
+			addStates(me,statesInfo);
+			me.waitFcn(0.01);
+			run(me);
+			me.waitFcn(0.01);
+			reset(me);
+			me.verbose = oldVerbose;
+			me.fnTimers = oldTimers;
+		end
 		
 		% ===================================================================
 		%> @brief skip exit state functions: sets an N x 2 cell array 
@@ -720,7 +753,7 @@ classdef stateMachine < optickaCore
 				tl = tiledlayout(f,'flow','TileSpacing','tight','Padding','compact');
 				tl.Title.String = tout;
 				tl.Title.FontWeight = 'bold';
-				nexttile;
+				ax1 = nexttile;
 				plot([log.entryTime]-[log.startTime],'ko','MarkerSize',12, 'MarkerFaceColor', [1 1 1])
 				hold on
 				plot([log.tnow]-[log.startTime],'ro','MarkerSize',12, 'MarkerFaceColor', [1 1 1])
@@ -737,7 +770,7 @@ classdef stateMachine < optickaCore
 						int(i) = log(i).fevalTime.enter;
 						outt(i) = log(i).fevalTime.exit;
 					end
-					nexttile;
+					ax2 = nexttile;
 					plot(int,'ko','MarkerSize',12, 'MarkerFaceColor', [1 1 1]);
 					hold on
 					plot(outt,'ro','MarkerSize',12, 'MarkerFaceColor', [1 1 1])
@@ -749,6 +782,7 @@ classdef stateMachine < optickaCore
 					title('Time the enter and exit state function evals ran')
 					ylabel('Time (milliseconds)')
 					box on; grid on; axis tight;
+					linkaxes([ax1 ax2],'x');
 				end
 			end
 		end

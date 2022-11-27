@@ -359,13 +359,24 @@ classdef eyelinkManager < optickaCore
 			EyelinkUpdateDefaults(me.defaults);
 		end
 		
+
+		% ===================================================================
+		%> @brief reset all fixation/exclusion data
+		%>
+		% ===================================================================
+		function resetAll(me)
+			resetExclusionZones(me);
+			resetFixInit(me);
+			resetOffset(me);
+			resetFixation(me,true);
+		end
 		% ===================================================================
 		%> @brief reset the fixation counters ready for a new trial
 		%>
 		%> @param removeHistory remove the history of recent eye position?
 		% ===================================================================
 		function resetFixation(me,removeHistory)
-			if ~exist('removeHistory','var');removeHistory=false;end
+			if ~exist('removeHistory','var');removeHistory=true;end
 			me.fixStartTime			= 0;
 			me.fixLength			= 0;
 			me.fixInitStartTime		= 0;
@@ -1167,7 +1178,7 @@ classdef eyelinkManager < optickaCore
 			trackerClearScreen(me);
 			trackerDrawExclusion(me);
 			trackerDrawFixation(me);
-			if ~isempty(ts);trackerDrawStimuli(me,stimPos);end
+			if ~isempty(ts);trackerDrawStimuli(me, ts);end
 			if ~isempty(comment);trackerDrawText(me, comment);end
 		end
 		

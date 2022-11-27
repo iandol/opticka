@@ -67,12 +67,12 @@ tS.INCORRECT				= -5;		%==the code to send eyetracker for incorrect trials
 % then the state will finish before the fixation time was completed!
 tS.fixX						= 0;		% X position in degrees
 tS.fixY						= 0;		% X position in degrees
-tS.firstFixInit				= 2;		% time to search and enter fixation window
-tS.firstFixTime				= [0.5];		% time to maintain fixation within windo
+tS.firstFixInit				= 1;		% time to search and enter fixation window
+tS.firstFixTime				= 0.25;		% time to maintain fixation within windo
 tS.firstFixRadius			= 2;		% radius in degrees
 tS.strict					= true;		% do we forbid eye to enter-exit-reenter fixation window?
 tS.exclusionZone			= [];		% do we add an exclusion zone where subject cannot saccade to...
-tS.stimulusFixTime			= 0.5;		% time to fix on the stimulus
+tS.stimulusFixTime			= 2;		% time to fix on the stimulus
 me.lastXPosition			= tS.fixX;
 me.lastYPosition			= tS.fixY;
 
@@ -228,7 +228,7 @@ prefixExitFcn = {
 	@()trackerMessage(eT,'V_RT MESSAGE END_FIX END_RT'); % Eyelink commands
 	@()trackerMessage(eT,sprintf('TRIALID %i',getTaskIndex(me))); %Eyelink start trial marker
 	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
-	@()startRecording(eT); %start recording eye position data again
+	@()startRecording(eT); %start recording eye position data again for eyelink
 	@()trackerDrawStatus(eT,'Start Fixation...',stims.stimulusPositions); %draw location of stimulus on eyelink
 };
 
@@ -237,7 +237,7 @@ prefixExitFcn = {
 %====================================================
 %fixate entry
 fixEntryFcn = {
-	@()show(stims{2});
+	@()show(stims{tS.nStims});
 	@()logRun(me,'INITFIX'); %fprintf current trial info to command window
 };
 
@@ -262,7 +262,7 @@ inFixFcn = {
 %--------------------exit fixation phase
 fixExitFcn = { 
 	@()updateFixationValues(eT,[],[],[],tS.stimulusFixTime); %reset fixation time for stimulus = tS.stimulusFixTime
-	@()show(stims{1});
+	@()show(stims);
 	@()trackerMessage(eT,'END_FIX');
 };
 
@@ -272,9 +272,12 @@ fixExitFcn = {
 
 %--------------------what to run when we enter the stim presentation state
 stimEntryFcn = {
-	% send an eyeTracker sync message (reset relative time to 0 after first flip of this state)
+	% send an eyeTracker sync message (reset timeline as 0 after first flip of this
+	% state).
 	@()doSyncTime(me);
-	% send stimulus value strobe (value set by updateVariables(me) function)
+	% send stimulus value strobe (value set by updateVariables(me) function of previous trial).
+	% doStrobe(me) correctly times the strobe either before flip
+	% (vpixx/display++) or after flip (LabJack etc.)
 	@()doStrobe(me,true);
 };
 
@@ -386,6 +389,7 @@ incExitFcn = {
 	@()resetExclusionZones(eT); % reset the exclusion zones on eyetracker
 	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions
 	@()checkTaskEnded(me); %check if task is finished
+	@()plot(bR, 1); % actually do our behaviour record drawing
 };
 
 %====================================================EYETRACKER

@@ -11,6 +11,7 @@ classdef timeLogger < optickaCore
 		flip			= 0
 		miss			= 0
 		stimTime		= 0
+		missvbls		= 0
 		tick			= 0
 		lastvbl			= 0
 		tickInfo		= 0
@@ -113,14 +114,14 @@ classdef timeLogger < optickaCore
 		function addMessage(me, tick, vbl, message)
 			if ~exist('message','var'); return; end
 			if ~exist('tick','var') || isempty(tick); tick = me.tick; end
-			if (~exist('vbl','var') || isempty(vbl)) && ~isempty(me.vbl)
+			if (~exist('vbl','var') || isempty(vbl)) && ~isempty(me.lastvbl)
 				vbl = me.lastvbl; 
 			else
 				vbl = GetSecs;
 			end
 			if isempty(me.messages); N = 1; else; N = length(me.messages)+1; end
 			me.messages(N).tick = tick;
-			me.messages(N).stimTime = me.stimTime(end);
+			me.messages(N).stimTime = me.stimTime(tick);
 			me.messages(N).vbl = vbl;
 			me.messages(N).message = message;
 		end
@@ -152,7 +153,7 @@ classdef timeLogger < optickaCore
 				'Position', [10 1 round(ssz(3)/3) ssz(4)]);
 			tl = tiledlayout(3,1,'TileSpacing','compact','Padding','compact');
 			
-			nexttile;
+			ax1 = nexttile;
 			hold on
 			vv=diff(vbl);
 			vv(vv>100)=100;
@@ -177,7 +178,7 @@ classdef timeLogger < optickaCore
 			ylabel('Time (milliseconds)');
 			box on; grid on; grid minor;
 			
-			nexttile;
+			ax2 = nexttile;
 			x = 1:length(show);
 			hold on
 			plot(x,show-vbl,'r')
@@ -197,7 +198,7 @@ classdef timeLogger < optickaCore
 			ylabel('Time (milliseconds)');
 			box on; grid on; grid minor;
 			
-			nexttile;
+			ax3 = nexttile;
 			hold on
 			miss(miss > 0.05) = 0.05;
 			plot(miss,'k.-');
@@ -209,6 +210,7 @@ classdef timeLogger < optickaCore
 			ylabel('Miss Value');
 			box on; grid on; grid minor;
 			
+			linkaxes([ax1 ax2 ax3],'x');
 			clear vbl show flip index miss stimTime
 		end
 
@@ -246,7 +248,7 @@ classdef timeLogger < optickaCore
 				h.figure1 = uifigure( ...
 					'Tag', 'sSLog', ...
 					'Units', 'normalized', ...
-					'Position', [0.6 0 0.4 0.2], ...
+					'Position', [0.6 0 0.4 0.5], ...
 					'Name', ['Log: ' me.fullName], ...
 					'MenuBar', 'none', ...
 					'NumberTitle', 'off', ...

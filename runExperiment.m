@@ -93,8 +93,6 @@ classdef runExperiment < optickaCore
 	end
 	
 	properties (Hidden = true)
-		%> our old stimulus structure used to be a simple cell, now we use metaStimulus
-		stimulus
 		%> used to select single stimulus in training mode
 		stimList					= []
 		%> which stimulus is selected?
@@ -108,13 +106,16 @@ classdef runExperiment < optickaCore
 		%> which port is the arduino on?
 		arduinoPort char			= ''
 		%> initial eyelink settings
-		elsettings 
+		elsettings					= []
 		%> initial tobii settings
-		tobiisettings
+		tobiisettings				= []
 		%> turn diary on for runTask, saved to the same folder as the data
-		diaryMode logical		= false
+		diaryMode logical			= false
 		%> opticka version, passed on first use by opticka
 		optickaVersion char
+		logStateTimers				= false
+		%> our old stimulus structure used to be a simple cell, now we use metaStimulus
+		stimulus
 	end
 
 	properties (Transient = true, Hidden = true)
@@ -613,6 +614,7 @@ classdef runExperiment < optickaCore
 			me.taskLog					= timeLogger();
 			tL							= me.taskLog; %short handle to log
 			tL.name						= me.name;
+			if me.logFrames;tL.preAllocate(me.screenVals.fps*60*60);end
 			
 			%-----behavioural record
 			me.behaviouralRecord		= behaviouralRecord('name',me.name); %#ok<*CPROP>
@@ -663,7 +665,6 @@ classdef runExperiment < optickaCore
 					me.fInc = 8;
 				end
 				stims.verbose			= me.verbose;
-				tL.preAllocate(me.screenVals.fps*60*60);
 				setup(stims); %run setup() for each stimulus
 				task.fps				= s.screenVals.fps;
 				
@@ -689,7 +690,7 @@ classdef runExperiment < optickaCore
 				%---------initialise the state machine
 				sM						= stateMachine('verbose',me.verbose,'realTime',true,'timeDelta',1e-4,'name',me.name); 
 				me.stateMachine			= sM;
-				sM.fnTimers				= me.logFrames; %if we record flips also record fn evaluations
+				sM.fnTimers				= me.logStateTimers; %record fn evaluations?
 				if isempty(me.stateInfoFile) || ~exist(me.stateInfoFile,'file') || strcmp(me.stateInfoFile, 'DefaultStateInfo.m')
 					me.stateInfoFile = [me.paths.root filesep 'DefaultStateInfo.m'];
 					me.paths.stateInfoFile = me.stateInfoFile; 
@@ -729,29 +730,36 @@ classdef runExperiment < optickaCore
 				% covered by a blank. This primes the GPU, eyetracker, IO
 				% and other components with the same stimuli/task code used later...
 				fprintf('\n===>>> Warming up the GPU, Eyetracker and I/O systems... <<<===\n')
+				tSM = stateMachine();
+				tSM.warmUp(); clear tSM;
 				show(stims); % allows all child stimuli to be drawn
-				if me.useEyeLink || me.useTobii; trackerClearScreen(eT); end % blank eyelink screen
+				getStimulusPositions(stims);
+				if me.useEyeLink || me.useTobii; resetAll(eT);trackerClearScreen(eT); end % blank eyelink screen
 				for i = 1:s.screenVals.fps*1
 					draw(stims); % draw all child stimuli
 					drawBackground(s); % draw our blank background
-					drawPhotoDiodeSquare(s, [1 1 1 1]); % set our photodiode square white
+					drawPhotoDiodeSquare(s, [mod(i,2) mod(i,2) mod(i,2) 1]); % set our photodiode square white
 					drawText(s,'Warming up the GPU, Eyetracker and I/O systems...');
 					finishDrawing(s);
 					animate(stims); % run our stimulus animation routines to the next frame
 					if ~mod(i,10); io.sendStrobe(255); end % send a strobed word
 					if me.useEyeLink || me.useTobii
 						getSample(eT); % get an eyetracker sample
-						if i == 1
-							trackerMessage(eT,'Warmup test');
+						if i < 10
+							trackerMessage(eT,sprintf('WARMUP_TEST %i',getTaskIndex(me)));
 						end
-						trackerDrawEyePosition(eT);
-						trackerDrawText(eT,'Warming Up System'); 
+						trackerDrawStatus(eT,'Warming Up System',stims.stimulusPositions); 
 					end
 					flip(s);
 					if eT.secondScreen; trackerFlip(eT,1); end
 				end
 				update(stims); %make sure all stimuli are set back to their start state
+				if me.useEyeLink || me.useTobii
+					resetAll(eT);
+					if eT.secondScreen; trackerClearScreen(eT);trackerFlip(eT,0); end 
+				end
 				io.resetStrobe;flip(s);flip(s); % reset the strobe system
+
 				
 				%-----Premptive save in case of crash or error: SAVES IN /TMP
 				rE = me;
@@ -830,6 +838,8 @@ classdef runExperiment < optickaCore
 				tL.screenLog.trackerStartTime = getTrackerTime(eT);
 				tL.screenLog.trackerStartOffset = getTimeOffset(eT);
 				tL.vbl(1)					= Screen('Flip', s.win);
+				tL.lastvbl					= tL.vbl(1);
+				tL.miss(1)					= 0;
 				tL.startTime				= tL.vbl(1);
 				
 				%-----IGNITE the stateMachine!
@@ -892,31 +902,36 @@ classdef runExperiment < optickaCore
 							tL.lastvbl = tL.vbl;
 						end
 
-						%-----LabJack: I/O needs to send strobe immediately
-						% after screen flip
+						%----- LabJack: I/O needs to send strobe immediately after screen flip -----%
 						if me.sendStrobe && me.useLabJackTStrobe
 							sendStrobe(io); me.sendStrobe = false;
 							%Eyelink('Message', sprintf('MSG:SYNCSTROBE value:%i @ vbl:%20.40g / totalTicks: %i', io.sendValue, tL.lastvbl, tS.totalTicks));
 						end
 
-						%----- Send Eyetracker messages
+						%----- Send Eyetracker messages -----%
 						if me.sendSyncTime % sends SYNCTIME message to eyetracker
 							syncTime(eT);
 							me.sendSyncTime = false;
 						end
-						%------Log stim / no stim condition
-						if me.logFrames; logStim(tL,sM.currentName,tS.totalTicks); end
-						
-						%----- increment our global tick counter
-						tS.totalTicks = tS.totalTicks + 1; tL.tick = tS.totalTicks;
 
-						%-------If we missed a frame record it somewhere
-						if tL.miss(end) > 0; addMessage(tL,[],[],'We missed a frame'); end
+						%------Log stim / no stim + missed frame -----%
+						if me.logFrames
+							logStim(tL,sM.currentName,tS.totalTicks);
+						end
+
+						%-------If we missed a frame record it somewhere -----%
+						if tL.miss(tS.totalTicks) > 0 && tL.stimTime(tS.totalTicks) > 0
+							addMessage(tL,[],[],'We missed a frame during stimulus'); 
+						end
+						
+						%----- increment our global tick counter -----%
+						tS.totalTicks = tS.totalTicks + 1; tL.tick = tS.totalTicks;
 					else % me.doFlip == FALSE
 						% still wait for IFI time
 						WaitSecs(s.screenVals.ifi);
-					end
+					end  % END me.doFlip
 
+					%----- For second display, do we flip? -----%
 					if me.doTrackerFlip > -1 && thisTobiiFlip >= tS.tobiiFlipRate
 						trackerFlip(eT, me.doTrackerFlip)
 						thisTobiiFlip = 1;

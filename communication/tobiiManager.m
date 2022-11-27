@@ -406,6 +406,17 @@ classdef tobiiManager < optickaCore
 				me.tobii.setOptions(me.settings);
 			end
 		end
+
+		% ===================================================================
+		%> @brief reset all fixation/exclusion data
+		%>
+		% ===================================================================
+		function resetAll(me)
+			resetExclusionZones(me);
+			resetFixInit(me);
+			resetOffset(me);
+			resetFixation(me,true);
+		end
 		
 		% ===================================================================
 		%> @brief reset the fixation counters ready for a new trial
