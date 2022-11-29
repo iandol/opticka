@@ -142,6 +142,20 @@ This class manages groups of stimuli as a single object. Each stimulus can be sh
 - `drawBackground(s)`  
 	Draws the s.backgroundColour to screen.
 
+# FAQ
+
+-----------
+
+* **Question:** My subject gave an incorrect answer, but I don't want to keep repeating the same stimulus.
+* **Answer:** Use resetRun(task) which chooses another run in the same block and swaps it. Note if we are on the last trial of a block, we cannot swap as we want to preserve repeats per block.
+
+------------
+
+* **Question:** .
+* **Answer:** .
+
+------------
+
 # Definitions
 
 Class

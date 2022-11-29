@@ -810,7 +810,7 @@ classdef runExperiment < optickaCore
 				thisTobiiFlip			= 1;
 				
 				%-----double check the labJackT handle is still valid
-				if isa(io','labJackT') && ~io.isHandleValid
+				if isa(io,'labJackT') && ~io.isHandleValid
 					io.close;
 					io.open;
 					warning('We had to reopen the labJackT to ensure a stable connection...')
@@ -1028,8 +1028,6 @@ classdef runExperiment < optickaCore
 					if isa(me.stateMachine,'stateMachine'); me.stateMachine.reset; end
 					if isa(me.stimuli,'metaStimulus'); me.stimuli.reset; end
 				end
-
-				clear rE tL s tS bR rM eT io sM	task
 				
 			catch ME
 				me.isRunning = false;
@@ -1043,10 +1041,6 @@ classdef runExperiment < optickaCore
 				end
 				%profile off; profile clear
 				warning('on') 
-				if me.useEyeOccluder && isfield(tS,'eO')
-					close(tS.eO)
-					tS.eO=[];
-				end
 				Priority(0);
 				ListenChar(0); RestrictKeysForKbCheck([]);
 				ShowCursor;
@@ -1058,7 +1052,10 @@ classdef runExperiment < optickaCore
 				try close(rM); end
 				me.lJack=[];
 				me.io = [];
-				clear tL s tS bR rM eT io sM
+				if me.useEyeOccluder && isfield(tS,'eO')
+					close(tS.eO)
+					tS.eO=[];
+				end
 				rethrow(ME)
 			end
 

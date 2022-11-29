@@ -157,7 +157,7 @@ classdef timeLogger < optickaCore
 			hold on
 			vv=diff(vbl);
 			vv(vv>100)=100;
-			plot(vv,'ro:')
+			plot(vv,'ro','MarkerFaceColor',[1 0 0])
 			ss=diff(show);
 			ss(ss>100)=100;
 			plot(ss,'b--')
@@ -166,6 +166,7 @@ classdef timeLogger < optickaCore
 			plot(ff,'g-.')
 			plot(stimTime(2:end)*100,'k-')
 			hold off
+			ylim([0 105])
 			legend('VBL','Show','Flip','Stim ON')
 			[m,e]=me.stderr(diff(vbl));
 			t=sprintf('VBL mean=%.3f ± %.3f s.e.', m, e);
@@ -201,14 +202,18 @@ classdef timeLogger < optickaCore
 			ax3 = nexttile;
 			hold on
 			miss(miss > 0.05) = 0.05;
-			plot(miss,'k.-');
+			stimTime = (stimTime / max(stimTime)) * max(miss);
+			plot(miss,'g-');
 			plot(me.missImportant,'ro','MarkerFaceColor',[1 0 0]);
-			plot(stimTime/30,'k','linewidth',1);
+			plot(stimTime,'k','linewidth',1);
 			hold off
+			ylim([-0.005 0.055]);
 			title(['Missed frames = ' num2str(me.nMissed) ' (RED > 0 means missed frame)']);
 			xlabel('Frame number');
 			ylabel('Miss Value');
 			box on; grid on; grid minor;
+
+			linkaxes([ax1 ax2 ax3],'x');
 			
 			linkaxes([ax1 ax2 ax3],'x');
 			clear vbl show flip index miss stimTime
@@ -277,10 +282,8 @@ classdef timeLogger < optickaCore
 		% ===================================================================
 		function calculateMisses(me,miss,stimTime)
 			removeEmptyValues(me)
-			if nargin == 1
-				miss = me.miss;
-				stimTime = me.stimTime;
-			end
+			if nargin < 3; stimTime = me.stimTime;end
+			if nargin < 2; miss = me.miss;end
 			me.missImportant = miss;
 			me.missImportant(me.missImportant <= 0) = -inf;
 			me.missImportant(stimTime < 1) = -inf;

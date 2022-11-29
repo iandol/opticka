@@ -228,7 +228,7 @@ prefixExitFcn = {
 	@()trackerMessage(eT,'V_RT MESSAGE END_FIX END_RT'); % Eyelink commands
 	@()trackerMessage(eT,sprintf('TRIALID %i',getTaskIndex(me))); %Eyelink start trial marker
 	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
-	@()startRecording(eT); %start recording eye position data again for eyelink
+	@()startRecording(eT); %start recording eye position data again
 	@()trackerDrawStatus(eT,'Start Fixation...',stims.stimulusPositions); %draw location of stimulus on eyelink
 };
 
@@ -272,8 +272,7 @@ fixExitFcn = {
 
 %--------------------what to run when we enter the stim presentation state
 stimEntryFcn = {
-	% send an eyeTracker sync message (reset timeline as 0 after first flip of this
-	% state).
+	% send an eyeTracker sync message (reset relative time to 0 after first flip of this state)
 	@()doSyncTime(me);
 	% send stimulus value strobe (value set by updateVariables(me) function of previous trial).
 	% doStrobe(me) correctly times the strobe either before flip
@@ -335,9 +334,9 @@ correctExitFcn = {
 	@()sendStrobe(io,250);
 	@()updatePlot(bR, me); %update our behavioural plot
 	@()updateTask(me,tS.CORRECT); %make sure our taskSequence is moved to the next trial
-	@()updateVariables(me); %randomise our stimuli, and set strobe value too
-	@()update(stims); %update our stimuli ready for display
-	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions
+	@()updateVariables(me); %randomise our stimuli, and set strobe value too for next trial
+	@()update(stims); %update our stimuli ready for display on next trial
+	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions for next trial
 	@()resetFixation(eT); %resets the fixation state timers	
 	@()resetFixationHistory(eT); % reset the recent eye position history
 	@()resetExclusionZones(eT); % reset the exclusion zones on eyetracker
@@ -380,22 +379,23 @@ incFcn = {
 %--------------------incorrect / break exit
 incExitFcn = { 
 	@()sendStrobe(io,251);
-	@()updatePlot(bR, me); %update our behavioural plot;
-	@()resetRun(task); %we randomise the run within this block to make it harder to guess next trial
-	@()updateVariables(me, [], true); %randomise our stimuli, force override using true, set strobe value too
-	@()update(stims); %update our stimuli ready for display
-	@()resetFixation(eT); %resets the fixation state timers	
+	@()updatePlot(bR, me); % update our behavioural plot;
+	@()resetRun(task); % we randomise the run within this block to make it harder to guess next trial
+	@()updateVariables(me, [], true); % randomise our stimuli, force override using true, set strobe value too
+	@()update(stims); % update our stimuli ready for display
+	@()resetFixation(eT); % resets the fixation state timers	
 	@()resetFixationHistory(eT); % reset the recent eye position history
 	@()resetExclusionZones(eT); % reset the exclusion zones on eyetracker
-	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions
-	@()checkTaskEnded(me); %check if task is finished
+	@()getStimulusPositions(stims); % make a struct the eT can use for drawing stim positions
+	@()checkTaskEnded(me); % check if task is finished
+	@()disableFlip(me);
 	@()plot(bR, 1); % actually do our behaviour record drawing
 };
 
 %====================================================EYETRACKER
 %--------------------calibration function
 calibrateFcn = {
-	@()drawBackground(s); %blank the display
+	@()drawBackground(s); % blank the display
 	@()stopRecording(eT); % stop eyelink recording data
 	@()setOffline(eT); 
 	@()rstop(io); 

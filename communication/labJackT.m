@@ -46,6 +46,7 @@ classdef labJackT < handle
 		openNow logical = true
 		%> silentMode=true allows one to gracefully fail methods without a labJack connected
 		silentMode logical = false
+		%> comment
 		comment char
 	end
 	
@@ -320,6 +321,16 @@ classdef labJackT < handle
 			me.devTypes = devTypes;
 		end
 		
+		% ===================================================================
+		%> @brief check if lua code is running
+		%>	
+		% ===================================================================
+		function result = isServerRunning(me)
+			if me.silentMode || isempty(me.handle); return; end
+			[err, ~, value] = calllib(me.libName, 'LJM_eReadName', me.handle, 'LUA_RUN',0);
+			me.checkError(err);
+			result = logical(value);
+		end
 		
 		% ===================================================================
 		%> @brief 
@@ -346,17 +357,6 @@ classdef labJackT < handle
 			if ~exist('value','var'); value = me.sendValue; end
 			calllib(me.libName, 'LJM_eWriteAddress', me.handle, me.RAMAddress, me.LJM_FLOAT32, value);
 			if me.verbose; fprintf('--->>> LabjackT:sendStrobe Sending strobe: %i\n',value); end
-		end
-		
-		% ===================================================================
-		%> @brief check if lua code is running
-		%>	
-		% ===================================================================
-		function result = isServerRunning(me)
-			if me.silentMode || isempty(me.handle); return; end
-			[err, ~, value] = calllib(me.libName, 'LJM_eReadName', me.handle, 'LUA_RUN',0);
-			me.checkError(err);
-			result = logical(value);
 		end
 
 		% ===================================================================
