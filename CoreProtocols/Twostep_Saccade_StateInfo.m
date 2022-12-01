@@ -207,7 +207,7 @@ pauseEntryFcn = {
 	@()trackerDrawText(eT,'PAUSED, press [p] to resume...');
 	@()trackerMessage(eT,'TRIAL_RESULT -100'); %store message in EDF
 	@()stopRecording(eT, true); %stop recording eye position data
-	@()disableFlip(me); % no need to flip the PTB screen
+	@()needFlip(me, false); % no need to flip the PTB screen
 	@()needEyeSample(me,false); % no need to check eye position
 	@()fprintf('\n\nPAUSED, press [p] to resume...\n\n'); 
 };
@@ -219,7 +219,7 @@ pauseExitFcn = {
 
 %====================================================PREFIXATION
 prefixEntryFcn = { 
-	@()enableFlip(me); 
+	@()needFlip(me, true); 
 	@()hide(stims);
 	@()edit(stims,3,'alphaOut',0.5); 
 	@()edit(stims,3,'alpha2Out',1);
@@ -445,7 +445,7 @@ calibrateFcn = {
 	@()flip(s);
 	@()trackerMessage(eT,'TRIAL_RESULT -100');
 	@()stopRecording(eT, true); % stop eyelink recording data
-	@()setOffline(eT); % set eyelink offline
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()trackerSetup(eT);  %enter tracker calibrate/validate setup mode
 };
 
@@ -455,7 +455,7 @@ driftFcn = {
 	@()flip(s);
 	@()trackerMessage(eT,'TRIAL_RESULT -100');
 	@()stopRecording(eT, true); % stop eyelink recording data
-	@()setOffline(eT); % set eyelink offline
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()driftCorrection(eT) % enter drift correct
 };
 
@@ -468,7 +468,7 @@ flashFcn = {
 	@()flip(s);
 	@()trackerMessage(eT,'TRIAL_RESULT -100');
 	@()stopRecording(eT, true); % stop eyelink recording data
-	@()setOffline(eT); % set eyelink offline
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()flashScreen(s, 0.2) % fullscreen flash mode for visual background activity detection
 };
 
@@ -478,7 +478,7 @@ gridFcn = {
 	@()flip(s);
 	@()trackerMessage(eT,'TRIAL_RESULT -100');
 	@()stopRecording(eT, true); % stop eyelink recording data
-	@()setOffline(eT); % set eyelink offline
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()drawGrid(s);
 };
 

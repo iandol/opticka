@@ -79,17 +79,17 @@ pauseEntryFcn = {
 	@()hide(me.stimuli);
 	@()drawBackground(s); %blank the display
 	@()rstop(io);
-	@()setOffline(eT); %set eyelink offline
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()stopRecording(eT);
 	@()edfMessage(eT,'TRIAL_RESULT -10');
 	@()fprintf('\n===>>>ENTER PAUSE STATE\n');
-	@()disableFlip(me);
+	@()needFlip(me, false);
 };
 
 %pause exit
 pauseExitFcn = { @()rstart(io); }; %lets unpause the plexon!...
 
-prefixEntryFcn = { @()enableFlip(me); };
+prefixEntryFcn = { @()needFlip(me, true); };
 prefixFcn = {}; %@()draw(me.stimuli);
 
 %fixate entry
@@ -97,7 +97,7 @@ fixEntryFcn = {
 	@()statusMessage(eT,'Initiate Fixation...'); %status text on the eyelink
 	@()sendTTL(io,3);
 	@()updateFixationValues(eT,tS.fixX,tS.fixY,[],tS.firstFixTime); %reset 
-	@()setOffline(eT); %make sure offline before start recording
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()show(me.stimuli{2});
 	@()edfMessage(eT,'V_RT MESSAGE END_FIX END_RT');
 	@()edfMessage(eT,['TRIALID ' num2str(getTaskIndex(me))]);
@@ -162,7 +162,7 @@ correctFcn = {
 
 %when we exit the correct state
 correctExitFcn = {
-	@()setOffline(eT); %set eyelink offline
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()updatePlot(bR, me); %update our behavioural plot
 	@()updateVariables(me,[],[],true); %randomise our stimuli, set strobe value too
 	@()update(me.stimuli); %update our stimuli ready for display
@@ -188,7 +188,7 @@ incFcn = [];
 
 %incorrect / break exit
 incExitFcn = { 
-	@()setOffline(eT); %set eyelink offline
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()updatePlot(bR, me); %update our behavioural plot, must come before updateTask() / updateVariables()
 	@()updateVariables(me,[],[],false);
 	@()update(me.stimuli); %update our stimuli ready for display
@@ -210,24 +210,24 @@ breakEntryFcn = {
 %--------------------calibration function
 calibrateFcn = { 
 	@()drawBackground(s); %blank the display
-	@()stopRecording(eT); % stop eyelink recording data
-	@()setOffline(eT); % set eyelink offline
+	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()trackerSetup(eT) % enter tracker calibrate/validate setup mode
 };
 
 %--------------------drift offset function
 offsetFcn = { 
 	@()drawBackground(s); %blank the display
-	@()stopRecording(eT); % stop eyelink recording data
-	@()setOffline(eT); % set eyelink offline
+	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()driftOffset(eT) % enter tracker calibrate/validate setup mode
 };
 
 %--------------------drift correction function
 driftFcn = { 
 	@()drawBackground(s); %blank the display
-	@()stopRecording(eT); % stop eyelink recording data
-	@()setOffline(eT); % set eyelink offline
+	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()driftCorrection(eT) % enter tracker calibrate/validate setup mode
 };
 

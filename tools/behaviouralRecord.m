@@ -222,6 +222,16 @@ classdef behaviouralRecord < optickaCore
 			end
 			fprintf('bR update took %3.2f ms\n',toc(tt)*1000);
 		end
+		
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> 
+		% ===================================================================
+		function plotAsyn(me, drawNow)
+			parfeval(backgroundPool,@me.plot,0,drawNow);
+		end
+		
 
 		% ===================================================================
 		%> @brief 

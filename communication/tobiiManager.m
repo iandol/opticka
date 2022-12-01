@@ -233,6 +233,7 @@ classdef tobiiManager < optickaCore
 				me.isDummy = true;
 			end
 			if contains(me.model,{'Tobii 4C','IS4_Large_Peripheral'})
+				me.model = 'IS4_Large_Peripheral';
 				me.sampleRate = 90; 
 				me.trackingMode = 'Default';
 			end
@@ -260,7 +261,7 @@ classdef tobiiManager < optickaCore
 				me.screen			= sM;
 			end
 			if me.useOperatorScreen && ~exist('sM2','var')
-				sM2 = screenManager('windowed',[0 0 1000 1000],'pixelsPerCm',25,'backgroundColour',sM.backgroundColour);
+				sM2 = screenManager('windowed',[0 0 1000 1000],'pixelsPerCm',25,'backgroundColour',sM.backgroundColour,'specialFlags', kPsychGUIWindow);
 			end
 			if ~exist('sM2','var') || ~isa(sM2,'screenManager')
 				me.secondScreen		= false;
@@ -269,6 +270,7 @@ classdef tobiiManager < optickaCore
 				me.secondScreen		= true;
 			end
 			if contains(me.model,{'Tobii 4C','IS4_Large_Peripheral'})
+				me.model = 'IS4_Large_Peripheral';
 				me.sampleRate = 90; 
 				me.trackingMode = 'Default';
 			end
@@ -484,8 +486,8 @@ classdef tobiiManager < optickaCore
 		%>
 		% ===================================================================
 		function resetFixInit(me)
-			me.fixInit.X = 0;
-			me.fixInit.Y = 0;
+			me.fixInit.X = [];
+			me.fixInit.Y = [];
 		end
 		
 		% ===================================================================
@@ -509,12 +511,10 @@ classdef tobiiManager < optickaCore
 				warning('Eyetracker not connected, cannot calibrate!');
 				return
 			end
+			if me.useOperatorScreen && ~me.closeSecondScreen; open(me.operatorScreen); end
 			if me.isDummy
-				if me.secondScreen && ~me.closeSecondScreen
-					me.operatorScreen.open();
-					disp('--->>> Tobii Dummy Mode: calibration skipped')
-					return;
-				end
+				disp('--->>> Tobii Dummy Mode: calibration skipped')
+				return;
 			end
 			if ~me.screen.isOpen 
 				open(me.screen);
@@ -562,11 +562,11 @@ classdef tobiiManager < optickaCore
 			else
 % 				disp('---!!! The calibration was unsuccesful or skipped !!!---')
 			end
-			if me.secondScreen && me.closeSecondScreen && me.operatorScreen.isOpen
+			if me.useOperatorScreen && me.closeSecondScreen && me.operatorScreen.isOpen
 				close(me.operatorScreen); 
 				WaitSecs('YieldSecs',0.2); 
 			end
-			resetFixation(me);
+			resetAll(me);
 			if wasRecording; startRecording(me); end
 			me.isRecording_ = me.isRecording;
 		end
@@ -870,6 +870,7 @@ classdef tobiiManager < optickaCore
 				for i = 1:length(x)
 					me.exclusionZone(i,:) = [x(i)-radius x(i)+radius y(i)-radius y(i)+radius];
 				end
+				if me.verbose;fprintf('-+-+-> tobiiManager:updateExclusionZones');end
 			end
 		end
 		
@@ -911,7 +912,7 @@ classdef tobiiManager < optickaCore
 					if ~any(window)
 						searching = false; exclusion = true; fixinit = true;
 						me.isInitFail = fixinit; me.isFix = false;
-						fprintf('-+-+-> tobiiManager: Eye left fix init window @ %.3f secs!\n',ft);
+						if me.verbose;fprintf('-+-+-> tobiiManager: Eye left fix init window @ %.3f secs!\n',(me.currentSample.time - me.fixInitStartTime));end
 						return;
 					end
 				end
@@ -978,7 +979,7 @@ classdef tobiiManager < optickaCore
 					if (me.x >= me.exclusionZone(i,1) && me.x <= me.exclusionZone(i,2)) && ...
 							(me.y >= me.exclusionZone(i,3) && me.y <= me.exclusionZone(i,4))
 						out = true;
-						fprintf('-+-+-> Tobii:EXCLUSION ZONE %i ENTERED!\n',i);
+						if me.verbose;fprintf('-+-+-> Tobii:EXCLUSION ZONE %i ENTERED!\n',i);end
 						return
 					end
 				end
@@ -1558,7 +1559,7 @@ classdef tobiiManager < optickaCore
 			if ~exist('comment','var'); comment=''; end
 			if ~exist('stimPos','var'); stimPos = struct; end
 			if ~exist('dontclear','var'); dontclear = 0; end
-			trackerClearScreen(me);
+			if dontclear==0; trackerClearScreen(me); end
 			trackerDrawExclusion(me);
 			trackerDrawFixation(me);
 			trackerDrawStimuli(me,stimPos);
@@ -1666,7 +1667,7 @@ classdef tobiiManager < optickaCore
 		% ===================================================================
 		function trackerFlip(me,dontclear)
 			if ~me.isConnected || ~me.operatorScreen.isOpen; return; end
-			if ~exist('clear','var');dontclear = 0; end
+			if ~exist('dontclear','var');dontclear = 1; end
 			me.operatorScreen.flip([], dontclear, 2);
 		end
 		

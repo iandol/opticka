@@ -4,8 +4,10 @@ classdef timeLogger < optickaCore
 	%  result.
 	
 	properties
-		screenLog		= struct()
 		timer			= @GetSecs
+		verbose			= true
+		stimStateNames	= {'stimulus','onestep','twostep'}
+		screenLog		= struct()
 		vbl				= 0
 		show			= 0
 		flip			= 0
@@ -17,19 +19,17 @@ classdef timeLogger < optickaCore
 		tickInfo		= 0
 		startTime		= 0
 		startRun		= 0
-		messages struct	= struct('tick',[],'vbl',[],'message',{})
-		verbose			= true
-		stimStateNames	= {'stimulus','onestep','twostep'}
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
+		messages struct	= struct('tick',[],'vbl',[],'message',{})
 		missImportant
 		nMissed
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> allowed properties passed to object upon construction
-		allowedProperties = 'stimStateNames|timer'
+		allowedProperties = 'stimStateNames|timer|verbose'
 	end
 	
 	%=======================================================================
@@ -121,7 +121,11 @@ classdef timeLogger < optickaCore
 			end
 			if isempty(me.messages); N = 1; else; N = length(me.messages)+1; end
 			me.messages(N).tick = tick;
-			me.messages(N).stimTime = me.stimTime(tick);
+			if ~isempty(me.stimTime) && length(me.stimTime)<=tick
+				me.messages(N).stimTime = me.stimTime(tick);
+			else
+				me.messages(N).stimTime = NaN;
+			end
 			me.messages(N).vbl = vbl;
 			me.messages(N).message = message;
 		end

@@ -32,16 +32,18 @@
 tS.useTask					= true;		%==use taskSequence (randomises stimulus variables)
 tS.rewardTime				= 250;		%==TTL time in milliseconds
 tS.rewardPin				= 2;		%==Output pin, 2 by default with Arduino.
-tS.checkKeysDuringStimulus  = true;		%==allow keyboard control within stimulus state? Slight drop in performance…
-tS.recordEyePosition		= true;		%==record local copy of eye position, **in addition** to the eyetracker?
+tS.checkKeysDuringStimulus  = false;		%==allow keyboard control within stimulus state? Slight drop in performance…
+tS.recordEyePosition		= false;		%==record local copy of eye position, **in addition** to the eyetracker?
 tS.askForComments			= false;	%==UI requestor asks for comments before/after run
 tS.saveData					= true;		%==save behavioural and eye movement data?
+tS.showBehaviourPlot		= true;		%==open the behaviourPlot figure? Can cause more memory use
 tS.name						= 'animated fixation training'; %==name of this protocol
 tS.nStims					= stims.n;	%==number of stimuli, taken from metaStimulus object
 tS.tOut						= 5;		%==if wrong response, how long to time out before next trial
 tS.CORRECT					= 1;		%==the code to send eyetracker for correct trials
 tS.BREAKFIX					= -1;		%==the code to send eyetracker for break fix trials
 tS.INCORRECT				= -5;		%==the code to send eyetracker for incorrect trials
+tS.tobiiFlipRate			= 15;		%==For Tobii how many main flips should trigger and operator screen flip?
 
 %==================================================================
 %----------------Debug logging to command window------------------
@@ -49,11 +51,11 @@ tS.INCORRECT				= -5;		%==the code to send eyetracker for incorrect trials
 % components; you can also set verbose in the opticka GUI to enable all of
 % these…
 %sM.verbose					= true;		%==print out stateMachine info for debugging
-stims.verbose				= true;		%==print out metaStimulus info for debugging
+%stims.verbose				= true;		%==print out metaStimulus info for debugging
 %io.verbose					= true;		%==print out io commands for debugging
-eT.verbose					= true;		%==print out eyelink commands for debugging
+%eT.verbose					= true;		%==print out eyelink commands for debugging
 %rM.verbose					= true;		%==print out reward commands for debugging
-task.verbose				= true;		%==print out task info for debugging
+%task.verbose				= true;		%==print out task info for debugging
 
 %==================================================================
 %-----------------INITIAL Eyetracker Settings----------------------
@@ -229,16 +231,17 @@ pauseEntryFn = {
 	@()disp('PAUSED, press [p] to resume...');
 	@()trackerDrawStatus(eT,'PAUSED, press [p] to resume', stims.stimulusPositions);
 	@()trackerMessage(eT,'TRIAL_RESULT -100'); %store message in EDF
-	@()setOffline(eT); % make sure we set offline, only works on eyelink, ignored by tobii
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()stopRecording(eT, true); %stop recording eye position data
-	@()disableFlip(me); % no need to flip the PTB screen
+	@()needFlip(me, false); % no need to flip the PTB screen
 	@()needEyeSample(me,false); % no need to check eye position
+	@()needFlipTracker(me, -1); %for tobii don't flip
 };
 
 %--------------------exit pause state
 pauseExitFn = {
 	@()fprintf('\n===>>>EXIT PAUSE STATE\n')
-	@()enableFlip(me); % start PTB screen flips
+	@()needFlip(me, true); % start PTB screen flips
 	@()needEyeSample(me,true); % make sure we start measuring eye position
 	@()startRecording(eT, true); % start eyetracker recording for this trial
 };
@@ -246,37 +249,33 @@ pauseExitFn = {
 %====================================================PRESTIMULUS
 %---------------------prestim entry
 psEntryFn = {
-	@()enableFlip(me); % start PTB screen flips
-	@()needEyeSample(me,true); % make sure we start measuring eye position
-	@()startRecording(eT); % start eyelink recording for this trial
+	@()needFlip(me, true); % start PTB screen flips
+	@()needEyeSample(me, true); % make sure we start measuring eye position
+	@()startRecording(eT); % start eyelink recording for this trial [ignored by tobii as it always records]
 	@()updateFixationTarget(me, tS.useTask, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
-	@()resetFixation(eT); %reset the fixation counters ready for a new trial
-	@()resetFixationHistory(eT); %reset the fixation counters ready for a new trial
+	@()resetAll(eT); %reset the fixation counters ready for a new trial
 	@()getStimulusPositions(stims,true); %make a struct the eT can use for drawing stim positions
 	@()trackerMessage(eT,'V_RT MESSAGE END_FIX END_RT'); % Eyelink commands
 	@()trackerMessage(eT,sprintf('TRIALID %i',getTaskIndex(me))); %Eyelink start trial marker
 	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
-	@()trackerDrawStatus(eT,'Prestim...', stims.stimulusPositions);
-	@()flipTracker(me,1); %for tobii show info if operator screen enabled
-	@()logRun(me,'PREFIX'); %fprintf current trial info to command window
+	@()trackerDrawStatus(eT,'Prestim...', stims.stimulusPositions, 0);
+	@()needFlipTracker(me, 1); % set tobii operator screen to flip and not clear
+	@()logRun(me,'PREFIX'); % log current trial info to command window AND timeLogger
 };
 
 %---------------------prestimulus blank
 prestimulusFn = {
-	@()drawBackground(s); % only draw a background colour to the PTB screen
 	@()trackerDrawEyePosition(eT); % draw the fixation window
 };
 
 %---------------------exiting prestimulus state
 psExitFn = {
 	@()show(stims); % make sure we prepare to show the stimulus set
-	@()statusMessage(eT,'Stimulus...'); % show eyetracker status message
 };
 
 %====================================================TARGET STIMULUS ALONE
 %---------------------stimulus entry state
 stimEntryFn = {
-	@()logRun(me,'SHOW Target'); % log start to command window
 	@()doSyncTime(me);
 };
 
@@ -313,9 +312,9 @@ correctEntryFn = {
 	@()beep(aM,2000); % correct beep
 	@()trackerMessage(eT,['TRIAL_RESULT ' num2str(tS.CORRECT)]); % tell EDF trial was a correct
 	@()trackerDrawStatus(eT,'CORRECT! :-)', stims.stimulusPositions, 0);
-	@()flipTracker(me,0); %for tobii stop flip
-	@()stopRecording(eT); % stop recording for this trial
-	@()setOffline(eT); %set eyelink offline
+	@()needFlipTracker(me, -1); %for tobii stop flip
+	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()needEyeSample(me,false); % no need to collect eye data until we start the next trial
 	@()hide(stims);
 	@()logRun(me,'CORRECT'); %fprintf current trial info
@@ -323,18 +322,17 @@ correctEntryFn = {
 
 %-----------------------correct stimulus
 correctFn = {
-	@()drawBackground(s); % draw background colour
 	@()drawText(s,'Correct'); % draw text
 };
 
 %----------------------when we exit the correct state
 correctExitFn = {
+	@()updatePlot(bR, me); %update our behavioural plot
 	@()updateTask(me,tS.CORRECT); %make sure our taskSequence is moved to the next trial
 	@()updateVariables(me); ... %update the task variables
 	@()update(stims); ... %update our stimuli ready for display
 	@()checkTaskEnded(me);
-	@()updatePlot(bR, me); % update the behavioural report plot
-	@()drawnow; % ensure we update the figure
+	@()plot(bR, 1); % actually do our behaviour record drawing
 };
 
 %----------------------break entry
@@ -342,9 +340,9 @@ breakEntryFn = {
 	@()beep(aM,400,0.5,1);
 	@()trackerMessage(eT,['TRIAL_RESULT ' num2str(tS.BREAKFIX)]); %trial incorrect message
 	@()trackerDrawStatus(eT,'BREAK! :-(', stims.stimulusPositions, 0);
-	@()flipTracker(me,0); %for tobii stop flip
-	@()stopRecording(eT); %stop eyelink recording data
-	@()setOffline(eT); %set eyelink offline
+	@()needFlipTracker(me, -1); %for tobii stop flip
+	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()needEyeSample(me,false);
 	@()hide(stims);
 	@()logRun(me,'BREAKFIX'); %fprintf current trial info
@@ -355,9 +353,9 @@ incEntryFn = {
 	@()beep(aM,400,0.5,1);
 	@()trackerMessage(eT,['TRIAL_RESULT ' num2str(tS.INCORRECT)]); %trial incorrect message
 	@()trackerDrawStatus(eT,'INCORRECT! :-(', stims.stimulusPositions, 0);
-	@()flipTracker(me,0); %for tobii stop flipping
-	@()stopRecording(eT); %stop eyelink recording data
-	@()setOffline(eT); %set eyelink offline
+	@()needFlipTracker(me, -1); %for tobii stop flip
+	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()needEyeSample(me,false);
 	@()hide(stims);
 	@()logRun(me,'INCORRECT'); %fprintf current trial info
@@ -371,35 +369,35 @@ breakFn =  {
 
 %----------------------break exit
 breakExitFn = { 
+	@()updatePlot(bR, me); %update our behavioural plot
 	@()updateTask(me,tS.BREAKFIX); %make sure our taskSequence is moved to the next trial
 	@()updateVariables(me); ... %update the task variables
 	@()update(stims); %update our stimuli ready for display
 	@()checkTaskEnded(me);
-	@()updatePlot(bR, me);
-	@()drawnow;
+	@()plot(bR, 1); % actually do our behaviour record drawing
 };
 
 %--------------------calibration function
 calibrateFn = { 
 	@()drawBackground(s); %blank the display
-	@()stopRecording(eT); % stop eyelink recording data
-	@()setOffline(eT); % set eyelink offline
+	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()trackerSetup(eT) % enter tracker calibrate/validate setup mode
 };
 
 %--------------------drift offset function
 offsetFn = { 
 	@()drawBackground(s); %blank the display
-	@()stopRecording(eT); % stop eyelink recording data
-	@()setOffline(eT); % set eyelink offline
+	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()driftOffset(eT) % enter tracker offset
 };
 
 %--------------------drift correction function
 driftFn = { 
 	@()drawBackground(s); %blank the display
-	@()stopRecording(eT); % stop eyelink recording data
-	@()setOffline(eT); % set eyelink offline
+	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()driftCorrection(eT) % enter drift correct
 };
 

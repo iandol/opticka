@@ -222,16 +222,16 @@ pauseEntryFn = {
 	@()trackerDrawText(eT,'PAUSED, press [P] to resume...');
 	@()trackerFlip(eT); %for tobii show info if operator screen enabled
 	@()trackerMessage(eT,'TRIAL_RESULT -100'); %store message in EDF
-	@()setOffline(eT); % make sure we set offline, only works on eyelink, ignored by tobii
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()stopRecording(eT, true); %stop recording eye position data
-	@()disableFlip(me); % no need to flip the PTB screen
+	@()needFlip(me, false); % no need to flip the PTB screen
 	@()needEyeSample(me,false); % no need to check eye position
 };
 
 %--------------------exit pause state
 pauseExitFn = {
 	@()fprintf('\n===>>>EXIT PAUSE STATE\n')
-	@()enableFlip(me); % start PTB screen flips
+	@()needFlip(me, true); % start PTB screen flips
 	@()startRecording(eT, true); % start eyetracker recording for this trial
 };
 
@@ -305,8 +305,8 @@ correctEntryFn = {
 	@()trackerDrawText(eT,'Correct! :-)');
 	@()trackerDrawEyePositions(eT); % draw the fixation window
 	@()trackerFlip(eT); %for tobii show info if operator screen enabled
-	@()stopRecording(eT); % stop recording for this trial
-	@()setOffline(eT); %set eyelink offline
+	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()needEyeSample(me,false); % no need to collect eye data until we start the next trial
 	@()logRun(me,'CORRECT'); %fprintf current trial info
 };
@@ -334,8 +334,8 @@ breakEntryFn = {
 	@()trackerDrawEyePositions(eT); % draw the fixation window
 	@()trackerFlip(eT); %for tobii show info if operator screen enabled
 	@()trackerMessage(eT,['TRIAL_RESULT ' num2str(tS.BREAKFIX)]); %trial incorrect message
-	@()stopRecording(eT); %stop eyelink recording data
-	@()setOffline(eT); %set eyelink offline
+	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()needEyeSample(me,false);
 	@()logRun(me,'BREAKFIX'); %fprintf current trial info
 };
@@ -345,8 +345,8 @@ incEntryFn = {
 	@()beep(aM,200,0.5,1);
 	@()trackerMessage(eT,['TRIAL_RESULT ' num2str(tS.INCORRECT)]); %trial incorrect message
 	@()trackerDrawStatus(eT,'Incorrect! :-(', stims.stimulusPositions);
-	@()stopRecording(eT); % stop eyelink recording data
-	@()setOffline(eT); % set eyelink offline
+	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()needEyeSample(me,false);
 	@()logRun(me,'INCORRECT'); %fprintf current trial info
 };
@@ -369,24 +369,24 @@ breakExitFn = {
 %--------------------calibration function
 calibrateFn = { 
 	@()drawBackground(s); %blank the display
-	@()stopRecording(eT); % stop eyelink recording data
-	@()setOffline(eT); % set eyelink offline
+	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()trackerSetup(eT) % enter tracker calibrate/validate setup mode
 };
 
 %--------------------drift offset function
 offsetFn = { 
 	@()drawBackground(s); %blank the display
-	@()stopRecording(eT); % stop eyelink recording data
-	@()setOffline(eT); % set eyelink offline
+	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()driftOffset(eT) % enter tracker offset
 };
 
 %--------------------drift correction function
 driftFn = { 
 	@()drawBackground(s); %blank the display
-	@()stopRecording(eT); % stop eyelink recording data
-	@()setOffline(eT); % set eyelink offline
+	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()driftCorrection(eT) % enter drift correct
 };
 

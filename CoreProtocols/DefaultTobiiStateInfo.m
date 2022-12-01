@@ -83,16 +83,16 @@ pauseEntryFcn = {
 	@()drawBackground(s); %blank the display
 	@()drawTextNow(s,'Paused, press [p] to resume...');
 	@()pauseRecording(io);
-	@()setOffline(eT); %set eyelink offline
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()stopRecording(eT);
 	@()edfMessage(eT,'TRIAL_RESULT -10');
 	@()fprintf('\n===>>>ENTER PAUSE STATE\n');
-	@()disableFlip(me);
+	@()needFlip(me, false);
 };
 
 	%pause exit
 	pauseExitFcn = {
-		@()enableFlip(me);
+		@()needFlip(me, true);
 		@()resumeRecording(io);
 	};
 
@@ -108,7 +108,7 @@ prefixExitFcn = {
 	@()statusMessage(eT,'Initiate Fixation...'); %status text on the eyelink
 	@()resetFixation(eT); %reset the fixation counters ready for a new trial
 	@()updateFixationValues(eT,tS.fixX,tS.fixY,[],tS.firstFixTime); %reset 
-	@()setOffline(eT); %make sure offline before start recording
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()show(me.stimuli{2});
 	@()edfMessage(eT,'V_RT MESSAGE END_FIX END_RT');
 	@()edfMessage(eT,['TRIALID ' num2str(getTaskIndex(me))]);
@@ -182,7 +182,7 @@ correctExitFcn = {
 	@()edfMessage(eT,'TRIAL_RESULT 1');
 	%@()timedTTL(rM,0,tS.rewardTime); % labjack sends a TTL to Crist reward system
 	@()stopRecording(eT);
-	@()setOffline(eT); %set eyelink offline
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()updatePlot(bR, me); %update our behavioural plot
 	@()updateVariables(me,[],[],true); %randomise our stimuli, set strobe value too
 	@()update(me.stimuli); %update our stimuli ready for display
@@ -200,7 +200,7 @@ incExitFcn = { @()incorrect(io);
 	@()edfMessage(eT,'END_RT');
 	@()edfMessage(eT,'TRIAL_RESULT 0');
 	@()stopRecording(eT);
-	@()setOffline(eT); %set eyelink offline
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()updatePlot(bR, me); %update our behavioural plot, must come before updateTask() / updateVariables()
 	@()resetRun(t);... %we randomise the run within this block to make it harder to guess next trial
 	@()updateVariables(me,[],true,false); %need to set override=true to visualise the randomised run
@@ -220,7 +220,7 @@ breakExitFcn = { @()breakFixation(io);
 	@()edfMessage(eT,'END_RT');
 	@()edfMessage(eT,'TRIAL_RESULT -1');
 	@()stopRecording(eT);
-	@()setOffline(eT); %set eyelink offline
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()updatePlot(bR, me); %update our behavioural plot
 	@()resetRun(t);... %we randomise the run within this block to make it harder to guess next trial
 	@()updateVariables(me,[],true,false);  %need to set override=true to visualise the randomised run

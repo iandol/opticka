@@ -216,14 +216,14 @@ pauseEntryFcn = {
 	% stop recording eye position data (true means tobii also stops)
 	@()stopRecording(eT, true);
 	 % no need to flip the PTB screen
-	@()disableFlip(me);
+	@()needFlip(me, false);
 	% no need to check eye position
 	@()needEyeSample(me,false);
 };
 
 %--------------------pause exit
 pauseExitFcn = { 
-	@()enableFlip(me);
+	@()needFlip(me, true);
 	@()resumeRecording(io); %for plexon
 };
 
@@ -335,8 +335,8 @@ correctExitFcn = {
 	%send correct value via I/O
 	@()correct(io);
 	@()trackerMessage(eT,['TRIAL_RESULT ' num2str(tS.CORRECT)]);
-	@()stopRecording(eT); %stops recording (eyelink, tobii ignores this)
-	@()setOffline(eT); %set eyelink offline
+	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	% tell taskSequence to update to the next trial.
 	@()updatePlot(bR, me); %update our behavioural plot
 	@()updateTask(task, tS.CORRECT);
@@ -373,7 +373,7 @@ incFcn = {
 incExitFcn = { 
 	@()incorrect(io);
 	@()trackerMessage(eT,['TRIAL_RESULT ' num2str(tS.INCORRECT)]); %trial incorrect message
-	@()stopRecording(eT); %stop eyelink recording data
+	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
 	@()updatePlot(bR, me); %update our behavioural plot, must come before updateTask() / updateVariables()
 	@()resetRun(task);... %we randomise the run within this block to make it harder to guess next trial
 	@()updateVariables(me,[],true,false); %update the variables via taskSequence if used
@@ -397,7 +397,7 @@ breakExitFcn = {
 	@()breakFixation(io);
 	@()trackerMessage(eT,['TRIAL_RESULT ' num2str(tS.BREAKFIX)]);
 	@()stopRecording(eT);
-	@()setOffline(eT); %set eyelink offline
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()updatePlot(bR, me); %update our behavioural plot, must come before updateTask() / updateVariables()
 	@()resetRun(task);... %we randomise the run within this block to make it harder to guess next trial
 	@()updateVariables(me,[],true,false); %update the variables
@@ -409,8 +409,8 @@ breakExitFcn = {
 %--------------------calibration function
 calibrateFcn = {
 	@()drawBackground(s); %blank the display
-	@()stopRecording(eT); % stop eyelink recording data
-	@()setOffline(eT); 
+	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()rstop(io); 
 	@()trackerSetup(eT);  %enter tracker calibrate/validate setup mode
 };
@@ -418,8 +418,8 @@ calibrateFcn = {
 %--------------------drift correction function
 driftFcn = { 
 	@()drawBackground(s); %blank the display
-	@()stopRecording(eT); % stop eyelink recording data
-	@()setOffline(eT); % set eyelink offline
+	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()rstop(io); 
 	@()driftCorrection(eT) % enter drift correct
 };
