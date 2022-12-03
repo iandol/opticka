@@ -36,7 +36,7 @@ tS.includeErrors			= false;
 %task.trialVar.values		= {'fix1Step','fix2Step'};
 %task.trialVar.probability	= [0.6 0.4];
 task.trialVar.comment		= 'one or twostep trial based on 60:40 probability';
-tL.stimStateNames			= {'onestep','twostep'};
+tL.stimStateNames			= ["onestep","twostep"];
 
 %==================================================================
 %----------------------Staircase manager---------------------------
@@ -60,7 +60,7 @@ tS.tOut						= 1; %if wrong response, how long to time out before next trial
 tS.CORRECT 					= 1; %==the code to send eyetracker for correct trials
 tS.BREAKFIX 				= -1; %==the code to send eyetracker for break fix trials
 tS.INCORRECT 				= -5; %==the code to send eyetracker for incorrect trials
-tS.keyExclusionPattern		= {'fixate','onestep','twostep'}; % only check if this list doesn't match
+tS.keyExclusionPattern		= ["fixate","onestep","twostep"]; % avoid keyboard commands for these states
 
 %==================================================================
 %------------Debug logging to command window-----------------
@@ -131,8 +131,8 @@ eT.resetExclusionZones();
 %==================================================================
 %----WHICH states assigned as correct or break for online plot?----
 %----You need to use regex patterns for the match (doc regexp)-----
-bR.correctStateName				= '^correct';
-bR.breakStateName				= '^(breakfix|incorrect)';
+bR.correctStateName				= "correct";
+bR.breakStateName				= ["breakfix","incorrect"];
 
 %==================================================================
 %-----simplistic randomisation of stimulus variables every trial?-----

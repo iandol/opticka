@@ -176,11 +176,11 @@ classdef movieStimulus < baseStimulus
 			
 			doProperties(me);
 			
-			tic;
+			t=tic;
 			[me.movie, me.duration, me.fps, me.width, me.height] = Screen('OpenMovie', ...
 				me.sM.win, me.fileName, [], me.preloadSecs, me.specialFlagsOpen, me.pixelFormat);
 			fprintf('\n--->>> movieStimulus: %s\n\t%.2f seconds duration, %f fps, w x h = %i x %i, in %ims\n', ...
-				me.fileName, me.duration, me.fps, me.width, me.height, round(toc*1e3));
+				me.fileName, me.duration, me.fps, me.width, me.height, round(toc(t)*1e3));
 			fprintf('\tBlocking: %i | Loop: %i | Preloadsecs: %i | Pixelformat: %i | Flags: %i\n', me.blocking, ...
 				me.loopStrategy, me.preloadSecs, me.pixelFormat, me.specialFlagsOpen);
 			

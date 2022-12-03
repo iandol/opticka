@@ -76,8 +76,8 @@ eT.updateFixationValues(tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.f
 
 %==================================================================
 %----which states assigned as correct or break for online plot?----
-bR.correctStateName				= '^correct';
-bR.breakStateName				= '^(breakfix|incorrect)';
+bR.correctStateName				= "correct";
+bR.breakStateName				= ["breakfix","incorrect"];
 
 %==================================================================
 %-------------------randomise stimulus variables every trial?-----------

@@ -126,7 +126,7 @@ classdef stateMachine < optickaCore
 		currentExitFcn
 		%> number of ticks before next transition realTime = false
 		nextTickOut
-		%> time before next transition realTime = true
+		%> time before next transition when realTime = true
 		nextTimeOut
 		%> Index with name and index number for each state
 		stateListIndex

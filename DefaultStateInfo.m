@@ -75,14 +75,15 @@
 tS.useTask					= true;		%==use taskSequence (randomises stimulus variables)
 tS.rewardTime				= 250;		%==TTL time in milliseconds
 tS.rewardPin				= 2;		%==Output pin, 2 by default with Arduino.
-tS.checkKeysDuringStimulus  = false;		%==allow keyboard control within stimulus state? Slight drop in performance…
+tS.keyExclusionPattern		= ["fixate","stimulus"]; %==which states to skip keyboard checking
 tS.recordEyePosition		= false;	%==record local copy of eye position, **in addition** to the eyetracker?
 tS.askForComments			= false;	%==UI requestor asks for comments before/after run
 tS.saveData					= false;	%==save behavioural and eye movement data?
+tS.showBehaviourPlot		= true;		%==open the behaviourPlot figure? Can cause more memory use…
 tS.includeErrors			= false;	%==do we update the trial number even for incorrect saccade/fixate, if true then we call updateTask for both correct and incorrect, otherwise we only call updateTask() for correct responses
 tS.name						= 'default protocol'; %==name of this protocol
 tS.nStims					= stims.n;	%==number of stimuli, taken from metaStimulus object
-tS.tOut						= 5;		%==if wrong response, how long to time out before next trial
+tS.tOut						= 2;		%==if wrong response, how long to time out before next trial
 tS.CORRECT					= 1;		%==the code to send eyetracker for correct trials
 tS.BREAKFIX					= -1;		%==the code to send eyetracker for break fix trials
 tS.INCORRECT				= -5;		%==the code to send eyetracker for incorrect trials
@@ -190,8 +191,8 @@ eT.resetExclusionZones();
 %==================================================================
 %----WHICH states assigned as correct or break for online plot?----
 %----You need to use regex patterns for the match (doc regexp)-----
-bR.correctStateName				= '^correct';
-bR.breakStateName				= '^(breakfix|incorrect)';
+bR.correctStateName				= "correct";
+bR.breakStateName				= ["breakfix","incorrect"];
 
 %==================================================================
 %--------------randomise stimulus variables every trial?-----------
@@ -264,16 +265,14 @@ sM.skipExitStates			= {'fixate','incorrect|breakfix'};
 pauseEntryFn = {
 	@()hide(stims);
 	@()drawBackground(s); %blank the subject display
+	@()drawPhotoDiode(s,[0 0 0]); %draw black photodiode
 	@()drawTextNow(s,'PAUSED, press [p] to resume...');
 	@()disp('PAUSED, press [p] to resume...');
-	@()resetFixationHistory(eT); % reset the recent eye position history
-	@()resetExclusionZones(eT); % reset the exclusion zones on eyetracker
-	@()trackerClearScreen(eT); % blank the eyelink screen
-	@()trackerDrawText(eT,'PAUSED, press [P] to resume...');
-	@()trackerFlip(eT); %for tobii show info if operator screen enabled
+	@()trackerDrawStatus(eT,'PAUSED, press [p] to resume', stims.stimulusPositions);
 	@()trackerMessage(eT,'TRIAL_RESULT -100'); %store message in EDF
+	@()resetAll(eT); % reset all fixation markers to initial state
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
-	@()stopRecording(eT, true); %stop recording eye position data
+	@()stopRecording(eT, true); %stop recording eye position data, true=both eyelink & tobii
 	@()needFlip(me, false); % no need to flip the PTB screen
 	@()needEyeSample(me,false); % no need to check eye position
 };

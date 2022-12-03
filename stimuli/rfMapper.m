@@ -43,7 +43,7 @@ classdef rfMapper < barStimulus
 		xyDots = [0;0]
 		showClicks = 0
 		stimulus = 'bar'
-        tf = 0
+		tf = 0
 		phase = 0
 		backgroundColour = [0.1 0.1 0.1 0];
 	end
@@ -638,7 +638,7 @@ classdef rfMapper < barStimulus
 							if ol~=nw;me.regenerate;end
 							keyTicks = 0;
 						end
-					case '5%'
+					case '6^'
 							ol = me.sfOut;
 							switch me.stimulus
 								case 'bar'
@@ -648,7 +648,7 @@ classdef rfMapper < barStimulus
 							nw = me.sfOut;
 							if ol~=nw;me.regenerate;end
 							
-					case '6^'
+					case '5%'
 							ol = me.sfOut;
 							switch me.stimulus
 								case 'bar'

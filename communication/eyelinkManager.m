@@ -1171,11 +1171,12 @@ classdef eyelinkManager < optickaCore
 		%> @brief draw general status
 		%>
 		% ===================================================================
-		function trackerDrawStatus(me, comment, ts)
+		function trackerDrawStatus(me, comment, ts, dontClear)
 			if ~me.isConnected; return; end
 			if ~exist('comment','var'); comment=''; end
 			if ~exist('ts','var'); ts = []; end
-			trackerClearScreen(me);
+			if ~exist('dontClear','var');dontClear = false; end
+			if dontClear==false; trackerClearScreen(me); end
 			trackerDrawExclusion(me);
 			trackerDrawFixation(me);
 			if ~isempty(ts);trackerDrawStimuli(me, ts);end
@@ -1186,20 +1187,20 @@ classdef eyelinkManager < optickaCore
 		%> @brief draw the stimuli boxes on the tracker display
 		%>
 		% ===================================================================
-		function trackerDrawStimuli(me, ts, clearScreen, convertToPixels)
+		function trackerDrawStimuli(me, ts, dontClear, convertToPixels)
 			if ~me.isConnected; return; end
 			if exist('ts','var') && isstruct(ts) && ~isempty(fields(ts))
 				me.stimulusPositions = ts;
 			else
 				return
 			end
-			if ~exist('clearScreen','var')
-				clearScreen = false;
+			if ~exist('dontClear','var')
+				dontClear = true;
 			end
 			if ~exist('convertToPixels','var')
 				convertToPixels = false;
 			end
-			if clearScreen; Eyelink('Command', 'clear_screen 0'); end
+			if dontClear==false; Eyelink('Command', 'clear_screen 0'); end
 			for i = 1:length(me.stimulusPositions)
 				x = me.stimulusPositions(i).x; 
 				y = me.stimulusPositions(i).y; 
@@ -1222,14 +1223,13 @@ classdef eyelinkManager < optickaCore
 		%>
 		% ===================================================================
 		function trackerDrawFixation(me)
-			if me.isConnected
-				size = me.fixation.radius * 2;
-				rect = [0 0 size size];
-				for i = 1:length(me.fixation.X)
-					nrect = CenterRectOnPoint(rect, me.fixation.X(i), me.fixation.Y(i));
-					nrect = round(toPixels(me, nrect, 'rect'));
-					Eyelink('Command', 'draw_filled_box %d %d %d %d 10', nrect(1), nrect(2), nrect(3), nrect(4));
-				end
+			if ~me.isConnected; return; end
+			size = me.fixation.radius * 2;
+			rect = [0 0 size size];
+			for i = 1:length(me.fixation.X)
+				nrect = CenterRectOnPoint(rect, me.fixation.X(i), me.fixation.Y(i));
+				nrect = round(toPixels(me, nrect, 'rect'));
+				Eyelink('Command', 'draw_filled_box %d %d %d %d 10', nrect(1), nrect(2), nrect(3), nrect(4));
 			end
 		end
 		
@@ -1238,7 +1238,8 @@ classdef eyelinkManager < optickaCore
 		%>
 		% ===================================================================
 		function trackerDrawExclusion(me)
-			if me.isConnected && ~isempty(me.exclusionZone) && size(me.exclusionZone,2)==4
+			if ~me.isConnected; return; end
+			if ~isempty(me.exclusionZone) && size(me.exclusionZone,2)==4
 				for i = 1:size(me.exclusionZone,1)
 					rect = round(toPixels(me, me.exclusionZone(i,:)));
 					% exclusion zone is [-degX +degX -degY +degY], but rect is left,top,right,bottom
@@ -1252,12 +1253,11 @@ classdef eyelinkManager < optickaCore
 		%>
 		% ===================================================================
 		function trackerDrawText(me,textIn)
-			if me.isConnected
-				if exist('textIn','var') && ~isempty(textIn)
-					xDraw = toPixels(me, 0, 'x');
-					yDraw = toPixels(me, 0, 'y');
-					Eyelink('Command', 'draw_text %i %i %d %s', xDraw, yDraw, 3, textIn);
-				end
+			if ~me.isConnected; return; end
+			if exist('textIn','var') && ~isempty(textIn)
+				xDraw = toPixels(me, 0, 'x');
+				yDraw = toPixels(me, 0, 'y');
+				Eyelink('Command', 'draw_text %i %i %d %s', xDraw, yDraw, 3, textIn);
 			end
 		end
 		
@@ -1287,9 +1287,8 @@ classdef eyelinkManager < optickaCore
 		%>
 		% ===================================================================
 		function syncTime(me)
-			if me.isConnected
-				Eyelink('Message', 'SYNCTIME');		%zero-plot time for EDFVIEW
-			end
+			if ~me.isConnected; return; end
+			Eyelink('Message', 'SYNCTIME');		%zero-plot time for EDFVIEW
 		end
 		
 		% ===================================================================

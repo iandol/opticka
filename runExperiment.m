@@ -596,7 +596,7 @@ classdef runExperiment < optickaCore
 			tS							= struct();
 			tS.name						= 'generic'; %==name of this protocol
 			tS.useTask					= false;	%==use taskSequence (randomised variable task object)
-			tS.keyExclusionPattern		= '^(fixate|stim)'; %==regex of which states not to check keyboard for checkKeysDuringStimulus
+			tS.keyExclusionPattern		= ["fixate","stimulus"]; %==which states skip keyboard check
 			tS.checkKeysDuringStimulus	= false;	%==allow keyboard control? Slight drop in performance
 			tS.recordEyePosition		= false;	%==record eye position within PTB, **in addition** to the eyetracker?
 			tS.askForComments			= false;	%==little UI requestor asks for comments before/after run
@@ -825,7 +825,9 @@ classdef runExperiment < optickaCore
 					%warning('off'); %#ok<*WNOFF>
 					ListenChar(-1); %2=capture all keystrokes
 				end
-				if ~isdeployed; commandwindow; end
+				if ~isdeployed
+					try commandwindow; end
+				end
 				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
 
 				%=============================profiling starts here if uncommented
@@ -846,6 +848,7 @@ classdef runExperiment < optickaCore
 				tL.screenLog.trackerStartTime = getTrackerTime(eT);
 				tL.screenLog.trackerStartOffset = getTimeOffset(eT);
 				
+				useParallel = true;
 				%==============================IGNITE the stateMachine!
 				fprintf('\n===>>> Igniting the State Machine... <<<===\n');
 				start(sM);
@@ -875,7 +878,7 @@ classdef runExperiment < optickaCore
 					%------Check keyboard for commands (remember we can turn
 					% this off using either tS.keyExclusionPattern
 					% [per-state toggle] or tS.checkKeysDuringStimulus).
-					if tS.checkKeysDuringStimulus || ~contains(sM.currentName,tS.keyExclusionPattern)
+					if ~matches(sM.currentName,tS.keyExclusionPattern)
 						tS = checkKeys(me,tS);
 					end
 					
@@ -969,10 +972,9 @@ classdef runExperiment < optickaCore
 					warning('on');
 				end
 
-				try
-					updatePlot(bR, me); %update our behavioural plot for final state
-					show(stims); %make all stimuli visible again, useful for editing 
-				end
+				try updatePlot(bR, me); end %update our behavioural plot for final state
+				try show(stims); end %make all stimuli visible again, useful for editing
+				try reset(stims); end %reset stims back to initial state
 				
 				me.isRunning = false;
 				
@@ -1055,6 +1057,7 @@ classdef runExperiment < optickaCore
 				Priority(0);
 				ListenChar(0); RestrictKeysForKbCheck([]);
 				ShowCursor;
+				try reset(stims); end
 				try close(s); end
 				try close(aM); end
 				try close(eT); end

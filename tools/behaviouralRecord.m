@@ -19,9 +19,9 @@ classdef behaviouralRecord < optickaCore
 		info				= ''
 		xAll				= []
 		yAll				= [];
-		correctStateName	= '^correct'
+		correctStateName	= "correct"
 		correctStateValue	= 1;
-		breakStateName		= '^(breakfix|incorrect)'
+		breakStateName		= ["breakfix", "incorrect"]
 		breakStateValue		= -1;
 		rewardTime			= 150;
 		rewardVolume		= 3.6067e-04; %for 1ms
@@ -89,7 +89,6 @@ classdef behaviouralRecord < optickaCore
 		%> 
 		% ===================================================================
 		function createPlot(me, eL)
-			tt=tic;
 			if ~me.plotOnly
 				reset(me);
 				me.date = datetime('now');
@@ -161,7 +160,6 @@ classdef behaviouralRecord < optickaCore
 			title(me.h.axis4,'Average (n=10) Hit / Miss %');
 			title(me.h.axis5,'Last Eye Position');
 			me.isOpen = true;
-			fprintf('bR create took %3.2f ms\n',toc(tt)*1000);
 		end
 		
 		% ===================================================================
@@ -177,16 +175,15 @@ classdef behaviouralRecord < optickaCore
 			else
 				return;
 			end	
-			tt = tic;
 			if me.tick == 1
 				reset(me);
 				me.startTime = datetime('now');
 			end
 			if exist('sM','var')
-				if ~isempty(regexpi(sM.currentName,me.correctStateName,'once'))
+				if matches(sM.currentName, me.correctStateName)
 					me.response(me.tick) = me.correctStateValue;
 					me.rt1(me.tick) = sM.log(end).stateTimeToNow * 1e3;
-				elseif ~isempty(regexpi(sM.currentName,me.breakStateName,'once'))
+				elseif matches(sM.currentName, me.breakStateName)
 					me.response(me.tick) = me.breakStateValue;
 					me.rt1(me.tick) = 0;
 				else
@@ -220,7 +217,6 @@ classdef behaviouralRecord < optickaCore
 				me.trials(n).xAll = me.xAll;
 				me.trials(n).yAll = me.yAll;
 			end
-			fprintf('bR update took %3.2f ms\n',toc(tt)*1000);
 		end
 		
 		% ===================================================================
@@ -228,7 +224,7 @@ classdef behaviouralRecord < optickaCore
 		%> 
 		%> 
 		% ===================================================================
-		function plotAsyn(me, drawNow)
+		function plotAsync(me, drawNow)
 			parfeval(backgroundPool,@me.plot,0,drawNow);
 		end
 		
@@ -241,7 +237,6 @@ classdef behaviouralRecord < optickaCore
 		function plot(me, drawNow)
 			if ~me.isOpen; return; end
 			if ~exist('drawNow','var'); drawNow = true; end
-			tt = tic;
 			hitn = length( me.response(me.response > 0) );
 			breakn = length( me.response(me.response < 0) );
 			totaln = length(me.response);
@@ -370,10 +365,7 @@ classdef behaviouralRecord < optickaCore
 			if ~me.plotOnly
 				me.tick = me.tick + 1;
 			end
-			fprintf('bR plot %3.2f ms\n',toc(tt)*1000);
-			tt=tic;
 			if drawNow; drawnow(); end
-			fprintf('bR plot drawnow %3.2f ms\n',toc(tt)*1000);
 		end
 
 		% ===================================================================

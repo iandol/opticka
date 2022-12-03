@@ -207,11 +207,15 @@ classdef opticka < optickaCore
 		%> @brief Start the UI
 		% ===================================================================
 			try
-				me.ss = SplashScreen(['Opticka V' me.optickaVersion],'opticka.png');
-				if isdeployed
-					me.ss.addText( 10, 30, ['Loading Opticka [D] V' me.optickaVersion '…'], 'FontSize', 20, 'Color', [1 0.8 0.5] )
-				else
-					me.ss.addText( 10, 30, ['Loading Opticka V' me.optickaVersion '…'], 'FontSize', 20, 'Color', [1 0.8 0.5] )
+				jv = version('-java');
+				if contains(jv,'not enabled');isjava=false;else;isjava=true;end
+				if isjava
+					me.ss = SplashScreen(['Opticka V' me.optickaVersion],'opticka.png');
+					if isdeployed
+						me.ss.addText( 10, 30, ['Loading Opticka [D] V' me.optickaVersion '…'], 'FontSize', 20, 'Color', [1 0.8 0.5] )
+					else
+						me.ss.addText( 10, 30, ['Loading Opticka V' me.optickaVersion '…'], 'FontSize', 20, 'Color', [1 0.8 0.5] )
+					end
 				end
 				me.paths.filename = mfilename;
 				me.paths.whereami = fileparts(which(mfilename));
@@ -312,9 +316,9 @@ classdef opticka < optickaCore
 				me.r.researcherName = me.ui.OKTrainingResearcherName.Value;
 				me.r.subjectName = me.ui.OKTrainingName.Value;
 				getStateInfo(me);
-				if ~isempty(me.ss); pause(0.1); delete(me.ss); me.ss = []; end
+				try if ~isempty(me.ss); pause(0.1); delete(me.ss); me.ss = []; end; end
 			catch ME
-				if ~isempty(me.ss); delete(me.ss); me.ss = []; end
+				try if ~isempty(me.ss); delete(me.ss); me.ss = []; end; end
 				warning('Problem initialising Opticka UI, please check errors on the commandline!');
 				try delete(me.ui.OKRoot);end %#ok<*TRYNC>
 				try me.ui = []; end

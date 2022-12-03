@@ -1554,32 +1554,32 @@ classdef tobiiManager < optickaCore
 		%> @brief draw general status
 		%>
 		% ===================================================================
-		function trackerDrawStatus(me, comment, stimPos, dontclear)
+		function trackerDrawStatus(me, comment, stimPos, dontClear)
 			if ~me.isConnected || ~me.operatorScreen.isOpen; return;end
 			if ~exist('comment','var'); comment=''; end
 			if ~exist('stimPos','var'); stimPos = struct; end
-			if ~exist('dontclear','var'); dontclear = 0; end
-			if dontclear==0; trackerClearScreen(me); end
+			if ~exist('dontClear','var'); dontClear = 0; end
+			if ~dontClear; trackerClearScreen(me); end
 			trackerDrawExclusion(me);
 			trackerDrawFixation(me);
-			trackerDrawStimuli(me,stimPos);
+			trackerDrawStimuli(me, stimPos);
 			trackerDrawEyePositions(me);
 			if ~isempty(comment);trackerDrawText(me, comment);end
-			trackerFlip(me,dontclear);
+			trackerFlip(me,dontClear);
 		end
 		
 		% ===================================================================
 		%> @brief draw the stimuli boxes on the tracker display
 		%>
 		% ===================================================================
-		function trackerDrawStimuli(me, ts, clearScreen)
-			if ~me.isConnected || ~me.operatorScreen.isOpen; return;end
+		function trackerDrawStimuli(me, ts, dontClear)
+			if ~me.isConnected || ~me.operatorScreen.isOpen; return; end
 			if exist('ts','var') && isstruct(ts)
 				me.stimulusPositions = ts;
 			end
 			if isempty(me.stimulusPositions) || isempty(fieldnames(me.stimulusPositions));return;end
-			if ~exist('clearScreen','var');clearScreen = false;end
-			if clearScreen; trackerClearScreen(me); end
+			if ~exist('dontClear','var');dontClear = true;end
+			if dontClear==false; trackerClearScreen(me); end
 			for i = 1:length(me.stimulusPositions)
 				x = me.stimulusPositions(i).x;
 				y = me.stimulusPositions(i).y;
@@ -1598,7 +1598,7 @@ classdef tobiiManager < optickaCore
 		%>
 		% ===================================================================
 		function trackerDrawFixation(me)
-			if ~me.isConnected || ~me.operatorScreen.isOpen; return;end
+			if ~me.isConnected || ~me.operatorScreen.isOpen; return; end
 			if length(me.fixation.radius) == 1
 				drawSpot(me.operatorScreen,me.fixation.radius,[0.5 0.6 0.5 1],me.fixation.X,me.fixation.Y);
 			else
@@ -1615,7 +1615,7 @@ classdef tobiiManager < optickaCore
 		%>
 		% ===================================================================
 		function trackerDrawEyePosition(me)
-			if ~me.isConnected || ~me.operatorScreen.isOpen; return;end
+			if ~me.isConnected || ~me.operatorScreen.isOpen; return; end
 			if me.isFix
 				if me.fixLength > me.fixation.time
 					drawSpot(me.operatorScreen,0.3,[0 1 0.25 0.75],me.x,me.y);
@@ -1632,7 +1632,7 @@ classdef tobiiManager < optickaCore
 		%>
 		% ===================================================================
 		function trackerDrawEyePositions(me)
-			if ~me.isConnected || ~me.operatorScreen.isOpen; return;end
+			if ~me.isConnected || ~me.operatorScreen.isOpen; return; end
 			if ~isempty(me.xAll) && ~isempty(me.yAll) && (length(me.xAll)==length(me.yAll))
 				xy = [me.xAll;me.yAll];
 				drawDots(me.operatorScreen,xy,8,[0.5 1 0 0.2]);

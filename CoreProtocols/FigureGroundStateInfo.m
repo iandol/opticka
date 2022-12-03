@@ -156,8 +156,8 @@ eT.resetExclusionZones();
 %==================================================================
 %----WHICH states assigned as correct or break for online plot?----
 %----You need to use regex patterns for the match (doc regexp)-----
-bR.correctStateName				= '^correct';
-bR.breakStateName				= '^(breakfix|incorrect)';
+bR.correctStateName				= "correct";
+bR.breakStateName				= ["breakfix","incorrect"];
 
 %randomise stimulus variables every trial? useful during initial training but not for
 %data collection.

@@ -30,13 +30,13 @@
 tS.useTask					= true;		%==use taskSequence (randomised variable task object)
 tS.rewardTime				= 150;		%==TTL time in milliseconds
 tS.rewardPin				= 2;		%==Output pin, 2 by default with Arduino.
-tS.checkKeysDuringStimulus	= false;	%==allow keyboard control during all states? Slight drop in performance
-tS.recordEyePosition		= false;	%==record eye position within PTB, **in addition** to the EDF?
+tS.keyExclusionPattern		= ["fixate","stimulus"]; %==which states to skip keyboard checking
+tS.recordEyePosition		= false;	%==record local copy of eye position, **in addition** to the eyetracker?
 tS.askForComments			= false;	%==little UI requestor asks for comments before/after run
 tS.saveData					= true;		%==save behavioural and eye movement data?
 tS.showBehaviourPlot		= true;		%==open the behaviourPlot figure? Can cause more memory use
 tS.name						= 'Colour Grating'; %==name of this protocol
-tS.nStims					= stims.n;	%==number of stimuli
+tS.nStims					= stims.n;	%==number of stimuli, taken from metaStimulus object
 tS.tOut						= 0.5;		%==if wrong response, how long to time out before next trial
 tS.CORRECT					= 1;		%==the code to send eyetracker for correct trials
 tS.BREAKFIX					= -1;		%==the code to send eyetracker for break fix trials
@@ -130,8 +130,8 @@ eT.resetExclusionZones();
 
 %==================================================================
 %----which states assigned as correct or break for online plot?----
-bR.correctStateName				= '^correct'; %use regex for better matching
-bR.breakStateName				= '^(breakfix|incorrect)';
+bR.correctStateName				= "correct"; %use regex for better matching
+bR.breakStateName				= ["breakfix","incorrect"];
 
 %==================================================================
 %--------------randomise stimulus variables every trial?-----------
