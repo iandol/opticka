@@ -125,7 +125,7 @@ classdef discStimulus < baseStimulus
 				end
 			end
 			
-			doProperties(me); % create transient runtime action properties
+			addRuntimeProperties(me); % create transient runtime action properties
 			
 			if isempty(me.findprop('discSize'));p=me.addprop('discSize');p.Transient=true;end
 			me.discSize = me.ppd * me.size;

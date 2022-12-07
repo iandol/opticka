@@ -125,7 +125,7 @@ classdef barStimulus < baseStimulus
 				end
 			end
 			
-			doProperties(me);
+			addRuntimeProperties(me);
 			
 			if me.barWidthOut > me.screenWidth; me.barWidthOut=me.screenWidth; end
 			if me.barHeightOut > me.screenHeight; me.barHeightOut=me.screenHeight; end

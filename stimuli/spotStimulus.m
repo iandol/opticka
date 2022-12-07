@@ -110,7 +110,7 @@ classdef spotStimulus < baseStimulus
 				end
 			end
 			
-			doProperties(me);
+			addRuntimeProperties(me);
 			
 			if me.doFlash
 				if ~isempty(me.flashColourOut)

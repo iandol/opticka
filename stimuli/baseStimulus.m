@@ -858,7 +858,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		end
 
 		% ===================================================================
-		%> @brief gets a propery copy or original property
+		%> @brief gets a properyy copy or original property
 		%>
 		%> When stimuli are run, their properties are copied, so e.g. angle
 		%> is copied to angleOut and this is used during the task. This
@@ -877,13 +877,13 @@ classdef baseStimulus < optickaCore & dynamicprops
 				value = me.(name);
 				if exist('range','var'); value = value(range); end
 			else
-				warning('Property %s doesn''t exist!!!',name)
-				value = [];
+				if me.verbose;fprintf('Property %s doesn''t exist...\n',name);end
+				value = []; name = [];
 			end
 		end
 
 		% ===================================================================
-		%> @brief gets a propery copy or original property
+		%> @brief gets a property copy or original property
 		%>
 		%> When stimuli are run, their properties are copied, so e.g. angle
 		%> is copied to angleOut and this is used during the task. This
@@ -901,7 +901,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				end
 				me.(name) = value;
 			else
-				warning('Property %s doesn''t exist!!!',name)
+				if me.verbose;fprintf('Property %s doesn''t exist...\n',name);end
 			end
 		end
 
@@ -958,24 +958,33 @@ classdef baseStimulus < optickaCore & dynamicprops
 	%=======================================================================
 		
 		% ===================================================================
-		%> @brief doProperties
+		%> @brief addRuntimeProperties
 		%> these are transient properties that specify actions during runtime
 		% ===================================================================
-		function doProperties(me)
-			if isempty(me.findprop('doFlash'));p=me.addprop('doFlash');end
-			if isempty(me.findprop('doDots'));p=me.addprop('doDots');end
-			if isempty(me.findprop('doMotion'));p=me.addprop('doMotion');end
-			if isempty(me.findprop('doDrift'));p=me.addprop('doDrift');end
-			if isempty(me.findprop('doAnimator'));p=me.addprop('doAnimator');end
-			
+		function addRuntimeProperties(me)
+			if isempty(me.findprop('doFlash'));me.addprop('doFlash');end
+			if isempty(me.findprop('doDots'));me.addprop('doDots');end
+			if isempty(me.findprop('doMotion'));me.addprop('doMotion');end
+			if isempty(me.findprop('doDrift'));me.addprop('doDrift');end
+			if isempty(me.findprop('doAnimator'));me.addprop('doAnimator');end
+
+			updateRuntimeProperties(me);
+		end
+
+		% ===================================================================
+		%> @brief addRuntimeProperties
+		%> these are transient properties that specify actions during runtime
+		% ===================================================================
+		function updateRuntimeProperties(me)
 			me.doDots		= false;
 			me.doMotion		= false;
 			me.doDrift		= false;
 			me.doFlash		= false;
 			me.doAnimator	= false;
-			
-			if ~isempty(me.findprop('tf')) && me.tf > 0; me.doDrift = true; end
-			if me.speed > 0; me.doMotion = true; end
+			[v,n] = getP(me,'tf');
+			if ~isempty(n) && v > 0; me.doDrift = true; end
+			[v,n] = getP(me,'speed');
+			if ~isempty(n) && v > 0; me.doMotion = true; end
 			if strcmpi(me.family,'dots'); me.doDots = true; end
 			if strcmpi(me.type,'flash'); me.doFlash = true; end
 			if ~isempty(me.animator) && isa(me.animator,'animationManager')

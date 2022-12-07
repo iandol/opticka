@@ -168,7 +168,7 @@ classdef logGaborStimulus < baseStimulus
 				makeMask(me);
 			end
 
-			doProperties(me);
+			addRuntimeProperties(me);
 
 			if me.sizeOut > 0
 				me.scale = me.sizeOut / (me.width / me.ppd);

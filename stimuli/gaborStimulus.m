@@ -160,7 +160,7 @@ classdef gaborStimulus < baseStimulus
 				end
 			end
 			
-			doProperties(me);
+			addRuntimeProperties(me);
 			
 			
 			if isempty(me.findprop('rotateMode'));p=me.addprop('rotateMode');p.Transient=true;end

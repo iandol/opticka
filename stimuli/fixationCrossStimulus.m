@@ -122,7 +122,7 @@ classdef fixationCrossStimulus < baseStimulus
 				end
 			end
 			
-			doProperties(me);
+			addRuntimeProperties(me);
 			
 			if me.doFlash
 				if ~isempty(me.flashColour)

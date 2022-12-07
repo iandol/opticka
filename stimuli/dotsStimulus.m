@@ -155,7 +155,7 @@ classdef dotsStimulus < baseStimulus
 				end
 			end
 			
-			doProperties(me);
+			addRuntimeProperties(me);
 			
 			%build the mask
 			if me.mask

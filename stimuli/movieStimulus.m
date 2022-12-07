@@ -174,7 +174,7 @@ classdef movieStimulus < baseStimulus
 				end
 			end
 			
-			doProperties(me);
+			addRuntimeProperties(me);
 			
 			t=tic;
 			[me.movie, me.duration, me.fps, me.width, me.height] = Screen('OpenMovie', ...

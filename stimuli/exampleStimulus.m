@@ -8,43 +8,59 @@ classdef exampleStimulus < baseStimulus
 	%> animate() to update any per-frame values etc.
 
 	properties
-		% add variables that you need here:
+		% add variables that you need for your stimulus here:
 		testValue			= 'hello'
+		% type is trigger for stimuli that can have different types, like
+		% 'static', 'flashing' etc.
 		type 				= 'simple'
 	end
 
 	properties (SetAccess = protected, GetAccess = public)
-		% stimulus family
+		% the stimulus family, 'grating','image', 'movie' etc.
 		family 				= 'example'
 	end
 
 	properties (SetAccess = private, GetAccess = private)
+		% which properties should we ignore when allowing variables to be
+		% modified during a task
 		ignoreProperties	= 'family';
+		% which properties can we pass when constructing the object
 		allowedProperties	= 'type'
 	end
 
 	methods
 		% ===================================================================
-		function me = exampleStimulus() % CONSTRUCTOR
+		function me = exampleStimulus(varargin) % CONSTRUCTOR
+			% build our arguments from what is passed in[varargin] and a
+			% struct of preset properties
 			args = optickaCore.addDefaults(varargin,...
 				struct('name','example stimulus'));
-			me=me@baseStimulus(args); %we call the superclass constructor first
+			% we call the superclass constructor first
+			me=me@baseStimulus(args);
+			% we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
-			
+			% stimuli in PTB have two ways to be drawn, via Rects or via
+			% X,Y positon. isRect=true means this is a Rect stimulus, not
+			% XY one
 			me.isRect = false; % uses a rect for drawing?
-			
+			% build our ignored properties combining the baseStimulus and
+			% this class into a regex
 			me.ignoreProperties = ['^(' me.ignorePropertiesBase '|' me.ignoreProperties ')$'];
-			me.salutation('constructor method','Stimulus initialisation complete');
 		end
 
 		% ===================================================================
 		function setup(me, sM)
+			% reset all values and properties
 			reset(me);
+			% specify we are in setup
 			me.inSetup = true;
+			% make sure our stimulus starts visible
 			if isempty(me.isVisible); me.show; end
-			
+			% copy our screenManager handle
 			me.sM = sM;
-			if ~sM.isOpen; warning('Screen needs to be Open!'); end
+			% make sure screen is open
+			if ~sM.isOpen; error('Screen needs to be Open!'); end
+			% grab our pixelsPerDegree value from screenManager.
 			me.ppd=sM.ppd;
 			
 			% opticka uses degrees etc. but PTB needs pixels. So what we do
@@ -68,8 +84,8 @@ classdef exampleStimulus < baseStimulus
 					me.([fn{j} 'Out']) = me.(fn{j}); %copy our property value to our tempory copy
 				end
 			end
-			
-			doProperties(me);
+			% check
+			addRuntimeProperties(me);
 			
 			me.inSetup = false;
 			

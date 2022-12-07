@@ -204,7 +204,7 @@ classdef colourGratingStimulus < baseStimulus
 				end
 			end
 			
-			doProperties(me);
+			addRuntimeProperties(me);
 			
 			if isempty(me.findprop('rotateMode')); me.addprop('rotateMode'); end
 			if me.rotateTexture
