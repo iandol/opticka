@@ -30,7 +30,9 @@ classdef runExperiment < optickaCore
 %> runMOC(myExp); % run method of constants type experiment
 %> ```
 %>
-%> will run a minimal experiment showing a 1c/d circularly masked grating
+%> will run a minimal experiment showing a 1c/d circularly masked grating.
+%>
+%> @todo refactor checkKey(): can we use a config for keyboard commands?
 %>
 %> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================	
@@ -594,10 +596,11 @@ classdef runExperiment < optickaCore
 			% after the run; prefer structure over class to keep it light. These
 			% defaults can be overwritten by the StateFile.m
 			tS							= struct();
-			tS.name						= 'generic'; %==name of this protocol
+			tS.name						= 'generic';%==name of this protocol
 			tS.useTask					= false;	%==use taskSequence (randomised variable task object)
 			tS.keyExclusionPattern		= ["fixate","stimulus"]; %==which states skip keyboard check
 			tS.checkKeysDuringStimulus	= false;	%==allow keyboard control? Slight drop in performance
+			tS.enableTrainingKeys		= false;	%==enable keys useful during task training, but not for data recording
 			tS.recordEyePosition		= false;	%==record eye position within PTB, **in addition** to the eyetracker?
 			tS.askForComments			= false;	%==little UI requestor asks for comments before/after run
 			tS.saveData					= false;	%==save behavioural and eye movement data?
@@ -2064,7 +2067,7 @@ classdef runExperiment < optickaCore
 			end
 			if isempty(me.task.outValues)
 				t = sprintf('%s | Time: %3.3f (%i) | isFix: %i | isExclusion: %i | isFixInit: %i',...
-					name,(log.vbl(log.tick-1)-log.startTime), log.tick-1,...
+					name,(log.lastvbl-log.startTime), log.tick-1,...
 					me.eyeTracker.isFix,me.eyeTracker.isExclusion,me.eyeTracker.isInitFail);
 				return
 			else
@@ -2074,13 +2077,13 @@ classdef runExperiment < optickaCore
 				t=sprintf('%s | B:%i R:%i [%i/%i] | V: %i | Time: %3.3f (%i) %s',...
 					name,me.task.thisBlock, me.task.thisRun, me.task.totalRuns,...
 					me.task.nRuns, var, ...
-					(log.vbl(log.tick-1)-log.startTime), log.tick-1,...
+					(log.lastvbl-log.startTime), log.tick-1,...
 					etinfo);
 			else
 				t=sprintf('%s | B:%i R:%i [%i/%i] | V: %i | Time: %3.3f (%i) %s',...
 					name,me.task.thisBlock,me.task.thisRun,me.task.totalRuns,...
 					me.task.nRuns, var, ...
-					(log.vbl(1)-log.startTime), log.tick,...
+					(log.lastvbl-log.startTime), log.tick,...
 					etinfo);
 			end
 			for i=1:me.task.nVars

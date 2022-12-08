@@ -36,7 +36,7 @@ classdef optickaCore < handle
 	%--------------------VISIBLE PROPERTIES-----------%
 	properties (SetAccess = protected, GetAccess = public)
 		%> clock() dateStamp set on construction
-		dateStamp double
+		dateStamp
 		%> universal ID
 		uuid char
 		%> storage of various paths
@@ -89,7 +89,7 @@ classdef optickaCore < handle
 		% ===================================================================
 			args = me.addDefaults(varargin);
 			me.parseArgs(args,me.allowedPropertiesCore);
-			me.dateStamp = clock();
+			me.dateStamp = datetime('now');
 			me.className = class(me);
 			me.uuid = num2str(dec2hex(floor((now - floor(now))*1e10))); %me.uuid = char(java.util.UUID.randomUUID)%128bit uuid
 			me.fullName_ = me.fullName; %cache fullName

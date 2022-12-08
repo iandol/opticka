@@ -32,7 +32,7 @@
 tS.useTask					= true;		%==use taskSequence (randomises stimulus variables)
 tS.rewardTime				= 250;		%==TTL time in milliseconds
 tS.rewardPin				= 2;		%==Output pin, 2 by default with Arduino.
-tS.checkKeysDuringStimulus  = false;		%==allow keyboard control within stimulus state? Slight drop in performance…
+tS.keyExclusionPattern		= ["fixate","stimulus"]; %==which states to skip keyboard checking
 tS.recordEyePosition		= false;		%==record local copy of eye position, **in addition** to the eyetracker?
 tS.askForComments			= false;	%==UI requestor asks for comments before/after run
 tS.saveData					= true;		%==save behavioural and eye movement data?
@@ -251,6 +251,7 @@ pauseExitFn = {
 psEntryFn = {
 	@()needFlip(me, true); % start PTB screen flips
 	@()needEyeSample(me, true); % make sure we start measuring eye position
+	@()needFlipTracker(me, 1); % set tobii operator screen to flip and not clear
 	@()startRecording(eT); % start eyelink recording for this trial [ignored by tobii as it always records]
 	@()updateFixationTarget(me, tS.useTask, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
 	@()resetAll(eT); %reset the fixation counters ready for a new trial
@@ -259,7 +260,6 @@ psEntryFn = {
 	@()trackerMessage(eT,sprintf('TRIALID %i',getTaskIndex(me))); %Eyelink start trial marker
 	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
 	@()trackerDrawStatus(eT,'Prestim...', stims.stimulusPositions, 0);
-	@()needFlipTracker(me, 1); % set tobii operator screen to flip and not clear
 	@()logRun(me,'PREFIX'); % log current trial info to command window AND timeLogger
 };
 

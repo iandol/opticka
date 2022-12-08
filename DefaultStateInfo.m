@@ -76,6 +76,7 @@ tS.useTask					= true;		%==use taskSequence (randomises stimulus variables)
 tS.rewardTime				= 250;		%==TTL time in milliseconds
 tS.rewardPin				= 2;		%==Output pin, 2 by default with Arduino.
 tS.keyExclusionPattern		= ["fixate","stimulus"]; %==which states to skip keyboard checking
+tS.enableTrainingKeys		= true;		%==enable keys useful during task training, but not for data recording
 tS.recordEyePosition		= false;	%==record local copy of eye position, **in addition** to the eyetracker?
 tS.askForComments			= false;	%==UI requestor asks for comments before/after run
 tS.saveData					= false;	%==save behavioural and eye movement data?
@@ -182,11 +183,10 @@ elseif me.useTobii
 		eT.valPositions				= [ .5 .5 ];
 	end
 end
-
 %Initialise the eyeTracker object with X, Y, FixInitTime, FixTime, Radius, StrictFix
-eT.updateFixationValues(tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
+updateFixationValues(eT, tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
 %Ensure we don't start with any exclusion zones set up
-eT.resetExclusionZones();
+resetAll(eT);
 
 %==================================================================
 %----WHICH states assigned as correct or break for online plot?----
@@ -434,8 +434,7 @@ incEntryFn = {
 	@()beep(aM,400,0.5,1);
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.INCORRECT));
-	@()trackerClearScreen(eT);
-	@()trackerDrawText(eT,'Incorrect! :-(');
+	@()trackerDrawStatus(eT,'INCORRECT! :-(', stims.stimulusPositions, 0);
 	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()needEyeSample(me,false);
@@ -465,8 +464,7 @@ breakEntryFn = {
 	@()beep(aM,400,0.5,1);
 	@()edfMessage(eT,'END_RT');
 	@()edfMessage(eT,['TRIAL_RESULT ' num2str(tS.BREAKFIX)]);
-	@()trackerClearScreen(eT);
-	@()trackerDrawText(eT,'Broke maintain fix! :-(');
+	@()trackerDrawStatus(eT,'BREAKFIX! :-(', stims.stimulusPositions, 0);
 	@()stopRecording(eT);
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()needEyeSample(me,false);

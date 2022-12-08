@@ -264,11 +264,11 @@ classdef metaStimulus < optickaCore
 		function reset(me)
 
 			for i = 1:me.n
-				reset(me.stimuli{i});
+				try reset(me.stimuli{i}); end %#ok<*TRYNC> 
 			end
 				
 			for i = 1:me.nMask
-				reset(me.maskStimuli{i});
+				try reset(me.maskStimuli{i}); end
 			end
 			
 		end
@@ -364,7 +364,7 @@ classdef metaStimulus < optickaCore
 		%> @brief Edit -- fast change a particular value.
 		%>
 		%> @params stims array of stimuli to edit
-		%> @params var he variable to edit
+		%> @params var the variable to edit
 		%> @params the value to assign
 		%> @params mask whether to edit a mask or notmal stimulus
 		% ===================================================================
