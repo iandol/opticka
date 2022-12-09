@@ -76,7 +76,7 @@ try
 
 			rect = Screen('Rect',texture(1));
 			rect = ScaleRect(rect,round(blockpx),round(blockpx));
-			rect = CenterRectOnPointd(rect, sv.xCenter, sv.yCenter);
+			rect = CenterRectOnPointd(rect, sv.xCenter+(s.screenXOffset*s.ppd), sv.yCenter+(s.screenYOffset*s.ppd));
 
 			% present stimulation
 			% Screen('DrawTexture', windowPointer, texturePointer [,sourceRect] [,destinationRect]
