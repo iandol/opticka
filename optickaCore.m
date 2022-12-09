@@ -113,19 +113,17 @@ classdef optickaCore < handle
 		end
 		
 		% ===================================================================
-		function initialiseSaveFile(me, path)
+		function c = initialiseSaveFile(me, path)
 		%> @fn initialiseSaveFile(me, path)
 		%> @brief Initialise Save Dir
 		%>
 		%> @param path - the path to use.
 		% ===================================================================
-			if ~exist('path','var') || isempty(path)
-				path = me.paths.savedData;
-			else
+			if exist('path','var') && exist(path,"dir")
 				me.paths.savedData = path;
 			end
-			c = fix(clock);
-			c = num2str(c(1:5));
+			c = fix(clock); %#ok<*CLOCK> compatible with octave
+			c = num2str(c(1:6));
 			c = regexprep(c,' +','-');
 			me.savePrefix = c;
 		end

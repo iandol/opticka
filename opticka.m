@@ -37,7 +37,7 @@ classdef opticka < optickaCore
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> version number
-		optickaVersion char		= '2.10'
+		optickaVersion char		= '2.11'
 		%> is this a remote instance?
 		remote					= false
 	end
@@ -1412,7 +1412,7 @@ classdef opticka < optickaCore
 
 			if me.r.stimuli.n > 0
 				set(me.ui.OKDeleteStimulus,'Enable','on');
-				set(me.ui.OKModifyStimulus,'Enable','on');
+				set(me.ui.OKModifyStimulus,'Enable','off');
 				set(me.ui.OKStimulusUp,'Enable','on');
 				set(me.ui.OKStimulusDown,'Enable','on');
 				set(me.ui.OKStimulusRun,'Enable','on');

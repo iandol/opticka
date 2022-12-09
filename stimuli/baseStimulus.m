@@ -854,6 +854,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 			if isprop(me,'h')
 				me.h = [];
 			end
+			fprintf('===>>> baseStimulus: Ran clean handles!!!\n')
 			me.isGUI = false;
 		end
 
@@ -967,7 +968,6 @@ classdef baseStimulus < optickaCore & dynamicprops
 			if isempty(me.findprop('doMotion'));me.addprop('doMotion');end
 			if isempty(me.findprop('doDrift'));me.addprop('doDrift');end
 			if isempty(me.findprop('doAnimator'));me.addprop('doAnimator');end
-
 			updateRuntimeProperties(me);
 		end
 
@@ -1076,7 +1076,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 			allprops = properties(me);
 			for i=1:numel(allprops)
         		m = findprop(me, allprops{i});
-        		if isa(m,'meta.DynamicProperty')
+				if isa(m,'meta.DynamicProperty')
             		delete(m)
 				end
 			end
@@ -1089,7 +1089,6 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> @return
 		% ===================================================================
 		function delete(me)
-			me.handles = [];
 			if ~isempty(me.texture)
 				for i = 1:length(me.texture)
 					if Screen(me.texture, 'WindowKind')~=0 ;try Screen('Close',me.texture); end; end %#ok<*TRYNC>
@@ -1098,6 +1097,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 			if isprop(me,'buffertex') && ~isempty(me.buffertex)
 				if Screen(me.buffertex, 'WindowKind')~=0 ; try Screen('Close',me.buffertex); end; end
 			end
+			me.handles = [];
 			if me.verbose; fprintf('--->>> Delete: %s\n',me.fullName); end
 		end
 		

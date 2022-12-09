@@ -399,8 +399,8 @@ classdef barStimulus < baseStimulus
 				scale = me.getP('scale');
 				bwpixels = round(me.barWidthOut*me.ppd);
 				blpixels = round(me.barHeightOut*me.ppd);
-				if bwpixels>me.screenWidth*2;bwpixels=me.screenWidth*2;end
-				if blpixels>me.screenHeight*2;blpixels=me.screenHeight*2;end
+				if bwpixels>me.screenWidth*3;bwpixels=me.screenWidth*3;end
+				if blpixels>me.screenHeight*3;blpixels=me.screenHeight*3;end
 	
 				if ~strcmpi(me.type,'checkerboard')
 					if rem(bwpixels,2);bwpixels=bwpixels+1;end
@@ -490,8 +490,8 @@ classdef barStimulus < baseStimulus
 				getReport(ME)
 				bwpixels = round(me.barWidthOut*me.ppd);
 				blpixels = round(me.barHeightOut*me.ppd);
-				if bwpixels>me.screenWidth*2;bwpixels=me.screenWidth*2;end
-				if blpixels>me.screenHeight*2;blpixels=me.screenHeight*2;end
+				if bwpixels>me.screenWidth*3;bwpixels=me.screenWidth*3;end
+				if blpixels>me.screenHeight*3;blpixels=me.screenHeight*3;end
 				me.matrix=ones(blpixels,bwpixels,4);
 			end
 		end
