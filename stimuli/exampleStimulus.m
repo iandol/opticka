@@ -53,15 +53,17 @@ classdef exampleStimulus < baseStimulus
 			% reset all values and properties
 			reset(me);
 			% specify we are in setup
-			me.inSetup = true;
+			me.inSetup		= true;
 			% make sure our stimulus starts visible
 			if isempty(me.isVisible); me.show; end
 			% copy our screenManager handle
-			me.sM = sM;
+			me.sM			= sM;
 			% make sure screen is open
 			if ~sM.isOpen; error('Screen needs to be Open!'); end
+			% screen values
+			me.screenVals	= sM.screenVals;	
 			% grab our pixelsPerDegree value from screenManager.
-			me.ppd=sM.ppd;
+			me.ppd			= sM.ppd;
 			
 			% opticka uses degrees etc. but PTB needs pixels. So what we do
 			% is copy all properties like `size` to a temporary property

@@ -410,11 +410,10 @@ classdef baseStimulus < optickaCore & dynamicprops
 				setup(me,s); %setup our stimulus object
 				
 				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
+
+				drawGrid(s); %draw +-5 degree dot grid
 				
 				if ~strcmpi(me.type,'movie'); draw(me); resetTicks(me); end
-				
-				drawGrid(s); %draw +-5 degree dot grid
-				drawScreenCenter(s); %centre spot
 				
 				if benchmark
 					Screen('DrawText', s.win, 'BENCHMARK: screen won''t update properly, see FPS in command window at end.', 5,5,[0 0 0]);
@@ -424,7 +423,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				
 				flip(s);
 				if benchmark
-					WaitSecs('YieldSecs',0.5);
+					WaitSecs('YieldSecs',0.25);
 				else
 					WaitSecs('YieldSecs',2);
 				end
@@ -432,8 +431,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 				nFrames = 0;
 				notFinished = true;
 				benchmarkFrames = floor(sv.fps * runtime);
-				startT = GetSecs;
 				vbl = zeros(benchmarkFrames+1,1);
+				startT = GetSecs; lastvbl = startT;
 				while notFinished
 					nFrames = nFrames + 1;
 					draw(me); %draw stimulus
@@ -444,10 +443,11 @@ classdef baseStimulus < optickaCore & dynamicprops
 						Screen('Flip',s.win,0,2,2);
 						notFinished = nFrames < benchmarkFrames;
 					else
-						vbl(nFrames) = flip(s, vbl(end)); %flip the buffer
+						vbl(nFrames) = flip(s, lastvbl + sv.halfisi); %flip the buffer
+						lastvbl = vbl(nFrames);
 						% the calculation needs to take into account the
 						% first and last frame times, so we subtract ifi*2
-						notFinished = vbl(nFrames) < ( vbl(1) + ( runtime - (sv.ifi * 2) ) );
+						notFinished = lastvbl < ( vbl(1) + ( runtime - (sv.ifi * 2) ) );
 					end
 				end
 				endT = flip(s);
@@ -906,6 +906,10 @@ classdef baseStimulus < optickaCore & dynamicprops
 			end
 		end
 
+		function set.handles(me,value)
+			fprintf('\n\nHANDLES ARE MODIFIED!!!\n\n')
+			me.handles = value;
+		end
 		
 	end %---END PUBLIC METHODS---%
 	
@@ -957,7 +961,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 	%=======================================================================
 	methods ( Access = protected ) %-------PRIVATE (protected) METHODS-----%
 	%=======================================================================
-		
+
 		% ===================================================================
 		%> @brief addRuntimeProperties
 		%> these are transient properties that specify actions during runtime
@@ -1097,7 +1101,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 			if isprop(me,'buffertex') && ~isempty(me.buffertex)
 				if Screen(me.buffertex, 'WindowKind')~=0 ; try Screen('Close',me.buffertex); end; end
 			end
-			me.handles = [];
+			
 			if me.verbose; fprintf('--->>> Delete: %s\n',me.fullName); end
 		end
 		

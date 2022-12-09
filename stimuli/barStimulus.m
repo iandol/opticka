@@ -99,6 +99,8 @@ classdef barStimulus < baseStimulus
 			me.inSetup = true;
 			
 			me.sM = sM;
+			if ~sM.isOpen; warning('Screen needs to be Open!'); end
+			me.screenVals = sM.screenVals;
 			me.ppd = sM.ppd;
 			me.baseColour = sM.backgroundColour;
 			me.screenWidth = sM.screenVals.screenWidth;
@@ -273,6 +275,7 @@ classdef barStimulus < baseStimulus
 				try Screen('Close',me.texture2); end %#ok<*TRYNC>
 			end
 			me.texture=[]; me.texture2 = [];
+			me.matrix = [];
 			me.mvRect = [];
 			me.dstRect = [];
 			me.screenWidth = [];
@@ -305,32 +308,6 @@ classdef barStimulus < baseStimulus
 				%if me.verbose; fprintf('===>>>Made texture: %i kind: %i\n',me.texture2,Screen(me.texture2,'WindowKind')); end
 				me.phaseCounter = round( me.phaseReverseTime / me.sM.screenVals.ifi );
 			end
-		end
-		
-		% ===================================================================
-		%> @brief barHeight set method
-		%>
-		%> @param length of bar
-		%> @return
-		% ===================================================================
-		function set.barHeight(me,value)
-			if ~(value > 0)
-				value = 4;
-			end
-			me.barHeight = value;
-		end
-		
-		% ===================================================================
-		%> @brief barWidth set method
-		%>
-		%> @param width of bar in degrees
-		%> @return
-		% ===================================================================
-		function set.barWidth(me,value)
-			if ~(value > 0)
-				value = 1;
-			end
-			me.barWidth = value;
 		end
 		
 		% ===================================================================

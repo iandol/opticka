@@ -1075,9 +1075,7 @@ classdef opticka < optickaCore
 				
 				tmp.store = struct(); %lets just nuke this incase some rogue handles are lurking
 				tmp.ui = struct(); %remove the handles to the UI which will not be valid on reload
-				for i = 1:tmp.r.stimuli.n
-					cleanHandles(tmp.r.stimuli{i}); %just in case!
-				end
+				
 				[~, ff, ee] = fileparts(me.r.stateInfoFile);
 				if copy == true
 					tmp.r.stateInfoFile = [pwd filesep ff ee];
@@ -1233,35 +1231,40 @@ classdef opticka < optickaCore
 				if isfield(tmp.r.paths,'stateInfoFile') && ~isempty(tmp.r.paths.stateInfoFile)
 					p2 = tmp.r.paths.stateInfoFile;	
 				end
-				if contains(p1,'DefaultStateInfo.m') && ~contains(p2,'DefaultStateInfo.m')
-					me.r.paths.stateInfoFile = p2;
+				if exist(p1,'file')
+					me.r.stateInfoFile = p1;
+				elseif ~isempty(p1) && isempty(p2)
+					me.r.stateInfoFile = p1;
+					msg = ['p1:' msg];
+				elseif contains(p1,'DefaultStateInfo.m') && ~contains(p2,'DefaultStateInfo.m')
+					me.r.stateInfoFile = p2;
 					msg = ['p2:' msg];
 				elseif ~isempty(p1) || strcmp(p1,p2)
-					me.r.paths.stateInfoFile = p1;
+					me.r.stateInfoFile = p1;
 					msg = ['p1:' msg];
 				elseif ~isempty(p2)
-					me.r.paths.stateInfoFile = p2;
+					me.r.stateInfoFile = p2;
 					msg = ['p2:' msg];
 				end
-				if ~isempty(me.r.paths.stateInfoFile) && ~exist(me.r.paths.stateInfoFile,'file') % first try to find the file in current dir
-					[~,f,e] = fileparts(me.r.paths.stateInfoFile);
+				if ~isempty(me.r.stateInfoFile) && ~exist(me.r.stateInfoFile,'file') % first try to find the file in current dir
+					[~,f,e] = fileparts(me.r.stateInfoFile);
 					newfile = [pwd filesep f e];
 					if exist(newfile, 'file')
-						me.r.paths.stateInfoFile = newfile;
+						me.r.stateInfoFile = newfile;
 						msg = ['pwd:' msg];
 					end
 				end	
-				if ~isempty(me.r.paths.stateInfoFile) && ~exist(me.r.paths.stateInfoFile,'file') % then try to replace the home directory
-					me.r.paths.stateInfoFile=regexprep(me.r.paths.stateInfoFile,'(.+)(.Code.opticka.+)',[getenv('HOME') '$2'],'ignorecase','once');
+				if ~isempty(me.r.stateInfoFile) && ~exist(me.r.stateInfoFile,'file') % then try to replace the home directory
+					me.r.stateInfoFile=regexprep(me.r.stateInfoFile,'(.+)(.Code.opticka.+)',[getenv('HOME') '$2'],'ignorecase','once');
 					msg = ['rehome:' msg];
 				end
-				if isempty(me.r.paths.stateInfoFile) || ~exist(me.r.paths.stateInfoFile,'file')
-					warndlg(['Couldn''t find state info file! Sources were: ' p1 ' ' p2 '  --  Revert to DefaultStateInfo.m']);
-					me.r.paths.stateInfoFile = which('DefaultStateInfo.m');
+				if isempty(me.r.stateInfoFile) || ~exist(me.r.stateInfoFile,'file')
+					warning(['Couldn''t find state info file! Sources were: ' p1 ' ' p2 '  --  Revert to DefaultStateInfo.m']);
+					me.r.stateInfoFile = [me.paths.root filesep 'DefaultStateInfo.m'];
 				else
-					fprintf('\t…state info file [%s] : %s\n', msg, me.r.paths.stateInfoFile);
+					fprintf('\t…state info file [%s] : %s\n', msg, me.r.stateInfoFile);
 				end
-				if isprop(me.r,'stateInfoFile'); me.r.stateInfoFile = me.r.paths.stateInfoFile; end
+				me.r.paths.stateInfoFile = me.r.stateInfoFile;
 				
 				%user functions file
 				if isprop(tmp.r,'userFunctionsFile') && ~isempty(tmp.r.userFunctionsFile)
@@ -1269,7 +1272,6 @@ classdef opticka < optickaCore
 				end
 				[~,f,e] = fileparts(me.r.userFunctionsFile);
 				if ~exist(me.r.userFunctionsFile,'file') % first try to find the file in current dir
-					
 					newfile = [pwd filesep f e];
 					if exist(newfile, 'file')
 						me.r.userFunctionsFile = newfile;
@@ -1285,8 +1287,8 @@ classdef opticka < optickaCore
 					me.r.userFunctionsFile=[me.r.paths.protocols filesep f e];
 				end
 				if ~exist(me.r.userFunctionsFile,'file')
-					warndlg('Couldn''t find userFunctions file! Revert to default userFunctions.m');
-					me.r.userFunctionsFile = which('userFunctions.m');
+					warning('Couldn''t find userFunctions file! Revert to default userFunctions.m');
+					me.r.userFunctionsFile = [me.paths.root filesep 'userFunctions.m'];
 				end
 				me.getStateInfo();
 				

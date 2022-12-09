@@ -497,7 +497,7 @@ classdef runExperiment < optickaCore
 					fprintf('\n!!!>>> >>> >>> There were %i MISSED FRAMES <<< <<< <<<!!!\n',tL.nMissed);
 				end
 				
-				s.playMovie();
+				if s.movieSettings.record; s.playMovie(); end
 				
 				me.isRunning = false;
 				

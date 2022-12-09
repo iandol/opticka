@@ -13,6 +13,7 @@ options  = { 't|10','Stimulus Sizes (deg):';...
 	'r|¤8bit|16bit|32bit','Texture Resolution:';...
   };
 sel = menuN(mtitle, options);
+if ~iscell(sel);warning('User cancelled!');return;end
 stimSizes		= sel{1}; % visual degrees
 blockSize		= sel{2}; % the size of each block of the noise
 nTrials			= sel{3}; %repeat times
@@ -74,6 +75,7 @@ try
 			end
 			fprintf('--->>>Texture construction took: %.2f secs\n',toc(t));
 
+			% scale our texture via a rect
 			rect = Screen('Rect',texture(1));
 			rect = ScaleRect(rect,round(blockpx),round(blockpx));
 			rect = CenterRectOnPointd(rect, sv.xCenter+(s.screenXOffset*s.ppd), sv.yCenter+(s.screenYOffset*s.ppd));
@@ -81,7 +83,6 @@ try
 			% present stimulation
 			% Screen('DrawTexture', windowPointer, texturePointer [,sourceRect] [,destinationRect]
 			% [,rotationAngle] [, filterMode] [, globalAlpha] [, modulateColor] [, textureShader] [, specialFlags] [, auxParameters]);
-
 			drawPhotoDiodeSquare(s,[0 0 0]);
 			vbl = flip(s); 
 			for i = 1:length(texture)

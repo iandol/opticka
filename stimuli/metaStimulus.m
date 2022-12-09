@@ -508,39 +508,42 @@ classdef metaStimulus < optickaCore
 				end
 			
 				if ~s.isOpen
-					sv=open(s);
+					open(s);
 				end
+				sv = s.screenVals;
 				setup(me,s); %setup our stimulus objects
 
 				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
 
-				draw(me);
 				if benchmark
-					Screen('DrawText', s.win, 'BENCHMARK: screen won''t update properly, see FPS in command window at end.', 5,5,[0.25 0.15 0]);
+					drawText(s, 'BENCHMARK: screen won''t update properly, see FPS in command window at end.');
 				else
-					drawGrid(s); %draw +-5 degree dot grid
-					Screen('DrawText', s.win, ['Preview ALL stimuli (grid is 1deg); static for 1 seconds, then animate for ' num2str(runtime) ' seconds...'], 5,5,[0.25 0.15 0]);
+					drawGrid(s); %draw degree dot grid
+					drawScreenCenter(s);
+					drawText(s, ['Preview ALL with grid = ±1°; static for 1 seconds, then animate for ' num2str(runtime) ' seconds...'])
 				end
-
+				draw(me);
 				flip(s);
 				update(me);
 				WaitSecs('YieldSecs',1);
 				nFrames = 0;
+				lastvbl = flip(s);
 				for i = 1:(s.screenVals.fps*runtime) 
 					nFrames = nFrames + 1;
 					draw(me); %draw stimuli
 					if ~benchmark && s.debug; drawGrid(s); end
-					finishDrawing(s); %tell PTB/GPU to draw
 					animate(me); %animate stimuli, ready for next draw();
 					if benchmark
 						Screen('Flip',s.win,0,2,2);
 						if i == 1; vbl = GetSecs; end
 					else
-						vbl = Screen('Flip',s.win); %flip the buffer
+						vbl = Screen('Flip',s.win, lastvbl + sv.halfisi); %flip the buffer
+						lastvbl = vbl;
 					end
 					if i == 1; startT = vbl; end
 				end
-				vbl = flip(s); endT = vbl;
+				endT = lastvbl;
+				flip(s);
 				WaitSecs(0.5);
 				Priority(0); ShowCursor; ListenChar(0);
 				reset(me); %reset our stimulus ready for use again
@@ -582,7 +585,7 @@ classdef metaStimulus < optickaCore
 				'backgroundColour',[0.5 0.5 0.5 0]); %use a temporary screenManager object
 			end
 			if ~exist('runtime','var') || isempty(runtime)
-				runtime = 5; %seconds to run
+				runtime = 2; %seconds to run
 			end
 			
 			try
@@ -683,8 +686,7 @@ classdef metaStimulus < optickaCore
 			nMask = length(me.maskStimuli);
 			me.nMask_ = nMask;
 		end
-		
-		
+
 		% ===================================================================
 		%> @brief set stimuli sanity checker
 		%> @param in a stimuli group

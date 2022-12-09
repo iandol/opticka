@@ -101,7 +101,9 @@ classdef fixationCrossStimulus < baseStimulus
 			if isempty(me.isVisible); me.show; end
 			
 			me.sM = sM;
-			me.ppd=sM.ppd;
+			if ~sM.isOpen; warning('Screen needs to be Open!'); end
+			me.screenVals = sM.screenVals;
+			me.ppd = sM.ppd;			
 			
 			fn = fieldnames(fixationCrossStimulus);
 			for j=1:length(fn)

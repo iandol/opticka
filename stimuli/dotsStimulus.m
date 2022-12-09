@@ -137,7 +137,9 @@ classdef dotsStimulus < baseStimulus
 			end
 			
 			me.sM = sM;
-			me.ppd=sM.ppd;
+			if ~sM.isOpen; warning('Screen needs to be Open!'); end
+			me.screenVals = sM.screenVals;
+			me.ppd = sM.ppd;			
 			
 			fn = sort(properties('dotsStimulus'));
 			for j=1:length(fn)

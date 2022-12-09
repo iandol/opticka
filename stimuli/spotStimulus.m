@@ -90,7 +90,8 @@ classdef spotStimulus < baseStimulus
 			
 			me.sM = sM;
 			if ~sM.isOpen; warning('Screen needs to be Open!'); end
-			me.ppd=sM.ppd;
+			me.screenVals = sM.screenVals;
+			me.ppd = sM.ppd;
 			
 			fn = fieldnames(spotStimulus);
 			for j=1:length(fn)
