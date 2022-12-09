@@ -30,6 +30,12 @@ classdef barStimulus < baseStimulus
 		%> modulate the colour
 		modulateColour double = []
 	end
+
+	properties (Hidden = true)
+		%> floatprecision defines the precision with which the texture should
+		%> be stored and processed. 0=8bit, 1=16bit, 2=32bit
+		floatPrecision = 0
+	end
 	
 	properties (SetAccess = protected, GetAccess = public)
 		family char = 'bar'
@@ -76,11 +82,6 @@ classdef barStimulus < baseStimulus
 			me=me@baseStimulus(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
 			
-			if me.size > 0 %size overrides 
-				me.barHeight = me.size;
-				me.barWidth = me.size;
-			end
-			
 			me.isRect = true; %uses a rect for drawing
 			
 			me.ignoreProperties = ['^(' me.ignorePropertiesBase '|' me.ignoreProperties ')$'];
@@ -110,15 +111,22 @@ classdef barStimulus < baseStimulus
 			
 			fn = fieldnames(me);
 			for j=1:length(fn)
-				if isempty(me.findprop([fn{j} 'Out'])) && isempty(regexpi(fn{j},me.ignoreProperties, 'once'))%create a temporary dynamic property
-					p=me.addprop([fn{j} 'Out']);
-					p.Transient = true;%p.Hidden = true;
-					if strcmp(fn{j},'xPosition');p.SetMethod = @set_xPositionOut;end
-					if strcmp(fn{j},'yPosition');p.SetMethod = @set_yPositionOut;end
-					if strcmp(fn{j},'size');p.SetMethod = @set_sizeOut;end
-					if strcmp(fn{j},'colour');p.SetMethod = @set_colourOut;end
-					if strcmp(fn{j},'alpha');p.SetMethod = @set_alphaOut;end
-					if strcmp(fn{j},'scale');p.SetMethod = @set_scaleOut;end
+				if isempty(regexpi(fn{j},me.ignoreProperties, 'once')) && isempty(me.findprop([fn{j} 'Out']))
+					p=me.addprop([fn{j} 'Out']); p.Transient = true;
+					switch fn{j}
+						case 'xPosition'
+							p.SetMethod = @set_xPositionOut;
+						case 'yPosition'
+							p.SetMethod = @set_yPositionOut;
+						case 'size'
+							p.SetMethod = @set_sizeOut;
+						case 'colour'
+							p.SetMethod = @set_colourOut;
+						case 'alpha'
+							p.SetMethod = @set_alphaOut;
+						case 'scale'
+							p.SetMethod = @set_scaleOut;
+					end
 					if isempty(regexpi(fn{j},me.ignoreProperties, 'once'))
 						me.([fn{j} 'Out']) = me.(fn{j}); %copy our property value to our tempory copy
 					end
@@ -131,10 +139,11 @@ classdef barStimulus < baseStimulus
 			if me.barHeightOut > me.screenHeight; me.barHeightOut=me.screenHeight; end
 			
 			constructMatrix(me); %make our matrix
-			me.texture = Screen('MakeTexture', me.sM.win, me.matrix, 0, [], 2);
+			%tx=Screen('MakeTexture', win, matrix [, optimizeForDrawAngle=0] [, specialFlags=0] [, floatprecision] [, textureOrientation=0] [, textureShader=0]);
+			me.texture = Screen('MakeTexture', me.sM.win, me.matrix, 0, [], me.floatPrecision);
 			if me.verbose; fprintf('===>>>Made texture: %i kind: %i\n',me.texture,Screen(me.texture,'WindowKind')); end
 			if me.phaseReverseTime > 0
-				me.texture2 = Screen('MakeTexture', me.sM.win, me.matrix2, 0, [], 2);
+				me.texture2 = Screen('MakeTexture', me.sM.win, me.matrix2, 0, [], me.floatPrecision);
 				if me.verbose; fprintf('===>>>Made texture: %i kind: %i\n',me.texture2,Screen(me.texture2,'WindowKind')); end
 				me.phaseCounter = round( me.phaseReverseTime / me.sM.screenVals.ifi );
 			end
@@ -147,7 +156,7 @@ classdef barStimulus < baseStimulus
 				me.xPositionOut = value * me.ppd;
 			end
 			function set_yPositionOut(me,value)
-				me.yPositionOut = value*me.ppd; 
+				me.yPositionOut = value * me.ppd; 
 			end
 			function set_sizeOut(me,value)
 				me.sizeOut = value;
@@ -179,22 +188,12 @@ classdef barStimulus < baseStimulus
 				me.colourOut = value;
 				me.isInSetColour = false;
 			end
-		
-		% ===================================================================
-		%> @brief alphaOut SET method
-		%>
-		% ===================================================================
-		function set_alphaOut(me, value)
-			if ~me.isInSetColour
+			function set_alphaOut(me, value)
+				if me.isInSetColour; return; end
 				me.alphaOut = value;
-				if isempty(me.findprop('colourOut'))
-					me.colour = [me.colour(1:3) me.alphaOut];
-				else
-					me.colourOut = [me.colourOut(1:3) me.alphaOut];
-				end
+				[v,n] = me.getP('colour');
+				me.(n) = [v(1:3) value];
 			end
-		end
-			
 		end
 		
 		% ===================================================================
@@ -214,8 +213,6 @@ classdef barStimulus < baseStimulus
 			end
 			me.tick = me.tick + 1;
 		end
-		
-		
 		
 		% ===================================================================
 		%> @brief Update our stimulus
@@ -301,10 +298,10 @@ classdef barStimulus < baseStimulus
 				try Screen('Close', me.texture2); me.texture2=[]; end 
 			end
 			constructMatrix(me);%make our texture matrix
-			me.texture = Screen('MakeTexture', me.sM.win, me.matrix, 1, [], 2);
+			me.texture = Screen('MakeTexture', me.sM.win, me.matrix, 1, [], me.floatPrecision);
 			%if me.verbose; fprintf('===>>>Made texture: %i kind: %i\n',me.texture,Screen(me.texture,'WindowKind')); end
 			if me.phaseReverseTime > 0
-				me.texture2=Screen('MakeTexture', me.sM.win, me.matrix2, 1, [], 2);
+				me.texture2=Screen('MakeTexture', me.sM.win, me.matrix2, 1, [], me.floatPrecision);
 				%if me.verbose; fprintf('===>>>Made texture: %i kind: %i\n',me.texture2,Screen(me.texture2,'WindowKind')); end
 				me.phaseCounter = round( me.phaseReverseTime / me.sM.screenVals.ifi );
 			end
@@ -396,21 +393,14 @@ classdef barStimulus < baseStimulus
 		function constructMatrix(me)
 			me.matrix=[]; %reset the matrix
 			try
-				if isempty(me.findprop('colourOut'))
-					colour = me.colour;
-					alpha = me.alpha;
-					contrast = me.contrast;
-					scale = me.scale;
-				else
-					colour = me.colourOut;
-					alpha = me.alphaOut;
-					contrast = me.contrastOut; %#ok<*PROP>
-					scale = me.scaleOut;
-				end
+				colour = me.getP('colour');
+				alpha = me.getP('alpha');
+				contrast = me.getP('contrast');
+				scale = me.getP('scale');
 				bwpixels = round(me.barWidthOut*me.ppd);
 				blpixels = round(me.barHeightOut*me.ppd);
-				if bwpixels>me.screenWidth;bwpixels=me.screenWidth;end
-				if blpixels>me.screenHeight;blpixels=bwpixels;end
+				if bwpixels>me.screenWidth*2;bwpixels=me.screenWidth*2;end
+				if blpixels>me.screenHeight*2;blpixels=me.screenHeight*2;end
 	
 				if ~strcmpi(me.type,'checkerboard')
 					if rem(bwpixels,2);bwpixels=bwpixels+1;end
@@ -500,8 +490,8 @@ classdef barStimulus < baseStimulus
 				getReport(ME)
 				bwpixels = round(me.barWidthOut*me.ppd);
 				blpixels = round(me.barHeightOut*me.ppd);
-				if bwpixels>me.screenWidth;bwpixels=me.screenWidth;end
-				if blpixels>me.screenHeight;blpixels=me.screenHeight;end
+				if bwpixels>me.screenWidth*2;bwpixels=me.screenWidth*2;end
+				if blpixels>me.screenHeight*2;blpixels=me.screenHeight*2;end
 				me.matrix=ones(blpixels,bwpixels,4);
 			end
 		end

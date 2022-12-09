@@ -177,6 +177,7 @@ classdef screenManager < optickaCore
 		syncVariance double					= 2e-04
 		%> overlay window if mirrorDisplay was enabled
 		overlayWin							= -1
+		%> e.g. kPsychGUIWindow
 		specialFlags						= []
 	end
 	
@@ -203,7 +204,7 @@ classdef screenManager < optickaCore
 		%> we cache ppd as it is used frequently
 		ppd_ double
 		%> properties allowed to be modified during construction
-		allowedProperties char = ['syncVariance|disableSyncTests|displayPPRefresh|screenToHead|'...
+		allowedProperties char = ['colorMode|overlayWin|specialFlags|syncVariance|disableSyncTests|displayPPRefresh|screenToHead|'...
 			'gammaTable|useRetina|bitDepth|pixelsPerCm|distance|screen|windowed|backgroundColour|'...
 			'screenXOffset|screenYOffset|blend|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash']
 		%> the photoDiode rectangle in pixel values
