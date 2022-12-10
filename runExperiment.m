@@ -271,6 +271,12 @@ classdef runExperiment < optickaCore
 				rM.close; rM.reset;
 			end
 
+			%------enable diary logging if requested
+			if me.diaryMode
+				diary off
+				diary([me.paths.savedData filesep me.name '.log']);
+			end
+			
 			%------initialise runLog for this run
 			me.previousInfo.runLog	= me.runLog;
 			me.taskLog				= [];
@@ -285,8 +291,8 @@ classdef runExperiment < optickaCore
 			tS.controlPlexon		= false;
 
 			%------initialise task
-			t						= me.task;
-			initialise(t, true);
+			task						= me.task;
+			initialise(task, true);
 
 			%-----------------------------------------------------------
 			try%======This is our main TRY CATCH experiment display loop
@@ -295,56 +301,32 @@ classdef runExperiment < optickaCore
 				me.isRunning = true;
 				me.isRunTask = false;
 				
-				%------open the PTB screen
-				me.screenVals			= s.open(me.debug,tL);
-				stims.screen		= s; %make sure our stimuli use the same screen
+				%================================open the PTB screen and setup stimuli
+				me.screenVals		= s.open(me.debug,tL);
 				stims.verbose		= me.verbose;
-				t.fps					= me.screenVals.fps;
-				setup(stims); %run setup() for each stimulus
+				task.fps				= me.screenVals.fps;
+				setup(stims, s); %run setup() for each stimulus
 				if s.movieSettings.record; prepareMovie(s); end
 				
-				%------configure IO
-				io						= configureIO(me);
+				%================================initialise and set up I/O
+				io					= configureIO(me);
 				
+				%================================Plexon control
 				if tS.controlPlexon && me.useDataPixx || me.useDisplayPP
 					startRecording(io);
 					WaitSecs(0.5);
-				elseif tS.controlPlexon && me.useLabJackTStrobe
-					
 				elseif tS.controlPlexon && me.useLabJackStrobe
 					% Trigger the omniplex (TTL on FIO1) into paused mode
 					io.setDIO([2,0,0]);WaitSecs(0.001);io.setDIO([0,0,0]);
-				end
-
-				%------set up the eyelink interface
-				if me.useEyeLink || me.useTobii
-					if me.useTobii
-						warning('Tobii not valid for a MOC task, switching to eyelink dummy mode')
-						me.useTobii = false; me.useEyeLink = true; me.dummyMode = true; 
-					end
-					me.eyeTracker = eyelinkManager();
-					eT = me.eyeTracker;
-					eT.isDummy = me.dummyMode;
-					eT.saveFile = [me.paths.savedData pathsep me.savePrefix 'RUN.edf'];
-					initialise(eT, s);
-					trackerSetup(eT);
+					WaitSecs(0.5);
 				end
 			
-				me.updateMOCVars(1,1); %------set the variables for the very first run;
-				
-				KbReleaseWait; %------make sure keyboard keys are all released
-				
-				%------bump our priority to maximum allowed
-				Priority(MaxPriority(s.win));
-				
 				%--------------unpause Plexon-------------------------
 				if tS.controlPlexon &&  (me.useDataPixx || me.useDisplayPP)
 					resumeRecording(io);
 				elseif tS.controlPlexon && me.useLabJackStrobe
 					io.setDIO([3,0,0],[3,0,0])%(Set HIGH FIO0->Pin 24), unpausing the omniplex
 				end
-				
-				if me.useEyeLink; startRecording(eT); end
 				
 				%------------------------------------------------------------
 				% lets draw 2 seconds worth of the stimuli we will be using
@@ -354,60 +336,75 @@ classdef runExperiment < optickaCore
 				% stimuli using 32bit computation buffers...
 				fprintf('\n===>>> Warming up the GPU and I/O systems... <<<===\n')
 				show(stims);
-				if me.useEyeLink || me.useTobii; resetAll(eT);trackerClearScreen(eT); end % blank eyelink screen
 				for i = 1:s.screenVals.fps*2
 					draw(stims);
 					drawBackground(s);
+					drawText(s,'Warming up the GPU, Eyetracker and I/O systems...');
 					s.drawPhotoDiodeSquare([0 0 0 1]);
 					finishDrawing(s);
 					animate(stims);
 					if ~mod(i,10); io.sendStrobe(255); end
-					if me.useEyeLink
-						getSample(eT); 
-						trackerDrawText(eT,'Warming Up System');
-						trackerMessage(eT,'Warmup test');
-					end
 					flip(s);
 				end
 				update(stims); %make sure stimuli are set back to their start state
 				io.resetStrobe;flip(s);flip(s);
 				tL.screenLog.beforeDisplay = GetSecs();
-				
-				%-----profiling starts here
-				%profile clear; profile on;
-				
-				%-----final setup
-				ListenChar(-1);
-				me.task.tick = 1;
-				me.task.switched = 0;
-				me.task.isBlank = true; %lets start in a blank
-				if me.logFrames == true
-					tL.screenLog.stimTime(1) = 1;
+
+				%===========================double check the labJackT handle is still valid
+				if isa(io,'labJackT') && io.isOpen && ~io.isHandleValid
+					io.close;
+					io.open;
+					disp('We had to reopen the labJackT to ensure a stable connection...')
 				end
-				tL.vbl(1) = GetSecs();
-				tL.startTime = tL.vbl(1);
 				
-				%==================================================================%
+				%=============================profiling starts here if uncommented
+				%profile clear; profile on;
+
+				%===========================take over the keyboard + max priority
+				KbReleaseWait; %make sure keyboard keys are all released
+				if me.debug == false
+					%warning('off'); %#ok<*WNOFF>
+					ListenChar(-1); %2=capture all keystrokes
+				end
+				if ~isdeployed
+					try commandwindow; end
+				end
+				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
+
+				
+				%================================Set state for first trial
+				me.updateMOCVars(1,1); %------set the variables for the very first run;
+				update(stims);
+				task.isBlank				= true;
+				task.tick					= 1;
+				task.switched				= 1;
+				task.totalRuns				= 1;
+	
+				tL.vbl(1)					= Screen('Flip', s.win);
+				tL.lastvbl					= tL.vbl(1);
+				tL.miss(1)					= 0;
+				tL.stimTime(1)				= 0;
+				tL.startTime				= tL.lastvbl;
+				tL.screenLog.beforeDisplay	= tL.lastvbl;
+				
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-				% Our display loop
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-				%==================================================================%
-				while ~me.task.taskFinished
-					if me.task.isBlank
+				% DISPLAY LOOP
+				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+				while ~task.taskFinished
+					if task.isBlank
 						if s.photoDiode;s.drawPhotoDiodeSquare([0 0 0 1]);end
-						if me.drawFixation;s.drawCross(0.4,[0.3 0.3 0.3 1]);end
 					else
-						if ~isempty(s.backgroundColour);s.drawBackground;end
 						draw(stims);
 						if s.photoDiode;s.drawPhotoDiodeSquare([1 1 1 1]);end
-						if me.drawFixation;s.drawCross(0.4,[1 1 1 1]);end
 					end
 					if s.visualDebug;s.drawGrid;me.infoTextScreen;end
 					
 					Screen('DrawingFinished', s.win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
 					
 					%========= check for keyboard if in blank ========%
-					if me.task.isBlank
+					if task.isBlank
 						if strcmpi(me.uiCommand,'stop');break;end
 						[~,~,kc] = KbCheck(-1);
 						if strcmpi(KbName(kc),'q')
@@ -415,52 +412,59 @@ classdef runExperiment < optickaCore
 							break; %break the while loop
 						end
 					end
-					
-					%============== Get eye position==================%
-					if me.useEyeLink; getSample(me.eyeTracker); end
-					
+
 					%================= UPDATE TASK ===================%
 					updateMOCTask(me); %update our task structure
 					
-					%============== Send Strobe =======================%
-					if (me.useDisplayPP || me.useDataPixx) && me.sendStrobe
-						triggerStrobe(io);
-						me.sendStrobe = false;
+					%=======Display++ or DataPixx: I/O send strobe
+					% command for this screen flip needs to be sent
+					% PRIOR to the flip! Also remember DPP will be
+					% delayed by one flip
+					if me.sendStrobe && me.useDisplayPP
+						sendStrobe(io); me.sendStrobe = false;
+					elseif me.sendStrobe && me.useDataPixx
+						triggerStrobe(io); me.sendStrobe = false;
 					end
 					
 					%======= FLIP: Show it at correct retrace: ========%
 					nextvbl = tL.lastvbl + me.screenVals.halfisi;
 					if me.logFrames == true
-						[tL.vbl(me.task.tick),tL.show(me.task.tick),tL.flip(me.task.tick),tL.miss(me.task.tick)] = Screen('Flip', s.win, nextvbl);
-						tL.lastvbl = tL.vbl(me.task.tick);
-					elseif me.benchmark == true
-						tL.vbl = Screen('Flip', s.win, 0, 2, 2);
+						[tL.vbl(task.tick),tL.show(task.tick), ...
+						tL.flip(task.tick),tL.miss(task.tick)] ...
+							= Screen('Flip', s.win, nextvbl);
+						tL.lastvbl = tL.vbl(task.tick);
+					elseif ~me.benchmark
+						[tL.vbl, tL.show, tL.flip, tL.miss] ...
+							= Screen('Flip', s.win, nextvbl);
 						tL.lastvbl = tL.vbl;
 					else
-						tL.vbl = Screen('Flip', s.win, nextvbl);
+						tL.vbl = Screen('Flip', s.win, 0, 2, 2);
 						tL.lastvbl = tL.vbl;
+					end
+
+					%======LabJack: I/O needs to send strobe immediately after screen flip -----%
+					if me.sendStrobe && me.useLabJackTStrobe
+						sendStrobe(io); me.sendStrobe = false;
 					end
 					
 					%===================Logging=======================%
-					if me.task.tick == 1
-						if me.benchmark == false
-							tL.startTime=tL.vbl(1); %respecify this with actual stimulus vbl
-						end
+					if task.tick == 1 && ~me.benchmark
+						tL.startTime=tL.vbl(1); %respecify this with actual stimulus vbl
 					end
-					if me.logFrames == true
-						if me.task.isBlank == false
-							tL.stimTime(me.task.tick)=1+me.task.switched;
+					if me.logFrames
+						if ~task.isBlank
+							tL.stimTime(task.tick)=1+task.switched;
 						else
-							tL.stimTime(me.task.tick)=0-me.task.switched;
+							tL.stimTime(task.tick)=0-task.switched;
 						end
 					end
 					if s.movieSettings.record ...
-							&& ~me.task.isBlank ...
+							&& ~task.isBlank ...
 							&& (s.movieSettings.loop <= s.movieSettings.nFrames)
 						s.addMovieFrame();
 					end
 					%===================Tick tock!=======================%
-					me.task.tick=me.task.tick+1; tL.tick = me.task.tick;
+					task.tick=task.tick+1; tL.tick = task.tick;
 					
 				end
 				%==================================================================%
@@ -486,7 +490,7 @@ classdef runExperiment < optickaCore
 				tL.screenLog.deltaUntilDisplay=tL.startTime - tL.screenLog.beforeDisplay;
 				tL.screenLog.deltaToFirstVBL=tL.vbl(1) - tL.screenLog.beforeDisplay;
 				if me.benchmark == true
-					tL.screenLog.benchmark = me.task.tick / (tL.screenLog.afterDisplay - tL.startTime);
+					tL.screenLog.benchmark = task.tick / (tL.screenLog.afterDisplay - tL.startTime);
 					fprintf('\n---> BENCHMARK FPS = %g\n', tL.screenLog.benchmark);
 				end
 				
@@ -690,7 +694,7 @@ classdef runExperiment < optickaCore
 					me.fInc = 8;
 				end
 				stims.verbose			= me.verbose;
-				setup(stims); %run setup() for each stimulus
+				setup(stims, s); %run setup() for each stimulus
 				task.fps				= s.screenVals.fps;
 				
 				%================================initialise and set up I/O

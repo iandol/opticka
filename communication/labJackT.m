@@ -17,53 +17,55 @@ classdef labJackT < handle
 	
 	properties
 		%> friendly object name, setting this to 'null' will force silentMode=1
-		name char = 'labJackT'
+		name char				= 'labJackT'
 		%> what LabJack device to use; 4 = T4, 7 = T7
-		deviceID double = 4
+		deviceID double			= 4
 		%> if more than one labJack connected, which one to open? Default is first device
-		device double = 1
+		device double			= 1
 		%> Connection type: ANY, USB, TCP, ETHERNET, WIFI
-		connectType char = 'ANY'
+		connectType char		= 'ANY'
 		%> IP address if using network
-		IP char = '192.168.1.100'
+		IP char					= ''
 		%> strobeTime is time of strobe in ms; max = 100ms
-		strobeTime double = 5
+		strobeTime double		= 5
 		%> streamChannels which channels to stream
-		streamChannels double = 0
+		streamChannels double	= 0
 		%> stream sample rate (Hz)
 		streamSampleRate double = 2000;
 		%> number of stream samples to collect in each read
-		streamSamples double = 500;
+		streamSamples double	= 500;
 		%> resolution of the stream 0-5 for T4, 0 is default (=1), 5 being best/slowest
 		streamResolution double = 0
+		%> timeout for communication in ms
+		timeOut	double			= 500
 		%> header needed by loadlib
-		header char = '/usr/local/include/LabJackM.h'
+		header char				= '/usr/local/include/LabJackM.h'
 		%> the library itself
-		library char = '/usr/local/lib/libLabJackM'
+		library char			= '/usr/local/lib/libLabJackM'
 		%> do we log everything to the command window?
-		verbose logical = true
+		verbose logical			= true
 		%> allows the constructor to run the open method immediately (default)
-		openNow logical = true
+		openNow logical			= true
 		%> silentMode=true allows one to gracefully fail methods without a labJack connected
-		silentMode logical = false
+		silentMode logical		= false
 		%> comment
 		comment char
 	end
 	
 	properties (Hidden = true)
-		winLibrary = 'C:\Windows\System32\LabJackM'
-		winHeader = 'C:\Program Files (x86)\LabJack\Drivers\LabJackM.h'
+		winLibrary				= 'C:\Windows\System32\LabJackM'
+		winHeader				= 'C:\Program Files (x86)\LabJack\Drivers\LabJackM.h'
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
 		%> have we successfully opened the labjack?
-		isOpen = false
+		isOpen logical			= false
 		%> is streaming?
-		isStreaming logical = false
+		isStreaming logical		= false
 		%> send this value for the next sendStrobe
-		sendValue double = 0
+		sendValue double		= 0
 		%> last value sent
-		lastValue double = []
+		lastValue double		= []
 		%> function list returned from loading LJM
 		functionList
 		%> firmware library version returned on first open
@@ -77,14 +79,14 @@ classdef labJackT < handle
 		%> device types
 		devTypes int32
 		%> handle to the opened device itself
-		handle int32 = []
+		handle int32			= []
 		%> Is our handle a valid one, this is a cache so we save a bit of
 		%> time on calling the method each time
-		isValid = 0
+		isValid					= 0
 		%> universal ID
-		uuid = 0
+		uuid					= 0
 		%> clock() dateStamp set on construction
-		dateStamp = []
+		dateStamp				= []
 		%> raw command 
 		command
 		%> last error found
@@ -98,22 +100,22 @@ classdef labJackT < handle
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> constants
-		LJM_dtANY int32		= 0
-		LJM_dt4 int32		= 4
-		LJM_dt7 int32		= 7
-		LJM_dtTSERIES int32 = 84
-		LJM_ctANY int32		= 0 
-		LJM_ctUSB int32		= 1
-		LJM_ctTCP int32		= 2
-		LJM_ctETHERNET int32 = 3
-		LJM_ctWIFI int32	= 4
-		LJM_UINT16 int32	= 0
-		LJM_UINT32 int32	= 1
-		LJM_INT32 int32		= 2
-		LJM_FLOAT32 int32	= 3
-		LJM_TESTRESULT uint32 = 1122867
+		LJM_dtANY int32			= 0
+		LJM_dt4 int32			= 4
+		LJM_dt7 int32			= 7
+		LJM_dtTSERIES int32		= 84
+		LJM_ctANY int32			= 0 
+		LJM_ctUSB int32			= 1
+		LJM_ctTCP int32			= 2
+		LJM_ctETHERNET int32	= 3
+		LJM_ctWIFI int32		= 4
+		LJM_UINT16 int32		= 0
+		LJM_UINT32 int32		= 1
+		LJM_INT32 int32			= 2
+		LJM_FLOAT32 int32		= 3
+		LJM_TESTRESULT uint32	= 1122867
 		%> RAM address for communication
-		RAMAddress uint32 = 46000
+		RAMAddress uint32		= 46000
 		%> minimal lua server to allow fast asynchronous strobing of EIO & CIO
 		miniServer char = 'LJ.setLuaThrottle(100)local a=MB.R;local b=MB.W;local c=-1;b(2601,0,255)b(2602,0,255)b(2501,0,0)b(2502,0,0)b(46000,3,0)while true do c=a(46000,3)if c>=1 and c<=255 then b(2501,0,c)b(61590,1,2000)b(2501,0,0)elseif c>=256 and c<=271 then b(2502,0,c-256)b(61590,1,100000)b(61590,1,100000)b(61590,1,100000)b(2502,0,0)elseif c==0 then b(2501,0,0)end;if c>-1 then b(46000,3,-1)end end'
 		%> test Lua server, just spits out time every second
@@ -246,7 +248,7 @@ classdef labJackT < handle
 				me.silentMode = false;
 			end
 
-			err = calllib(me.libName, 'LJM_WriteLibraryConfigS', 'LJM_SEND_RECEIVE_TIMEOUT_MS', 500);
+			err = calllib(me.libName, 'LJM_WriteLibraryConfigS', 'LJM_SEND_RECEIVE_TIMEOUT_MS', me.timeOut);
 			if err == 0; me.salutation('OPEN method','Set timeout to 500ms!'); end
 
 			[~, ~, vals] = calllib(me.libName, 'LJM_eReadNames', me.handle,...
@@ -746,13 +748,13 @@ classdef labJackT < handle
 			if me.silentMode || isempty(me.handle); return; end
 			while true
 				me.strobeServer(1); fprintf('Send 1\n');
-				WaitSecs('YieldSecs', 1);
+				WaitSecs('YieldSecs', 0.5);
 				me.strobeServer(255); fprintf('Send 255\n');
-				WaitSecs('YieldSecs', 1);
+				WaitSecs('YieldSecs', 0.5);
 				me.strobeServer(0); fprintf('Send 0\n');
-				[~,~,buttons] = GetMouse(0);
+				[~,~,buttons] = GetMouse();
 				if any(buttons); break; end
-				WaitSecs('YieldSecs', 1);
+				WaitSecs('YieldSecs', 0.5);
 			end
 		end
 		

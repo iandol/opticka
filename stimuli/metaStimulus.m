@@ -123,7 +123,7 @@ classdef metaStimulus < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function setup(me,s)
+		function setup(me, s)
 			if ~exist('s','var') || ~isa(s,'screenManager')
 				if isa(me.screen,'screenManager')
 					s = me.screen;
