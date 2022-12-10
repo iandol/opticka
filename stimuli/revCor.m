@@ -3,7 +3,7 @@ function revCor(s)
 mtitle   = 'Opticka Reverse Correlation Module';
 options  = { 't|10','Stimulus Sizes (deg):';...
 	't|1','Size of Pixel Blocks (deg):';...
-	't|2','Number of Trials:';...
+	't|5','Number of Trials:';...
 	't|5','Number of Seconds (secs):';...
 	't|2','Number of Frames to show texture:';...
 	'r|¤Trinary|Binary','White Noise Type:';...
@@ -30,83 +30,91 @@ if ~exist('s','var') || ~isa(s,'screenManager')
 end
 
 if ~s.isOpen; open(s); end
-drawPhotoDiodeSquare(s,[0 0 0]);s.flip;
 sv = s.screenVals;
 
 saveName = [s.paths.savedData filesep 'RevCor-' s.initialiseSaveFile '.mat'];
 
+data.name = saveName;
+data.date = datetime('now');
+data.options = options;
+data.sel = sel;
+data.s = s;
+data.computer = Screen('Computer');
+data.version = Screen('Version');
+
 lJ = labJackT;
 if ~lJ.isOpen;open(lJ);end
 
+drawPhotoDiodeSquare(s,[0 0 0]);
+drawText(s,'Press ESCAPE key to start...');
+flip(s);
+KbWait;
+
 try
 	blockpx = blockSize * s.ppd;
-	randomdegreea11 = zeros(nTrials,length(stimSizes));
-
-	for irp=1:nTrials
-
-		randomdegreeindex=randperm(length(stimSizes)); % generate a random sequence of visual degrees
-		
-		for ivd=1:length(stimSizes)
-			t=tic;
-
-			nStimuli = round(nSeconds*round(sv.fps/nFrames));
-			pxLength = round(stimSizes(randomdegreeindex(ivd)) * (1/blockSize));
-			mx = rand(pxLength,pxLength,nStimuli);
-
-			if noiseType == 1
-				mx(mx < (1/3)) = 10;
-				mx(mx < (2/3)) = 20;
-				mx(mx <= 1) = 30;
-				mx(mx == 10) = 0;
-				mx(mx == 20) = 0.5;
-				mx(mx == 30) = 1;
-			else
-				mx(mx < 0.5) = 0;
-				mx(mx > 0) = 1;
-			end
-			fprintf('--->>>Matrix construction took: %.2f secs\n',toc(t));
-
-			% Screen('MakeTexture', WindowIndex, imageMatrix [, optimizeForDrawAngle=0] [, specialFlags=0]
-			% [, floatprecision] [, textureOrientation=0] [, textureShader=0]);
-			t=tic;
-			texture = [];
-			for i = 1:nStimuli
-				texture(i) = Screen('MakeTexture', sv.win, mx(:,:,i), [], [], floatPrecision);
-			end
-			fprintf('--->>>Texture construction took: %.2f secs\n',toc(t));
-
+	data.scale = blockpx;
+	data.comment = 'scale is by how much the data.matrix is scaled to show in matlab';
+	nStimuli = round(nSeconds*round(sv.fps/nFrames));
+	data.nStimuli = nStimuli;
+	for nSt=1:length(stimSizes)
+		pxLength = round(stimSizes(nSt) * (1/blockSize));
+		mx = rand(pxLength,pxLength,nStimuli);
+		if noiseType == 1
+			mx(mx < (1/3)) = 0;
+			mx(mx > 0 & mx < (2/3)) = 0.5;
+			mx(mx > 0.5 ) = 1;
+		else
+			mx(mx < 0.5) = 0;
+			mx(mx > 0) = 1;
+		end
+		% Screen('MakeTexture', WindowIndex, imageMatrix [, optimizeForDrawAngle=0] [, specialFlags=0]
+		% [, floatprecision] [, textureOrientation=0] [, textureShader=0]);
+		data.stimuli{nSt} = mx;
+		texture = [];
+		for i = 1:nStimuli
+			texture{nSt}(i) = Screen('MakeTexture', sv.win, mx(:,:,i), [], [], floatPrecision);
+		end
+	end
+	
+	for nTr=1:nTrials
+		for nSt=1:length(stimSizes)
+			tx = texture{nSt};
 			% scale our texture via a rect
-			rect = Screen('Rect',texture(1));
+			rect = Screen('Rect',tx(1));
 			rect = ScaleRect(rect,round(blockpx),round(blockpx));
 			rect = CenterRectOnPointd(rect, sv.xCenter+(s.screenXOffset*s.ppd), sv.yCenter+(s.screenYOffset*s.ppd));
-
 			% present stimulation
 			% Screen('DrawTexture', windowPointer, texturePointer [,sourceRect] [,destinationRect]
 			% [,rotationAngle] [, filterMode] [, globalAlpha] [, modulateColor] [, textureShader] [, specialFlags] [, auxParameters]);
+			t=tic;
 			drawPhotoDiodeSquare(s,[0 0 0]);
-			vbl = flip(s); 
-			for i = 1:length(texture)
+			lastvbl = flip(s); 
+			for i = 1:length(tx)
 				for j = 1:nFrames
-					Screen('DrawTexture', sv.win, texture(i), [], rect, [], filterMode);
+					Screen('DrawTexture', sv.win, tx(i), [], rect, [], filterMode);
 					if debug;drawGrid(s);end
 					drawPhotoDiodeSquare(s,[1 1 1]);
-					vbl = flip(s, vbl + sv.halfisi);
+					vbl = flip(s, lastvbl + sv.halfisi);
+					lastvbl = vbl;
 					if i == 1 && j == 1; sendStrobe(lJ,strobeValue); startT = vbl;end
 				end
 			end
 			drawPhotoDiodeSquare(s,[0 0 0]);
 			vbl = flip(s, vbl + sv.halfisi);
+			data.times.trialLength(nTr,nSt) = vbl-startT;
 			fprintf('--->>>Stimulus presentation took: %s secs\n', vbl-startT);
-			
-			for i = 1:length(texture)
-				try Screen('Close', texture(i)); end %#ok<*TRYNC> 
-			end
 			WaitSecs(1);
 		end
-		randomdegreea11(irp,:)=randomdegreeindex;
 	end
 	drawPhotoDiodeSquare(s,[0 0 0]);
 	drawTextNow(s,'Finished!');
+	
+	for nSt = 1:length(stimSizes)
+	tx = texture{nSt};
+		for i = 1:length(tx)
+			try Screen('Close', texture(i)); end %#ok<*TRYNC> 
+		end
+	end
 	WaitSecs(1);
 	close(s);
 	close(lJ);
@@ -117,7 +125,7 @@ catch
 end
 
 fprintf('\n\nSaving DATA to %s\n\n',saveName);
-save(saveName,'randomdegreea11');
+save(saveName,'data');
 
 
 function pixs=deg2pix(degree,cm,pwidth,vdist)

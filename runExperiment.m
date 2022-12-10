@@ -246,27 +246,47 @@ classdef runExperiment < optickaCore
 			% variables in this specific case...
 			global rM %eyetracker calibration needs access to reward manager
 					
+			refreshScreen(me);
+			initialiseSaveFile(me); %generate a savePrefix for this run
+			me.name = [me.subjectName '-' me.savePrefix]; %give us a run name
 			if isempty(me.screen) || isempty(me.task)
-				me.initialise;
+				me.initialise; %we set up screenManager and taskSequence objects
 			end
-			if isempty(me.stimuli) || me.stimuli.n < 1
-				error('No stimuli present!!!')
-			end
-			if me.screen.isPTB == false
+			if me.screen.isPTB == false %NEED PTB!
 				errordlg('There is no working PTB available!')
 				error('There is no working PTB available!')
 			end
-			
-			initialiseSaveFile(me); %generate a savePrefix for this run
-			me.name = [me.subjectName '-' me.savePrefix]; %give us a run name
+
+			%------enable diary logging if requested
+			if me.diaryMode
+				diary off
+				diary([me.paths.savedData filesep me.name '.log']);
+			end
+
+			%------initialise the rewardManager global object
+			if ~isa(rM,'arduinoManager') 
+				rM=arduinoManager();
+			end
+			if rM.isOpen
+				rM.close; rM.reset;
+			end
 
 			%------initialise runLog for this run
-			me.previousInfo.runLog = me.runLog;
-			me.taskLog = timeLogger();
-			me.runLog = timeLogger();
-			tL = me.runLog;
-			s = me.screen;
-			t = me.task;
+			me.previousInfo.runLog	= me.runLog;
+			me.taskLog				= [];
+			me.runLog				= timeLogger();
+			tL						= me.runLog;
+			tL.name					= me.name;
+			if me.logFrames;tL.preAllocate(me.screenVals.fps*60*60);end
+			%------make a short handle to the screenManager and metaStimulus objects
+			me.stimuli.screen		= me.screen;
+			s						= me.screen; 
+			stims					= me.stimuli;
+			tS.controlPlexon		= false;
+
+			%------initialise task
+			t						= me.task;
+			initialise(t, true);
 
 			%-----------------------------------------------------------
 			try%======This is our main TRY CATCH experiment display loop
@@ -276,20 +296,22 @@ classdef runExperiment < optickaCore
 				me.isRunTask = false;
 				
 				%------open the PTB screen
-				me.screenVals = s.open(me.debug,tL);
-				me.stimuli.screen = s; %make sure our stimuli use the same screen
-				me.stimuli.verbose = me.verbose;
-				t.fps = me.screenVals.fps;
-				setup(me.stimuli); %run setup() for each stimulus
+				me.screenVals			= s.open(me.debug,tL);
+				stims.screen		= s; %make sure our stimuli use the same screen
+				stims.verbose		= me.verbose;
+				t.fps					= me.screenVals.fps;
+				setup(stims); %run setup() for each stimulus
 				if s.movieSettings.record; prepareMovie(s); end
 				
 				%------configure IO
-				io = configureIO(me);
+				io						= configureIO(me);
 				
-				if me.useDataPixx || me.useDisplayPP
+				if tS.controlPlexon && me.useDataPixx || me.useDisplayPP
 					startRecording(io);
 					WaitSecs(0.5);
-				elseif me.useLabJackStrobe
+				elseif tS.controlPlexon && me.useLabJackTStrobe
+					
+				elseif tS.controlPlexon && me.useLabJackStrobe
 					% Trigger the omniplex (TTL on FIO1) into paused mode
 					io.setDIO([2,0,0]);WaitSecs(0.001);io.setDIO([0,0,0]);
 				end
@@ -307,8 +329,7 @@ classdef runExperiment < optickaCore
 					initialise(eT, s);
 					trackerSetup(eT);
 				end
-				
-				initialise(t); %------initialise the task for this run
+			
 				me.updateMOCVars(1,1); %------set the variables for the very first run;
 				
 				KbReleaseWait; %------make sure keyboard keys are all released
@@ -317,9 +338,9 @@ classdef runExperiment < optickaCore
 				Priority(MaxPriority(s.win));
 				
 				%--------------unpause Plexon-------------------------
-				if me.useDataPixx || me.useDisplayPP
+				if tS.controlPlexon &&  (me.useDataPixx || me.useDisplayPP)
 					resumeRecording(io);
-				elseif me.useLabJackStrobe
+				elseif tS.controlPlexon && me.useLabJackStrobe
 					io.setDIO([3,0,0],[3,0,0])%(Set HIGH FIO0->Pin 24), unpausing the omniplex
 				end
 				
@@ -332,14 +353,14 @@ classdef runExperiment < optickaCore
 				% some of the frames lost on first presentation for very complex
 				% stimuli using 32bit computation buffers...
 				fprintf('\n===>>> Warming up the GPU and I/O systems... <<<===\n')
-				show(me.stimuli);
-				if me.useEyeLink; trackerClearScreen(eT); end
+				show(stims);
+				if me.useEyeLink || me.useTobii; resetAll(eT);trackerClearScreen(eT); end % blank eyelink screen
 				for i = 1:s.screenVals.fps*2
-					draw(me.stimuli);
+					draw(stims);
 					drawBackground(s);
 					s.drawPhotoDiodeSquare([0 0 0 1]);
 					finishDrawing(s);
-					animate(me.stimuli);
+					animate(stims);
 					if ~mod(i,10); io.sendStrobe(255); end
 					if me.useEyeLink
 						getSample(eT); 
@@ -348,7 +369,7 @@ classdef runExperiment < optickaCore
 					end
 					flip(s);
 				end
-				update(me.stimuli); %make sure stimuli are set back to their start state
+				update(stims); %make sure stimuli are set back to their start state
 				io.resetStrobe;flip(s);flip(s);
 				tL.screenLog.beforeDisplay = GetSecs();
 				
@@ -377,7 +398,7 @@ classdef runExperiment < optickaCore
 						if me.drawFixation;s.drawCross(0.4,[0.3 0.3 0.3 1]);end
 					else
 						if ~isempty(s.backgroundColour);s.drawBackground;end
-						draw(me.stimuli);
+						draw(stims);
 						if s.photoDiode;s.drawPhotoDiodeSquare([1 1 1 1]);end
 						if me.drawFixation;s.drawCross(0.4,[1 1 1 1]);end
 					end
@@ -480,7 +501,7 @@ classdef runExperiment < optickaCore
 				
 				s.finaliseMovie(false);
 				
-				me.stimuli.reset();
+				stims.reset();
 				s.close();
 				
 				if me.useDataPixx || me.useDisplayPP
