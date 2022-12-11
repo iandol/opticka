@@ -3,12 +3,12 @@ function revCor(s)
 mtitle   = 'Opticka Reverse Correlation Module';
 options  = { 't|10','Stimulus Sizes (deg):';...
 	't|1','Size of Pixel Blocks (deg):';...
-	't|5','Number of Trials:';...
+	't|10','Number of Trials:';...
 	't|5','Number of Seconds (secs):';...
 	't|2','Number of Frames to show texture:';...
 	'r|¤Trinary|Binary','White Noise Type:';...
-	't|255','Value to send on LabJack:';...
-	'r|Off|¤On','Debug mode:';...
+	't|1 255','Values to send on LabJack (ON/OFF):';...
+	'r|¤Off|On','Debug mode:';...
 	'r|¤Nearest Neighbour|Bilinear|BilinearMipmap|Trilinear|NNMipmap|NNInterp','Texture Scaling:';...
 	'r|¤8bit|16bit|32bit','Texture Resolution:';...
   };
@@ -56,6 +56,7 @@ try
 	data.comment = 'scale is by how much the data.matrix is scaled to show in matlab';
 	nStimuli = round(nSeconds*round(sv.fps/nFrames));
 	data.nStimuli = nStimuli;
+	texture = [];
 	for nSt=1:length(stimSizes)
 		pxLength = round(stimSizes(nSt) * (1/blockSize));
 		mx = rand(pxLength,pxLength,nStimuli);
@@ -70,7 +71,6 @@ try
 		% Screen('MakeTexture', WindowIndex, imageMatrix [, optimizeForDrawAngle=0] [, specialFlags=0]
 		% [, floatprecision] [, textureOrientation=0] [, textureShader=0]);
 		data.stimuli{nSt} = mx;
-		texture = [];
 		for i = 1:nStimuli
 			texture{nSt}(i) = Screen('MakeTexture', sv.win, mx(:,:,i), [], [], floatPrecision);
 		end
@@ -78,29 +78,31 @@ try
 	
 	for nTr=1:nTrials
 		for nSt=1:length(stimSizes)
+			thisSize = stimSizes(nSt);
+			data.trials(nTr,nSt) = thisSize;
 			tx = texture{nSt};
+			if isempty(tx);error('Texture is empty!!!');end
 			% scale our texture via a rect
 			rect = Screen('Rect',tx(1));
 			rect = ScaleRect(rect,round(blockpx),round(blockpx));
 			rect = CenterRectOnPointd(rect, sv.xCenter+(s.screenXOffset*s.ppd), sv.yCenter+(s.screenYOffset*s.ppd));
-			% present stimulation
-			% Screen('DrawTexture', windowPointer, texturePointer [,sourceRect] [,destinationRect]
-			% [,rotationAngle] [, filterMode] [, globalAlpha] [, modulateColor] [, textureShader] [, specialFlags] [, auxParameters]);
-			t=tic;
 			drawPhotoDiodeSquare(s,[0 0 0]);
 			lastvbl = flip(s); 
 			for i = 1:length(tx)
 				for j = 1:nFrames
+					% Screen('DrawTexture', windowPointer, texturePointer [,sourceRect] [,destinationRect]
+					% [,rotationAngle] [, filterMode] [, globalAlpha] [, modulateColor] [, textureShader] [, specialFlags] [, auxParameters]);	
 					Screen('DrawTexture', sv.win, tx(i), [], rect, [], filterMode);
 					if debug;drawGrid(s);end
 					drawPhotoDiodeSquare(s,[1 1 1]);
 					vbl = flip(s, lastvbl + sv.halfisi);
 					lastvbl = vbl;
-					if i == 1 && j == 1; sendStrobe(lJ,strobeValue); startT = vbl;end
+					if i == 1 && j == 1; sendStrobe(lJ,strobeValue(1)); startT = vbl;end
 				end
 			end
 			drawPhotoDiodeSquare(s,[0 0 0]);
 			vbl = flip(s, vbl + sv.halfisi);
+			sendStrobe(lJ,strobeValue(2));
 			data.times.trialLength(nTr,nSt) = vbl-startT;
 			fprintf('--->>>Stimulus presentation took: %s secs\n', vbl-startT);
 			WaitSecs(1);
@@ -110,9 +112,9 @@ try
 	drawTextNow(s,'Finished!');
 	
 	for nSt = 1:length(stimSizes)
-	tx = texture{nSt};
+		tx = texture{nSt};
 		for i = 1:length(tx)
-			try Screen('Close', texture(i)); end %#ok<*TRYNC> 
+			try Screen('Close', tx(i)); end %#ok<*TRYNC> 
 		end
 	end
 	WaitSecs(1);
