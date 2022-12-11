@@ -86,6 +86,7 @@ try
 			rect = Screen('Rect',tx(1));
 			rect = ScaleRect(rect,round(blockpx),round(blockpx));
 			rect = CenterRectOnPointd(rect, sv.xCenter+(s.screenXOffset*s.ppd), sv.yCenter+(s.screenYOffset*s.ppd));
+			% prepare our frame before stim ON
 			drawPhotoDiodeSquare(s,[0 0 0]);
 			lastvbl = flip(s); 
 			for i = 1:length(tx)
@@ -95,8 +96,7 @@ try
 					Screen('DrawTexture', sv.win, tx(i), [], rect, [], filterMode);
 					if debug;drawGrid(s);end
 					drawPhotoDiodeSquare(s,[1 1 1]);
-					vbl = flip(s, lastvbl + sv.halfisi);
-					lastvbl = vbl;
+					vbl = flip(s, lastvbl + sv.halfisi); lastvbl = vbl;
 					if i == 1 && j == 1; sendStrobe(lJ,strobeValue(1)); startT = vbl;end
 				end
 			end
@@ -126,7 +126,7 @@ catch
 	psychrethrow(psychlasterror);
 end
 
-fprintf('\n\nSaving DATA to %s\n\n',saveName);
+fprintf('\n\n!!!!!!!!!!!!\nSaving DATA to %s\n!!!!!!!!!!!!!\n\n',saveName);
 save(saveName,'data');
 
 

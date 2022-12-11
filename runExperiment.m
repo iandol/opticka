@@ -257,13 +257,13 @@ classdef runExperiment < optickaCore
 				error('There is no working PTB available!')
 			end
 
-			%------enable diary logging if requested
+			%===============================enable diary logging if requested
 			if me.diaryMode
 				diary off
 				diary([me.paths.savedData filesep me.name '.log']);
 			end
 
-			%------initialise the rewardManager global object
+			%===============================initialise the rewardManager global object
 			if ~isa(rM,'arduinoManager') 
 				rM=arduinoManager();
 			end
@@ -271,26 +271,27 @@ classdef runExperiment < optickaCore
 				rM.close; rM.reset;
 			end
 
-			%------enable diary logging if requested
+			%===============================enable diary logging if requested
 			if me.diaryMode
 				diary off
 				diary([me.paths.savedData filesep me.name '.log']);
 			end
 			
-			%------initialise runLog for this run
+			%===============================initialise runLog for this run
 			me.previousInfo.runLog	= me.runLog;
 			me.taskLog				= [];
 			me.runLog				= timeLogger();
 			tL						= me.runLog;
 			tL.name					= me.name;
 			if me.logFrames;tL.preAllocate(me.screenVals.fps*60*60);end
-			%------make a short handle to the screenManager and metaStimulus objects
+			%===============================make a short handle to the screenManager and metaStimulus objects
 			me.stimuli.screen		= me.screen;
 			s						= me.screen; 
 			stims					= me.stimuli;
 			tS.controlPlexon		= false;
+			tS.askForComments		= true;
 
-			%------initialise task
+			%===============================initialise task
 			task						= me.task;
 			initialise(task, true);
 
@@ -300,6 +301,22 @@ classdef runExperiment < optickaCore
 				me.lastIndex = 0;
 				me.isRunning = true;
 				me.isRunTask = false;
+
+				%================================get pre-run comments for this data collection
+				if tS.askForComments
+					comment = inputdlg({'CHECK Recording system!!! Initial Comment for this Run?'},['Run Comment for ' me.name]);
+					if ~isempty(comment)
+						comment = comment{1};
+						me.comment = [me.name ':' comment];
+						bR.comment = me.comment; eT.comment = me.comment; sM.comment = me.comment; io.comment = me.comment; tL.comment = me.comment; tS.comment = me.comment;
+					end
+				end
+
+				%=============================Premptive save in case of crash or error: SAVES IN /TMP
+				rE = me;
+				tS.tmpFile = [tempdir filesep me.name '.mat'];
+				fprintf('===>>> Save initial state: %s\n',tS.tmpFile);
+				save(tS.tmpFile,'rE','tS');
 				
 				%================================open the PTB screen and setup stimuli
 				me.screenVals		= s.open(me.debug,tL);
@@ -321,14 +338,14 @@ classdef runExperiment < optickaCore
 					WaitSecs(0.5);
 				end
 			
-				%--------------unpause Plexon-------------------------
+				%===============================unpause Plexon
 				if tS.controlPlexon &&  (me.useDataPixx || me.useDisplayPP)
 					resumeRecording(io);
 				elseif tS.controlPlexon && me.useLabJackStrobe
 					io.setDIO([3,0,0],[3,0,0])%(Set HIGH FIO0->Pin 24), unpausing the omniplex
 				end
 				
-				%------------------------------------------------------------
+				%=========================================================
 				% lets draw 2 seconds worth of the stimuli we will be using
 				% covered by a blank. Primes the GPU and other components with the sorts
 				% of stimuli/tasks used and this does appear to minimise
@@ -371,18 +388,16 @@ classdef runExperiment < optickaCore
 				end
 				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
 
-				
 				%================================Set state for first trial
 				me.updateMOCVars(1,1); %------set the variables for the very first run
 				task.isBlank				= true;
 				task.tick					= 1;
 				task.switched				= 1;
 				task.totalRuns				= 1;
-	
-				tL.vbl(1)					= Screen('Flip', s.win);
-				tL.lastvbl					= tL.vbl(1);
 				tL.miss(1)					= 0;
 				tL.stimTime(1)				= 0;
+				tL.vbl(1)					= Screen('Flip', s.win);
+				tL.lastvbl					= tL.vbl(1);
 				tL.startTime				= tL.lastvbl;
 				tL.screenLog.beforeDisplay	= tL.lastvbl;
 				
@@ -471,16 +486,16 @@ classdef runExperiment < optickaCore
 				% Finished display loop
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%==================================================================%
+				
 				ListenChar(0);
 				s.drawBackground;
 				vbl=Screen('Flip', s.win);
 				tL.screenLog.afterDisplay=vbl;
-				if me.useDataPixx || me.useDisplayPP
+				if tS.controlPlexon && (me.useDataPixx || me.useDisplayPP)
 					pauseRecording(io);
-				elseif me.useLabJackStrobe
+				elseif tS.controlPlexon && me.useLabJackStrobe
 					io.setDIO([0,0,0],[1,0,0]); %this is RSTOP, pausing the omniplex
 				end
-				%notify(me,'endAllRuns');
 				
 				%-----get our profiling report for our task loop
 				%profile off; profile report; profile clear
@@ -506,11 +521,34 @@ classdef runExperiment < optickaCore
 				
 				stims.reset();
 				s.close();
+
+				removeEmptyValues(tL);
+				me.tS = tS; %store our tS structure for backup
+
+				if tS.askForComments
+					comment = inputdlg('Final Comment for this Run?','Run Comment');
+					if ~isempty(comment)
+						comment = comment{1};
+						me.comment = [me.comment ' | Final Comment: ' comment];
+						bR.comment = me.comment;
+						eT.comment = me.comment;
+						sM.comment = me.comment;
+						io.comment = me.comment;
+						tL.comment = me.comment;
+						tS.comment = me.comment;
+					end
+				end
 				
-				if me.useDataPixx || me.useDisplayPP
+				%------SAVE the DATA
+				sname = [me.paths.savedData filesep me.name '.mat'];
+				rE = me;
+				save(sname,'rE','tS');
+				fprintf('\n\n===>>> SAVED DATA to: %s\n\n',sname)
+				
+				if tS.controlPlexon && (me.useDataPixx || me.useDisplayPP)
 					stopRecording(io);
 					close(io);
-				elseif me.useLabJackStrobe
+				elseif tS.controlPlexon && me.useLabJackStrobe
 					me.lJack.setDIO([2,0,0]);WaitSecs(0.05);me.lJack.setDIO([0,0,0]); %we stop recording mode completely
 					me.lJack.close;
 					me.lJack=[];
@@ -528,7 +566,6 @@ classdef runExperiment < optickaCore
 			catch ME
 				me.isRunning = false;
 				fprintf('\n\n---!!! ERROR in runExperiment.runMOC()\n');
-				getReport(ME)
 				if me.useDataPixx || me.useDisplayPP
 					pauseRecording(io); %pause plexon
 					WaitSecs(0.25)
@@ -985,6 +1022,7 @@ classdef runExperiment < optickaCore
 				tL.screenLog.afterDisplay = tL.lastvbl;
 				tL.screenLog.trackerEndTime = getTrackerTime(eT);
 				tL.screenLog.trackerEndOffset = getTimeOffset(eT);
+				me.isRunning = false;
 				
 				try %#ok<*TRYNC> 
 					drawBackground(s);
@@ -1003,12 +1041,10 @@ classdef runExperiment < optickaCore
 				try show(stims); end %make all stimuli visible again, useful for editing
 				try reset(stims); end %reset stims back to initial state
 				
-				me.isRunning = false;
-				
 				%-----get our profiling report for our task loop
 				%profile off; profile viewer;
 				
-				if me.useDisplayPP || me.useDataPixx
+				if tS.controlPlexon && (me.useDisplayPP || me.useDataPixx)
 					pauseRecording(io); %pause plexon
 					WaitSecs(0.5);
 					stopRecording(io);
@@ -1072,25 +1108,24 @@ classdef runExperiment < optickaCore
 			catch ME
 				me.isRunning = false;
 				fprintf('\n\n===!!! ERROR in runExperiment.runTask()\n');
-				getReport(ME)
+				try reset(stims); end
+				try close(s); end
+				try close(aM); end
+				try close(eT); end
+				try close(rM); end
 				if exist('io','var')
-					pauseRecording(io); %pause plexon
+					try pauseRecording(io); end%pause plexon
 					WaitSecs(0.25)
-					stopRecording(io);
-					close(io);
+					try stopRecording(io); end
+					try close(io); end
 				end
 				%profile off; profile clear
 				warning('on') 
 				Priority(0);
 				ListenChar(0); RestrictKeysForKbCheck([]);
 				ShowCursor;
-				try reset(stims); end
-				try close(s); end
-				try close(aM); end
-				try close(eT); end
 				me.eyeTracker = [];
 				me.behaviouralRecord = [];
-				try close(rM); end
 				me.lJack=[];
 				me.io = [];
 				if me.useEyeOccluder && isfield(tS,'eO')
