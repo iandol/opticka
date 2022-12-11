@@ -392,7 +392,7 @@ classdef opticka < optickaCore
 				me.ui.OKAntiAliasing.Value = '0';
 			end
 			me.r.screen.antiAlias = me.gd(me.ui.OKAntiAliasing);
-			me.r.screen.photoDiode = logical(me.gv(me.ui.OKUsePhotoDiode));
+			me.r.photoDiode = logical(me.gv(me.ui.OKUsePhotoDiode));
 			me.r.screen.movieSettings.record = logical(me.gv(me.ui.OKrecordMovie));
 			me.r.verbose = logical(me.gv(me.ui.OKVerbose)); %set method
 			me.verbose = me.r.verbose;
@@ -447,7 +447,7 @@ classdef opticka < optickaCore
 			if me.ui.OKuseTobii.Checked == true
 				me.r.useTobii = true;
 				me.r.useEyeLink = false;
-				e.h.OKuseEyelink.Checked = false;
+				me.h.OKuseEyelink.Checked = false;
 			else
 				me.r.useTobii = false;
 			end

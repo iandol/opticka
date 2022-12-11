@@ -48,7 +48,6 @@ classdef metaStimulus < optickaCore
 		%> control table for keyboard changes, again allows you to dynamically 
 		%> change variables during training sessions
 		controlTable		= []
-		
 		%> verbose?
 		verbose				= false
 	end

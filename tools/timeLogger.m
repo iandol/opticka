@@ -43,17 +43,17 @@ classdef timeLogger < optickaCore
 		%> @return
 		% ===================================================================
 		function me=timeLogger(varargin)
-			if nargin == 0; varargin.name = 'timeLog';end
-			if nargin>0; me.parseArgs(varargin,me.allowedProperties); end
-			if isempty(me.name);me.name = 'timeLog'; end
+			args = optickaCore.addDefaults(varargin,struct('name','timeLog'));
+			me = me@optickaCore(args); %superclass constructor
+			me.parseArgs(args,me.allowedProperties);
 			if ~exist('GetSecs','file')
 				me.timer = @now;
 			end
-			me.screenLog.construct = me.timer();
+			me.screenLog.construct = me.timer;
 		end
 		
 		% ===================================================================
-		%> @brief Preallocate array a bit more efficient
+		%> @brief Preallocate array: a bit more efficient
 		%>
 		%> @param varargin
 		%> @return
@@ -144,20 +144,39 @@ classdef timeLogger < optickaCore
 			
 			removeEmptyValues(me)
 			
-			vbl=me.vbl.*1000; %#ok<*PROP>
-			show=me.show.*1000;
-			flip=me.flip.*1000; 
+			vbl=me.vbl.*1e3; %#ok<*PROP>
+			show=me.show.*1e3;
+			flip=me.flip.*1e3; 
 			miss=me.miss;
 			stimTime=me.stimTime;
+			l = length(vbl);
+			vbl = vbl(1:l);
+			show=show(1:l);
+			flip=flip(1:l);
+			stimTime=stimTime(1:l);
+			x=1:l;
 			
 			calculateMisses(me,miss,stimTime)
 			
 			ssz = get(0,'ScreenSize');
 			figure('Name',me.name,'NumberTitle','off','Color',[1 1 1],...
-				'Position', [10 1 round(ssz(3)/3) ssz(4)]);
-			tl = tiledlayout(3,1,'TileSpacing','compact','Padding','compact');
+				'Position', [10 1 round(ssz(3)/2.5) ssz(4)]);
+			tl = tiledlayout(4,1,'TileSpacing','compact','Padding','compact');
 			
 			ax1 = nexttile;
+			hold on
+			plot(x,vbl-vbl(1),'r-','MarkerFaceColor',[1 0 0]);
+			plot(x,show-show(1),'b--');
+			plot(x,miss-miss(1),'g-.');
+			plot(x,(stimTime-min(stimTime))*mean(vbl-vbl(1)),'k-');
+			xlim([1 length(x)]);
+			legend('VBL','Show','Flip','STIMULUS');
+			title('Raw Frame times')
+			xlabel('Frame number');
+			ylabel('Time (milliseconds)');
+			box on; grid on; grid minor;
+
+			ax2 = nexttile;
 			hold on
 			vv=diff(vbl);
 			vv(vv>100)=100;
@@ -170,10 +189,11 @@ classdef timeLogger < optickaCore
 			plot(ff,'g-.')
 			plot(stimTime(2:end)*100,'k-')
 			hold off
+			xlim([1 length(x)]);
 			ylim([0 105])
-			legend('VBL','Show','Flip','Stim ON')
+			legend('VBL','Show','Flip','STIMULUS')
 			[m,e]=me.stderr(diff(vbl));
-			t=sprintf('VBL mean=%.3f ± %.3f s.e.', m, e);
+			t=sprintf('DIFF: VBL mean=%.3f ± %.3f s.e.', m, e);
 			[m,e]=me.stderr(diff(show));
 			t=[t sprintf(' | Show mean=%.3f ± %.3f', m, e)];
 			[m,e]=me.stderr(diff(flip));
@@ -183,15 +203,15 @@ classdef timeLogger < optickaCore
 			ylabel('Time (milliseconds)');
 			box on; grid on; grid minor;
 			
-			ax2 = nexttile;
-			x = 1:length(show);
+			ax3 = nexttile;
 			hold on
 			plot(x,show-vbl,'r')
 			plot(x,show-flip,'g')
 			plot(x,vbl-flip,'b-.')
 			plot(x,stimTime-0.5,'k')
-			legend('Show-VBL','Show-Flip','VBL-Flip','Simulus ON/OFF');
+			legend('Show-VBL','Show-Flip','VBL-Flip','STIMULUS');
 			hold off
+			xlim([1 length(x)]);
 			[m,e]=me.stderr(show-vbl);
 			t=sprintf('Show-VBL=%.3f ± %.3f', m, e);
 			[m,e]=me.stderr(show-flip);
@@ -203,23 +223,24 @@ classdef timeLogger < optickaCore
 			ylabel('Time (milliseconds)');
 			box on; grid on; grid minor;
 			
-			ax3 = nexttile;
+			ax4 = nexttile;
 			hold on
 			miss(miss > 0.05) = 0.05;
 			stimTime = (stimTime / max(stimTime)) * max(miss);
-			plot(miss,'g-');
-			plot(me.missImportant,'ro','MarkerFaceColor',[1 0 0]);
-			plot(stimTime,'k','linewidth',1);
+			plot(x,miss,'g-');
+			plot(x,me.missImportant,'ro','MarkerFaceColor',[1 0 0]);
+			plot(x,stimTime,'k','linewidth',1);
 			hold off
-			ylim([-0.005 0.055]);
+			xlim([1 length(x)]);
+			ylim([min(miss) max([max(stimTime) max(miss)])]);
 			title(['Missed frames = ' num2str(me.nMissed) ' (RED > 0 means missed frame)']);
 			xlabel('Frame number');
 			ylabel('Miss Value');
 			box on; grid on; grid minor;
 
-			linkaxes([ax1 ax2 ax3],'x');
+			linkaxes([ax1 ax2 ax3 ax4],'x');
 			
-			linkaxes([ax1 ax2 ax3],'x');
+			linkaxes([ax1 ax2 ax3 ax4],'x');
 			clear vbl show flip index miss stimTime
 		end
 

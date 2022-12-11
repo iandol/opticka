@@ -98,12 +98,6 @@ classdef screenManager < optickaCore
 		%> shunt center by Y degrees (coordinates are in degrees from centre of
 		%> monitor)
 		screenYOffset(1,1) double			= 0
-		%> show a white square in the top-right corner to trigger a photodiode
-		%> attached to screen. This is only displayed when the stimulus is
-		%> shown, not during the blank and can therefore be used for timing
-		%> validation. For stateMachine tasks you need to pass in the drawing
-		%> command for this to take effect.
-		photoDiode logical					= false
 		%> gamma correction info saved as a calibrateLuminance object
 		gammaTable calibrateLuminance
 		%> settings for movie output

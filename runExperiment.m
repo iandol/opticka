@@ -107,6 +107,12 @@ classdef runExperiment < optickaCore
 		dPPMode char				= 'plain'
 		%> which port is the arduino on?
 		arduinoPort char			= ''
+		%> show a white square in the top-right corner to trigger a photodiode
+		%> attached to screen. This is only displayed when the stimulus is
+		%> shown, not during the blank and can therefore be used for timing
+		%> validation. For stateMachine tasks you need to pass in the drawing
+		%> command for this to take effect.
+		photoDiode logical			= false
 		%> initial eyelink settings
 		elsettings					= []
 		%> initial tobii settings
@@ -192,20 +198,14 @@ classdef runExperiment < optickaCore
 		isTask logical				= true
 		%> should we stop the task?
 		stopTask logical			= false
+		%> prestimuli
+		stimShown				= false
 		%> properties allowed to be modified during construction
 		allowedProperties char = ['useDisplayPP|useDataPixx|useEyeLink|'...
 			'useArduino|dummyMode|logFrames|subjectName|researcherName'...
 			'useTobii|stateInfoFile|userFunctionFile|dummyMode|stimuli|task|'...
 			'screen|visualDebug|useLabJack|useLabJackTStrobe|useLabJackStrobe|debug|'...
 		'useEyeOccluder|verbose|screenSettings|benchmark']
-	end
-	
-	events %causing a major MATLAB 2019a crash when loading .mat files that contain events, removed for the moment
-		%runInfo
-		%calls when we quit
-		%abortRun
-		%calls after all runs finish
-		%endAllRuns
 	end
 	
 	%=======================================================================
@@ -373,8 +373,7 @@ classdef runExperiment < optickaCore
 
 				
 				%================================Set state for first trial
-				me.updateMOCVars(1,1); %------set the variables for the very first run;
-				update(stims);
+				me.updateMOCVars(1,1); %------set the variables for the very first run
 				task.isBlank				= true;
 				task.tick					= 1;
 				task.switched				= 1;
@@ -394,10 +393,10 @@ classdef runExperiment < optickaCore
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				while ~task.taskFinished
 					if task.isBlank
-						if s.photoDiode;s.drawPhotoDiodeSquare([0 0 0 1]);end
+						if me.photoDiode;s.drawPhotoDiodeSquare([0 0 0 1]);end
 					else
 						draw(stims);
-						if s.photoDiode;s.drawPhotoDiodeSquare([1 1 1 1]);end
+						if me.photoDiode;s.drawPhotoDiodeSquare([1 1 1 1]);end
 					end
 					if s.visualDebug;s.drawGrid;me.infoTextScreen;end
 					
@@ -1959,10 +1958,11 @@ classdef runExperiment < optickaCore
 			%--------------first run-----------------
 			if me.task.tick == 1 
 				fprintf('START @%s\n\n',infoText(me));
+				me.stimShown = false;
 				me.task.isBlank = true;
 				me.task.startTime = me.task.timeNow;
 				me.task.switchTime = me.task.isTime; %first ever time is for the first trial
-				me.task.switchTick = me.task.isTime*ceil(me.screenVals.fps);
+				me.task.switchTick = ceil(me.task.isTime*me.screenVals.fps);
 				setStrobeValue(me,me.task.outIndex(me.task.totalRuns));
 			end
 			
@@ -1973,23 +1973,24 @@ classdef runExperiment < optickaCore
 				maintain = me.task.tick < me.task.switchTick;
 			end
 			
-			if maintain == true %no need to switch state
+			if maintain %no need to switch state
 				
-				if me.task.isBlank == false %showing stimulus, need to call animate for each stimulus
+				if ~me.task.isBlank %showing stimulus, need to call animate for each stimulus
 					
 					% because the update happens before the flip, but the drawing of the update happens
 					% only in the next loop, we have to send the strobe one loop after we set switched
 					% to true
 					if me.task.switched == true
 						me.sendStrobe = true;
+						me.stimShown = true;
 					end
-					%if me.verbose==true;tic;end
-% 					parfor i = 1:me.stimuli.n %parfor appears faster here for 6 stimuli at least
-% 						me.stimuli{i}.animate;
-% 					end
-					animate(me.stimuli);
-					%if me.verbose==true;fprintf('=-> updateMOCTask() Stimuli animation: %g ms\n',toc*1000);end
-					
+					%if me.verbose==true;tt=tic;end
+					%stims = me.stimuli;
+ 					%parfor i = 1:me.stimuli.n %parfor appears faster here for 6 stimuli at least
+ 					%	stims{i}.animate;
+ 					%end
+					me.stimuli.animate;
+					%if me.verbose==true;fprintf('=-> updateMOCTask() Stimuli animation: %g ms\n',toc(tt)*1e3);end
 				else %this is a blank stimulus
 					me.task.blankTick = me.task.blankTick + 1;
 					%this causes the update of the stimuli, which may take more than one refresh, to
@@ -2006,7 +2007,7 @@ classdef runExperiment < optickaCore
 					end
 					% now update our stimuli, we do it after the first blank as less
 					% critical timingwise
-					if me.task.doUpdate == true
+					if me.task.doUpdate && me.stimShown
 						if ~mod(me.task.thisRun,me.task.minTrials) %are we rolling over into a new trial?
 							mT=me.task.thisBlock+1;
 							mR = 1;
@@ -2034,23 +2035,17 @@ classdef runExperiment < optickaCore
 				if me.task.isBlank == false %we come from showing a stimulus
 					me.task.isBlank = true;
 					me.task.blankTick = 0;
-					
 					if me.task.thisRun == me.task.minTrials %are we within a trial block or not? we add the required time to our switch timer
 						me.task.switchTime=me.task.switchTime+me.task.ibTimeNow;
-						me.task.switchTick=me.task.switchTick+(me.task.ibTimeNow*ceil(me.screenVals.fps));
-						fprintf('IB TIME: %g\n',me.task.ibTimeNow);
+						me.task.switchTick=me.task.switchTick+(ceil(me.task.ibTimeNow*me.screenVals.fps));
 					else
 						me.task.switchTime=me.task.switchTime+me.task.isTimeNow;
-						me.task.switchTick=me.task.switchTick+(me.task.isTimeNow*ceil(me.screenVals.fps));
-						fprintf('IS TIME: %g\n',me.task.isTimeNow);
+						me.task.switchTick=me.task.switchTick+(ceil(me.task.isTimeNow*me.screenVals.fps));
 					end
-					
 					setStrobeValue(me,me.stimOFFValue);%get the strobe word to signify stimulus OFF ready
-					%me.logMe('OutaBlank');
-					
 				else %we have to show the new run on the next flip
 					me.task.switchTime=me.task.switchTime+me.task.trialTime; %update our timer
-					me.task.switchTick=me.task.switchTick+(me.task.trialTime*round(me.screenVals.fps)); %update our timer
+					me.task.switchTick=me.task.switchTick+(ceil(me.task.trialTime*me.screenVals.fps)); %update our timer
 					me.task.isBlank = false;
 					updateTask(me.task);
 					if me.task.totalRuns <= me.task.nRuns

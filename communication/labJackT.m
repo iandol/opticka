@@ -384,7 +384,7 @@ classdef labJackT < handle
 		%>	
 		% ===================================================================
 		function prepareStrobe(me,value)
-			if me.silentMode || isempty(me.handle); return; end
+			if me.silentMode || isempty(me.handle); me.sendValue=value; return; end
 			me.lastValue = me.sendValue;
 			me.sendValue = value;
 			cmd = zeros(64,1);
