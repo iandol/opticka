@@ -97,14 +97,13 @@ classdef discStimulus < baseStimulus
 		function setup(me,sM)
 			
 			reset(me);
-			me.inSetup = true;
+			me.inSetup = true; me.isSetup = false;
 			if isempty(me.isVisible); me.show; end
 			
 			me.sM = sM;
-			if ~sM.isOpen; warning('Screen needs to be Open!'); end
+			if ~sM.isOpen; error('Screen needs to be Open!'); end
+			me.ppd=sM.ppd;
 			me.screenVals = sM.screenVals;
-			me.ppd = sM.ppd;			
-			
 			me.texture = []; %we need to reset this
 			
 			fn = fieldnames(me);

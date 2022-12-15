@@ -216,7 +216,7 @@ classdef dotsStimulus < baseStimulus
 				if me.mask
 					Screen('BlendFunction', me.sM.win, me.msrcMode, me.mdstMode);
 					Screen('DrawDots', me.sM.win,me.xy,me.dotSizeOut,me.colours,...
-						[me.xOut me.yOut],me.dotTypeOut);
+						[me.xFinal me.yFinal],me.dotTypeOut);
 					if me.maskIsProcedural
 						Screen('DrawTexture', me.sM.win, me.maskTexture, [], me.maskRect,...
 						[], [], 1, me.maskColour);
@@ -226,7 +226,7 @@ classdef dotsStimulus < baseStimulus
 					end
 					Screen('BlendFunction', me.sM.win, me.sM.srcMode, me.sM.dstMode);
 				else
-					Screen('DrawDots',me.sM.win,me.xy,me.dotSizeOut,me.colours,[me.xOut me.yOut],me.dotTypeOut);
+					Screen('DrawDots',me.sM.win,me.xy,me.dotSizeOut,me.colours,[me.xFinal me.yFinal],me.dotTypeOut);
 				end
 			end
 			me.tick = me.tick + 1;
@@ -241,20 +241,20 @@ classdef dotsStimulus < baseStimulus
 				if me.mouseOverride
 					getMousePosition(me);
 					if me.mouseValid
-						me.xOut = me.mouseX;
-						me.yOut = me.mouseY;
+						me.xFinal = me.mouseX;
+						me.yFinal = me.mouseY;
 					end
 				end
 % 				if me.doMotion == true
 % 					if me.doAnimator
 % 						out = update(me.animator);
-% 						me.xOut = out(1);
-% 						me.xOut = out(2);
+% 						me.xFinal = out(1);
+% 						me.xFinal = out(2);
 % 					else
-% 						me.xOut = me.xOut + me.dX_;
-% 						me.yOut = me.yOut + me.dY_;
+% 						me.xFinal = me.xFinal + me.dX_;
+% 						me.yFinal = me.yFinal + me.dY_;
 % 					end
-% 					me.maskRect=CenterRectOnPointd(me.maskRect,me.xOut,me.yOut);
+% 					me.maskRect=CenterRectOnPointd(me.maskRect,me.xFinal,me.yFinal);
 % 				end
 				me.xy = me.xy + me.dxdy; %increment position
 				sz = me.sizeOut + me.maskSmoothing-(me.dotSizeOut*1.5);
@@ -333,7 +333,7 @@ classdef dotsStimulus < baseStimulus
 				if me.mouseOverride && me.mouseValid
 					me.dstRect = CenterRectOnPointd(me.dstRect, me.mouseX, me.mouseY);
 				else
-					me.dstRect=CenterRectOnPointd(me.dstRect, me.xOut, me.yOut);
+					me.dstRect=CenterRectOnPointd(me.dstRect, me.xFinal, me.yFinal);
 				end
 				me.mvRect=me.dstRect; me.maskRect=me.dstRect;
 			end

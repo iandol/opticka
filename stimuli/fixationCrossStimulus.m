@@ -247,15 +247,15 @@ classdef fixationCrossStimulus < baseStimulus
 		function draw(me)
 			if me.isVisible && me.tick >= me.delayTicks && me.tick < me.offTicks
 				if me.doFlash == false
-					if me.showDisk;Screen('gluDisk', me.sM.win, me.colourOut, me.xOut,me.yOut,me.sizeOut/2);end
-					Screen('FillRect', me.sM.win, me.colour2Out, CenterRectOnPointd([0 0 me.sizeOut me.lineWidthOut], me.xOut,me.yOut));
-					Screen('FillRect', me.sM.win, me.colour2Out, CenterRectOnPointd([0 0 me.lineWidthOut me.sizeOut], me.xOut,me.yOut));
-					Screen('gluDisk', me.sM.win, me.colourOut, me.xOut, me.yOut, me.lineWidthOut);
+					if me.showDisk;Screen('gluDisk', me.sM.win, me.colourOut, me.xFinal,me.yFinal,me.sizeOut/2);end
+					Screen('FillRect', me.sM.win, me.colour2Out, CenterRectOnPointd([0 0 me.sizeOut me.lineWidthOut], me.xFinal,me.yFinal));
+					Screen('FillRect', me.sM.win, me.colour2Out, CenterRectOnPointd([0 0 me.lineWidthOut me.sizeOut], me.xFinal,me.yFinal));
+					Screen('gluDisk', me.sM.win, me.colourOut, me.xFinal, me.yFinal, me.lineWidthOut);
 				else
-					if me.showDisk;Screen('gluDisk', me.sM.win, me.currentColour, me.xOut,me.yOut,me.sizeOut/2);end
-					Screen('FillRect', me.sM.win, me.colour2Out, CenterRectOnPointd([0 0 me.sizeOut me.lineWidthOut], me.xOut,me.yOut));
-					Screen('FillRect', me.sM.win, me.colour2Out, CenterRectOnPointd([0 0 me.lineWidthOut me.sizeOut], me.xOut,me.yOut));
-					Screen('gluDisk', me.sM.win, me.currentColour, me.xOut, me.yOut, me.lineWidthOut);
+					if me.showDisk;Screen('gluDisk', me.sM.win, me.currentColour, me.xFinal,me.yFinal,me.sizeOut/2);end
+					Screen('FillRect', me.sM.win, me.colour2Out, CenterRectOnPointd([0 0 me.sizeOut me.lineWidthOut], me.xFinal,me.yFinal));
+					Screen('FillRect', me.sM.win, me.colour2Out, CenterRectOnPointd([0 0 me.lineWidthOut me.sizeOut], me.xFinal,me.yFinal));
+					Screen('gluDisk', me.sM.win, me.currentColour, me.xFinal, me.yFinal, me.lineWidthOut);
 				end
 			end
 			me.tick = me.tick + 1;
@@ -272,13 +272,13 @@ classdef fixationCrossStimulus < baseStimulus
 				if me.mouseOverride
 					getMousePosition(me);
 					if me.mouseValid
-						me.xOut = me.mouseX;
-						me.yOut = me.mouseY;
+						me.xFinal = me.mouseX;
+						me.yFinal = me.mouseY;
 					end
 				end
 				if me.doMotion == true
-					me.xOut = me.xOut + me.dX_;
-					me.yOut = me.yOut + me.dY_;
+					me.xFinal = me.xFinal + me.dX_;
+					me.yFinal = me.yFinal + me.dY_;
 				end
 				if me.doFlash == true
 					if me.flashCounter <= me.flashSwitch

@@ -475,7 +475,7 @@ classdef logGaborStimulus < baseStimulus
 				if me.mouseOverride && me.mouseValid
 					me.dstRect = CenterRectOnPointd(me.dstRect, me.mouseX, me.mouseY);
 				else
-					me.dstRect=CenterRectOnPointd(me.dstRect, me.xOut, me.yOut);
+					me.dstRect=CenterRectOnPointd(me.dstRect, me.xFinal, me.yFinal);
 				end
 				me.mvRect = me.dstRect;
 				if ~isempty(me.maskTexture)
@@ -483,7 +483,7 @@ classdef logGaborStimulus < baseStimulus
 					if me.mouseOverride && me.mouseValid
 						dstRect2 = CenterRectOnPointd(dstRect2, me.mouseX, me.mouseY);
 					else
-						dstRect2=CenterRectOnPointd(dstRect2, me.xOut, me.yOut);
+						dstRect2=CenterRectOnPointd(dstRect2, me.xFinal, me.yFinal);
 					end
 					me.maskRect=dstRect2;
 				end

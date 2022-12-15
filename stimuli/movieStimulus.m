@@ -147,22 +147,26 @@ classdef movieStimulus < baseStimulus
 		% ===================================================================
 		function setup(me, sM)
 			
-			if ~exist('sM','var') && ~isempty(me.sM); sM = me.sM; end
-			
 			reset(me);
 			me.inSetup = true;
+			if isempty(me.isVisible); me.show; end
+			
+			me.sM = sM;
+			if ~sM.isOpen; error('Screen needs to be Open!'); end
 			
 			checkFileName(me);
 			
-			if isempty(me.isVisible)
-				me.show;
+			% On ARM set the default pixelFormat to 6 for shader based decode.
+			% On a RaspberryPi-4 this makes a world of difference when playing
+			% HD movies, between slow-motion 2 fps and proper 24 fps playback.
+			if isempty(me.pixelFormat) && IsARM
+				me.pixelFormat = 6;
 			end
 			
-			me.sM = sM;
-			if ~sM.isOpen; warning('Screen needs to be Open!'); end
+			me.ppd=sM.ppd;
 			me.screenVals = sM.screenVals;
-			me.ppd = sM.ppd;
-
+			me.texture = []; %we need to reset this
+			
 			fn = fieldnames(me);
 			for j=1:length(fn)
 				if isempty(me.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},me.ignoreProperties, 'once')) %create a temporary dynamic property
@@ -234,10 +238,10 @@ classdef movieStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function updatePositions(me,x,y)
-			me.xOut = x;
-			me.yOut = y;
+			me.xFinal = x;
+			me.yFinal = y;
 			if length(me.mvRect) == 4
-				me.mvRect=CenterRectOnPointd(me.mvRect, me.xOut, me.yOut);
+				me.mvRect=CenterRectOnPointd(me.mvRect, me.xFinal, me.yFinal);
 			else
 				fprintf('--->>> movieStimulus invalid mvRect\n');
 			end
@@ -356,12 +360,11 @@ classdef movieStimulus < baseStimulus
 		% ===================================================================
 		function setRect(me)
 			if ~isempty(me.movie)
-				me.dstRect = CenterRect([0 0 me.width me.height],me.sM.winRect);
-				me.dstRect = ScaleRect(me.dstRect, me.scale, me.scale);
+				me.dstRect = ScaleRect([0 0 me.width me.height], me.scale, me.scale);
 				if me.mouseOverride && me.mouseValid
 					me.dstRect = CenterRectOnPointd(me.dstRect, me.mouseX, me.mouseY);
 				else
-					me.dstRect=CenterRectOnPointd(me.dstRect, me.xOut, me.yOut);
+					me.dstRect=CenterRectOnPointd(me.dstRect, me.xFinal, me.yFinal);
 				end
 				if me.verbose
 					fprintf('---> stimulus TEXTURE dstRect = %5.5g %5.5g %5.5g %5.5g\n',me.dstRect(1), me.dstRect(2),me.dstRect(3),me.dstRect(4));
@@ -375,10 +378,12 @@ classdef movieStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function checkFileName(me)
+			me.fileName = regexprep(me.fileName, '^~\/', [getenv('HOME') filesep]);
 			if isempty(me.fileName) || exist(me.fileName,'file') ~= 2
 				p = mfilename('fullpath');
 				p = fileparts(p);
 				me.fileName = [p filesep 'monkey-dance.avi'];
+				warning('Didn''t find specified file so replacing with default movie!');
 			end
 		end
 		

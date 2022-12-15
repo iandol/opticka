@@ -63,10 +63,12 @@ classdef baseStimulus < optickaCore & dynamicprops
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
-		%> computed X position
-		xOut double = []
-		%> computed Y position
-		yOut double = []
+		%> final centered X position in pixel coordinates PTB uses: 0,0 top-left
+		%> see computePosition();
+		xFinal double = []
+		%> final centerd Y position in pixel coordinates PTB uses: 0,0 top-left
+		%> see computePosition();
+		yFinal double = []
 		%> initial screen rectangle position [LEFT TOP RIGHT BOTTOM]
 		dstRect double = []
 		%> current screen rectangle position [LEFT TOP RIGHT BOTTOM]
@@ -155,6 +157,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		readPanelUpdate
 	end
 
+	%> ALL Children must implement these 5 methods!
 	%=======================================================================
 	methods (Abstract)%------------------ABSTRACT METHODS
 	%=======================================================================
@@ -1008,7 +1011,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				if me.mouseOverride && me.mouseValid
 					me.dstRect = CenterRectOnPointd(me.dstRect, me.mouseX, me.mouseY);
 				else
-					me.dstRect=CenterRectOnPointd(me.dstRect, me.xOut, me.yOut);
+					me.dstRect=CenterRectOnPointd(me.dstRect, me.xFinal, me.yFinal);
 				end
 				me.mvRect=me.dstRect;
 			end
@@ -1034,16 +1037,16 @@ classdef baseStimulus < optickaCore & dynamicprops
 		% ===================================================================
 		function computePosition(me)
 			if me.mouseOverride && me.mouseValid
-				me.xOut = me.mouseX; me.yOut = me.mouseY;
+				me.xFinal = me.mouseX; me.yFinal = me.mouseY;
 			else
 				if isempty(me.findprop('angleOut'))
 					[dx, dy]=pol2cart(me.d2r(me.angle),me.startPosition);
 				else
 					[dx, dy]=pol2cart(me.d2r(me.angleOut),me.startPositionOut);
 				end
-				me.xOut = me.xPositionOut + (dx * me.ppd) + me.sM.xCenter;
-				me.yOut = me.yPositionOut + (dy * me.ppd) + me.sM.yCenter;
-				if me.verbose; fprintf('---> computePosition: %s X = %gpx / %gpx / %gdeg | Y = %gpx / %gpx / %gdeg\n',me.fullName, me.xOut, me.xPositionOut, dx, me.yOut, me.yPositionOut, dy); end
+				me.xFinal = me.xPositionOut + (dx * me.ppd) + me.sM.xCenter;
+				me.yFinal = me.yPositionOut + (dy * me.ppd) + me.sM.yCenter;
+				if me.verbose; fprintf('---> computePosition: %s X = %gpx / %gpx / %gdeg | Y = %gpx / %gpx / %gdeg\n',me.fullName, me.xFinal, me.xPositionOut, dx, me.yFinal, me.yPositionOut, dy); end
 			end
 			setAnimationDelta(me);
 		end

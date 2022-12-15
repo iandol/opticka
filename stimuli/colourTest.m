@@ -97,12 +97,12 @@ classdef colourTest < spotStimulus
 					draw(obj);
 					Screen('DrawingFinished', obj.sM.win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
 
-					%[obj.xOut, obj.yOut, obj.buttons] = GetMouse(obj.sM.screen);
+					%[obj.xOut, obj.yFinal, obj.buttons] = GetMouse(obj.sM.screen);
 					if obj.mouseOverride
 						getMousePosition(obj);
 						if obj.mouseValid
 							obj.xOut = obj.mouseX;
-							obj.yOut = obj.mouseY;
+							obj.yFinal = obj.mouseY;
 						end
 					end
 					keyHold = checkKeys(obj,mX,mY,keyHold,Finc);

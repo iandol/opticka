@@ -202,7 +202,7 @@ classdef ndotsStimulus < baseStimulus
 				bg = [obj.sM.backgroundColour(1:3) 1];
 				obj.maskTexture = Screen('OpenOffscreenwindow', obj.sM.win, bg, wrect);
 				Screen('FillOval', obj.maskTexture, obj.maskColour, mrect);
-				obj.maskRect = CenterRectOnPointd(wrect,obj.xOut,obj.yOut);
+				obj.maskRect = CenterRectOnPointd(wrect,obj.xFinal,obj.yFinal);
 				if obj.maskSmoothing > 0
 					if ~rem(obj.maskSmoothing, 2)
 						obj.maskSmoothing = obj.maskSmoothing + 1;
@@ -366,7 +366,7 @@ classdef ndotsStimulus < baseStimulus
 			obj.normalizedXY = rand(2, obj.nDots);
 			
 			if obj.mask == true
-				obj.maskRect = CenterRectOnPointd(obj.maskRect,obj.xOut,obj.yOut);
+				obj.maskRect = CenterRectOnPointd(obj.maskRect,obj.xFinal,obj.yFinal);
 			end
 		end
 		

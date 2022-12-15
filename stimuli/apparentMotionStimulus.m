@@ -373,7 +373,7 @@ classdef apparentMotionStimulus < baseStimulus
 					pos = fliplr(pos);
 				end
 				for i = 1:obj.nBars;
-					obj.mvRects{i} = CenterRectOnPointd(obj.dstRect, pos(i), obj.yOut);
+					obj.mvRects{i} = CenterRectOnPointd(obj.dstRect, pos(i), obj.yFinal);
 				end
 				obj.mvRect=obj.mvRects{1};
 			end

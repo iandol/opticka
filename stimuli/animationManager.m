@@ -94,8 +94,8 @@ classdef animationManager < optickaCore
 		end
 		
 		function setup(me, stimulus)
-			me.xOut = stimulus.xOut;
-			me.yOut = stimulus.yOut;
+			me.xFinal = stimulus.xOut;
+			me.yFinal = stimulus.yFinal;
 			me.dstRect = stimulus.dstRect;
 			me.mvRect = stimulus.mvRect;
 			me.tick = 0;
@@ -119,16 +119,16 @@ classdef animationManager < optickaCore
 				me.mvRect=OffsetRect(me.mvRect,me.dX,me.dY);
 				pos = me.mvRect;
 			else
-				me.xOut = me.xOut + me.dX;
-				me.yOut = me.yOut + me.dY;
-				pos = [me.xOut me.yOut];
+				me.xFinal = me.xFinal + me.dX;
+				me.yFinal = me.yFinal + me.dY;
+				pos = [me.xFinal me.yFinal];
 			end
 		end
 		
 		function reset(me)
 			me.tick = 0;
-			me.xOut = [];
-			me.yOut = [];
+			me.xFinal = [];
+			me.yFinal = [];
 			me.dstRect = [];
 			me.mvRect = [];
 		end

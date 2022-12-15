@@ -108,7 +108,7 @@ classdef exampleStimulus < baseStimulus
 		% ===================================================================
 		function draw(me)
 			if me.isVisible && me.tick >= me.delayTicks && me.tick < me.offTicks
-				Screen('gluDisk',me.sM.win,me.colourOut,me.xOut,me.yOut,me.sizeOut/2);
+				Screen('gluDisk',me.sM.win,me.colourOut,me.xFinal,me.yFinal,me.sizeOut/2);
 			end
 			me.tick = me.tick + 1;
 		end
@@ -125,13 +125,13 @@ classdef exampleStimulus < baseStimulus
 				if me.mouseOverride
 					getMousePosition(me);
 					if me.mouseValid
-						me.xOut = me.mouseX;
-						me.yOut = me.mouseY;
+						me.xFinal = me.mouseX;
+						me.yFinal = me.mouseY;
 					end
 				end
 				if me.doMotion == true
-					me.xOut = me.xOut + me.dX_;
-					me.yOut = me.yOut + me.dY_;
+					me.xFinal = me.xFinal + me.dX_;
+					me.yFinal = me.yFinal + me.dY_;
 				end
 			end
 		end

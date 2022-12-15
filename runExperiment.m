@@ -2031,7 +2031,7 @@ classdef runExperiment < optickaCore
 					%this causes the update of the stimuli, which may take more than one refresh, to
 					%occur during the second blank flip, thus we don't lose any timing.
 					if me.task.blankTick == 2 && me.task.tick > 1
-						fprintf('@%s\n\n',infoText(me));
+						logRun(me,'IN BLANK');
 						me.task.doUpdate = true;
 					end
 					% because the update happens before the flip, but the drawing of the update happens

@@ -915,8 +915,8 @@ classdef screenManager < optickaCore
 			if any(check)
 				me.dstMode = me.blendModes{check};
 			else
-				disp(me.blendModes)
-				error('Wrong value given, select from list above')
+				disp(me.blendModes);
+				error('Wrong value given, select from list above');
 			end
 		end
 		
@@ -927,7 +927,7 @@ classdef screenManager < optickaCore
 		%>
 		%> @param value
 		% ===================================================================
-			assert(value > 0,'Distance must be greater than 0!')
+			assert(value > 0,'Distance must be greater than 0!');
 			me.distance = value;
 			me.makeGrid();
 		end
@@ -1630,6 +1630,61 @@ classdef screenManager < optickaCore
 				me.salutation('playMovie method','Playing failed!',true);
 			end
 		end
+
+		% ===================================================================
+		%> @brief toDegrees - convert from pixels to degrees
+		%>
+		% ===================================================================
+		function out = toDegrees(me, in, axis)
+			if ~exist('axis','var'); axis=''; end
+			switch axis
+				case ''
+					if length(in)==2
+						out(1) = (in(1) - me.xCenter) / me.ppd_;
+						out(2) = (in(2) - me.yCenter) / me.ppd_;
+					else
+						out = 0;
+					end
+				case 'rect'
+					out(1) = (in(1) - me.xCenter) / me.ppd_;
+					out(2) = (in(2) - me.yCenter) / me.ppd_;
+					out(3) = (in(3) - me.xCenter) / me.ppd_;
+					out(4) = (in(4) - me.yCenter) / me.ppd_;
+				case 'x'
+					out = (in - me.xCenter) / me.ppd_;
+				case 'y'
+					out = (in - me.yCenter) / me.ppd_;
+			end
+		end
+		
+		% ===================================================================
+		%> @brief toPixels - convert from degrees to pixels
+		%>
+		% ===================================================================
+		function out = toPixels(me, in, axis)
+			if ~exist('axis','var'); axis=''; end
+			switch axis
+				case ''
+					if length(in)==4
+						out(1:2) = (in(1:2) * me.ppd_) + me.xCenter;
+						out(3:4) = (in(3:4) * me.ppd_) + me.yCenter;
+					elseif length(in)==2
+						out(1) = (in(1) * me.ppd_) + me.xCenter;
+						out(2) = (in(2) * me.ppd_) + me.yCenter;
+					else
+						out = 0;
+					end
+				case 'rect'
+					out(1) = (in(1) * me.ppd_) + me.xCenter;
+					out(2) = (in(2) * me.ppd_) + me.yCenter;
+					out(3) = (in(3) * me.ppd_) + me.xCenter;
+					out(4) = (in(4) * me.ppd_) + me.yCenter;
+				case 'x'
+					out = (in * me.ppd_) + me.xCenter;
+				case 'y'
+					out = (in * me.ppd_) + me.yCenter;
+			end
+		end
 		
 		% ===================================================================
 		%> @brief Delete method
@@ -1827,61 +1882,6 @@ classdef screenManager < optickaCore
 					me.screenVals.xCenter = me.xCenter;
 					me.screenVals.yCenter = me.yCenter;
 				end
-			end
-		end
-		
-		% ===================================================================
-		%> @brief
-		%>
-		% ===================================================================
-		function out = toDegrees(me,in,axis)
-			if ~exist('axis','var');axis='';end
-			switch axis
-				case ''
-					if length(in)==2
-						out(1) = (in(1) - me.xCenter) / me.ppd_;
-						out(2) = (in(2) - me.yCenter) / me.ppd_;
-					else
-						out = 0;
-					end
-				case 'rect'
-					out(1) = (in(1) - me.xCenter) / me.ppd_;
-					out(2) = (in(2) - me.yCenter) / me.ppd_;
-					out(3) = (in(3) - me.xCenter) / me.ppd_;
-					out(4) = (in(4) - me.yCenter) / me.ppd_;
-				case 'x'
-					out = (in - me.xCenter) / me.ppd_;
-				case 'y'
-					out = (in - me.yCenter) / me.ppd_;
-			end
-		end
-		
-		% ===================================================================
-		%> @brief
-		%>
-		% ===================================================================
-		function out = toPixels(me,in,axis)
-			if ~exist('axis','var');axis='';end
-			switch axis
-				case ''
-					if length(in)==4
-						out(1:2) = (in(1:2) * me.ppd_) + me.xCenter;
-						out(3:4) = (in(3:4) * me.ppd_) + me.yCenter;
-					elseif length(in)==2
-						out(1) = (in(1) * me.ppd_) + me.xCenter;
-						out(2) = (in(2) * me.ppd_) + me.yCenter;
-					else
-						out = 0;
-					end
-				case 'rect'
-					out(1) = (in(1) * me.ppd_) + me.xCenter;
-					out(2) = (in(2) * me.ppd_) + me.yCenter;
-					out(3) = (in(3) * me.ppd_) + me.xCenter;
-					out(4) = (in(4) * me.ppd_) + me.yCenter;
-				case 'x'
-					out = (in * me.ppd_) + me.xCenter;
-				case 'y'
-					out = (in * me.ppd_) + me.yCenter;
 			end
 		end
 
