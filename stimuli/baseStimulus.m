@@ -908,11 +908,6 @@ classdef baseStimulus < optickaCore & dynamicprops
 				if me.verbose;fprintf('Property %s doesn''t exist...\n',name);end
 			end
 		end
-
-		function set.handles(me,value)
-			fprintf('\n\nHANDLES ARE MODIFIED!!!\n\n')
-			me.handles = value;
-		end
 		
 	end %---END PUBLIC METHODS---%
 	

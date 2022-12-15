@@ -242,7 +242,6 @@ classdef taskSequence < optickaCore & dynamicprops
 		%> trialVar and perform the randomisation and balancing.
 		% ===================================================================
 			if me.nVars == 0
-				me.salutation('randomise','No variables to randomise...',true);
 				me.outIndex = 1; %there is only one stimulus, no variables
 				me.outValues = [];
 				me.outVars = {};

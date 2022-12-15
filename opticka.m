@@ -498,7 +498,7 @@ classdef opticka < optickaCore
 				end
 			end
 			if isempty(me.r.task.taskStream); me.r.task.initialiseGenerator; end
-			if randomise; me.r.task.randomiseTask; end
+			if randomise && me.r.task.nVars > 0; me.r.task.randomiseTask; end
 		end
 		
 		% ===================================================================
