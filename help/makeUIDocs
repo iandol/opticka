@@ -1,0 +1,3 @@
+#!/usr/bin/env elvish
+echo "Will rebuild just the UI help files..."
+each {|x| e:pandoc -d "help.yaml" -o $x".html" $x".md" } ["uihelpvars" "uihelpstims" "uihelpstate" "uihelpfunctions" "uihelptask"]

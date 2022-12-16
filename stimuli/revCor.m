@@ -180,7 +180,8 @@ catch ME
 	getReport(ME);
 end
 
-fprintf('\n\n!!!!!!!!!!!!\nSaving DATA to %s\n!!!!!!!!!!!!!\n\n',saveName);
+fprintf('\n\n#####################\n===>>> <strong>SAVED DATA to: %s</strong>\n#####################\n\n',saveName)
 save(saveName,'data');
+WaitSecs(0.5);
 
 end

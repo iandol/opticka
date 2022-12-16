@@ -543,7 +543,7 @@ classdef runExperiment < optickaCore
 				sname = [me.paths.savedData filesep me.name '.mat'];
 				rE = me;
 				save(sname,'rE','tS');
-				fprintf('\n\n===>>> SAVED DATA to: %s\n\n',sname)
+				fprintf('\n\n#####################\n===>>> SAVED DATA to: %s\n#####################\n\n',sname)
 				
 				if tS.controlPlexon && (me.useDataPixx || me.useDisplayPP)
 					stopRecording(io);
@@ -588,7 +588,7 @@ classdef runExperiment < optickaCore
 				clear tL s tS bR rM eT io sM
 				rethrow(ME)	
 			end
-		end
+		end %==============END runMOC
 	
 		% ===================================================================
 		function runTask(me)
@@ -1092,7 +1092,7 @@ classdef runExperiment < optickaCore
 					sname = [me.paths.savedData filesep me.name '.mat'];
 					rE = me;
 					save(sname,'rE','tS');
-					fprintf('\n\n===>>> SAVED DATA to: %s\n\n',sname)
+					fprintf('\n\n#####################\n===>>> <strong>SAVED DATA to: %s</strong>\n#####################\n\n',sname)
 					assignin('base', 'tS', tS); % assign tS in base for manual checking
 				end
 
