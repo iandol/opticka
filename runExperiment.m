@@ -79,7 +79,7 @@ classdef runExperiment < optickaCore
 		benchmark logical			= false
 		%> verbose logging to command window?
 		verbose						= false
-		%> what value to send on stimulus OFF
+		%> what value to send on MOC task, stimulus OFF
 		stimOFFValue double			= 255
 		%> subject name
 		subjectName char			= 'Simulcra'
@@ -573,7 +573,7 @@ classdef runExperiment < optickaCore
 					close(io);
 				end
 				%profile off; profile clear
-				warning('on')
+				warning('on');
 				Priority(0);
 				ListenChar(0);
 				ShowCursor;
@@ -586,7 +586,7 @@ classdef runExperiment < optickaCore
 				me.lJack=[];
 				me.io = [];
 				clear tL s tS bR rM eT io sM
-				rethrow(ME)	
+				rethrow(ME);
 			end
 		end %==============END runMOC
 	
@@ -836,7 +836,7 @@ classdef runExperiment < optickaCore
 				if me.useArduino && isa(rM,'arduinoManager') && ~rM.isOpen
 					fprintf('======>>> Opening Arduino for sending reward TTLs\n')
 					open(rM);
-				elseif  me.useLabJackReward && isa(rM,'labJack')
+				elseif me.useLabJackReward && isa(rM,'labJack')
 					fprintf('======>>> Opening LabJack for sending reward TTLs\n')
 					open(rM);
 				end

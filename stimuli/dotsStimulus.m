@@ -130,18 +130,16 @@ classdef dotsStimulus < baseStimulus
 		% ===================================================================
 		function setup(me,sM)
 			
-			me.reset; %reset it back to its initial state
-			me.inSetup = true;
-			if isempty(me.isVisible)
-				me.show;
-			end
+			reset(me);
+			me.inSetup = true; me.isSetup = false;
+			if isempty(me.isVisible); me.show; end
 			
 			me.sM = sM;
 			if ~sM.isOpen; warning('Screen needs to be Open!'); end
 			me.screenVals = sM.screenVals;
-			me.ppd = sM.ppd;			
+			me.ppd = sM.ppd;
 			
-			fn = sort(properties('dotsStimulus'));
+			fn = sort(fieldnames(me));
 			for j=1:length(fn)
 				if isempty(me.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},me.ignoreProperties, 'once')) %create a temporary dynamic property
 					p=me.addprop([fn{j} 'Out']);
@@ -164,7 +162,7 @@ classdef dotsStimulus < baseStimulus
 				makeMask(me);
 			end
 			
-			me.inSetup = false;
+			me.inSetup = false; me.isSetup = true;
 			computePosition(me);
 			setRect(me);
 			updateDots(me);

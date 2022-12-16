@@ -440,7 +440,7 @@ classdef metaStimulus < optickaCore
 				if ignoreVisible; check = true; else; check = me.stimuli{i}.isVisible; end
 				if check && me.stimuli{i}.showOnTracker == true
 					if isprop(me.stimuli{i},'sizeOut')
-						if ~isempty(me.stimuli{i}.xOut)
+						if ~isempty(me.stimuli{i}.xFinal)
 							me.stimulusPositions(a).x = me.stimuli{i}.xFinal;
 							me.stimulusPositions(a).y = me.stimuli{i}.yFinal;
 						elseif ~isempty(me.stimuli{i}.mvRect)

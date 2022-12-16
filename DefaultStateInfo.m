@@ -294,14 +294,6 @@ prefixEntryFn = {
 	@()needFlip(me, true); 
 	@()needEyeSample(me, true); % make sure we start measuring eye position
 	@()hide(stims); % hide all stimuli
-};
-
-%--------------------prefixate within
-prefixFn = {
-	@()drawPhotoDiode(s,[0 0 0]);
-};
-
-prefixExitFn = {
 	% update the fixation window to initial values
 	@()updateFixationValues(eT,tS.fixX,tS.fixY,[],tS.firstFixTime); %reset fixation window
 	@()startRecording(eT); % start eyelink recording for this trial (tobii ignores this)
@@ -312,9 +304,15 @@ prefixExitFn = {
 	% you can add any other messages, such as stimulus values as needed,
 	% e.g. @()trackerMessage(eT,['MSG:ANGLE' num2str(stims{1}.angleOut)])
 	% draw to the eyetracker display
+};
+
+%--------------------prefixate within
+prefixFn = {
+	@()drawPhotoDiode(s,[0 0 0]);
+};
+
+prefixExitFn = {
 	@()trackerDrawStatus(eT,'Init Fix...', stims.stimulusPositions);
-	% show the LAST stimulus in the list (should be the fixation cross)
-	@()show(stims{tS.nStims});
 };
 
 %========================================================
@@ -322,6 +320,7 @@ prefixExitFn = {
 %========================================================
 %--------------------fixate entry
 fixEntryFn = { 
+	@()show(stims{tS.nStims});
 	@()logRun(me,'INITFIX');
 };
 
@@ -329,7 +328,6 @@ fixEntryFn = {
 fixFn = {
 	@()draw(stims); %draw stimuli
 	@()drawPhotoDiode(s,[0 0 0]);
-	@()animate(stims); % animate stimuli for subsequent draw
 };
 
 %--------------------test we are fixated for a certain length of time
@@ -535,7 +533,7 @@ gridFn = { @()drawGrid(s) };
 %--------------------------State Machine Table-----------------------------
 % specify our cell array that is read by the stateMachine
 stateInfoTmp = {
-'name'		'next'		'time'	'entryFn'		'withinFn'		'transitionFn'	'exitFn';
+'name'		'next'		'time'	'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn';
 %---------------------------------------------------------------------------------------------
 'pause'		'prefix'	inf		pauseEntryFn	{}				{}				pauseExitFn;
 'prefix'	'fixate'	0.5		prefixEntryFn	{}				{}				{};

@@ -127,22 +127,14 @@ classdef ndotsStimulus < baseStimulus
 		%> parsed.
 		%> @return instance of class.
 		% ===================================================================
-		function obj = ndotsStimulus(varargin)
-			%Initialise for superclass, stops a noargs error
-			if nargin == 0
-				varargin.family = 'ndots';
-				varargin.colour = [1 1 1 1];
-				varargin.speed = 2;
-			end
+		function me = ndotsStimulus(varargin)
+			args = optickaCore.addDefaults(varargin,...
+				struct('name','n-dots','colour',[1 1 1 1],'speed',2));
+			me=me@baseStimulus(args); %we call the superclass constructor first
+			me.parseArgs(args, me.allowedProperties);
 			
-			obj=obj@baseStimulus(varargin); %we call the superclass constructor first
-			
-			if nargin>0
-				obj.parseArgs(varargin, obj.allowedProperties);
-			end
-			
-			obj.ignoreProperties = ['^(' obj.ignorePropertiesBase '|' obj.ignoreProperties ')$'];
-			obj.salutation('constructor','nDots Stimulus initialisation complete');
+			me.ignoreProperties = ['^(' me.ignorePropertiesBase '|' me.ignoreProperties ')$'];
+			me.salutation('constructor','nDots Stimulus initialisation complete');
 		end
 		
 		% ===================================================================
@@ -150,83 +142,77 @@ classdef ndotsStimulus < baseStimulus
 		%>
 		%> @param rE runExperiment object for reference
 		% ===================================================================
-		function setup(obj,sM)
+		function setup(me,sM)
 			
-			obj.reset; %reset it back to its initial state
-			obj.inSetup = true;
-			if isempty(obj.isVisible)
-				obj.show;
-			end
+			reset(me); %reset object back to its initial state
+			me.inSetup = true; me.isSetup = false;
+			if isempty(me.isVisible); show(me); end
 			
-			obj.sM = sM;
-			obj.ppd=sM.ppd;
+			me.sM = sM;
+			if ~sM.isOpen; error('Screen needs to be Open!'); end
+			me.ppd=sM.ppd;
+			me.screenVals = sM.screenVals;
+			me.texture = []; %we need to reset this
 			
-			fn = sort(properties('ndotsStimulus'));
+			fn = sort(properties(me));
 			for j=1:length(fn)
-				if isempty(obj.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},obj.ignoreProperties, 'once')) %create a temporary dynamic property
-					p=obj.addprop([fn{j} 'Out']);
+				if isempty(me.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},me.ignoreProperties, 'once')) %create a temporary dynamic property
+					p=me.addprop([fn{j} 'Out']);
 					p.Transient = true;%p.Hidden = true;
 					if strcmp(fn{j},'size');p.SetMethod = @set_sizeOut;end
 					if strcmp(fn{j},'dotSize');p.SetMethod = @set_dotSizeOut;end
 					if strcmp(fn{j},'xPosition');p.SetMethod = @set_xPositionOut;end
 					if strcmp(fn{j},'yPosition');p.SetMethod = @set_yPositionOut;end
 				end
-				if isempty(regexp(fn{j},obj.ignoreProperties, 'once'))
-					obj.([fn{j} 'Out']) = obj.(fn{j}); %copy our property value to our tempory copy
+				if isempty(regexp(fn{j},me.ignoreProperties, 'once'))
+					me.([fn{j} 'Out']) = me.(fn{j}); %copy our property value to our tempory copy
 				end
 			end
 			
-			if isempty(obj.findprop('doDots'));p=obj.addprop('doDots');p.Transient = true;end
-			if isempty(obj.findprop('doMotion'));p=obj.addprop('doMotion');p.Transient = true;end
-			if isempty(obj.findprop('doDrift'));p=obj.addprop('doDrift');p.Transient = true;end
-			if isempty(obj.findprop('doFlash'));p=obj.addprop('doFlash');p.Transient = true;end
-			obj.doDots = [];
-			obj.doMotion = [];
-			obj.doDrift = [];
-			obj.doFlash = [];
+			addRuntimeProperties(me);
 			
-			computePosition(obj); %do it now so we can give mask a position
+			computePosition(me); %do it now so we can give mask a position
 			
 			%build the mask
-			if obj.mask == true
-				if isempty(obj.maskColour)
-					obj.wasMaskColourBlank = true;
-					obj.maskColour = obj.sM.backgroundColour;
-					obj.maskColour(4) = 0; %set alpha to 0
+			if me.mask == true
+				if isempty(me.maskColour)
+					me.wasMaskColourBlank = true;
+					me.maskColour = me.sM.backgroundColour;
+					me.maskColour(4) = 0; %set alpha to 0
 				else
-					obj.wasMaskColourBlank = false;
+					me.wasMaskColourBlank = false;
 				end
-				wrect = SetRect(0, 0, obj.fieldSize+obj.dotSizeOut, obj.fieldSize+obj.dotSizeOut);
-				mrect = SetRect(0, 0, obj.sizeOut, obj.sizeOut);
+				wrect = SetRect(0, 0, me.fieldSize+me.dotSizeOut, me.fieldSize+me.dotSizeOut);
+				mrect = SetRect(0, 0, me.sizeOut, me.sizeOut);
 				mrect = CenterRect(mrect,wrect);
-				bg = [obj.sM.backgroundColour(1:3) 1];
-				obj.maskTexture = Screen('OpenOffscreenwindow', obj.sM.win, bg, wrect);
-				Screen('FillOval', obj.maskTexture, obj.maskColour, mrect);
-				obj.maskRect = CenterRectOnPointd(wrect,obj.xFinal,obj.yFinal);
-				if obj.maskSmoothing > 0
-					if ~rem(obj.maskSmoothing, 2)
-						obj.maskSmoothing = obj.maskSmoothing + 1;
+				bg = [me.sM.backgroundColour(1:3) 1];
+				me.maskTexture = Screen('OpenOffscreenwindow', me.sM.win, bg, wrect);
+				Screen('FillOval', me.maskTexture, me.maskColour, mrect);
+				me.maskRect = CenterRectOnPointd(wrect,me.xFinal,me.yFinal);
+				if me.maskSmoothing > 0
+					if ~rem(me.maskSmoothing, 2)
+						me.maskSmoothing = me.maskSmoothing + 1;
 					end
 					if exist('fspecial','file')
-						obj.kernel = fspecial('gaussian',obj.maskSmoothing,obj.maskSmoothing);
-						obj.shader = EXPCreateStatic2DConvolutionShader(obj.kernel, 4, 4, 0, 2);
+						me.kernel = fspecial('gaussian',me.maskSmoothing,me.maskSmoothing);
+						me.shader = EXPCreateStatic2DConvolutionShader(me.kernel, 4, 4, 0, 2);
 					else
 						p = mfilename('fullpath');
 						p = fileparts(p);
 						ktmp = load([p filesep 'gaussian52kernel.mat']); %'gaussian73kernel.mat''disk5kernel.mat'
-						obj.kernel = ktmp.kernel;
-						obj.shader = EXPCreateStatic2DConvolutionShader(obj.kernel, 4, 4, 0, 2);
-						obj.salutation('No fspecial, had to use precompiled kernel');
+						me.kernel = ktmp.kernel;
+						me.shader = EXPCreateStatic2DConvolutionShader(me.kernel, 4, 4, 0, 2);
+						me.salutation('No fspecial, had to use precompiled kernel');
 					end
 				else
-					obj.kernel = [];
-					obj.shader = 0;
+					me.kernel = [];
+					me.shader = 0;
 				end
 			end
 			
-			obj.inSetup = false;
-			initialiseDots(obj);
-			computeNextFrame(obj);
+			me.inSetup = false; me.isSetup = true;
+			initialiseDots(me);
+			computeNextFrame(me);
 
 			function set_xPositionOut(me, value)
 				me.xPositionOut = value * me.ppd;
@@ -234,16 +220,16 @@ classdef ndotsStimulus < baseStimulus
 			function set_yPositionOut(me,value)
 				me.yPositionOut = value*me.ppd;
 			end
-			function set_sizeOut(obj,value)
-				obj.sizeOut = value * obj.ppd;
-				if obj.mask == 1
-					obj.fieldSize = obj.sizeOut * obj.fieldScale; %for masking!
+			function set_sizeOut(me,value)
+				me.sizeOut = value * me.ppd;
+				if me.mask == 1
+					me.fieldSize = me.sizeOut * me.fieldScale; %for masking!
 				else
-					obj.fieldSize = obj.sizeOut;
+					me.fieldSize = me.sizeOut;
 				end
 			end
-			function set_dotSizeOut(obj,value)
-				obj.dotSizeOut = value * obj.ppd;
+			function set_dotSizeOut(me,value)
+				me.dotSizeOut = value * me.ppd;
 			end
 			
 		end
@@ -252,40 +238,40 @@ classdef ndotsStimulus < baseStimulus
 		%> @brief Update an structure for runExperiment
 		%>
 		% ===================================================================
-		function update(obj)
-			computePosition(obj);
-			initialiseDots(obj);
-			computeNextFrame(obj);
-			resetTicks(obj);
+		function update(me)
+			computePosition(me);
+			initialiseDots(me);
+			computeNextFrame(me);
+			resetTicks(me);
 		end
 		
 		% ===================================================================
 		%> @brief Draw an structure for runExperiment
 		%>
 		% ===================================================================
-		function draw(obj)
-			if obj.isVisible && obj.tick >= obj.delayTicks
-				if obj.mask == true
-					Screen('BlendFunction', obj.sM.win, obj.msrcMode, obj.mdstMode);
+		function draw(me)
+			if me.isVisible && me.tick >= me.delayTicks
+				if me.mask == true
+					Screen('BlendFunction', me.sM.win, me.msrcMode, me.mdstMode);
 					Screen('DrawDots', ...
-						obj.sM.win, ...
-						obj.pixelXY(:,obj.frameSelector), ...
-						obj.dotSize, ...
-						obj.colour, ...
-						obj.pixelOrigin, ...
-						obj.dotType);
-					Screen('DrawTexture', obj.sM.win, obj.maskTexture, [], obj.maskRect);
-					Screen('BlendFunction', obj.sM.win, obj.sM.srcMode, obj.sM.dstMode);
+						me.sM.win, ...
+						me.pixelXY(:,me.frameSelector), ...
+						me.dotSize, ...
+						me.colour, ...
+						me.pixelOrigin, ...
+						me.dotType);
+					Screen('DrawTexture', me.sM.win, me.maskTexture, [], me.maskRect);
+					Screen('BlendFunction', me.sM.win, me.sM.srcMode, me.sM.dstMode);
 				else
 					Screen('DrawDots', ...
-						obj.sM.win, ...
-						obj.pixelXY(:,obj.frameSelector), ...
-						obj.dotSize, ...
-						obj.colour, ...
-						obj.pixelOrigin, ...
-						obj.dotType);
+						me.sM.win, ...
+						me.pixelXY(:,me.frameSelector), ...
+						me.dotSize, ...
+						me.colour, ...
+						me.pixelOrigin, ...
+						me.dotType);
 				end
-				obj.tick = obj.tick + 1;
+				me.tick = me.tick + 1;
 			end
 		end
 		
@@ -293,9 +279,9 @@ classdef ndotsStimulus < baseStimulus
 		%> @brief Animate an structure for runExperiment
 		%>
 		% ===================================================================
-		function animate(obj)
-			if obj.isVisible == true && obj.tick > obj.delayTicks
-				computeNextFrame(obj);
+		function animate(me)
+			if me.isVisible == true && me.tick > me.delayTicks
+				computeNextFrame(me);
 			end
 		end
 		
@@ -303,10 +289,10 @@ classdef ndotsStimulus < baseStimulus
 		%> @brief Reset an structure for runExperiment
 		%>
 		% ===================================================================
-		function reset(obj)
-			obj.removeTmpProperties;
-			if obj.wasMaskColourBlank;	obj.maskColour = []; end
-			resetTicks(obj);
+		function reset(me)
+			me.removeTmpProperties;
+			if me.wasMaskColourBlank;	me.maskColour = []; end
+			resetTicks(me);
 		end
 		
 	end%---END PUBLIC METHODS---%
@@ -320,53 +306,53 @@ classdef ndotsStimulus < baseStimulus
 		%>
 		% ===================================================================
 		%-------------------Set up our dot matrices----------------------%
-		function initialiseDots(obj)
-			fr=round(1/obj.sM.screenVals.ifi);
+		function initialiseDots(me)
+			fr=round(1/me.sM.screenVals.ifi);
 			% size the dot field and the aperture circle
-			fieldWidth = obj.size*obj.fieldScale;
-			marginWidth = (obj.fieldScale - 1) * obj.size / 2;
-			fieldPixels = ceil(fieldWidth * obj.ppd);
-			maskPixels = fieldPixels + obj.dotSize;
-			marginPixels = ceil(marginWidth * obj.ppd);
+			fieldWidth = me.size*me.fieldScale;
+			marginWidth = (me.fieldScale - 1) * me.size / 2;
+			fieldPixels = ceil(fieldWidth * me.ppd);
+			maskPixels = fieldPixels + me.dotSize;
+			marginPixels = ceil(marginWidth * me.ppd);
 			
 			% count dots
-			obj.nDots = ceil(obj.density * fieldWidth^2 / fr);
-			obj.frameSelector = false(1, obj.nDots);
-			obj.dotLifetimes = zeros(1, obj.nDots);
+			me.nDots = ceil(me.density * fieldWidth^2 / fr);
+			me.frameSelector = false(1, me.nDots);
+			me.dotLifetimes = zeros(1, me.nDots);
 			
 			% account for speed as step per interleaved frame
-			obj.deltaR = obj.speed / obj.size ...
-				* (obj.interleaving / fr);
+			me.deltaR = me.speed / me.size ...
+				* (me.interleaving / fr);
 			
 			% account for pixel real estate
-			obj.pixelScale = fieldPixels;
-			obj.pixelOrigin(1) = obj.sM.xCenter + obj.xPositionOut - fieldPixels/2;
-			obj.pixelOrigin(2) = obj.sM.yCenter	- obj.yPositionOut - fieldPixels/2;
+			me.pixelScale = fieldPixels;
+			me.pixelOrigin(1) = me.sM.xCenter + me.xPositionOut - fieldPixels/2;
+			me.pixelOrigin(2) = me.sM.yCenter	- me.yPositionOut - fieldPixels/2;
 			
-			% 			obj.maskSourceRect = [0 0, maskPixels, maskPixels];
-			% 			obj.maskDestinationRect = obj.maskSourceRect ...
-			% 				+ obj.pixelOrigin([1 2 1 2]) - obj.dotSize/2;
+			% 			me.maskSourceRect = [0 0, maskPixels, maskPixels];
+			% 			me.maskDestinationRect = me.maskSourceRect ...
+			% 				+ me.pixelOrigin([1 2 1 2]) - me.dotSize/2;
 			
 			% build a lookup table to pick weighted directions from a
 			% uniform random variable.
-			if ~isequal(size(obj.directionWeights), size(obj.angle))
-				obj.directionWeights = ones(1, length(obj.angle));
+			if ~isequal(size(me.directionWeights), size(me.angle))
+				me.directionWeights = ones(1, length(me.angle));
 			end
 			
-			directionCDF = cumsum(obj.directionWeights) ...
-				/ sum(obj.directionWeights);
-			obj.directionCDFInverse = ones(1, obj.directionCDFSize);
-			probs = linspace(0, 1, obj.directionCDFSize);
-			for ii = 1:obj.directionCDFSize
+			directionCDF = cumsum(me.directionWeights) ...
+				/ sum(me.directionWeights);
+			me.directionCDFInverse = ones(1, me.directionCDFSize);
+			probs = linspace(0, 1, me.directionCDFSize);
+			for ii = 1:me.directionCDFSize
 				nearest = find(directionCDF >= probs(ii), 1, 'first');
-				obj.directionCDFInverse(ii) = obj.angle(nearest);
+				me.directionCDFInverse(ii) = me.angle(nearest);
 			end
 			
 			% pick random start positions for all dots
-			obj.normalizedXY = rand(2, obj.nDots);
+			me.normalizedXY = rand(2, me.nDots);
 			
-			if obj.mask == true
-				obj.maskRect = CenterRectOnPointd(obj.maskRect,obj.xFinal,obj.yFinal);
+			if me.mask == true
+				me.maskRect = CenterRectOnPointd(me.maskRect,me.xFinal,me.yFinal);
 			end
 		end
 		
@@ -374,26 +360,26 @@ classdef ndotsStimulus < baseStimulus
 		%> @brief Compute dot positions for the next frame of animation.
 		%>
 		% ===================================================================
-		function computeNextFrame(obj)
+		function computeNextFrame(me)
 			% cache some properties as local variables because it's faster
-			nFrames = obj.interleaving;
-			frame = obj.frameNumber;
+			nFrames = me.interleaving;
+			frame = me.frameNumber;
 			frame = 1 + mod(frame, nFrames);
-			obj.frameNumber = frame;
+			me.frameNumber = frame;
 			
-			thisFrame = obj.frameSelector;
+			thisFrame = me.frameSelector;
 			thisFrame(thisFrame) = false;
 			thisFrame(frame:nFrames:end) = true;
-			obj.frameSelector = thisFrame;
+			me.frameSelector = thisFrame;
 			nFrameDots = sum(thisFrame);
 			
 			% pick coherent dots
 			cohSelector = false(size(thisFrame));
-			cohCoinToss = rand(1, nFrameDots) < obj.coherence;
+			cohCoinToss = rand(1, nFrameDots) < me.coherence;
 			nCoherentDots = sum(cohCoinToss);
 			nNonCoherentDots = nFrameDots - nCoherentDots;
-			lifetimes = obj.dotLifetimes;
-			if obj.isLimitedLifetime
+			lifetimes = me.dotLifetimes;
+			if me.isLimitedLifetime
 				% would prefer not to call sort
 				%   should be able to do accounting as we go
 				[frameSorted, frameOrder] = ...
@@ -413,35 +399,35 @@ classdef ndotsStimulus < baseStimulus
 			nonCohSelector(thisFrame) = true;
 			nonCohSelector(cohSelector) = false;
 			lifetimes(nonCohSelector) = 0;
-			obj.dotLifetimes = lifetimes;
+			me.dotLifetimes = lifetimes;
 			
 			% pick motion direction(s) for coherent dots
-			if obj.isMovingAsHerd
+			if me.isMovingAsHerd
 				nDirections = 1;
 			else
 				nDirections = nCoherentDots;
 			end
 			
-			if numel(obj.angle) == 1
+			if numel(me.angle) == 1
 				% use the one constant direction
-				degrees = obj.angle(1) * ones(1, nDirections);
+				degrees = me.angle(1) * ones(1, nDirections);
 				
 			else
 				% pick from the direction distribution
 				CDFIndexes = 1 + ...
-					floor(rand(1, nDirections)*(obj.directionCDFSize));
-				degrees = obj.directionCDFInverse(CDFIndexes);
+					floor(rand(1, nDirections)*(me.directionCDFSize));
+				degrees = me.directionCDFInverse(CDFIndexes);
 			end
 			
-			if obj.drunkenWalk > 0
+			if me.drunkenWalk > 0
 				% jitter the direction from a uniform distribution
 				degrees = degrees + ...
-					obj.drunkenWalk * (rand(1, nDirections) - .5);
+					me.drunkenWalk * (rand(1, nDirections) - .5);
 			end
 			
 			% move the coherent dots
-			XY = obj.normalizedXY;
-			R = obj.deltaR;
+			XY = me.normalizedXY;
+			R = me.deltaR;
 			radians = pi*degrees/180;
 			deltaX = R*cos(radians);
 			deltaY = R*sin(radians);
@@ -449,7 +435,7 @@ classdef ndotsStimulus < baseStimulus
 			XY(2,cohSelector) = XY(2,cohSelector) - deltaY;
 			
 			% move the non-coherent dots
-			if obj.isFlickering
+			if me.isFlickering
 				XY(:,nonCohSelector) = rand(2, nNonCoherentDots);
 				
 			else
@@ -464,7 +450,7 @@ classdef ndotsStimulus < baseStimulus
 			tooBig = XY > 1;
 			tooSmall = XY < 0;
 			componentOverrun = tooBig | tooSmall;
-			if obj.isWrapping
+			if me.isWrapping
 				% wrap the overrun component
 				%   carry the overrun to prevent striping
 				XY(tooBig) = XY(tooBig) - 1;
@@ -480,8 +466,8 @@ classdef ndotsStimulus < baseStimulus
 				XY([1,2],overrun) = rand(2, sum(overrun));
 			end
 			
-			obj.normalizedXY = XY;
-			obj.pixelXY = XY*obj.pixelScale;
+			me.normalizedXY = XY;
+			me.pixelXY = XY*me.pixelScale;
 		end
 		
 	end

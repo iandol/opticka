@@ -84,16 +84,17 @@ classdef spotStimulus < baseStimulus
 		% ===================================================================
 		function setup(me,sM)
 			
-			reset(me);
-			me.inSetup = true;
-			if isempty(me.isVisible); me.show; end
-			
+			reset(me); %reset object back to its initial state
+			me.inSetup = true; me.isSetup = false;
+			if isempty(me.isVisible); show(me); end
+		
 			me.sM = sM;
-			if ~sM.isOpen; warning('Screen needs to be Open!'); end
+			if ~sM.isOpen; error('Screen needs to be Open!'); end
+			me.ppd=sM.ppd;
 			me.screenVals = sM.screenVals;
-			me.ppd = sM.ppd;
+			me.texture = []; %we need to reset this
 			
-			fn = fieldnames(spotStimulus);
+			fn = sort(properties(me));
 			for j=1:length(fn)
 				if isempty(me.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},me.ignoreProperties, 'once'))%create a temporary dynamic property
 					p=me.addprop([fn{j} 'Out']);
@@ -122,8 +123,7 @@ classdef spotStimulus < baseStimulus
 				setupFlash(me);
 			end
 			
-			me.inSetup = false;
-			
+			me.inSetup = false; me.isSetup = true;
 			computeColour(me);
 			computePosition(me);
 			setAnimationDelta(me);
@@ -302,10 +302,10 @@ classdef spotStimulus < baseStimulus
 		% ===================================================================
 		function reset(me)
 			resetTicks(me);
+			removeTmpProperties(me);
 			me.texture=[];
-			me.removeTmpProperties;
 			me.stopLoop = false;
-			me.inSetup = false;
+			me.inSetup = false; me.isSetup = false;
 			me.colourOutTemp = [];
 			me.flashColourOutTemp = [];
 			me.flashFG = [];

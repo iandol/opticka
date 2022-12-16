@@ -156,24 +156,20 @@ classdef colourGratingStimulus < baseStimulus
 		function setup(me,sM)
 			
 			reset(me); %reset object back to its initial state
-			me.inSetup = true;
-			if isempty(me.isVisible)
-				show(me);
-			end
+			me.inSetup = true; me.isSetup = false;
+			if isempty(me.isVisible); show(me); end
 			
 			me.sM = sM;
-			if ~sM.isOpen; warning('Screen needs to be Open!'); end
+			if ~sM.isOpen; error('Screen needs to be Open!'); end
+			me.ppd=sM.ppd;
 			me.screenVals = sM.screenVals;
-			me.ppd = sM.ppd;			
-
 			me.texture = []; %we need to reset this
 
-			props = properties(me);
+			props = sort(properties(me));
 			for p = 1:numel(props)
 				pr = props{p};
 				if isempty(regexp(pr, me.ignoreProperties, 'once')) 
 					m = me.addprop([pr 'Out']);
-					%m.Transient = true; m.Hidden = false;
 					if strcmp(pr, 'sf'); m.SetMethod = @set_sfOut; end
 					if strcmp(pr, 'tf')
 						m.SetMethod = @set_tfOut;
@@ -270,7 +266,7 @@ classdef colourGratingStimulus < baseStimulus
 				me.res(2), me.colourOut, me.colour2Out, me.maskValue);
 			me.colourCache = me.colourOut; me.colour2Cache = me.colour2Out;
 			
-			me.inSetup = false;
+			me.inSetup = false; me.isSetup = true;
 			computePosition(me);
 			setRect(me);
 
@@ -538,7 +534,7 @@ classdef colourGratingStimulus < baseStimulus
 				end
 			end
 			me.mvRect=me.dstRect;
-			me.setAnimationDelta();
+			setAnimationDelta(me);
 		end
 		
 		% ===================================================================

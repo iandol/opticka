@@ -106,12 +106,11 @@ classdef discStimulus < baseStimulus
 			me.screenVals = sM.screenVals;
 			me.texture = []; %we need to reset this
 			
-			fn = fieldnames(me);
-			for j=1:length(fn)
+			fn = sort(fieldnames(me));
+			for j=1:numel(fn)
 				prop = [fn{j} 'Out'];
 				if isempty(me.findprop(prop)) && isempty(regexp(fn{j},me.ignoreProperties, 'once'))%create a temporary dynamic property
 					p = addprop(me, prop);
-					p.Transient = true;
 					if strcmp(fn{j},'size');p.SetMethod = @set_sizeOut;end
 					if strcmp(fn{j},'xPosition');p.SetMethod = @set_xPositionOut;end
 					if strcmp(fn{j},'yPosition');p.SetMethod = @set_yPositionOut;end
@@ -157,7 +156,7 @@ classdef discStimulus < baseStimulus
 				me.changeBlend = true;
 			end
 			
-			me.inSetup = false;
+			me.inSetup = false; me.isSetup = true;
 			computePosition(me);
 			setRect(me);
 			if me.doAnimator;setup(me.animator, me);end

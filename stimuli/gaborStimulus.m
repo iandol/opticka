@@ -130,26 +130,22 @@ classdef gaborStimulus < baseStimulus
 		% ===================================================================
 		function setup(me,sM)
 			
-			me.reset(); %reset it back to its initial state
-			me.inSetup = true;
-			if isempty(me.isVisible)
-				me.show();
-			end
+			reset(me); %reset object back to its initial state
+			me.inSetup = true; me.isSetup = false;
+			if isempty(me.isVisible); me.show; end
 			addlistener(me,'changeScale',@me.calculateScale); %use an event to keep scale accurate
 			addlistener(me,'changePhaseIncrement',@me.calculatePhaseIncrement);
 			
 			me.sM = sM;
-			if ~sM.isOpen; warning('Screen needs to be Open!'); end
+			if ~sM.isOpen; error('Screen needs to be Open!'); end
+			me.ppd=sM.ppd;
 			me.screenVals = sM.screenVals;
-			me.ppd = sM.ppd;			
-
 			me.texture = []; %we need to reset this
 
-			fn = fieldnames(me);
+			fn = sort(properties(me));
 			for j=1:length(fn)
 				if isempty(me.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},me.ignoreProperties, 'once')) %create a temporary dynamic property
 					p=me.addprop([fn{j} 'Out']);
-					p.Transient = true;%p.Hidden = true;
 					if strcmp(fn{j},'sf');p.SetMethod = @set_sfOut;end
 					if strcmp(fn{j},'tf');p.SetMethod = @set_tfOut;end
 					if strcmp(fn{j},'driftDirection');p.SetMethod = @set_driftDirectionOut;end
@@ -205,9 +201,9 @@ classdef gaborStimulus < baseStimulus
 				me.res(2), nonSymmetric, me.colourOut, me.disableNorm,...
 				me.contrastMult);
 			
-			me.inSetup = false;
+			me.inSetup = false; me.isSetup = true;
 			computePosition(me);
-			me.setRect();
+			setRect(me);
 
 			function set_xPositionOut(me, value)
 				me.xPositionOut = value * me.ppd;
@@ -253,7 +249,7 @@ classdef gaborStimulus < baseStimulus
 				me.driftPhase=me.phaseOut;
 			end
 			computePosition(me);
-			me.setRect();
+			setRect(me);
 		end
 		
 		% ===================================================================
@@ -310,7 +306,7 @@ classdef gaborStimulus < baseStimulus
 				end
 				me.texture = []; 
 			end
-			me.removeTmpProperties;
+			removeTmpProperties(me);
 		end
 		
 		% ===================================================================
@@ -375,7 +371,7 @@ classdef gaborStimulus < baseStimulus
 				end
 			end
 			me.mvRect=me.dstRect;
-			me.setAnimationDelta();
+			setAnimationDelta(me);
 		end
 	
 	end %---END PROTECTED METHODS---%

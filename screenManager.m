@@ -1416,7 +1416,17 @@ classdef screenManager < optickaCore
 			% drawPhotoDiodeSquare(me,colour)
 			Screen('FillRect',me.win,colour,me.photoDiodeRect);
 		end
-		
+		% ===================================================================
+		%> @brief conditionally draw a white square to trigger photodiode
+		%>
+		%> @param colour colour of square
+		%> @return
+		% ===================================================================
+		function drawPhotoDiode(me,colour)
+			% drawPhotoDiode(me,colour) % conditionally draw a white square to trigger photodiode
+			Screen('FillRect',me.win,colour,me.photoDiodeRect);
+		end
+
 		% ===================================================================
 		%> @brief draw the mouse X and Y position on screen
 		%>
@@ -1425,7 +1435,7 @@ classdef screenManager < optickaCore
 		%> @return
 		% ===================================================================
 		function drawMousePosition(me,force)
-			global mouseGlobalX mouseGlobalY
+			global mouseGlobalX mouseGlobalY %#ok<*GVMIS> 
 			if ~exist('force','var'); force = false; end
 			if force == true
 				[x,y] = mousePosition(me,false);
@@ -1438,18 +1448,7 @@ classdef screenManager < optickaCore
 				Screen('DrawText',me.win,txt, me.xCenter, 5, [0.7 0.7 0.5], [0.5 0.5 0.5]);
 			end
 		end
-		
-		% ===================================================================
-		%> @brief conditionally draw a white square to trigger photodiode
-		%>
-		%> @param colour colour of square
-		%> @return
-		% ===================================================================
-		function drawPhotoDiode(me,colour)
-			% drawPhotoDiode(me,colour) % conditionally draw a white square to trigger photodiode
-			if me.photoDiode;Screen('FillRect',me.win,colour,me.photoDiodeRect);end
-		end
-		
+
 		% ===================================================================
 		function drawBackground(me,background)
 		%> @fn drawBackground(me,background)

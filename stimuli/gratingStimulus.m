@@ -254,7 +254,7 @@ classdef gratingStimulus < baseStimulus
 				me.changeBlend = true;
 			end
 
-			me.inSetup = false;
+			me.inSetup = false; me.isSetup = true;
 			computePosition(me);
 			setRect(me);
 

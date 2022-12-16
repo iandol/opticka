@@ -96,16 +96,16 @@ classdef fixationCrossStimulus < baseStimulus
 		% ===================================================================
 		function setup(me,sM)
 			
-			reset(me);
-			me.inSetup = true;
+			reset(me); %reset object back to its initial state
+			me.inSetup = true; me.isSetup = false;
 			if isempty(me.isVisible); me.show; end
 			
 			me.sM = sM;
-			if ~sM.isOpen; warning('Screen needs to be Open!'); end
+			if ~sM.isOpen; error('Screen needs to be Open!'); end
+			me.ppd=sM.ppd;
 			me.screenVals = sM.screenVals;
-			me.ppd = sM.ppd;			
 			
-			fn = fieldnames(fixationCrossStimulus);
+			fn = sort(properties(me));
 			for j=1:length(fn)
 				if isempty(me.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},me.ignoreProperties, 'once'))%create a temporary dynamic property
 					p=me.addprop([fn{j} 'Out']);
@@ -135,8 +135,7 @@ classdef fixationCrossStimulus < baseStimulus
 				setupFlash(me);
 			end
 			
-			me.inSetup = false;
-			
+			me.inSetup = false; me.isSetup = true;			
 			computePosition(me);
 
 			function set_xPositionOut(me, value)

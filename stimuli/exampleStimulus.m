@@ -53,7 +53,7 @@ classdef exampleStimulus < baseStimulus
 			% reset all values and properties
 			reset(me);
 			% specify we are in setup
-			me.inSetup		= true;
+			me.inSetup		= true; me.isSetup = false;
 			% make sure our stimulus starts visible
 			if isempty(me.isVisible); me.show; end
 			% copy our screenManager handle
@@ -89,8 +89,7 @@ classdef exampleStimulus < baseStimulus
 			% check
 			addRuntimeProperties(me);
 			
-			me.inSetup = false;
-			
+			me.inSetup = false; me.isSetup = true;
 			computePosition(me); %used for non-rect type stimuli
 
 			function set_xPositionOut(me, value)
@@ -139,8 +138,8 @@ classdef exampleStimulus < baseStimulus
 		% ===================================================================
 		function reset(me)
 			resetTicks(me);
-			me.removeTmpProperties;
-			me.inSetup = false;
+			removeTmpProperties(me);
+			me.inSetup = false; me.isSetup = false;
 		end
 
 	end

@@ -75,7 +75,7 @@ myStims			= metaStimulus();
 
 %%
 % first stimulus is a smoothed 5° red disc
-myStims{1}		= discStimulus('colour', [0.7 0 0], 'size', 5, 'sigma', 25);
+myStims{1}		= discStimulus('colour', [0.7 0.2 0], 'size', 5, 'sigma', 20);
 
 %%
 % second stimulus is an optimised 0.8° fixation cross from Thaler et al., 2013
@@ -119,7 +119,7 @@ showLog(myTask);
 % several screen parameters, windowing, blending etc.
 myScreen = screenManager('distance', 57.3,... % display distance from observer
 	'pixelsPerCm', 27,... % calibration value for pixel density, measure using calibrateSize()
-	'windowed', [0 0 800 600],... % use fullscreen [] or window [X Y]?
+	'windowed', [],... % use fullscreen [] or window [X Y]?
 	'backgroundColour', [0.5 0.5 0.5],... % initial background colour
 	'blend', true,... % enable OpenGL blending, you can also set blend modes when needed
 	'bitDepth', '8bit'); % FloatingPoint32bit, 8bit, FloatingPoint16bit etc.
@@ -147,7 +147,7 @@ myExp = runExperiment('stimuli', myStims,... %stimulus objects
 	'screen', myScreen,... %screen manager object
 	'task', myTask,... % task randomised stimulus sequence
 	'stateInfoFile', 'DefaultStateInfo.m', ... % use the default state info file
-	'debug', true,... % enable debug mode for testing
+	'debug', false,... % debug mode for testing?
 	'useEyeLink', true, ... % use the eyelink manager
 	'dummyMode', true, ... % use dummy mode so the mouse replaces eye movements for testing
 	'subjectName', 'Simulcra', ...

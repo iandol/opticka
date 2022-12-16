@@ -232,10 +232,10 @@ classdef baseStimulus < optickaCore & dynamicprops
 			me.alpha = value;
 			if ~me.isInSetColour
 				me.colour = me.colour(1:3); %force colour to be regenerated
-				if isprop(me,'colour2')
+				if ~isempty(findprop(me,'colour2'))
 					me.colour2 = me.colour2(1:3);
 				end
-				if isprop(me,'baseColour')
+				if ~isempty(findprop(me,'baseColour'))
 					me.baseColour = me.baseColour(1:3);
 				end
 			end
@@ -246,10 +246,10 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> delta is the normalised number of pixels per frame to move a stimulus
 		% ===================================================================
 		function value = get.delta(me)
-			if isempty(me.findprop('speedOut'))
-				value = (me.speed * me.ppd) * me.screenVals.ifi;
-			else
+			if ~isempty(findprop(me,'speedOut'))
 				value = (me.speedOut * me.ppd) * me.screenVals.ifi;
+			else
+				value = (me.speed * me.ppd) * me.screenVals.ifi;
 			end
 		end
 		
@@ -259,9 +259,9 @@ classdef baseStimulus < optickaCore & dynamicprops
 		% ===================================================================
 		function value = get.dX(me)
 			value = 0;
-			if ~isempty(me.findprop('directionOut'))
+			if ~isempty(findprop(me,'directionOut'))
 				[value,~]=me.updatePosition(me.delta,me.directionOut);
-			elseif ~isempty(me.findprop('angleOut'))
+			elseif ~isempty(findprop(me,'angleOut'))
 				[value,~]=me.updatePosition(me.delta,me.angleOut);
 			end
 		end
@@ -272,9 +272,9 @@ classdef baseStimulus < optickaCore & dynamicprops
 		% ===================================================================
 		function value = get.dY(me)
 			value = 0;
-			if ~isempty(me.findprop('directionOut'))
+			if ~isempty(findprop(me,'directionOut'))
 				[~,value]=me.updatePosition(me.delta,me.directionOut);
-			elseif ~isempty(me.findprop('angleOut'))
+			elseif ~isempty(findprop(me,'angleOut'))
 				[~,value]=me.updatePosition(me.delta,me.angleOut);
 			end
 		end
@@ -300,7 +300,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%>
 		% ===================================================================
 		function resetTicks(me)
-			global mouseTick mouseGlobalX mouseGlobalY mouseValid %shared across all stimuli
+			global mouseTick mouseGlobalX mouseGlobalY mouseValid %#ok<*GVMIS> %shared across all stimuli
 			if max(me.delayTime) > 0 %delay display a number of frames 
 				if length(me.delayTime) == 1
 					me.delayTicks = round(me.delayTime/me.screenVals.ifi);

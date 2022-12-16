@@ -95,13 +95,15 @@ classdef barStimulus < baseStimulus
 		% ===================================================================
 		function setup(me,sM)
 			
-			reset(me);
-			me.inSetup = true;
+			reset(me); %reset object back to its initial state
+			me.inSetup = true; me.isSetup = false;
+			if isempty(me.isVisible); show(me); end
 			
 			me.sM = sM;
-			if ~sM.isOpen; warning('Screen needs to be Open!'); end
+			if ~sM.isOpen; error('Screen needs to be Open!'); end
+			me.ppd=sM.ppd;
 			me.screenVals = sM.screenVals;
-			me.ppd = sM.ppd;
+			me.texture = []; %we need to reset this
 			me.baseColour = sM.backgroundColour;
 			me.screenWidth = sM.screenVals.screenWidth;
 			me.screenHeight = sM.screenVals.screenHeight;
@@ -111,7 +113,7 @@ classdef barStimulus < baseStimulus
 				me.barWidth = me.size;
 			end
 			
-			fn = fieldnames(me);
+			fn = sort(properties(me));
 			for j=1:length(fn)
 				if isempty(regexpi(fn{j},me.ignoreProperties, 'once')) && isempty(me.findprop([fn{j} 'Out']))
 					p=me.addprop([fn{j} 'Out']); p.Transient = true;
@@ -150,7 +152,7 @@ classdef barStimulus < baseStimulus
 				me.phaseCounter = round( me.phaseReverseTime / me.sM.screenVals.ifi );
 			end
 			
-			me.inSetup = false;
+			me.inSetup = false; me.isSetup = true;
 			computePosition(me);
 			setRect(me);
 
@@ -281,7 +283,7 @@ classdef barStimulus < baseStimulus
 			me.screenWidth = [];
 			me.screenHeight = [];
 			me.ppd = [];
-			me.removeTmpProperties;
+			removeTmpProperties(me);
 			resetTicks(me);
 		end
 		

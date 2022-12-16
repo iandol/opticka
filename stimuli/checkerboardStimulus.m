@@ -128,26 +128,23 @@ classdef checkerboardStimulus < baseStimulus
 		% ===================================================================
 		function setup(me,sM)
 			
-			reset(me); %reset it back to its initial state
-			me.inSetup = true;
-			if isempty(me.isVisible)
-				show(me);
-			end
+			reset(me); %reset object back to its initial state
+			me.inSetup = true; me.isSetup = false;
+			if isempty(me.isVisible); show(me); end
+
 			addlistener(me,'changeScale',@me.calculateScale); %use an event to keep scale accurate
 			addlistener(me,'changePhaseIncrement',@me.calculatePhaseIncrement);
 			
 			me.sM = sM;
-			if ~sM.isOpen; warning('Screen needs to be Open!'); end
+			if ~sM.isOpen; error('Screen needs to be Open!'); end
+			me.ppd=sM.ppd;
 			me.screenVals = sM.screenVals;
-			me.ppd = sM.ppd;		
-
 			me.texture = []; %we need to reset this
 
-			fn = fieldnames(me);
+			fn = sort(properties(me));
 			for j=1:length(fn)
 				if isempty(me.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},me.ignoreProperties, 'once')) %create a temporary dynamic property
 					p=me.addprop([fn{j} 'Out']);
-					p.Transient = true;p.Hidden = true;
 					if strcmp(fn{j},'sf');p.SetMethod = @set_sfOut;end
 					if strcmp(fn{j},'tf');p.SetMethod = @set_tfOut;end
 					if strcmp(fn{j},'reverseDirection');p.SetMethod = @set_reverseDirectionOut;end
@@ -215,7 +212,7 @@ classdef checkerboardStimulus < baseStimulus
 			[me.texture, ~, me.shader] = CreateProceduralCheckerboard(me.sM.win, ...
 				me.res(1), me.res(2), me.maskValue);
 			
-			me.inSetup = false;
+			me.inSetup = false; me.isSetup = true;
 			computePosition(me);
 			setRect(me);
 
@@ -329,7 +326,7 @@ classdef checkerboardStimulus < baseStimulus
 				me.mask = true;
 			end
 			me.maskValue = [];
-			me.removeTmpProperties;
+			removeTmpProperties(me);
 		end
 		
 		% ===================================================================
@@ -458,8 +455,6 @@ classdef checkerboardStimulus < baseStimulus
 				end
 			end
 		end
-		
-		
 		
 	end
 end
