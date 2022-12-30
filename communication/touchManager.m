@@ -4,28 +4,35 @@ classdef touchManager < optickaCore
 
 	%--------------------PUBLIC PROPERTIES----------%
 	properties
-		device		= 1
-		verbose		= false
-		isDummy		= false
-		window		= struct('X',0,'Y',0,'radius',[5]);
+		device					= 1
+		verbose					= false
+		isDummy					= false
+		%> accept window (circular when radius is 1 value, rectangular when radius = [width height]) 
+		%> doNegation allows to return -100 (like exclusion) if touch is outside window.
+		window					= struct('X', 0, 'Y', 0, 'radius', 2, 'doNegation', false);
+		%> Use exclusion zones where no eye movement allowed: [left,top,right,bottom]
+		%> Add rows to generate multiple exclusion zones.
+		exclusionZone			= []
+		nSlots					= 1e5
+		negationBuffer			= 0
 	end
 
 	properties (SetAccess=private, GetAccess=public)
-		devices		= []
-		names		= []
-		allinfo		= []
-		nSlots		= 1e5
-		win			= []
-		x			= -1
-		y			= -1
-		ppd			= 36
-		screen		= []
-		screenVals	= []
-	end
+		devices			= []
+		names				= []
+		allInfo			= []
+		x						= -1
+		y						= -1
+		isOpen			= false
+		isQueue			= false
+	end	
 
-	properties (SetAccess = private, GetAccess = private)
-		allowedProperties char	= ['device'...
-			'verbose']
+	properties (Access = private)
+		ppd					= 36
+		screen			= []
+		win					= []
+		screenVals	= []
+		allowedProperties	= {'isDummy','device','verbose','window','nSlots','negationBuffer'}
 	end
 
 	%=======================================================================
@@ -46,7 +53,7 @@ classdef touchManager < optickaCore
 			args = optickaCore.addDefaults(varargin,struct('name','touchManager'));
 			me = me@optickaCore(args); %superclass constructor
 			me.parseArgs(args, me.allowedProperties);
-			[me.devices,me.names,me.allinfo] = GetTouchDeviceIndices([], 1);
+			try [me.devices,me.names,me.allInfo] = GetTouchDeviceIndices([], 1); end
 		end
 
 		%================SET UP TOUCH INPUT============
@@ -59,6 +66,7 @@ classdef touchManager < optickaCore
 			else
 				error('Need to pass an open screenManager object!');
 			end
+			try [me.devices,me.names,me.allInfo] = GetTouchDeviceIndices([], 1); end
 			if me.isDummy
 				me.comment = 'Dummy Mode Active';
 				fprintf('--->touchManager: %s\n',me.comment);
@@ -78,11 +86,17 @@ classdef touchManager < optickaCore
 		function createQueue(me, choice)
 			if me.isDummy; return; end
 			if ~exist('choice','var') || isempty(choice)
-				choice=me.device;
+				choice = me.device;
 			end
 			for i = 1:length(choice)
-				TouchQueueCreate(me.win, me.devices(choice(i)), me.nSlots);
+				try
+					TouchQueueCreate(me.win, me.devices(choice(i)), me.nSlots);
+				catch
+					warning('touchManager: Cannot create touch queue!');
+				end
 			end
+			me.isQueue = true;
+			if me.verbose;me.logEvent('createQueue','Opened');end
 		end
 
 		%===============START=========
@@ -91,9 +105,12 @@ classdef touchManager < optickaCore
 			if ~exist('choice','var') || isempty(choice)
 				choice=me.device;
 			end
+			if ~me.isQueue; createQueue(me,choice); end
 			for i = 1:length(choice)
 				TouchQueueStart(me.devices(choice(i)));
 			end
+			me.isOpen = true;
+			if me.verbose;me.logEvent('start','Started queue');end
 		end
 
 		%===============FLUSH=========
@@ -150,9 +167,9 @@ classdef touchManager < optickaCore
 				while iscell(event);event = event{1}; end
 				if isempty(event); return; end
 				xy = me.screen.toDegrees([event.X event.Y]);
+				if me.verbose;fprintf('dummy touch: %i %.2f %i %.2f\n',event.X, xy(1), event.Y, xy(2));end
+				result = calculateWindow(me, xy(1), xy(2));
 				x = xy(1); y = xy(2);
-				%fprintf('%i %.2f %i %.2f\n',event.X, x, event.Y, y);
-				result = calculateWindow(me, x, y);
 			else
 				if ~exist('choice','var') || isempty(choice);choice=me.device;end
 				if ~isempty(eventAvail(me,choice))
@@ -161,15 +178,18 @@ classdef touchManager < optickaCore
 					while iscell(event);event = event{1}; end
 					if isempty(event); return; end
 					xy = me.screen.toDegrees([event.X event.Y]);
+					if me.verbose;fprintf('touch: %i %.2f %i %.2f\n',event.X, xy(1), event.Y, xy(2));end
+					result = calculateWindow(me, xy(1), xy(2));
 					x = xy(1); y = xy(2);
-					%fprintf('%i %.2f %i %.2f\n',event.X, x, event.Y, y);
-					result = calculateWindow(me, x, y);
 				end
 			end
+			if result == -100; fprintf('NEGATION!\n'); end
 		end
 
 		%===========CLOSE=========
 		function close(me)
+			me.isOpen = false;
+			me.isQueue = false;
 			if me.isDummy
 				logOutput(me,'Closing dummy touchManager...');
 			else
@@ -183,21 +203,50 @@ classdef touchManager < optickaCore
 	end
 
 	methods (Access = protected)
-		%===========CLOSE=========
+		%===========calculateWindow=========
 		function result = calculateWindow(me, x, y)
-			result = false; window = false;
-			if length(me.window.radius) == 1 % circular test
-				r = sqrt((x - me.window.X).^2 + (y - me.window.Y).^2); %fprintf('x: %g-%g y: %g-%g r: %g-%g\n',x, me.window.X, me.y, me.window.Y,r,me.window.radius);
-				window = find(r < me.window.radius);
-			else % x y rectangular window test
-				for i = 1:length(me.window.X)
-					if (x >= (me.window.X - me.window.radius(1))) && (x <= (me.window.X + me.window.radius(1))) ...
-							&& (me.y >= (me.window.Y - me.window.radius(2))) && (me.y <= (me.window.Y + me.window.radius(2)))
-						window = i;break;
+			result = false; resultneg = false; match = false;
+			window = false; windowneg = false; 
+			radius = me.window.radius;
+			negradius = radius + me.negationBuffer;
+			xWin = me.window.X;
+			yWin = me.window.Y;
+			ez = me.exclusionZone;
+			% ---- test for exclusion zones first
+			if ~isempty(ez)
+				for i = 1:size(ez,1)
+					% [-x +x -y +y]
+					if (x >= ez(i,1) && x <= ez(i,3)) && ...
+						(y >= ez(i,2) && y <= ez(i,4))
+						result = -100;
+						return;
 					end
 				end
 			end
+			% ---- circular test
+			if length(radius) == 1 
+				r = sqrt((x - xWin).^2 + (y - yWin).^2); %fprintf('x: %g-%g y: %g-%g r: %g-%g\n',x, me.window.X, me.y, me.window.Y,r,me.window.radius);
+				window = find(r < radius);
+				windowneg = find(r < negradius);
+			else % ---- x y rectangular window test
+				for i = 1:length(xWin)
+					if (x >= (xWin - radius(1))) && (x <= (xWin + radius(1))) ...
+							&& (y >= (yWin - radius(2))) && (y <= (yWin + radius(2)))
+						window(i) = i;
+						match = true;
+					end
+					if (x >= (xWin - negradius(1))) && (x <= (xWin + negradius(1))) ...
+							&& (y >= (yWin - negradius(2))) && (y <= (yWin + negradius(2)))
+						windowneg(i) = i;
+					end
+					if match == true; break; end
+				end
+			end
 			if any(window); result = true;end
+			if any(windowneg); resultneg = true; end
+			if me.window.doNegation && resultneg == false
+				result = -100; 
+			end
 		end
 	end
 end

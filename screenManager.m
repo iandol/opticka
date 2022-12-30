@@ -238,10 +238,10 @@ classdef screenManager < optickaCore
 			try
 				AssertOpenGL
 				me.isPTB = true;
-				me.salutation('PTB + OpenGL supported!')
+				salutation(me,'PTB + OpenGL supported!')
 			catch %#ok<*CTCH>
 				me.isPTB = false;
-				me.salutation('CONSTRUCTOR','OpenGL support needed for PTB!!!',true)
+				salutation(me,'CONSTRUCTOR','OpenGL support needed for PTB!!!',true)
 			end
 			prepareScreen(me);
 		end
@@ -663,14 +663,13 @@ classdef screenManager < optickaCore
 		% ===================================================================
 			if ~me.isOpen
 				stim = dotsStimulus('mask',true,'size',10,'speed',4);
-				prepareScreen(me);
 				open(me);
 				disp('--->>> screenManager running a quick demo...')
 				disp(me.screenVals);
 				setup(stim, me);
 				vbl = flip(me);
 				for i = 1:me.screenVals.fps*2
-					drawText(me,'Running a quick demo of screenManager...')
+					drawText(me,'Running a quick demo of screenManager...');
 					draw(stim);
 					finishDrawing(me);
 					animate(stim);
@@ -803,19 +802,21 @@ classdef screenManager < optickaCore
 		%> @return
 		% ===================================================================
 			if ~me.isPTB; return; end
-			Priority(0); ListenChar(0); ShowCursor;
+			try Priority(0); end
+			try ListenChar(0); end
+			ShowCursor; 
 			if me.screenVals.resetGamma && isfield(me.screenVals,'originalGamma') && ~isempty(me.screenVals.originalGamma)
 				Screen('LoadNormalizedGammaTable', me.win, me.screenVals.originalGamma);
 				fprintf('\n---> screenManager: REVERT GAMMA TABLES\n');
 			end
 			if me.isInAsync 
-				Screen('ASyncFlipEnd',me.win);
+				try Screen('ASyncFlipEnd',me.win); end
 			end
 			me.isInAsync = false;
 			if me.isPlusPlus
 				try BitsPlusPlus('Close'); end
 			end
-			me.finaliseMovie(); me.moviePtr = [];
+			try me.finaliseMovie(); me.moviePtr = []; end
 			kind = Screen(me.win, 'WindowKind');
 			try
 				if kind == 1 
@@ -869,7 +870,7 @@ classdef screenManager < optickaCore
 				case 4
 					me.backgroundColour = value;
 				otherwise
-					error('Wrong colour values given, enter 1, 3 or 4 values')
+					error('Wrong colour values given, enter 1, 3 or 4 values');
 			end
 		end
 		
@@ -1626,7 +1627,7 @@ classdef screenManager < optickaCore
 					clear mimg
 				end
 			else
-				me.salutation('playMovie method','Playing failed!',true);
+				salutation(me,'playMovie method','Playing failed!',true);
 			end
 		end
 
@@ -1691,8 +1692,8 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		function delete(me)
 			if me.isOpen
-				me.close();
-				me.salutation('DELETE method','Screen closed');
+				close(me);
+				salutation(me,'DELETE method','Screen closed');
 			end
 		end	
 	end
@@ -1850,8 +1851,10 @@ classdef screenManager < optickaCore
 			updateCenter(me);
 			sv.xCenter = me.xCenter;
 			sv.yCenter = me.yCenter;
-			sv.topInDegrees = -me.yCenter / me.ppd;
 			sv.leftInDegrees = -me.xCenter / me.ppd;
+			sv.topInDegrees = -me.yCenter / me.ppd;
+			sv.rightInDegrees = -sv.leftInDegrees;
+			sv.bottomInDegrees = -sv.topInDegrees;
 		end
 		
 		% ===================================================================
