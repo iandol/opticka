@@ -66,7 +66,7 @@ classdef optickaCore < handle
 	%--------------------PRIVATE PROPERTIES----------%
 	properties (SetAccess = private, GetAccess = private)
 		%> allowed properties passed to object upon construction
-		allowedPropertiesCore char = 'name|comment|cloning'
+		allowedPropertiesCore = {'name','comment','cloning'}
 		%> cached full name
 		fullName_ char
 	end
@@ -466,14 +466,17 @@ classdef optickaCore < handle
 		%> @param args input structure
 		%> @param allowedProperties properties possible to set on construction
 		% ===================================================================
-			allowedProperties = ['^(' allowedProperties ')$'];
+			if ischar(allowedProperties)
+				%we used | for regexp but better use cell array
+				allowedProperties = strsplit(allowedProperties,'|');
+			end
 			
 			args = optickaCore.makeArgs(args);
 
 			if isstruct(args)
 				fnames = fieldnames(args); %find our argument names
 				for i=1:length(fnames)
-					if regexpi(fnames{i},allowedProperties) %only set if allowed property
+					if matches(fnames{i},allowedProperties) %only set if allowed property
 						me.salutation(fnames{i},'Parsing input argument');
 						try
 							me.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
@@ -600,6 +603,11 @@ classdef optickaCore < handle
 					fprintf(['---> ' me.fullName_ ': ' message ' | ' in '\n']);
 				end
 			end
+		end
+		function LogOutput(me, in, message, override)
+			if ~exist('override','var');override = false;end
+			if ~exist('message','var'); message = ''; end
+			salutation(me, in, message, override)
 		end
 		
 	end

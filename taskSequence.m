@@ -139,8 +139,9 @@ classdef taskSequence < optickaCore & dynamicprops
 		%> used in calculatin mintrials
 		nLevels
 		%> properties allowed during initial construction
-		allowedProperties char = ['randomise|nVar|blockVar|trialVar|nBlocks|trialTime|isTime|ibTime|realTime|randomSeed|fps'...
-			'randomGenerator|verbose|addBlank']
+		allowedProperties = {'randomise','nVar','blockVar','trialVar','nBlocks',...
+			'trialTime','isTime','ibTime','realTime','randomSeed','fps',...
+			'randomGenerator','verbose','addBlank'}
 		%> used to handle problems with dependant property nVar: the problem
 		%> is that set.nVar gets called before static loadobj, and therefore
 		%> we need to handle this differently. Initially set to empty, set

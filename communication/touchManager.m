@@ -4,34 +4,39 @@ classdef touchManager < optickaCore
 
 	%--------------------PUBLIC PROPERTIES----------%
 	properties
-		device					= 1
-		verbose					= false
-		isDummy					= false
+		%> which touch device to connect to?
+		device				= 1
+		%> use the mouse instead of the touch screen for debugging
+		isDummy				= false
 		%> accept window (circular when radius is 1 value, rectangular when radius = [width height]) 
 		%> doNegation allows to return -100 (like exclusion) if touch is outside window.
-		window					= struct('X', 0, 'Y', 0, 'radius', 2, 'doNegation', false);
+		window				= struct('X', 0, 'Y', 0, 'radius', 2, 'doNegation', false);
 		%> Use exclusion zones where no eye movement allowed: [left,top,right,bottom]
 		%> Add rows to generate multiple exclusion zones.
-		exclusionZone			= []
-		nSlots					= 1e5
-		negationBuffer			= 0
+		exclusionZone		= []
+		%> number of slots for touch events
+		nSlots				= 1e5
+		%> size in degrees around the window for negation to trigger
+		negationBuffer		= 2
+		%> verbosity
+		verbose				= false
 	end
 
 	properties (SetAccess=private, GetAccess=public)
-		devices			= []
+		devices				= []
 		names				= []
-		allInfo			= []
-		x						= -1
-		y						= -1
-		isOpen			= false
-		isQueue			= false
+		allInfo				= []
+		x					= -1
+		y					= -1
+		isOpen				= false
+		isQueue				= false
 	end	
 
 	properties (Access = private)
 		ppd					= 36
-		screen			= []
+		screen				= []
 		win					= []
-		screenVals	= []
+		screenVals			= []
 		allowedProperties	= {'isDummy','device','verbose','window','nSlots','negationBuffer'}
 	end
 
@@ -53,7 +58,7 @@ classdef touchManager < optickaCore
 			args = optickaCore.addDefaults(varargin,struct('name','touchManager'));
 			me = me@optickaCore(args); %superclass constructor
 			me.parseArgs(args, me.allowedProperties);
-			try [me.devices,me.names,me.allInfo] = GetTouchDeviceIndices([], 1); end
+			try [me.devices,me.names,me.allInfo] = GetTouchDeviceIndices([], 1); end %#ok<*TRYNC> 
 		end
 
 		%================SET UP TOUCH INPUT============
@@ -187,16 +192,19 @@ classdef touchManager < optickaCore
 		end
 
 		%===========CLOSE=========
-		function close(me)
+		function close(me, choice)
 			me.isOpen = false;
 			me.isQueue = false;
+			if ~exist('choice','var') || isempty(choice)
+				choice = me.device;
+			end
 			if me.isDummy
-				logOutput(me,'Closing dummy touchManager...');
+				salutation(me,'Closing dummy touchManager...');
 			else
-				for i = 1:length(me.device)
-					TouchQueueStop(me.devices(me.device(i)));
+				for i = 1:length(choice)
+					TouchQueueStop(me.devices(choice(i)));
 				end
-				logOutput(me,'Closing touchManager...');
+				salutation(me,'Closing touchManager...');
 			end
 		end
 

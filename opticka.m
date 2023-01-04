@@ -447,7 +447,7 @@ classdef opticka < optickaCore
 			if me.ui.OKuseTobii.Checked == true
 				me.r.useTobii = true;
 				me.r.useEyeLink = false;
-				me.h.OKuseEyelink.Checked = false;
+				me.ui.OKuseEyelink.Checked = false;
 			else
 				me.r.useTobii = false;
 			end
