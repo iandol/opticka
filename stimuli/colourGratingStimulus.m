@@ -96,11 +96,11 @@ classdef colourGratingStimulus < baseStimulus
 		%>to stop a loop between set method and an event
 		sfRecurse				= false
 		%> allowed properties passed to object upon construction
-		allowedProperties = ['colour2|sf|tf|angle|direction|phase|rotateTexture|' ... 
-			'contrast|mask|reverseDirection|speed|startPosition|aspectRatio|' ... 
-			'sigma|correctPhase|phaseReverseTime|phaseOfReverse']
+		allowedProperties = {'colour2', 'sf', 'tf', 'angle', 'direction', 'phase', 'rotateTexture' ... 
+			'contrast', 'mask', 'reverseDirection', 'speed', 'startPosition', 'aspectRatio' ... 
+			'sigma', 'correctPhase', 'phaseReverseTime', 'phaseOfReverse'}
 		%> properties to not create transient copies of during setup phase
-		ignoreProperties = 'type|scale|phaseIncrement|correctPhase|contrastMult|mask|typeList'
+		ignoreProperties = {'type', 'scale', 'phaseIncrement', 'correctPhase', 'contrastMult', 'mask', 'typeList'}
 		%> how many frames between phase reverses
 		phaseCounter			= 0
 		%> mask value (radius for the procedural shader)
@@ -134,7 +134,7 @@ classdef colourGratingStimulus < baseStimulus
 			
 			me.isRect = true; %uses a rect for drawing
 			
-			me.ignoreProperties = ['^(' me.ignorePropertiesBase '|' me.ignoreProperties ')$'];
+			me.ignoreProperties = [me.ignorePropertiesBase me.ignoreProperties];
 			me.salutation('constructor method','Stimulus initialisation complete');
 		end
 		
@@ -165,56 +165,50 @@ classdef colourGratingStimulus < baseStimulus
 			me.screenVals = sM.screenVals;
 			me.texture = []; %we need to reset this
 
-			props = sort(properties(me));
-			for p = 1:numel(props)
-				pr = props{p};
-				if isempty(regexp(pr, me.ignoreProperties, 'once')) 
-					m = me.addprop([pr 'Out']);
-					if strcmp(pr, 'sf'); m.SetMethod = @set_sfOut; end
-					if strcmp(pr, 'tf')
-						m.SetMethod = @set_tfOut;
-						m.SetObservable = true;
-						addlistener(me, [pr 'Out'], 'PostSet', @me.calculatePhaseIncrement);
+			fn = sort(properties(me));
+			for j=1:length(fn)
+				if ~matches(fn{j}, me.ignoreProperties)
+					p=me.addprop([fn{j} 'Out']);
+					if strcmp(fn{j}, 'sf'); p.SetMethod = @set_sfOut; end
+					if strcmp(fn{j}, 'tf')
+						p.SetMethod = @set_tfOut; p.SetObservable = true;
+						addlistener(me, [fn{j} 'Out'], 'PostSet', @me.calculatePhaseIncrement);
 					end
-					if strcmp(pr, 'reverseDirection')
-						m.SetMethod = @set_reverseDirectionOut; 
-						m.SetObservable = true;
-						addlistener(me, [pr 'Out'], 'PostSet', @me.calculatePhaseIncrement);
+					if strcmp(fn{j}, 'reverseDirection')
+						p.SetMethod = @set_reverseDirectionOut; p.SetObservable = true;
+						addlistener(me, [fn{j} 'Out'], 'PostSet', @me.calculatePhaseIncrement);
 					end
-					if strcmp(pr, 'size') 
-						m.SetMethod = @set_sizeOut;
-						m.SetObservable = true;
-						addlistener(me, [pr 'Out'], 'PostSet', @me.calculateScale);
+					if strcmp(fn{j}, 'size') 
+						p.SetMethod = @set_sizeOut; p.SetObservable = true;
+						addlistener(me, [fn{j} 'Out'], 'PostSet', @me.calculateScale);
 					end
-					if strcmp(pr, 'xPosition'); m.SetMethod = @set_xPositionOut; end
-					if strcmp(pr, 'yPosition'); m.SetMethod = @set_yPositionOut; end
-					if strcmp(pr, 'colour')
-						m.SetMethod = @set_cOut;
-						m.SetObservable = true;
-						addlistener(me, [pr 'Out'], 'PostSet', @me.fixBaseColour);
+					if strcmp(fn{j}, 'xPosition'); p.SetMethod = @set_xPositionOut; end
+					if strcmp(fn{j}, 'yPosition'); p.SetMethod = @set_yPositionOut; end
+					if strcmp(fn{j}, 'colour')
+						p.SetMethod = @set_cOut; p.SetObservable = true;
+						addlistener(me, [fn{j} 'Out'], 'PostSet', @me.fixBaseColour);
 					end
-					if strcmp(pr, 'colour2')
-						m.SetMethod = @set_c2Out;
-						m.SetObservable = true;
-						addlistener(me, [pr 'Out'], 'PostSet', @me.fixBaseColour);
+					if strcmp(fn{j}, 'colour2')
+						p.SetMethod = @set_c2Out; p.SetObservable = true;
+						addlistener(me, [fn{j} 'Out'], 'PostSet', @me.fixBaseColour);
 					end
-					me.([pr 'Out']) = me.(pr); %copy our property value to our temporary copy
+					me.([fn{j} 'Out']) = me.(fn{j}); %copy our property value to our temporary copy
 				end
 			end
 			
 			addRuntimeProperties(me);
 			
-			if isempty(me.findprop('rotateMode')); me.addprop('rotateMode'); end
+			if ~isprop(me,'rotateMode'); addprop(me,'rotateMode'); end
 			if me.rotateTexture
 				me.rotateMode = kPsychUseTextureMatrixForRotation;
 			else
 				me.rotateMode = [];
 			end
 			
-			if isempty(me.findprop('gratingSize')); me.addprop('gratingSize'); end
+			if ~isprop(me,'gratingSize'); addprop(me,'gratingSize'); end
 			me.gratingSize = round(me.ppd*me.size); %virtual support larger than initial size
 			
-			if isempty(me.findprop('driftPhase')); me.addprop('driftPhase'); end
+			if ~isprop(me,'driftPhase'); addprop(me,'driftPhase'); end
 			if me.correctPhase
 				ps = me.calculatePhase;
 				me.driftPhase = me.phaseOut-ps;
@@ -222,7 +216,7 @@ classdef colourGratingStimulus < baseStimulus
 				me.driftPhase = me.phaseOut;
 			end
 			
-			if isempty(me.findprop('res')); me.addprop('res'); end
+			if ~isprop(me,'res'); addprop(me,'res'); end
 			
 			switch length(me.aspectRatio)
 				case 1
@@ -556,9 +550,9 @@ classdef colourGratingStimulus < baseStimulus
 		%> many more times), than an event which is only called on update
 		% ===================================================================
 		function calculatePhaseIncrement(me,~,~)
-			if ~isempty(me.findprop('tfOut'))
+			if isprop(me,'tfOut')
 				me.phaseIncrement = (me.tfOut * 360) * me.sM.screenVals.ifi;
-				if ~isempty(me.findprop('reverseDirectionOut'))
+				if isprop(me,'reverseDirectionOut')
 					if me.reverseDirectionOut == false
 						me.phaseIncrement = -me.phaseIncrement;
 					end

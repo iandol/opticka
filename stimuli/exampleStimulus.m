@@ -23,9 +23,9 @@ classdef exampleStimulus < baseStimulus
 	properties (SetAccess = private, GetAccess = private)
 		% which properties should we ignore when allowing variables to be
 		% modified during a task
-		ignoreProperties	= 'family';
+		ignoreProperties	= {'family'}
 		% which properties can we pass when constructing the object
-		allowedProperties	= 'type'
+		allowedProperties	= {'testValue','type'}
 	end
 
 	methods
@@ -45,7 +45,7 @@ classdef exampleStimulus < baseStimulus
 			me.isRect = false; % uses a rect for drawing?
 			% build our ignored properties combining the baseStimulus and
 			% this class into a regex
-			me.ignoreProperties = ['^(' me.ignorePropertiesBase '|' me.ignoreProperties ')$'];
+			me.ignoreProperties = [me.ignorePropertiesBase me.ignoreProperties];
 		end
 
 		% ===================================================================
@@ -73,16 +73,13 @@ classdef exampleStimulus < baseStimulus
 			% converting to pixels under-the-hood. We use SetMethods for
 			% properties that need modification, like size, xPosition etc.
 			% So when we set them this method runs and does the conversion.
-			fn = fieldnames(testStimulus);
+			fn = sort(fieldnames(me));
 			for j=1:length(fn)
-				if isempty(me.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},me.ignoreProperties, 'once'))%create a temporary dynamic property
+				if ~matches(fn{j}, me.ignoreProperties) % create a temporary dynamic property
 					p=me.addprop([fn{j} 'Out']);
-					p.Transient = true;
-					if strcmp(fn{j},'size');p.SetMethod = @set_sizeOut;end
-					if strcmp(fn{j},'xPosition');p.SetMethod = @set_xPositionOut;end
-					if strcmp(fn{j},'yPosition');p.SetMethod = @set_yPositionOut;end
-				end
-				if isempty(regexp(fn{j},me.ignoreProperties, 'once'))
+					if strcmp(fn{j},'size'); p.SetMethod = @set_sizeOut;end
+					if strcmp(fn{j},'xPosition'); p.SetMethod = @set_xPositionOut;end
+					if strcmp(fn{j},'yPosition'); p.SetMethod = @set_yPositionOut;end
 					me.([fn{j} 'Out']) = me.(fn{j}); %copy our property value to our tempory copy
 				end
 			end

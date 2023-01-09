@@ -32,6 +32,8 @@ classdef rfMapper < barStimulus
 	
 	properties (Hidden = true)
 		stimTime = 2;
+		showText = true;
+		showGrid = false;
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -121,10 +123,10 @@ classdef rfMapper < barStimulus
 			try
 				sM = me.sM;
 				sM.blend = true;
+				oldbd = sM.bitDepth;
 				sM.bitDepth = '8bit';
-				sM.antiAlias = 4;
 				oldbg = sM.backgroundColour;
-				sM.backgroundColour = me.backgroundColour;
+				sM.backgroundColour = me.colourList{me.bgcolourIndex};
 				open(sM);
 				me.setup(sM);
 				stimtime = me.stimTime;
@@ -217,16 +219,15 @@ classdef rfMapper < barStimulus
 					%================================================================
 					while isBreak==false && ~me.stopTask
 						[mX, mY, me.buttons] = GetMouse(sM.screen);
-						drawBackground(sM,me.backgroundColour);
-						drawGrid(sM);
-						sColour = me.backgroundColour./2;
-						if max(sColour)==0;sColour=[0.5 0.5 0.5 1];end
+						drawBackground(sM, me.backgroundColour);
 						%draw clicked points
 						if me.showClicks == 1
+							sColour = me.backgroundColour./2;
+							if max(sColour)==0;sColour=[0.5 0.5 0.5 1];end
 							me.xyDots = vertcat((me.xClick.*me.ppd),(me.yClick*me.ppd));
 							Screen('DrawDots',sM.win,me.xyDots,2,sColour,[sM.xCenter sM.yCenter],1);
 						end
-						if sM.visualDebug; drawGrid(sM); end
+						if me.showGrid; drawGrid(sM); end
 						% Draw at the new location.
 						if me.isVisible == true
 							switch me.stimulus
@@ -236,21 +237,25 @@ classdef rfMapper < barStimulus
 
 							end
 						end
-						drawCross(sM, 0.75, [1 1 1 1], 0, 0, 0.1, true, 0.6);
+						if me.useEyetracker
+							drawCross(sM, 0.75, [1 1 1 1], 0, 0, 0.1, true, 0.6); 
+						end
 						xOut = (mX - sM.xCenter)/me.ppd;
 						yOut = (mY - sM.yCenter)/me.ppd;
-						%draw text
-						width=abs(me.dstRect(1)-me.dstRect(3))/me.ppd;
-						height=abs(me.dstRect(2)-me.dstRect(4))/me.ppd;
-						t=sprintf('X = %+.2f | Y = %+.2f ',xOut,yOut);
-						t=[t sprintf('| W = %.2f H = %.2f ',width,height)];
-						t=[t sprintf('| Scale = %i ',me.scaleOut)];
-						t=[t sprintf('| SF = %.2f ',me.sfOut)];
-						t=[t sprintf('| Texture = %g',me.textureIndex)];
-						t=[t sprintf('| Buttons: %i\t',me.buttons)];
-						if ischar(me.rchar); t=[t sprintf(' | Char: %s ',me.rchar)]; end
-						Screen('DrawText', sM.win, t, 5, 5, [0.5 0.25 0]);
-						Screen('DrawingFinished', sM.win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
+						if me.showText
+							%draw text
+							width=abs(me.dstRect(1)-me.dstRect(3))/me.ppd;
+							height=abs(me.dstRect(2)-me.dstRect(4))/me.ppd;
+							t=sprintf('X = %+.2f | Y = %+.2f ',xOut,yOut);
+							t=[t sprintf('| W = %.2f H = %.2f ',width,height)];
+							t=[t sprintf('| Scale = %i ',me.scaleOut)];
+							t=[t sprintf('| SF = %.2f ',me.sfOut)];
+							t=[t sprintf('| Texture = %g',me.textureIndex)];
+							t=[t sprintf('| Buttons: %i\t',me.buttons)];
+							if ischar(me.rchar); t=[t sprintf(' | Char: %s ',me.rchar)]; end
+							Screen('DrawText', sM.win, t, 5, 5, [0.5 0.25 0]);
+							Screen('DrawingFinished', sM.win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
+						end
 						animate(me);
 						if me.buttons(2) == 1
 							me.xClick = [me.xClick xOut];
@@ -297,6 +302,7 @@ classdef rfMapper < barStimulus
 				end
 				
 				close(sM);
+				sM.bitDepth = oldbd;
 				sM.backgroundColour = oldbg;
 				Priority(0);ListenChar(0); ShowCursor;
 				if ~isempty(me.xClick) && length(me.xClick)>1
@@ -439,6 +445,16 @@ classdef rfMapper < barStimulus
 						if keyTicks > fInc
 							keyTicks = 0;
 							me.stopTask = true;
+						end
+					case 'a'
+						if keyTicks > fInc
+							keyTicks = 0;
+							me.showGrid = ~me.showGrid;
+						end
+					case 's'
+						if keyTicks > fInc
+							keyTicks = 0;
+							me.showText = ~me.showText;
 						end
 					case 'c'
 						if keyTicks > fInc
@@ -715,7 +731,8 @@ classdef rfMapper < barStimulus
 		%>  sets the colours based on the current index
 		% ===================================================================
 		function setColours(me)
-			me.colour = me.colourList{me.colourIndex};
+			[~ , name]=getP(me,'colour');
+			me.(name) = me.colourList{me.colourIndex};
 			me.backgroundColour = me.colourList{me.bgcolourIndex};
 		end
 		
@@ -731,7 +748,6 @@ classdef rfMapper < barStimulus
 			end
             me.barWidthOut = width / me.ppd;
             me.barHeightOut = height / me.ppd;
-            me.colourOut = me.colour;
             update(me);
 		end
 	end

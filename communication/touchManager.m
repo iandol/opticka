@@ -163,7 +163,7 @@ classdef touchManager < optickaCore
 			end
 		end
 		
-		%===========GETEVENT=========
+		%===========CHECK TOUCH WINDOW=========
 		function [result, x, y] = checkTouchWindow(me, choice)
 			result = false; x = []; y = [];
 			if me.isDummy

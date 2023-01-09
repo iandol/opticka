@@ -93,14 +93,18 @@ classdef dotsStimulus < baseStimulus
 		kernel				= []
 		shader				= 0
 		%> regexes for object management during construction
-		allowedProperties='msrcMode|mdstMode|type|density|dotSize|colourType|coherence|dotType|kill|mask|maskIsProcedural|maskSmoothing|maskColour';
+		allowedProperties={'msrcMode', 'mdstMode', 'type', 'density', ...
+			'dotSize', 'colourType', 'coherence', 'dotType', 'kill', 'mask', ...
+			'maskIsProcedural', 'maskSmoothing', 'maskColour'}
 		%> regexes for object management during setup
-		ignoreProperties='name|family|xy|dxdy|colours|mask|maskTexture|maskIsProcedural|maskColour|colourType|msrcMode|mdstMode'
+		ignoreProperties={'name', 'family', 'xy', 'dxdy', 'colours', 'mask', ...
+			'maskTexture', 'maskIsProcedural', 'maskColour', 'colourType', ...
+			'msrcMode', 'mdstMode'}
 	end
 	
 	%=======================================================================
 	methods %------------------PUBLIC METHODS
-		%=======================================================================
+	%=======================================================================
 		
 		% ===================================================================
 		%> @brief Class constructor
@@ -119,7 +123,7 @@ classdef dotsStimulus < baseStimulus
 			
 			me.isRect = false; %uses a point for drawing
 			
-			me.ignoreProperties = ['^(' me.ignorePropertiesBase '|' me.ignoreProperties ')$'];
+			me.ignoreProperties = [me.ignorePropertiesBase me.ignoreProperties];
 			me.salutation('constructor','Dots Stimulus initialisation complete');
 		end
 		
@@ -141,16 +145,13 @@ classdef dotsStimulus < baseStimulus
 			
 			fn = sort(fieldnames(me));
 			for j=1:length(fn)
-				if isempty(me.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},me.ignoreProperties, 'once')) %create a temporary dynamic property
+				if ~matches(fn{j}, me.ignoreProperties) %create a temporary dynamic property
 					p=me.addprop([fn{j} 'Out']);
-					p.Transient = true;%p.Hidden = true;
 					if strcmp(fn{j},'size');p.SetMethod = @set_sizeOut;end
 					if strcmp(fn{j},'dotSize');p.SetMethod = @set_dotSizeOut;end
 					if strcmp(fn{j},'xPosition');p.SetMethod = @set_xPositionOut;end
 					if strcmp(fn{j},'yPosition');p.SetMethod = @set_yPositionOut;end
 					if strcmp(fn{j},'density');p.SetMethod = @set_densityOut;end
-				end
-				if isempty(regexp(fn{j},me.ignoreProperties, 'once'))
 					me.([fn{j} 'Out']) = me.(fn{j}); %copy our property value to our tempory copy
 				end
 			end

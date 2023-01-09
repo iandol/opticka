@@ -48,9 +48,9 @@ classdef imageStimulus < baseStimulus
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> allowed properties passed to object upon construction
-		allowedProperties='type|fileName|multipleImages|contrast|scale';
+		allowedProperties = {'type', 'fileName', 'multipleImages', 'contrast', 'scale'}
 		%>properties to not create transient copies of during setup phase
-		ignoreProperties = 'type|scale|fileName|multipleImages'
+		ignoreProperties = {'type', 'scale', 'fileName', 'multipleImages'}
 	end
 	
 	%=======================================================================
@@ -77,7 +77,7 @@ classdef imageStimulus < baseStimulus
 			
 			checkFileName(me);
 			
-			me.ignoreProperties = ['^(' me.ignorePropertiesBase '|' me.ignoreProperties ')$'];
+			me.ignoreProperties = [me.ignorePropertiesBase me.ignoreProperties];
 			me.salutation('constructor','Image Stimulus initialisation complete');
 		end
 		
@@ -116,40 +116,24 @@ classdef imageStimulus < baseStimulus
 
 			fn = sort(properties(me));
 			for j=1:length(fn)
-				if isempty(me.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},me.ignoreProperties, 'once')) %create a temporary dynamic property
-					p=me.addprop([fn{j} 'Out']);
-					p.Transient = true;%p.Hidden = true;
-					if strcmp(fn{j},'xPosition');p.SetMethod = @set_xPositionOut;end
-					if strcmp(fn{j},'yPosition');p.SetMethod = @set_yPositionOut;end
-				end
-				if isempty(regexp(fn{j},me.ignoreProperties, 'once'))
+				if ~matches(fn{j}, me.ignoreProperties) %create a temporary dynamic property
+					p = me.addprop([fn{j} 'Out']);
+					if strcmp(fn{j},'xPosition'); p.SetMethod = @set_xPositionOut; end
+					if strcmp(fn{j},'yPosition'); p.SetMethod = @set_yPositionOut; end
 					me.([fn{j} 'Out']) = me.(fn{j}); %copy our property value to our tempory copy
 				end
 			end
 
+			addRuntimeProperties(me);
+
 			loadImage(me, in);
-			
-			if isempty(me.findprop('doDots'));p=me.addprop('doDots');p.Transient = true;end
-			if isempty(me.findprop('doMotion'));p=me.addprop('doMotion');p.Transient = true;end
-			if isempty(me.findprop('doDrift'));p=me.addprop('doDrift');p.Transient = true;end
-			if isempty(me.findprop('doFlash'));p=me.addprop('doFlash');p.Transient = true;end
-			me.doDots = false;
-			me.doMotion = false;
-			me.doDrift = false;
-			me.doFlash = false;
-			
-			if me.speed>0 %we need to say this needs animating
-				me.doMotion=true;
- 				%sM.task.stimIsMoving=[sM.task.stimIsMoving i];
-			else
-				me.doMotion=false;
-			end
 			
 			if me.sizeOut > 0
 				me.scale = me.sizeOut / (me.width / me.ppd);
 			end
 			
 			me.inSetup = false; me.isSetup = true;
+			
 			computePosition(me);
 			setRect(me);
 

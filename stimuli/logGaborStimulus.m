@@ -79,11 +79,11 @@ classdef logGaborStimulus < baseStimulus
 		wasMaskColourBlank = false
 		randomTexture = true;
 		%> allowed properties passed to object upon construction
-		allowedProperties=['type|direction|lockAngle|fileName|contrast|'...
-			'sf|sfSigma|angleSigma|scale|seed|mask|maskColour|'...
-			'maskSmoothing|modulateColour|regenerateTexture|phaseReverseTime'];
+		allowedProperties = {'type', 'direction', 'lockAngle', 'fileName', 'contrast'...
+			'sf', 'sfSigma', 'angleSigma', 'scale', 'seed', 'mask', 'maskColour'...
+			'maskSmoothing', 'modulateColour', 'regenerateTexture', 'phaseReverseTime'}
 		%>properties to not create transient copies of during setup phase
-		ignoreProperties = 'scale|fileName|interpMethod|pixelScale|mask'
+		ignoreProperties = {'scale', 'fileName', 'interpMethod', 'pixelScale', 'mask'}
 	end
 	
 	%=======================================================================
@@ -110,7 +110,7 @@ classdef logGaborStimulus < baseStimulus
 
 			checkFileName(me);
 
-			me.ignoreProperties = ['^(' me.ignorePropertiesBase '|' me.ignoreProperties ')$'];
+			me.ignoreProperties = [me.ignorePropertiesBase me.ignoreProperties];
 			me.salutation('constructor','logGabor Stimulus initialisation complete');
 		end
 		
@@ -146,28 +146,23 @@ classdef logGaborStimulus < baseStimulus
 
 			fn = sort(properties(me));
 			for j=1:length(fn)
-				if isempty(me.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},me.ignoreProperties, 'once')) %create a temporary dynamic property
-					p=me.addprop([fn{j} 'Out']);
-					p.Transient = true;%p.Hidden = true;
-					if strcmp(fn{j},'xPosition');p.SetMethod = @set_xPositionOut;end
-					if strcmp(fn{j},'yPosition');p.SetMethod = @set_yPositionOut;end
-					if strcmp(fn{j},'size');p.SetMethod = @set_sizeOut;end
-				end
-				if isempty(regexp(fn{j},me.ignoreProperties, 'once'))
+				if ~matches(fn{j}, me.ignoreProperties) %create a temporary dynamic property
+					p = me.addprop([fn{j} 'Out']);
+					if strcmp(fn{j},'xPosition'); p.SetMethod = @set_xPositionOut; end
+					if strcmp(fn{j},'yPosition'); p.SetMethod = @set_yPositionOut; end
+					if strcmp(fn{j},'size'); p.SetMethod = @set_sizeOut; end
 					me.([fn{j} 'Out']) = me.(fn{j}); %copy our property value to our tempory copy
 				end
 			end
+
+			addRuntimeProperties(me);
 
 			if me.angleSigma == 0; me.angleSigmaOut = 0.001; end
 
 			loadImage(me, in);
 
 			%build the mask
-			if me.mask
-				makeMask(me);
-			end
-
-			addRuntimeProperties(me);
+			if me.mask; makeMask(me); end
 
 			if me.sizeOut > 0
 				me.scale = me.sizeOut / (me.width / me.ppd);

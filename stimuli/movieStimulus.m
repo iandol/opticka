@@ -78,7 +78,7 @@ classdef movieStimulus < baseStimulus
 	
 	properties (SetAccess = protected, GetAccess = public, Hidden = true)
 		typeList = {'movie'}
-		fileNameList = 'filerequestor';
+		fileNameList = 'filerequestor'
 	end
 	
 	properties (SetAccess = protected, GetAccess = public, Transient = true)
@@ -91,16 +91,21 @@ classdef movieStimulus < baseStimulus
 
 	properties (SetAccess = protected, GetAccess = ?baseStimulus)
 		%> properties to not show in the UI panel
-		ignorePropertiesUI = 'alpha';
+		ignorePropertiesUI = 'alpha'
 	end
 	
 	properties (SetAccess = protected, GetAccess = protected)
 		msrcMode			= 'GL_SRC_ALPHA'
 		mdstMode			= 'GL_ONE_MINUS_SRC_ALPHA'
 		%> allowed properties passed to object upon construction
-		allowedProperties='fileName|blocking|pixelFormat|preloadSecs|specialFlagsOpen|specialFlagsFrame|specialFlags2Frame|loopStrategy|mask|maskTolerance|enforceBlending|direction';
+		allowedProperties = {'fileName', 'blocking', 'pixelFormat', 'preloadSecs', ...
+			'specialFlagsOpen', 'specialFlagsFrame', 'specialFlags2Frame', 'loopStrategy', ...
+			'mask', 'maskTolerance', 'enforceBlending', 'direction'}
 		%> properties to not create transient copies of during setup phase
-		ignoreProperties = 'buffertex|shader|screenVals|movie|duration|fps|width|height|count|scale|fileName|pixelFormat|preloadSecs|specialFlagsOpen|specialFlagsFrame|specialFlags2Frame|loopStrategy'
+		ignoreProperties = {'buffertex', 'shader', 'screenVals', 'movie', 'duration', ...
+			'fps', 'width', 'height', 'count', 'scale', 'fileName', 'pixelFormat', ...
+			'preloadSecs', 'specialFlagsOpen', 'specialFlagsFrame', 'specialFlags2Frame', ...
+			'loopStrategy'}
 	end
 	
 	%=======================================================================
@@ -127,7 +132,7 @@ classdef movieStimulus < baseStimulus
 			
 			checkFileName(me);
 			
-			me.ignoreProperties = ['^(' me.ignorePropertiesBase '|' me.ignoreProperties ')$'];
+			me.ignoreProperties = [me.ignorePropertiesBase me.ignoreProperties];
 			me.salutation('constructor','Movie Stimulus initialisation complete');
 		end
 		
@@ -167,15 +172,12 @@ classdef movieStimulus < baseStimulus
 			me.screenVals = sM.screenVals;
 			me.texture = []; %we need to reset this
 			
-			fn = fieldnames(me);
-			for j=1:length(fn)
-				if isempty(me.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},me.ignoreProperties, 'once')) %create a temporary dynamic property
-					p=me.addprop([fn{j} 'Out']);
-					p.Transient = true;%p.Hidden = true;
+			fn = sort(fieldnames(me));
+			for j=1:numel(fn)
+				if ~matches(fn{j}, me.ignoreProperties)%create a temporary dynamic property
+					p = addprop(me, [fn{j} 'Out']);
 					if strcmp(fn{j},'xPosition');p.SetMethod = @set_xPositionOut;end
 					if strcmp(fn{j},'yPosition');p.SetMethod = @set_yPositionOut;end
-				end
-				if isempty(regexp(fn{j},me.ignoreProperties, 'once'))
 					me.([fn{j} 'Out']) = me.(fn{j}); %copy our property value to our tempory copy
 				end
 			end
@@ -382,7 +384,7 @@ classdef movieStimulus < baseStimulus
 				p = mfilename('fullpath');
 				p = fileparts(p);
 				me.fileName = [p filesep 'monkey-dance.avi'];
-				warning('Didn''t find specified file so replacing with default movie!');
+				disp('---> movieStimulus: Didn''t find specified file so replacing with default movie!');
 			end
 		end
 		

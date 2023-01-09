@@ -72,12 +72,13 @@ classdef gaborStimulus < baseStimulus
 		%>to stop a loop between set method and an event
 		sfRecurse = false
 		%> allowed properties passed to object upon construction
-		allowedProperties = ['sf|tf|method|angle|direction|phase|rotationMethod|' ... 
-			'contrast|driftDirection|speed|startPosition|aspectRatio|' ... 
-			'disableNorm|contrastMult|spatialConstant|' ...
-			'correctPhase|phaseReverseTime|phaseOfReverse']
+		allowedProperties = {'sf', 'tf', 'method', 'angle', 'direction', 'phase', 'rotationMethod' ... 
+			'contrast', 'driftDirection', 'speed', 'startPosition', 'aspectRatio' ... 
+			'disableNorm', 'contrastMult', 'spatialConstant' ...
+			'correctPhase', 'phaseReverseTime', 'phaseOfReverse'}
 		%>properties to not create transient copies of during setup phase
-		ignoreProperties = 'name|scale|phaseIncrement|disableNorm|correctPhase|gabor|squareWave|contrastMult|mask'
+		ignoreProperties = {'name', 'scale', 'phaseIncrement', 'disableNorm', 'correctPhase', ...
+			'gabor', 'squareWave', 'contrastMult', 'mask'}
 		%> how many frames between phase reverses
 		phaseCounter = 0
 	end
@@ -110,7 +111,7 @@ classdef gaborStimulus < baseStimulus
 			
 			me.isRect = true; %uses a rect for drawing
 			
-			me.ignoreProperties = ['^(' me.ignorePropertiesBase '|' me.ignoreProperties ')$'];
+			me.ignoreProperties = [me.ignorePropertiesBase me.ignoreProperties];
 			me.salutation('constructor method','Stimulus initialisation complete');
 		end
 		
@@ -133,8 +134,9 @@ classdef gaborStimulus < baseStimulus
 			reset(me); %reset object back to its initial state
 			me.inSetup = true; me.isSetup = false;
 			if isempty(me.isVisible); me.show; end
-			addlistener(me,'changeScale',@me.calculateScale); %use an event to keep scale accurate
-			addlistener(me,'changePhaseIncrement',@me.calculatePhaseIncrement);
+			
+			addlistener(me,'changeScale', @me.calculateScale); %use an event to keep scale accurate
+			addlistener(me,'changePhaseIncrement', @me.calculatePhaseIncrement);
 			
 			me.sM = sM;
 			if ~sM.isOpen; error('Screen needs to be Open!'); end
@@ -144,49 +146,54 @@ classdef gaborStimulus < baseStimulus
 
 			fn = sort(properties(me));
 			for j=1:length(fn)
-				if isempty(me.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},me.ignoreProperties, 'once')) %create a temporary dynamic property
-					p=me.addprop([fn{j} 'Out']);
-					if strcmp(fn{j},'sf');p.SetMethod = @set_sfOut;end
-					if strcmp(fn{j},'tf');p.SetMethod = @set_tfOut;end
-					if strcmp(fn{j},'driftDirection');p.SetMethod = @set_driftDirectionOut;end
-					if strcmp(fn{j},'size');p.SetMethod = @set_sizeOut;end
-					if strcmp(fn{j},'xPosition');p.SetMethod = @set_xPositionOut;end
-					if strcmp(fn{j},'yPosition');p.SetMethod = @set_yPositionOut;end
-				end
-				if isempty(regexp(fn{j},me.ignoreProperties, 'once'))
+				if ~matches(fn{j}, me.ignoreProperties) %create a temporary dynamic property
+					p = addprop(me, [fn{j} 'Out']);
+					if strcmp(fn{j},'sf'); p.SetMethod = @set_sfOut; end
+					if strcmp(fn{j},'tf')
+						p.SetMethod = @set_tfOut;
+						p.SetObservable = true;
+						addlistener(me, [fn{j} 'Out'], 'PostSet', @me.calculatePhaseIncrement); 
+					end
+					if strcmp(fn{j},'driftDirection')
+						p.SetMethod = @set_driftDirectionOut; 
+						p.SetObservable = true;
+						addlistener(me, [fn{j} 'Out'], 'PostSet', @me.calculatePhaseIncrement); 
+					end
+					if strcmp(fn{j},'size')
+						p.SetMethod = @set_sizeOut;
+						p.SetObservable = true;
+						addlistener(me, [fn{j} 'Out'], 'PostSet', @me.calculateScale);
+					end
+					if strcmp(fn{j},'xPosition'); p.SetMethod = @set_xPositionOut; end
+					if strcmp(fn{j},'yPosition'); p.SetMethod = @set_yPositionOut; end
 					me.([fn{j} 'Out']) = me.(fn{j}); %copy our property value to our tempory copy
 				end
 			end
-			
+	
 			addRuntimeProperties(me);
-			
-			
-			if isempty(me.findprop('rotateMode'));p=me.addprop('rotateMode');p.Transient=true;end
+
+			if ~isprop(me,'rotateMode'); addprop(me,'rotateMode'); end
 			if me.rotationMethod==1
 				me.rotateMode = kPsychUseTextureMatrixForRotation;
 			else
 				me.rotateMode = [];
 			end
 			
-			if isempty(me.findprop('gratingSize'));p=me.addprop('gratingSize');p.Transient=true;end
+			if ~isprop(me,'gratingSize'); addprop(me,'gratingSize'); end
 			me.gratingSize = round(me.ppd*me.size);
 			
-			if isempty(me.findprop('phaseIncrement'))
-				p=me.addprop('phaseIncrement');
-			end
+			if ~isprop(me,'phaseIncrement'); addprop(me,'phaseIncrement'); end
 			
-			if isempty(me.findprop('driftPhase'));p=me.addprop('driftPhase');p.Transient=true;end
+			if ~isprop(me,'driftPhase'); addprop(me,'driftPhase'); end
 			if me.correctPhase
-				ps=me.calculatePhase;
-				me.driftPhase=me.phaseOut-ps;
+				ps = me.calculatePhase;
+				me.driftPhase = me.phaseOut-ps;
 			else
-				me.driftPhase=me.phaseOut;
+				me.driftPhase = me.phaseOut;
 			end
 			
-			if isempty(me.findprop('res'));p=me.addprop('res');p.Transient=true;end
+			if ~isprop(me,'res'); addprop(me,'res'); end
 			me.res = [me.gratingSize me.gratingSize];
-			
-			if isempty(me.findprop('texture'));p=me.addprop('texture');p.Transient=true;end
 			
 			if me.phaseReverseTime > 0
 				me.phaseCounter = round(me.phaseReverseTime / me.sM.screenVals.ifi);
@@ -202,6 +209,8 @@ classdef gaborStimulus < baseStimulus
 				me.contrastMult);
 			
 			me.inSetup = false; me.isSetup = true;
+
+			notify(me,'changeScale');
 			computePosition(me);
 			setRect(me);
 
@@ -209,11 +218,11 @@ classdef gaborStimulus < baseStimulus
 				me.xPositionOut = value * me.ppd;
 			end
 			function set_yPositionOut(me,value)
-				me.yPositionOut = value*me.ppd;
+				me.yPositionOut = value * me.ppd;
 			end
 			function set_sfOut(me,value)
 				if me.sfRecurse == false
-					me.sfCache = (value/me.ppd);
+					me.sfCache = (value / me.ppd);
 					me.sfOut = me.sfCache * me.scale;
 				else
 					me.sfOut = value;
@@ -223,15 +232,12 @@ classdef gaborStimulus < baseStimulus
 			end
 			function set_tfOut(me,value)
 				me.tfOut = value;
-				notify(me,'changePhaseIncrement');
 			end
 			function set_driftDirectionOut(me,value)
 				me.driftDirectionOut = value;
-				notify(me,'changePhaseIncrement');
 			end
 			function set_sizeOut(me,value)
-				me.sizeOut = value*me.ppd;
-				notify(me,'changeScale');
+				me.sizeOut = value * me.ppd;
 			end
 			
 		end
@@ -358,13 +364,13 @@ classdef gaborStimulus < baseStimulus
 					me.dstRect = CenterRectOnPointd(me.dstRect, me.mouseX, me.mouseY);
 				end
 			else
-				if isempty(me.findprop('directionOut'));
+				if ~isprop(me,'directionOut')
 					[sx sy]=pol2cart(me.d2r(me.direction),me.startPosition);
 				else
 					[sx sy]=pol2cart(me.d2r(me.directionOut),me.startPosition);
 				end
 				me.dstRect=CenterRectOnPointd(me.dstRect,me.sM.xCenter,me.sM.yCenter);
-				if isempty(me.findprop('xPositionOut'));
+				if ~isprop(me,'xPositionOut')
 					me.dstRect=OffsetRect(me.dstRect,(me.xPosition)*me.ppd,(me.yPosition)*me.ppd);
 				else
 					me.dstRect=OffsetRect(me.dstRect,me.xPositionOut+(sx*me.ppd),me.yPositionOut+(sy*me.ppd));
@@ -386,11 +392,12 @@ classdef gaborStimulus < baseStimulus
 		%> many more times), than an event which is only called on update
 		% ===================================================================
 		function calculateScale(me,~,~)
-			me.scale = me.sizeOut/(me.size*me.ppd);
+			me.scale = me.sizeOut / (me.size * me.ppd);
 			me.sfRecurse = true;
 			me.sfOut = me.sfCache * me.scale;
-			%fprintf('\nCalculate SFOut: %d | in: %d | scale: %d\n', me.sfOut, me.sfCache, me.scale);
-			me.spatialConstantOut=me.sizeOut/me.spatialConstant;
+			if isprop(me,'spatialConstantOut')
+				me.spatialConstantOut = me.sizeOut / me.spatialConstant;
+			end
 		end
 		
 		% ===================================================================
@@ -399,12 +406,10 @@ classdef gaborStimulus < baseStimulus
 		%> many more times), than an event which is only called on update
 		% ===================================================================
 		function calculatePhaseIncrement(me,~,~)
-			if ~isempty(me.findprop('tfOut'))
+			if isprop(me,'tfOut')
 				me.phaseIncrement = (me.tfOut * 360) * me.sM.screenVals.ifi;
-				if ~isempty(me.findprop('driftDirectionOut'))
-					if me.driftDirectionOut == false
+				if isprop(me,'driftDirectionOut') && me.driftDirectionOut == false
 						me.phaseIncrement = -me.phaseIncrement;
-					end
 				end
 			end
 		end

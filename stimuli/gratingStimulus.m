@@ -89,12 +89,13 @@ classdef gratingStimulus < baseStimulus
 		%>to stop a loop between set method and an event
 		sfRecurse				= false
 		%> allowed properties passed to object upon construction
-		allowedProperties = ['type|sf|tf|angle|direction|phase|rotateTexture|' ...
-			'contrast|mask|reverseDirection|speed|startPosition|aspectRatio|' ...
-			'contrastMult|sigma|useAlpha|smoothMethod|' ...
-			'correctPhase|phaseReverseTime|phaseOfReverse']
+		allowedProperties = {'type', 'sf', 'tf', 'angle', 'direction', 'phase', 'rotateTexture' ...
+			'contrast', 'mask', 'reverseDirection', 'speed', 'startPosition', 'aspectRatio' ...
+			'contrastMult', 'sigma', 'useAlpha', 'smoothMethod' ...
+			'correctPhase', 'phaseReverseTime', 'phaseOfReverse'}
 		%>properties to not create transient copies of during setup phase
-		ignoreProperties		= 'name|type|scale|phaseIncrement|correctPhase|contrastMult|mask'
+		ignoreProperties = {'name', 'type', 'scale', 'phaseIncrement', 'correctPhase', ...
+			'contrastMult', 'mask'}
 		%> how many frames between phase reverses
 		phaseCounter			= 0
 		%> do we generate a square wave?
@@ -126,7 +127,7 @@ classdef gratingStimulus < baseStimulus
 			
 			me.isRect = true; %uses a rect for drawing
 
-			me.ignoreProperties = ['^(' me.ignorePropertiesBase '|' me.ignoreProperties ')$'];
+			me.ignoreProperties = [me.ignorePropertiesBase me.ignoreProperties];
 			me.salutation('constructor','Initialisation complete');
 		end
 
@@ -148,58 +149,55 @@ classdef gratingStimulus < baseStimulus
 
 			reset(me); %reset it back to its initial state
 			me.inSetup = true;
-			if isempty(me.isVisible)
-				show(me);
-			end
+			if isempty(me.isVisible); show(me); end
 			
 			me.sM = sM;
-			if ~sM.isOpen; warning('Screen needs to be Open!'); end
+			if ~sM.isOpen; error('Screen needs to be Open!'); end
+			me.ppd=sM.ppd;
 			me.screenVals = sM.screenVals;
-			me.ppd = sM.ppd;			
-
 			me.texture = []; %we need to reset this
 
-			props = properties(me);
-			for pn = 1:numel(props)
-				pr = props{pn};
-				if isempty(regexp(pr, me.ignoreProperties, 'once')) %create a temporary dynamic property
-					p=me.addprop([pr 'Out']);
-					if strcmp(pr,'sf'); p.SetMethod = @set_sfOut; end
-					if strcmp(pr,'tf'); ...
-							p.SetMethod = @set_tfOut; ...
-							p.SetObservable = true; ...
-							addlistener(me, [pr 'Out'], 'PostSet', @me.calculatePhaseIncrement); end
-					if strcmp(pr,'reverseDirection'); ...
-							p.SetMethod = @set_reverseDirectionOut; ...
-							p.SetObservable = true; ...
-							addlistener(me, [pr 'Out'], 'PostSet', @me.calculatePhaseIncrement); end
-					if strcmp(pr,'size'); ...
-							p.SetMethod = @set_sizeOut; ...
-							p.SetObservable = true; ...
-							addlistener(me, [pr 'Out'], 'PostSet', @me.calculateScale); end
-					if strcmp(pr,'xPosition');p.SetMethod = @set_xPositionOut;end
-					if strcmp(pr,'yPosition');p.SetMethod = @set_yPositionOut;end
-					me.([pr 'Out']) = me.(pr); %copy our property value to our temporary copy
+			fn = sort(properties(me));
+			for j=1:length(fn)
+				if ~matches(fn{j}, me.ignoreProperties) %create a temporary dynamic property
+					p = addprop(me, [fn{j} 'Out']);
+					if strcmp(fn{j},'sf'); p.SetMethod = @set_sfOut; end
+					if strcmp(fn{j},'tf')
+						p.SetMethod = @set_tfOut;
+						p.SetObservable = true;
+						addlistener(me, [fn{j} 'Out'], 'PostSet', @me.calculatePhaseIncrement); 
+					end
+					if strcmp(fn{j},'reverseDirection')
+						p.SetMethod = @set_reverseDirectionOut;
+						p.SetObservable = true; 
+						addlistener(me, [fn{j} 'Out'], 'PostSet', @me.calculatePhaseIncrement); 
+					end
+					if strcmp(fn{j},'size')
+						p.SetMethod = @set_sizeOut;
+						p.SetObservable = true;
+						addlistener(me, [fn{j} 'Out'], 'PostSet', @me.calculateScale); 
+					end
+					if strcmp(fn{j},'xPosition');p.SetMethod = @set_xPositionOut;end
+					if strcmp(fn{j},'yPosition');p.SetMethod = @set_yPositionOut;end
+					me.([fn{j} 'Out']) = me.(fn{j}); %copy our property value to our temporary copy
 				end
 			end
 
 			addRuntimeProperties(me);
 
-			if isempty(me.findprop('rotateMode'));p=me.addprop('rotateMode');p.Transient=true;p.Hidden=true;end
+			if ~isprop(me, 'rotateMode'); addprop(me, 'rotateMode'); end
 			if me.rotateTexture
 				me.rotateMode = kPsychUseTextureMatrixForRotation;
 			else
 				me.rotateMode = [];
 			end
 
-			if isempty(me.findprop('gratingSize'));p=me.addprop('gratingSize');p.Transient=true;end
+			if ~isprop(me, 'gratingSize'); addprop(me, 'gratingSize'); end
 			me.gratingSize = round(me.ppd*me.size);
 
-			if isempty(me.findprop('phaseIncrement'))
-				p=me.addprop('phaseIncrement');
-			end
+			if ~isprop(me,'phaseIncrement'); addprop(me, 'phaseIncrement'); end
 
-			if isempty(me.findprop('driftPhase'));p=me.addprop('driftPhase');p.Transient=true;end
+			if ~isprop(me, 'driftPhase'); addprop(me,'driftPhase'); end
 			if me.correctPhase
 				ps=me.calculatePhase;
 				me.driftPhase=me.phaseOut-ps;
@@ -207,7 +205,7 @@ classdef gratingStimulus < baseStimulus
 				me.driftPhase=me.phaseOut;
 			end
 
-			if isempty(me.findprop('res'));p=me.addprop('res');p.Transient=true;end
+			if ~isprop(me,'res'); addprop(me,'res'); end
 
 			switch length(me.aspectRatio)
 				case 1
@@ -221,8 +219,6 @@ classdef gratingStimulus < baseStimulus
 			else
 				me.maskValue = [];
 			end
-
-			if isempty(me.findprop('texture'));p=me.addprop('texture');p.Transient=true;end
 
 			if me.phaseReverseTime > 0
 				me.phaseCounter = round(me.phaseReverseTime / me.sM.screenVals.ifi);
@@ -255,6 +251,7 @@ classdef gratingStimulus < baseStimulus
 			end
 
 			me.inSetup = false; me.isSetup = true;
+			
 			computePosition(me);
 			setRect(me);
 

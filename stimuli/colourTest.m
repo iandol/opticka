@@ -23,7 +23,7 @@ classdef colourTest < spotStimulus
 		colourIndex = 1
 		bgcolourIndex = 2
 		colourList = {[1 1 1];[0 0 0];[1 0 0];[0 1 0];[0 0 1];[1 1 0];[1 0 1];[0 1 1];[.5 .5 .5]}
-		allowedProperties='type|screen|blend|antiAlias'
+		allowedProperties={'type','screen','blend','antiAlias'}
 	end
 	
 	%=======================================================================

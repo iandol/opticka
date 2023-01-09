@@ -66,11 +66,11 @@ classdef checkerboardStimulus < baseStimulus
 		%>to stop a loop between set method and an event
 		sfRecurse				= false
 		%> allowed properties passed to object upon construction
-		allowedProperties = ['colour2|sf|tf|angle|direction|phase|rotateTexture|' ... 
-			'contrast|mask|reverseDirection|speed|startPosition|aspectRatio|' ... 
-			'sigma|correctPhase|phaseReverseTime|phaseOfReverse']
+		allowedProperties = {'colour2', 'sf', 'tf', 'angle', 'direction', 'phase', 'rotateTexture' ... 
+			'contrast', 'mask', 'reverseDirection', 'speed', 'startPosition', 'aspectRatio' ... 
+			'sigma', 'correctPhase', 'phaseReverseTime', 'phaseOfReverse'}
 		%>properties to not create transient copies of during setup phase
-		ignoreProperties = 'name|type|scale|phaseIncrement|correctPhase|contrastMult|mask'
+		ignoreProperties = {'name', 'type', 'scale', 'phaseIncrement', 'correctPhase', 'contrastMult', 'mask'}
 		%> how many frames between phase reverses
 		phaseCounter			= 0
 		%> mask value (radius for the procedural shader)
@@ -107,7 +107,7 @@ classdef checkerboardStimulus < baseStimulus
 			
 			me.isRect = true; %uses a rect for drawing
 			
-			me.ignoreProperties = ['^(' me.ignorePropertiesBase '|' me.ignoreProperties ')$'];
+			me.ignoreProperties = [me.ignorePropertiesBase me.ignoreProperties];
 			me.salutation('constructor method','Stimulus initialisation complete');
 		end
 		
@@ -143,7 +143,7 @@ classdef checkerboardStimulus < baseStimulus
 
 			fn = sort(properties(me));
 			for j=1:length(fn)
-				if isempty(me.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},me.ignoreProperties, 'once')) %create a temporary dynamic property
+				if ~matches(fn{j}, me.ignoreProperties) %create a temporary dynamic property
 					p=me.addprop([fn{j} 'Out']);
 					if strcmp(fn{j},'sf');p.SetMethod = @set_sfOut;end
 					if strcmp(fn{j},'tf');p.SetMethod = @set_tfOut;end
@@ -151,8 +151,6 @@ classdef checkerboardStimulus < baseStimulus
 					if strcmp(fn{j},'size');p.SetMethod = @set_sizeOut;end
 					if strcmp(fn{j},'xPosition');p.SetMethod = @set_xPositionOut;end
 					if strcmp(fn{j},'yPosition');p.SetMethod = @set_yPositionOut;end
-				end
-				if isempty(regexp(fn{j},me.ignoreProperties, 'once'))
 					me.([fn{j} 'Out']) = me.(fn{j}); %copy our property value to our tempory copy
 				end
 			end

@@ -22,7 +22,7 @@ classdef annulusStimulus < baseStimulus
 		texid=[];
     end
     properties (SetAccess = private, GetAccess = private)
-		allowedProperties='^(family|sf1|tf1|sf2|tf2|method|angle1|phase1|angle2|phase2|contrast1|contrast2|texid)$';
+		allowedProperties={'family', 'sf1', 'tf1', 'sf2', 'tf2', 'method', 'angle1', 'phase1', 'angle2', 'phase2', 'contrast1', 'contrast2', 'texid'}
 	end
     
     methods

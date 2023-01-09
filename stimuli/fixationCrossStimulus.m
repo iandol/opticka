@@ -59,8 +59,9 @@ classdef fixationCrossStimulus < baseStimulus
 		currentColour				= [1 1 1]
 		colourOutTemp				= [1 1 1]
 		colour2OutTemp				= [1 1 1]
-		allowedProperties='showDisk|type|flashTime|flashOn|flashColour|colour2|alpha2|lineWidth'
-		ignoreProperties = 'flashSwitch'
+		allowedProperties={'showDisk', 'type', 'flashTime', 'flashOn', ...
+			'flashColour', 'colour2', 'alpha2', 'lineWidth'}
+		ignoreProperties = {'flashSwitch','flashOn'}
 	end
 	
 	%=======================================================================
@@ -85,7 +86,7 @@ classdef fixationCrossStimulus < baseStimulus
 			
 			me.isRect = false; %uses a rect for drawing
 
-			me.ignoreProperties = ['^(' me.ignorePropertiesBase '|' me.ignoreProperties ')$'];
+			me.ignoreProperties = [me.ignorePropertiesBase me.ignoreProperties];
 			me.salutation('constructor','Stimulus initialisation complete');
 		end
 		
@@ -107,19 +108,16 @@ classdef fixationCrossStimulus < baseStimulus
 			
 			fn = sort(properties(me));
 			for j=1:length(fn)
-				if isempty(me.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},me.ignoreProperties, 'once'))%create a temporary dynamic property
-					p=me.addprop([fn{j} 'Out']);
-					p.Transient = true;%p.Hidden = true;
-					if strcmp(fn{j},'size');p.SetMethod = @set_sizeOut;end
-					if strcmp(fn{j},'lineWidth');p.SetMethod = @set_lineWidthOut;end
-					if strcmp(fn{j},'xPosition');p.SetMethod = @set_xPositionOut;end
-					if strcmp(fn{j},'yPosition');p.SetMethod = @set_yPositionOut;end
-					if strcmp(fn{j},'colour');p.SetMethod = @set_colourOut;end
-					if strcmp(fn{j},'colour2');p.SetMethod = @set_colour2Out;end
-					if strcmp(fn{j},'alpha');p.SetMethod = @set_alphaOut;end
-					if strcmp(fn{j},'alpha2');p.SetMethod = @set_alpha2Out;end
-				end
-				if isempty(regexp(fn{j},me.ignoreProperties, 'once'))
+				if ~matches(fn{j}, me.ignoreProperties)%create a temporary dynamic property
+					p = addprop(me, [fn{j} 'Out']);
+					if strcmp(fn{j},'size'); p.SetMethod = @set_sizeOut; end
+					if strcmp(fn{j},'lineWidth'); p.SetMethod = @set_lineWidthOut; end
+					if strcmp(fn{j},'xPosition'); p.SetMethod = @set_xPositionOut; end
+					if strcmp(fn{j},'yPosition'); p.SetMethod = @set_yPositionOut; end
+					if strcmp(fn{j},'colour'); p.SetMethod = @set_colourOut; end
+					if strcmp(fn{j},'colour2'); p.SetMethod = @set_colour2Out; end
+					if strcmp(fn{j},'alpha'); p.SetMethod = @set_alphaOut; end
+					if strcmp(fn{j},'alpha2'); p.SetMethod = @set_alpha2Out; end
 					me.([fn{j} 'Out']) = me.(fn{j}); %copy our property value to our tempory copy
 				end
 			end

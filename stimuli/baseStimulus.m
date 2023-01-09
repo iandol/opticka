@@ -136,13 +136,13 @@ classdef baseStimulus < optickaCore & dynamicprops
 		setLoop = 0;
 		%> Which properties to ignore to clone when making transient copies in
 		%> the setup method
-		ignorePropertiesBase char = ['handles|ppd|sM|name|comment|fullName|'...
-			'family|type|dX|dY|delta|verbose|texture|dstRect|xOut|yOut|'...
-			'isVisible|dateStamp|paths|uuid|tick|mouseOverride|isRect|'...
-			'dstRect|mvRect|sM|screenVals|isSetup|isGUI|showOnTracker|'...
-			'doDots|doMotion|doDrift|doFlash|doAnimator']
+		ignorePropertiesBase = {'handles','ppd','sM','name','comment','fullName'...
+			'family','type','dX','dY','delta','verbose','texture','dstRect','xFinal','yFinal'...
+			'isVisible','dateStamp','paths','uuid','tick','mouseOverride','isRect'...
+			'dstRect','mvRect','sM','screenVals','isSetup','isGUI','showOnTracker'...
+			'doDots','doMotion','doDrift','doFlash','doAnimator'}
 		%> Which properties to not draw in the UI panel
-		ignorePropertiesUIBase char = ['animator|fullName']
+		ignorePropertiesUIBase char = {'animator','fullName'}
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -406,25 +406,25 @@ classdef baseStimulus < optickaCore & dynamicprops
 				end
 				
 				if ~s.isOpen
-					sv=open(s); %open PTB screen
-				else
-					sv = s.screenVals;
+					sv=open(s); 
 				end
+				sv = s.screenVals;
 				setup(me,s); %setup our stimulus object
 				
 				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
 
 				drawGrid(s); %draw +-5 degree dot grid
 				
-				if ~strcmpi(me.type,'movie'); draw(me); resetTicks(me); end
-				
 				if benchmark
-					Screen('DrawText', s.win, 'BENCHMARK: screen won''t update properly, see FPS in command window at end.', 5,5,[0 0 0]);
+					drawText(s, 'BENCHMARK: screen won''t update properly, see FPS in command window at end.');
 				else
-					Screen('DrawText', s.win, sprintf('Stimulus will be static for 2 secs (debug grid = ±1°), then animate for %.2f seconds',runtime), 5,5,[0 0 0]);
+					drawGrid(s); %draw degree dot grid
+					drawScreenCenter(s);
+					drawText(s, ['Preview ALL with grid = ±1°; static for 1 seconds, then animate for ' num2str(runtime) ' seconds...'])
 				end
-				
+				if ~strcmpi(me.type,'movie'); draw(me); resetTicks(me); end
 				flip(s);
+				update(me);
 				if benchmark
 					WaitSecs('YieldSecs',0.25);
 				else
@@ -439,7 +439,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				while notFinished
 					nFrames = nFrames + 1;
 					draw(me); %draw stimulus
-					if s.visualDebug&&~benchmark; drawGrid(s); end
+					if ~benchmark && s.debug; drawGrid(s); end
 					finishDrawing(s); %tell PTB/GPU to draw
  					animate(me); %animate stimulus, will be seen on next draw
 					if benchmark
@@ -480,10 +480,10 @@ classdef baseStimulus < optickaCore & dynamicprops
 				warning on
 			catch ME
 				warning on
-				getReport(ME)
-				Priority(0);
+				try getReport(ME); end
+				try Priority(0); end
 				if exist('s','var') && isa(s,'screenManager')
-					close(s);
+					try close(s); end
 				end
 				clear fps benchmark runtime b bb i; %clear up a bit
 				reset(me); %reset our stimulus ready for use again
@@ -569,7 +569,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 			pr = findAttributesandType(me,'SetAccess','public','notlogical');
 			pr = sort(pr);
 			if isprop(me,'ignorePropertiesUI')
-				excl = [me.ignorePropertiesUIBase '|' me.ignorePropertiesUI];
+				excl = [me.ignorePropertiesUIBase me.ignorePropertiesUI];
 			else
 				excl = me.ignorePropertiesUIBase;
 			end		

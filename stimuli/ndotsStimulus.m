@@ -113,9 +113,14 @@ classdef ndotsStimulus < baseStimulus
 		fieldSize
 		kernel = []
 		shader = 0
-		allowedProperties='msrcMode|mdstMode|directionWeights|mask|isMovingAsHerd|isWrapping|isLimitedLifetime|dotType|speed|density|dotSize|angle|coherence|density|interleaving|drunkenWalk';
-		ignoreProperties='msrcMode|mdstMode|pixelXY|pixelOrigin|deltaR|frameNumber|frameSelector|dotLifetimes|nDots|normalizedXY|pixelScale|maskTexture|maskDestinationRect|maskSourceRect'
-	end
+		allowedProperties = {'msrcMode', 'mdstMode', 'directionWeights', ...
+			'mask', 'isMovingAsHerd', 'isWrapping', 'isLimitedLifetime', ...
+			'dotType', 'speed', 'density', 'dotSize', 'angle', 'coherence', ...
+			'density', 'interleaving', 'drunkenWalk'}
+		ignoreProperties = {'msrcMode', 'mdstMode', 'pixelXY', 'pixelOrigin', ...
+			'deltaR', 'frameNumber', 'frameSelector', 'dotLifetimes', 'nDots', ...
+			'normalizedXY', 'pixelScale', 'maskTexture', 'maskDestinationRect', 'maskSourceRect'}
+	end 
 	
 	methods
 		% ===================================================================
@@ -133,7 +138,7 @@ classdef ndotsStimulus < baseStimulus
 			me=me@baseStimulus(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
 			
-			me.ignoreProperties = ['^(' me.ignorePropertiesBase '|' me.ignoreProperties ')$'];
+			me.ignoreProperties = [me.ignorePropertiesBase me.ignoreProperties];
 			me.salutation('constructor','nDots Stimulus initialisation complete');
 		end
 		
@@ -156,15 +161,12 @@ classdef ndotsStimulus < baseStimulus
 			
 			fn = sort(properties(me));
 			for j=1:length(fn)
-				if isempty(me.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},me.ignoreProperties, 'once')) %create a temporary dynamic property
+				if ~matches(fn{j}, me.ignoreProperties) %create a temporary dynamic property
 					p=me.addprop([fn{j} 'Out']);
-					p.Transient = true;%p.Hidden = true;
 					if strcmp(fn{j},'size');p.SetMethod = @set_sizeOut;end
 					if strcmp(fn{j},'dotSize');p.SetMethod = @set_dotSizeOut;end
 					if strcmp(fn{j},'xPosition');p.SetMethod = @set_xPositionOut;end
 					if strcmp(fn{j},'yPosition');p.SetMethod = @set_yPositionOut;end
-				end
-				if isempty(regexp(fn{j},me.ignoreProperties, 'once'))
 					me.([fn{j} 'Out']) = me.(fn{j}); %copy our property value to our tempory copy
 				end
 			end

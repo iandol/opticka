@@ -113,17 +113,14 @@ classdef apparentMotionStimulus < baseStimulus
 			obj.sM = sM;
 			obj.ppd=sM.ppd;
 			
-			fn = fieldnames(apparentMotionStimulus);
+			fn = sort(properties(me));
 			for j=1:length(fn)
-				if isempty(obj.findprop([fn{j} 'Out'])) && isempty(regexpi(fn{j},obj.ignoreProperties, 'once'))%create a temporary dynamic property
-					p=obj.addprop([fn{j} 'Out']);
-					p.Transient = true;%p.Hidden = true;
+				if ~matches(fn{j}, me.ignoreProperties)
+					p=me.addprop([fn{j} 'Out']);
 					if strcmp(fn{j},'xPosition');p.SetMethod = @set_xPositionOut;end
 					if strcmp(fn{j},'yPosition');p.SetMethod = @set_yPositionOut;end
 					if strcmp(fn{j},'size');p.SetMethod = @set_sizeOut;end
-					if isempty(regexpi(fn{j},obj.ignoreProperties, 'once'))
-						obj.([fn{j} 'Out']) = obj.(fn{j}); %copy our property value to our tempory copy
-					end
+					obj.([fn{j} 'Out']) = obj.(fn{j}); %copy our property value to our tempory copy
 				end
 			end
 			

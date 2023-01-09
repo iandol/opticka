@@ -95,8 +95,10 @@ classdef metaStimulus < optickaCore
 		n_
 		nMask_
 		%> allowed properties passed to object upon construction
-		allowedProperties = 'setChoice|stimulusSets|controlTable|showMask|maskStimuli|verbose|stimuli|screen|choice|fixationChoice|exclusionChoice|stimulusTable|tableChoice'
-		sM
+		allowedProperties = {'setChoice', 'stimulusSets', 'controlTable', 'showMask', ...
+		'maskStimuli', 'verbose', 'stimuli', 'screen', 'choice', 'fixationChoice', ...
+		'exclusionChoice', 'stimulusTable', 'tableChoice'}
+		sM 
 	end
 	
 	%=======================================================================
@@ -470,7 +472,7 @@ classdef metaStimulus < optickaCore
 		%> @brief Run Stimuli in a window to quickly preview them
 		%>
 		% ===================================================================
-		function run(me, benchmark, runtime, s, forceScreen)
+		function run(me, benchmark, runtime, s, forceScreen, showVBL)
 		% run(benchmark, runtime, screenManager, forceFullscreen)
 			try
 				warning off
@@ -488,22 +490,27 @@ classdef metaStimulus < optickaCore
 					s.bitDepth = 'FloatingPoint32BitIfPossible';
 				end
 				if ~exist('forceScreen','var'); forceScreen = -1; end
+				if ~exist('showVBL','var') || isempty(showVBL); showVBL = false; end
 
 				oldscreen = s.screen;
 				oldbitdepth = s.bitDepth;
+				oldwindowed = s.windowed;
 				if forceScreen >= 0
 					s.screen = forceScreen;
 					if forceScreen == 0 % make sure screen 0 does not trigger bits++ etc.
-						s.bitDepth = 'FloatingPoint32BitIfPossible';
+						s.bitDepth = '8bit';
 					end
 				end
 				prepareScreen(s);
 
-				oldwindowed = s.windowed;
 				if benchmark
 					s.windowed = false;
 				elseif forceScreen > -1
-					s.windowed = [0 0 s.screenVals.width/2 s.screenVals.height/2]; %middle of screen
+					if ~isempty(s.windowed) && (length(s.windowed) == 2 || length(s.windowed) == 4)
+						% use existing setting
+					else
+						s.windowed = [0 0 s.screenVals.screenWidth/2 s.screenVals.screenHeight/2]; %half of screen
+					end
 				end
 			
 				if ~s.isOpen
@@ -521,47 +528,71 @@ classdef metaStimulus < optickaCore
 					drawScreenCenter(s);
 					drawText(s, ['Preview ALL with grid = ±1°; static for 1 seconds, then animate for ' num2str(runtime) ' seconds...'])
 				end
-				draw(me);
+				t = me.getTypes;
+				if ~matches('movie', t); draw(me); end
 				flip(s);
 				update(me);
-				WaitSecs('YieldSecs',1);
+				if benchmark
+					WaitSecs('YieldSecs',0.25);
+				else
+					WaitSecs('YieldSecs',2);
+				end
+				if runtime < sv.ifi; runtime = sv.ifi; end
 				nFrames = 0;
-				lastvbl = flip(s);
-				for i = 1:(s.screenVals.fps*runtime) 
+				notFinished = true;
+				benchmarkFrames = floor(sv.fps * runtime);
+				vbl = zeros(benchmarkFrames+1,1);
+				startT = GetSecs; lastvbl = startT;
+				while notFinished
 					nFrames = nFrames + 1;
 					draw(me); %draw stimuli
 					if ~benchmark && s.debug; drawGrid(s); end
-					animate(me); %animate stimuli, ready for next draw();
+					finishDrawing(s); %tell PTB/GPU to draw
+ 					animate(me); %animate stimulus, will be seen on next draw
 					if benchmark
 						Screen('Flip',s.win,0,2,2);
-						if i == 1; vbl = GetSecs; end
+						notFinished = nFrames < benchmarkFrames;
 					else
-						vbl = Screen('Flip',s.win, lastvbl + sv.halfisi); %flip the buffer
-						lastvbl = vbl;
+						vbl(nFrames) = flip(s, lastvbl + sv.halfisi); %flip the buffer
+						lastvbl = vbl(nFrames);
+						% the calculation needs to take into account the
+						% first and last frame times, so we subtract ifi*2
+						notFinished = lastvbl < ( vbl(1) + ( runtime - (sv.ifi * 2) ) );
 					end
-					if i == 1; startT = vbl; end
 				end
-				endT = lastvbl;
-				flip(s);
+				endT = flip(s);
+				if ~benchmark;startT = vbl(1);end
+				diffT = endT - startT;
 				WaitSecs(0.5);
+				vbl = vbl(1:nFrames);
+				if showVBL && ~benchmark
+					figure;
+					plot(diff(vbl)*1e3,'k*');
+					line([0 length(vbl)-1],[sv.ifi*1e3 sv.ifi*1e3],'Color',[0 0 0]);
+					title(sprintf('VBL Times, should be ~%.4f ms',sv.ifi*1e3));
+					ylabel('Time (ms)')
+					xlabel('Frame #')
+				end
 				Priority(0); ShowCursor; ListenChar(0);
 				reset(me); %reset our stimulus ready for use again
 				close(s); %close screen
 				s.screen = oldscreen;
 				s.windowed = oldwindowed;
 				s.bitDepth = oldbitdepth;
-				fps = nFrames / (endT-startT);
-				fprintf('\n\n======>>> Stimulus: %s\n',me.fullName);
-				fprintf('======>>> <strong>SPEED</strong> (%i frames in %.3f secs) = <strong>%.3f</strong> fps\n\n',...
-					nFrames, endT-startT, fps);
-				clear s fps benchmark runtime b bb i; %clear up a bit
+				fps = nFrames / diffT;
+				s = '';
+				for i = 1:me.n; s = [s ' ' me.stimuli{i}.fullName]; end
+				fprintf('\n\n======>>> metaStimulus: %s\n', s);
+				fprintf('======>>> <strong>SPEED</strong> (%i frames in %.3f secs) = <strong>%.2f</strong> fps\n\n',nFrames, diffT, fps);
+				if ~benchmark;fprintf('\b======>>> First - Last frame time: %.3f\n\n',vbl(end)-startT);end
+				clear s fps benchmark runtime b bb i vbl; %clear up a bit
 				warning on
 			catch ME
 				warning on
-				getReport(ME)
-				Priority(0);
+				try getReport(ME); end
+				try Priority(0); end
 				if exist('s','var') && isa(s,'screenManager')
-					close(s);
+					try close(s); end
 				end
 				clear fps benchmark runtime b bb i; %clear up a bit
 				reset(me); %reset our stimulus ready for use again
@@ -574,87 +605,8 @@ classdef metaStimulus < optickaCore
 		%> @brief Run single stimulus in a window to preview
 		%>
 		% ===================================================================
-		function runSingle(me,s,eL,runtime)
-			if ~exist('eL','var') || ~isa(eL,'eyelinkManager')
-				eL = eyelinkManager();
-			end
-			if ~exist('s','var') || ~isa(s,'screenManager')
-				s = screenManager('verbose',false,'blend',true,...
-				'bitDepth','FloatingPoint32BitIfPossible','debug',false,...
-				'backgroundColour',[0.5 0.5 0.5 0]); %use a temporary screenManager object
-			end
-			if ~exist('runtime','var') || isempty(runtime)
-				runtime = 2; %seconds to run
-			end
-			
-			try
-				lJ = labJack('name','runSingle','readResponse', false,'verbose',false);
-				open(s); %open PTB screen
-				setup(me,s); %setup our stimulus object
-
-				fixX = 0;
-				fixY = 0;
-				firstFixInit = 2;
-				firstFixTime = 2;
-				firstFixRadius = 1.25;
-				eL.isDummy = false; %use dummy or real eyelink?
-				eL.recordData = false;
-				eL.sampleRate = 250;
-				eL.updateFixationValues(fixX, fixY, firstFixInit, firstFixTime, firstFixRadius, true);
-
-				initialise(eL,s); %initialise eyelink with our screen
-				%setup(eL); %setup eyelink
-
-				eL.statusMessage('SINGLE TRIAL RUNNING'); %
-				setOffline(eL); 
-				trackerDrawFixation(eL)
-
-				breakString = 'ok';
-				breakloop = false;
-				a=1;
-				startRecording(eL);
-				WaitSecs(1);
-				syncTime(eL);
-				Screen('Flip',s.win);
-				while breakloop == false
-					draw(me); %draw stimulus
-					Screen('DrawingFinished', s.win); %tell PTB/GPU to draw
-
-					getSample(eL);
-					breakString = testSearchHoldFixation(eL,'yes','no');
-
-					if strcmpi(breakString,'yes') 
-						timedTTL(lJ,0,200);
-						breakloop = true;
-						fprintf('metaStimulus runSingle: CORRECT');
-						break;
-					elseif strcmpi(breakString,'no')
-						breakloop = true;
-						fprintf('metaStimulus runSingle: INCORRECT');
-						break;
-					end
-
-					animate(me); %animate stimulus, will be seen on next draw
-
-					Screen('Flip',s.win); %flip the buffer
-				end
-				Screen('Flip',s.win);Screen('Flip',s.win);
-				WaitSecs(1);
-				stopRecording(eL)
-				close(s); %close screen
-				close(eL);
-				close(lJ)
-				reset(me); %reset our stimulus ready for use again
-			catch ME
-				ListenChar(0);
-				Eyelink('Shutdown');
-				close(s);
-				close(eL);
-				close(lJ);
-				reset(me); %reset our stimulus ready for use again
-				rethrow(ME);
-			end
-			
+		function runSingle(me,choice,varargin)
+			me.stimuli{choice}.run(varargin)
 		end
 		% ===================================================================
 		%> @brief print current choice if only single stimulus drawn
@@ -684,6 +636,18 @@ classdef metaStimulus < optickaCore
 		function nMask = get.nMask(me)
 			nMask = length(me.maskStimuli);
 			me.nMask_ = nMask;
+		end
+
+		% ===================================================================
+		%> @brief get nMask dependent method
+		%> @param
+		%> @return nMask number of mask stimuli
+		% ===================================================================
+		function typeList = getTypes(me)
+			typeList = {};
+			for i = 1:me.n
+				typeList{i} = me.stimuli{i}.type;
+			end
 		end
 
 		% ===================================================================

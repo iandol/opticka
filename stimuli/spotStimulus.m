@@ -48,8 +48,8 @@ classdef spotStimulus < baseStimulus
 		colourOutTemp = [1 1 1]
 		flashColourOutTemp = [1 1 1]
 		stopLoop = false
-		allowedProperties='type|flashTime|flashOn|flashColour|contrast'
-		ignoreProperties = 'flashSwitch';
+		allowedProperties={'type', 'flashTime', 'flashOn', 'flashColour', 'contrast'}
+		ignoreProperties = {'flashSwitch','flashOn'}
 	end
 	
 	%=======================================================================
@@ -73,7 +73,7 @@ classdef spotStimulus < baseStimulus
 			
 			me.isRect = false; %uses a rect for drawing?
 
-			me.ignoreProperties = ['^(' me.ignorePropertiesBase '|' me.ignoreProperties ')$'];
+			me.ignoreProperties = [me.ignorePropertiesBase me.ignoreProperties];
 			me.salutation('constructor','Stimulus initialisation complete');
 		end
 		
@@ -96,18 +96,15 @@ classdef spotStimulus < baseStimulus
 			
 			fn = sort(properties(me));
 			for j=1:length(fn)
-				if isempty(me.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},me.ignoreProperties, 'once'))%create a temporary dynamic property
+				if ~matches(fn{j}, me.ignoreProperties)%create a temporary dynamic property
 					p=me.addprop([fn{j} 'Out']);
-					p.Transient = true;
-					if strcmp(fn{j},'size');p.SetMethod = @set_sizeOut;end
-					if strcmp(fn{j},'xPosition');p.SetMethod = @set_xPositionOut;end
-					if strcmp(fn{j},'yPosition');p.SetMethod = @set_yPositionOut;end
-					if strcmp(fn{j},'colour');p.SetMethod = @set_colourOut;end
-					if strcmp(fn{j},'flashColour');p.SetMethod = @set_flashColourOut;end
-					if strcmp(fn{j},'contrast');p.SetMethod = @set_contrastOut;end
-					if strcmp(fn{j},'alpha');p.SetMethod = @set_alphaOut;end
-				end
-				if isempty(regexp(fn{j},me.ignoreProperties, 'once'))
+					if strcmp(fn{j},'size'); p.SetMethod = @set_sizeOut; end
+					if strcmp(fn{j},'xPosition'); p.SetMethod = @set_xPositionOut; end
+					if strcmp(fn{j},'yPosition'); p.SetMethod = @set_yPositionOut; end
+					if strcmp(fn{j},'colour'); p.SetMethod = @set_colourOut; end
+					if strcmp(fn{j},'flashColour'); p.SetMethod = @set_flashColourOut; end
+					if strcmp(fn{j},'contrast'); p.SetMethod = @set_contrastOut; end
+					if strcmp(fn{j},'alpha'); p.SetMethod = @set_alphaOut; end
 					me.([fn{j} 'Out']) = me.(fn{j}); %copy our property value to our tempory copy
 				end
 			end

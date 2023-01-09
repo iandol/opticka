@@ -71,14 +71,14 @@ classdef targetInducerStimulus < baseStimulus
 		%>to stop a loop between set method and an event
 		sfRecurse = false
 		%> allowed properties passed to object upon construction
-		allowedProperties = ['sf|tf|sfi|tfi|angle|direction|phase|phasei|rotationMethod|' ...
-			'inducerHeight|inducerPosition|inducerContrast|phaseOffset' ...
-			'contrast|mask|driftDirection|speed|startPosition|aspectRatio|' ... 
-			'contrastMult|sigma|useAlpha|smoothMethod|' ...
-			'correctPhase|phaseReverseTime|phaseOfReverse']
+		allowedProperties = {'sf', 'tf', 'sfi', 'tfi', 'angle', 'direction', 'phase', 'phasei', 'rotationMethod', ...
+			'inducerHeight', 'inducerPosition', 'inducerContrast', 'phaseOffset' ...
+			'contrast', 'mask', 'driftDirection', 'speed', 'startPosition', 'aspectRatio', ... 
+			'contrastMult', 'sigma', 'useAlpha', 'smoothMethod', ...
+			'correctPhase', 'phaseReverseTime', 'phaseOfReverse'}
 		%>properties to not create transient copies of during setup phase
-		ignoreProperties = 'name|type|scale|phaseIncrement|correctPhase|contrastMult|mask'
-		%> how many frames between phase reverses
+		ignoreProperties = {'name', 'type', 'scale', 'phaseIncrement', 'correctPhase', 'contrastMult', 'mask'}
+		%> how many frames between phase reverses 
 		phaseCounter = 0
 		%> do we generate a square wave?
 		squareWave = false
@@ -153,34 +153,21 @@ classdef targetInducerStimulus < baseStimulus
 
 			obj.texture = []; %we need to reset this
 
-			fn = fieldnames(obj);
-			for j=1:length(fn)
-				if isempty(obj.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},obj.ignoreProperties, 'once')) %create a temporary dynamic property
-					p=obj.addprop([fn{j} 'Out']);
-					p.Transient = true;%p.Hidden = true;
+			fn = sort(fieldnames(me));
+			for j=1:numel(fn)
+				if ~matches(fn{j}, me.ignoreProperties)%create a temporary dynamic property
+					p = addprop(me, [fn{j} 'Out']);
 					if strcmp(fn{j},'sf');p.SetMethod = @set_sfOut;end
 					if strcmp(fn{j},'tf');p.SetMethod = @set_tfOut;end
 					if strcmp(fn{j},'driftDirection');p.SetMethod = @set_driftDirectionOut;end
 					if strcmp(fn{j},'size');p.SetMethod = @set_sizeOut;end
 					if strcmp(fn{j},'xPosition');p.SetMethod = @set_xPositionOut;end
 					if strcmp(fn{j},'yPosition');p.SetMethod = @set_yPositionOut;end
-				end
-				if isempty(regexp(fn{j},obj.ignoreProperties, 'once'))
 					obj.([fn{j} 'Out']) = obj.(fn{j}); %copy our property value to our tempory copy
 				end
 			end
 			
-			if isempty(obj.findprop('doDots'));p=obj.addprop('doDots');p.Transient = true;end
-			if isempty(obj.findprop('doMotion'));p=obj.addprop('doMotion');p.Transient = true;end
-			if isempty(obj.findprop('doDrift'));p=obj.addprop('doDrift');p.Transient = true;end
-			if isempty(obj.findprop('doFlash'));p=obj.addprop('doFlash');p.Transient = true;end
-			obj.doDots = false;
-			obj.doMotion = false;
-			obj.doDrift = false;
-			obj.doFlash = false;
-			
-			if obj.tf > 0;obj.doDrift = true;end
-			if obj.speed > 0; obj.doMotion = true;end
+			addRuntimeProperties(me);
 			
 			if isempty(obj.findprop('rotateMode'));p=obj.addprop('rotateMode');p.Transient=true;p.Hidden=true;end
 			if obj.rotationMethod==1

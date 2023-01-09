@@ -56,8 +56,9 @@ classdef discStimulus < baseStimulus
 		flashColourOutTemp = [1 1 1]
 		stopLoop = 0
 		scale = 1
-		allowedProperties='type|flashTime|flashOn|flashColour|contrast|sigma|useAlpha|smoothMethod'
-		ignoreProperties = 'flashSwitch';
+		allowedProperties = {'type', 'flashTime', 'flashOn', 'flashColour', ...
+			'contrast', 'sigma', 'useAlpha', 'smoothMethod'}
+		ignoreProperties = {'flashSwitch'}
 	end
 	
 	%=======================================================================
@@ -81,7 +82,7 @@ classdef discStimulus < baseStimulus
 			
 			me.isRect = true; %uses a rect for drawing?
 			
-			me.ignoreProperties = ['^(' me.ignorePropertiesBase '|' me.ignoreProperties ')$'];
+			me.ignoreProperties = [me.ignorePropertiesBase me.ignoreProperties];
 			me.salutation('constructor','Stimulus initialisation complete');
 		end
 		
@@ -108,9 +109,8 @@ classdef discStimulus < baseStimulus
 			
 			fn = sort(fieldnames(me));
 			for j=1:numel(fn)
-				prop = [fn{j} 'Out'];
-				if isempty(me.findprop(prop)) && isempty(regexp(fn{j},me.ignoreProperties, 'once'))%create a temporary dynamic property
-					p = addprop(me, prop);
+				if ~matches(fn{j}, me.ignoreProperties)%create a temporary dynamic property
+					p = addprop(me, [fn{j} 'Out']);
 					if strcmp(fn{j},'size');p.SetMethod = @set_sizeOut;end
 					if strcmp(fn{j},'xPosition');p.SetMethod = @set_xPositionOut;end
 					if strcmp(fn{j},'yPosition');p.SetMethod = @set_yPositionOut;end
@@ -118,9 +118,7 @@ classdef discStimulus < baseStimulus
 					if strcmp(fn{j},'flashColour');p.SetMethod = @set_flashColourOut;end
 					if strcmp(fn{j},'alpha');p.SetMethod = @set_alphaOut;end
 					if strcmp(fn{j},'contrast');p.SetMethod = @set_contrastOut;end
-				end
-				if isempty(regexp(fn{j},me.ignoreProperties, 'once'))
-					me.(prop) = me.(fn{j}); %copy our property value to our tempory copy
+					me.([fn{j} 'Out']) = me.(fn{j}); %copy our property value to our tempory copy
 				end
 			end
 			

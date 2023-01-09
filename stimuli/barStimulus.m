@@ -58,8 +58,10 @@ classdef barStimulus < baseStimulus
 		texture2
 		%> how many frames between phase reverses
 		phaseCounter double = 0
-		allowedProperties = 'modulateColour|colour2|regenerateTexture|type|barWidth|barHeight|angle|speed|contrast|scale|sf|interpMethod|phaseReverseTime';
-		ignoreProperties = 'interpMethod|matrix|matrix2|phaseCounter|pixelScale';
+		allowedProperties = {'modulateColour', 'colour2', 'regenerateTexture', ...
+			'type', 'barWidth', 'barHeight', 'angle', 'speed', 'contrast', 'scale', ...
+			'sf', 'interpMethod', 'phaseReverseTime'}
+		ignoreProperties = {'interpMethod', 'matrix', 'matrix2', 'phaseCounter', 'pixelScale'}
 	end
 	
 	%=======================================================================
@@ -84,7 +86,7 @@ classdef barStimulus < baseStimulus
 			
 			me.isRect = true; %uses a rect for drawing
 			
-			me.ignoreProperties = ['^(' me.ignorePropertiesBase '|' me.ignoreProperties ')$'];
+			me.ignoreProperties = [me.ignorePropertiesBase me.ignoreProperties];
 			me.salutation('constructor','Bar Stimulus initialisation complete');
 		end
 		
@@ -115,25 +117,15 @@ classdef barStimulus < baseStimulus
 			
 			fn = sort(properties(me));
 			for j=1:length(fn)
-				if isempty(regexpi(fn{j},me.ignoreProperties, 'once')) && isempty(me.findprop([fn{j} 'Out']))
-					p=me.addprop([fn{j} 'Out']); p.Transient = true;
-					switch fn{j}
-						case 'xPosition'
-							p.SetMethod = @set_xPositionOut;
-						case 'yPosition'
-							p.SetMethod = @set_yPositionOut;
-						case 'size'
-							p.SetMethod = @set_sizeOut;
-						case 'colour'
-							p.SetMethod = @set_colourOut;
-						case 'alpha'
-							p.SetMethod = @set_alphaOut;
-						case 'scale'
-							p.SetMethod = @set_scaleOut;
-					end
-					if isempty(regexpi(fn{j},me.ignoreProperties, 'once'))
-						me.([fn{j} 'Out']) = me.(fn{j}); %copy our property value to our tempory copy
-					end
+				if ~matches(fn{j}, me.ignoreProperties)
+					p = me.addprop([fn{j} 'Out']);
+					if strcmp(fn{j},'size'); p.SetMethod = @set_sizeOut; end
+					if strcmp(fn{j},'xPosition'); p.SetMethod = @set_xPositionOut; end
+					if strcmp(fn{j},'yPosition'); p.SetMethod = @set_yPositionOut; end
+					if strcmp(fn{j},'colour'); p.SetMethod = @set_colourOut; end
+					if strcmp(fn{j},'alpha'); p.SetMethod = @set_alphaOut; end
+					if strcmp(fn{j},'scale'); p.SetMethod = @set_scaleOut; end
+					me.([fn{j} 'Out']) = me.(fn{j}); %copy our property value to our tempory copy
 				end
 			end
 			
@@ -466,7 +458,7 @@ classdef barStimulus < baseStimulus
 				end
 			catch ME %#ok<CTCH>
 				warning('--->>> barStimulus texture generation failed, making plain texture...')
-				getReport(ME)
+				%getReport(ME)
 				bwpixels = round(me.barWidthOut*me.ppd);
 				blpixels = round(me.barHeightOut*me.ppd);
 				if bwpixels>me.screenWidth*3;bwpixels=me.screenWidth*3;end

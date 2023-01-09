@@ -121,7 +121,10 @@ classdef runExperiment < optickaCore
 		diaryMode logical			= false
 		%> opticka version, passed on first use by opticka
 		optickaVersion char
+		%> do we record times for every function run by state machine?
 		logStateTimers				= false
+		%> do we ask for comments for runMOC
+		comments					= true
 		%> our old stimulus structure used to be a simple cell, now we use metaStimulus
 		stimulus
 	end
@@ -227,7 +230,7 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
-		function runMOC(me)
+		function runMOC(me, tS)
 		%> @fn runMOC
 		%> 
 		%> runMOC uses built-in loop for experiment control and runs a
@@ -240,6 +243,7 @@ classdef runExperiment < optickaCore
 		%> eyelink, add other tracker support
 		%>
 		%> @param me required class object
+		%> @param tS structure with some options to pass
 		% ===================================================================
 			% we try not to use global variables, however the external eyetracker
 			% API does not easily allow us to pass objects and so we use global
@@ -288,8 +292,12 @@ classdef runExperiment < optickaCore
 			me.stimuli.screen		= me.screen;
 			s						= me.screen; 
 			stims					= me.stimuli;
-			tS.controlPlexon		= false;
-			tS.askForComments		= true;
+			if ~exist('tS','var') || isempty(tS)
+				tS.controlPlexon		= false;
+				tS.askForComments		= true;
+			end
+			if ~isfield(tS,'controlPlexon'); tS.controlPlexon = false; end
+			if ~isfield(tS,'askForComments'); tS.askForComments = true; end
 
 			%===============================initialise task
 			task						= me.task;

@@ -184,10 +184,6 @@ myTask.nVar(3).offsetvalue = 2;
 % We call the method to randomise the trials in a block structure
 randomiseTask(myTask);
 
-%% Visual Trial List
-% Lets print out a table of the stimulus properties for every trial
-showLog(myTask);
-
 %% Setup screenManager Object
 % we initialise the object with parameter options to open the PTB screen
 % with. Note distance and pixels per cm define the resultant geometry >
@@ -196,12 +192,10 @@ showLog(myTask);
 % task background colour so you don't see the black flash on PTB screen
 % initialisation.
 myScreen = screenManager('distance', 57.3,... %display distance from observer
-	'pixelsPerCm', 27,... %calibration value for pixel density, measure using calibrateSize()
+	'pixelsPerCm', 36,... %calibration value for pixel density, measure using calibrateSize()
 	'backgroundColour', [0.5 0.5 0.5],... %initial background colour
 	'blend', true,... %enable OpenGL blending, you can also set blend modes when needed
-	'srcMode', 'GL_SRC_ALPHA',... %src blend mode
-	'dstMode', 'GL_ONE_MINUS_SRC_ALPHA',... %dst blend mode
-	'debug', false,...
+	'debug', false,... %enable debug mode?
 	'windowed', [],... %set to a widthxheight for debugging i.e. [800 600]; set to empty for fullscreen
 	'bitDepth', '8bit');
 if ismac; myScreen.useRetina = true; end
@@ -213,13 +207,18 @@ if ismac; myScreen.useRetina = true; end
 myExp = runExperiment('stimuli', myStims,... %stimulus objects
 	'task', myTask,... %task design object
 	'screen', myScreen,... %screen manager object
-	'debug', false,... %disable debug mode
+	'debug', false,... %use debug mode?
 	'verbose', false); %minimal verbosity
 
 %%
 % run our method of constants (MOC) experiment; 
 % to exit early, press [q] during the interstimulus period.
-runMOC(myExp);
+opts.askForComments = false;
+runMOC(myExp, opts);
+
+%% Visual Trial List
+% Lets print out a table of the stimulus properties for every trial
+showLog(myTask);
 
 %%
 % Plot a timing log of every frame against the stimulus on/off times:
@@ -239,7 +238,7 @@ showTimingLog(myExp);
 %% Manual control
 % You don't need to use opticka's stimuli via runExperiment(), you can
 % use them in your own experiments, lets have a quick look here, set
-% runThis to true.
+% runThis to true to run the following code:
 
 runThis = false;
 if ~runThis; return; end
