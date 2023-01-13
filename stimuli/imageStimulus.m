@@ -8,28 +8,36 @@
 % ========================================================================	
 classdef imageStimulus < baseStimulus	
 	properties %--------------------PUBLIC PROPERTIES----------%
-		type char = 'picture'
+		type char					= 'picture'
 		%> filename to load
-		fileName char = ''
+		fileName char				= ''
 		%> multipleImages if N > 0, then this is a number of images from 1:N, e.g.
 		%> fileName = base.jpg, multipleImages=5, then base1.jpg - base5.jpg
 		%> update() will randomly select one from this group.
-		multipleImages double = 0
+		multipleImages double		= 0
 		%> contrast multiplier
-		contrast double = 1
+		contrast double				= 1
 		%> precision, 0 keeps 8bit, 1 16bit, 2 32bit
-		precision = 0
+		precision					= 0
+		%> special flags: 0 = hardware filter, 2 = PTB
+		%> filter, 4 = fast texture creation, 8 = prevent
+		%> auto mip-map generation, 32 = stop Screen('Close')
+		%> clearing texture
+		specialFlags				= []
+		%> modulate the colour of the image, useful for all-white images
+		%> with alpha channel
+		modulateColour				= []
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> scale is set by size
-		scale = 1
+		scale						= 1
 		%>
-		family = 'texture'
+		family						= 'texture'
 		%>
 		matrix
 		%> current randomly selected image
-		currentImage = ''
+		currentImage				= ''
 		%>
 		width
 		%>
@@ -43,12 +51,13 @@ classdef imageStimulus < baseStimulus
 		%> list of imagenames if multipleImages > 0
 		fileNames = {};
 		%> properties to ignore in the UI
-		ignorePropertiesUI='colour|alpha'
+		ignorePropertiesUI={'colour'}
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> allowed properties passed to object upon construction
-		allowedProperties = {'type', 'fileName', 'multipleImages', 'contrast', 'scale'}
+		allowedProperties = {'type', 'fileName', 'multipleImages', 'contrast', ...
+			'modulateColour','scale'}
 		%>properties to not create transient copies of during setup phase
 		ignoreProperties = {'type', 'scale', 'fileName', 'multipleImages'}
 	end
@@ -192,12 +201,10 @@ classdef imageStimulus < baseStimulus
 				end
 			end
 			
-			if isinteger(me.matrix(1))
-				specialFlags = 4; %4 is optimization for uint8 textures. 0 is default
-			else
-				specialFlags = 0; %4 is optimization for uint8 textures. 0 is default
+			if isempty(me.specialFlags) && isinteger(me.matrix(1))
+				me.specialFlags = 4; %4 is optimization for uint8 textures. 0 is default
 			end
-			me.texture = Screen('MakeTexture', me.sM.win, me.matrix, 1, specialFlags, me.precision);
+			me.texture = Screen('MakeTexture', me.sM.win, me.matrix, 1, me.specialFlags, me.precision);
 		end
 
 		% ===================================================================
@@ -226,7 +233,12 @@ classdef imageStimulus < baseStimulus
 		function draw(me,win)
 			if me.isVisible && me.tick >= me.delayTicks && me.tick < me.offTicks
 				if ~exist('win','var');win = me.sM.win; end
-				Screen('DrawTexture',win,me.texture,[],me.mvRect,me.angleOut);
+				% Screen('DrawTexture', windowPointer, texturePointer 
+				% [,sourceRect] [,destinationRect] [,rotationAngle] 
+				% [, filterMode] [, globalAlpha] [, modulateColor] 
+				% [, textureShader] [, specialFlags] [, auxParameters]);
+				Screen('DrawTexture', win, me.texture, [], me.mvRect, me.angleOut,...
+					[], me.alpha, me.modulateColourOut);
 			end
 			me.tick = me.tick + 1;
 		end

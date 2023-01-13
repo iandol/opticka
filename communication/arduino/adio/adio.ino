@@ -130,11 +130,6 @@ void loop() {
           else {
             pinMode(pin, OUTPUT);
           }
-          Serial.print(s);
-          Serial.print(' ');
-          Serial.print(pin);
-          Serial.print(' ');
-          Serial.println(val);     
         }
         s = -1; /* we are done with CHANGE PIN so go to -1      */
         break; /* s=1 taken care of                            */
@@ -174,7 +169,6 @@ void loop() {
         if (val > 47 && val < 50) {
           dgv = val - 48;            /* calculate value        */
           digitalWrite(pin, dgv);    /* perform Digital Output */
-          Serial.println(pin, dgv);
         }
         s = -1; /* we are done with DO so next state is -1      */
         break; /* s=21 taken care of                           */

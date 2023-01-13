@@ -25,7 +25,7 @@ classdef barStimulus < baseStimulus
 		%> update() method also regenerates the texture, this can be slow, but 
 		%> normally update() is only called after a trial has finished
 		regenerateTexture logical = true
-		%> for checkerboard the second colour
+		%> for checkerboard: the second colour
 		colour2 double = [0 0 0 1];
 		%> modulate the colour
 		modulateColour double = []
