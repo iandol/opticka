@@ -42,27 +42,33 @@ classdef touchManager < optickaCore
 
 	%=======================================================================
 	methods %------------------PUBLIC METHODS
-		%=======================================================================
+	%=======================================================================
 
-		% ===================================================================
+		% ===================================================================CONSTRUCTOR
 		function me = touchManager(varargin)
-			%> @fn touchManager
-			%> @brief Class constructor
-			%>
-			%> Initialises the class sending any parameters to parseArgs.
-			%>
-			%> @param varargin are passed as a structure of properties which is
-			%> parsed.
-			%> @return instance of the class.
-			% ===================================================================
+		%> @fn touchManager
+		%> @brief Class constructor
+		%>
+		%> Initialises the class sending any parameters to parseArgs.
+		%>
+		%> @param varargin are passed as a structure of properties which is
+		%> parsed.
+		%> @return instance of the class.
+		% ===================================================================
 			args = optickaCore.addDefaults(varargin,struct('name','touchManager'));
 			me = me@optickaCore(args); %superclass constructor
 			me.parseArgs(args, me.allowedProperties);
 			try [me.devices,me.names,me.allInfo] = GetTouchDeviceIndices([], 1); end %#ok<*TRYNC> 
 		end
 
-		%================SET UP TOUCH INPUT============
+		% ===================================================================SETUP
 		function  setup(me, sM)
+		%> @fn setup
+		%>
+		%> @param
+		%> @return 
+		% ===================================================================
+			me.isOpen = false; me.isQueue = false;
 			if isa(sM,'screenManager') && sM.isOpen
 				me.screen = sM;
 				me.win = sM.win; 
@@ -87,12 +93,15 @@ classdef touchManager < optickaCore
 			end
 		end
 
-		%================SET UP TOUCH INPUT============
+		% ===================================================================
 		function createQueue(me, choice)
-			if me.isDummy; return; end
-			if ~exist('choice','var') || isempty(choice)
-				choice = me.device;
-			end
+		%> @fn setup
+		%>
+		%> @param
+		%> @return 
+		% ===================================================================
+			if me.isDummy; me.isQueue = true; return; end
+			if ~exist('choice','var') || isempty(choice); choice = me.device; end
 			for i = 1:length(choice)
 				try
 					TouchQueueCreate(me.win, me.devices(choice(i)), me.nSlots);
@@ -101,124 +110,221 @@ classdef touchManager < optickaCore
 				end
 			end
 			me.isQueue = true;
-			if me.verbose;me.logEvent('createQueue','Opened');end
+			if me.verbose;me.salutation('createQueue','Opened');end
 		end
 
-		%===============START=========
+		% ===================================================================
 		function start(me, choice)
-			if me.isDummy; return; end
-			if ~exist('choice','var') || isempty(choice)
-				choice=me.device;
-			end
+		%> @fn setup
+		%>
+		%> @param
+		%> @return 
+		% ===================================================================
+			if me.isDummy; me.isOpen = true; return; end
+			if ~exist('choice','var') || isempty(choice); choice = me.device; end
 			if ~me.isQueue; createQueue(me,choice); end
 			for i = 1:length(choice)
 				TouchQueueStart(me.devices(choice(i)));
 			end
 			me.isOpen = true;
-			if me.verbose;me.logEvent('start','Started queue');end
+			if me.verbose;salutation(me,'start','Started queue...');end
+		end
+		
+		% ===================================================================
+		function stop(me, choice)
+		%> @fn stop
+		%>
+		%> @param
+		%> @return 
+		% ===================================================================
+			if me.isDummy; me.isOpen = false; return; end
+			if ~exist('choice','var') || isempty(choice); choice = me.device; end
+			for i = 1:length(choice)
+				TouchQueueStop(me.devices(choice(i)));
+			end
+			me.isOpen = false;
+			salutation(me,'stop','Stopped queue...');
 		end
 
-		%===============FLUSH=========
-		function flush(me, choice)
+		% ===================================================================
+		function close(me, choice)
+		%> @fn close
+		%>
+		%> @param
+		%> @return 
+		% ===================================================================
+			me.isOpen = false;
+			me.isQueue = false;
 			if me.isDummy; return; end
-			if ~exist('choice','var') || isempty(choice)
-				choice = me.device;
+			if ~exist('choice','var') || isempty(choice); choice = me.device; end
+			for i = 1:length(choice)
+				TouchQueueRelease(me.devices(choice(i)));
 			end
+			salutation(me,'close','Closing...');
+		end
+
+		% ===================================================================
+		function flush(me, choice)
+		%> @fn flush
+		%>
+		%> @param
+		%> @return 
+		% ===================================================================
+			if me.isDummy; return; end
+			if ~exist('choice','var') || isempty(choice); choice = me.device; end
 			for i = 1:length(choice)
 				TouchEventFlush(me.devices(choice(i)));
 			end
 		end
 
-		%===========EVENT AVAIL=========
+		% ===================================================================
 		function navail = eventAvail(me, choice)
+		%> @fn eventAvail
+		%>
+		%> @param
+		%> @return 
+		% ===================================================================
 			navail = [];
 			if me.isDummy
-				[x,y,b] = GetMouse;
+				[~, ~, b] = GetMouse;
 				if any(b); navail = true; end
 				return
 			end
-			if ~exist('choice','var') || isempty(choice);choice=me.device;end
+			if ~exist('choice','var') || isempty(choice); choice=me.device; end
 			for i = 1:length(choice)
 				navail(i)=TouchEventAvail(me.devices(choice(i))); %#ok<*AGROW> 
 			end
 		end
 
-		%===========GETEVENT=========
+		% ===================================================================
 		function event = getEvent(me, choice)
+		%> @fn getEvent
+		%>
+		%> @param
+		%> @return 
+		% ===================================================================
 			event = {};
 			if me.isDummy
-				[x,y,b] = GetMouse(me.win);
+				[mx, my, b] = GetMouse(me.win); 
 				if any(b)
 					event{1} = struct('Type',2,'Time',GetSecs,...
-					'X',x,'Y',y,'ButtonStates',b,...
-					'NormX',x/me.screenVals.width,'NormY',y/me.screenVals.height);
+					'X',mx,'Y',my,'ButtonStates',b,...
+					'NormX',mx/me.screenVals.width,'NormY',my/me.screenVals.height);
 				end
 				return;
 			end
-			if ~exist('choice','var') || isempty(choice)
-				choice=me.device;
-			end
+			if ~exist('choice','var') || isempty(choice); choice=me.device; end
 			for i = 1:length(choice)
 				event{i} = TouchEventGet(me.devices(choice(i)), me.win);
 			end
 		end
 		
-		%===========CHECK TOUCH WINDOW=========
-		function [result, x, y] = checkTouchWindow(me, choice)
+		% ===================================================================
+		function [result, x, y] = checkTouchWindow(me, choice, window)
+		%> @fn checkTouchWindow
+		%>
+		%> @param
+		%> @return 
+		% ===================================================================
+			if ~exist('window','var'); window = []; end
+			if ~exist('choice','var') || isempty(choice);choice=me.device;end
 			result = false; x = []; y = [];
-			if me.isDummy
-				event = getEvent(me);
-				if isempty(event); return; end
-				while iscell(event);event = event{1}; end
-				if isempty(event); return; end
-				xy = me.screen.toDegrees([event.X event.Y]);
-				if me.verbose;fprintf('dummy touch: %i %.2f %i %.2f\n',event.X, xy(1), event.Y, xy(2));end
-				result = calculateWindow(me, xy(1), xy(2));
-				x = xy(1); y = xy(2);
-			else
-				if ~exist('choice','var') || isempty(choice);choice=me.device;end
-				if ~isempty(eventAvail(me,choice))
-					event = getEvent(me);
-					if isempty(event); return; end
-					while iscell(event);event = event{1}; end
-					if isempty(event); return; end
-					xy = me.screen.toDegrees([event.X event.Y]);
-					if me.verbose;fprintf('touch: %i %.2f %i %.2f\n',event.X, xy(1), event.Y, xy(2));end
-					result = calculateWindow(me, xy(1), xy(2));
-					x = xy(1); y = xy(2);
-				end
-			end
-			if result == -100; fprintf('NEGATION!\n'); end
+			event = getEvent(me);
+			if isempty(event); return; end
+			while iscell(event);event = event{1}; end
+			if isempty(event); return; end
+			xy = me.screen.toDegrees([event.X event.Y]);
+			result = calculateWindow(me, xy(1), xy(2), window);
+			x = xy(1); y = xy(2);
+			if me.verbose;fprintf('IN: %i Touch: x = %i (%.2f) y = %i (%.2f)\n',result, event.X, xy(1), event.Y, xy(2));end
 		end
 
-		%===========CLOSE=========
-		function close(me, choice)
-			me.isOpen = false;
-			me.isQueue = false;
-			if ~exist('choice','var') || isempty(choice)
-				choice = me.device;
-			end
-			if me.isDummy
-				salutation(me,'Closing dummy touchManager...');
-			else
-				for i = 1:length(choice)
-					TouchQueueStop(me.devices(choice(i)));
+		% ===================================================================
+		function demo(me)
+		%> @fn demo
+		%>
+		%> @param
+		%> @return 
+		% ===================================================================
+			if isempty(me.screen); me.screen = screenManager(); end
+			oldWin = me.window;
+			oldVerbose = me.verbose;
+			me.verbose = true;
+			sM = me.screen;
+			if ~sM.isOpen; open(sM); end
+			setup(me, sM); % !!! Run setup first
+			im = imageStimulus('size', 5);
+			setup(im, sM);
+
+			createQueue(me); % !!! Create Queue
+			start(me); % !!! Start touch collection
+
+			for i = 1 : 5
+				tx = randi(20)-10;
+				ty = randi(20)-10;
+				im.xPositionOut = tx;
+				im.yPositionOut = ty;
+				update(im);
+				rect = toDegrees(sM, im.mvRect, 'rect');
+
+				flush(me); %!!! flush the queue
+				txt = '';
+				ts = GetSecs;
+				while GetSecs <= ts + 8
+					x = []; y = [];
+					drawText(sM,txt);
+					drawGrid(sM);
+					draw(im);
+					flip(sM);
+					[r,x,y] = checkTouchWindow(me, [], rect); %!!! check touch window
+					if r
+						txt = sprintf('IN window x = %.2f y = %.2f',x,y);
+					elseif ~isempty(x)
+						txt = sprintf('OUT window x = %.2f y = %.2f',x,y);
+					else
+						txt = sprintf('No touch...');
+					end
 				end
-				salutation(me,'Closing touchManager...');
+				flip(sM); WaitSecs(1);
 			end
+			stop(me); close(me);
+			me.window = oldWin;
+			me.verbose = oldVerbose;
+			try close(sM); end
 		end
 
 	end
 
-	methods (Access = protected)
-		%===========calculateWindow=========
-		function result = calculateWindow(me, x, y)
+	%=======================================================================
+	methods (Static = true) %------------------STATIC METHODS
+	%=======================================================================
+
+	end
+
+	%=======================================================================
+	methods (Access = protected) %------------------PROTECTED METHODS
+	%=======================================================================
+
+		% ===================================================================
+		function result = calculateWindow(me, x, y, tempWindow)
+		%> @fn setup
+		%>
+		%> @param
+		%> @return 
+		% ===================================================================
+			if exist('tempWindow','var') && isnumeric(tempWindow) && length(tempWindow) == 4
+				pos = screenManager.rectToPos(tempWindow);
+				radius = pos.radius / 2; % diameter to radius
+				xWin = pos.X;
+				yWin = pos.Y;
+			else
+				radius = me.window.radius;
+				xWin = me.window.X;
+				yWin = me.window.Y;
+			end
 			result = false; resultneg = false; match = false;
 			window = false; windowneg = false; 
-			radius = me.window.radius;
 			negradius = radius + me.negationBuffer;
-			xWin = me.window.X;
-			yWin = me.window.Y;
 			ez = me.exclusionZone;
 			% ---- test for exclusion zones first
 			if ~isempty(ez)

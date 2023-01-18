@@ -1638,15 +1638,8 @@ classdef screenManager < optickaCore
 		%>
 		% ===================================================================
 		function out = toDegrees(me, in, axis)
-			if ~exist('axis','var'); axis=''; end
+			if ~exist('axis','var'); if length(in)==4; axis='rect'; else; axis=''; end; end
 			switch axis
-				case ''
-					if length(in)==2
-						out(1) = (in(1) - me.xCenter) / me.ppd_;
-						out(2) = (in(2) - me.yCenter) / me.ppd_;
-					else
-						out = 0;
-					end
 				case 'rect'
 					out(1) = (in(1) - me.xCenter) / me.ppd_;
 					out(2) = (in(2) - me.yCenter) / me.ppd_;
@@ -1656,6 +1649,13 @@ classdef screenManager < optickaCore
 					out = (in - me.xCenter) / me.ppd_;
 				case 'y'
 					out = (in - me.yCenter) / me.ppd_;
+				otherwise
+					if length(in)==2
+						out(1) = (in(1) - me.xCenter) / me.ppd_;
+						out(2) = (in(2) - me.yCenter) / me.ppd_;
+					else
+						out = 0;
+					end
 			end
 		end
 		
@@ -1666,16 +1666,6 @@ classdef screenManager < optickaCore
 		function out = toPixels(me, in, axis)
 			if ~exist('axis','var'); axis=''; end
 			switch axis
-				case ''
-					if length(in)==4
-						out(1:2) = (in(1:2) * me.ppd_) + me.xCenter;
-						out(3:4) = (in(3:4) * me.ppd_) + me.yCenter;
-					elseif length(in)==2
-						out(1) = (in(1) * me.ppd_) + me.xCenter;
-						out(2) = (in(2) * me.ppd_) + me.yCenter;
-					else
-						out = 0;
-					end
 				case 'rect'
 					out(1) = (in(1) * me.ppd_) + me.xCenter;
 					out(2) = (in(2) * me.ppd_) + me.yCenter;
@@ -1685,6 +1675,16 @@ classdef screenManager < optickaCore
 					out = (in * me.ppd_) + me.xCenter;
 				case 'y'
 					out = (in * me.ppd_) + me.yCenter;
+				otherwise
+					if length(in)==4
+						out(1:2) = (in(1:2) * me.ppd_) + me.xCenter;
+						out(3:4) = (in(3:4) * me.ppd_) + me.yCenter;
+					elseif length(in)==2
+						out(1) = (in(1) * me.ppd_) + me.xCenter;
+						out(2) = (in(2) * me.ppd_) + me.yCenter;
+					else
+						out = 0;
+					end
 			end
 		end
 		
@@ -1704,6 +1704,36 @@ classdef screenManager < optickaCore
 	methods (Static = true) %------------------STATIC METHODS
 	%=======================================================================
 	
+		% ===================================================================
+		function out = rectToPos(rect)
+		%> @fn rectToPos
+		%>
+		%> @param
+		%> @return 
+		% ===================================================================
+			[out.X,out.Y] = RectCenter(rect);
+			out.radius = [RectWidth(rect) RectHeight(rect)];
+		end
+
+		% ===================================================================
+		function out = posToRect(pos);
+		%> @fn posToRectpos
+		%>
+		%> @param
+		%> @return 
+		% ===================================================================
+			if ~isstruct(pos); out = []; return; end
+			if length(pos.radius) == 1
+				w = pos.radius * 2;
+				h = w;
+			else
+				w = pos.radius(1);
+				h = pos.radius(2);
+			end
+			out = [0 0 w h];
+			out = CenterRectOnPointd(out, pos.X, pos.Y);
+		end
+		
 		% ===================================================================
 		%> @brief Set Refresh
 		%> Screen('ConfigureDisplay', setting, screenNumber, outputId 

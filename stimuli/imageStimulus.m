@@ -24,9 +24,6 @@ classdef imageStimulus < baseStimulus
 		%> auto mip-map generation, 32 = stop Screen('Close')
 		%> clearing texture
 		specialFlags				= []
-		%> modulate the colour of the image, useful for all-white images
-		%> with alpha channel
-		modulateColour				= []
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -51,13 +48,13 @@ classdef imageStimulus < baseStimulus
 		%> list of imagenames if multipleImages > 0
 		fileNames = {};
 		%> properties to ignore in the UI
-		ignorePropertiesUI={'colour'}
+		ignorePropertiesUI={}
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> allowed properties passed to object upon construction
 		allowedProperties = {'type', 'fileName', 'multipleImages', 'contrast', ...
-			'modulateColour','scale'}
+			'scale'}
 		%>properties to not create transient copies of during setup phase
 		ignoreProperties = {'type', 'scale', 'fileName', 'multipleImages'}
 	end
@@ -238,7 +235,7 @@ classdef imageStimulus < baseStimulus
 				% [, filterMode] [, globalAlpha] [, modulateColor] 
 				% [, textureShader] [, specialFlags] [, auxParameters]);
 				Screen('DrawTexture', win, me.texture, [], me.mvRect, me.angleOut,...
-					[], me.alpha, me.modulateColourOut);
+					[], me.alpha, me.colourOut);
 			end
 			me.tick = me.tick + 1;
 		end

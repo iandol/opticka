@@ -123,12 +123,19 @@ myStims{10}=imageStimulus('speed',2,'xPosition',-10,'yPosition',10,'size',4,...
 	'name','Image');
 
 %%
+% a picture stimulus, by default this loads a picture from the opticka
+% stimulus directory; you can rotate it, scale it etc and drift it across screen as
+% in this case. Size is in degrees, scaling the whole picture
+myStims{11}=imageStimulus('speed',0,'xPosition',0,'yPosition',5,'size',5,...
+	'fileName',[myStims.paths.root '/stimuli/star.png'],...
+	'modulateColour',[0.7 0.7 0.2], 'name', 'Image',);
+
+%%
 % a movie stimulus, by default this loads a movie from the opticka
 % stimulus directory; you can rotate it, scale it etc and drift it across screen as
 % in this case. Size is in degrees, scaling the whole movie
-myStims{11}=movieStimulus('speed', 1, 'xPosition', -7, 'yPosition', -10,...
-	'size', 4, 'enforceBlending', true,...
-	'name', 'AVI transparent movie');
+myStims{12}=movieStimulus('speed', 1, 'xPosition', -7, 'yPosition', -10,...
+	'size', 4, 'name', 'AVI transparent movie');
 
 %% Task Initialisation
 % The taskSequence class defines a stimulus sequence (task) which is composed
@@ -150,7 +157,7 @@ myTask.realTime = true; %we use real time for switching trials, false uses a tic
 % Our first variable is angle, applied to 4 stimuli, randomly
 % selected from values of 0 45 and 90 degrees
 myTask.nVar(1).name = 'angle';
-myTask.nVar(1).stimulus = [1 3 8 10 11];
+myTask.nVar(1).stimulus = [1 3 8 10 11 12];
 myTask.nVar(1).values = [0 45 90];
 % the next two parameters allow us to link a stimulus with
 % an offset; for example you could set stimulus 1 to values [1 2 3]
@@ -176,8 +183,8 @@ myTask.nVar(3).values = [-6 6];
 % an offset; for example you could set stimulus 1 to values [1 2 3]
 % and if offsetvalue was 2 and offsetstimulus was 2 then the second
 % stimulus would change through [3 4 5]; in this case we offset stimulus 10
-% to +1 the values above i.e. [-4 8]
-myTask.nVar(3).offsetstimulus = 10;
+% to +2 the values above i.e. [-4 8]
+myTask.nVar(3).offsetstimulus = [10];
 myTask.nVar(3).offsetvalue = 2;
 
 %% Randomisation
@@ -249,7 +256,7 @@ WaitSecs('YieldSecs',2);
 reset(myStims); % reset them back to their defaults
 
 %stimulus
-myMovie = myStims{11}; % the movie stimulus from above
+myMovie = myStims{12}; % the movie stimulus from above
 myMovie.xPosition = 0; myMovie.yPosition = 0;
 myMovie.speed = 5;
 myMovie.size = 0; %if size is zero, then native dimensions are used.
