@@ -220,23 +220,42 @@ classdef touchManager < optickaCore
 		end
 		
 		% ===================================================================
-		function [result, x, y] = checkTouchWindow(me, choice, window)
+		function [result, x, y] = checkTouchWindow(me, window)
 		%> @fn checkTouchWindow
 		%>
 		%> @param
 		%> @return 
 		% ===================================================================
 			if ~exist('window','var'); window = []; end
-			if ~exist('choice','var') || isempty(choice);choice=me.device;end
 			result = false; x = []; y = [];
 			event = getEvent(me);
-			if isempty(event); return; end
-			while iscell(event);event = event{1}; end
-			if isempty(event); return; end
-			xy = me.screen.toDegrees([event.X event.Y]);
+			while ~isempty(event) && iscell(event); event = event{1}; end
+			if isempty(event) || ~isfield(event,'MappedX'); return; end
+			xy = me.screen.toDegrees([event.MappedX event.MappedY]);
 			result = calculateWindow(me, xy(1), xy(2), window);
 			x = xy(1); y = xy(2);
 			if me.verbose;fprintf('IN: %i Touch: x = %i (%.2f) y = %i (%.2f)\n',result, event.X, xy(1), event.Y, xy(2));end
+		end
+
+		% ===================================================================
+		function [result, x, y] = checkTouchWindows(me, windows)
+		%> @fn checkTouchWindow
+		%>
+		%> @param
+		%> @return 
+		% ===================================================================
+			if ~exist('windows','var') || isempty(windows); return; end
+			nWindows = size(windows,1);
+			result = false; x = []; y = [];
+			event = getEvent(me);
+			while ~isempty(event) && iscell(event); event = event{1}; end
+			if isempty(event) || ~isfield(event,'MappedX'); return; end
+			xy = me.screen.toDegrees([event.MappedX event.MappedY]);
+			for i = 1 : nWindows
+				result(i,1) = calculateWindow(me, xy(1), xy(2), windows(i,:));
+				x(i,1) = xy(1); y(i,1) = xy(2);
+				if me.verbose;fprintf('Window %i IN: %i Touch: x = %i (%.2f) y = %i (%.2f)\n',i,result, event.X, xy(1), event.Y, xy(2));end
+			end
 		end
 
 		% ===================================================================
@@ -258,39 +277,43 @@ classdef touchManager < optickaCore
 
 			createQueue(me); % !!! Create Queue
 			start(me); % !!! Start touch collection
-
-			for i = 1 : 5
-				tx = randi(20)-10;
-				ty = randi(20)-10;
-				im.xPositionOut = tx;
-				im.yPositionOut = ty;
-				update(im);
-				rect = toDegrees(sM, im.mvRect, 'rect');
-
-				flush(me); %!!! flush the queue
-				txt = '';
-				ts = GetSecs;
-				while GetSecs <= ts + 8
-					x = []; y = [];
-					drawText(sM,txt);
-					drawGrid(sM);
-					draw(im);
-					flip(sM);
-					[r,x,y] = checkTouchWindow(me, [], rect); %!!! check touch window
-					if r
-						txt = sprintf('IN window x = %.2f y = %.2f',x,y);
-					elseif ~isempty(x)
-						txt = sprintf('OUT window x = %.2f y = %.2f',x,y);
-					else
-						txt = sprintf('No touch...');
+			try 
+				for i = 1 : 5
+					tx = randi(20)-10;
+					ty = randi(20)-10;
+					im.xPositionOut = tx;
+					im.yPositionOut = ty;
+					update(im);
+					rect = toDegrees(sM, im.mvRect, 'rect');
+	
+					flush(me); %!!! flush the queue
+					txt = '';
+					ts = GetSecs;
+					while GetSecs <= ts + 10
+						x = []; y = [];
+						drawText(sM,txt); drawGrid(sM);
+						draw(im);
+						flip(sM);
+						[r,x,y] = checkTouchWindow(me, rect); %!!! check touch window
+						if r
+							txt = sprintf('IN window x = %.2f y = %.2f',x,y);
+						elseif ~isempty(x)
+							txt = sprintf('OUT window x = %.2f y = %.2f',x,y);
+						end
+						flush(me);
 					end
+					flip(sM); WaitSecs(1);
 				end
-				flip(sM); WaitSecs(1);
+				stop(me); close(me);
+				me.window = oldWin;
+				me.verbose = oldVerbose;
+				try reset(im); end
+				try close(sM); end
+			catch ME
+				try reset(im); end
+				try close(s); end
+				try close(me); end
 			end
-			stop(me); close(me);
-			me.window = oldWin;
-			me.verbose = oldVerbose;
-			try close(sM); end
 		end
 
 	end
@@ -306,7 +329,7 @@ classdef touchManager < optickaCore
 	%=======================================================================
 
 		% ===================================================================
-		function result = calculateWindow(me, x, y, tempWindow)
+		function [result, window] = calculateWindow(me, x, y, tempWindow)
 		%> @fn setup
 		%>
 		%> @param
