@@ -169,7 +169,8 @@ classdef imageStimulus < baseStimulus
 				[me.matrix, ~, ialpha] = imread(me.fileNames{1});
 				me.currentImage = me.fileNames{1};
 			else
-				me.matrix = uint8(ones(me.size*me.ppd,me.size*me.ppd,3)); %white texture
+				if isempty(me.sizeOut);sz=2;else;sz=me.sizeOut;end
+				me.matrix = uint8(ones(sz*me.ppd, sz*me.ppd, 3)); %white texture
 				me.currentImage = '';
 			end
 			
@@ -179,8 +180,6 @@ classdef imageStimulus < baseStimulus
 			
 			me.width = size(me.matrix,2);
 			me.height = size(me.matrix,1);
-			
-			me.salutation('loadImage',['Load: ' regexprep(me.currentImage,'\','/')]);
 			
 			me.matrix = me.matrix .* me.contrast;
 			
@@ -202,6 +201,7 @@ classdef imageStimulus < baseStimulus
 				me.specialFlags = 4; %4 is optimization for uint8 textures. 0 is default
 			end
 			me.texture = Screen('MakeTexture', me.sM.win, me.matrix, 1, me.specialFlags, me.precision);
+			me.salutation('loadImage',['Load: ' regexprep(me.currentImage,'\\','/')]);
 		end
 
 		% ===================================================================

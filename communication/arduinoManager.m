@@ -14,35 +14,35 @@ classdef arduinoManager < optickaCore
 	% than MATLAB's hardware package.
 	properties
 		%> arduino port, if left empty it will make a guess during open()
-		port char				= ''
+		port					= ''
 		%> board type; uno [default] is a generic arduino, xiao is the seeduino xiao
 		%> pico is RaspberryPi Pico
-		board char {mustBeMember(board,{'Uno','Xiao','Pico'})}	= 'Uno' 
+		board					= 'Uno' 
 		%> run with no arduino attached, useful for debugging
-		silentMode logical		= false
+		silentMode				= false
 		%> output logging info
 		verbose					= false
 		%> which pin to trigger the reward TTL by default?
-		rewardPin double		= 2
+		rewardPin				= 2
 		%> time of the TTL sent by default?
-		rewardTime double		= 300
+		rewardTime				= 300
 		%> specify the available pins to use; 2-13 is the default for an Uno
 		%> 0-10 for the xiao (though xiao pins 11-14 can control LEDS)
-		availablePins cell		= {}
+		availablePins			= {}
 		%> the arduinoIOPort device object, you can call the methods
 		%> directly if required.
 		device					= []
 		% motor shield settings
 		delayLength				= 0.03
 		shield					= ''
-		linePwm					= 3
+		linePWM					= 3
 	end
 
 	properties (SetAccess = private, GetAccess = public)
 		%> which ports are available
 		ports
 		%> could we succesfully open the arduino?
-		isOpen logical			= false
+		isOpen					= false
 		%> ID from device
 		deviceID				= ''
 	end
@@ -54,7 +54,7 @@ classdef arduinoManager < optickaCore
 	
 	properties (SetAccess = private, GetAccess = private)
 		allowedProperties = {'availablePins','rewardPin','rewardTime','openGUI','board'...
-			'port','silentMode','verbose','shield'}
+			'port','silentMode','verbose','delayLength','shield','linePWM'}
 	end
 	
 	methods%------------------PUBLIC METHODS--------------%
@@ -266,9 +266,9 @@ classdef arduinoManager < optickaCore
                  nstep       = round((rem(ndegree,(1.8*4))/7.2)*4);
 			 switch me.shield
 				 case 'new'
-					 me.linePwm = [10 11];
+					 me.linePWM = [10 11];
 				 otherwise
-					 me.linePwm = [3 11];
+					 me.linePWM = [3 11];
 			 end
 			 if me.verbose;fprintf('===>>> STEPPER on %s shield: steps =  %i \n',me.shield,nstep);end
 		     for i=1:ncycle
@@ -279,13 +279,13 @@ classdef arduinoManager < optickaCore
 					me.digitalWrite(9, 0);    %//ENABLE CH A 
   					me.digitalWrite(8, 1);    %//DISABLE CH B
   					me.digitalWrite(12,1);   %//Sets direction of CH A
-  					me.digitalWrite(me.linePwm(1), 1);    %//Moves CH A
+  					me.digitalWrite(me.linePWM(1), 1);    %//Moves CH A
   					WaitSecs(me.delayLength);
 				 case 2
 					me.digitalWrite(9, 0);    %//ENABLE CH A 
   					me.digitalWrite(8, 1);    %//DISABLE CH B
   					me.digitalWrite(12,1);   %//Sets direction of CH A
-  					me.digitalWrite(me.linePwm(1), 1);    %//Moves CH A
+  					me.digitalWrite(me.linePWM(1), 1);    %//Moves CH A
   					WaitSecs(me.delayLength);
   				
   					me.digitalWrite(9, 1);    %//DISABLE CH A
@@ -297,7 +297,7 @@ classdef arduinoManager < optickaCore
 			    	me.digitalWrite(9, 0);    %//ENABLE CH A 
   					me.digitalWrite(8, 1);    %//DISABLE CH B
   					me.digitalWrite(12,1);   %//Sets direction of CH A
-  					me.digitalWrite(me.linePwm(1), 1);    %//Moves CH A
+  					me.digitalWrite(me.linePWM(1), 1);    %//Moves CH A
   					WaitSecs(me.delayLength);
   				
   					me.digitalWrite(9, 1);    %//DISABLE CH A
@@ -309,7 +309,7 @@ classdef arduinoManager < optickaCore
   					me.digitalWrite(9, 0);     %//ENABLE CH A-
   					me.digitalWrite(8, 1);     %//DISABLE CH B
   					me.digitalWrite(12,0);    %//Sets direction of CH A
-  					me.digitalWrite(me.linePwm(1), 1);     %//Moves CH A
+  					me.digitalWrite(me.linePWM(1), 1);     %//Moves CH A
   					WaitSecs(me.delayLength);
 				 case 4
 					cycleStepper(me)
@@ -322,7 +322,7 @@ classdef arduinoManager < optickaCore
 			    me.digitalWrite(9, 0);    %//ENABLE CH A 
   				me.digitalWrite(8, 1);    %//DISABLE CH B
   				me.digitalWrite(12,1);   %//Sets direction of CH A
-  				me.digitalWrite(me.linePwm(1), 1);    %//Moves CH A
+  				me.digitalWrite(me.linePWM(1), 1);    %//Moves CH A
   				WaitSecs(me.delayLength);
   				
   				me.digitalWrite(9, 1);    %//DISABLE CH A
@@ -334,7 +334,7 @@ classdef arduinoManager < optickaCore
   				me.digitalWrite(9, 0);     %//ENABLE CH A-
   				me.digitalWrite(8, 1);     %//DISABLE CH B
   				me.digitalWrite(12,0);    %//Sets direction of CH A
-  				me.digitalWrite(me.linePwm(1), 1);     %//Moves CH A
+  				me.digitalWrite(me.linePWM(1), 1);     %//Moves CH A
   				WaitSecs(me.delayLength);
  				
   				me.digitalWrite(9, 1);   %//DISABLE CH A
@@ -347,7 +347,7 @@ classdef arduinoManager < optickaCore
 		%================STOP STEPPER================
 		function stopStepper(me)
         		me.digitalWrite(9,1);        %//DISABLE CH A
-        		me.digitalWrite(me.linePwm(1), 0);       %//stop Move CH A
+        		me.digitalWrite(me.linePWM(1), 0);       %//stop Move CH A
         		me.digitalWrite(8,1);        %//DISABLE CH B
         		me.digitalWrite(11,0);      %//stop Move CH B 
         		WaitSecs(me.delayLength);
