@@ -29,15 +29,15 @@ classdef arduinoManager < optickaCore
 		%> specify the available pins to use; 2-13 is the default for an Uno
 		%> 0-10 for the xiao (though xiao pins 11-14 can control LEDS)
 		availablePins cell		= {}
-		
 		%> the arduinoIOPort device object, you can call the methods
 		%> directly if required.
 		device					= []
 		% motor shield settings
-		delaylength				= 0.03
+		delayLength				= 0.03
 		shield					= ''
 		linePwm					= 3
 	end
+
 	properties (SetAccess = private, GetAccess = public)
 		%> which ports are available
 		ports
@@ -46,13 +46,15 @@ classdef arduinoManager < optickaCore
 		%> ID from device
 		deviceID				= ''
 	end
+
 	properties (SetAccess = private, GetAccess = private, Transient = true)
 		%> a screen object to bind to
 		screen			= []
 	end
+	
 	properties (SetAccess = private, GetAccess = private)
-		allowedProperties char	= ['availablePins|rewardPin|rewardTime|openGUI|board|'...
-			'port|silentMode|verbose']
+		allowedProperties = {'availablePins','rewardPin','rewardTime','openGUI','board'...
+			'port','silentMode','verbose','shield'}
 	end
 	
 	methods%------------------PUBLIC METHODS--------------%
