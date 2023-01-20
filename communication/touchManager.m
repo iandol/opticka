@@ -209,7 +209,8 @@ classdef touchManager < optickaCore
 				if any(b)
 					event{1} = struct('Type',2,'Time',GetSecs,...
 					'X',mx,'Y',my,'ButtonStates',b,...
-					'NormX',mx/me.screenVals.width,'NormY',my/me.screenVals.height);
+					'NormX',mx/me.screenVals.width,'NormY',my/me.screenVals.height, ...
+					'MappedX',mx,'MappedY',my);
 				end
 				return;
 			end
@@ -246,7 +247,7 @@ classdef touchManager < optickaCore
 		% ===================================================================
 			if ~exist('windows','var') || isempty(windows); return; end
 			nWindows = size(windows,1);
-			result = false; x = []; y = [];
+			result = logical(zeros(nWindows,1)); x = zeros(nWindows,1); y = zeros(nWindows,1);
 			event = getEvent(me);
 			while ~isempty(event) && iscell(event); event = event{1}; end
 			if isempty(event) || ~isfield(event,'MappedX'); return; end
@@ -254,7 +255,7 @@ classdef touchManager < optickaCore
 			for i = 1 : nWindows
 				result(i,1) = calculateWindow(me, xy(1), xy(2), windows(i,:));
 				x(i,1) = xy(1); y(i,1) = xy(2);
-				if me.verbose;fprintf('Window %i IN: %i Touch: x = %i (%.2f) y = %i (%.2f)\n',i,result, event.X, xy(1), event.Y, xy(2));end
+				if result(i,1)==true; break; end
 			end
 		end
 
@@ -337,7 +338,7 @@ classdef touchManager < optickaCore
 		% ===================================================================
 			if exist('tempWindow','var') && isnumeric(tempWindow) && length(tempWindow) == 4
 				pos = screenManager.rectToPos(tempWindow);
-				radius = pos.radius / 2; % diameter to radius
+				radius = pos.radius;
 				xWin = pos.X;
 				yWin = pos.Y;
 			else

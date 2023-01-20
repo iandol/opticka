@@ -1712,7 +1712,7 @@ classdef screenManager < optickaCore
 		%> @return 
 		% ===================================================================
 			[out.X,out.Y] = RectCenter(rect);
-			out.radius = [RectWidth(rect) RectHeight(rect)];
+			out.radius = [RectWidth(rect) RectHeight(rect)] / 2;
 		end
 
 		% ===================================================================
