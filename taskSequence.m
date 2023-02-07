@@ -113,8 +113,9 @@ classdef taskSequence < optickaCore & dynamicprops
 		%> has task finished
 		taskFinished logical	= false
 		%> which seed values were used?
-		usedSeeds double		= []
-		dataTable table
+		thisSeed				= []
+		usedSeeds				= []
+		dataTable
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Transient = true, Hidden = true)
@@ -186,8 +187,8 @@ classdef taskSequence < optickaCore & dynamicprops
 			me.nVar = me.varTemplate;
 			me.blockVar = me.blockTemplate;
 			me.trialVar = me.trialTemplate;
-			me.initialiseGenerator();
 			me.isLoading = false;
+			initialiseGenerator(me);
 			
 		end
 		
@@ -198,21 +199,21 @@ classdef taskSequence < optickaCore & dynamicprops
 		%>
 		%> set up the random number generator
 		% ===================================================================
-			if isnan(me.mversion) || me.mversion == 0
-				me.mversion = str2double(regexp(version,'(?<ver>^\d+\.\d+)','match','once'));
-			end
 			if isempty(me.randomSeed)
-				me.randomSeed=round(rand*sum(clock));
+				me.thisSeed=round(rand*sum(clock));
+			else
+				me.thisSeed = me.randomSeed;
 			end
+			me.usedSeeds(end+1) = me.thisSeed;
 			if isempty(me.oldStream)
-				if me.mversion > 7.11
+				if ~verLessThan('matlab','7.11')
 					me.oldStream = RandStream.getGlobalStream;
 				else
 					me.oldStream = RandStream.getDefaultStream; %#ok<*GETRS>
 				end
 			end
-			me.taskStream = RandStream.create(me.randomGenerator,'Seed',me.randomSeed);
-			if me.mversion > 7.11
+			me.taskStream = RandStream.create(me.randomGenerator,'Seed',me.thisSeed);
+			if ~verLessThan('matlab','7.11')
 				RandStream.setGlobalStream(me.taskStream);
 			else
 				RandStream.setDefaultStream(me.taskStream); %#ok<*SETRS>
@@ -226,8 +227,7 @@ classdef taskSequence < optickaCore & dynamicprops
 		%>
 		%> reset the random number generator
 		% ===================================================================
-			me.randomSeed=[];
-			if me.mversion > 7.11
+			if ~verLessThan('matlab','7.11')
 				RandStream.setGlobalStream(me.oldStream);
 			else
 				RandStream.setDefaultStream(me.oldStream);
@@ -260,7 +260,7 @@ classdef taskSequence < optickaCore & dynamicprops
 				warning('WARNING: You are exceeding the number of variable numbers in an 8bit strobed word!')
 			end
 
-			me.usedSeeds = [me.usedSeeds me.taskStream.Seed];
+			initialiseGenerator(me);
 
 			checkBlockTrialVars(me);
 			% ---- deal with block level factor randomisation
@@ -713,10 +713,13 @@ classdef taskSequence < optickaCore & dynamicprops
 			nFrames = ceil(nSecs) * ceil(me.fps); %be a bit generous in defining how many frames the task will take
 		end
 		
-		% ===================================================================
 		function showLog(me)
-		%> @fn showLog
-		%> @brief showLog
+			showTable(me);
+		end
+		% ===================================================================
+		function showTable(me)
+		%> @fn showTable
+		%> @brief showTable
 		%>
 		%> Generates a table with the randomised stimulus values
 		% ===================================================================
@@ -747,7 +750,7 @@ classdef taskSequence < optickaCore & dynamicprops
 					'Tag', 'sSLog', ...
 					'Units', 'normalized', ...
 					'Position', [0.6 0 0.4 heightin], ...
-					'Name', ['Log: ' me.fullName], ...
+					'Name', ['Table: ' me.fullName], ...
 					'MenuBar', 'none', ...
 					'NumberTitle', 'off', ...
 					'Color', [0.94 0.94 0.94], ...
@@ -944,6 +947,7 @@ classdef taskSequence < optickaCore & dynamicprops
 			me.resetLog = [];
 			me.taskInitialised = false;
 			me.taskFinished = false;
+			initialiseGenerator(me);
 		end
 		
 		% ===================================================================

@@ -128,7 +128,7 @@ myStims{10}=imageStimulus('speed',2,'xPosition',-10,'yPosition',10,'size',4,...
 % in this case. Size is in degrees, scaling the whole picture
 myStims{11}=imageStimulus('speed',0,'xPosition',0,'yPosition',5,'size',5,...
 	'fileName',[myStims.paths.root '/stimuli/star.png'],...
-	'modulateColour',[0.7 0.7 0.2], 'name', 'Image',);
+	'modulateColour',[0.7 0.7 0.2], 'name', 'Image');
 
 %%
 % a movie stimulus, by default this loads a movie from the opticka
@@ -225,7 +225,7 @@ runMOC(myExp, opts);
 
 %% Visual Trial List
 % Lets print out a table of the stimulus properties for every trial
-showLog(myTask);
+showTable(myTask);
 
 %%
 % Plot a timing log of every frame against the stimulus on/off times:

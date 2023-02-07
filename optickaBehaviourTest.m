@@ -108,10 +108,6 @@ myTask.nVar(1).values	= [-10 0 10];
 myTask.nBlocks			= 3;
 randomiseTask(myTask);
 
-%%
-% Lets print out a table of the stimulus values for every trial to be run
-showLog(myTask);
-
 %% Setup screenManager Object
 % screenManager controls the PTB Screen(). We initialise the object with
 % parameters to open the PTB screen with. Note distance and pixels
@@ -156,6 +152,10 @@ myExp = runExperiment('stimuli', myStims,... %stimulus objects
 %% Run the full behavioural task
 % 
 runTask(myExp);
+
+%%
+% Lets print out a table of the stimulus values for every trial run
+showTable(myTask);
 
 %% Plot a timing log of every frame against the stimulus on/off times
 % PTB has the most reliable and precise timing control of any experimental

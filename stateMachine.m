@@ -57,9 +57,9 @@ classdef stateMachine < optickaCore
 	properties
 		%> our main state list, stored as a structure
 		stateList struct			= struct([])
-		%> timedelta for time > ticks calculation, assume 1e-4 by default
+		%> timedelta for time > ticks calculation, assume 1e-3 by default
 		%> can set to IFI of display.
-		timeDelta double			= 1e-4
+		timeDelta double			= 1e-3
 		%> use real time (true) or ticks (false) to mark state time. Real time is more
 		%> accurate, and robust against unexpected delays. Ticks uses timeDelta per tick and a
 		%> tick timer (each loop is 1 tick) for time measurement. This is simpler, can be
@@ -137,8 +137,6 @@ classdef stateMachine < optickaCore
 	properties (SetAccess = protected, GetAccess = protected)
 		%> feval logging
 		fevalTime
-		%> is tops data logger present?
-		isTops logical = false
 		%> should we run the finish function
 		isFinishing logical = false
 		%> field names of allStates struct array, defining state behaviors
@@ -146,8 +144,8 @@ classdef stateMachine < optickaCore
 		%> default values of allStates struct array fields
 		stateDefaults cell = { '', '', {}, {}, 1, {}, {}, false }
 		%> properties allowed during construction
-		allowedProperties char = ['name|realTime|verbose|clockFcn|waitFcn|'...
-			'timeDelta|skipExitStates|tempNextState']
+		allowedProperties = {'name','realTime','verbose','clockFcn','waitFcn'...
+			'timeDelta','skipExitStates','tempNextState'}
 	end
 	
 	%events
@@ -181,8 +179,7 @@ classdef stateMachine < optickaCore
 			me.parseArgs(args,me.allowedProperties);
 			
 			%initialise the statelist index
-			me.stateList = struct([]);
-			me.stateListIndex = containers.Map('uniformValues', false);
+			reset(me);
 			
 		end
 		
@@ -470,7 +467,7 @@ classdef stateMachine < optickaCore
 		% ===================================================================
 		function reset(me)
 			me.stateList = struct([]);
-			me.stateListIndex = containers.Map('uniformValues', false);
+			me.stateListIndex = containers.Map('KeyType','char','ValueType','double');
 			me.isRunning = false;
 			if me.timeDelta == 0; me.realTime = true; end %stops a divide by zero infinite loop
 			me.isFinishing = false;
@@ -500,16 +497,18 @@ classdef stateMachine < optickaCore
 		% ===================================================================
 		function runDemo(me)
 			oldVerbose = me.verbose;
+			oldTimers = me.fnTimers;
 			oldTimeDelta = me.timeDelta;
-			me.timeDelta = 1e-4;
+			me.timeDelta = 1e-2;
 			me.verbose = true;
+			me.fnTimers = true;
 			beginFcn = {@()disp('begin state: Hello there!');};
 			middleFcn = {@()disp('middle state: Still here?');};
 			endFcn = {@()disp('end state: See you soon!');};
 			surpriseFcn = {@()disp('surprise state: SURPRISE!!!');};
 			withinFcn = {}; %don't run anything within the state
 			transitionFcn = {@()sprintf('surprise');}; %returns a valid state name and thus triggers a transition
-			exitFcn = { @()fprintf('\t--->>exit state'); @()fprintf('\n') };
+			exitFcn = { @()fprintf('<<---exit state--->>'); @()fprintf('\n') };
 			statesInfo = {
 				'name'		'next'		'time'	'entryFcn'	'withinFcn'	'transitionFcn'	'exitFcn';
 				'begin'		'middle'	[2 4]	beginFcn	withinFcn	{}				exitFcn;
@@ -533,6 +532,7 @@ classdef stateMachine < optickaCore
 			reset(me);
 			me.verbose = oldVerbose; %reset verbose back to original value
 			me.timeDelta = oldTimeDelta;
+			me.fnTimers = oldTimers;
 		end
 
 		% ===================================================================
@@ -545,13 +545,13 @@ classdef stateMachine < optickaCore
 			oldTimers = me.fnTimers;
 			me.verbose = false;
 			me.fnTimers = true;
-			beginFcn = {@()fprintf('begin state: warmup\n');};
-			middleFcn = {@()fprintf('middle state: warmup\n');};
-			endFcn = {@()fprintf('end state: warmup\n');};
-			surpriseFcn = {@()fprintf('surprise state: warmup\n');};
-			withinFcn = {}; %don't run anything within the state
-			transitionFcn = {@()sprintf('surprise');}; %returns a valid state name and thus triggers a transition
-			exitFcn = { @()fprintf('\t--->>exit state'); @()fprintf('\n') };
+			beginFcn = { @()fprintf('begin state: stateMachine warmup... ') };
+			middleFcn = { @()fprintf('middle state: stateMachine warmup... ') };
+			endFcn = { @()fprintf('end state: stateMachine warmup... ') };
+			surpriseFcn = { @()fprintf('surprise state: stateMachine warmup... ')};
+			withinFcn = {};
+			transitionFcn = { @()sprintf('surprise') }; 
+			exitFcn = { @()fprintf('...exit\n') };
 			statesInfo = {
 				'name'		'next'		'time'	'entryFcn'	'withinFcn'	'transitionFcn'	'exitFcn';
 				'begin'		'middle'	0.1		beginFcn	withinFcn	{}				exitFcn;

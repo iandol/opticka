@@ -387,7 +387,6 @@ classdef opticka < optickaCore
 			me.r.benchmark = logical(me.gv(me.ui.OKbenchmark));
 			me.r.screen.hideFlash = logical(me.gv(me.ui.OKHideFlash));
 			me.r.screen.useRetina = logical(me.gv(me.ui.OKUseRetina));
-			me.r.dummyMode = logical(me.gv(me.ui.OKUseDummy));
 			if strcmpi(me.r.screen.bitDepth,'8bit')
 				me.ui.OKAntiAliasing.Value = '0';
 			end
@@ -403,54 +402,46 @@ classdef opticka < optickaCore
 			me.r.screen.backgroundColour = me.gn(me.ui.OKbackgroundColour);
 			%deprecated me.r.screen.nativeBeamPosition = logical(me.gv(me.h.OKNativeBeamPosition));
 			
-			if me.ui.OKuseLabJackStrobe.Checked == true
-				me.r.useLabJackStrobe = true;
-				me.r.useLabJackTStrobe = false;
+			me.r.control.port = me.ui.OKINTANPort.Value;
+			if me.ui.StartStopIntanMenu.Checked == true
+				me.r.control.device = 'intan';
 			else
-				me.r.useLabJackStrobe = false;
+				me.r.control.device = '';
 			end
+
+			me.r.strobe.mode = me.ui.OKstrobeMode.Value;
+			me.r.strobe.stimOFFValue = me.ui.OKstrobeOFF.Value;
 			if me.ui.OKuseLabJackTStrobe.Checked == true
-				me.r.useLabJackTStrobe = true;
-				me.r.useLabJackStrobe = false;
+				me.r.strobe.device = 'labjackt';
+			elseif me.ui.OKuseLabJackStrobe.Checked == true
+				me.r.strobe.device = 'labjack';	
+			elseif me.ui.OKuseDataPixx.Checked == true
+				me.r.strobe.device = 'datapixx';	
+			elseif me.ui.OKuseDisplayPP.Checked == true
+				me.r.strobe.device = 'display++';
 			else
-				me.r.useLabJackTStrobe = false;
+				me.r.strobe.device = '';
 			end
-			if me.ui.OKuseDataPixx.Checked == true
-				me.r.useDataPixx = true;
-			else
-				me.r.useDataPixx = false;
-			end
-			if me.ui.OKuseDisplayPP.Checked == true
-				me.r.useDisplayPP = true;
-				%me.r.dPPMode = get(me.h.OKdPPMode,'Value');
-			else
-				me.r.useDisplayPP = false;
-			end
+
+			me.r.reward.port = me.ui.OKarduinoPort.Value;
 			if me.ui.OKuseArduino.Checked == true
-				me.r.useArduino = true;
-				me.r.arduinoPort = me.gv(me.ui.OKarduinoPort);
+				me.r.reward.device = 'arduino';
+				me.r.reward.port = me.gv(me.ui.OKarduinoPort);
+			elseif me.ui.OKuseLabJackReward.Checked == true
+				me.r.reward.device = 'labjack';
 			else
-				me.r.useArduino = false;
+				me.r.reward.device = '';
 			end
-			if me.ui.OKuseLabJackReward.Checked == true
-				me.r.useLabJackReward = true;
-			else
-				me.r.useLabJackReward = false;
-			end
+
+			me.r.eyetracker.dummy = logical(me.ui.OKUseDummy.Value);
 			if me.ui.OKuseEyelink.Checked == true
-				me.r.useEyeLink = true;
-				me.r.useTobii = false;
-				me.ui.OKuseTobii.Checked = false;
+				me.r.eyetracker.device = 'eyelink';
+			elseif me.ui.OKuseTobii.Checked == true
+				me.r.eyetracker.device = 'tobii';
 			else
-				me.r.useEyeLink = false;
+				me.r.eyetracker.device = '';
 			end
-			if me.ui.OKuseTobii.Checked == true
-				me.r.useTobii = true;
-				me.r.useEyeLink = false;
-				me.ui.OKuseEyelink.Checked = false;
-			else
-				me.r.useTobii = false;
-			end
+
 			if me.ui.OKuseEyeOccluder.Enable == true && me.ui.OKuseEyeOccluder.Checked == true
 				me.r.useEyeOccluder = true;
 			else
@@ -1310,8 +1301,10 @@ classdef opticka < optickaCore
 				me.ui.OKuseEyeOccluder.Checked		= 'off';
 				me.ui.OKuseMagStim.Checked			= 'off';
 				
-				if isprop(tmp.r,'useLabJackTStrobe'); me.r.useLabJackTStrobe = tmp.r.useLabJackTStrobe; end
-				if me.r.useLabJackTStrobe == true; me.ui.OKuseLabJackTStrobe.Checked = 'on'; end
+				if isprop(tmp.r,'useLabJackTStrobe') && tmp.r.useLabJackTStrobe == true
+					me.r.strobe.device = 'labjackt';
+					me.ui.OKuseLabJackTStrobe.Checked = 'on';
+				end
 				
 				if isprop(tmp.r,'useDisplayPP'); me.r.useDisplayPP = tmp.r.useDisplayPP; end
 				if me.r.useDisplayPP == true; me.ui.OKuseDisplayPP.Checked = 'on'; end
