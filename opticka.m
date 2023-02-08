@@ -433,19 +433,13 @@ classdef opticka < optickaCore
 				me.r.reward.device = '';
 			end
 
-			me.r.eyetracker.dummy = logical(me.ui.OKUseDummy.Value);
+			me.r.eyetracker.dummy = logical(me.ui.OKUseDummy.Checked);
 			if me.ui.OKuseEyelink.Checked == true
 				me.r.eyetracker.device = 'eyelink';
 			elseif me.ui.OKuseTobii.Checked == true
 				me.r.eyetracker.device = 'tobii';
 			else
 				me.r.eyetracker.device = '';
-			end
-
-			if me.ui.OKuseEyeOccluder.Enable == true && me.ui.OKuseEyeOccluder.Checked == true
-				me.r.useEyeOccluder = true;
-			else
-				me.r.useEyeOccluder = false;
 			end
 			
 		end
@@ -1170,6 +1164,8 @@ classdef opticka < optickaCore
 			salutation(me,sprintf('Routing Protocol FROM %s TO %s',tmp.fullName,me.fullName),[],true);
 			
 			fprintf('---> Opticka Protocol loading:\n');
+
+			% stimuli
 			if isprop(tmp.r,'stimuli')
 				if isa(tmp.r.stimuli,'metaStimulus')
 					me.r.stimuli = tmp.r.stimuli;
@@ -1294,33 +1290,78 @@ classdef opticka < optickaCore
 				me.ui.OKuseLabJackTStrobe.Checked	= 'off';
 				me.ui.OKuseDataPixx.Checked			= 'off';
 				me.ui.OKuseDisplayPP.Checked		= 'off';
-				me.ui.OKuseEyelink.Checked			= 'on';
+				me.ui.OKuseEyelink.Checked			= 'off';
 				me.ui.OKuseTobii.Checked			= 'off';
 				me.ui.OKuseLabJackReward.Checked	= 'off';
 				me.ui.OKuseArduino.Checked			= 'off';
 				me.ui.OKuseEyeOccluder.Checked		= 'off';
 				me.ui.OKuseMagStim.Checked			= 'off';
+
+				me.r.strobe.device = '';
+				me.r.reward.device = '';
+				me.r.eyetracker.device = '';
+				me.r.control.device = '';
 				
+				% Legacy properties
 				if isprop(tmp.r,'useLabJackTStrobe') && tmp.r.useLabJackTStrobe == true
 					me.r.strobe.device = 'labjackt';
-					me.ui.OKuseLabJackTStrobe.Checked = 'on';
+				elseif isprop(tmp.r,'useDisplayPP') &&  me.r.useDisplayPP == true
+					me.r.strobe.device = 'display++';
+				elseif isprop(tmp.r,'useDataPixx') &&  me.r.useDataPixx == true
+					me.r.strobe.device = 'display++';
+				elseif isprop(tmp.r,'OKuseLabJackStrobe') &&  me.r.OKuseLabJackStrobe == true
+					me.r.strobe.device = 'labjack';
 				end
-				
-				if isprop(tmp.r,'useDisplayPP'); me.r.useDisplayPP = tmp.r.useDisplayPP; end
-				if me.r.useDisplayPP == true; me.ui.OKuseDisplayPP.Checked = 'on'; end
-				
-				if isprop(tmp.r,'useDataPixx'); me.r.useDataPixx = tmp.r.useDataPixx; end
-				if me.r.useDataPixx == true; me.ui.OKuseDataPixx.Checked = 'on'; end
-				
-				if isprop(tmp.r,'useArduino'); me.r.useArduino = tmp.r.useArduino; end
-				if me.r.useArduino == true; me.ui.OKuseArduino.Checked = 'on'; end
-				
-				if isprop(tmp.r,'useTobii'); me.r.useTobii = tmp.r.useTobii; end
-				if me.r.useTobii == true; me.ui.OKuseTobii.Checked = 'on'; me.ui.OKuseEyelink.Checked = 'off';end
-				
-				if isprop(tmp.r,'useEyeLink'); me.r.useEyeLink = tmp.r.useEyeLink; end
-				if me.r.useEyeLink == true; me.ui.OKuseEyelink.Checked = 'on'; me.ui.OKuseTobii.Checked = 'off';end
-			end
+				if isprop(tmp.r,'useArduino') && me.r.useArduino == true
+					me.r.reward.device = 'arduino';
+					me.ui.OKuseArduino.Checked = 'on';
+				elseif isprop(tmp.r,'useLabJackReward') && me.r.useLabJackReward == true
+					me.r.reward.device = 'labjack';
+					me.ui.OKuseLabJackReward.Checked = 'on';
+				end
+				if isprop(tmp.r,'useTobii') && me.r.useTobii == true
+					me.r.useTobii = tmp.r.useTobii;
+					me.ui.OKuseTobii.Checked = 'on';
+					me.ui.OKuseEyelink.Checked = 'off';
+				elseif isprop(tmp.r,'useEyeLink') && me.r.useEyeLink == true
+					me.r.useEyeLink = tmp.r.useEyeLink;
+					me.ui.OKuseEyelink.Checked = 'on'; 
+					me.ui.OKuseTobii.Checked = 'off';
+				end
+
+				% New properties
+				if isprop(tmp.r,'strobe')
+					me.r.strobe = tmp.r.strobe;
+					switch me.r.strobe.device
+						case 'labjackt'
+							me.ui.OKuseLabJackTStrobe.Checked = 'on';
+						case 'datapixx'
+							me.ui.OKuseDataPixx.Checked = 'on';
+						case 'display++'
+							me.ui.OKuseDisplayPP.Checked = 'on';
+						case 'labjack'
+							me.ui.OKuseLabJackStrobe.Checked = 'on';
+					end
+				end
+				if isprop(tmp.r,'reward')
+					me.r.reward = tmp.r.reward;
+					switch me.r.reward.device
+						case 'arduino'
+							me.ui.OKuseArduino.Checked = 'on';
+						case 'labjack'
+							me.ui.OKuseLabJackReward.Checked = 'on';
+					end
+				end
+				if isprop(tmp.r,'eyetracker')
+					me.r.eyetracker = tmp.r.eyetracker;
+					switch me.r.eyetracker.device
+						case 'tobii'
+							me.ui.OKuseTobii.Checked = 'on';
+						case 'eyelink'
+							me.ui.OKuseEyelink.Checked = 'on';
+					end
+				end
+			end % runExperiment
 			
 			%copy screen parameters
 			if isa(tmp.r.screen,'screenManager')

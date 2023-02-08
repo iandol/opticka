@@ -2833,11 +2833,12 @@ classdef runExperiment < optickaCore
 					lobj.previousInfo.ptb = in.ptb;
 					lobj.previousInfo.screenVals = in.screenVals;
 					lobj.previousInfo.screenSettings = in.screenSettings;
+					lobj.previousInfo.all = in;
 				end
 				try lobj.stateMachine		= in.stateMachine; end
 				try lobj.eyeTracker			= in.eyeTracker; end
 				try lobj.behaviouralRecord	= in.behaviouralRecord; end
-				try lobj.runkLog			= in.runLog; end
+				try lobj.runLog				= in.runLog; end
 				try lobj.taskLog			= in.taskLog; end
 				try lobj.stateInfo			= in.stateInfo; end
 				try lobj.comment			= in.comment; end
