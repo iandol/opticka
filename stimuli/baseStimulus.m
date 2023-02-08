@@ -142,7 +142,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 			'dstRect','mvRect','sM','screenVals','isSetup','isGUI','showOnTracker'...
 			'doDots','doMotion','doDrift','doFlash','doAnimator'}
 		%> Which properties to not draw in the UI panel
-		ignorePropertiesUIBase char = {'animator','fullName'}
+		ignorePropertiesUIBase = {'animator','fullName'}
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -575,7 +575,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 			end		
 			eidx = [];
 			for i = 1:length(pr)
-				if ~isempty(regexpi(pr{i},excl, 'once'))
+				if matches(pr{i}, excl)
 					eidx = [eidx i];
 				end
 			end
@@ -586,13 +586,13 @@ classdef baseStimulus < optickaCore & dynamicprops
 			pr2 = sort(pr2);
 			eidx = [];
 			for i = 1:length(pr2)
-				if ~isempty(regexpi(pr2{i},excl, 'once'))
+				if matches(pr2{i},excl)
 					eidx = [eidx i];
 				end
 			end
 			pr2(eidx) = [];
 			lp2 = length(pr2);
-			handles.grid3 = uigridlayout(handles.grid,[lp2 1],'Padding',[1 1 1 1],'BackgroundColor',bgcolor);
+			if lp2 > 0; handles.grid3 = uigridlayout(handles.grid,[lp2 1],'Padding',[1 1 1 1],'BackgroundColor',bgcolor); end
 
 			for i = 1:2
 				for j = 1:lp
