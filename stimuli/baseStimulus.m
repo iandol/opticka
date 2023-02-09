@@ -664,7 +664,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 								handles.([pr{cur} '_num']).Enable = false; 
 							end
 						else
-							uitextarea('Parent',eval(idx{i}),'BackgroundColor',bgcolor,'Enable','off');
+							uilabel('Parent',eval(idx{i}),'Text','','BackgroundColor',bgcolor,'Enable','off');
 						end
 						if isprop(me,[pr{cur} 'List'])
 							if strcmp(me.([pr{cur} 'List']),'filerequestor')
@@ -696,7 +696,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 							'BackgroundColor',bgcolor);
 						end
 					else
-						uitextarea('Parent',eval(idx{i}),'BackgroundColor',bgcolor);
+						uilabel('Parent',eval(idx{i}),'Text','','BackgroundColor',bgcolor,'Enable','off');
 					end
 				end
 			end

@@ -326,33 +326,35 @@ classdef runExperiment < optickaCore
 				io					= configureIO(me); %#ok<*PROPLC> 
 				dC					= dataConnection('protocol','tcp');
 				
-				%================================Amplifier control
-				if matches(me.control.device,'intan')
+				%========================================Start amplifier
+				% 
+				if strcmp(me.control.device,'intan')
 					addr = strsplit(me.control.port,':');
 					dC.rAddress = addr{1};
 					dC.rPort = addr{2};
-					open(dC);
-					write(dC,uint8(['set Filename.BaseFilename ' me.name]));
-					write(dC,uint8(['set Filename.Path ' 'C:/OptickaFiles']));
-					write(dC,uint8('set runmode run'));
-				elseif matches(me.control.device,'plexon') 
-					if me.useDataPixx || me.useDisplayPP
+					try 
+						open(dC);
+						write(dC,uint8(['set Filename.BaseFilename ' me.name]));
+						write(dC,uint8(['set Filename.Path ' 'C:/OptickaFiles']));
+						write(dC,uint8('set runmode run'));
+					catch
+						warning('runTask cannot contact intan!!!')
+						me.control.device = '';
+					end
+				elseif strcmp(me.control.device,'plexon') 
+					if strcmp(me.strobe.device,'datapixx') || strcmp(me.strobe.device,'display++')
 						startRecording(io);
 						WaitSecs(0.5);
-					elseif tS.controlPlexon && me.useLabJackStrobe
+						resumeRecording(io);
+					elseif strcmp(me.strobe.device,'labjack')
 						% Trigger the omniplex (TTL on FIO1) into paused mode
 						io.setDIO([2,0,0]);WaitSecs(0.001);io.setDIO([0,0,0]);
 						WaitSecs(0.5);
+						io.setDIO([3,0,0],[3,0,0])%(Set HIGH FIO0->Pin 24), unpausing the omniplex
 					end
 				end
+
 			
-				%===============================unpause Plexon
-				if matches(me.control.device,'plexon')  &&  (me.useDataPixx || me.useDisplayPP)
-					resumeRecording(io);
-				elseif matches(me.control.device,'plexon') && me.useLabJackStrobe
-					io.setDIO([3,0,0],[3,0,0])%(Set HIGH FIO0->Pin 24), unpausing the omniplex
-				end
-				
 				%=========================================================
 				% lets draw 2 seconds worth of the stimuli we will be using
 				% covered by a blank. Primes the GPU and other components with the sorts
@@ -368,7 +370,7 @@ classdef runExperiment < optickaCore
 					s.drawPhotoDiodeSquare([0 0 0 1]);
 					finishDrawing(s);
 					animate(stims);
-					if ~mod(i,10); io.sendStrobe(255); end
+					if ~mod(i,10); io.sendStrobe(me.strobe.stimOFFValue); end
 					flip(s);
 				end
 				update(stims); %make sure stimuli are set back to their start state
@@ -499,10 +501,19 @@ classdef runExperiment < optickaCore
 				s.drawBackground;
 				vbl=Screen('Flip', s.win);
 				tL.screenLog.afterDisplay=vbl;
-				if tS.controlPlexon && (me.useDataPixx || me.useDisplayPP)
-					pauseRecording(io);
-				elseif tS.controlPlexon && me.useLabJackStrobe
-					io.setDIO([0,0,0],[1,0,0]); %this is RSTOP, pausing the omniplex
+				
+				%================================Amplifier control
+				if strcmp(me.control.device,'intan')
+					write(dC,uint8('set runmode stop'));
+				elseif strcmp(me.control.device,'plexon') 
+					if strcmp(me.strobe.device,'datapixx') || strcmp(me.strobe.device,'display++')
+						pauseRecording(io);
+						WaitSecs(0.25)
+						stopRecording(io);
+					elseif strcmp(me.strobe.device,'labjack')
+						io.setDIO([0,0,0],[1,0,0]); %this is RSTOP, pausing the omniplex
+						io.setDIO([2,0,0]);WaitSecs(0.05);io.setDIO([0,0,0]); %we stop recording mode completely
+					end
 				end
 				
 				%-----get our profiling report for our task loop
@@ -518,17 +529,18 @@ classdef runExperiment < optickaCore
 				
 				s.screenVals.info = Screen('GetWindowInfo', s.win);
 				
-				s.resetScreenGamma();
+				try resetScreenGamma(s); end
 				
 				if matches(me.eyetracker.device,'eyelink')
-					close(me.eyeTracker);
+					try close(me.eyeTracker); end
 					me.eyeTracker = [];
 				end
 				
-				s.finaliseMovie(false);
+				try finaliseMovie(s,false); end
 				
-				stims.reset();
-				s.close();
+				try reset(stims); end
+				try close(s); end
+				try close(io); end
 
 				removeEmptyValues(tL);
 				me.tS = tS; %store our tS structure for backup
@@ -553,28 +565,19 @@ classdef runExperiment < optickaCore
 				save(sname,'rE','tS');
 				fprintf('\n\n#####################\n===>>> SAVED DATA to: %s\n#####################\n\n',sname)
 				
-				if tS.controlPlexon && (me.useDataPixx || me.useDisplayPP)
-					stopRecording(io);
-					close(io);
-				elseif tS.controlPlexon && me.useLabJackStrobe
-					me.lJack.setDIO([2,0,0]);WaitSecs(0.05);me.lJack.setDIO([0,0,0]); %we stop recording mode completely
-					me.lJack.close;
-					me.lJack=[];
-				end
-				
 				tL.calculateMisses;
 				if tL.nMissed > 0
 					fprintf('\n!!!>>> >>> >>> There were %i MISSED FRAMES <<< <<< <<<!!!\n',tL.nMissed);
 				end
 				
-				if s.movieSettings.record; s.playMovie(); end
+				if s.movieSettings.record; playMovie(s); end
 				
 				me.isRunning = false;
 				
 			catch ME
 				me.isRunning = false;
 				fprintf('\n\n---!!! ERROR in runExperiment.runMOC()\n');
-				if me.useDataPixx || me.useDisplayPP
+				try
 					pauseRecording(io); %pause plexon
 					WaitSecs(0.25)
 					stopRecording(io);
@@ -586,11 +589,11 @@ classdef runExperiment < optickaCore
 				ListenChar(0);
 				ShowCursor;
 				resetScreenGamma(s);
-				close(s);
-				close(me.eyeTracker);
+				try close(s); end
+				try close(me.eyeTracker); end
 				me.eyeTracker = [];
 				me.behaviouralRecord = [];
-				close(rM);
+				try close(rM); end
 				me.lJack=[];
 				me.io = [];
 				clear tL s tS bR rM eT io sM
@@ -710,20 +713,20 @@ classdef runExperiment < optickaCore
 				me.isRunTask			= true;
 				
 				%================================open the eyetracker interface
-				if me.useTobii
+				if strcmp(me.eyetracker.device, 'tobii')
 					me.eyeTracker		= tobiiManager();
-					if ~isempty(me.tobiisettings); me.eyeTracker.addArgs(me.tobiisettings); end
+					if ~isempty(me.eyetracker.tsettings); me.eyeTracker.addArgs(me.eyetracker.tsettings); end
 				else
 					me.eyeTracker		= eyelinkManager();
-					if ~isempty(me.elsettings); me.eyeTracker.addArgs(me.elsettings); end
+					if ~isempty(me.eyetracker.esettings); me.eyeTracker.addArgs(me.eyetracker.esettings); end
 				end
 				eT						= me.eyeTracker;
 				eT.verbose				= me.verbose;
-				eT.saveFile				= [me.paths.savedData filesep me.subjectName '-' me.savePrefix '.edf'];
-				if ~matches(me.eyetracker.device,'eyelink') && ~matches(me.eyetracker.device,'tobii')
+				eT.saveFile				= [me.paths.savedData filesep me.name '.edf'];
+				if isempty(me.eyetracker.device)
 					eT.isDummy			= true;
 				else
-					eT.isDummy			= me.dummyMode;
+					eT.isDummy			= me.eyetracker.dummy;
 				end
 				
 				if isfield(tS,'rewardTime')
@@ -742,7 +745,8 @@ classdef runExperiment < optickaCore
 				task.fps				= s.screenVals.fps;
 				
 				%================================initialise and set up I/O
-				io						= configureIO(me);
+				io					= configureIO(me);
+				dC					= dataConnection('protocol','tcp');
 				
 				%================================initialise the user functions object
 				if ~exist(me.userFunctionsFile,'file')
@@ -815,8 +819,8 @@ classdef runExperiment < optickaCore
 					drawText(s,'Warming up the GPU, Eyetracker and I/O systems...');
 					finishDrawing(s);
 					animate(stims); % run our stimulus animation routines to the next frame
-					if ~mod(i,10); io.sendStrobe(255); end % send a strobed word
-					if me.useEyeLink || me.useTobii
+					if ~mod(i,10); sendStrobe(io, 255); end % send a strobed word
+					if ~isempty(me.eyetracker.device)
 						getSample(eT); % get an eyetracker sample
 						if i == 1
 							trackerMessage(eT,sprintf('WARMUP_TEST %i',getTaskIndex(me)));
@@ -824,16 +828,15 @@ classdef runExperiment < optickaCore
 						end
 					end
 					flip(s);
-					if me.useTobii && eT.secondScreen; trackerFlip(eT,1); end
+					if eT.secondScreen; trackerFlip(eT,1); end
 				end
 				update(stims); %make sure all stimuli are set back to their start state
-				if me.useEyeLink || me.useTobii
+				if ~isempty(me.eyetracker.device)
 					resetAll(eT);
-					if eT.secondScreen; trackerClearScreen(eT);trackerFlip(eT,0); end 
+					if eT.secondScreen; trackerClearScreen(eT); trackerFlip(eT,0); end 
 				end
-				io.resetStrobe;flip(s);flip(s); % reset the strobe system
+				resetStrobe(io); flip(s); flip(s); % reset the strobe system
 
-				
 				%=============================Premptive save in case of crash or error: SAVES IN /TMP
 				rE = me;
 				tS.tmpFile = [tempdir filesep me.name '.mat'];
@@ -849,18 +852,32 @@ classdef runExperiment < optickaCore
 					open(rM);
 				end
 				
-				%===========================Start Plexon in paused mode (the plexon can be
-				% controlled using specific trigger values, see the omniplex
-				% settings for details).
-				if tS.controlPlexon && (me.useDisplayPP || me.useDataPixx)
-					fprintf('===>>> Triggering I/O systems... <<<===\n')
-					pauseRecording(io); %make sure this is set low first
-					startRecording(io);
-					WaitSecs(1);
-				end
-
-				if matches(me.control.device, 'intan')
-
+				%===========================Start amplifier
+				% 
+				if strcmp(me.control.device,'intan')
+					addr = strsplit(me.control.port,':');
+					dC.rAddress = addr{1};
+					dC.rPort = addr{2};
+					try 
+						open(dC);
+						write(dC,uint8(['set Filename.BaseFilename ' me.name]));
+						write(dC,uint8(['set Filename.Path ' 'C:/OptickaFiles']));
+						write(dC,uint8('set runmode run'));
+					catch
+						warning('runTask cannot contact intan!!!')
+						me.control.device = '';
+					end
+				elseif strcmp(me.control.device,'plexon') 
+					if strcmp(me.strobe.device,'datapixx') || strcmp(me.strobe.device,'display++')
+						startRecording(io);
+						WaitSecs(0.5);
+						resumeRecording(io);
+					elseif strcmp(me.strobe.device,'labjack')
+						% Trigger the omniplex (TTL on FIO1) into paused mode
+						io.setDIO([2,0,0]);WaitSecs(0.001);io.setDIO([0,0,0]);
+						WaitSecs(0.5);
+						io.setDIO([3,0,0],[3,0,0])%(Set HIGH FIO0->Pin 24), unpausing the omniplex
+					end
 				end
 
 				%===========================Initialise our various counters
@@ -989,7 +1006,7 @@ classdef runExperiment < optickaCore
 						end
 
 						%----- LabJack: I/O needs to send strobe immediately after screen flip -----%
-						if me.sendStrobe && me.useLabJackTStrobe
+						if me.sendStrobe && matches(me.strobe.device,'labjackt')
 							sendStrobe(io); me.sendStrobe = false;
 							%Eyelink('Message', sprintf('MSG:SYNCSTROBE value:%i @ vbl:%20.40g / totalTicks: %i', io.sendValue, tL.lastvbl, tS.totalTicks));
 						end
@@ -1055,13 +1072,21 @@ classdef runExperiment < optickaCore
 				
 				%-----get our profiling report for our task loop
 				%profile off; profile viewer;
-				
-				if tS.controlPlexon && (me.useDisplayPP || me.useDataPixx)
-					pauseRecording(io); %pause plexon
-					WaitSecs(0.5);
-					stopRecording(io);
-					WaitSecs(0.5);
-					close(io);
+
+				%================================Amplifier control
+				if strcmp(me.control.device,'intan')
+					write(dC,uint8('set runmode stop'));
+				elseif strcmp(me.control.device,'plexon') 
+					if strcmp(me.strobe.device,'datapixx') || strcmp(me.strobe.device,'display++')
+						pauseRecording(io);
+						WaitSecs(0.25)
+						stopRecording(io);
+					elseif strcmp(me.strobe.device,'labjack')
+						io.setDIO([0,0,0],[1,0,0]); %this is RSTOP, pausing the omniplex
+						io.setDIO([2,0,0]);
+						WaitSecs(0.05);
+						io.setDIO([0,0,0]); %we stop recording mode completely
+					end
 				end
 				
 				try close(s); end %screen
@@ -1140,10 +1165,6 @@ classdef runExperiment < optickaCore
 				me.behaviouralRecord = [];
 				me.lJack=[];
 				me.io = [];
-				if me.useEyeOccluder && isfield(tS,'eO')
-					close(tS.eO)
-					tS.eO=[];
-				end
 				rethrow(ME)
 			end
 
@@ -1419,11 +1440,11 @@ classdef runExperiment < optickaCore
 		%> @param value the value to set the I/O system
 		% ===================================================================
 			if value == Inf; value = me.stimOFFValue; end
-			if me.useDisplayPP == true
+			if strcmp(me.strobe.device, 'display++')
 				prepareStrobe(me.dPP, value);
-			elseif me.useDataPixx == true
+			elseif strcmp(me.strobe.device, 'datapixx')
 				prepareStrobe(me.dPixx, value);
-			elseif me.useLabJackTStrobe || me.useLabJackStrobe
+			elseif strcmp(me.strobe.device, 'labjackt') || strcmp(me.strobe.device, 'labjack')
 				prepareStrobe(me.lJack, value);
 			end
 		end
@@ -1595,7 +1616,7 @@ classdef runExperiment < optickaCore
 			if ~exist('override','var') || isempty(override)
 				override = true;
 			end
-			if me.useDataPixx || me.useDisplayPP || me.useLabJackTStrobe
+			if ~isempty(me.strobe.device)
 				if me.isTask
 					setStrobeValue(me, me.task.outIndex(index));
 				else
@@ -1823,7 +1844,7 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 			global rM
 			%-------Set up Digital I/O (dPixx and labjack) for this task run...
-			if matches(me.strobe.device,'display++')
+			if strcmp(me.strobe.device,'display++')
 				if ~isa(me.dPP,'plusplusManager')
 					me.dPP = plusplusManager('verbose',me.verbose);
 				end
@@ -1836,7 +1857,7 @@ classdef runExperiment < optickaCore
 				io.name = 'runinstance';
 				open(io);
 				fprintf('===> Using Display++ for strobed I/O...\n')
-			elseif matches(me.strobe.device,'datapixx')
+			elseif strcmp(me.strobe.device,'datapixx')
 				if ~isa(me.dPixx,'dPixxManager')
 					me.dPixx = dPixxManager('verbose',me.verbose);
 				end
@@ -1847,7 +1868,7 @@ classdef runExperiment < optickaCore
 				io.name = 'runinstance';
 				open(io);
 				fprintf('===> Using dataPixx for strobed I/O...\n')
-			elseif matches(me.strobe.device,'labjackt')
+			elseif strcmp(me.strobe.device,'labjackt')
 				if ~isa(me.lJack,'labjackT')
 					me.lJack = labJackT('openNow',false,'device',1);
 				end
@@ -1861,7 +1882,7 @@ classdef runExperiment < optickaCore
 				else
 					warning('===> !!! labJackT could not properly open !!!');
 				end
-			elseif matches(me.strobe.device,'labjack')
+			elseif strcmp(me.strobe.device,'labjack')
 				if ~isa(me.lJack,'labjack')
 					me.lJack = labJack('openNow',false);
 				end
@@ -1880,10 +1901,7 @@ classdef runExperiment < optickaCore
 				io.silentMode = true;
 				io.verbose = false;
 				io.name = 'silentruninstance';
-				me.useDataPixx = false;
-				me.useLabJackTStrobe = false;
-				me.useLabJackStrobe = false;
-				me.useDisplayPP = false;
+				me.strobe.device = '';
 				fprintf('\n===>>> No strobe output I/O...\n')
 			end
 			if matches(me.reward.device,'arduino')

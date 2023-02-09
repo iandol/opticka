@@ -139,7 +139,7 @@ classdef eyelinkManager < optickaCore
 		driftMaximum double			= 15
 		%> custom calibration target
 		customTarget				= []
-		%> compatibilitty with tobii which can use a second screen
+		%> compatibility with tobii which can use a second screen
 		secondScreen				= false
 	end
 	

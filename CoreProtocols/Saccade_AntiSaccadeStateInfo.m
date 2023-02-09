@@ -98,11 +98,11 @@ tS.INCORRECT				= -5;		%==the code to send eyetracker for incorrect trials
 % settings you can test if they are empty or not and set them based on
 % that...
 eT.name				= tS.name;
-if me.dummyMode;	eT.isDummy = true; end %===use dummy or real eyetracker? 
+if me.eyetracker.dummy;	eT.isDummy = true; end %===use dummy or real eyetracker? 
 if tS.saveData;		eT.recordData = true; end %===save Eyetracker data?					
-if me.useEyeLink
+if matches(me.eyetracker.device, 'eyelink')
 	warning('Note: this protocol file is optimised for the Tobii eyetracker...')
-	if isempty(me.elsettings)		%==check if GUI settings are empty
+	if isempty(me.eyetracker.esettings)		%==check if GUI settings are empty
 		eT.sampleRate				= 250;		%==sampling rate
 		eT.calibrationStyle			= 'HV5';	%==calibration style
 		eT.calibrationProportion	= [0.4 0.4]; %==the proportion of the screen occupied by the calibration stimuli
@@ -120,8 +120,8 @@ if me.useEyeLink
 		eT.modify.devicenumber				= -1;		%==-1 = use any attachedkeyboard
 		eT.modify.targetbeep				= 1;		%==beep during calibration
 	end
-elseif me.useTobii
-	if isempty(me.tobiisettings)	%==check if GUI settings are empty
+elseif matches(me.eyetracker.device, 'tobii')
+	if isempty(me.eyetracker.tsettings)	%==check if GUI settings are empty
 		eT.model					= 'Tobii Pro Spectrum';
 		eT.sampleRate				= 300;
 		eT.trackingMode				= 'human';

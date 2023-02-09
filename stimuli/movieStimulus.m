@@ -91,7 +91,7 @@ classdef movieStimulus < baseStimulus
 
 	properties (SetAccess = protected, GetAccess = ?baseStimulus)
 		%> properties to not show in the UI panel
-		ignorePropertiesUI = 'alpha'
+		ignorePropertiesUI = {'alpha','type'}
 	end
 	
 	properties (SetAccess = protected, GetAccess = protected)
