@@ -53,16 +53,18 @@ classdef runExperiment < optickaCore
 		userFunctionsFile			= ''
 		%> what strobe device to use
 		%> device = display++ | datapixx | labjackt | labjack | arduino
-		%> optional port = 
+		%> optional port = not needed for most of the interfaces
 		%> optional config = plain | plexon style strobe
-		strobe struct				= struct('device','','port','','mode','plain',...
-									'stimOFFValue',255)
+		%> optional stim OFF strobe value used for MOC tasks
+		strobe struct				= struct('device','','port','',...
+									'mode','plain','stimOFFValue',255)
 		%> what reward device to use
 		reward struct				= struct('device','','port','')
 		%> which eyetracker to use
-		eyetracker struct			= struct('device','','dummy',true,'esettings',[],'tsettings',[])
+		eyetracker struct			= struct('device','','dummy',true,...
+									'esettings',[],'tsettings',[])
 		%> use control commands to start / stop recording
-		%> device = intan | none
+		%> device = intan | plexon | none
 		%> port = tcp port
 		control struct				= struct('device','','port','127.0.0.1:5000')
 		%> log all frame times?
@@ -192,11 +194,10 @@ classdef runExperiment < optickaCore
 		%> prestimuli
 		stimShown				= false
 		%> properties allowed to be modified during construction
-		allowedProperties = {'useDisplayPP','useDataPixx','useEyeLink',...
-			'useArduino','dummyMode','logFrames','subjectName','researcherName'...
-			'useTobii','stateInfoFile','userFunctionFile','dummyMode','stimuli','task',...
-			'screen','visualDebug','useLabJack','useLabJackTStrobe','useLabJackStrobe','debug',...
-			'useEyeOccluder','verbose','screenSettings','benchmark'}
+		allowedProperties = {'reward','strobe','eyetracker','control',...
+			'logFrames','subjectName','researcherName'...
+			'stateInfoFile','userFunctionFile','dummyMode','stimuli','task',...
+			'screen','visualDebug','debug','verbose','screenSettings','benchmark'}
 	end
 	
 	%=======================================================================
@@ -317,27 +318,38 @@ classdef runExperiment < optickaCore
 				%================================open the PTB screen and setup stimuli
 				me.screenVals		= s.open(me.debug,tL);
 				stims.verbose		= me.verbose;
-				task.fps				= me.screenVals.fps;
+				task.fps			= me.screenVals.fps;
 				setup(stims, s); %run setup() for each stimulus
 				if s.movieSettings.record; prepareMovie(s); end
 				
 				%================================initialise and set up I/O
-				io					= configureIO(me);
+				io					= configureIO(me); %#ok<*PROPLC> 
+				dC					= dataConnection('protocol','tcp');
 				
-				%================================Plexon control
-				if tS.controlPlexon && me.useDataPixx || me.useDisplayPP
-					startRecording(io);
-					WaitSecs(0.5);
-				elseif tS.controlPlexon && me.useLabJackStrobe
-					% Trigger the omniplex (TTL on FIO1) into paused mode
-					io.setDIO([2,0,0]);WaitSecs(0.001);io.setDIO([0,0,0]);
-					WaitSecs(0.5);
+				%================================Amplifier control
+				if matches(me.control.device,'intan')
+					addr = strsplit(me.control.port,':');
+					dC.rAddress = addr{1};
+					dC.rPort = addr{2};
+					open(dC);
+					write(dC,uint8(['set Filename.BaseFilename ' me.name]));
+					write(dC,uint8(['set Filename.Path ' 'C:/OptickaFiles']));
+					write(dC,uint8('set runmode run'));
+				elseif matches(me.control.device,'plexon') 
+					if me.useDataPixx || me.useDisplayPP
+						startRecording(io);
+						WaitSecs(0.5);
+					elseif tS.controlPlexon && me.useLabJackStrobe
+						% Trigger the omniplex (TTL on FIO1) into paused mode
+						io.setDIO([2,0,0]);WaitSecs(0.001);io.setDIO([0,0,0]);
+						WaitSecs(0.5);
+					end
 				end
 			
 				%===============================unpause Plexon
-				if tS.controlPlexon &&  (me.useDataPixx || me.useDisplayPP)
+				if matches(me.control.device,'plexon')  &&  (me.useDataPixx || me.useDisplayPP)
 					resumeRecording(io);
-				elseif tS.controlPlexon && me.useLabJackStrobe
+				elseif matches(me.control.device,'plexon') && me.useLabJackStrobe
 					io.setDIO([3,0,0],[3,0,0])%(Set HIGH FIO0->Pin 24), unpausing the omniplex
 				end
 				
@@ -430,9 +442,9 @@ classdef runExperiment < optickaCore
 					% command for this screen flip needs to be sent
 					% PRIOR to the flip! Also remember DPP will be
 					% delayed by one flip
-					if me.sendStrobe && me.useDisplayPP
+					if me.sendStrobe && matches(me.strobe.device,'display++')
 						sendStrobe(io); me.sendStrobe = false;
-					elseif me.sendStrobe && me.useDataPixx
+					elseif me.sendStrobe && matches(me.strobe.device,'datapixx')
 						triggerStrobe(io); me.sendStrobe = false;
 					end
 					
@@ -453,7 +465,7 @@ classdef runExperiment < optickaCore
 					end
 
 					%======LabJack: I/O needs to send strobe immediately after screen flip -----%
-					if me.sendStrobe && me.useLabJackTStrobe
+					if me.sendStrobe && matches(me.strobe.device,'labjackt')
 						sendStrobe(io); me.sendStrobe = false;
 					end
 					
@@ -508,7 +520,7 @@ classdef runExperiment < optickaCore
 				
 				s.resetScreenGamma();
 				
-				if me.useEyeLink
+				if matches(me.eyetracker.device,'eyelink')
 					close(me.eyeTracker);
 					me.eyeTracker = [];
 				end
@@ -708,7 +720,7 @@ classdef runExperiment < optickaCore
 				eT						= me.eyeTracker;
 				eT.verbose				= me.verbose;
 				eT.saveFile				= [me.paths.savedData filesep me.subjectName '-' me.savePrefix '.edf'];
-				if ~me.useEyeLink && ~me.useTobii
+				if ~matches(me.eyetracker.device,'eyelink') && ~matches(me.eyetracker.device,'tobii')
 					eT.isDummy			= true;
 				else
 					eT.isDummy			= me.dummyMode;
@@ -795,7 +807,7 @@ classdef runExperiment < optickaCore
 				tSM.warmUp(); clear tSM;
 				show(stims); % allows all child stimuli to be drawn
 				getStimulusPositions(stims);
-				if me.useEyeLink || me.useTobii; resetAll(eT);trackerClearScreen(eT); end % blank eyelink screen
+				if matches(me.eyetracker.device,'eyelink') || matches(me.eyetracker.device,'tobii'); resetAll(eT);trackerClearScreen(eT); end % blank eyelink screen
 				for i = 1:s.screenVals.fps*1
 					draw(stims); % draw all child stimuli
 					drawBackground(s); % draw our blank background
@@ -829,10 +841,10 @@ classdef runExperiment < optickaCore
 				save(tS.tmpFile,'rE','tS');
 
 				%=============================Ensure we open the reward manager
-				if me.useArduino && isa(rM,'arduinoManager') && ~rM.isOpen
+				if matches(me.reward.device,'arduino') && isa(rM,'arduinoManager') && ~rM.isOpen
 					fprintf('======>>> Opening Arduino for sending reward TTLs\n')
 					open(rM);
-				elseif me.useLabJackReward && isa(rM,'labJack')
+				elseif matches(me.reward.device,'labjack') && isa(rM,'labJack')
 					fprintf('======>>> Opening LabJack for sending reward TTLs\n')
 					open(rM);
 				end
@@ -845,6 +857,10 @@ classdef runExperiment < optickaCore
 					pauseRecording(io); %make sure this is set low first
 					startRecording(io);
 					WaitSecs(1);
+				end
+
+				if matches(me.control.device, 'intan')
+
 				end
 
 				%===========================Initialise our various counters
@@ -1807,7 +1823,7 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 			global rM
 			%-------Set up Digital I/O (dPixx and labjack) for this task run...
-			if me.useDisplayPP
+			if matches(me.strobe.device,'display++')
 				if ~isa(me.dPP,'plusplusManager')
 					me.dPP = plusplusManager('verbose',me.verbose);
 				end
@@ -1819,11 +1835,8 @@ classdef runExperiment < optickaCore
 				io.verbose = me.verbose;
 				io.name = 'runinstance';
 				open(io);
-				me.useLabJackStrobe = false;
-				me.useLabJackTStrobe = false;
-				me.useDataPixx = false;
-				fprintf('===> Using Display++ for I/O...\n')
-			elseif me.useDataPixx
+				fprintf('===> Using Display++ for strobed I/O...\n')
+			elseif matches(me.strobe.device,'datapixx')
 				if ~isa(me.dPixx,'dPixxManager')
 					me.dPixx = dPixxManager('verbose',me.verbose);
 				end
@@ -1833,11 +1846,8 @@ classdef runExperiment < optickaCore
 				io.verbose = me.verbose;
 				io.name = 'runinstance';
 				open(io);
-				me.useLabJackStrobe = false;
-				me.useLabJackTStrobe = false;
-				me.useDisplayPP = false;
-				fprintf('===> Using dataPixx for I/O...\n')
-			elseif me.useLabJackTStrobe
+				fprintf('===> Using dataPixx for strobed I/O...\n')
+			elseif matches(me.strobe.device,'labjackt')
 				if ~isa(me.lJack,'labjackT')
 					me.lJack = labJackT('openNow',false,'device',1);
 				end
@@ -1846,15 +1856,12 @@ classdef runExperiment < optickaCore
 				io.verbose = me.verbose;
 				io.name = 'runinstance';
 				open(io);
-				me.useDataPixx = false;
-				me.useLabJackStrobe = false;
-				me.useDisplayPP = false;
 				if io.isOpen
-					fprintf('===> Using labjackT for I/O...\n')
+					fprintf('===> Using labjackT for strobed I/O...\n')
 				else
 					warning('===> !!! labJackT could not properly open !!!');
 				end
-			elseif me.useLabJackStrobe
+			elseif matches(me.strobe.device,'labjack')
 				if ~isa(me.lJack,'labjack')
 					me.lJack = labJack('openNow',false);
 				end
@@ -1863,11 +1870,8 @@ classdef runExperiment < optickaCore
 				io.verbose = me.verbose;
 				io.name = 'runinstance';
 				open(io);
-				me.useDataPixx = false;
-				me.useLabJackTStrobe = false;
-				me.useDisplayPP = false;
 				if io.isOpen
-					fprintf('===> Using labjack for I/O...\n')
+					fprintf('===> Using labjack for strobed I/O...\n')
 				else
 					warning('===> !!! labJackT could not properly open !!!');
 				end
@@ -1882,7 +1886,7 @@ classdef runExperiment < optickaCore
 				me.useDisplayPP = false;
 				fprintf('\n===>>> No strobe output I/O...\n')
 			end
-			if me.useArduino
+			if matches(me.reward.device,'arduino')
 				if ~isa(rM,'arduinoManager')
                     rM = arduinoManager();
 				end
@@ -1894,33 +1898,16 @@ classdef runExperiment < optickaCore
 				end
 				me.arduino = rM;
 				if rM.isOpen; fprintf('===> Using Arduino for reward TTLs...\n'); end
-			elseif ~me.useArduino && ~me.useLabJackReward
+			else
 				if isa(rM,'arduinoManager')
 					rM.close();
 					rM.silentMode = true;
 				else
 					rM = ioManager();
 				end
-				fprintf('===> No reward TTLs will be sent...\n')
-			elseif me.useLabJackReward
-				rM = ioManager();
-				warning('===> Currently not enabled to use LabJack U3/U6 for reward...')
-			else
-				rM = ioManager();
+				fprintf('===> No reward TTLs will be sent...\n');
 			end
-			%-----try to open eyeOccluder
-			if me.useEyeOccluder
-				if ~isfield(tS,'eO') || ~isa(tS.eO,'eyeOccluder')
-					tS.eO				= eyeOccluder;
-				end
-				if tS.eO.isOpen == true
-					pause(0.1);
-					tS.eO.bothEyesOpen;
-				else
-					tS.eO				= [];
-					tS					= rmfield(tS,'eO');
-				end
-			end
+			
 		end
 		
 		

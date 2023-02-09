@@ -1364,7 +1364,7 @@ classdef opticka < optickaCore
 			end % runExperiment
 			
 			%copy screen parameters
-			if isa(tmp.r.screen,'screenManager')
+			if isa(tmp.r.screen,'screenManager') && ~isempty(tmp.r.screen)
 				me.ui.OKscreenXOffset.Value = num2str(tmp.r.screen.screenXOffset);
 				me.ui.OKscreenYOffset.Value = num2str(tmp.r.screen.screenYOffset);
 				
@@ -1404,7 +1404,7 @@ classdef opticka < optickaCore
 			end
 			
 			%===================copy task parameters taskSequence()
-			if isempty(tmp.r.task)
+			if isempty(tmp.r.task) || ~isa(tmp.r.task,'taskSequence')
 				me.r.task = taskSequence;
 				me.r.task.randomiseTask;
 				fprintf('\t…taskSequence created\n');
