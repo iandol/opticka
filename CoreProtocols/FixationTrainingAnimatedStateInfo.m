@@ -39,7 +39,7 @@ tS.saveData					= true;		%==save behavioural and eye movement data?
 tS.showBehaviourPlot		= true;		%==open the behaviourPlot figure? Can cause more memory use
 tS.name						= 'animated fixation training'; %==name of this protocol
 tS.nStims					= stims.n;	%==number of stimuli, taken from metaStimulus object
-tS.tOut						= 5;		%==if wrong response, how long to time out before next trial
+tS.tOut						= 2;		%==if wrong response, how long to time out before next trial
 tS.CORRECT					= 1;		%==the code to send eyetracker for correct trials
 tS.BREAKFIX					= -1;		%==the code to send eyetracker for break fix trials
 tS.INCORRECT				= -5;		%==the code to send eyetracker for incorrect trials
@@ -96,8 +96,8 @@ me.lastYExclusion			= [];
 eT.name 				= tS.name;
 if me.dummyMode;		eT.isDummy = true; end %===use dummy or real eyetracker? 
 if tS.saveData == true;	eT.recordData = true; end %===save ET data?					
-if me.useEyeLink
-	if isempty(me.elsettings)
+if strcmp(me.eyetracker.device, 'eyelink')
+	if isempty(me.eyetracker.esettings)
 		eT.sampleRate 				= 250; % sampling rate
 		eT.calibrationStyle 		= 'HV5'; % calibration style
 		eT.calibrationProportion	= [0.4 0.4]; %the proportion of the screen occupied by the calibration stimuli
@@ -115,8 +115,8 @@ if me.useEyeLink
 		eT.modify.devicenumber 			= -1; % -1 = use any attachedkeyboard
 		eT.modify.targetbeep 			= 1; % beep during calibration
 	end
-elseif me.useTobii
-	if isempty(me.tobiisettings)
+elseif strcmp(me.eyetracker.device, 'tobii')
+	if isempty(me.eyetracker.tsettings)
 		eT.model					= 'Tobii Pro Spectrum';
 		eT.sampleRate				= 300;
 		eT.trackingMode				= 'human';

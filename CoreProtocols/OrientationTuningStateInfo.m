@@ -27,12 +27,12 @@
 tS.useTask					= true;		%==use taskSequence (randomises stimulus variables)
 tS.rewardTime				= 250;		%==TTL time in milliseconds
 tS.rewardPin				= 2;		%==Output pin, 2 by default with Arduino.
-tS.checkKeysDuringStimulus  = true;		%==allow keyboard control within stimulus state? Slight drop in performance…
-tS.recordEyePosition		= false;	%==record local copy of eye position, **in addition** to the eyetracker?
+tS.checkKeysDuringStimulus  = false;	%==allow keyboard control within stimulus state? Slight drop in performance…
+tS.recordEyePosition		= false;	%==record local copy of eye position, **in addition** to the eyetracker data file?
 tS.askForComments			= false;	%==UI requestor asks for comments before/after run
 tS.saveData					= false;	%==save behavioural and eye movement data?
-tS.showBehaviourPlot		= false;	%==open the behaviourPlot figure? Can cause more memory use
-tS.name						= 'default protocol'; %==name of this protocol
+tS.showBehaviourPlot		= false;	%==open the behaviourPlot figure? Can cause more memory usein MATLAB
+tS.name						= 'orientation'; %==name of this protocol
 tS.nStims					= stims.n;	%==number of stimuli, taken from metaStimulus object
 tS.tOut						= 5;		%==if wrong response, how long to time out before next trial
 tS.CORRECT 					= 1;		%==the code to send eyetracker for correct trials
@@ -96,11 +96,11 @@ me.lastYExclusion			= [];
 % that...
 eT.name 					= tS.name;
 if tS.saveData == true;		eT.recordData = true; end %===save ET data?
-if me.useEyeLink
+if strcmp(me.eyetracker.device, 'eyelink')
 	eT.name 						= tS.name;
 	if me.dummyMode;				eT.isDummy = true; end %===use dummy or real eyetracker? 
 	if tS.saveData == true;			eT.recordData = true; end %===save EDF file?
-	if isempty(me.elsettings)		%==check if GUI settings are empty
+	if isempty(me.eyetracker.esettings)		%==check if GUI settings are empty
 		eT.sampleRate				= 250;		%==sampling rate
 		eT.calibrationStyle			= 'HV5';	%==calibration style
 		eT.calibrationProportion	= [0.4 0.4]; %==the proportion of the screen occupied by the calibration stimuli
@@ -118,10 +118,10 @@ if me.useEyeLink
 		eT.modify.devicenumber				= -1;		%==-1 = use any attachedkeyboard
 		eT.modify.targetbeep				= 1;		%==beep during calibration
 	end
-elseif me.useTobii
+elseif strcmp(me.eyetracker.device, 'tobii')
 	eT.name 						= tS.name;
 	if me.dummyMode;				eT.isDummy = true; end %===use dummy or real eyetracker? 
-	if isempty(me.tobiisettings)	%==check if GUI settings are empty
+	if isempty(me.eyetracker.tsettings)	%==check if GUI settings are empty
 		eT.model					= 'Tobii Pro Spectrum';
 		eT.sampleRate				= 300;
 		eT.trackingMode				= 'human';
@@ -420,12 +420,20 @@ calibrateFcn = {
 	@()trackerSetup(eT);  %enter tracker calibrate/validate setup mode
 };
 
-%--------------------drift correction function
+%--------------------drift correction function (eyelink only)
 driftFcn = {
 	@()drawBackground(s); %blank the display
 	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()driftCorrection(eT) % enter drift correct
+};
+
+%--------------------drift offset function (eyelink | tobii)
+offsetFcn = {
+	@()drawBackground(s); %blank the display
+	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
+	@()driftOffset(eT) % enter drift correct
 };
 
 %====================================================GENERAL
@@ -452,6 +460,7 @@ gridFcn = { @()drawGrid(s) };
 % specify our cell array that is read by the stateMachine
 stateInfoTmp = {
 'name'		'next'		'time'	'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn';
+%-----------------------------------------------------------------------------------------
 'pause'		'prefix'	inf		pauseEntryFcn	[]				[]				pauseExitFcn;
 'prefix'	'fixate'	0.5		prefixEntryFcn	prefixFcn		[]				prefixExitFcn;
 'fixate'	'incorrect'	5		fixEntryFcn		fixFcn			inFixFcn		fixExitFcn;
@@ -459,8 +468,11 @@ stateInfoTmp = {
 'incorrect'	'prefix'	tS.tOut	incEntryFcn		incFcn			[]				incExitFcn;
 'breakfix'	'prefix'	tS.tOut	breakEntryFcn	incFcn			[]				incExitFcn;
 'correct'	'prefix'	0.5		correctEntryFcn	correctFcn		[]				correctExitFcn;
+%-----------------------------------------------------------------------------------------
 'calibrate' 'pause'		0.5		calibrateFcn	[]				[]				[];
 'drift'		'pause'		0.5		driftFcn		[]				[]				[];
+'offset'	'pause'		0.5		offsetFcn		[]				[]				[];
+%-----------------------------------------------------------------------------------------
 'override'	'pause'		0.5		overrideFcn		[]				[]				[];
 'flash'		'pause'		0.5		flashFcn		[]				[]				[];
 'magstim'	'prefix'	0.5		[]				magstimFcn		[]				[];

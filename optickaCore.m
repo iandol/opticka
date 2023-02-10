@@ -303,7 +303,7 @@ classdef optickaCore < handle
 				end
 			end
 		end
-		
+
 		% ===================================================================
 		function editProperties(me, properties)
 		%> @fn editProperties
@@ -451,6 +451,20 @@ classdef optickaCore < handle
 				end
 			end
 		end
+
+		% ===================================================================
+		function result = hasKey(in, key)
+		%> @fn isMap
+		%> @brief check if a struct / object has a propery / field
+		%>
+		%> @param value name
+		% ===================================================================
+			result = false;
+			if isfield(in, key) || isprop(in, key)
+				result = true;
+			end
+		end
+			
 		
 	end %--------END STATIC METHODS
 	

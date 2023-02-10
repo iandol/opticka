@@ -1166,7 +1166,7 @@ classdef opticka < optickaCore
 			fprintf('---> Opticka Protocol loading:\n');
 
 			% stimuli
-			if isprop(tmp.r,'stimuli')
+			if optickaCore.hasKey(tmp.r,'stimuli')
 				if isa(tmp.r.stimuli,'metaStimulus')
 					me.r.stimuli = tmp.r.stimuli;
 					rm = [];
@@ -1187,7 +1187,7 @@ classdef opticka < optickaCore
 					warndlg('Sorry, this protocol appears to have no stimulus objects, please remake');
 					error('No stimulus found in protocol!!!');
 				end
-			elseif isprop(tmp.r,'stimulus')
+			elseif optickaCore.hasKey(tmp.r,'stimulus')
 				if iscell(tmp.r.stimulus)
 					me.r.stimuli = metaStimulus();
 					me.r.stimuli.stimuli = tmp.r.stimulus;
@@ -1212,7 +1212,7 @@ classdef opticka < optickaCore
 				% state info file
 				me.r.stateInfoFile = '';
 				p1 = ''; p2 = ''; msg = '';
-				if isprop(tmp.r,'stateInfoFile') && ~isempty(tmp.r.stateInfoFile)
+				if optickaCore.hasKey(tmp.r,'stateInfoFile') && ~isempty(tmp.r.stateInfoFile)
 					p1 = tmp.r.stateInfoFile;	
 				end
 				if isfield(tmp.r.paths,'stateInfoFile') && ~isempty(tmp.r.paths.stateInfoFile)
@@ -1254,7 +1254,7 @@ classdef opticka < optickaCore
 				me.r.paths.stateInfoFile = me.r.stateInfoFile;
 				
 				%user functions file
-				if isprop(tmp.r,'userFunctionsFile') && ~isempty(tmp.r.userFunctionsFile)
+				if optickaCore.hasKey(tmp.r,'userFunctionsFile') && ~isempty(tmp.r.userFunctionsFile)
 					me.r.userFunctionsFile = tmp.r.userFunctionsFile;
 				end
 				[~,f,e] = fileparts(me.r.userFunctionsFile);
@@ -1279,10 +1279,10 @@ classdef opticka < optickaCore
 				end
 				me.getStateInfo();
 				
-				if isprop(tmp.r,'drawFixation');me.r.drawFixation=tmp.r.drawFixation;end
-				if isprop(tmp.r,'dPPMode'); me.r.dPPMode = tmp.r.dPPMode; end
-				%if isprop(tmp.r,'subjectName');me.r.subjectName = tmp.r.subjectName;me.h.OKTrainingName.Value = me.r.subjectName;end
-				%if isprop(tmp.r,'researcherName');me.r.researcherName = tmp.r.researcherName;me.h.OKTrainingResearcherName.Value=me.r.researcherName;end
+				if optickaCore.hasKey(tmp.r,'drawFixation');me.r.drawFixation=tmp.r.drawFixation;end
+				if optickaCore.hasKey(tmp.r,'dPPMode'); me.r.dPPMode = tmp.r.dPPMode; end
+				%if optickaCore.hasKey(tmp.r,'subjectName');me.r.subjectName = tmp.r.subjectName;me.h.OKTrainingName.Value = me.r.subjectName;end
+				%if optickaCore.hasKey(tmp.r,'researcherName');me.r.researcherName = tmp.r.researcherName;me.h.OKTrainingResearcherName.Value=me.r.researcherName;end
 				me.r.subjectName = me.ui.OKTrainingName.Value;
 				me.r.researcherName = me.ui.OKTrainingResearcherName.Value;
 
@@ -1303,34 +1303,34 @@ classdef opticka < optickaCore
 				me.r.control.device = '';
 				
 				% Legacy properties
-				if isprop(tmp.r,'useLabJackTStrobe') && tmp.r.useLabJackTStrobe == true
+				if optickaCore.hasKey(tmp.r,'useLabJackTStrobe') && tmp.r.useLabJackTStrobe == true
 					me.r.strobe.device = 'labjackt';
-				elseif isprop(tmp.r,'useDisplayPP') &&  me.r.useDisplayPP == true
+				elseif optickaCore.hasKey(tmp.r,'useDisplayPP') &&  me.r.useDisplayPP == true
 					me.r.strobe.device = 'display++';
-				elseif isprop(tmp.r,'useDataPixx') &&  me.r.useDataPixx == true
+				elseif optickaCore.hasKey(tmp.r,'useDataPixx') &&  me.r.useDataPixx == true
 					me.r.strobe.device = 'display++';
-				elseif isprop(tmp.r,'OKuseLabJackStrobe') &&  me.r.OKuseLabJackStrobe == true
+				elseif optickaCore.hasKey(tmp.r,'OKuseLabJackStrobe') &&  me.r.OKuseLabJackStrobe == true
 					me.r.strobe.device = 'labjack';
 				end
-				if isprop(tmp.r,'useArduino') && me.r.useArduino == true
+				if optickaCore.hasKey(tmp.r,'useArduino') && me.r.useArduino == true
 					me.r.reward.device = 'arduino';
 					me.ui.OKuseArduino.Checked = 'on';
-				elseif isprop(tmp.r,'useLabJackReward') && me.r.useLabJackReward == true
+				elseif optickaCore.hasKey(tmp.r,'useLabJackReward') && me.r.useLabJackReward == true
 					me.r.reward.device = 'labjack';
 					me.ui.OKuseLabJackReward.Checked = 'on';
 				end
-				if isprop(tmp.r,'useTobii') && me.r.useTobii == true
+				if optickaCore.hasKey(tmp.r,'useTobii') && me.r.useTobii == true
 					me.r.useTobii = tmp.r.useTobii;
 					me.ui.OKuseTobii.Checked = 'on';
 					me.ui.OKuseEyelink.Checked = 'off';
-				elseif isprop(tmp.r,'useEyeLink') && me.r.useEyeLink == true
+				elseif optickaCore.hasKey(tmp.r,'useEyeLink') && me.r.useEyeLink == true
 					me.r.useEyeLink = tmp.r.useEyeLink;
 					me.ui.OKuseEyelink.Checked = 'on'; 
 					me.ui.OKuseTobii.Checked = 'off';
 				end
 
 				% New properties
-				if isprop(tmp.r,'strobe')
+				if optickaCore.hasKey(tmp.r,'strobe')
 					me.r.strobe = tmp.r.strobe;
 					switch me.r.strobe.device
 						case 'labjackt'
@@ -1343,7 +1343,7 @@ classdef opticka < optickaCore
 							me.ui.OKuseLabJackStrobe.Checked = 'on';
 					end
 				end
-				if isprop(tmp.r,'reward')
+				if optickaCore.hasKey(tmp.r,'reward')
 					me.r.reward = tmp.r.reward;
 					switch me.r.reward.device
 						case 'arduino'
@@ -1352,7 +1352,7 @@ classdef opticka < optickaCore
 							me.ui.OKuseLabJackReward.Checked = 'on';
 					end
 				end
-				if isprop(tmp.r,'eyetracker')
+				if optickaCore.hasKey(tmp.r,'eyetracker')
 					me.r.eyetracker = tmp.r.eyetracker;
 					switch me.r.eyetracker.device
 						case 'tobii'

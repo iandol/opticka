@@ -582,7 +582,7 @@ classdef eyelinkManager < optickaCore
 		% ===================================================================
 		function success = driftOffset(me)
 		%> @fn driftOffset
-		%> @brief wrapper for EyelinkDoDriftCorrection
+		%> @brief wrapper for custom drift offset function
 		%>
 		% ===================================================================
 			success = false;

@@ -67,11 +67,11 @@ me.lastYPosition			= tS.fixY;
 % that...
 eT.name 					= tS.name;
 if tS.saveData == true;		eT.recordData = true; end %===save ET data?
-if me.useEyeLink
+if strcmp(me.eyetracker.device, 'eyelink')
 	eT.name 						= tS.name;
 	if me.dummyMode;				eT.isDummy = true; end %===use dummy or real eyetracker? 
 	if tS.saveData == true;			eT.recordData = true; end %===save EDF file?
-	if isempty(me.elsettings)		%==check if GUI settings are empty
+	if isempty(me.eyetracker.esettings)		%==check if GUI settings are empty
 		eT.sampleRate				= 250;		%==sampling rate
 		eT.calibrationStyle			= 'HV5';	%==calibration style
 		eT.calibrationProportion	= [0.4 0.4]; %==the proportion of the screen occupied by the calibration stimuli
@@ -89,10 +89,10 @@ if me.useEyeLink
 		eT.modify.devicenumber				= -1;		%==-1 = use any attachedkeyboard
 		eT.modify.targetbeep				= 1;		%==beep during calibration
 	end
-elseif me.useTobii
+elseif strcmp(me.eyetracker.device, 'tobii')
 	eT.name 						= tS.name;
 	if me.dummyMode;				eT.isDummy = true; end %===use dummy or real eyetracker? 
-	if isempty(me.tobiisettings)	%==check if GUI settings are empty
+	if isempty(me.eyetracker.tsettings)	%==check if GUI settings are empty
 		eT.model					= 'Tobii Pro Spectrum';
 		eT.sampleRate				= 300;
 		eT.trackingMode				= 'human';

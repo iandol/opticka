@@ -666,7 +666,7 @@ classdef tobiiManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief wrapper for EyelinkDoDriftCorrection
+		%> @brief Custom drift offset command
 		%>
 		% ===================================================================
 		function success = driftOffset(me)
@@ -1805,7 +1805,7 @@ classdef tobiiManager < optickaCore
 		%>
 		% ===================================================================
 		function success = driftCorrection(me)
-			driftOffset(me);
+			success = driftOffset(me);
 		end
 		
 		% ===================================================================

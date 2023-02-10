@@ -100,7 +100,7 @@ tS.INCORRECT				= -5;		%==the code to send eyetracker for incorrect trials
 eT.name				= tS.name;
 if me.eyetracker.dummy;	eT.isDummy = true; end %===use dummy or real eyetracker? 
 if tS.saveData;		eT.recordData = true; end %===save Eyetracker data?					
-if matches(me.eyetracker.device, 'eyelink')
+if strcmp(me.eyetracker.device, 'eyelink')
 	warning('Note: this protocol file is optimised for the Tobii eyetracker...')
 	if isempty(me.eyetracker.esettings)		%==check if GUI settings are empty
 		eT.sampleRate				= 250;		%==sampling rate
@@ -120,7 +120,7 @@ if matches(me.eyetracker.device, 'eyelink')
 		eT.modify.devicenumber				= -1;		%==-1 = use any attachedkeyboard
 		eT.modify.targetbeep				= 1;		%==beep during calibration
 	end
-elseif matches(me.eyetracker.device, 'tobii')
+elseif strcmp(me.eyetracker.device, 'tobii')
 	if isempty(me.eyetracker.tsettings)	%==check if GUI settings are empty
 		eT.model					= 'Tobii Pro Spectrum';
 		eT.sampleRate				= 300;

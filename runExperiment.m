@@ -811,7 +811,7 @@ classdef runExperiment < optickaCore
 				tSM.warmUp(); clear tSM;
 				show(stims); % allows all child stimuli to be drawn
 				getStimulusPositions(stims);
-				if matches(me.eyetracker.device,'eyelink') || matches(me.eyetracker.device,'tobii'); resetAll(eT);trackerClearScreen(eT); end % blank eyelink screen
+				if ~isempty(me.eyetracker.device); resetAll(eT);trackerClearScreen(eT); end % blank eyelink screen
 				for i = 1:s.screenVals.fps*1
 					draw(stims); % draw all child stimuli
 					drawBackground(s); % draw our blank background
@@ -1035,7 +1035,7 @@ classdef runExperiment < optickaCore
 					end  % END me.doFlip
 
 					%----- For second display, do we flip? -----%
-					if me.useTobii && me.doTrackerFlip > -1 
+					if strcmp(me.eyetracker.device, 'tobii') && me.doTrackerFlip > -1 
 						if thisTobiiFlip >= tS.tobiiFlipRate
 							trackerFlip(eT, me.doTrackerFlip)
 							thisTobiiFlip = 1;
@@ -1557,7 +1557,7 @@ classdef runExperiment < optickaCore
 		%> @param result an integer result, e.g. 1 = correct or -1 = breakfix
 		% ===================================================================
 			info = ''; sinfo = '';
-			if me.useEyeLink || me.useTobii
+			if ~isempty(me.eyetracker.device)
 				info = sprintf('window=%i; isBlink=%i; isExclusion=%i; isFix=%i; isInitFail=%i; fixTotal=%g',...
 					me.eyeTracker.fixWindow, me.eyeTracker.isBlink, me.eyeTracker.isExclusion, ...
 					me.eyeTracker.isFix, me.eyeTracker.isInitFail, me.eyeTracker.fixTotal);
@@ -1807,7 +1807,7 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 			if ~exist('eT','var');error('You need to pass the eyetracker manager object!');end
 			if ~exist('s','var');error('You need to pass the screen manager object!');end
-			if me.useTobii
+			if strcmp(me.eyetracker.device, 'tobii')
 				if eT.useOperatorScreen && length(Screen('Screens')) > 1 && s.screen - 1 >= 0
 					ss					= screenManager;
 					ss.screen			= 0;
@@ -1826,7 +1826,7 @@ classdef runExperiment < optickaCore
 				if ~eT.isConnected && ~eT.isDummy
 					warning('Eyetracker is not connected and not in dummy mode, potential connection issue...')
 				end
-			elseif me.useEyeLink || me.dummyMode
+			elseif strcmp(me.eyetracker.device, 'eyelink') || me.dummyMode
 				if me.dummyMode
 					fprintf('\n===>>> Dummy eyelink being initialised...\n')
 				else
@@ -2109,7 +2109,7 @@ classdef runExperiment < optickaCore
 			if me.isRunTask
 				log = me.taskLog;
 				name = [me.stateMachine.currentName ':' me.stateMachine.currentUUID];
-				if me.useEyeLink || me.useTobii
+				if ~isempty(me.eyetracker.device)
 					etinfo = sprintf('isFix:%i isExcl:%i isFixInit:%i fixLength: %.2f',...
 						me.eyeTracker.isFix,me.eyeTracker.isExclusion,me.eyeTracker.isInitFail,me.eyeTracker.fixLength);
 				end
@@ -2690,14 +2690,14 @@ classdef runExperiment < optickaCore
 			function me = rebuild()
 				fprintf('   > ');
 				try %#ok<*TRYNC>
-					if (isprop(in,'stimuli') || isfield(in,'stimuli')) && isa(in.stimuli,'metaStimulus')
+					if optickaCore.hasKey(in, 'stimuli') && isa(in.stimuli,'metaStimulus')
 						if ~isObjectLoaded
 							lobj.stimuli = in.stimuli;
 							fprintf('metaStimulus object loaded | ');
 						else
 							fprintf('metaStimulus object present | ');
 						end
-					elseif isfield(in,'stimulus') || isprop(in,'stimulus')
+					elseif optickaCore.hasKey(in, 'stimuli')
 						if iscell(in.stimulus) && isa(in.stimulus{1},'baseStimulus')
 							lobj.stimuli = metaStimulus();
 							lobj.stimuli.stimuli = in.stimulus;
