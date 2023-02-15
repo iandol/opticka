@@ -239,7 +239,6 @@ hide(stims);
 % exit states.
 sM.skipExitStates			= {'fixate','incorrect|breakfix'};
 
-
 %===================================================================
 %===================================================================
 %===================================================================
@@ -512,7 +511,13 @@ driftFn = {
 	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()rstop(io); 
-	@()driftCorrection(eT) % enter drift correct
+	@()driftCorrection(eT) % enter drift correct (only eyelink) (only eyelink)
+};
+offsetFcn = {
+	@()drawBackground(s); %blank the display
+	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
+	@()driftOffset(eT) % enter drift offset (works on tobii & eyelink)
 };
 
 %========================================================
@@ -536,6 +541,7 @@ stateInfoTmp = {
 'name'		'next'		'time'	'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn';
 %---------------------------------------------------------------------------------------------
 'pause'		'prefix'	inf		pauseEntryFn	{}				{}				pauseExitFn;
+%---------------------------------------------------------------------------------------------
 'prefix'	'fixate'	0.5		prefixEntryFn	{}				{}				{};
 'fixate'	'incorrect'	10		fixEntryFn		fixFn			inFixFn			fixExitFn;
 'stimulus'	'incorrect'	10		stimEntryFn		stimFn			maintainFixFn	stimExitFn;
@@ -543,8 +549,11 @@ stateInfoTmp = {
 'breakfix'	'timeout'	0.5		breakEntryFn	incFn			{}				breakExitFn;
 'correct'	'prefix'	0.5		correctEntryFn	correctFn		{}				correctExitFn;
 'timeout'	'prefix'	tS.tOut	{}				incFn			{}				{};
+%---------------------------------------------------------------------------------------------
 'calibrate'	'pause'		0.5		calibrateFn		{}				{}				{};
 'drift'		'pause'		0.5		driftFn			{}				{}				{};
+'offset'	'pause'		0.5		offsetFcn		{}				{}				{};
+%---------------------------------------------------------------------------------------------
 'override'	'pause'		0.5		overrideFn		{}				{}				{};
 'flash'		'pause'		0.5		flashFn			{}				{}				{};
 'showgrid'	'pause'		10		{}				gridFn			{}				{};

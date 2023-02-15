@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--Generator: Apple Native CoreSVG 175.5-->
+
+<svg
+   version="1.1"
+   width="71.142578"
+   height="71.191376"
+   id="svg130"
+   sodipodi:docname="trash.svg"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs134" />
+  <sodipodi:namedview
+     id="namedview132"
+     pagecolor="#505050"
+     bordercolor="#eeeeee"
+     borderopacity="1"
+     inkscape:showpageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#505050"
+     showgrid="false"
+     inkscape:zoom="4.4020611"
+     inkscape:cx="41.00352"
+     inkscape:cy="61.789238"
+     inkscape:window-width="1440"
+     inkscape:window-height="810"
+     inkscape:window-x="45"
+     inkscape:window-y="72"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="Regular-S" />
+  <!--glyph: "uni100F3D.medium", point size: 100.0, font version: "18.0d12e2", template writer version: "101"-->
+  <style
+     id="style2">.monochrome-0 {fill:#000000}
+.monochrome-1 {fill:#000000}
+
+.multicolor-0:systemRedColor {fill:#FF3B30}
+.multicolor-1:systemRedColor {fill:#FF3B30}
+
+.hierarchical-0:secondary {fill:#4D4D4D}
+.hierarchical-1:primary {fill:#212121}
+
+.SFSymbolsPreviewFF3B30 {fill:#FF3B30;opacity:1.0}
+</style>
+  <g
+     id="Regular-S"
+     transform="translate(-9.76562,70.3613)">
+    <path
+       class="monochrome-0 multicolor-0:systemRedColor hierarchical-0:secondary SFSymbolsPreviewFF3B30"
+       d="M 22.2168,0.830078 H 68.457 c 8.3496,0 12.4512,-4.101558 12.4512,-12.304678 v -46.582 c 0,-8.2032 -4.1016,-12.3047 -12.4512,-12.3047 H 22.2168 c -8.3008,0 -12.45118,4.1015 -12.45118,12.3047 v 46.582 c 0,8.20312 4.15038,12.304678 12.45118,12.304678 z M 22.3145,-6.25 c -3.5157,0 -5.5176,-1.85547 -5.5176,-5.5664 v -45.8984 c 0,-3.6622 2.0019,-5.5664 5.5176,-5.5664 h 46.0449 c 3.5156,0 5.5176,1.9042 5.5176,5.5664 v 45.8984 c 0,3.71093 -2.002,5.5664 -5.5176,5.5664 z"
+       id="path119"
+       style="fill:#ff5555" />
+    <path
+       class="monochrome-1 multicolor-1:systemRedColor hierarchical-1:primary SFSymbolsPreviewFF3B30"
+       d="m 35.3516,-12.3047 h 19.9218 c 2.6368,0 4.1504,-1.3672 4.2481,-4.0527 l 1.2207,-29.6387 h 2.8808 c 0.9766,0 1.7579,-0.8301 1.8067,-1.8066 0.0488,-0.9766 -0.8301,-1.8067 -1.8067,-1.8067 h -8.8867 v -2.9297 c 0,-3.3203 -2.1972,-5.3711 -5.664,-5.3711 h -7.6172 c -3.4668,0 -5.5664,2.0508 -5.5664,5.3711 v 2.9297 H 27.002 c -0.9766,0 -1.8067,0.8301 -1.8067,1.8067 0,0.9765 0.8301,1.8066 1.8067,1.8066 h 2.9296 l 1.2207,29.6387 c 0.0977,2.6855 1.5625,4.0527 4.1993,4.0527 z m 9.9609,-5.9082 c -0.9277,0 -1.5137,-0.5859 -1.5137,-1.3672 v -22.0215 c 0,-0.83 0.586,-1.416 1.5137,-1.416 0.8789,0 1.5137,0.586 1.5137,1.416 v 22.0215 c 0,0.7813 -0.6348,1.3672 -1.5137,1.3672 z m 6.543,0 c -0.8789,0 -1.416,-0.5859 -1.416,-1.3672 l 0.5859,-22.0215 c 0,-0.83 0.6348,-1.416 1.4648,-1.416 0.9278,0 1.4649,0.586 1.4649,1.416 l -0.586,22.0215 c 0,0.7813 -0.6836,1.3672 -1.5136,1.3672 z m -13.1348,0 c -0.8301,0 -1.4648,-0.5859 -1.4648,-1.3672 l -0.6348,-22.0215 c 0,-0.83 0.5371,-1.416 1.5137,-1.416 0.83,0 1.416,0.586 1.416,1.416 l 0.5859,22.0215 c 0,0.7813 -0.4883,1.3672 -1.416,1.3672 z m 1.4648,-31.3965 v -2.6855 c 0,-0.9278 0.6348,-1.5137 1.5625,-1.5137 h 7.0801 c 0.9278,0 1.6114,0.5859 1.6114,1.5137 v 2.6855 z"
+       id="path121"
+       style="fill:#ff5555" />
+  </g>
+</svg>

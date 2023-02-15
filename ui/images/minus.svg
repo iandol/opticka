@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--Generator: Apple Native CoreSVG 175.5-->
+
+<svg
+   version="1.1"
+   width="71.142578"
+   height="71.191422"
+   id="svg130"
+   sodipodi:docname="minus.square.fill.svg"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs134" />
+  <sodipodi:namedview
+     id="namedview132"
+     pagecolor="#505050"
+     bordercolor="#eeeeee"
+     borderopacity="1"
+     inkscape:showpageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#505050"
+     showgrid="false"
+     inkscape:zoom="4.4020611"
+     inkscape:cx="58.495326"
+     inkscape:cy="41.344269"
+     inkscape:window-width="1440"
+     inkscape:window-height="810"
+     inkscape:window-x="45"
+     inkscape:window-y="72"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="Regular-S" />
+  <!--glyph: "uni1000DF.medium", point size: 100.0, font version: "18.0d12e2", template writer version: "101"-->
+  <style
+     id="style2">.monochrome-0 {fill:#000000}
+.monochrome-1 {fill:#FFFFFF;opacity:0.0;-sfsymbols-clear-behind:true}
+
+.multicolor-0:systemRedColor {fill:#FF3B30}
+.multicolor-1:white {fill:#FFFFFF}
+
+.hierarchical-0:tertiary {fill:#8E8E8E}
+.hierarchical-1:primary {fill:#212121}
+
+.SFSymbolsPreviewFF3B30 {fill:#FF3B30;opacity:1.0}
+.SFSymbolsPreviewFFFFFF {fill:#FFFFFF;opacity:1.0}
+</style>
+  <g
+     id="Regular-S"
+     transform="translate(-9.76562,70.8008)">
+    <path
+       class="monochrome-0 multicolor-0:systemRedColor hierarchical-0:tertiary SFSymbolsPreviewFF3B30"
+       d="M 22.2168,0.390625 H 68.457 c 8.3496,0 12.4512,-4.101565 12.4512,-12.304725 v -46.582 c 0,-8.2031 -4.1016,-12.3047 -12.4512,-12.3047 H 22.2168 c -8.3008,0 -12.45118,4.1016 -12.45118,12.3047 v 46.582 c 0,8.20316 4.15038,12.304725 12.45118,12.304725 z"
+       id="path119"
+       style="fill:#ff5555" />
+    <path
+       class="monochrome-1 multicolor-1:white hierarchical-1:primary SFSymbolsPreviewFFFFFF"
+       d="m 30.4688,-31.3965 c -2.5879,0 -4.3458,-1.3183 -4.3458,-3.7597 0,-2.4903 1.6602,-3.8575 4.3458,-3.8575 h 29.7851 c 2.6856,0 4.3457,1.3672 4.3457,3.8575 0,2.4414 -1.7578,3.7597 -4.3457,3.7597 z"
+       id="path121"
+       style="-sfsymbols-clear-behind:true" />
+  </g>
+</svg>

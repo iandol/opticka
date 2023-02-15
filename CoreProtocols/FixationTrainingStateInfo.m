@@ -387,7 +387,13 @@ driftFn = {
 	@()drawBackground(s); %blank the display
 	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
-	@()driftCorrection(eT) % enter drift correct
+	@()driftCorrection(eT) % enter drift correct (only eyelink)
+};
+offsetFcn = {
+	@()drawBackground(s); %blank the display
+	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
+	@()driftOffset(eT) % enter drift offset (works on tobii & eyelink)
 };
 
 %--------------------screenflash
@@ -431,7 +437,8 @@ stateInfoTmp = {
 'timeout'	'blank'		tS.tOut	{}				{}				{}				{};
 'calibrate' 'pause'		0.5		calibrateFn		{}				{}				{};
 'offset'	'pause'		0.5		offsetFn		{}				{}				{};
-'drift'		'pause'		0.5		driftFn			{}				{}				{};
+'drift'		'pause'		0.5		driftFn			{}				{}					{};
+'offset'	'pause'		0.5		offsetFcn		{}				{}					{};
 'flash'		'pause'		0.5		{}				flashFn			{}				{};
 'override'	'pause'		0.5		{}				overrideFn		{}				{};
 'showgrid'	'pause'		1		{}				gridFn			{}				{};

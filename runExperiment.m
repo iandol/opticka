@@ -2361,7 +2361,7 @@ classdef runExperiment < optickaCore
 					case ']}'
 						if tS.keyTicks > tS.keyHold
 							me.screen.screenYOffset = me.screen.screenYOffset + 1;
-							fprintf('======>>> Screen Y Center: %g deg / %g pixels\n',me.screen.screenYOffset,me.screen.yCenter);
+							fpridriftntf('======>>> Screen Y Center: %g deg / %g pixels\n',me.screen.screenYOffset,me.screen.yCenter);
 							tS.keyHold = tS.keyTicks + me.fInc;
 						end
 					case 'k'

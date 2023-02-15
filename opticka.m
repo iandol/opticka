@@ -844,7 +844,7 @@ classdef opticka < optickaCore
 		% ===================================================================
 		function copyVariable(me)
 			if isobject(me.r.task)
-				val = me.gv(me.ui.OKVarList);
+				val = me.gp(me.ui.OKVarList);
 				me.r.task.nVar(end+1)=me.r.task.nVar(val);
 				me.refreshVariableList;
 			end
@@ -1122,7 +1122,7 @@ classdef opticka < optickaCore
 		end
 		
 		% ===================================================================
-		function loadProtocol(me,ui)
+		function loadProtocol(me, ui)
 		%> @fn loadProtocol
 		%> @brief Load Protocol
 		%> Load Protocol
@@ -1443,7 +1443,7 @@ classdef opticka < optickaCore
 				set(me.ui.OKAddVariable,'Enable','on');
 				set(me.ui.OKDeleteVariable,'Enable','on');
 				set(me.ui.OKCopyVariable,'Enable','on');
-				set(me.ui.OKEditVariable,'Enable','on');
+				%set(me.ui.OKEditVariable,'Enable','on');
 			end
 
 			if me.r.stimuli.n > 0
@@ -1455,7 +1455,6 @@ classdef opticka < optickaCore
 				set(me.ui.OKStimulusRunBenchmark,'Enable','on');
 				set(me.ui.OKStimulusRunAll,'Enable','on');
 				set(me.ui.OKStimulusRunAllBenchmark,'Enable','on');
-				set(me.ui.OKStimulusRunSingle,'Enable','on');
 				me.store.visibleStimulus.uuid='';
 				me.editStimulus;
 			end

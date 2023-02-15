@@ -320,7 +320,13 @@ driftFcn = {
 	@()drawBackground(s); %blank the display
 	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
-	@()driftCorrection(eT) % enter drift correct
+	@()driftCorrection(eT) % enter drift correct (only eyelink)
+};
+offsetFcn = {
+	@()drawBackground(s); %blank the display
+	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
+	@()driftOffset(eT) % enter drift offset (works on tobii & eyelink)
 };
 
 %--------------------screenflash
@@ -345,15 +351,20 @@ gridFcn = {
 % specify our cell array that is read by the stateMachine
 stateInfoTmp = {
 'name'		'next'			'time'	'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn';
+%---------------------------------------------------------------------------------------------
 'pause'		'blank'			inf		pauseEntryFcn	{}				{}				pauseExitFcn;
+%---------------------------------------------------------------------------------------------
 'blank'		'stimulus'		0.5		blEntryFcn		blFcn			{}				blExitFcn;
 'stimulus'	'incorrect'		2		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn;
 'incorrect'	'timeout'		0.25	inEntryFcn		breakFcn		{}				ExitFcn;
 'breakfix'	'timeout'		0.25	breakEntryFcn	breakFcn		{}				ExitFcn;
 'correct'	'blank'			0.25	correctEntryFcn	correctFcn		{}				ExitFcn;
 'timeout'	'blank'			tS.tOut	{}				{}				{}				{};
+%---------------------------------------------------------------------------------------------
 'calibrate'	'pause'			0.5		calibrateFcn	{}				{}				{};
 'drift'		'pause'			0.5		driftFcn		{}				{}				{};
+'offset'	'pause'			0.5		offsetFcn		{}				{}				{};
+%---------------------------------------------------------------------------------------------
 'flash'		'pause'			0.5		{}				flashFcn		{}				{};
 'override'	'pause'			0.5		{}				overrideFcn		{}				{};
 'showgrid'	'pause'			1		{}				gridFcn			{}				{};

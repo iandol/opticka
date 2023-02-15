@@ -439,6 +439,19 @@ calibrateFcn = {
 	%@()pauseRecording(io);
 	@()trackerSetup(eT);
 }; 
+%--------------------drift correction function
+driftFcn = {
+	@()drawBackground(s); %blank the display
+	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
+	@()driftCorrection(eT) % enter drift correct (only eyelink)
+};
+offsetFcn = {
+	@()drawBackground(s); %blank the display
+	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
+	@()driftOffset(eT) % enter drift offset (works on tobii & eyelink)
+};
 
 %--------------------debug override special mode which enters a matlab debug state so we can manually edit object values
 overrideFcn = { 
@@ -451,12 +464,6 @@ overrideFcn = {
 flashFcn = {
 	@()drawBackground(s);
 	@()flashScreen(s, 0.2);% fullscreen flash mode for visual background activity detection
-};
-
-%--------------------magstim
-magstimFcn = { 
-	@()drawBackground(s);
-	@()stimulate(mS);% run the magstim
 };
 
 %--------------------show 1deg size grid
@@ -472,28 +479,31 @@ sM.skipExitStates = {'fixate',{'incorrect','breakfix'}};
 
 %==================================================================
 %----------------------State Machine Table-------------------------
-disp('================>> Building state info file <<================')
 %specify our cell array that is read by the stateMachine
 stateInfoTmp = {
-'name'      'next'		'time'  'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn';
+'name'		'next'		'time'  'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn';
+%---------------------------------------------------------------------------------------------
 'pause'		'prefix'	inf		pauseEntryFcn	{}				{}				pauseExitFcn;
+%---------------------------------------------------------------------------------------------
 'prefix'	'fixate'	2		prefixEntryFcn	{}				{}				{};
 'fixate'	'incorrect'	2	 	fixEntryFcn		fixFcn			initFixFcn		fixExitFcn;
-'stimulus'  'incorrect'	2		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn;
+'stimulus'	'incorrect'	2		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn;
 'correct'	'prefix'	1		correctEntryFcn	correctFcn		{}				correctExitFcn;
 'incorrect'	'prefix'	1		incEntryFcn		incFcn			{}				incExitFcn;
 'breakfix'	'prefix'	1		breakEntryFcn	incFcn			{}				breakExitFcn;
-'calibrate' 'pause'		0.5		calibrateFcn	{}				{}				{};
+%---------------------------------------------------------------------------------------------
+'calibrate'	'pause'		0.5		calibrateFcn	{}				{}				{};
+'drift'		'pause'		0.5		driftFcn		{}				{}				{};
+'offset'	'pause'		0.5		offsetFcn		{}				{}				{};
+%---------------------------------------------------------------------------------------------
 'override'	'pause'		0.5		overrideFcn		{}				{}				{};
 'flash'		'pause'		0.5		flashFcn		{}				{}				{};
-'magstim'	'prefix'	0.5		{}				magstimFcn		{}				{};
 'showgrid'	'pause'		10		{}				gridFcn			{}				{};
 };
 %----------------------State Machine Table-------------------------
 %==================================================================
 
+disp('=================>> Built state info file <<==================')
 disp(stateInfoTmp)
-disp('================>> Loaded state info file  <<================')
-clear pauseEntryFcn fixEntryFcn fixFcn initFixFcn fixExitFcn stimFcn maintainFixFcn incEntryFcn ...
-	incFcn incExitFcn breakEntryFcn breakFcn correctEntryFcn correctFcn correctExitFcn ...
-	calibrateFcn overrideFcn flashFcn gridFcn
+disp('=================>> Built state info file <<=================')
+clearvars -regexp '.+Fn$' % clear the cell array Fns in the current workspace

@@ -511,7 +511,13 @@ driftFn = {
 	@()drawBackground(s); %blank the display
 	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
-	@()driftCorrection(eT) % enter drift correct
+	@()driftCorrection(eT) % enter drift correct (only eyelink)
+};
+offsetFcn = {
+	@()drawBackground(s); %blank the display
+	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
+	@()driftOffset(eT) % enter drift offset (works on tobii & eyelink)
 };
 
 %debug override
@@ -546,7 +552,8 @@ stateInfoTmp = {
 'exclusion'	'timeout'	0.25	exclEntry		incWithin		{}				incExit;
 'timeout'	'prefix'	tS.tOut	{}				{}				{}				{};
 'calibrate'	'pause'		0.5		calibrateFn		{}				{}				{};
-'drift'		'pause'		0.5		driftFn			{}				{}				{};
+'drift'		'pause'		0.5		driftFn			{}				{}					{};
+'offset'	'pause'		0.5		offsetFcn		{}				{}					{};
 'override'	'pause'		0.5		overrideFn		{}				{}				{};
 'flash'		'pause'		0.5		flashFn			{}				{}				{};
 'showgrid'	'pause'		10		{}				gridFn			{}				{};
