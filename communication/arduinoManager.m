@@ -339,22 +339,49 @@ classdef arduinoManager < optickaCore
  				
   				me.digitalWrite(9, 1);   %//DISABLE CH A
   				me.digitalWrite(8, 0);   %//ENABLE CH B-
-  				me.digitalWrite(13,1);  %//Sets direction of CH B
-  				me.digitalWrite(11,1);  %//Moves CH B
-  				WaitSecs(me.delayLength);
-		end
-	
-		%================STOP STEPPER================
-		function stopStepper(me)
-        		me.digitalWrite(9,1);        %//DISABLE CH A
-        		me.digitalWrite(me.linePWM(1), 0);       %//stop Move CH A
-        		me.digitalWrite(8,1);        %//DISABLE CH B
-        		me.digitalWrite(11,0);      %//stop Move CH B 
-        		WaitSecs(me.delayLength);
-		end
-		
-		%===========Check Ports==========%
-		function checkPorts(me)
+                me.digitalWrite(13,1);  %//Sets direction of CH B
+                me.digitalWrite(11,1);  %//Moves CH B
+                WaitSecs(me.delayLength);
+        end
+    	
+             
+        %================STOP STEPPER================
+        function stopStepper(me)
+            me.digitalWrite(9,1);        %//DISABLE CH A
+            me.digitalWrite(me.linePWM(1), 0);       %//stop Move CH A
+            me.digitalWrite(8,1);        %//DISABLE CH B
+            me.digitalWrite(11,0);      %//stop Move CH B
+            WaitSecs(me.delayLength);
+        end
+        %===========DRIVE DC MOTOR for SMALL PUMP=========%
+        % A DC motor need 3 digital pin to work,2 general digital to control 
+        % the direction and a pmw channel to control the speed. A L298 drive
+        % board or a motorshield + a arduino uno/pico ,which need a 12v DC 
+        % input, can cooperate to drive a DC motor,in clockwise or the otherway.
+        %  
+        % 
+        function liqRewDCmotor(me,time) % this function is running on picko
+            seraildevice='arduino UNO';
+            seraildevice='pico';
+         % define to digital channels for a DC motor
+            switch seraildevice
+                case 'arduino UNO'
+                    IN1=2;IN2=4;EN=3;     
+                case 'pico'
+                    IN1=2;IN2=4;EN=1;
+            end
+            me.digitalWrite(IN1, 0); % stop the motor
+            me.digitalWrite(IN2, 0); % stop the mo
+            me.analogWrite(EN, 1);  % here must be the analogWrite
+            me.digitalWrite(IN1, 1);
+            me.digitalWrite(IN2, 0);
+            WaitSecs(time)
+            me.digitalWrite(IN1, 0); % stop the motor
+            me.digitalWrite(IN2, 0); % stop the motor
+        end
+
+        %===========Check Ports==========%
+        function checkPorts(me)
 			if IsOctave
 				if ~exist('serialportlist','file'); try pkg load instrument-control; end; end
 				if ~verLessThan('instrument-control','0.7')
