@@ -69,7 +69,7 @@ eT.name 					= tS.name;
 if tS.saveData == true;		eT.recordData = true; end %===save ET data?
 if strcmp(me.eyetracker.device, 'eyelink')
 	eT.name 						= tS.name;
-	if me.dummyMode;				eT.isDummy = true; end %===use dummy or real eyetracker? 
+	if me.eyetracker.dummy == true;				eT.isDummy = true; end %===use dummy or real eyetracker? 
 	if tS.saveData == true;			eT.recordData = true; end %===save EDF file?
 	if isempty(me.eyetracker.esettings)		%==check if GUI settings are empty
 		eT.sampleRate				= 250;		%==sampling rate
@@ -91,7 +91,7 @@ if strcmp(me.eyetracker.device, 'eyelink')
 	end
 elseif strcmp(me.eyetracker.device, 'tobii')
 	eT.name 						= tS.name;
-	if me.dummyMode;				eT.isDummy = true; end %===use dummy or real eyetracker? 
+	if me.eyetracker.dummy == true;				eT.isDummy = true; end %===use dummy or real eyetracker? 
 	if isempty(me.eyetracker.tsettings)	%==check if GUI settings are empty
 		eT.model					= 'Tobii Pro Spectrum';
 		eT.sampleRate				= 300;

@@ -94,7 +94,7 @@ me.lastYExclusion			= [];
 % contain the GUI settings; we test if they are empty or not and set
 % defaults based on that...
 eT.name 				= tS.name;
-if me.dummyMode;		eT.isDummy = true; end %===use dummy or real eyetracker? 
+if me.eyetracker.dummy == true;		eT.isDummy = true; end %===use dummy or real eyetracker? 
 if tS.saveData == true;	eT.recordData = true; end %===save ET data?					
 if strcmp(me.eyetracker.device, 'eyelink')
 	if isempty(me.eyetracker.esettings)

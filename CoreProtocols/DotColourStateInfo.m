@@ -57,7 +57,7 @@ eT.sampleRate 				= 250;		% sampling rate
 eT.calibrationStyle 		= 'HV5';	% calibration style
 eT.calibrationProportion	= [0.25 0.25]; %the proportion of the screen occupied by the calibration stimuli
 if tS.saveData == true;		eT.recordData = true; end %===save EDF file?
-if me.dummyMode;			eT.isDummy = true; end %===use dummy or real eyetracker? 
+if me.eyetracker.dummy == true;			eT.isDummy = true; end %===use dummy or real eyetracker? 
 %-----------------------
 % remote calibration enables manual control and selection of each fixation
 % this is useful for a baby or monkey who has not been trained for fixation

@@ -1826,8 +1826,8 @@ classdef runExperiment < optickaCore
 				if ~eT.isConnected && ~eT.isDummy
 					warning('Eyetracker is not connected and not in dummy mode, potential connection issue...')
 				end
-			elseif strcmp(me.eyetracker.device, 'eyelink') || me.dummyMode
-				if me.dummyMode
+			elseif strcmp(me.eyetracker.device, 'eyelink') || me.eyetracker.dummy
+				if me.eyetracker.dummy == true
 					fprintf('\n===>>> Dummy eyelink being initialised...\n')
 				else
 					fprintf('\n===>>> Handing over to Eyelink for calibration & validation...\n')

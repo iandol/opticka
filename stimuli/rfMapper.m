@@ -106,7 +106,7 @@ classdef rfMapper < barStimulus
 			if exist('rE','var') && isa(rE,'runExperiment')
 				me.sM = rE.screen;
 				el = [];
-				me.dummyMode = rE.dummyMode;
+				me.eyetracker.dummy = rE.dummyMode;
 				if rE.useEyeLink
 					me.useEyetracker = true;
 					el = rE.elsettings;
@@ -134,7 +134,7 @@ classdef rfMapper < barStimulus
 					eT						= eyelinkManager();
 					eT.verbose				= me.verbose;
 					fprintf('--->>> rfMapper eyetracker setup starting: %s\n', eT.fullName);
-					eT.isDummy				= me.dummyMode; %use dummy or real eyelink?
+					eT.isDummy				= me.eyetracker.dummy; %use dummy or real eyelink?
 					eT.recordData			= false; %save EDF file
 					if ~isempty(el)
 						eT.editProperties(el);

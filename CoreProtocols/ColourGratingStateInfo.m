@@ -84,7 +84,7 @@ me.lastYPosition			= tS.fixY;
 % settings you can test if they are empty or not and set them based on
 % that:
 eT.name				= tS.name;
-if me.dummyMode;	eT.isDummy = true; end %===use dummy or real eyetracker? 
+if me.eyetracker.dummy == true;	eT.isDummy = true; end %===use dummy or real eyetracker? 
 if tS.saveData;		eT.recordData = true; end %===save ET data?					
 if strcmp(me.eyetracker.device, 'eyelink')
 	if isempty(me.eyetracker.esettings)		%==check if GUI settings are empty
