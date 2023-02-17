@@ -368,7 +368,7 @@ classdef arduinoManager < optickaCore
                 case 'arduino UNO'
                     IN1=2;IN2=4;EN=3;     
                 case 'pico'
-                    IN1=2;IN2=4;EN=1;
+                    IN1=2;IN2=3;EN=4;
             end
             me.digitalWrite(IN1, 0); % stop the motor
             me.digitalWrite(IN2, 0); % stop the mo
