@@ -41,7 +41,12 @@ classdef audioManager < optickaCore
 			if ~isValid
 				me.salutation('constructor','Please ensure valid file/dir name');
 			end
-			me.devices = PsychPortAudio('GetDevices');
+			try
+				InitializePsychSound(me.lowLatency);
+				me.devices = PsychPortAudio('GetDevices');
+			catch
+				warning('audioManager: Could not initialise audio devices!!!')
+			end
 			me.salutation('constructor','Audio Manager initialisation complete');
 		end
 		
@@ -64,7 +69,6 @@ classdef audioManager < optickaCore
 			if ~isValid
 				warning('NO valid file/dir name');
 			end
-			InitializePsychSound(me.lowLatency);
 			me.devices = PsychPortAudio('GetDevices');
 			if me.device > length(me.devices)
 				fprintf('You have specified a non-existant device, trying first available device!\n');
@@ -96,7 +100,7 @@ classdef audioManager < optickaCore
 			if me.isFiles
 				%TODO
 			else
-				[audiodata, infreq] = psychwavread(me.fileName);
+				[audiodata, ~] = psychwavread(me.fileName);
 			end
 			PsychPortAudio('FillBuffer', me.aHandle, audiodata');
 		end
@@ -146,12 +150,11 @@ classdef audioManager < optickaCore
 				end
 			end
 			if ischar(freq)
-				if strcmpi(freq, 'high') freq = 1000;
-				elseif strcmpi(freq, 'med') freq = 500;
-				elseif strcmpi(freq, 'medium') freq = 500;
-				elseif strcmpi(freq, 'low') freq = 300;
+				if strcmpi(freq, 'high'); freq = 1000;
+				elseif strcmpi(freq, 'med'); freq = 500;
+				elseif strcmpi(freq, 'medium'); freq = 500;
+				elseif strcmpi(freq, 'low'); freq = 300;
 				end
-
 			end
 			nSample = me.frequency*durationSec;
 			soundVec = sin(2*pi*freq*(1:nSample)/me.frequency);
@@ -184,7 +187,7 @@ classdef audioManager < optickaCore
 					PsychPortAudio('Stop', me.aHandle, 0, 1); 
 					PsychPortAudio('DeleteBuffer');
 				end
-				try PsychPortAudio('Close'); end
+				try PsychPortAudio('Close'); end %#ok<*TRYNC> 
 				me.aHandle = [];
 				me.status = [];
 				me.frequency = [];

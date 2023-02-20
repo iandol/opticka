@@ -227,62 +227,32 @@ classdef opticka < optickaCore
 					me.store.serverCommand = '!matlab -nodesktop -nosplash -r "d=dataConnection(struct(''autoServer'',1,''lPort'',5678));" &';
 				end
 
+				me.paths.temp=tempdir;
+				if ~isfield(me.paths,'protocols')
+					me.paths.protocols = [me.paths.parent filesep 'Protocols'];
+					if ~isfolder(me.paths.protocols); mkdir(me.paths.protocols); end
+				end
+				try cd(me.paths.protocols); end
+				me.paths.currentPath = pwd;
+				if ~isfield(me.paths,'calibration')
+					me.paths.calibration = [me.paths.parent filesep 'Calibration'];
+					if ~isfolder(me.paths.calibration); mkdir(me.paths.calibration); end
+				end
+				if ~isfield(me.paths,'historypath')
+					me.paths.historypath = [me.paths.parent filesep 'History'];
+					if ~isfolder(me.paths.historypath); mkdir(me.paths.historypath); end
+				end
+				if ~isfield(me.paths,'savedData')
+					me.paths.savedData = [me.paths.parent filesep 'SavedData'];
+					if ~isfolder(me.paths.savedData); mkdir(me.paths.savedData); end
+				end
 				if ismac || isunix
-					me.paths.temp=tempdir;
-
-					if ~exist([me.paths.parent filesep 'Protocols'],'dir')
-						mkdir([me.paths.parent filesep 'Protocols']);
-					end
 					if ~isdeployed && ~exist([me.paths.parent filesep 'Protocols' filesep 'CoreProtocols'],'dir')
 						src = [me.paths.whereami filesep 'CoreProtocols'];
 						dst = [me.paths.parent filesep 'Protocols' filesep];
 						cmd = ['!ln -s ' src ' ' dst];
 						eval(cmd);
 					end
-					
-					me.paths.protocols = [me.paths.parent filesep 'Protocols'];
-					cd(me.paths.protocols);
-					me.paths.currentPath = pwd;
-					
-					if ~exist([me.paths.parent filesep 'Calibration'],'dir')
-						mkdir([me.paths.parent filesep 'Calibration']);
-					end
-					me.paths.calibration = [me.paths.parent filesep 'Calibration'];
-					
-					if ~exist([me.paths.temp 'History'],'dir')
-						mkdir([me.paths.temp 'History']);
-					end
-					me.paths.historypath=[me.paths.temp 'History'];
-					
-					if ~exist([me.paths.parent filesep 'SavedData'],'dir')
-						mkdir([me.paths.parent filesep 'SavedData']);
-					end
-					me.paths.savedData = [me.paths.parent filesep 'SavedData'];
-				elseif ispc
-					root = me.paths.parent;
-					me.paths.temp=tempdir;
-					
-					if ~exist([root 'Protocols'],'dir')
-						mkdir([root 'Protocols']);
-					end
-					me.paths.protocols = [root 'Protocols'];
-					cd(me.paths.protocols);
-					me.paths.currentPath = pwd;
-					
-					if ~exist([root 'Calibration'],'dir')
-						mkdir([root 'Calibration']);
-					end
-					me.paths.calibration = [root 'Calibration'];
-					
-					if ~exist([root 'History'],'dir')
-						mkdir([root 'History']);
-					end
-					me.paths.historypath=[root 'History'];
-					
-					if ~exist([root 'SavedData'],'dir')
-						mkdir([root 'SavedData']);
-					end
-					me.paths.savedData = [root 'SavedData'];
 				end
 
 				me.ui = opticka_ui(me); %our GUI file

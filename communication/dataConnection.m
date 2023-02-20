@@ -151,15 +151,11 @@ classdef dataConnection < handle
 									pause(0.1);
 									if loop == 2 %see if we have rogue connetions
 										for i = 1:length(me.rconnList)
-											try %#ok<TRYNC>
-												pnet(me.rconnList(i),'close');
-											end
+											try pnet(me.rconnList(i),'close'); end %#ok<*TRYNC> 
 										end
 									elseif loop == 3
 										for i = 0:8
-											try
-												pnet(i,'close');
-											end
+											try	pnet(i,'close'); end
 										end
 									end
 								else
@@ -179,9 +175,9 @@ classdef dataConnection < handle
 									fprintf('---> CAN NOT CONNECT TO HOST: %s PORT: %d\nRETRY....',me.rAddress,me.rPort);
 									pause(0.5);
 								else
-									
 									break
 								end
+								loop = loop + 1;
 							end
 							
 							if me.conn >= 0
@@ -275,7 +271,7 @@ classdef dataConnection < handle
 			end
 			status = me.status;
 		end
-		
+
 		% ===================================================================
 		%> @brief Check if there is data non-destructively
 		%>
@@ -302,6 +298,15 @@ classdef dataConnection < handle
 					
 			end
 			hasData = me.hasData;
+		end
+
+		% ===================================================================
+		%> @brief Close all connections
+		%>
+		%> Close all connections
+		% ===================================================================
+		function flush(me)
+			try flushStatus(me); end
 		end
 		
 		% ===================================================================
