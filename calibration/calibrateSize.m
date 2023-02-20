@@ -1,5 +1,5 @@
 function [dpi, dpc] = calibrateSize(theScreen, distance, mSize, forceLCD)
-% dpi=calibrateSize([theScreen])
+% [dpi, dpc] = calibrateSize(theScreen, distance, mSize, forceLCD)
 % Helps the user to accurately measure the screen's dots per inch.
 %
 % Denis Pelli
@@ -19,7 +19,7 @@ function [dpi, dpc] = calibrateSize(theScreen, distance, mSize, forceLCD)
 if nargin>4 || nargout>2
 	error('Usage: [dpi, dpc] = calibrateSize(theScreen, distance, mSize, forceLCD)');
 end
-if nargin<1 || theScreen < 0
+if nargin<1 || isempty(theScreen) || theScreen < 0
 	theScreen=max(Screen('Screens'));
 end
 if nargin<2
@@ -37,7 +37,6 @@ AssertOpenGL;
 try
 	inches = 0;
 	unitInches=1/2.54;
-	units='cm';
 	unit='cm';
 	objectInches=mSize*unitInches;
 	disp('A small correction will be made for your viewing distance and the thickness of');
@@ -53,19 +52,26 @@ try
 		fprintf('with a thick (%.1f inch) clear front plate.\n',thicknessInches);
 	end
 	distanceInches=distance*unitInches;
-	Screen('Preference', 'SkipSyncTests', 2);
-	Screen('Preference', 'VisualDebugLevel', 0);
-	[window,screenRect]=Screen('OpenWindow',theScreen, 128);
+
+	Screen('Preference', 'VisualDebugLevel', 3);
+
+	PsychDefaultSetup(2);
+	s = screenManager('disableSyncTests',true,'bitDepth','8bit','blend',true); open(s);
+	window = s.win;
+	screenRect = s.winRect;
+
+	%[window,screenRect]=Screen('OpenWindow',theScreen, 128);
+	fprintf('\nThe screen size is measured as %i x %i\n',screenRect(3), screenRect(4));
 	white=WhiteIndex(window);
 	black=BlackIndex(window);
 	
 	% Instructions
 	s=sprintf('Hold your %.1f-%s-wide object against the display.',objectInches/unitInches,unit);
 	theText={s,'Use one eye. Drag to match the object''s width.'};
-	Screen('TextFont',window,'Helvetica');
+	Screen('TextFont',window,'Calibri');
 	s=18;
 	Screen('TextSize',window,s);
-	textLeading=s+5;
+	textLeading=s+10;
 	textRect=Screen('TextBounds',window,theText{1});
 	textRect(4)=length(theText)*textLeading;
 	textRect=CenterRect(textRect,screenRect);
@@ -169,7 +175,8 @@ try
 		oldButton=any(button);
 	end
 	Screen('Close',window);
-	fprintf('\nRESULT: pixels per cm = %.2g | pixels per inch = %.2g\n',dpc,dpi);
+	fprintf('\n\n============\nRESULT (%ipx object): pixels per cm = %.2g | pixels per inch = %.2g\n\n',objectPix,dpc,dpi);
+	sca
 catch
 	ShowCursor;
 	Screen('CloseAll');

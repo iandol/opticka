@@ -981,9 +981,9 @@ classdef runExperiment < optickaCore
 						% command for this screen flip needs to be sent
 						% PRIOR to the flip! Also remember DPP will be
 						% delayed by one flip
-						if me.sendStrobe && me.useDisplayPP
+						if me.sendStrobe && strcmp(me.strobe.device,'display++')
 							sendStrobe(io); me.sendStrobe = false;
-						elseif me.sendStrobe && me.useDataPixx
+						elseif me.sendStrobe && strcmp(me.strobe.device,'datapixx')
 							triggerStrobe(io); me.sendStrobe = false;
 						end
 						%------Do the actual Screen flip, save times if

@@ -551,10 +551,15 @@ classdef optickaCore < handle
 				status = mkdir(me.paths.savedData);
 				if status == 0; warning('Could not create SavedData folder'); end
 			end
-			me.paths.protocols = [me.paths.parent filesep 'protocols'];
-			if ~isfolder(me.paths.savedData)
-				status = mkdir(me.paths.savedData);
-				if status == 0; warning('Could not create SavedData folder'); end
+			me.paths.protocols = [me.paths.parent filesep 'Protocols'];
+			if ~isfolder(me.paths.protocols)
+				status = mkdir(me.paths.protocols);
+				if status == 0; warning('Could not create Protocols folder'); end
+			end
+			me.paths.calibration = [me.paths.parent filesep 'Calibration'];
+			if ~isfolder(me.paths.calibration)
+				mkdir(me.paths.calibration);
+				if status == 0; warning('Could not create Calibration folder'); end
 			end
 			if isdeployed
 				me.paths.deploypath = ctfroot;

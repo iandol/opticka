@@ -587,11 +587,17 @@ classdef screenManager < optickaCore
 				sv.photoDiodeRect = me.photoDiodeRect;
 				
 				% get gamma table and info
-				[sv.originalGamma, sv.dacBits, sv.lutSize]=Screen('ReadNormalizedGammaTable', me.win);
+				try
+					[sv.originalGamma, sv.dacBits, sv.lutSize]=Screen('ReadNormalizedGammaTable', me.win);
+				catch
+					sv.originalGamma = [];
+					sv.dacBits = 0;
+					sv.lutSize = 0;
+				end
 				sv.linearGamma  = repmat(linspace(0,1,sv.lutSize)',1,3);
 				sv.gammaTable	= sv.originalGamma;
 				
-				if me.hideFlash == true && isempty(me.gammaTable)
+				if me.hideFlash == true && isempty(me.gammaTable) && sv.lutSize > 0
 					Screen('LoadNormalizedGammaTable', me.screen, sv.linearGamma);
 					sv.gammaTable = sv.linearGamma;
 					sv.resetGamma = false;
