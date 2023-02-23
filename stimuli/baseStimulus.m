@@ -951,9 +951,9 @@ classdef baseStimulus < optickaCore & dynamicprops
 		function [dX, dY] = updatePosition(delta,angle)
 		% updatePosition(delta, angle)
 			dX = delta .* cos(baseStimulus.d2r(angle));
-			if dX < 1e-3; dX = 0; end
+			if abs(dX) < 1e-3; dX = 0; end
 			dY = delta .* sin(baseStimulus.d2r(angle));
-			if dY < 1e-3; dY = 0; end
+			if abs(dY) < 1e-3; dY = 0; end
 		end
 		
 	end%---END STATIC METHODS---%
