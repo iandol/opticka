@@ -620,6 +620,7 @@ classdef runExperiment < optickaCore
 
 			refreshScreen(me);
 			initialiseSaveFile(me); %generate a savePrefix for this run
+			me.comment = [me.comment ' ' me.name];
 			me.name = [me.subjectName '-' me.savePrefix]; %give us a run name
 			if isempty(me.screen) || isempty(me.task)
 				me.initialise; %we set up screenManager and taskSequence objects
@@ -859,7 +860,9 @@ classdef runExperiment < optickaCore
 						if ~dC.isOpen; open(dC); end
 						write(dC,uint8(['set Filename.BaseFilename ' me.name]));
 						write(dC,uint8(['set Filename.Path ' me.paths.savedData]));
-						write(dC,uint8('set runmode run'));
+						write(dC,uint8(['set Note1 ' me.name]));
+						write(dC,uint8(['set Note2 ' me.comment]));
+						write(dC,uint8('set runmode record'));
 						WaitSecs(0.5);
 					catch
 						warning('runTask cannot contact intan!!!')

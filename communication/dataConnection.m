@@ -238,17 +238,18 @@ classdef dataConnection < handle
 							status = -1;
 							fprintf('Couldn''t close connection %i, perhaps closed?\n',me.(list)(i));
 						end
+						me.isOpen = false;
 					end
 				else
 					me.status = pnet(me.(name),'status');
-					if me.status <=0;
-						me.isOpen = false;
+					if me.status <=0
 						me.salutation('close Method','Connection appears closed...');
 					else
 						try %#ok<TRYNC>
 							pnet(me.(name), 'close');
 						end
 					end
+					me.isOpen = false;
 					me.conn = -1;
 				end
 			end
@@ -270,6 +271,7 @@ classdef dataConnection < handle
 				me.salutation('closeAll Method','Failed to close all PNet connections')
 				me.status = -1;
 			end
+			me.isOpen = false;
 			status = me.status;
 		end
 

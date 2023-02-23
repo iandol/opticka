@@ -1127,6 +1127,7 @@ classdef opticka < optickaCore
 			
 			me.comment = ['Protocol: ' fileName];
 			me.store.protocolName = fileName;
+			me.store.protocolPath = p;
 
 			clearStimulusList(me);
 			clearVariableList(me);
@@ -1436,6 +1437,10 @@ classdef opticka < optickaCore
 			me.editVariable;
 			me.refreshProtocolsList;
 			me.ui.propertiesToVariables;
+
+			me.r.comment = me.comment;
+			me.r.paths.protocolName = me.store.protocolName;
+			me.r.paths.protocolPath = me.store.protocolPath;
 			
 			fprintf('---> Protocol load finished…\n');
 
