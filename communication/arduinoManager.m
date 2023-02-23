@@ -361,21 +361,21 @@ classdef arduinoManager < optickaCore
         %  
         % 
         function liqRewDCmotor(me,time) % this function is running on picko
-            seraildevice='arduino UNO';
-            seraildevice='pico';
+%             seraildevice='arduino UNO';
+%             seraildevice='pico';
          % define to digital channels for a DC motor
-            switch seraildevice
-                case 'arduino UNO'
-                    IN1=2;IN2=4;EN=3;     
-                case 'pico'
-                    IN1=2;IN2=3;EN=4;
-            end
+%             switch seraildevice
+%                 case 'arduino UNO'
+                    IN1=5;IN2=4;EN=3;     
+%                 case 'pico'
+%                     IN1=2;IN2=3;EN=4;
+%             end
             me.digitalWrite(IN1, 0); % stop the motor
             me.digitalWrite(IN2, 0); % stop the mo
-            me.analogWrite(EN, 1);  % here must be the analogWrite
+            me.analogWrite(EN, 200);  % here must be the analogWrite
             me.digitalWrite(IN1, 1);
             me.digitalWrite(IN2, 0);
-            WaitSecs(time)
+            WaitSecs(time);
             me.digitalWrite(IN1, 0); % stop the motor
             me.digitalWrite(IN2, 0); % stop the motor
         end
