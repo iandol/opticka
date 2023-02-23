@@ -855,13 +855,10 @@ classdef runExperiment < optickaCore
 				%===========================Start amplifier
 				% 
 				if strcmp(me.control.device,'intan')
-					addr = strsplit(me.control.port,':');
-					dC.rAddress = addr{1};
-					dC.rPort = addr{2};
 					try
-						open(dC);
+						if ~dC.isOpen; open(dC); end
 						write(dC,uint8(['set Filename.BaseFilename ' me.name]));
-						write(dC,uint8(['set Filename.Path ' 'C:/OptickaFiles']));
+						write(dC,uint8(['set Filename.Path ' me.paths.savedData]));
 						write(dC,uint8('set runmode run'));
 						WaitSecs(0.5);
 					catch
