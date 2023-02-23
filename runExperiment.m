@@ -82,6 +82,8 @@ classdef runExperiment < optickaCore
 		screenSettings struct		= struct()
 		%> this lets the opticka UI leave commands to runExperiment
 		uiCommand char				= ''
+		%> return if runExperiment is running (true) or not (false)
+		isRunning logical			= false
 	end
 	
 	properties (Hidden = true)
@@ -130,16 +132,6 @@ classdef runExperiment < optickaCore
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
-		%> send a strobe on next flip?
-		sendStrobe logical			= false
-		%> need an eyetracker sample on next flip?
-		needSample logical			= false
-		%> send an eyetracker SYNCTIME on next flip?
-		sendSyncTime logical		= false
-		%> do we flip the screen or not?
-		doFlip logical				= true
-		%> do we flip the eyetracker window? 0=no 1=yes 2=yes+clear
-		doTrackerFlip double		= 0;
 		%> stateMachine
 		stateMachine
 		%> eyetracker manager object
@@ -153,11 +145,11 @@ classdef runExperiment < optickaCore
 		%> LabJack control object
 		lJack 
 		%> Arduino control object
-		arduino 
-		%> magstim manager
-		mS
+		arduino
 		%> user functions object
 		userFunctions
+		%> data connection
+		dC
 		%> state machine control cell array
 		stateInfo cell				= {}
 		%> general computer info retrieved using PTB Screen('computer')
@@ -172,17 +164,25 @@ classdef runExperiment < optickaCore
 		taskLog
 		%> behavioural responses log
 		behaviouralRecord
+		%> previous info populated during load of a saved object
+		previousInfo struct			= struct()
+	end
+	
+	properties (SetAccess = private, GetAccess = private)
 		%> general info on current run
 		currentInfo
 		%> variable info on the current run
 		variableInfo
-		%> previous info populated during load of a saved object
-		previousInfo struct			= struct()
-		%> return if runExperiment is running (true) or not (false)
-		isRunning logical			= false
-	end
-	
-	properties (SetAccess = private, GetAccess = private)
+		%> send a strobe on next flip?
+		sendStrobe logical			= false
+		%> need an eyetracker sample on next flip?
+		needSample logical			= false
+		%> send an eyetracker SYNCTIME on next flip?
+		sendSyncTime logical		= false
+		%> do we flip the screen or not?
+		doFlip logical				= true
+		%> do we flip the eyetracker window? 0=no 1=yes 2=yes+clear
+		doTrackerFlip double		= 0;
 		%> fInc for managing keyboard sensitivity
 		fInc						= 6
 		%> is it MOC run (false) or stateMachine runTask (true)?
@@ -746,7 +746,7 @@ classdef runExperiment < optickaCore
 				
 				%================================initialise and set up I/O
 				io					= configureIO(me);
-				dC					= dataConnection('protocol','tcp');
+				dC					= me.dC;
 				
 				%================================initialise the user functions object
 				if ~exist(me.userFunctionsFile,'file')
@@ -858,11 +858,12 @@ classdef runExperiment < optickaCore
 					addr = strsplit(me.control.port,':');
 					dC.rAddress = addr{1};
 					dC.rPort = addr{2};
-					try 
+					try
 						open(dC);
 						write(dC,uint8(['set Filename.BaseFilename ' me.name]));
 						write(dC,uint8(['set Filename.Path ' 'C:/OptickaFiles']));
 						write(dC,uint8('set runmode run'));
+						WaitSecs(0.5);
 					catch
 						warning('runTask cannot contact intan!!!')
 						me.control.device = '';
@@ -941,7 +942,6 @@ classdef runExperiment < optickaCore
 				tL.screenLog.trackerStartTime = getTrackerTime(eT);
 				tL.screenLog.trackerStartOffset = getTimeOffset(eT);
 				
-				useParallel = true;
 				%==============================IGNITE the stateMachine!
 				fprintf('\n===>>> Igniting the State Machine... <<<===\n');
 				start(sM);
@@ -1094,6 +1094,7 @@ classdef runExperiment < optickaCore
 				try close(eT); end % eyetracker, should save the data for us we've already given it our name and folder
 				try close(aM); end % audio manager
 				try close(rM); end % reward manager
+				try close(dC); end % data connection
 				
 				WaitSecs(0.25);
 				fprintf('\n\n======>>> Total ticks: %g | stateMachine ticks: %g\n', tS.totalTicks, sM.totalTicks);
@@ -1904,6 +1905,8 @@ classdef runExperiment < optickaCore
 				me.strobe.device = '';
 				fprintf('\n===>>> No strobe output I/O...\n')
 			end
+
+			%--------------------------------------reward
 			if matches(me.reward.device,'arduino')
 				if ~isa(rM,'arduinoManager')
                     rM = arduinoManager();
@@ -1924,6 +1927,31 @@ classdef runExperiment < optickaCore
 					rM = ioManager();
 				end
 				fprintf('===> No reward TTLs will be sent...\n');
+			end
+
+			%--------------------------------------control
+			if isempty(me.dC)
+				me.dC = dataConnection();
+			end
+			close(me.dC);
+			if matches(me.control.device,'intan')
+				if ~isempty(me.control.port)
+					v = strsplit(me.control.port,':');
+				else
+					v{1} = '127.0.0.1';
+					v{2} = '5000';
+				end
+				if length(v) == 2
+					me.dC.rAddress = v{1};
+					me.dC.rPort = v{2};
+				end
+				try 
+					open(me.dC); 
+				catch
+					warning('Cannot open Intan connection!');
+				end
+			else
+				me.dC = dataConnection();
 			end
 			
 		end

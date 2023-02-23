@@ -1901,7 +1901,7 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		function makeGrid(me)
 			me.grid = [];
-			rn = -15:15;
+			rn = -20:20;
 			for i=rn
 				me.grid = horzcat(me.grid, [rn;ones(1,length(rn))*i]);
 			end

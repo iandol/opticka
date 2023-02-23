@@ -122,6 +122,7 @@ classdef dataConnection < handle
 		%> or TCP connection
 		% ===================================================================
 		function conn = open(me)
+			if me.isOpen; return; end
 			switch me.protocol
 				case 'udp'
 					me.conn = pnet('udpsocket', me.lPort);

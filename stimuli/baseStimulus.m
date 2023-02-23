@@ -413,8 +413,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 				
 				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
 
-				drawGrid(s); %draw +-5 degree dot grid
-				
+
+
 				if benchmark
 					drawText(s, 'BENCHMARK: screen won''t update properly, see FPS in command window at end.');
 				else
