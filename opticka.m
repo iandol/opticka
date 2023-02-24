@@ -57,8 +57,8 @@ classdef opticka < optickaCore
 		%> which UI settings should be saved locally to the machine?
 		uiPrefsList cell = {'OKOmniplexIP','OKMonitorDistance','OKpixelsPerCm',...
 			'OKbackgroundColour','OKAntiAliasing','OKbitDepth','OKUseRetina',...
-			'OKHideFlash','OKlogFrames','OKUsePhotoDiode','OKTrainingResearcherName',...
-			'OKTrainingName','OKarduinoPort','OKArduinoType','OKdPPMode','OKDebug',...
+			'OKHideFlash','OKlogFrames','OKUsePhotoDiode','OKResearcher',...
+			'OKSubject','OKarduinoPort','OKArduinoType','OKdPPMode','OKDebug',...
 			'OKOpenGLBlending','OKCalEditField','OKValEditField',...
 			'OKTrackerDropDown','OKWindowSize','OKUseDummy','OKINTANPort','OKControlIntan',...
 			'OKCalibProp','OKELManualMode','OKTobiiManualMode'}
@@ -324,6 +324,9 @@ classdef opticka < optickaCore
 				end
 			end
 			
+			me.r.subjectName = me.gv(me.ui.OKSubject);
+			me.r.researcherName = me.gv(me.ui.OKResearcher);
+
 			me.r.screen.screen = me.gd(me.ui.OKSelectScreen);
 			
 			me.r.screen.distance = me.gd(me.ui.OKMonitorDistance);
@@ -430,8 +433,6 @@ classdef opticka < optickaCore
 			if isfield(me.r.screenVals,'fps')
 				me.r.task.fps = me.r.screenVals.fps;
 			end
-			me.r.subjectName = me.gv(me.ui.OKSubject);
-			me.r.researcherName = me.gv(me.ui.OKResearcher);
 			me.r.task.trialTime = me.gd(me.ui.OKtrialTime);
 			me.r.task.randomSeed = me.gn(me.ui.OKRandomSeed);
 			me.r.task.randomGenerator = me.gs(me.ui.OKrandomGenerator);
@@ -1254,10 +1255,6 @@ classdef opticka < optickaCore
 				
 				if optickaCore.hasKey(tmp.r,'drawFixation');me.r.drawFixation=tmp.r.drawFixation;end
 				if optickaCore.hasKey(tmp.r,'dPPMode'); me.r.dPPMode = tmp.r.dPPMode; end
-				%if optickaCore.hasKey(tmp.r,'subjectName');me.r.subjectName = tmp.r.subjectName;me.h.OKTrainingName.Value = me.r.subjectName;end
-				%if optickaCore.hasKey(tmp.r,'researcherName');me.r.researcherName = tmp.r.researcherName;me.h.OKTrainingResearcherName.Value=me.r.researcherName;end
-				me.r.subjectName = me.ui.OKTrainingName.Value;
-				me.r.researcherName = me.ui.OKTrainingResearcherName.Value;
 
 				me.ui.OKuseLabJackStrobe.Checked	= 'off';
 				me.ui.OKuseLabJackTStrobe.Checked	= 'off';
