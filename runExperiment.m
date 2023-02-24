@@ -59,7 +59,8 @@ classdef runExperiment < optickaCore
 		strobe struct				= struct('device','','port','',...
 									'mode','plain','stimOFFValue',255)
 		%> what reward device to use
-		reward struct				= struct('device','','port','')
+		reward struct				= struct('device','','port','',...
+									'board','');
 		%> which eyetracker to use
 		eyetracker struct			= struct('device','','dummy',true,...
 									'esettings',[],'tsettings',[])

@@ -58,9 +58,10 @@ classdef opticka < optickaCore
 		uiPrefsList cell = {'OKOmniplexIP','OKMonitorDistance','OKpixelsPerCm',...
 			'OKbackgroundColour','OKAntiAliasing','OKbitDepth','OKUseRetina',...
 			'OKHideFlash','OKlogFrames','OKUsePhotoDiode','OKTrainingResearcherName',...
-			'OKTrainingName','OKarduinoPort','OKdPPMode','OKDebug',...
+			'OKTrainingName','OKarduinoPort','OKArduinoType','OKdPPMode','OKDebug',...
 			'OKOpenGLBlending','OKCalEditField','OKValEditField',...
-			'OKTrackerDropDown','OKWindowSize','OKUseDummy'}
+			'OKTrackerDropDown','OKWindowSize','OKUseDummy','OKINTANPort','OKControlIntan',...
+			'OKCalibProp','OKELManualMode','OKTobiiManualMode'}
 	end
 	
 	%=======================================================================
@@ -263,7 +264,7 @@ classdef opticka < optickaCore
 				me.loadCalibration();
 				me.refreshProtocolsList();
 
-				OKTobiiUpdate(me.ui);
+				me.ui.getEyetrackerSettings();
 				
 				%addlistener(me.r,'abortRun',@me.abortRunEvent);
 				%addlistener(me.r,'endAllRuns',@me.endRunEvent);
@@ -283,8 +284,6 @@ classdef opticka < optickaCore
 					me.r.userFunctionsFile = [me.paths.whereami filesep 'userFunctions.m'];
 				end
 				
-				me.r.researcherName = me.ui.OKTrainingResearcherName.Value;
-				me.r.subjectName = me.ui.OKTrainingName.Value;
 				getStateInfo(me);
 				try if ~isempty(me.ss); pause(0.1); delete(me.ss); me.ss = []; end; end
 			catch ME
@@ -373,7 +372,7 @@ classdef opticka < optickaCore
 			%deprecated me.r.screen.nativeBeamPosition = logical(me.gv(me.h.OKNativeBeamPosition));
 			
 			me.r.control.port = me.ui.OKINTANPort.Value;
-			if me.ui.StartStopIntanMenu.Checked == true
+			if me.ui.OKControlIntan.Checked == true
 				me.r.control.device = 'intan';
 			else
 				me.r.control.device = '';
@@ -397,6 +396,7 @@ classdef opticka < optickaCore
 			if me.ui.OKuseArduino.Checked == true
 				me.r.reward.device = 'arduino';
 				me.r.reward.port = me.gv(me.ui.OKarduinoPort);
+				me.r.reward.board = me.gv(me.ui.OKArduinoType);
 			elseif me.ui.OKuseLabJackReward.Checked == true
 				me.r.reward.device = 'labjack';
 			else
@@ -430,6 +430,8 @@ classdef opticka < optickaCore
 			if isfield(me.r.screenVals,'fps')
 				me.r.task.fps = me.r.screenVals.fps;
 			end
+			me.r.subjectName = me.gv(me.ui.OKSubject);
+			me.r.researcherName = me.gv(me.ui.OKResearcher);
 			me.r.task.trialTime = me.gd(me.ui.OKtrialTime);
 			me.r.task.randomSeed = me.gn(me.ui.OKRandomSeed);
 			me.r.task.randomGenerator = me.gs(me.ui.OKrandomGenerator);
