@@ -277,7 +277,7 @@ classdef runExperiment < optickaCore
 			me.runLog				= timeLogger();
 			tL						= me.runLog;
 			tL.name					= me.name;
-			if me.logFrames;tL.preAllocate(me.screenVals.fps*60*60);end
+			if me.logFrames;tL.preAllocate(me.screenVals.fps*60*180);end
 			%===============================make a short handle to the screenManager and metaStimulus objects
 			me.stimuli.screen		= me.screen;
 			s						= me.screen; 

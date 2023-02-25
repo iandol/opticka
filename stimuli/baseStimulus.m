@@ -568,11 +568,12 @@ classdef baseStimulus < optickaCore & dynamicprops
 			
 			pr = findAttributesandType(me,'SetAccess','public','notlogical');
 			pr = sort(pr);
-			if isprop(me,'ignorePropertiesUI')
-				excl = [me.ignorePropertiesUIBase me.ignorePropertiesUI];
-			else
-				excl = me.ignorePropertiesUIBase;
-			end		
+			igA = {}; igB = {};
+			if isprop(me,'ignorePropertiesUI'); igA = me.ignorePropertiesUI; end
+			if isprop(me,'ignorePropertiesUIBase'); igB = me.ignorePropertiesUIBase; end
+			if ischar(igA);igA = strsplit(igA,'|');end
+			if ischar(igB); igB = {'animator','fullName'}; end
+			excl = [igA igB];	
 			eidx = [];
 			for i = 1:length(pr)
 				if matches(pr{i}, excl)

@@ -122,7 +122,11 @@ classdef timeLogger < optickaCore
 			if isempty(me.messages); N = 1; else; N = length(me.messages)+1; end
 			me.messages(N).tick = tick;
 			if ~isempty(me.stimTime) && length(me.stimTime)<=tick
-				me.messages(N).stimTime = me.stimTime(tick);
+				try 
+					me.messages(N).stimTime = me.stimTime(tick); 
+				catch
+					me.messages(N).stimTime = NaN;
+				end
 			else
 				me.messages(N).stimTime = NaN;
 			end

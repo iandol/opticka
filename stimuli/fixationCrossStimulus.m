@@ -43,8 +43,8 @@ classdef fixationCrossStimulus < baseStimulus
 		flashSwitch
 	end
 
-	properties (SetAccess = protected, GetAccess = ?baseStimulus)
-		ignorePropertiesUI = 'speed|startPosition|angle'
+	properties (SetAccess = ?baseStimulus, GetAccess = ?baseStimulus)
+		ignorePropertiesUI = {'speed','startPosition','angle'}
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
