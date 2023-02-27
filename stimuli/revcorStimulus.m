@@ -6,62 +6,51 @@
 classdef revcorStimulus < baseStimulus
 	
 	properties %--------------------PUBLIC PROPERTIES----------%
-		%> type of bar: 'solid','checkerboard','random','randomColour','randomN','randomBW'
-		type char = 'solid'
-		%> width of bar
-		barWidth double = 1
-		%> length of bar
-		barHeight double= 4
-		%> contrast multiplier
-		contrast double = 1
+		%> type 
+		type char			= 'trinary'
 		%> texture scale
-		scale double = 1
-		%> sf in cycles per degree for checkerboard textures
-		sf double = 1
-		%> texture interpolation: 'nearest','linear','spline','cubic'
-		interpMethod char = 'nearest'
-		%> For checkerboard, allow timed phase reversal
-		phaseReverseTime double = 0
-		%> update() method also regenerates the texture, this can be slow, but 
-		%> normally update() is only called after a trial has finished
-		regenerateTexture logical = true
-		%> for checkerboard: the second colour
-		colour2 double = [0 0 0 1];
-		%> modulate the colour
-		modulateColour double = []
-	end
-
-	properties (Hidden = true)
-		%> floatprecision defines the precision with which the texture should
-		%> be stored and processed. 0=8bit, 1=16bit, 2=32bit
-		floatPrecision = 0
+		pixelScale double	= 1
+		%> frameTime in ms (to nearest frame)
+		frameTime double	= 64
+		%> texture interpolation: 0 = Nearest neighbour filtering, 1 = Bilinear
+		%> filtering - this is the default. Values 2 or 3 select use of OpenGL mip-mapping
+		%> for improved quality: 2 = Bilinear filtering for nearest mipmap level, 3 =
+		%> Trilinear filtering across mipmap lev
+		interpolation double	= 0
+		%> length of trial used to calculate the number of noise frames
+		%properly
+		trialLength double	= 2
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
-		family char = 'bar'
+		family char = 'revcor'
+		%> framelog
+		frameLog
 		%> computed matrix for the bar
-		matrix
+		trialMatrix
+		%>
+		trialTick double = 0
 	end
 	
 	properties (SetAccess = protected, GetAccess = public, Hidden = true)
-		typeList cell = {'solid','checkerboard','random','randomColour','randomN','randomBW'}
+		typeList cell = {'trinary','binary'}
 		interpMethodList cell = {'nearest','linear','makima','spline','cubic'}
+		%> properties to ignore in the UI
+		ignorePropertiesUI={'speed'}
 	end
 	
 	properties (SetAccess = protected, GetAccess = protected)
+		allowedProperties = {'type', 'size', 'angle', 'pixelScale', ...
+			'interpMethod'}
+		ignoreProperties = {'interpMethod', 'matrix', 'matrix2', 'phaseCounter', ...
+			'pixelScale','trialLength','trialTick','interpMethod','frameTime','frameLog'}
 		baseColour
 		screenWidth
 		screenHeight
-		%> for phase reveral of checkerboard
-		matrix2
-		%> for phase reveral of checkerboard
-		texture2
-		%> how many frames between phase reverses
-		phaseCounter double = 0
-		allowedProperties = {'modulateColour', 'colour2', 'regenerateTexture', ...
-			'type', 'barWidth', 'barHeight', 'angle', 'speed', 'contrast', 'scale', ...
-			'sf', 'interpMethod', 'phaseReverseTime'}
-		ignoreProperties = {'interpMethod', 'matrix', 'matrix2', 'phaseCounter', 'pixelScale'}
+		nFrames
+		nFrame
+		nStimuli
+		nStim
 	end
 	
 	%=======================================================================
@@ -77,10 +66,10 @@ classdef revcorStimulus < baseStimulus
 		%> parsed.
 		%> @return instance of opticka class.
 		% ===================================================================
-		function me = barStimulus(varargin)
+		function me = revcorStimulus(varargin)
 			args = optickaCore.addDefaults(varargin,...
-				struct('name','Bar','colour',[1 1 1 1],'size',0,...
-				'speed',2,'startPosition',0));
+				struct('name','RevCor','size',10,...
+				'speed',0,'startPosition',0));
 			me=me@baseStimulus(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
 			
@@ -96,7 +85,7 @@ classdef revcorStimulus < baseStimulus
 		%> @param sM screenManager object for reference
 		% ===================================================================
 		function setup(me,sM)
-			
+			resetLog(me);
 			reset(me); %reset object back to its initial state
 			me.inSetup = true; me.isSetup = false;
 			if isempty(me.isVisible); show(me); end
@@ -105,16 +94,11 @@ classdef revcorStimulus < baseStimulus
 			if ~sM.isOpen; error('Screen needs to be Open!'); end
 			me.ppd=sM.ppd;
 			me.screenVals = sM.screenVals;
-			me.texture = []; %we need to reset this
+			
 			me.baseColour = sM.backgroundColour;
 			me.screenWidth = sM.screenVals.screenWidth;
 			me.screenHeight = sM.screenVals.screenHeight;
-			
-			if me.size > 0
-				me.barHeight = me.size;
-				me.barWidth = me.size;
-			end
-			
+
 			fn = sort(properties(me));
 			for j=1:length(fn)
 				if ~matches(fn{j}, me.ignoreProperties)
@@ -122,27 +106,15 @@ classdef revcorStimulus < baseStimulus
 					if strcmp(fn{j},'size'); p.SetMethod = @set_sizeOut; end
 					if strcmp(fn{j},'xPosition'); p.SetMethod = @set_xPositionOut; end
 					if strcmp(fn{j},'yPosition'); p.SetMethod = @set_yPositionOut; end
-					if strcmp(fn{j},'colour'); p.SetMethod = @set_colourOut; end
-					if strcmp(fn{j},'alpha'); p.SetMethod = @set_alphaOut; end
-					if strcmp(fn{j},'scale'); p.SetMethod = @set_scaleOut; end
 					me.([fn{j} 'Out']) = me.(fn{j}); %copy our property value to our tempory copy
 				end
 			end
 			
 			addRuntimeProperties(me);
 			
-			if me.barWidthOut > me.screenWidth; me.barWidthOut=me.screenWidth; end
-			if me.barHeightOut > me.screenHeight; me.barHeightOut=me.screenHeight; end
+			if me.sizeOut > me.screenWidth*2; me.sizeOut=me.screenWidth*2; end
 			
 			constructMatrix(me); %make our matrix
-			%tx=Screen('MakeTexture', win, matrix [, optimizeForDrawAngle=0] [, specialFlags=0] [, floatprecision] [, textureOrientation=0] [, textureShader=0]);
-			me.texture = Screen('MakeTexture', me.sM.win, me.matrix, 0, [], me.floatPrecision);
-			if me.verbose; fprintf('===>>>Made texture: %i kind: %i\n',me.texture,Screen(me.texture,'WindowKind')); end
-			if me.phaseReverseTime > 0
-				me.texture2 = Screen('MakeTexture', me.sM.win, me.matrix2, 0, [], me.floatPrecision);
-				if me.verbose; fprintf('===>>>Made texture: %i kind: %i\n',me.texture2,Screen(me.texture2,'WindowKind')); end
-				me.phaseCounter = round( me.phaseReverseTime / me.sM.screenVals.ifi );
-			end
 			
 			me.inSetup = false; me.isSetup = true;
 			computePosition(me);
@@ -155,40 +127,7 @@ classdef revcorStimulus < baseStimulus
 				me.yPositionOut = value * me.ppd; 
 			end
 			function set_sizeOut(me,value)
-				me.sizeOut = value;
-				if ~me.inSetup
-					me.barHeightOut = me.sizeOut;
-					me.barWidthOut = me.sizeOut;
-				end
-			end
-			function set_scaleOut(me,value)
-				if value < 1; value = 1; end
-				me.scaleOut = round(value);
-			end
-			function set_colourOut(me, value)
-				me.isInSetColour = true;
-				[aold,name] = getP(me,'alpha');
-				if length(value)==4 && value(4) ~= aold
-					alpha = value(4);
-				else
-					alpha = aold;
-				end
-				switch length(value)
-					case 4
-						if alpha ~= aold; me.(name) = alpha; end
-					case 3
-						value = [value(1:3) alpha];
-					case 1
-						value = [value value value alpha];
-				end
-				me.colourOut = value;
-				me.isInSetColour = false;
-			end
-			function set_alphaOut(me, value)
-				if me.isInSetColour; return; end
-				me.alphaOut = value;
-				[v,n] = me.getP('colour');
-				me.(n) = [v(1:3) value];
+				me.sizeOut = value * me.ppd;
 			end
 		end
 		
@@ -199,13 +138,18 @@ classdef revcorStimulus < baseStimulus
 		% ===================================================================
 		function draw(me)
 			if me.isVisible && me.tick >= me.delayTicks && me.tick < me.offTicks
-				if ~isempty(me.modulateColourOut)
-					colour = me.modulateColourOut;
-				else
-					colour = [];
+				if (me.nFrame+1 > me.nFrames) && me.nStim < length(me.texture)
+					me.nStim = me.nStim + 1;
+					me.nFrame = 0;
 				end
-				Screen('DrawTexture',me.sM.win, me.texture,[ ],...
-					me.mvRect, me.angleOut, [], [], colour);
+				Screen('DrawTexture',me.sM.win, me.texture(me.nStim),[ ],...
+					me.mvRect, me.angleOut,me.interpolation,me.alphaOut);
+				me.drawTick = me.drawTick + 1;
+				me.nFrame = me.nFrame + 1;
+				try 
+					me.frameLog(me.trialTick).nFrame(end+1) = me.nFrame;
+					me.frameLog(me.trialTick).nStim(end+1) = me.nStim;
+				end
 			end
 			me.tick = me.tick + 1;
 		end
@@ -216,14 +160,11 @@ classdef revcorStimulus < baseStimulus
 		%> 
 		% ===================================================================
 		function update(me)
+			closeTextures(me);
+			saveFrames(me);
 			resetTicks(me);
-			if me.sizeOut > 0; me.barHeightOut = me.sizeOut; me.barWidthOut = me.sizeOut; end
-			if me.phaseReverseTime > 0 
-				me.phaseCounter = round( me.phaseReverseTime / me.sM.screenVals.ifi );
-			end
-			if me.regenerateTexture && Screen(me.sM.win,'WindowKind') == 1
-				refreshTexture(me);
-			end
+			constructMatrix(me);
+			me.nStim = 1; me.nFrame = 0;
 			computePosition(me);
 			setRect(me);
 		end
@@ -245,12 +186,6 @@ classdef revcorStimulus < baseStimulus
 				if me.doMotion == 1
 					me.mvRect=OffsetRect(me.mvRect,me.dX_,me.dY_);
 				end
-				if me.phaseReverseTime > 0 && mod(me.tick,me.phaseCounter) == 0
-					tx = me.texture;
-					tx2 = me.texture2;
-					me.texture = tx2;
-					me.texture2 = tx;
-				end
 			end
 		end
 		
@@ -260,94 +195,28 @@ classdef revcorStimulus < baseStimulus
 		%> 
 		% ===================================================================
 		function reset(me)
-			if ~isempty(me.texture) && me.texture > 0 && Screen(me.texture,'WindowKind') == -1
-				if me.verbose; fprintf('!!!>>>Closing texture: %i kind: %i\n',me.texture,Screen(me.texture,'WindowKind')); end
-				try Screen('Close',me.texture); end %#ok<*TRYNC>
-			end
-			if ~isempty(me.texture2) && me.texture2 > 0 && Screen(me.texture2,'WindowKind') == -1
-				if me.verbose; fprintf('!!!>>>Closing texture: %i kind: %i\n',me.texture,Screen(me.texture2,'WindowKind')); end
-				try Screen('Close',me.texture2); end %#ok<*TRYNC>
-			end
-			me.texture=[]; me.texture2 = [];
-			me.matrix = [];
+			saveFrames(me);
+			closeTextures(me);
 			me.mvRect = [];
 			me.dstRect = [];
 			me.screenWidth = [];
 			me.screenHeight = [];
 			me.ppd = [];
+			me.trialTick = 0;
+			me.nStim = 0; me.nFrame = 0;
 			removeTmpProperties(me);
 			resetTicks(me);
 		end
-		
+
 		% ===================================================================
-		%> @brief Regenerate the texture for the bar, can be called outside
-		%> of update
+		%> @brief Reset the stimulus back to a default state
 		%>
 		%> 
 		% ===================================================================
-		function refreshTexture(me)
-			if ~isempty(me.texture) && me.texture > 0 && Screen(me.texture,'WindowKind') == -1
-				%if me.verbose; fprintf('!!!>>>Closing texture: %i kind: %i\n',me.texture,Screen(me.texture,'WindowKind')); end
-				try Screen('Close',me.texture); me.texture=[]; end %#ok<*TRYNC>
-			end
-			if ~isempty(me.texture2) && me.texture2 > 0 && Screen(me.texture2,'WindowKind') == -1
-				%if me.verbose; fprintf('!!!>>>Closing texture: %i kind: %i\n',me.texture2,Screen(me.texture2,'WindowKind')); end
-				try Screen('Close', me.texture2); me.texture2=[]; end 
-			end
-			constructMatrix(me);%make our texture matrix
-			me.texture = Screen('MakeTexture', me.sM.win, me.matrix, 1, [], me.floatPrecision);
-			%if me.verbose; fprintf('===>>>Made texture: %i kind: %i\n',me.texture,Screen(me.texture,'WindowKind')); end
-			if me.phaseReverseTime > 0
-				me.texture2=Screen('MakeTexture', me.sM.win, me.matrix2, 1, [], me.floatPrecision);
-				%if me.verbose; fprintf('===>>>Made texture: %i kind: %i\n',me.texture2,Screen(me.texture2,'WindowKind')); end
-				me.phaseCounter = round( me.phaseReverseTime / me.sM.screenVals.ifi );
-			end
+		function resetLog(me)
+			me.trialTick = 0;
+			me.frameLog = [];
 		end
-		
-		% ===================================================================
-		%> @brief barWidth set method
-		%>
-		%> @param width of bar in degrees
-		%> @return
-		% ===================================================================
-		function set.scale(me,value)
-			if value < 1
-				value = 1;
-			end
-			me.scale = round(value);
-		end
-		
-		% ===================================================================
-		%> @brief SET Colour2 method
-		%> Allow 1 (R=G=B) 3 (RGB) or 4 (RGBA) value colour
-		%> alpha will not be updated is RGBA is used
-		% ===================================================================
-		function set.colour2(me,value)
-			len=length(value);
-			switch len
-				case 4
-					me.colour2 = value(1:4);
-				case 3
-					me.colour2 = [value(1:3) me.alpha]; %force our alpha to override
-				case 1
-					me.colour2 = [value value value me.alpha]; %construct RGBA
-				otherwise
-					me.colour = [1 1 1 me.alpha]; %return white for everything else
-			end
-			me.colour2(me.colour2<0)=0; me.colour2(me.colour2>1)=1;
-		end
-		
-		% ===================================================================
-		%> @brief sfOut Pseudo Get method
-		%>
-		% ===================================================================
-		function sf = getsfOut(me)
-			sf = 0;
-			if ~isempty(me.findprop('sfOut'))
-				sf = me.sfOut;
-			end
-		end
-
 		
 	end %---END PUBLIC METHODS---%
 	
@@ -356,150 +225,89 @@ classdef revcorStimulus < baseStimulus
 	%=======================================================================
 
 		% ===================================================================
+		%> @brief setRect
+		%> setRect makes the PsychRect based on the texture and screen
+		%> values, you should call computePosition() first to get xOut and
+		%> yOut
+		% ===================================================================
+		function setRect(me)
+			if ~isempty(me.texture)
+				me.dstRect = Screen('Rect',me.texture(1));
+				blockSize = round(me.pixelScale * me.ppd);
+				me.dstRect = ScaleRect(me.dstRect,round(blockSize),round(blockSize));
+				if me.mouseOverride && me.mouseValid
+					me.dstRect = CenterRectOnPointd(me.dstRect, me.mouseX, me.mouseY);
+				else
+					me.dstRect=CenterRectOnPointd(me.dstRect, me.xFinal, me.yFinal);
+				end
+				me.mvRect=me.dstRect;
+			end
+		end
+
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param 
+		% ===================================================================
+		function saveFrames(me)
+			if me.trialTick > 0
+				me.frameLog(me.trialTick).tick = me.tick;
+				me.frameLog(me.trialTick).drawTick = me.drawTick;
+			end
+		end
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param 
+		% ===================================================================
+		function closeTextures(me)
+			if ~isempty(me.texture) 
+				for i = 1:length(me.texture)
+					if me.verbose; fprintf('!!!>>>Closing texture: %i kind: %i\n',me.texture,Screen(me.texture,'WindowKind')); end
+					try Screen('Close',me.texture(i)); end %#ok<*TRYNC>
+				end
+				me.texture = [];
+			end
+		end
+		% ===================================================================
 		%> @brief constructMatrix makes the texture matrix to fill the bar with
 		%>
 		%> @param ppd use the passed pixels per degree to make a RGBA matrix of
 		%> the correct dimensions
 		% ===================================================================
 		function constructMatrix(me)
-			me.matrix=[]; %reset the matrix
-			try
-				colour = me.getP('colour');
-				alpha = me.getP('alpha');
-				contrast = me.getP('contrast');
-				scale = me.getP('scale');
-				bwpixels = round(me.barWidthOut*me.ppd);
-				blpixels = round(me.barHeightOut*me.ppd);
-				if bwpixels>me.screenWidth*3;bwpixels=me.screenWidth*3;end
-				if blpixels>me.screenHeight*3;blpixels=me.screenHeight*3;end
-	
-				if ~strcmpi(me.type,'checkerboard')
-					if rem(bwpixels,2);bwpixels=bwpixels+1;end
-					if rem(blpixels,2);blpixels=blpixels+1;end
-					% some scales cause rounding errors so find the next
-					% best scale
-					while rem(bwpixels,scale)>0 && rem(bwpixels,scale)>0
-						scale = scale - 1;
-					end
-					bwscale = round(bwpixels/scale)+1;
-					blscale = round(blpixels/scale)+1;
-					rmat = ones(blscale,bwscale);
-					tmat = repmat(rmat,1,1,3); 
-				end
-				
-				switch me.type
-					case 'checkerboard'
-						tmat = me.makeCheckerBoard(blpixels,bwpixels,me.sfOut);
-					case 'random'
-						rmat=rand(blscale,bwscale);
-						for i=1:3
-							tmat(:,:,i)=tmat(:,:,i).*rmat;
-						end
-					case 'randomColour'
-						for i=1:3
-							rmat=rand(blscale,bwscale);
-							tmat(:,:,i)=tmat(:,:,i).*rmat;
-						end
-					case 'randomN'
-						rmat=randn(blscale,bwscale);
-						for i=1:3
-							tmat(:,:,i)=tmat(:,:,i).*rmat;
-						end
-					case 'randomBW'
-						rmat=rand(blscale,bwscale);
-						rmat(rmat < 0.5) = 0;
-						rmat(rmat >= 0.5) = 1;
-						for i=1:3
-							tmat(:,:,i)=tmat(:,:,i).*rmat;
-						end
-					otherwise
-						tmat(:,:,1)=ones(blscale,bwscale) * (colour(1) * contrast);
-						tmat(:,:,2)=ones(blscale,bwscale) * (colour(2) * contrast);
-						tmat(:,:,3)=ones(blscale,bwscale) * (colour(3) * contrast);
-				end
-				if ~strcmpi(me.type,'checkerboard')
-					aw=0:scale:bwpixels;
-					al=0:scale:blpixels;
-					[a,b]=meshgrid(aw,al);
-					[A,B]=meshgrid(0:bwpixels,0:blpixels);
-					for i=1:3
-						outmat(:,:,i) = interp2(a,b,tmat(:,:,i),A,B,me.interpMethod);
-					end
-					outmat(:,:,4) = ones(size(outmat,1),size(outmat,2)).*alpha;
-					outmat = outmat(1:blpixels,1:bwpixels,:);
-				else
-					outmat(:,:,1:3) = tmat;
-					outmat(:,:,4) = ones(size(outmat,1),size(outmat,2)).*alpha;
-				end
-				me.matrix = outmat;
-				if me.phaseReverseTime > 0
-					switch me.type
-						case {'solid','checkerboard'}
-							c2 = me.mix(me.colour2Out);
-							out = zeros(size(outmat));
-							for i = 1:3
-								tmp = outmat(:,:,i);
-								u = unique(tmp);
-								if length(u) >= 2
-									idx1 = tmp == u(1);
-									idx2 = tmp == u(2);
-									tmp(idx1) = u(2);
-									tmp(idx2) = u(1);
-								elseif length(u) == 1 %only 1 colour, probably low sf
-									tmp(tmp == u(1)) = c2(i);
-								end
-								out(:,:,i) = tmp;
-							end
-							out(:,:,4) = ones(size(out,1),size(out,2)).*alpha;
-							me.matrix2 = out;
-						otherwise
-							me.matrix2 = fliplr(me.matrix);
-					end
-				end
-			catch ME %#ok<CTCH>
-				warning('--->>> barStimulus texture generation failed, making plain texture...')
-				%getReport(ME)
-				bwpixels = round(me.barWidthOut*me.ppd);
-				blpixels = round(me.barHeightOut*me.ppd);
-				if bwpixels>me.screenWidth*3;bwpixels=me.screenWidth*3;end
-				if blpixels>me.screenHeight*3;blpixels=me.screenHeight*3;end
-				me.matrix=ones(blpixels,bwpixels,4);
+			me.nStim = 1; me.nFrame = 0;
+			me.trialTick = me.trialTick + 1;
+			
+			blockSize = round(me.pixelScale * me.ppd);
+			me.nFrames = analysisCore.findNearest((1:60)*(me.screenVals.ifi*1e3), me.frameTime);
+			me.nStimuli = round(me.trialLength*round(me.screenVals.fps/me.nFrames));
+
+			noiseType = 1;
+			pxLength = round(me.sizeOut * (1/blockSize));
+			mx = rand(pxLength,pxLength,me.nStimuli);
+			if noiseType == 1
+				mx(mx < (1/3)) = 0;
+				mx(mx > 0 & mx < (2/3)) = 0.5;
+				mx(mx > 0.5 ) = 1;
+			else
+				mx(mx < 0.5) = 0;
+				mx(mx > 0) = 1;
 			end
-		end
-		
-		% ===================================================================
-		%> @brief make the checkerboard
-		%>
-		% ===================================================================
-		function mout = makeCheckerBoard(me,hh,ww,c)
-			c1 = me.mix(me.colourOut);
-			c2 = me.mix(me.colour2Out);
-			cppd = round(( me.ppd / 2 / c )); %convert to sf cycles per degree
-			if cppd == 1; warning('--->>> Checkerboard at resolution limit of monitor (1px) ...'); end
-			if cppd < 1 || cppd >= max(me.sM.winRect) || cppd == Inf 
-				warning('--->>> Checkerboard spatial frequency exceeds resolution of monitor...');
-				mout = zeros(hh,ww,3);
-				for i = 1:3
-					if cppd < 1
-						mout(:,:,i) = mout(:,:,i) + me.baseColour(i);
-					else
-						mout(:,:,i) = mout(:,:,i) + c1(i);
-					end
-				end
-				return
+			% Screen('MakeTexture', WindowIndex, imageMatrix [, optimizeForDrawAngle=0] [, specialFlags=0]
+			% [, floatprecision] [, textureOrientation=0] [, textureShader=0]);
+			me.frameLog(me.trialTick).nFrames = me.nFrames;
+			me.frameLog(me.trialTick).nStimuli = me.nStimuli;
+			me.frameLog(me.trialTick).mx = mx;
+			me.frameLog(me.trialTick).nFrame = [];
+			me.frameLog(me.trialTick).nStim = [];
+			me.frameLog(me.trialTick).tickInit = me.tick;
+			me.frameLog(me.trialTick).drawTickInit = me.drawTick;
+			texture = zeros(1, me.nStimuli);
+			for i = 1:me.nStimuli
+				texture(i) = Screen('MakeTexture', me.sM.win, mx(:,:,i));
 			end
-			hscale = ceil((hh / cppd) / 2); if hscale < 1; hscale = 1; end
-			wscale = ceil((ww / cppd) / 2); if wscale < 1; wscale = 1; end
-			tile = repelem([0 1; 1 0], cppd, cppd);
-			mx = repmat(tile, hscale, wscale);
-			mx = mx(1:hh,1:ww);
-			mout = repmat(mx,1,1,3);
-			for i = 1:3
-				tmp = mout(:,:,i);
-				tmp(mx==0) = c1(i);
-				tmp(mx==1) = c2(i);
-				mout(:,:,i) = tmp;
-			end
+			me.texture = texture;
 		end
 		
 		% ===================================================================

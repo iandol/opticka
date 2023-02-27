@@ -276,10 +276,13 @@ classdef touchManager < optickaCore
 			im = imageStimulus('size', 5);
 			setup(im, sM);
 
+			quitKey = KbName('escape');
+			doQuit = false;
 			createQueue(me); % !!! Create Queue
 			start(me); % !!! Start touch collection
 			try 
 				for i = 1 : 5
+					if doQuit; break; end
 					tx = randi(20)-10;
 					ty = randi(20)-10;
 					im.xPositionOut = tx;
@@ -297,11 +300,13 @@ classdef touchManager < optickaCore
 						flip(sM);
 						[r,x,y] = checkTouchWindow(me, rect); %!!! check touch window
 						if r
-							txt = sprintf('IN window x = %.2f y = %.2f',x,y);
+							txt = sprintf('IN window x = %.2f y = %.2f [esc to exit]',x,y);
 						elseif ~isempty(x)
-							txt = sprintf('OUT window x = %.2f y = %.2f',x,y);
+							txt = sprintf('OUT window x = %.2f y = %.2f [esc to exit]',x,y);
 						end
 						flush(me);
+						[~,~,keys] = KbCheck(-1);
+						if any(keys(quitKey)); doQuit = true; break; end
 					end
 					flip(sM); WaitSecs(1);
 				end
@@ -314,6 +319,8 @@ classdef touchManager < optickaCore
 				try reset(im); end
 				try close(s); end
 				try close(me); end
+				sca
+				rethrow(ME);
 			end
 		end
 

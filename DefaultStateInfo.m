@@ -510,7 +510,6 @@ driftFn = {
 	@()drawBackground(s); %blank the display
 	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
-	@()rstop(io); 
 	@()driftCorrection(eT) % enter drift correct (only eyelink) (only eyelink)
 };
 offsetFcn = {

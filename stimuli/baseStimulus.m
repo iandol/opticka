@@ -413,8 +413,6 @@ classdef baseStimulus < optickaCore & dynamicprops
 				
 				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
 
-
-
 				if benchmark
 					drawText(s, 'BENCHMARK: screen won''t update properly, see FPS in command window at end.');
 				else
@@ -422,9 +420,10 @@ classdef baseStimulus < optickaCore & dynamicprops
 					drawScreenCenter(s);
 					drawText(s, ['Preview ALL with grid = ±1°; static for 1 seconds, then animate for ' num2str(runtime) ' seconds...'])
 				end
-				if ~strcmpi(me.type,'movie'); draw(me); resetTicks(me); end
+				if ~any(strcmpi(me.family,{'movie','revcor'})); draw(me); resetTicks(me); end
+				if ismethod(me,'resetLog'); resetLog(me); end
 				flip(s);
-				update(me);
+				if ~any(strcmpi(me.family,{'movie','revcor'})); update(me); end
 				if benchmark
 					WaitSecs('YieldSecs',0.25);
 				else
@@ -1005,7 +1004,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		% ===================================================================
 		function setRect(me)
 			if ~isempty(me.texture)
-				me.dstRect=Screen('Rect',me.texture);
+				me.dstRect=Screen('Rect',me.texture(1));
 				if me.mouseOverride && me.mouseValid
 					me.dstRect = CenterRectOnPointd(me.dstRect, me.mouseX, me.mouseY);
 				else
