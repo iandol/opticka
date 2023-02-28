@@ -373,8 +373,10 @@ classdef runExperiment < optickaCore
 					animate(stims);
 					if ~mod(i,10); io.sendStrobe(me.strobe.stimOFFValue); end
 					flip(s);
+					KbCheck(-1);
 				end
 				update(stims); %make sure stimuli are set back to their start state
+				if ismethod(me,'resetLog'); resetLog(me); end
 				io.resetStrobe;flip(s);flip(s);
 				tL.screenLog.beforeDisplay = GetSecs();
 
@@ -830,9 +832,11 @@ classdef runExperiment < optickaCore
 						end
 					end
 					flip(s);
+					KbCheck(-1);
 					if eT.secondScreen; trackerFlip(eT,1); end
 				end
 				update(stims); %make sure all stimuli are set back to their start state
+				if ismethod(me,'resetLog'); resetLog(me); end
 				if ~isempty(me.eyetracker.device)
 					resetAll(eT);
 					if eT.secondScreen; trackerClearScreen(eT); trackerFlip(eT,0); end 

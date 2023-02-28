@@ -228,8 +228,8 @@ classdef optickaCore < handle
 				
 				% If the attribute is set or has the specified value,
 				% save its name in cell array
-				if attrValue
-					if islogical(attrValue) || strcmp(attrValue,thisValue)
+				if exist('attrValue','var') && ~isempty(thisValue)
+					if all(islogical(attrValue)) || all((ischar(thisValue) && strcmp(attrValue,thisValue)))
 						val = me.(mp.Name);
 						if exist('val','var')
 							if islogical(val) && strcmpi(type,'logical')
@@ -254,6 +254,20 @@ classdef optickaCore < handle
 			end
 			% Return used portion of array
 			list = cl_array(1:ii);
+		end
+
+		function value = findPropertyDefault(me,propName)
+			value = [];
+			if ischar(me) % Determine if first input is object or class name
+				mc		= meta.class.fromName(me);
+			elseif isobject(me)
+				mc		= metaclass(me);
+			end
+			nlist = {mc.PropertyList.Name};
+			nidx = find(matches(nlist, propName));
+			if ~isempty(nidx)
+				value = mc.PropertyList(nidx).DefaultValue;
+			end
 		end
 		
 		% ===================================================================

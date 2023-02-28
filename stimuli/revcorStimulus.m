@@ -1,16 +1,16 @@
 % ========================================================================
 %> @brief revcorStimulus single bar stimulus, inherits from baseStimulus
 %>
-%> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2023 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef revcorStimulus < baseStimulus
 	
 	properties %--------------------PUBLIC PROPERTIES----------%
-		%> type 
+		%> type, 'trinary' or 'binary'
 		type char			= 'trinary'
-		%> texture scale
+		%> texture scale size in degrees for each pixel of noise
 		pixelScale double	= 1
-		%> frameTime in ms (to nearest frame)
+		%> frameTime in ms (to nearest frame dependant on fps)
 		frameTime double	= 64
 		%> texture interpolation: 0 = Nearest neighbour filtering, 1 = Bilinear
 		%> filtering - this is the default. Values 2 or 3 select use of OpenGL mip-mapping
@@ -18,7 +18,9 @@ classdef revcorStimulus < baseStimulus
 		%> Trilinear filtering across mipmap lev
 		interpolation double	= 0
 		%> length of trial used to calculate the number of noise frames
-		%properly
+		%> properly. For most experiments you should set this to the
+		%> maximum time a trial may last as this is determined by eyetracker
+		%> etc.
 		trialLength double	= 2
 	end
 	
@@ -31,22 +33,24 @@ classdef revcorStimulus < baseStimulus
 		%>
 		trialTick double = 0
 	end
-	
+
 	properties (SetAccess = protected, GetAccess = public, Hidden = true)
-		typeList cell = {'trinary','binary'}
-		interpMethodList cell = {'nearest','linear','makima','spline','cubic'}
-		%> properties to ignore in the UI
-		ignorePropertiesUI={'speed'}
+		typeList = {'trinary','binary'}
+	end
+
+	properties (SetAccess = ?baseStimulus, GetAccess = ?baseStimulus)
+		baseColour
+		screenWidth
+		screenHeight
+		%> properties to not show in the UI panel
+		ignorePropertiesUI = {'colour','speed','startPosition'}
 	end
 	
-	properties (SetAccess = protected, GetAccess = protected)
+	properties (Access = protected)
 		allowedProperties = {'type', 'size', 'angle', 'pixelScale', ...
 			'interpMethod'}
 		ignoreProperties = {'interpMethod', 'matrix', 'matrix2', 'phaseCounter', ...
 			'pixelScale','trialLength','trialTick','interpMethod','frameTime','frameLog'}
-		baseColour
-		screenWidth
-		screenHeight
 		nFrames
 		nFrame
 		nStimuli
@@ -286,7 +290,7 @@ classdef revcorStimulus < baseStimulus
 			noiseType = 1;
 			pxLength = round(me.sizeOut * (1/blockSize));
 			mx = rand(pxLength,pxLength,me.nStimuli);
-			if noiseType == 1
+			if matches(me.type,'trinary')
 				mx(mx < (1/3)) = 0;
 				mx(mx > 0 & mx < (2/3)) = 0.5;
 				mx(mx > 0.5 ) = 1;
