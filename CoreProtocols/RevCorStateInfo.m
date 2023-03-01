@@ -25,14 +25,14 @@
 % functionality, not just the state machine. Other switches like
 % includeErrors are referenced in this state machine file to change with
 % functions are added to the state machine states…
-tS.useTask					= false;	%==use taskSequence (randomises stimulus variables)
+tS.useTask					= true;		%==use taskSequence (randomises stimulus variables)
 tS.rewardTime				= 250;		%==TTL time in milliseconds
 tS.rewardPin				= 2;		%==Output pin, 2 by default with Arduino.
 tS.keyExclusionPattern		= ["fixate","stimulus"]; %==which states to skip keyboard checking
 tS.enableTrainingKeys		= true;		%==enable keys useful during task training, but not for data recording
 tS.recordEyePosition		= false;	%==record local copy of eye position, **in addition** to the eyetracker?
 tS.askForComments			= false;	%==UI requestor asks for comments before/after run
-tS.saveData					= true;	%==save behavioural and eye movement data?
+tS.saveData					= true;		%==save behavioural and eye movement data?
 tS.showBehaviourPlot		= true;		%==open the behaviourPlot figure? Can cause more memory use…
 tS.includeErrors			= false;	%==do we update the trial number even for incorrect saccade/fixate, if true then we call updateTask for both correct and incorrect, otherwise we only call updateTask() for correct responses
 tS.name						= 'REVCOR'; %==name of this protocol
@@ -432,18 +432,10 @@ breakExitFn = incExitFn; % we copy the incorrect exit functions
 % updateTask = updates task object
 % resetRun = randomise current trial within the block
 % checkTaskEnded = see if taskSequence has finished
-if tS.includeErrors % we want to update our task even if there were errors
-	incExitFn = [ {@()updateTask(me,tS.INCORRECT)}; incExitFn ]; %update our taskSequence 
-	breakExitFn = [ {@()updateTask(me,tS.BREAKFIX)}; breakExitFn ]; %update our taskSequence 
-end
 if tS.useTask %we are using task
 	correctExitFn = [ correctExitFn; {@()checkTaskEnded(me)} ];
 	incExitFn = [ incExitFn; {@()checkTaskEnded(me)} ];
 	breakExitFn = [ breakExitFn; {@()checkTaskEnded(me)} ];
-	if ~tS.includeErrors % using task but don't include errors 
-		incExitFn = [ {@()resetRun(task)}; incExitFn ]; %we randomise the run within this block to make it harder to guess next trial
-		breakExitFn = [ {@()resetRun(task)}; breakExitFn ]; %we randomise the run within this block to make it harder to guess next trial
-	end
 end
 %========================================================
 %========================================================EYETRACKER
@@ -493,7 +485,7 @@ stateInfoTmp = {
 %---------------------------------------------------------------------------------------------
 'pause'		'prefix'	inf		pauseEntryFn	{}				{}				pauseExitFn;
 %---------------------------------------------------------------------------------------------
-'prefix'	'fixate'	0.5		prefixEntryFn	{}				{}				{};
+'prefix'	'fixate'	0.5		prefixEntryFn	prefixFn		{}				{};
 'fixate'	'incorrect'	10		fixEntryFn		fixFn			inFixFn			fixExitFn;
 'stimulus'	'incorrect'	10		stimEntryFn		stimFn			maintainFixFn	stimExitFn;
 'incorrect'	'timeout'	0.5		incEntryFn		incFn			{}				incExitFn;

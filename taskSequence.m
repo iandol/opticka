@@ -543,7 +543,7 @@ classdef taskSequence < optickaCore & dynamicprops
 		%> @return message details of the swapped trials
 		% ===================================================================
 			success = false; message = '';
-			if me.taskInitialised
+			if me.taskInitialised && me.nVars > 0
 				[b,r,v,ix] = me.findRun;
 				message = sprintf('--->>> taskSequence.resetRun() Blk/Run/Var/Idx %i/%i/%i/%i ',b,r,v,ix);
 				iLow = me.totalRuns; % select from this run...
