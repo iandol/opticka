@@ -1028,7 +1028,7 @@ classdef runExperiment < optickaCore
 						end
 
 						%-------If we missed a frame record it somewhere -----%
-						if thisN > 0 && tL.miss(thisN) > 0 && tL.stimTime(thisN) > 0
+						if me.debug && thisN > 0 && tL.miss(thisN) > 0 && tL.stimTime(thisN) > 0
 							addMessage(tL,[],[],'We missed a frame during stimulus'); 
 						end
 						
