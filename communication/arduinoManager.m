@@ -361,11 +361,12 @@ classdef arduinoManager < optickaCore
         function rwdByDCmotor(me,time) % this function is running on picko
             %             seraildevice='arduino UNO';
             %             seraildevice='pico';
-            % need to wire the pico/arduino channel 3/4/5 to the L298N EN/IN1/IN2 
-            IN1=5;IN2=4;EN=3;
+            % need to wire the pico/arduino channel 3/4/5 to the L298N EN/IN1/IN2
+            IN1=5;   IN2=4;       EN=3;
+            me.pinMode(IN1,'o');me.pinMode(IN2,'o');
             me.digitalWrite(IN1, 0);  me.digitalWrite(IN2, 0); % stop the motor
             % here must be the analogWrite,1024/255 is the max for pico/uno
-            me.analogWrite(EN, 1024);                         
+            me.analogWrite(EN, 1000);
             me.digitalWrite(IN1, 1); me.digitalWrite(IN2, 0);%run in one direction
             WaitSecs(time);
             me.digitalWrite(IN1, 0); me.digitalWrite(IN2, 0);% stop the motor
