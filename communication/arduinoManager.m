@@ -358,26 +358,17 @@ classdef arduinoManager < optickaCore
         % the direction and a pmw channel to control the speed. A L298 drive
         % board or a motorshield + a arduino uno/pico ,which need a 12v DC 
         % input, can cooperate to drive a DC motor,in clockwise or the otherway.
-        %  
-        % 
-        function liqRewDCmotor(me,time) % this function is running on picko
-%             seraildevice='arduino UNO';
-%             seraildevice='pico';
-         % define to digital channels for a DC motor
-%             switch seraildevice
-%                 case 'arduino UNO'
-                    IN1=5;IN2=4;EN=3;     
-%                 case 'pico'
-%                     IN1=2;IN2=3;EN=4;
-%             end
-            me.digitalWrite(IN1, 0); % stop the motor
-            me.digitalWrite(IN2, 0); % stop the mo
-            me.analogWrite(EN, 200);  % here must be the analogWrite
-            me.digitalWrite(IN1, 1);
-            me.digitalWrite(IN2, 0);
+        function rwdByDCmotor(me,time) % this function is running on picko
+            %             seraildevice='arduino UNO';
+            %             seraildevice='pico';
+            % need to wire the pico/arduino channel 3/4/5 to the L298N EN/IN1/IN2 
+            IN1=5;IN2=4;EN=3;
+            me.digitalWrite(IN1, 0);  me.digitalWrite(IN2, 0); % stop the motor
+            % here must be the analogWrite,1024/255 is the max for pico/uno
+            me.analogWrite(EN, 1024);                         
+            me.digitalWrite(IN1, 1); me.digitalWrite(IN2, 0);%run in one direction
             WaitSecs(time);
-            me.digitalWrite(IN1, 0); % stop the motor
-            me.digitalWrite(IN2, 0); % stop the motor
+            me.digitalWrite(IN1, 0); me.digitalWrite(IN2, 0);% stop the motor
         end
 
         %===========Check Ports==========%
