@@ -66,12 +66,11 @@ try
 	black=BlackIndex(window);
 	
 	% Instructions
-	s=sprintf('Hold your %.1f-%s-wide object against the display.',objectInches/unitInches,unit);
-	theText={s,'Use one eye. Drag to match the object''s width.'};
+	st=sprintf('Hold your %.1f-%s-wide object against the display.',objectInches/unitInches,unit);
+	theText={st,'Use one eye. Drag to match the object''s width.'};
 	Screen('TextFont',window,'Calibri');
-	s=18;
-	Screen('TextSize',window,s);
-	textLeading=s+10;
+	Screen('TextSize',window,18);
+	textLeading=18+10;
 	textRect=Screen('TextBounds',window,theText{1});
 	textRect(4)=length(theText)*textLeading;
 	textRect=CenterRect(textRect,screenRect);
