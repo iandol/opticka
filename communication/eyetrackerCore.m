@@ -1,10 +1,59 @@
 % ========================================================================
-%> @class eyeTracker Manager -- parent class for all eyetrackers
+%> @class eyeTracker CORE -- parent class for all eyetrackers
+%> Class methods enable the user to test for common behavioural eye tracking
+%> tasks with single commands. For example, to initiate a task we normally
+%> place a fixation cross on the screen and ask the subject to saccade to
+%> the cross and maintain fixation for a particular duration. This is
+%> achieved using testSearchHoldFixation('yes','no'), using the properties:
+%> fixation.initTime to time how long the subject has to saccade into the
+%> window, fixation.time for how long they must maintain fixation,
+%> fixation.radius for the radius around fixation.X and fixation.Y position.
+%> The method returns the 'yes' string if the rules are matched, and 'no' if
+%> they are not, thus enabling experiment code to simply call this method
+%> until it returns 'yes''. Other methods include isFixated(),
+%> testFixationTime(), testHoldFixation().
+%>
+%> This class enables several types of behavioural control:
+%>
+%> 1. Fixation window: one or more areas where the subject must enter with
+%>    their eye position within a certain time and must maintain fixation
+%>    for a certain time. Windows can be circular or rectangular.
+%> 2. Exclusion zones: one or more rectangular areas that cause failure if
+%>    entered.
+%> 3. Fix initiation zone: an area the eye must stay with for a certain time
+%>    before a saccade. For example if a subect fixates, then must saccade a
+%>    time X, do not allow the eye to leave this zone before X + t (t by
+%>    default is 100ms). This stops potential cheating by the subject.
+%>
+%> Try using the demo mode to see it in action (read the runDemo() code to
+%> understand how to use the class):
+%>
+%>```matlab
+%> >> eT = eyelinkManager('verbose', true);
+%> >> eT.runDemo();
+%>```
+%>
+%> Multiple fixation windows can be assigned (either circular or
+%> rectangular), and in addition multiple exclusion windows (exclusionZone)
+%> can ensure a subject doesn't saccade to particular parts of the screen.
+%> fixInit allows you to define a minimum time with which the subject can
+%> initiate a saccade away from a position (which stops a subject cheating
+%> by moving the eyes too soon).
+%>
+%> For the eyelink we also allow the use of remote calibration and can call
+%> a reward systems during calibration / validation to improve subject
+%> performance compared to the eyelink toolbox alone.
+%>
 %> WIP
 %> 
-%> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2023 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef eyetrackerCore < optickaCore
+
+	properties (Abstract, SetAccess = protected, GetAccess = public)
+		%> type of eyetracker
+		type
+	end
 	
 	properties
 		%> fixation window in deg with 0,0 being the screen center:
@@ -23,29 +72,28 @@ classdef eyetrackerCore < optickaCore
 		%>
 		%> strict = false allows subject to exit and enter window without
 		%> failure, useful during training
-		fixation struct				= struct('X',0,'Y',0,'initTime',1,'time',1,...
-									'radius',1,'strict',true)
+		fixation			= struct('X',0,'Y',0,'initTime',1,'time',1,...
+								'radius',1,'strict',true)
 		%> Use exclusion zones where no eye movement allowed: [-degX +degX -degY
 		%> +degY] Add rows to generate multiple exclusion zones.
-		exclusionZone double		= []
+		exclusionZone		= []
 		%> we can define an optional window that the subject must stay
 		%> inside before they saccade to other targets. This restricts
 		%> guessing and "cheating", by forcing a minimum delay (default =
 		%> 100ms / 0.1s) before initiating a saccade. Only used if X
 		%> position is not empty.
-		fixInit	struct				= struct('X',[],'Y',[],'time',0.1,'radius',2)
+		fixInit				= struct('X',[],'Y',[],'time',0.1,'radius',2)
 		%> add a manual offset to the eye position, similar to a drift correction
 		%> but handled by the eyelinkManager.
-		offset struct				= struct('X',0,'Y',0)
+		offset				= struct('X',0,'Y',0)
+		%> tracker update speed (Hz)
+		sampleRate			= 300
 		%> start eyetracker in dummy mode?
-		isDummy logical				= false
-		%> do we use manual calibration mode?
-		%> this is useful for a baby or monkey who has not been trained
-		%> for fixation use 1-9 to show each dot, space to select fix as valid,
-		%> and INS key ON EYELINK KEYBOARD to accept calibration!
-		manualCalibration logical		= false
+		isDummy				= false
 		%> do we record and retrieve eyetracker EDF file?
-		recordData logical			= true
+		recordData			= true
+		%> use an operator screen for calibration etc.
+		useOperatorScreen	= false
 		%> do we ignore blinks, if true then we do not update X and Y position
 		%> from previous eye location, meaning the various methods will maintain
 		%> position, e.g. if you are fixated and blink, the within-fixation X
@@ -53,118 +101,112 @@ classdef eyetrackerCore < optickaCore
 		%> fixation. a blink is defined as a state whre gx and gy are MISSING
 		%> and pa is 0. Technically we can't really tell if a subject is
 		%> blinking or has removed their head using the float data.
-		ignoreBlinks logical		= false
+		ignoreBlinks		= false
 		%> name of eyetracker EDF file
-		saveFile char				= 'myData'
+		saveFile			= 'myData'
+		%> do we log messages to the command window?
+		verbose					= false
+	end
+
+	properties (Abstract)
+		%> info for calibration
+		calibration
 	end
 	
 	properties (Hidden = true)
 		%> stimulus positions to draw on screen
-		stimulusPositions			= []
+		stimulusPositions		= []
 		%> the PTB screen to work on, passed in during initialise
-		screen						= []
-		%> 
-		secondScreen				= false
-		%> do we log messages to the command window?
-		verbose						= false
+		screen					= []
+		%> operator screen used during calibration
+		operatorScreen			= []
+		%> is operator screen being used?
+		secondScreen			= false
+		%> size to draw eye position on screen
+		eyeSize double					= 6
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> Gaze X position in degrees
-		x							= []
+		x						= []
 		%> Gaze Y position in degrees
-		y							= []
+		y						= []
 		%> pupil size
-		pupil						= []
+		pupil					= []
 		%> last isFixated true/false result
-		isFix						= false
+		isFix					= false
 		%> did the fixInit test fail or not?
-		isInitFail					= false
+		isInitFail				= false
 		%> are we in a blink?
-		isBlink						= false
+		isBlink					= false
 		%> are we in an exclusion zone?
-		isExclusion					= false
+		isExclusion				= false
 		%> total time searching and holding fixation
-		fixTotal					= 0
+		fixTotal				= 0
 		%> Initiate fixation length
-		fixInitLength				= 0
+		fixInitLength			= 0
 		%how long have we been fixated?
-		fixLength					= 0
+		fixLength				= 0
 		%> Initiate fixation time
-		fixInitStartTime			= 0
+		fixInitStartTime		= 0
 		%the first timestamp fixation was true
-		fixStartTime				= 0
+		fixStartTime			= 0
 		%> which fixation window matched the last fixation?
-		fixWindow					= 0
+		fixWindow				= 0
 		%> last time offset betweeen tracker and display computers
-		currentOffset				= 0
+		currentOffset			= 0
 		%> tracker time stamp
-		trackerTime					= 0
+		trackerTime				= 0
 		%current sample taken from eyelink
-		currentSample				= []
+		currentSample			= []
 		%current event taken from eyelink
-		currentEvent				= []
+		currentEvent			= []
 		% are we connected to eyelink?
-		isConnected logical			= false
+		isConnected				= false
 		% are we recording to an EDF file?
-		isRecording logical			= false
+		isRecording				= false
 		% which eye is the tracker using?
-		eyeUsed						= -1
-		%version of eyelink
-		version						= ''
+		eyeUsed					= -1
+		%version of eyetracker interface
+		version					= ''
 		%> All gaze X position in degrees reset using resetFixation
-		xAll						= []
+		xAll					= []
 		%> Last gaze Y position in degrees reset using resetFixation
-		yAll						= []
+		yAll					= []
 		%> all pupil size reset using resetFixation
-		pupilAll					= []
-		%> calibration data
-		calibration					= []
+		pupilAll				= []
 		%> data streamed out from the Tobii
-		data struct					= struct()
+		data					= struct()
 	end
 	
 	properties (SetAccess = protected, GetAccess = ?optickaCore)
-		%> cache this to save time in tight loops
-		isRecording_					= false
 		%> the PTB screen handle, normally set by screenManager but can force it to use another screen
-		win								= []
-		ppd_ double						= 36
+		win						= []
+		ppd_					= 36
 		% these are used to test strict fixation
-		fixN double						= 0
-		fixSelection					= []
-		%> event N
-		eventN							= 1
-		%> previous message sent to tobii
-		previousMessage char			= ''
+		fixN double				= 0
+		fixSelection			= []
 		%> allowed properties passed to object upon construction
-		allowedProperties char		= ['fixation|exclusionZone|fixInit|offset|ignoreBlinks|sampleRate|'...
-			'calibrationStyle|calibrationProportion|recordData|modify|' ...
-			'enableCallbacks|callback|name|verbose|isDummy|remoteCalibration|IP']
+		allowedPropertiesBase	= {'fixation', 'exclusionZone', 'fixInit', ...
+			'offset', 'sampleRate', 'ignoreBlinks', 'saveData',...
+			'recordData', 'verbose', 'isDummy', 'manualCalibration'}
 	end
 
-	%> ALL Children must implement these 5 methods!
+	%> ALL Children must implement these methods!
 	%=======================================================================
 	methods (Abstract)%------------------ABSTRACT METHODS
 	%=======================================================================
-		%> initialise the stimulus with the PTB screenManager
-		out = initialise(runObject)
-		out = close(runObject)
-		out = checkConnection(runObject)
-		out = updateDefaults(runObject)
-		out = trackerSetup(runObject)
-		out = startRecording(runObject)
-		out = stopRecording(runObject)
-		out = getSample(runObject)
-		out = trackerMessage(runObject)
-		out = statusMessage(runObject)
-		out = trackerClearScreen(runObject)
-		out = trackerDrawStatus(runObject)
-		out = trackerDrawStimuli(runObject)
-		out = trackerDrawFixation(runObject)
-		out = trackerDrawExclusion(runObject)
-		out = trackerDrawText(runObject)
-		out = runDemo(runObject)
+		out = initialise(in)
+		out = close(in)
+		out = checkConnection(in)
+		out = updateDefaults(in)
+		out = trackerSetup(in)
+		out = startRecording(in)
+		out = stopRecording(in)
+		out = getSample(in)
+		out = trackerMessage(in)
+		out = statusMessage(in)
+		out = runDemo(in)
 	end %---END ABSTRACT METHODS---%
 		
 	
@@ -176,7 +218,7 @@ classdef eyetrackerCore < optickaCore
 		function me = eyetrackerCore(varargin)
 			args = optickaCore.addDefaults(varargin);
 			me=me@optickaCore(args); %we call the superclass constructor first
-			me.parseArgs(args, me.allowedProperties);
+			me.parseArgs(args, me.allowedPropertiesBase);
 		end
 		
 		% ===================================================================
@@ -315,57 +357,6 @@ classdef eyetrackerCore < optickaCore
 				WaitSecs('YieldSecs',1);
 			end
 		end
-
-		
-		% ===================================================================
-		function sample = getSample(me)
-		%> @fn getSample
-		%> Get a sample from the tracker, if dummymode=true then use
-		%> the mouse as an eye signal
-		%>
-		% ===================================================================
-			if me.isConnected && Eyelink('NewFloatSampleAvailable') > 0
-				me.currentSample = Eyelink('NewestFloatSample');% get the sample in the form of an event structure
-				if ~isempty(me.currentSample) && isstruct(me.currentSample)
-					if me.currentSample.gx(me.eyeUsed+1) == me.MISSING_DATA ...
-					&& me.currentSample.gy(me.eyeUsed+1) == me.MISSING_DATA ...
-					&& me.currentSample.pa(me.eyeUsed+1) == 0 ...
-					&& me.ignoreBlinks
-						%me.x = toPixels(me,me.fixation.X,'x');
-						%me.y = toPixels(me,me.fixation.Y,'y');
-						me.pupil = 0;
-						me.isBlink = true;
-					else
-						me.x = me.currentSample.gx(me.eyeUsed+1); % +1 as we're accessing MATLAB array
-						me.y = me.currentSample.gy(me.eyeUsed+1);
-						me.pupil = me.currentSample.pa(me.eyeUsed+1);
-						me.xAll = [me.xAll me.x];
-						me.yAll = [me.yAll me.y];
-						me.pupilAll = [me.pupilAll me.pupil];
-						me.isBlink = false;
-					end
-					%if me.verbose;fprintf('<GS X: %.2g | Y: %.2g | P: %.2g | isBlink: %i>\n',me.x,me.y,me.pupil,me.isBlink);end
-				end
-			elseif me.isDummy %lets use a mouse to simulate the eye signal
-				if ~isempty(me.win)
-					[me.x, me.y] = GetMouse(me.win);
-				elseif ~isempty(me.screen) && ~isempty(me.screen.screen)
-					[me.x, me.y] = GetMouse(me.screen.screen);
-				else
-					[me.x, me.y] = GetMouse();
-				end
-				me.pupil = 800 + randi(20);
-				me.currentSample.gx = me.x;
-				me.currentSample.gy = me.y;
-				me.currentSample.pa = me.pupil;
-				me.currentSample.time = GetSecs * 1000;
-				me.xAll = [me.xAll me.x];
-				me.yAll = [me.yAll me.y];
-				me.pupilAll = [me.pupilAll me.pupil];
-				%if me.verbose;fprintf('<DM X: %.2f | Y: %.2f | P: %.2f | T: %f>\n',me.x,me.y,me.pupil,me.currentSample.time);end
-			end
-			sample = me.currentSample;
-		end
 		
 		
 		% ===================================================================
@@ -423,7 +414,7 @@ classdef eyetrackerCore < optickaCore
 			if nargin > 5 && ~isempty(radius); me.fixation.radius = radius; end
 			if nargin > 6 && ~isempty(strict); me.fixation.strict = strict; end
 			if me.verbose 
-				fprintf('-+-+-> eyelinkManager:updateFixationValues: X=%g | Y=%g | IT=%s | FT=%s | R=%g | Strict=%i\n', ... 
+				fprintf('-+-+-> eyetrackerManager:updateFixationValues: X=%g | Y=%g | IT=%s | FT=%s | R=%g | Strict=%i\n', ... 
 				me.fixation.X, me.fixation.Y, num2str(me.fixation.initTime,'%.2f '), num2str(me.fixation.time,'%.2f '), ...
 				me.fixation.radius,me.fixation.strict); 
 			end
@@ -724,25 +715,156 @@ classdef eyetrackerCore < optickaCore
 		%> @brief draw the current eye position on the PTB display
 		%>
 		% ===================================================================
-		function drawEyePosition(me)
+		function drawEyePosition(me,varargin)
 			if (me.isDummy || me.isConnected) && isa(me.screen,'screenManager') && me.screen.isOpen && ~isempty(me.x) && ~isempty(me.y)
 				xy = toPixels(me,[me.x-me.offset.X me.y-me.offset.Y]);
 				if me.isFix
 					if me.fixLength > me.fixation.time && ~me.isBlink
-						Screen('DrawDots', me.win, xy, 6, [0 1 0.25 1], [], 3);
+						Screen('DrawDots', me.win, xy, me.eyeSize, [0 1 0.25 1], [], 3);
 					elseif ~me.isBlink
-						Screen('DrawDots', me.win, xy, 6, [0.75 0 0.75 1], [], 3);
+						Screen('DrawDots', me.win, xy, me.eyeSize, [0.75 0 0.75 1], [], 3);
 					else
-						Screen('DrawDots', me.win, xy, 6, [0.75 0 0 1], [], 3);
+						Screen('DrawDots', me.win, xy, me.eyeSize, [0.75 0 0 1], [], 3);
 					end
 				else
 					if ~me.isBlink
-						Screen('DrawDots', me.win, xy, 6, [0.75 0.5 0 1], [], 3);
+						Screen('DrawDots', me.win, xy, me.eyeSize, [0.75 0.5 0 1], [], 3);
 					else
-						Screen('DrawDots', me.win, xy, 6, [0.75 0 0 1], [], 3);
+						Screen('DrawDots', me.win, xy, me.eyeSize, [0.75 0 0 1], [], 3);
 					end
 				end
 			end
+		end
+
+		% ===================================================================
+		%> @brief draw the background colour
+		%>
+		% ===================================================================
+		function trackerClearScreen(me)
+			if ~me.isConnected || ~me.operatorScreen.isOpen; return;end
+			drawBackground(me.operatorScreen);
+		end
+
+		% ===================================================================
+		%> @brief draw general status
+		%>
+		% ===================================================================
+		function trackerDrawStatus(me, comment, stimPos, dontClear)
+			if ~me.isConnected || ~me.operatorScreen.isOpen; return;end
+			if ~exist('comment','var'); comment=''; end
+			if ~exist('stimPos','var'); stimPos = struct; end
+			if ~exist('dontClear','var'); dontClear = 0; end
+			if ~dontClear; trackerClearScreen(me); end
+			trackerDrawExclusion(me);
+			trackerDrawFixation(me);
+			trackerDrawStimuli(me, stimPos);
+			trackerDrawEyePositions(me);
+			if ~isempty(comment);trackerDrawText(me, comment);end
+			trackerFlip(me,dontClear);
+		end
+
+		% ===================================================================
+		%> @brief draw the stimuli boxes on the tracker display
+		%>
+		% ===================================================================
+		function trackerDrawStimuli(me, ts, dontClear)
+			if ~me.isConnected || ~me.operatorScreen.isOpen; return; end
+			if exist('ts','var') && isstruct(ts)
+				me.stimulusPositions = ts;
+			end
+			if isempty(me.stimulusPositions) || isempty(fieldnames(me.stimulusPositions));return;end
+			if ~exist('dontClear','var');dontClear = true;end
+			if dontClear==false; trackerClearScreen(me); end
+			for i = 1:length(me.stimulusPositions)
+				x = me.stimulusPositions(i).x;
+				y = me.stimulusPositions(i).y;
+				size = me.stimulusPositions(i).size;
+				if isempty(size); size = 1 * me.ppd_; end
+				if me.stimulusPositions(i).selected == true
+					drawBoxPx(me.operatorScreen,[x; y],size,[0.5 1 0 0.5]);
+				else
+					drawBoxPx(me.operatorScreen,[x; y],size,[0.6 0.6 0.3]);
+				end
+			end			
+		end
+		
+		% ===================================================================
+		%> @brief draw the fixation box on the tracker display
+		%>
+		% ===================================================================
+		function trackerDrawFixation(me)
+			if ~me.isConnected || ~me.operatorScreen.isOpen; return; end
+			if length(me.fixation.radius) == 1
+				drawSpot(me.operatorScreen,me.fixation.radius,[0.5 0.6 0.5 1],me.fixation.X,me.fixation.Y);
+			else
+				rect = [me.fixation.X - me.fixation.radius(1), ...
+					me.fixation.Y - me.fixation.radius(2), ...
+					me.fixation.X + me.fixation.radius(1), ...
+					me.fixation.Y + me.fixation.radius(2)];
+				drawRect(me.operatorScreen,rect,[0.5 0.6 0.5 1]);
+			end
+		end
+
+		% ===================================================================
+		%> @brief draw the fixation box on the tracker display
+		%>
+		% ===================================================================
+		function trackerDrawExclusion(me)
+			if ~me.isConnected || ~me.operatorScreen.isOpen || isempty(me.exclusionZone); return; end
+			for i = 1:size(me.exclusionZone,1)
+				drawRect(me.operatorScreen, [me.exclusionZone(1), ...
+					me.exclusionZone(3), me.exclusionZone(2), ...
+					me.exclusionZone(4)],[0.7 0.6 0.6]);
+			end
+		end
+		
+		
+		% ===================================================================
+		%> @brief draw the fixation position on the tracker display
+		%>
+		% ===================================================================
+		function trackerDrawEyePosition(me)
+			if ~me.isConnected || ~me.operatorScreen.isOpen; return; end
+			if me.isFix
+				if me.fixLength > me.fixation.time
+					drawSpot(me.operatorScreen,0.3,[0 1 0.25 0.75],me.x,me.y);
+				else
+					drawSpot(me.operatorScreen,0.3,[0.75 0.25 0.75 0.75],me.x,me.y);
+				end
+			else
+				drawSpot(me.operatorScreen,0.3,[0.7 0.5 0 0.5],me.x,me.y);
+			end
+		end
+		
+		% ===================================================================
+		%> @brief draw the sampled eye positions in xAll yAll
+		%>
+		% ===================================================================
+		function trackerDrawEyePositions(me)
+			if ~me.isConnected || ~me.operatorScreen.isOpen; return; end
+			if ~isempty(me.xAll) && ~isempty(me.yAll) && (length(me.xAll)==length(me.yAll))
+				xy = [me.xAll;me.yAll];
+				drawDots(me.operatorScreen,xy,8,[0.5 1 0 0.2]);
+			end
+		end
+
+		% ===================================================================
+		%> @brief draw the fixation box on the tracker display
+		%>
+		% ===================================================================
+		function trackerDrawText(me,textIn)
+			if ~me.isConnected || ~me.operatorScreen.isOpen || ~exist('textIn','var'); return; end
+			drawText(me.operatorScreen, textIn);
+		end
+
+		% ===================================================================
+		%> @brief draw the fixation box on the tracker display
+		%>
+		% ===================================================================
+		function trackerFlip(me,dontclear)
+			if ~me.isConnected || ~me.operatorScreen.isOpen; return; end
+			if ~exist('dontclear','var');dontclear = 1; end
+			me.operatorScreen.flip([], dontclear, 2);
 		end
 		
 		% ===================================================================
@@ -766,7 +888,14 @@ classdef eyetrackerCore < optickaCore
 	%=======================================================================
 	methods (Hidden = true) %------------------HIDDEN METHODS
 	%=======================================================================
-	
+		
+		% ===================================================================
+		%> @brief send message to store in EDF data
+		% ===================================================================
+		function edfMessage(me, message)
+			
+		end
+
 		% ===================================================================
 		%> @brief TODO
 		%>
@@ -783,30 +912,6 @@ classdef eyetrackerCore < optickaCore
 			
 		end
 		
-		% ===================================================================
-		%> @brief send message to store in EDF data
-		%>
-		%>
-		% ===================================================================
-		function edfMessage(me, message)
-			if me.isConnected
-				Eyelink('Message', message );
-				if me.verbose; fprintf('-+-+->EDF Message: %s\n',message);end
-			end
-		end
-
-		function trackerFlip(me, varargin)
-
-		end
-
-		function trackerDrawEyePosition(me)
-
-		end
-
-		function trackerDrawEyePositions(me)
-
-		end
-		
 	
 	end
 	
@@ -815,7 +920,44 @@ classdef eyetrackerCore < optickaCore
 	methods (Access = protected) %------------------PRIVATE METHODS
 	%=======================================================================
 		
-				
+		% ===================================================================
+		%> @brief to visual degrees from pixels
+		%>
+		% ===================================================================
+		function out = toDegrees(me,in,axis,inputtype)
+			if ~exist('axis','var') || isempty(axis); axis=''; end
+			if ~exist('inputtype','var') || isempty(inputtype); inputtype = 'pixels'; end
+			out = 0;
+			if length(in)>2; return; end
+			switch axis
+				case 'x'
+					in = in(1);
+					switch inputtype
+						case 'pixels'
+							out = (in - me.screen.xCenter) / me.ppd_;
+						case 'relative'
+							out = (in - 0.5) * (me.screen.screenVals.width /me.ppd_);
+					end
+				case 'y'
+					in = in(1);
+					switch inputtype
+						case 'pixels'
+							out = (in - me.screen.yCenter) / me.ppd_; return
+						case 'relative'
+							out = (in - 0.5) * (me.screen.screenVals.height /me.ppd_);
+					end
+				otherwise
+					switch inputtype
+						case 'pixels'
+							out(1) = (in(1) - me.screen.xCenter) / me.ppd_;
+							out(2) = (in(2) - me.screen.yCenter) / me.ppd_;
+						case 'relative'
+							out(1) = (in - 0.5) * (me.screen.screenVals.width /me.ppd_);
+							out(2) = (in - 0.5) * (me.screen.screenVals.height /me.ppd_);
+					end
+			end
+		end
+
 		% ===================================================================
 		%> @brief to pixels from visual degrees / relative
 		%>
@@ -862,43 +1004,7 @@ classdef eyetrackerCore < optickaCore
 			end
 		end
 		
-		% ===================================================================
-		%> @brief to visual degrees from pixels
-		%>
-		% ===================================================================
-		function out = toDegrees(me,in,axis,inputtype)
-			if ~exist('axis','var') || isempty(axis); axis=''; end
-			if ~exist('inputtype','var') || isempty(inputtype); inputtype = 'pixels'; end
-			out = 0;
-			if length(in)>2; return; end
-			switch axis
-				case 'x'
-					in = in(1);
-					switch inputtype
-						case 'pixels'
-							out = (in - me.screen.xCenter) / me.ppd_;
-						case 'relative'
-							out = (in - 0.5) * (me.screen.screenVals.width /me.ppd_);
-					end
-				case 'y'
-					in = in(1);
-					switch inputtype
-						case 'pixels'
-							out = (in - me.screen.yCenter) / me.ppd_; return
-						case 'relative'
-							out = (in - 0.5) * (me.screen.screenVals.height /me.ppd_);
-					end
-				otherwise
-					switch inputtype
-						case 'pixels'
-							out(1) = (in(1) - me.screen.xCenter) / me.ppd_;
-							out(2) = (in(2) - me.screen.yCenter) / me.ppd_;
-						case 'relative'
-							out(1) = (in - 0.5) * (me.screen.screenVals.width /me.ppd_);
-							out(2) = (in - 0.5) * (me.screen.screenVals.height /me.ppd_);
-					end
-			end
-		end
+		
 		
 	end
 	

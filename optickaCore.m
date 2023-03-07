@@ -505,7 +505,6 @@ classdef optickaCore < handle
 				fnames = fieldnames(args); %find our argument names
 				for i=1:length(fnames)
 					if matches(fnames{i},allowedProperties) %only set if allowed property
-						me.salutation(fnames{i},'Parsing input argument');
 						try
 							me.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
 						catch

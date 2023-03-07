@@ -3,157 +3,52 @@
 %> @brief eyelinkManager wraps around the eyelink toolbox functions offering a
 %> consistent interface and methods for fixation window control
 %>
-%> Class methods enable the user to test for common behavioural eye tracking
-%> tasks with single commands. For example, to initiate a task we normally
-%> place a fixation cross on the screen and ask the subject to saccade to
-%> the cross and maintain fixation for a particular duration. This is
-%> achieved using testSearchHoldFixation('yes','no'), using the properties:
-%> fixation.initTime to time how long the subject has to saccade into the
-%> window, fixation.time for how long they must maintain fixation,
-%> fixation.radius for the radius around fixation.X and fixation.Y position.
-%> The method returns the 'yes' string if the rules are matched, and 'no' if
-%> they are not, thus enabling experiment code to simply call this method
-%> until it returns 'yes''. Other methods include isFixated(),
-%> testFixationTime(), testHoldFixation().
-%>
-%> This class enables several types of behavioural control:
-%>
-%> 1. Fixation window: one or more areas where the subject must enter with
-%>    their eye position within a certain time and must maintain fixation
-%>    for a certain time. Windows can be circular or rectangular.
-%> 2. Exclusion zones: one or more rectangular areas that cause failure if
-%>    entered.
-%> 3. Fix initiation zone: an area the eye must stay with for a certain time
-%>    before a saccade. For example if a subect fixates, then must saccade a
-%>    time X, do not allow the eye to leave this zone before X + t (t by
-%>    default is 100ms). This stops potential cheating by the subject.
-%>
-%> Try using the demo mode to see it in action (read the runDemo() code to
-%> understand how to use the class):
-%>
-%>```matlab
-%> >> eT = eyelinkManager('verbose', true);
-%> >> eT.runDemo();
-%>```
-%>
-%> Multiple fixation windows can be assigned (either circular or
-%> rectangular), and in addition multiple exclusion windows (exclusionZone)
-%> can ensure a subject doesn't saccade to particular parts of the screen.
-%> fixInit allows you to define a minimum time with which the subject can
-%> initiate a saccade away from a position (which stops a subject cheating
-%> by moving the eyes too soon).
-%>
-%> For the eyelink we also allow the use of remote calibration and can call
-%> a reward systems during calibration / validation to improve subject
-%> performance compared to the eyelink toolbox alone.
-%>
 %> @todo refactor this and tobiiManager to inherit from a common eyelinkManager
 %> 
-%> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2023 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef eyelinkManager < eyetrackerCore
+
+	properties (SetAccess = protected, GetAccess = public)
+		%> type of eyetracker
+		type				= 'eyelink'
+	end
 	
 	properties
-		%> tracker update speed (Hz), should be 250 500 1000 2000
-		sampleRate double			= 1000
-		%> calibration style, [H3 HV3 HV5 HV8 HV13]
-		calibrationStyle char		= 'HV5'
-		%> proportion of screen used in horizontal and vertical co-ordinates
-		%> for calibration and validation, e.g. [0.3 0.3]
-		calibrationProportion double= []
+		%> properties to setup and modify calibration
+		calibration			= struct('style','HV5','proportion',[0.7 0.7],'manual',false,...
+							'IP','', 'enableCallbacks', true, 'callback', 'eyelinkCustomCallback',...
+							'calibrationtargetcolour', [1 1 1],...
+							'calibrationtargetsize', 2, 'calibrationtargetwidth', 0.1,...
+							'displayCalResults', 1, 'targetbeep', 1, 'devicenumber', -1,...
+							'waitformodereadytime', 500)
 		%> eyetracker defaults structure
-		defaults struct				= struct()
-		%> IP address of host
-		IP char						= ''
-		% use callbacks
-		enableCallbacks logical		= true
-		%> cutom calibration callback (enables better handling of
-		%> calibration, can trigger reward system etc.)
-		callback char				= 'eyelinkCustomCallback'
-		%> eyelink defaults modifiers as a struct()
-		modify struct				= struct('calibrationtargetcolour',[1 1 1],...
-									'calibrationtargetsize',2,'calibrationtargetwidth',0.1,...
-									'displayCalResults',1,'targetbeep',1,'devicenumber',-1,...
-									'waitformodereadytime',500)
+		defaults			= struct()
 	end
 	
 	properties (Hidden = true)
 		%> verbosity level
-		verbosityLevel double		= 4
+		verbosityLevel		= 4
 		%> force drift correction?
-		forceDriftCorrect logical	= true
+		forceDriftCorrect	= true
 		%> drift correct max
-		driftMaximum double			= 15
+		driftMaximum		= 15
 		%> custom calibration target
-		customTarget				= []
-		%> compatibility with tobii which can use a second screen
-		secondScreen				= false
-	end
-	
-	properties (SetAccess = protected, GetAccess = public)
-		%> Gaze X position in degrees
-		x							= []
-		%> Gaze Y position in degrees
-		y							= []
-		%> pupil size
-		pupil						= []
-		%> last isFixated true/false result
-		isFix						= false
-		%> did the fixInit test fail or not?
-		isInitFail					= false
-		%> are we in a blink?
-		isBlink						= false
-		%> are we in an exclusion zone?
-		isExclusion					= false
-		%> total time searching and holding fixation
-		fixTotal					= 0
-		%> Initiate fixation length
-		fixInitLength				= 0
-		%how long have we been fixated?
-		fixLength					= 0
-		%> Initiate fixation time
-		fixInitStartTime			= 0
-		%the first timestamp fixation was true
-		fixStartTime				= 0
-		%> which fixation window matched the last fixation?
-		fixWindow					= 0
-		%> last time offset betweeen tracker and display computers
-		currentOffset				= 0
-		%> tracker time stamp
-		trackerTime					= 0
-		%current sample taken from eyelink
-		currentSample				= []
-		%current event taken from eyelink
-		currentEvent				= []
-		% are we connected to eyelink?
-		isConnected logical			= false
-		% are we recording to an EDF file?
-		isRecording logical			= false
-		% which eye is the tracker using?
-		eyeUsed						= -1
-		%version of eyelink
-		version						= ''
-		%> the PTB screen to work on, passed in during initialise
-		xAll						= []
-		%> Last gaze Y position in degrees reset using resetFixation
-		yAll						= []
-		%> all pupil size reset using resetFixation
-		pupilAll					= []
+		customTarget		= []
 	end
 	
 	properties (SetAccess = protected, GetAccess = ?optickaCore)
 		% value for missing data
-		MISSING_DATA				= -32768
-		%> the PTB screen handle, normally set by screenManager but can force it to use another screen
-		win							= []
-		ppd_ double					= 32
-		tempFile char				= 'MYDATA.edf'
-		% deals with strict fixation
-		fixN double					= 0
-		fixSelection				= []
-		error						= []
+		MISSING_DATA		= -32768
+		tempFile char		= 'MYDATA.edf'
+		error				= []
 		%> previous message sent to eyelink
-		previousMessage char		= ''
+		previousMessage		= ''
+	end
+
+	properties (SetAccess = protected, GetAccess = protected)
+		%> allowed properties passed to object upon construction
+		allowedProperties	= {'calibration', 'defaults','modify'}
 	end
 	
 	methods
@@ -162,7 +57,7 @@ classdef eyelinkManager < eyetrackerCore
 		%>
 		% ===================================================================
 		function me = eyelinkManager(varargin)
-			args = optickaCore.addDefaults(varargin,struct('name','eyelink manager'));
+			args = optickaCore.addDefaults(varargin,struct('name','Eyelink','sampleRate',1000));
 			me=me@eyetrackerCore(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
 			
@@ -197,17 +92,17 @@ classdef eyelinkManager < eyetrackerCore
 			end
 			me.screen = sM;
 			
-			if ~isempty(me.IP) && ~me.isDummy
-				me.salutation('Eyelink Initialise',['Trying to set custom IP address: ' me.IP],true)
-				ret = Eyelink('SetAddress', me.IP);
+			if ~isempty(me.calibration.IP) && ~me.isDummy
+				me.salutation('Eyelink Initialise',['Trying to set custom IP address: ' me.calibration.IP],true)
+				ret = Eyelink('SetAddress', me.calibration.IP);
 				if ret ~= 0
-					warning('!!!--> Couldn''t set IP address to %s!!!\n',me.IP);
+					warning('!!!--> Couldn''t set IP address to %s!!!\n',me.calibration.IP);
 				end
 			end
 			
-			if ~isempty(me.callback) && me.enableCallbacks
-				[res,dummy] = EyelinkInit(me.isDummy,me.callback);
-			elseif me.enableCallbacks
+			if ~isempty(me.calibration.callback) && me.calibration.enableCallbacks
+				[res,dummy] = EyelinkInit(me.isDummy, me.calibration.callback);
+			elseif me.calibration.enableCallbacks
 				[res,dummy] = EyelinkInit(me.isDummy,1);
 			else
 				[res,dummy] = EyelinkInit(me.isDummy,0);
@@ -231,15 +126,15 @@ classdef eyelinkManager < eyetrackerCore
 			me.defaults.winRect=me.screen.winRect;
 			% this command is sent from EyelinkInitDefaults
  			% Eyelink('Command', 'screen_pixel_coords = %ld %ld %ld %ld',me.screen.winRect(1),me.screen.winRect(2),me.screen.winRect(3)-1,me.screen.winRect(4)-1);
-			if ~isempty(me.callback) && exist(me.callback,'file')
-				me.defaults.callback = me.callback;
+			if ~isempty(me.calibration.callback) && exist(me.calibration.callback,'file')
+				me.defaults.callback = me.calibration.callback;
 			end
 			me.defaults.backgroundcolour = me.screen.backgroundColour;
 			me.ppd_ = me.screen.ppd;
 			me.defaults.ppd = me.screen.ppd;
 			
 			%structure of eyelink modifiers
-			fn = fieldnames(me.modify);
+			fn = fieldnames(me.calibration);
 			for i = 1:length(fn)
 				if isfield(me.defaults,fn{i})
 					me.defaults.(fn{i}) = me.modify.(fn{i});
@@ -248,13 +143,13 @@ classdef eyelinkManager < eyetrackerCore
 			
 			me.defaults.verbose = me.verbose;
 			
-			if ~isempty(me.customTarget)
-				me.customTarget.reset();
-				me.customTarget.setup(me.screen);
-				me.defaults.customTarget = me.customTarget;
-			else
-				me.defaults.customTarget = [];
-			end
+			%if ~isempty(me.calibration.customTarget)
+			%	me.customTarget.reset();
+			%	me.customTarget.setup(me.screen);
+			%	me.defaults.customTarget = me.customTarget;
+			%else
+			%	me.defaults.customTarget = [];
+			%end
 			
 			updateDefaults(me);
 			
@@ -326,15 +221,15 @@ classdef eyelinkManager < eyetrackerCore
 			oldrk = RestrictKeysForKbCheck([]); %just in case someone has restricted keys
 			fprintf('\n===>>> CALIBRATING EYELINK... <<<===\n');
 			Eyelink('Verbosity',me.verbosityLevel);
-			if ~isempty(me.calibrationProportion) && length(me.calibrationProportion)==2
-				Eyelink('Command','calibration_area_proportion = %s', num2str(me.calibrationProportion));
-				Eyelink('Command','validation_area_proportion = %s', num2str(me.calibrationProportion));
+			if ~isempty(me.calibration.proportion) && length(me.calibration.proportion)==2
+				Eyelink('Command','calibration_area_proportion = %s', num2str(me.calibration.proportion));
+				Eyelink('Command','validation_area_proportion = %s', num2str(me.calibration.proportion));
 				% see https://www.sr-support.com/forum-37-page-2.html
 				%Eyelink('Command','calibration_corner_scaling = %s', num2str([me.calibrationProportion(1)-0.1 me.calibrationProportion(2)-0.1])-);
 				%Eyelink('Command','validation_corner_scaling = %s', num2str([me.calibrationProportion(1)-0.1 me.calibrationProportion(2)-0.1]));
 			end
 			Eyelink('Command','horizontal_target_y = %i',me.screen.winRect(4)/2);
-			Eyelink('Command','calibration_type = %s', me.calibrationStyle);
+			Eyelink('Command','calibration_type = %s', me.calibration.style);
 			Eyelink('Command','normal_click_dcorr = ON');
 			Eyelink('Command', 'driftcorrect_cr_disable = OFF');
 			Eyelink('Command', 'drift_correction_rpt_error = 10.0');
@@ -345,7 +240,7 @@ classdef eyelinkManager < eyetrackerCore
 			Eyelink('Command','val_repeat_first_target = YES');
 			Eyelink('Command','validation_online_fixup  = NO');
 			Eyelink('Command','generate_default_targets = YES');
-			if me.remoteCalibration
+			if me.calibration.manual
 				Eyelink('Command','remote_cal_enable = 1');
 				Eyelink('Command','key_function 1 ''remote_cal_target 1''');
 				Eyelink('Command','key_function 2 ''remote_cal_target 2''');
@@ -470,8 +365,7 @@ classdef eyelinkManager < eyetrackerCore
 						me.pupil = 0;
 						me.isBlink = true;
 					else
-						me.x = me.currentSample.gx(me.eyeUsed+1); % +1 as we're accessing MATLAB array
-						me.y = me.currentSample.gy(me.eyeUsed+1);
+						[me.x, me.y] = toDegrees(me, [me.currentSample.gx(me.eyeUsed+1) me.currentSample.gy(me.eyeUsed+1)]);
 						me.pupil = me.currentSample.pa(me.eyeUsed+1);
 						me.xAll = [me.xAll me.x];
 						me.yAll = [me.yAll me.y];
@@ -482,12 +376,14 @@ classdef eyelinkManager < eyetrackerCore
 				end
 			elseif me.isDummy %lets use a mouse to simulate the eye signal
 				if ~isempty(me.win)
-					[me.x, me.y] = GetMouse(me.win);
+					w = me.win;
 				elseif ~isempty(me.screen) && ~isempty(me.screen.screen)
-					[me.x, me.y] = GetMouse(me.screen.screen);
+					w = me.screen.screen;
 				else
-					[me.x, me.y] = GetMouse();
+					w = [];
 				end
+				[x, y] = GetMouse(w);
+				[me.x, me.y] = toDegrees(me, [x y]);
 				me.pupil = 800 + randi(20);
 				me.currentSample.gx = me.x;
 				me.currentSample.gy = me.y;
@@ -681,6 +577,17 @@ classdef eyelinkManager < eyetrackerCore
 				end
 			end
 		end
+
+		% === NOOPS
+		function trackerDrawEyePosition(me)
+			
+		end
+		function trackerDrawEyePositions(me)
+			
+		end
+		function trackerFlip(me,dontclear)
+			
+		end
 		
 		% ===================================================================
 		%> @brief draw the fixation box on the tracker display
@@ -752,27 +659,11 @@ classdef eyelinkManager < eyetrackerCore
 		end
 		
 		% ===================================================================
-		%> @brief automagically turn pixels to degrees
-		%>
-		% ===================================================================
-		function set.x(me,in)
-			me.x = toDegrees(me,in,'x'); %#ok<*MCSUP>
-		end
-		
-		% ===================================================================
-		%> @brief automagically turn pixels to degrees
-		%>
-		% ===================================================================
-		function set.y(me,in)
-			me.y = toDegrees(me,in,'y');
-		end
-		
-		% ===================================================================
 		%> @brief runs a demo of the eyelink, tests this class
 		%>
 		% ===================================================================
-		function runDemo(me,forcescreen)
-			KbName('UnifyKeyNames')
+		function runDemo(me, forcescreen)
+			PsychDefaultSetup(2);
 			stopkey				= KbName('Q');
 			nextKey				= KbName('SPACE');
 			calibkey			= KbName('C');
@@ -808,7 +699,7 @@ classdef eyelinkManager < eyetrackerCore
 				% define our fixation widow and stimulus for first trial
 				% x,y,inittime,fixtime,radius,strict
 				me.updateFixationValues([0 -10],[0 -10],3,1,1,true);
-				o.sizeOut = me.fixation.radius(1)*2;
+				o.sizeOut = me.fixation.radius(1) * 2;
 				o.xPositionOut = me.fixation.X;
 				o.yPositionOut = me.fixation.Y;
 				ts.x = me.fixation.X; %ts is a simple structure that we can pass to eyelink to draw on its screen
@@ -848,7 +739,7 @@ classdef eyelinkManager < eyetrackerCore
 					% this draws the text to the tracker info box
 					statusMessage(me,sprintf('DEMO Running Trial=%i X Pos = %g | Y Pos = %g | Radius = %g',a,me.fixation.X,me.fixation.Y,me.fixation.radius));
 					WaitSecs('YieldSecs',0.25);
-					vbl=flip(s);
+					vbl = flip(s);
 					syncTime(me);
 					while trialLoop
 						Screen('FillRect',s.win,[0.7 0.7 0.7 0.5],exc); Screen('DrawText',s.win,'Exclusion Zone',exc(1),exc(2),[0.8 0.8 0.8]);
@@ -883,12 +774,14 @@ classdef eyelinkManager < eyetrackerCore
 						vbl=Screen('Flip',s.win, vbl + s.screenVals.halfisi);
 						
 						% check the keyboard
-						   [~, ~, keyCode] = KbCheck(-1);
-						if keyCode(stopkey); trialLoop = 0; blockLoop = 0; break;	end
-						if keyCode(nextKey); trialLoop = 0; correct = true; break; end
-						if keyCode(calibkey); trackerSetup(me); break; end
-						if keyCode(driftkey); driftCorrection(me); break; end
-						if keyCode(offsetkey); driftOffset(me); break; end
+						[keyDown, ~, keyCode] = KbCheck(-1);
+						if keyDown
+							if keyCode(stopkey); trialLoop = 0; blockLoop = 0; break;	end
+							if keyCode(nextKey); trialLoop = 0; correct = true; break; end
+							if keyCode(calibkey); trackerSetup(me); break; end
+							if keyCode(driftkey); driftCorrection(me); break; end
+							if keyCode(offsetkey); driftOffset(me); break; end
+						end
 						% send a message for the EDF after 60 frames
 						if b == 60; edfMessage(me,'END_FIX');end
 						b=b+1;
@@ -970,10 +863,10 @@ classdef eyelinkManager < eyetrackerCore
 				me.resetOffset;
 				ListenChar(0);Priority(0);ShowCursor;RestrictKeysForKbCheck([])
 				me.salutation('runDemo ERROR!!!')
-				Eyelink('Shutdown');
+				try Eyelink('Shutdown'); end
 				try close(s); end
-				sca;
 				try close(me); end
+				sca;
 				clear s o
 				me.error = ME;
 				me.salutation(ME.message);
@@ -1016,19 +909,6 @@ classdef eyelinkManager < eyetrackerCore
 			end
 		end
 
-		function trackerFlip(me, varargin)
-
-		end
-
-		function trackerDrawEyePosition(me)
-
-		end
-
-		function trackerDrawEyePositions(me)
-
-		end
-		
-	
 	end
 	
 	

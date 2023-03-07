@@ -1,11 +1,7 @@
 % ========================================================================
-classdef tobiiManager < eyetrackerCore
-%> @class tobiiManager
-%> @brief Manages the Tobii eyetrackers
-%>
-%> tobiiManager wraps around the Titta toolbox functions
-%> offering a interface consistent with eyelinkManager, offering
-%> methods to check and change fixation windows gaze contingent tasks easily.
+classdef iRecManager < eyetrackerCore
+%> @class irecManager
+%> @brief Manages the iRec eyetrackers
 %>
 %> The core methods enable the user to test for common behavioural eye
 %> tracking tasks with single commands. For example, to initiate a task we
@@ -33,29 +29,25 @@ classdef tobiiManager < eyetrackerCore
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> type of eyetracker
-		type							= 'tobii'
+		type							= 'iRec'
 	end
 
 	properties
 		%> setup and calibration values
-		calibration		= struct('model','Tobii Pro Spectrum','mode','human',...
-							'stimulus','animated','calPositions',[],'valPositions',[],...
-							'manual', false, 'autoPace',true,'paceDuration',0.8,'eyeUsed','both',...
-							'movie',[])
+		calibration		= struct('ip','127.0.0.1','port','35000',...
+						'stimulus','animated','CalPositions',[],'valPositions',[],...
+						'manual', false, 'movie', [])
 		%> options for online smoothing of peeked data {'median','heuristic','savitsky-golay'}
 		smoothing		= struct('nSamples',8,'method','median','window',3,...
-							'eyes','both')
+						'eyes','both')
 	end
 	
 	properties (Hidden = true)
-		%> Titta settings structure
-		settings struct					= []
-		%> Titta class object
-		tobii
-		%> 
-		sampletime						= []
+		connection
 		%> should we close it after calibration
 		closeSecondScreen logical		= false
+		%> size to draw eye position on screen
+		eyeSize double					= 6
 	end
 	
 	properties (SetAccess = protected, GetAccess = public, Dependent = true)
@@ -72,7 +64,7 @@ classdef tobiiManager < eyetrackerCore
 		sampleTemplate struct			= struct('raw',[],'time',NaN,'timeD',NaN,'gx',NaN,'gy',NaN,...
 											'pa',NaN,'valid',false)
 		%> allowed properties passed to object upon construction
-		allowedProperties	= {'calibration', 'settings','useOperatorScreen','smoothing'}
+		allowedProperties	= {'calibration', 'smoothing'}
 	end
 	
 	%=======================================================================
@@ -80,33 +72,18 @@ classdef tobiiManager < eyetrackerCore
 	%=======================================================================
 	
 		% ===================================================================
-		function me = tobiiManager(varargin)
-		%> @fn tobiiManager
+		function me = iRecManager(varargin)
+		%> @fn iRecManager
 		%>
-		%> tobiiManager CONSTRUCTOR
+		%> iRecManager CONSTRUCTOR
 		%>
 		%> @param varargin can be passed as a structure or name,arg pairs
 		%> @return instance of the class.
 		% ===================================================================
-			args = optickaCore.addDefaults(varargin,struct('name','Tobii','sampleRate',300));
+			args = optickaCore.addDefaults(varargin,struct('name','iRec','sampleRate',500));
 			me=me@eyetrackerCore(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
 			
-			try % is tobii working?
-				assert(exist('Titta','class')==8,'TOBIIMANAGER:NO-TITTA','Cannot find Titta toolbox, please install instead of Tobii SDK; exiting...');
-				initTracker(me);
-				assert(isa(me.tobii,'Titta'),'TOBIIMANAGER:INIT-ERROR','Cannot Initialise...')
-			catch ME
-				ME.getReport
-				fprintf('!!! Error initialising Tobii: %s\n\t going into Dummy mode...\n',ME.message);
-				me.tobii = [];
-				me.isDummy = true;
-			end
-			if contains(me.calibration.model,{'Tobii 4C','IS4_Large_Peripheral'})
-				me.model = 'IS4_Large_Peripheral';
-				me.sampleRate = 90; 
-				me.calibration.mode = 'Default';
-			end
 			p = fileparts(me.saveFile);
 			if isempty(p)
 				me.saveFile = [me.paths.savedData filesep me.saveFile];
@@ -151,7 +128,7 @@ classdef tobiiManager < eyetrackerCore
 				me.tobii			= me.tobii.setDummyMode();
 			end
 			
-			me.settings								= Titta.getDefaults(me.calibration.model);
+			me.settings								= Titta.getDefaults(me.model);
 			if ~contains(me.calibration.model,{'Tobii 4C','IS4_Large_Peripheral'})
 				me.settings.freq					= me.sampleRate;
 				me.settings.trackingMode			= me.calibration.mode;
@@ -172,7 +149,7 @@ classdef tobiiManager < eyetrackerCore
 				me.calStim.fixBackColor				= 0;
 				me.calStim.fixFrontColor			= 255;
 				me.settings.cal.drawFunction		= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);
-				if me.calibration.manual;me.settings.mancal.drawFunction	= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);end
+				if me.manualCalibration;me.settings.mancal.drawFunction	= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);end
 			elseif strcmpi(me.calibration.stimulus,'movie')
 				me.calStim							= tittaCalMovieStimulus();
 				me.calStim.moveTime					= 0.75;
@@ -204,7 +181,7 @@ classdef tobiiManager < eyetrackerCore
 			me.settings.cal.pointNotifyFunction	= @tittaCalCallback;
 			me.settings.val.pointNotifyFunction	= @tittaCalCallback;
 			
-			if me.calibration.manual
+			if me.manualCalibration
 				me.settings.UI.mancal.bgColor		= floor(me.screen.backgroundColour*255);
 				me.settings.mancal.bgColor			= floor(me.screen.backgroundColour*255);
 				me.settings.mancal.cal.pointPos		= me.calibration.calPositions;
@@ -273,7 +250,7 @@ classdef tobiiManager < eyetrackerCore
 				warning('Eyetracker not connected, cannot calibrate!');
 				return
 			end
-			if me.useOperatorScreen && ~me.closeSecondScreen && ~me.operatorScreen.isOpen; open(me.operatorScreen); end
+			if me.useOperatorScreen && ~me.closeSecondScreen; open(me.operatorScreen); end
 			if me.isDummy
 				disp('--->>> Tobii Dummy Mode: calibration skipped')
 				return;
@@ -370,7 +347,7 @@ classdef tobiiManager < eyetrackerCore
 					warning('Can''t START buffer() timeSync recording!!!')
 				end
 			end
-			me.isRecording = true;
+			me.isRecording_ = me.isRecording;
 		end
 		
 		% ===================================================================
@@ -424,7 +401,7 @@ classdef tobiiManager < eyetrackerCore
 					warning('Can''t STOP buffer() GAZE recording!!!')
 				end
 			end
-			me.isrecording = false;
+			me.isRecording_ = me.isRecording;
 		end
 
 		% ===================================================================
@@ -446,8 +423,8 @@ classdef tobiiManager < eyetrackerCore
 				sample.gy		= my;
 				sample.pa		= me.pupil;
 				sample.time		= GetSecs * 1e6;
-				xy				= me.toDegrees([sample.gx sample.gy]);
-				me.x = xy(1); me.y = xy(2);
+				me.x			= me.toDegrees(sample.gx,'x');
+				me.y			= me.toDegrees(sample.gy,'y');
 				me.xAll			= [me.xAll me.x];
 				me.yAll			= [me.yAll me.y];
 				me.pupilAll		= [me.pupilAll me.pupil];
@@ -483,8 +460,9 @@ classdef tobiiManager < eyetrackerCore
 					sample.gx	= xy(1);
 					sample.gy	= xy(2);
 					sample.pa	= nanmean(td.left.pupil.diameter);
-					xyd	= me.toDegrees(xy);
-					me.x = xyd(1); me.y = xyd(2);
+					xy			= me.toDegrees(xy);
+					me.x		= xy(1);
+					me.y		= xy(2);
 					me.pupil	= sample.pa;
 					%if me.verbose;fprintf('>>X: %2.2f | Y: %2.2f | P: %.2f\n',me.x,me.y,me.pupil);end
 				else
@@ -594,7 +572,7 @@ classdef tobiiManager < eyetrackerCore
 				stopRecording(me);
 				out = me.tobii.deInit();
 				me.isConnected = false;
-				me.isRecording = false;
+				me.isRecording_ = false;
 				resetFixation(me);
 				if me.secondScreen && ~isempty(me.operatorScreen) && isa(me.operatorScreen,'screenManager')
 					me.operatorScreen.close;
@@ -603,7 +581,7 @@ classdef tobiiManager < eyetrackerCore
 				me.salutation('Close Method','Couldn''t stop recording, forcing shutdown...',true)
 				me.tobii.deInit();
 				me.isConnected = false;
-				me.isRecording = false;
+				me.isRecording_ = false;
 				resetFixation(me);
 				if me.secondScreen && ~isempty(me.operatorScreen) && isa(me.operatorScreen,'screenManager')
 					me.operatorScreen.close;
@@ -707,14 +685,13 @@ classdef tobiiManager < eyetrackerCore
 		%>
 		% ===================================================================
 		function runDemo(me,forcescreen)
-			PsychDefaultSetup(2);
-			stopKey				= KbName('q');
+			KbName('UnifyKeyNames')
+			stopkey				= KbName('q');
 			upKey				= KbName('uparrow');
 			downKey				= KbName('downarrow');
 			leftKey				= KbName('leftarrow');
 			rightKey			= KbName('rightarrow');
-			calibKey			= KbName('c');
-			RestrictKeysForKbCheck([stopKey upKey downKey leftKey rightKey calibKey]);
+			calibkey			= KbName('c');
 			ofixation			= me.fixation; 
 			me.sampletime		= [];
 			osmoothing			= me.smoothing;
@@ -729,15 +706,15 @@ classdef tobiiManager < eyetrackerCore
 				if isa(me.screen,'screenManager') && ~isempty(me.screen)
 					s = me.screen;
 				else
-					s = screenManager('blend',true,'pixelsPerCm',36,'distance',60,'disableSyncTests',true);
+					s = screenManager('blend',true,'pixelsPerCm',36,'distance',60);
 				end
-				
+				s.disableSyncTests		= false;
 				if exist('forcescreen','var'); s.screen = forcescreen; end
 				s.backgroundColour		= [0.5 0.5 0.5 0];
 				if length(Screen('Screens'))>1 && s.screen - 1 >= 0
 					useS2				= true;
+					s2.pixelsPerCm		= 45;
 					s2					= screenManager;
-					s2.pixelsPerCm		= 20;
 					s2.screen			= s.screen - 1;
 					s2.backgroundColour	= s.backgroundColour;
 					[w,h]				= Screen('WindowSize',s2.screen);
@@ -745,7 +722,6 @@ classdef tobiiManager < eyetrackerCore
 					s2.bitDepth			= '8bit';
 					s2.blend			= true;
 					s2.disableSyncTests	= true;
-					s2.specialFlags		= kPsychGUIWindow;
 				end
 			
 				sv=open(s); %open our screen
@@ -773,7 +749,7 @@ classdef tobiiManager < eyetrackerCore
 				setup(f,s); %setup our stimulus with open screen
 				o.xPositionOut = me.fixation.X;
 				o.yPositionOut = me.fixation.Y;
-				f.alpha;
+				f.alpha
 				f.xPositionOut = me.fixation.X;
 				f.xPositionOut = me.fixation.X;
 				
@@ -811,7 +787,7 @@ classdef tobiiManager < eyetrackerCore
 				drawPhotoDiodeSquare(s,[0 0 0 1]);
 				flip(s);
 				if useS2;flip(s2);end
-				ListenChar(-1); % ListenChar(0);
+				ListenChar(-1);
 				update(o); %make sure stimuli are set back to their start state
 				update(f);
 				WaitSecs('YieldSecs',0.5);
@@ -838,14 +814,13 @@ classdef tobiiManager < eyetrackerCore
 								me.smoothing.method, me.smoothing.eyes, sprintf('%1.1f ',me.fixation.radius), ...
 								me.fixTotal,me.fixLength,me.isExclusion,me.isInitFail);
 							Screen('DrawText', s.win, txt, 10, 10,[1 1 1]);
-							drawEyePosition(me);
+							drawEyePosition(me,true);
 							%psn{trialn} = me.tobii.buffer.peekN('positioning',1);
 						end
 						if useS2
 							drawGrid(s2);
 							trackerDrawExclusion(me);
 							trackerDrawFixation(me);
-							trackerDrawEyePosition(me);
 						end
 						finishDrawing(s);
 						animate(o);
@@ -855,8 +830,8 @@ classdef tobiiManager < eyetrackerCore
 						if useS2; flip(s2,[],[],2); end
 						[keyDown, ~, keyCode] = KbCheck(-1);
 						if keyDown
-							if keyCode(stopKey); endExp = 1; break;
-							elseif keyCode(calibKey); me.doCalibration;
+							if keyCode(stopkey); endExp = 1; break;
+							elseif keyCode(calibkey); me.doCalibration;
 							elseif keyCode(upKey); me.smoothing.nSamples = me.smoothing.nSamples + 1; if me.smoothing.nSamples > 400; me.smoothing.nSamples=400;end
 							elseif keyCode(downKey); me.smoothing.nSamples = me.smoothing.nSamples - 1; if me.smoothing.nSamples < 1; me.smoothing.nSamples=1;end
 							elseif keyCode(leftKey); m=m+1; if m>5;m=1;end; me.smoothing.method=methods{m};
@@ -901,7 +876,7 @@ classdef tobiiManager < eyetrackerCore
 					end
 				end
 				stopRecording(me);
-				ListenChar(0); Priority(0); ShowCursor; RestrictKeysForKbCheck([]);
+				ListenChar(0); Priority(0); ShowCursor;
 				try close(s); close(s2);end %#ok<*TRYNC>
 				saveData(me);
 				assignin('base','psn',psn);
@@ -920,7 +895,7 @@ classdef tobiiManager < eyetrackerCore
 				me.smoothing = osmoothing;
 				me.exclusionZone = oldexc;
 				me.fixInit = oldfixinit;
-				ListenChar(0); Priority(0); ShowCursor; RestrictKeysForKbCheck([]);
+				ListenChar(0);Priority(0);ShowCursor;
 				getReport(ME)
 				close(s);
 				sca;
