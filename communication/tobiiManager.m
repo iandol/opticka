@@ -423,7 +423,7 @@ classdef tobiiManager < eyetrackerCore
 					warning('Can''t STOP buffer() GAZE recording!!!')
 				end
 			end
-			me.isrecording = false;
+			me.isRecording = false;
 		end
 
 		% ===================================================================
