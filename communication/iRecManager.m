@@ -30,11 +30,15 @@ classdef iRecManager < eyetrackerCore
 	properties (SetAccess = protected, GetAccess = public)
 		%> type of eyetracker
 		type							= 'iRec'
+		%> TCP interface
+		tcp
+		%> udp interface
+		udp
 	end
 
 	properties
 		%> setup and calibration values
-		calibration		= struct('ip','127.0.0.1','port','35000',...
+		calibration		= struct('ip','127.0.0.1','udpport','35000','tcpport','35001',...
 						'stimulus','animated','CalPositions',[],'valPositions',[],...
 						'manual', false, 'movie', [])
 		%> options for online smoothing of peeked data {'median','heuristic','savitsky-golay'}
@@ -43,11 +47,7 @@ classdef iRecManager < eyetrackerCore
 	end
 	
 	properties (Hidden = true)
-		connection
-		%> should we close it after calibration
-		closeSecondScreen logical		= false
-		%> size to draw eye position on screen
-		eyeSize double					= 6
+
 	end
 	
 	properties (SetAccess = protected, GetAccess = public, Dependent = true)
@@ -91,7 +91,7 @@ classdef iRecManager < eyetrackerCore
 		end
 		
 		% ===================================================================
-		%> @brief initialise the tobii.
+		%> @brief initialise 
 		%>
 		%> @param sM - screenManager object we will use
 		%> @param sM2 - a second screenManager used during calibration
@@ -102,13 +102,16 @@ classdef iRecManager < eyetrackerCore
 					me.screen		= screenManager();
 				end
 			else
-				if ~isempty(me.screen) && isa(me.screen,'screenManager') && me.screen.isOpen && ~strcmpi(sM.uuid,me.screen.uuid)
-					%close(me.screen); 
-				end
 				me.screen			= sM;
 			end
+			me.ppd_									= me.screen.ppd;
+			if me.screen.isOpen == true
+				me.win								= me.screen.win;
+			end
 			if me.useOperatorScreen && ~exist('sM2','var')
-				sM2 = screenManager('windowed',[0 0 1000 1000],'pixelsPerCm',25,'backgroundColour',sM.backgroundColour,'specialFlags', kPsychGUIWindow);
+				sM2 = screenManager('windowed',[0 0 1000 1000],'pixelsPerCm',25,...
+					'disableSyncTests',true,'backgroundColour',sM.backgroundColour,...
+					'specialFlags', kPsychGUIWindow);
 			end
 			if ~exist('sM2','var') || ~isa(sM2,'screenManager')
 				me.secondScreen		= false;
@@ -116,106 +119,23 @@ classdef iRecManager < eyetrackerCore
 				me.operatorScreen	= sM2;
 				me.secondScreen		= true;
 			end
-			if contains(me.calibration.model,{'Tobii 4C','IS4_Large_Peripheral'})
-				me.calibration.model = 'IS4_Large_Peripheral';
-				me.sampleRate = 90; 
-				me.calibration.mode = 'Default';
-			end
-			if ~isa(me.tobii, 'Titta') || isempty(me.tobii); initTracker(me); end
-			assert(isa(me.tobii,'Titta'),'TOBIIMANAGER:INIT-ERROR','Cannot Initialise...')
 			
 			if me.isDummy
-				me.tobii			= me.tobii.setDummyMode();
-			end
-			
-			me.settings								= Titta.getDefaults(me.model);
-			if ~contains(me.calibration.model,{'Tobii 4C','IS4_Large_Peripheral'})
-				me.settings.freq					= me.sampleRate;
-				me.settings.trackingMode			= me.calibration.mode;
-			end
-			me.settings.calibrateEye				= me.calibration.eyeUsed;
-			me.settings.cal.bgColor					= floor(me.screen.backgroundColour*255);
-			me.settings.UI.setup.bgColor			= me.settings.cal.bgColor;
-			me.settings.UI.setup.showFixPointsToSubject		= false;
-			me.settings.UI.setup.showHeadToSubject			= true;   
-			me.settings.UI.setup.showInstructionToSubject	= true;
-			me.settings.UI.setup.eyeClr						= 255;
-			if strcmpi(me.calibration.stimulus,'animated')
-				me.calStim							= AnimatedCalibrationDisplay();
-				me.calStim.moveTime					= 0.75;
-				me.calStim.oscillatePeriod			= 1;
-				me.calStim.blinkCount				= 4;
-				me.calStim.bgColor					= me.settings.cal.bgColor;
-				me.calStim.fixBackColor				= 0;
-				me.calStim.fixFrontColor			= 255;
-				me.settings.cal.drawFunction		= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);
-				if me.manualCalibration;me.settings.mancal.drawFunction	= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);end
-			elseif strcmpi(me.calibration.stimulus,'movie')
-				me.calStim							= tittaCalMovieStimulus();
-				me.calStim.moveTime					= 0.75;
-				me.calStim.oscillatePeriod			= 1;
-				me.calStim.blinkCount				= 3;
-				if isempty(me.calibration.movie)
-					me.calibration.movie			= movieStimulus('size',4);
-				end
-				reset(me.calibration.movie);
-				setup(me.calibration.movie, me.screen);
-				me.calStim.initialise(me.calibration.movie);
-				me.settings.cal.drawFunction		= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);
-				if me.manualCalibration;me.settings.mancal.drawFunction	= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);end
-			end
-			me.settings.cal.autoPace				= me.calibration.autoPace;
-			me.settings.cal.paceDuration			= me.calibration.paceDuration;
-			if me.calibration.autoPace
-				me.settings.cal.doRandomPointOrder	= true;
+				me.salutation('Initialise', 'Running in Dummy Mode', true);
 			else
-				me.settings.cal.doRandomPointOrder	= false;
-			end
-			if ~isempty(me.calibration.calPositions)
-				me.settings.cal.pointPos			= me.calPositions;
-			end
-			if ~isempty(me.calibration.valPositions)
-				me.settings.val.pointPos			= me.valPositions;
-			end
-			
-			me.settings.cal.pointNotifyFunction	= @tittaCalCallback;
-			me.settings.val.pointNotifyFunction	= @tittaCalCallback;
-			
-			if me.manualCalibration
-				me.settings.UI.mancal.bgColor		= floor(me.screen.backgroundColour*255);
-				me.settings.mancal.bgColor			= floor(me.screen.backgroundColour*255);
-				me.settings.mancal.cal.pointPos		= me.calibration.calPositions;
-				me.settings.mancal.val.pointPos		= me.calibration.valPositions;
-				me.settings.mancal.cal.paceDuration	= me.calibration.paceDuration;
-				me.settings.mancal.val.paceDuration	= me.calibration.paceDuration;
-				me.settings.UI.mancal.showHead		= true;
-				me.settings.UI.mancal.headScale		= 0.4;
-				me.settings.mancal.cal.pointNotifyFunction	= @tittaCalCallback;
-				me.settings.mancal.val.pointNotifyFunction	= @tittaCalCallback;
-			end
-			updateDefaults(me);
-			me.tobii.init();
-			me.isConnected							= true;
-			me.systemTime							= me.tobii.getTimeAsSystemTime;
-			me.ppd_									= me.screen.ppd;
-			if me.screen.isOpen == true
-				me.win								= me.screen.win;
-			end
-			
-			if ~me.isDummy
+				me.tcp = dataConnection('rAddress', me.calibration.ip,'rPort',...
+					me.calibration.tcpport);
+				me.udp = dataConnection('rAddress', me.calibration.ip,'rPort',...
+					me.calibration.udpport);
+
 				me.salutation('Initialise', ...
-					sprintf('Running on a %s (%s) @ %iHz mode:%s | Screen %i %i x %i @ %iHz', ...
-					me.tobii.systemInfo.model, ...
-					me.tobii.systemInfo.deviceName,...
-					me.tobii.systemInfo.frequency,...
-					me.tobii.systemInfo.trackingMode,...
+					sprintf('Running on a iRec | Screen %i %i x %i @ %iHz', ...
 					me.screen.screen,...
 					me.screen.winRect(3),...
 					me.screen.winRect(4),...
 					me.screen.screenVals.fps),true);
-			else
-				me.salutation('Initialise', 'Running in Dummy Mode', true);
 			end
+
 			success = true;
 		end
 		
@@ -224,9 +144,7 @@ classdef iRecManager < eyetrackerCore
 		%>
 		% ===================================================================
 		function updateDefaults(me)
-			if isa(me.tobii, 'Titta')
-				me.tobii.setOptions(me.settings);
-			end
+			
 		end
 
 		% ===================================================================
@@ -234,10 +152,7 @@ classdef iRecManager < eyetrackerCore
 		%>
 		% ===================================================================
 		function connected = checkConnection(me)
-			connected = false;
-			if isa(me.tobii,'Titta') && me.tobii.isInitialized
-				connected = true;
-			end
+			connected = me.isConnected;
 		end
 		
 		% ===================================================================

@@ -220,6 +220,17 @@ classdef eyetrackerCore < optickaCore
 			me=me@optickaCore(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedPropertiesBase);
 		end
+
+		% ===================================================================
+		%> @brief reset all fixation/exclusion data
+		%>
+		% ===================================================================
+		function resetAll(me)
+			resetExclusionZones(me);
+			resetFixInit(me);
+			resetOffset(me);
+			resetFixation(me,true);
+		end
 		
 		% ===================================================================
 		%> @brief reset the fixation counters ready for a new trial
@@ -279,18 +290,18 @@ classdef eyetrackerCore < optickaCore
 		%> @brief reset the fixation offset to 0
 		%>
 		% ===================================================================
-		function resetOffset(me)
-			me.offset.X = 0;
-			me.offset.Y = 0;
+		function resetFixInit(me)
+			me.fixInit.X = [];
+			me.fixInit.Y = [];
 		end
-		
+
 		% ===================================================================
 		%> @brief reset the fixation offset to 0
 		%>
 		% ===================================================================
-		function resetFixInit(me)
-			me.fixInit.X = [];
-			me.fixInit.Y = [];
+		function resetOffset(me)
+			me.offset.X = 0;
+			me.offset.Y = 0;
 		end
 		
 		% ===================================================================
@@ -865,22 +876,6 @@ classdef eyetrackerCore < optickaCore
 			if ~me.isConnected || ~me.operatorScreen.isOpen; return; end
 			if ~exist('dontclear','var');dontclear = 1; end
 			me.operatorScreen.flip([], dontclear, 2);
-		end
-		
-		% ===================================================================
-		%> @brief automagically turn pixels to degrees
-		%>
-		% ===================================================================
-		function set.x(me,in)
-			me.x = toDegrees(me,in,'x'); %#ok<*MCSUP>
-		end
-		
-		% ===================================================================
-		%> @brief automagically turn pixels to degrees
-		%>
-		% ===================================================================
-		function set.y(me,in)
-			me.y = toDegrees(me,in,'y');
 		end
 		
 	end%-------------------------END PUBLIC METHODS--------------------------------%

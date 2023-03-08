@@ -694,7 +694,7 @@ classdef runExperiment < optickaCore
 			me.taskLog					= timeLogger();
 			tL							= me.taskLog; %short handle to log
 			tL.name						= me.name;
-			if me.logFrames;tL.preAllocate(me.screenVals.fps*60*60);end
+			if me.logFrames;tL.preAllocate(me.screenVals.fps*60*240);end
 			
 			%-----behavioural record
 			me.behaviouralRecord		= behaviouralRecord('name',me.name); %#ok<*CPROP>
@@ -836,7 +836,7 @@ classdef runExperiment < optickaCore
 					if eT.secondScreen; trackerFlip(eT,1); end
 				end
 				update(stims); %make sure all stimuli are set back to their start state
-				if ismethod(me,'resetLog'); resetLog(me); end
+				resetLog(stims);
 				if ~isempty(me.eyetracker.device)
 					resetAll(eT);
 					if eT.secondScreen; trackerClearScreen(eT); trackerFlip(eT,0); end 
@@ -1544,8 +1544,9 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 			if me.isRunning
 				if ~exist('tag','var'); tag = '#'; end
-				t = sprintf('===>%s:%s\n',tag,me.infoText);
+				t = sprintf('===>%s:%s %s-UUID:%s',tag,infoText(me),me.stateMachine.currentName,me.stateMachine.currentUUID);
 				fprintf('%s\n',t);
+				me.behaviouralRecord.info = t;
 				if me.isRunTask
 					me.taskLog.addMessage([],[],t);
 				else
@@ -1721,7 +1722,7 @@ classdef runExperiment < optickaCore
 					end
 				end
 				me.variableInfo = t;
-				me.behaviouralRecord.info = t;
+				me.behaviouralRecord.info = [me.behaviouralRecord.info t];
 				me.lastIndex = index;
 			end
 		end

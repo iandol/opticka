@@ -255,6 +255,34 @@ classdef metaStimulus < optickaCore
 			end
 			
 		end
+
+		% ===================================================================
+		%> @brief reset log wrapper
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function resetLog(me)
+
+			for i = 1:me.n
+				if ismethod(me.stimuli{i},'resetLog');resetLog(me.stimuli{i});end
+			end
+			
+		end
+
+		% ===================================================================
+		%> @brief add tag wrapper
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function addTag(me, tag)
+			if ~exist('tag','var'); return; end
+			for i = 1:me.n
+				if ismethod(me.stimuli{i},'addTag');addTag(me.stimuli{i},tag);end
+			end
+
+		end
 		
 		% ===================================================================
 		%> @brief reset wrapper

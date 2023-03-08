@@ -516,13 +516,15 @@ try
 	figure('Position',[0 0 1500 1000],'Name','Performance Results');
 	subplot(2,3,1);
 	hold on;
-	plot(diff(ts) * 1e3,'k.','MarkerSize',10);
+	d = diff(ts) * 1e3;
+	plot(d,'k.','MarkerSize',10);
 	ni=numifis;
 	if (numifis==0)
 		ni=1;
 	end
 	plot(ones(1,n)*ifi*ni*1000);
 	title('Delta between VBL values');
+	ylim([min(d)-2 max(d)+2])
 	ylabel('Time (ms)');
 	hold off; box on; grid on;
 	
@@ -575,7 +577,7 @@ try
 		ax = plotyy(1:length(a), a, 1:length(b), b);
 		axis tight
 		%set(ax,'YScale','log')
-		title({'GETWINDOWINFO:', ['Max-VBLCount:' num2str(max(a)) ' | Mean-LastVBLTime:' num2str(mean(diff(b)))]});
+		title('Getwindowinfo');
 		assignin('base','VBLCount',a);
 		assignin('base','LastVBLTime',b);
 		drawnow;

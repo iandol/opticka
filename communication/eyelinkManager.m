@@ -137,7 +137,7 @@ classdef eyelinkManager < eyetrackerCore
 			fn = fieldnames(me.calibration);
 			for i = 1:length(fn)
 				if isfield(me.defaults,fn{i})
-					me.defaults.(fn{i}) = me.modify.(fn{i});
+					me.defaults.(fn{i}) = me.calibration.(fn{i});
 				end
 			end
 			
@@ -365,7 +365,8 @@ classdef eyelinkManager < eyetrackerCore
 						me.pupil = 0;
 						me.isBlink = true;
 					else
-						[me.x, me.y] = toDegrees(me, [me.currentSample.gx(me.eyeUsed+1) me.currentSample.gy(me.eyeUsed+1)]);
+						xy = toDegrees(me, [me.currentSample.gx(me.eyeUsed+1) me.currentSample.gy(me.eyeUsed+1)]);
+						me.x = xy(1); me.y = xy(2);
 						me.pupil = me.currentSample.pa(me.eyeUsed+1);
 						me.xAll = [me.xAll me.x];
 						me.yAll = [me.yAll me.y];
@@ -383,7 +384,8 @@ classdef eyelinkManager < eyetrackerCore
 					w = [];
 				end
 				[x, y] = GetMouse(w);
-				[me.x, me.y] = toDegrees(me, [x y]);
+				xy = toDegrees(me, [x y]);
+				me.x = xy(1); me.y = xy(2);
 				me.pupil = 800 + randi(20);
 				me.currentSample.gx = me.x;
 				me.currentSample.gy = me.y;
@@ -681,6 +683,7 @@ classdef eyelinkManager < eyetrackerCore
 			try
 				%open screen manager and dots stimulus
 				s = screenManager('debug',true,'pixelsPerCm',27,'distance',66);
+				s.font.TextSize = 18;
 				if exist('forcescreen','var'); s.screen = forcescreen; end
 				s.backgroundColour = [0.5 0.5 0.5 0]; %s.windowed = [0 0 900 900];
 				o = dotsStimulus('size',me.fixation.radius(1)*2,'speed',2,'mask',true,'density',50); %test stimulus
@@ -694,7 +697,7 @@ classdef eyelinkManager < eyetrackerCore
 					error('Could not connect to Eyelink or use Dummy mode...')
 				end
 				%ListenChar(-1); % capture the keyboard settings
-				setup(me); % setup + calibrate the eyelink
+				trackerSetup(me); % setup + calibrate the eyelink
 				
 				% define our fixation widow and stimulus for first trial
 				% x,y,inittime,fixtime,radius,strict
@@ -717,8 +720,6 @@ classdef eyelinkManager < eyetrackerCore
 				trackerDrawFixation(me); % draw fixation window on tracker
 				trackerDrawStimuli(me,ts); % draw stimulus on tracker
 				
-				Screen('TextSize', s.win, 18);
-				HideCursor(s.win);
 				Priority(MaxPriority(s.win));
 				blockLoop = true;
 				a = 1;
@@ -732,8 +733,8 @@ classdef eyelinkManager < eyetrackerCore
 					correct = false;
 					% !!! these messages define the trail start in the EDF for
 					% offline analysis
-					edfMessage(me,'V_RT MESSAGE END_FIX END_RT');
-					edfMessage(me,['TRIALID ' num2str(a)]);
+					trackerMessage(me,'V_RT MESSAGE END_FIX END_RT');
+					trackerMessage(me,['TRIALID ' num2str(a)]);
 					% start the eyelink recording data for this trail
 					startRecording(me);
 					% this draws the text to the tracker info box
@@ -783,15 +784,15 @@ classdef eyelinkManager < eyetrackerCore
 							if keyCode(offsetkey); driftOffset(me); break; end
 						end
 						% send a message for the EDF after 60 frames
-						if b == 60; edfMessage(me,'END_FIX');end
+						if b == 60; trackerMessage(me,'END_FIX');end
 						b=b+1;
 					end
 					% tell EDF end of reaction time portion
-					edfMessage(me,'END_RT');
+					trackerMessage(me,'END_RT');
 					if correct
-						edfMessage(me,'TRIAL_RESULT 1');
+						trackerMessage(me,'TRIAL_RESULT 1');
 					else
-						edfMessage(me,'TRIAL_RESULT 0');
+						trackerMessage(me,'TRIAL_RESULT 0');
 					end
 					% stop recording data
 					stopRecording(me);
@@ -898,7 +899,7 @@ classdef eyelinkManager < eyetrackerCore
 		end
 		
 		% ===================================================================
-		%> @brief send message to store in EDF data
+		%> @brief send message to store in EDF data, USE trackerMessage
 		%>
 		%>
 		% ===================================================================

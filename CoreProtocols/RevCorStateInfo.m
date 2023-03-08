@@ -43,7 +43,8 @@ tS.BREAKFIX					= -1;		%==the code to send eyetracker for break fix trials
 tS.INCORRECT				= -5;		%==the code to send eyetracker for incorrect trials
 
 %=================================================================
-%----------------Debug logging to command window------------------
+%----------------Debug logging to command window------------------ging the behaviour of the protocol easier. tS
+% is just a struct(), so you c
 % uncomment each line to get specific verbose logging from each of these
 % components; you can also set verbose in the opticka GUI to enable all of
 % these…
@@ -329,12 +330,13 @@ maintainFixFn = {
 	% otherwise 'breakfix' is returned and the state machine will jump to the
 	% breakfix state. If neither condition matches, then the state table below
 	% defines that after 5 seconds we will switch to the incorrect state.
-	@()testSearchHoldFixation(eT,'correct','breakfix'); 
+	@()testSearchHoldFixation(eT, 'correct', 'breakfix');
 };
 
 %as we exit stim presentation state
 stimExitFn = {
-	@()sendStrobe(io,255);
+	@()sendStrobe(io, 255);
+	@()addTag(stims{1}, sM.currentUUID); % this adds stateMachine UUID to revcor stimulus frameLog
 };
 
 %========================================================
@@ -359,13 +361,13 @@ correctEntryFn = {
 
 %--------------------correct stimulus
 correctFn = {
-	@()drawPhotoDiode(s,[0 0 0]);
+	@()drawPhotoDiode(s, [0 0 0]);
 };
 
 %--------------------when we exit the correct state
 correctExitFn = {
 	@()updatePlot(bR, me); %update our behavioural record, MUST be done before we update variables
-	@()updateTask(me,tS.CORRECT); %make sure our taskSequence is moved to the next trial
+	@()updateTask(me, tS.CORRECT); %make sure our taskSequence is moved to the next trial
 	@()updateVariables(me); %randomise our stimuli, and set strobe value too
 	@()update(stims); %update our stimuli ready for display
 	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions
@@ -380,10 +382,10 @@ correctExitFn = {
 %========================================================INCORRECT
 %--------------------incorrect entry
 incEntryFn = { 
-	@()beep(aM,400,0.5,1);
-	@()trackerMessage(eT,'END_RT');
-	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.INCORRECT));
-	@()trackerDrawStatus(eT,'INCORRECT! :-(', stims.stimulusPositions, 0);
+	@()beep(aM, 400, 0.5, 1);
+	@()trackerMessage(eT, 'END_RT');
+	@()trackerMessage(eT, sprintf('TRIAL_RESULT %i', tS.INCORRECT));
+	@()trackerDrawStatus(eT, 'INCORRECT! :-(', stims.stimulusPositions, 0);
 	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()needEyeSample(me,false);

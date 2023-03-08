@@ -196,7 +196,7 @@ classdef revcorStimulus < baseStimulus
 		% ===================================================================
 		%> @brief Reset the stimulus back to a default state
 		%>
-		%> 
+		%> resetLog
 		% ===================================================================
 		function reset(me)
 			saveFrames(me);
@@ -220,6 +220,16 @@ classdef revcorStimulus < baseStimulus
 		function resetLog(me)
 			me.trialTick = 0;
 			me.frameLog = [];
+		end
+
+		% ===================================================================
+		%> @brief add a tag to the frameLog
+		%>
+		%> 
+		% ===================================================================
+		function addTag(me, tag)
+			if ~exist('tag','var'); return; end
+			try me.frameLog(me.trialTick).tag = tag; end
 		end
 		
 	end %---END PUBLIC METHODS---%
@@ -307,6 +317,7 @@ classdef revcorStimulus < baseStimulus
 			me.frameLog(me.trialTick).nStim = [];
 			me.frameLog(me.trialTick).tickInit = me.tick;
 			me.frameLog(me.trialTick).drawTickInit = me.drawTick;
+			me.frameLog(me.trialTick).tag = '';
 			texture = zeros(1, me.nStimuli);
 			for i = 1:me.nStimuli
 				texture(i) = Screen('MakeTexture', me.sM.win, mx(:,:,i));

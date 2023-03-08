@@ -739,7 +739,7 @@ classdef stateMachine < optickaCore
 		%>
 		% ===================================================================
 		function plotLogs(log,tin)
-			if ~exist('log','var') || isempty(log);warndlg('No log data yet...');return;end
+			if ~exist('log','var') || isempty(log); warndlg('No log data yet...');return;end
 			if ~exist('tin','var')
 				tout = ['State Machine with ' num2str(length(log)) ' states']; 
 			else

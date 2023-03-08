@@ -125,13 +125,12 @@ classdef tobiiManager < eyetrackerCore
 					me.screen		= screenManager();
 				end
 			else
-				if ~isempty(me.screen) && isa(me.screen,'screenManager') && me.screen.isOpen && ~strcmpi(sM.uuid,me.screen.uuid)
-					%close(me.screen); 
-				end
 				me.screen			= sM;
 			end
 			if me.useOperatorScreen && ~exist('sM2','var')
-				sM2 = screenManager('windowed',[0 0 1000 1000],'pixelsPerCm',25,'backgroundColour',sM.backgroundColour,'specialFlags', kPsychGUIWindow);
+				sM2 = screenManager('windowed',[0 0 1000 1000],'pixelsPerCm',25,...
+					'disableSyncTests',true,'backgroundColour',sM.backgroundColour,...
+					'specialFlags', kPsychGUIWindow);
 			end
 			if ~exist('sM2','var') || ~isa(sM2,'screenManager')
 				me.secondScreen		= false;
@@ -785,7 +784,7 @@ classdef tobiiManager < eyetrackerCore
 				% warm up
 				fprintf('\n===>>> Warming up the GPU, Eyetracker etc... <<<===\n')
 				Priority(MaxPriority(s.win));
-				HideCursor(s.win);
+				%HideCursor(s.win);
 				endExp = 0;
 				trialn = 1;
 				maxTrials = 10;
