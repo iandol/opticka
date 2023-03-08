@@ -126,6 +126,10 @@ classdef arduinoManager < optickaCore
 					me.deviceID = me.port;
 					me.isOpen = true;
 				end
+				for i = 1:length(me.availablePins)
+					pinMode(me,me.availablePins{i}, 'output');
+					digitalWrite(me,me.availablePins{i},0);
+				end
 				me.silentMode = false;
 			catch ME
 				me.silentMode = true; me.isOpen = false;
