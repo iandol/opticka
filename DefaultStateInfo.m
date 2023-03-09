@@ -541,7 +541,7 @@ stateInfoTmp = {
 %---------------------------------------------------------------------------------------------
 'pause'		'prefix'	inf		pauseEntryFn	{}				{}				pauseExitFn;
 %---------------------------------------------------------------------------------------------
-'prefix'	'fixate'	0.5		prefixEntryFn	prefixfn		{}				{};
+'prefix'	'fixate'	0.5		prefixEntryFn	prefixFn		{}				{};
 'fixate'	'incorrect'	10		fixEntryFn		fixFn			inFixFn			fixExitFn;
 'stimulus'	'incorrect'	10		stimEntryFn		stimFn			maintainFixFn	stimExitFn;
 'incorrect'	'timeout'	0.5		incEntryFn		incFn			{}				incExitFn;

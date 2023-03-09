@@ -969,7 +969,7 @@ classdef runExperiment < optickaCore
 					% just a backup sampled at the GPU FPS wrapped in the
 					% PTB loop.
 					if me.needSample; getSample(eT); end
-					if tS.recordEyePosition && me.useEyeLink
+					if tS.recordEyePosition && strcmp(me.eyetracker.device,'eyelink')
 						saveEyeInfo(me, sM, eT, tS);
 					end
 					
