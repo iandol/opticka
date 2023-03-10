@@ -1217,8 +1217,8 @@ classdef runExperiment < optickaCore
 				end
 			end
 				
-			me.computer=Screen('computer');
-			me.ptb=Screen('version');
+			try me.computer=Screen('computer'); end
+			try me.ptb=Screen('version'); end
 		
 			if ~isempty(me.screen); me.screenVals = me.screen.screenVals; end
 			

@@ -316,7 +316,7 @@ classdef opticka < optickaCore
 				for i=0:me.r.screen.maxScreen
 					s{i+1} = num2str(i);
 				end
-				if ~isdeployed || ~ismcc
+				if (~isdeployed || ~ismcc) && ~isempty(s)
 					me.ui.OKSelectScreen.Items = s;
 					me.ui.OKSelectScreen.Value = s{end};
 					clear s;
