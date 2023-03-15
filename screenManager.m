@@ -338,6 +338,7 @@ classdef screenManager < optickaCore
 		%> @param forceScreen force a particular screen number to open
 		%> @return sv structure of basic info from the opened screen
 		% ===================================================================
+			if me.isOpen; warning('Screen already open!');return; end
 			if me.isPTB == false
 				warning('No PTB found!')
 				sv = me.screenVals;

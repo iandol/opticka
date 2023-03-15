@@ -459,12 +459,13 @@ classdef eyetrackerCore < optickaCore
 			fixated = false; fixtime = false; searching = true; 
 			exclusion = false; window = []; fixinit = false;
 			
-			if isempty(me.currentSample); return; end
-			
 			if me.isExclusion || me.isInitFail
 				exclusion = me.isExclusion; fixinit = me.isInitFail; searching = false;
 				return; % we previously matched either rule, now cannot pass fixation until a reset.
 			end
+
+			if isempty(me.currentSample) || me.currentSample.valid == false; return; end
+
 			if me.fixInitStartTime == 0
 				me.fixInitStartTime = me.currentSample.time;
 				me.fixTotal = 0;
@@ -473,6 +474,7 @@ classdef eyetrackerCore < optickaCore
 			
 			% ---- add any offsets for following calculations
 			x = me.x - me.offset.X; y = me.y - me.offset.Y;
+			if isempty(x) || isempty(y); return; end
 			
 			% ---- test for exclusion zones first
 			if ~isempty(me.exclusionZone)

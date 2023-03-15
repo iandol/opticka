@@ -33,7 +33,7 @@ classdef tobiiManager < eyetrackerCore
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> type of eyetracker
-		type							= 'tobii'
+		type			= 'tobii'
 	end
 
 	properties
@@ -49,13 +49,13 @@ classdef tobiiManager < eyetrackerCore
 	
 	properties (Hidden = true)
 		%> Titta settings structure
-		settings struct					= []
+		settings struct	= []
 		%> Titta class object
 		tobii
 		%> 
-		sampletime						= []
+		sampletime		= []
 		%> should we close it after calibration
-		closeSecondScreen logical		= false
+		closeSecondScreen logical = false
 	end
 	
 	properties (SetAccess = protected, GetAccess = public, Dependent = true)
@@ -65,14 +65,14 @@ classdef tobiiManager < eyetrackerCore
 	
 	properties (SetAccess = protected, GetAccess = protected)
 		%> tracker time stamp
-		systemTime						= 0
+		systemTime		= 0
 		calibData
 		calStim
 		%> currentSample template
-		sampleTemplate struct			= struct('raw',[],'time',NaN,'timeD',NaN,'gx',NaN,'gy',NaN,...
-											'pa',NaN,'valid',false)
+		sampleTemplate struct	= struct('raw',[],'time',NaN,'timeD',NaN,'gx',NaN,'gy',NaN,...
+									'pa',NaN,'valid',false)
 		%> allowed properties passed to object upon construction
-		allowedProperties	= {'calibration', 'settings','useOperatorScreen','smoothing'}
+		allowedProperties = {'calibration', 'settings','useOperatorScreen','smoothing'}
 	end
 	
 	%=======================================================================

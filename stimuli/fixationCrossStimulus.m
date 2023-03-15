@@ -18,7 +18,7 @@ classdef fixationCrossStimulus < baseStimulus
 		lineWidth = 0.1
 		%> show background disk
 		showDisk = true
-		%> type can be "simple" or "flash"
+		%> type can be "simple", "pulse" or "flash"
 		type char				= 'simple'
 		%> time to flash on and off in seconds
 		flashTime double		= [0.25 0.1]
@@ -26,6 +26,11 @@ classdef fixationCrossStimulus < baseStimulus
 		flashOn logical			= true
 		%> colour for flash, empty to inherit from screen background with 0 alpha
 		flashColour = []
+		%> pulse frequency Hz
+		pulseFrequency = 2
+		%> pulse size range in %
+		pulseRange = 50
+
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -56,12 +61,17 @@ classdef fixationCrossStimulus < baseStimulus
 		flashBG						= [0.5 0.5 0.5]
 		%> ON flash colour, reset on setup
 		flashFG						= [1 1 1]
+		%> values for pulse animation
+		currentSize					= 0
+		pulseMod					= 0
+		pulseStep					= 0
+		pulsePosition				= 0
 		currentColour				= [1 1 1]
 		colourOutTemp				= [1 1 1]
 		colour2OutTemp				= [1 1 1]
-		allowedProperties={'showDisk', 'type', 'flashTime', 'flashOn', ...
+		allowedProperties = {'showDisk', 'type', 'flashTime', 'flashOn', ...
 			'flashColour', 'colour2', 'alpha2', 'lineWidth'}
-		ignoreProperties = {'flashSwitch','flashOn'}
+		ignoreProperties  = {'flashSwitch','flashOn'}
 	end
 	
 	%=======================================================================
@@ -80,7 +90,7 @@ classdef fixationCrossStimulus < baseStimulus
 		function me = fixationCrossStimulus(varargin)
 			args = optickaCore.addDefaults(varargin,...
 				struct('name','fix','colour',[1 1 1 0.75],'alpha', 0.75, ...
-				'size',0.8,'comment','colour/alpha apply to disk, colour2/alpha2 apply to cross'));
+				'size',0.8,'comment','colour&alpha apply to disk, colour2&alpha2 apply to cross'));
 			me=me@baseStimulus(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
 			
@@ -132,6 +142,9 @@ classdef fixationCrossStimulus < baseStimulus
 				end
 				setupFlash(me);
 			end
+
+			me.pulsePosition = 0;
+			me.pulseStep = (pi * (2*me.pulseFrequency)) / me.screenVals.fps;
 			
 			me.inSetup = false; me.isSetup = true;			
 			computePosition(me);
@@ -170,6 +183,8 @@ classdef fixationCrossStimulus < baseStimulus
 			end
 			function set_sizeOut(me,value)
 				me.sizeOut = value * me.ppd; %divide by 2 to get diameter
+				me.currentSize = me.sizeOut;
+				me.pulseMod = ((me.sizeOut/me.ppd) / 100) * (me.pulseRange/2);
 			end
 			function set_lineWidthOut(me,value)
 				me.lineWidthOut = value * me.ppd; %divide by 2 to get diameter
@@ -232,6 +247,9 @@ classdef fixationCrossStimulus < baseStimulus
 			me.colourOutTemp = [];
 			me.inSetup = false;
 			computePosition(me);
+			me.currentSize = me.sizeOut;
+			me.pulseMod = ((me.sizeOut/me.ppd) / 100) * (me.pulseRange/2);
+			me.pulsePosition = 0;
 			if me.doFlash; me.setupFlash; end
 		end
 		
@@ -243,10 +261,10 @@ classdef fixationCrossStimulus < baseStimulus
 		% ===================================================================
 		function draw(me)
 			if me.isVisible && me.tick >= me.delayTicks && me.tick < me.offTicks
-				if me.doFlash == false
-					if me.showDisk;Screen('gluDisk', me.sM.win, me.colourOut, me.xFinal,me.yFinal,me.sizeOut/2);end
-					Screen('FillRect', me.sM.win, me.colour2Out, CenterRectOnPointd([0 0 me.sizeOut me.lineWidthOut], me.xFinal,me.yFinal));
-					Screen('FillRect', me.sM.win, me.colour2Out, CenterRectOnPointd([0 0 me.lineWidthOut me.sizeOut], me.xFinal,me.yFinal));
+				if ~me.doFlash
+					if me.showDisk;Screen('gluDisk', me.sM.win, me.colourOut, me.xFinal,me.yFinal,me.currentSize/2);end
+					Screen('FillRect', me.sM.win, me.colour2Out, CenterRectOnPointd([0 0 me.currentSize me.lineWidthOut], me.xFinal,me.yFinal));
+					Screen('FillRect', me.sM.win, me.colour2Out, CenterRectOnPointd([0 0 me.lineWidthOut me.currentSize], me.xFinal,me.yFinal));
 					Screen('gluDisk', me.sM.win, me.colourOut, me.xFinal, me.yFinal, me.lineWidthOut);
 				else
 					if me.showDisk;Screen('gluDisk', me.sM.win, me.currentColour, me.xFinal,me.yFinal,me.sizeOut/2);end
@@ -289,6 +307,9 @@ classdef fixationCrossStimulus < baseStimulus
 							me.currentColour = me.flashBG;
 						end
 					end
+				elseif strcmp(me.type,'pulse')
+					me.currentSize = me.sizeOut + (sin(me.pulsePosition) * (me.pulseMod*me.ppd));
+					me.pulsePosition = me.pulsePosition + me.pulseStep;
 				end
 			end
 		end

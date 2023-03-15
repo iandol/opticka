@@ -210,10 +210,16 @@ classdef dataConnection < handle
 		%>
 		%> Close the ethernet connection
 		% ===================================================================
-		function status = close(me,type,force)
-			if ~exist('type','var');type = 'conn';end
-			if ~exist('force','var');force = true;end
-			if ischar(force);force = true;end
+		function status = close(me, type, force)
+			if ~exist('type','var')
+				if matches(me.type,'server') 
+					type = 'rconn';
+				else
+					type = 'conn';
+				end
+			end
+			if ~exist('force','var'); force = true; end
+			if ischar(force); force = true; end
 			status = 0;
 			
 			switch type
@@ -238,7 +244,6 @@ classdef dataConnection < handle
 							status = -1;
 							fprintf('Couldn''t close connection %i, perhaps closed?\n',me.(list)(i));
 						end
-						me.isOpen = false;
 					end
 				else
 					me.status = pnet(me.(name),'status');
@@ -249,9 +254,9 @@ classdef dataConnection < handle
 							pnet(me.(name), 'close');
 						end
 					end
-					me.isOpen = false;
-					me.conn = -1;
+					me.(name) = -1; me.(list) = [];
 				end
+				if me.conn == -1 && me.rconn == -1; me.isOpen = false; end
 			end
 		end
 		
@@ -262,8 +267,8 @@ classdef dataConnection < handle
 		% ===================================================================
 		function status = closeAll(me)
 			me.status = 0;
-			me.conn = -1;
-			me.rconn = -1;
+			me.conn = -1; me.rconn = -1;
+			me.connList = []; me.rconnList = []; 
 			try
 				pnet('closeall');
 				me.salutation('closeAll Method','Closed all PNet connections')
@@ -285,16 +290,23 @@ classdef dataConnection < handle
 		% ===================================================================
 		function hasData = checkData(me)
 			me.hasData = false;
+			if matches(me.type,'server') && me.rconn > -1
+				conn = me.rconn; 
+			elseif me.conn > -1
+				conn = me.conn;
+			else
+				return;
+			end
 			switch me.protocol
 				case 'udp'%============================UDP
-					data = pnet(me.conn, 'read', 65536, me.dataType, 'view');
+					data = pnet(conn, 'read', 65536, me.dataType, 'view');
 					if isempty(data)
-						me.hasData = pnet(me.conn, 'readpacket') > 0;
+						me.hasData = pnet(conn, 'readpacket') > 0;
 					else
 						me.hasData = true;
 					end
 				case 'tcp'%============================TCP
-					data = pnet(me.conn, 'read', 1024, me.dataType, 'noblock', 'view');
+					data = pnet(conn, 'read', 1024, me.dataType, 'noblock', 'view');
 					if ~isempty(data)
 						me.hasData = true;
 					end
@@ -321,16 +333,48 @@ classdef dataConnection < handle
 		% Read any avalable data from the given pnet socket.
 		function data = readline(me)
 			data = [];
+			if matches(me.type,'server') && me.rconn > -1
+				conn = me.rconn; 
+			elseif me.conn > -1
+				conn = me.conn;
+			else
+				return;
+			end
 			switch me.protocol
 				case 'udp'%============================UDP
-					nBytes = pnet(me.conn, 'readpacket');
+					nBytes = pnet(conn, 'readpacket');
 					if nBytes > 0
-						data = pnet(me.conn, 'readline', nBytes, 'noblock');
+						data = pnet(conn, 'readline', nBytes, 'noblock');
 					end
 				case 'tcp'%============================TCP
-					data = pnet(me.conn, 'readline', 1024,' noblock');
+					data = pnet(conn, 'readline', 1024,' noblock');
 			end
 			me.dataIn = data;
+		end
+
+		% ===================================================================
+		%> @brief read last N lines
+		%>
+		%> Flush the server messagelist
+		% ===================================================================
+		function data = readLines(me, N, order)
+			if ~exist('N','var') || isempty(N); N = 1; end
+			if ~exist('order','var') || ~matches(order,{'first','last'}); order = 'last'; end
+			data = [];
+			if matches(me.type,'server') && me.rconn > -1; conn = me.rconn; elseif me.conn > -1; conn = me.conn; else; return; end
+			while 1
+				thisData = pnet(conn, 'read', 512000, 'noblock');
+				if isempty(thisData); break; end
+				data = [data thisData];
+			end
+			if isempty(data); return; end
+			r = regexp(data,'\n');
+			if length(r) <= N; return; end
+			if matches(order,'first')
+				data = data(1:r(N));
+			else
+				data = data(r(end-N):end);
+			end
 		end
 		
 		% ===================================================================
@@ -437,29 +481,37 @@ classdef dataConnection < handle
 		% ===================================================================
 		function write(me, data, formatted, sendPacket)
 			
-			if ~exist('data','var')
+			if ~exist('data','var') || isempty(data)
 				data = me.dataOut;
 			end
-			if ~exist('formatted','var')
+			if ~exist('formatted','var') || isempty(formatted)
 				formatted = false;
 			end
-			if ~exist('sendPacket','var')
+			if ~exist('sendPacket','var') || isempty(sendPacket)
 				sendPacket = true;
 			end
 			
+			if matches(me.type,'server') && me.rconn > -1
+				conn = me.rconn; 
+			elseif me.conn > -1
+				conn = me.conn;
+			else
+				return;
+			end
+
 			switch me.protocol
 				case 'udp'%============================UDP
 					if formatted == false
-						pnet(me.conn, 'write', data);
+						pnet(conn, 'write', data);
 					else
-						pnet(me.conn, 'printf', data);
+						pnet(conn, 'printf', data);
 					end
 					if sendPacket;pnet(me.conn, 'writepacket', me.rAddress, me.rPort);end
 				case 'tcp'%============================TCP
 					if formatted == false
-						pnet(me.conn, 'write', data);
+						pnet(conn, 'write', data);
 					else
-						pnet(me.conn, 'printf', data);
+						pnet(conn, 'printf', data);
 					end
 			end
 		end
@@ -470,9 +522,16 @@ classdef dataConnection < handle
 		%> Read any avalable variable from the given pnet socket.
 		% ===================================================================
 		function data = readVar(me)
-			pnet(me.conn ,'setreadtimeout', 5);
+			if matches(me.type,'server') && me.rconn > -1
+				conn = me.rconn; 
+			elseif me.conn > -1
+				conn = me.conn;
+			else
+				return;
+			end
+			pnet(conn ,'setreadtimeout', 5);
 			data = me.getVar;
-			pnet(me.conn ,'setreadtimeout', me.readTimeOut);
+			pnet(conn ,'setreadtimeout', me.readTimeOut);
 		end
 		
 		% ===================================================================
@@ -482,9 +541,16 @@ classdef dataConnection < handle
 		% ===================================================================
 		% Write data to the given pnet socket.
 		function writeVar(me, varargin)
-			pnet(me.conn ,'setwritetimeout', 5);
+			if matches(me.type,'server') && me.rconn > -1
+				conn = me.rconn; 
+			elseif me.conn > -1
+				conn = me.conn;
+			else
+				return;
+			end
+			pnet(conn ,'setwritetimeout', 5);
 			me.putVar(varargin);
-			pnet(me.conn ,'setwritetimeout', me.writeTimeOut);
+			pnet(conn ,'setwritetimeout', me.writeTimeOut);
 		end
 		
 		% ===================================================================
@@ -535,10 +601,10 @@ classdef dataConnection < handle
 		% 		#define STATUS_TCP_SERVER  12
 		% 		#define STATUS_UDP_CLIENT_CONNECT 18
 		% 		#define STATUS_UDP_SERVER_CONNECT 19
-		function status = checkStatus(me,conn) %#ok<INUSD>
+		function status = checkStatus(me, conn) %#ok<INUSD>
 			status = -1;
 			try
-				if ~exist('conn','var') || strcmp(conn,'conn')
+				if ~exist('conn','var') && matches(me.type,'client') || strcmp(conn,'conn')
 					conn='conn';
 				else
 					conn = 'rconn';
@@ -810,10 +876,11 @@ classdef dataConnection < handle
 		%>
 		%> Flush the server messagelist
 		% ===================================================================
-		function stat=flushStatus(me)
+		function stat=flushStatus(me, num)
+			if ~exist('number','var'); num = 1; end
 			while 1 % Loop that finds, returns and leaves last text line in buffer.
 				str=pnet(me.conn,'read', 1024,'view','noblock');
-				if length(regexp([str,' '],'\n'))<=1
+				if length(regexp([str,' '],'\n'))<=num
 					stat=pnet(me.conn,'readline',1024,'view','noblock'); % The return
 					stat=stat(3:end-2);
 					return;

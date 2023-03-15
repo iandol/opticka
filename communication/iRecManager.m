@@ -38,8 +38,9 @@ classdef iRecManager < eyetrackerCore
 
 	properties
 		%> setup and calibration values
-		calibration		= struct('ip','127.0.0.1','udpport','35000','tcpport','35001',...
-						'stimulus','animated','CalPositions',[],'valPositions',[],...
+		calibration		= struct('ip','127.0.0.1','udpport',35000,'tcpport',35001,...
+						'stimulus','animated','CalPositions',[-15 0; 0 -15; 0 0; 0 15; 15 0],...
+						'valPositions',[-15 0; 0 -15; 0 0; 0 15; 15 0],...
 						'manual', false, 'movie', [])
 		%> options for online smoothing of peeked data {'median','heuristic','savitsky-golay'}
 		smoothing		= struct('nSamples',8,'method','median','window',3,...
@@ -104,14 +105,16 @@ classdef iRecManager < eyetrackerCore
 			else
 				me.screen			= sM;
 			end
-			me.ppd_									= me.screen.ppd;
-			if me.screen.isOpen == true
-				me.win								= me.screen.win;
+			me.ppd_					= me.screen.ppd;
+			if me.screen.isOpen
+				me.win				= me.screen.win;
 			end
 			if me.useOperatorScreen && ~exist('sM2','var')
-				sM2 = screenManager('windowed',[0 0 1000 1000],'pixelsPerCm',25,...
+				sM2 = screenManager('pixelsPerCm',20,...
 					'disableSyncTests',true,'backgroundColour',sM.backgroundColour,...
-					'specialFlags', kPsychGUIWindow);
+					'screen', me.screen.screen - 1, 'specialFlags', kPsychGUIWindow);
+					[w,h]			= Screen('WindowSize',sM2.screen);
+					sM2.windowed	= [0 0 round(w/2) round(h/2)];
 			end
 			if ~exist('sM2','var') || ~isa(sM2,'screenManager')
 				me.secondScreen		= false;
@@ -123,28 +126,33 @@ classdef iRecManager < eyetrackerCore
 			if me.isDummy
 				me.salutation('Initialise', 'Running in Dummy Mode', true);
 			else
-				me.tcp = dataConnection('rAddress', me.calibration.ip,'rPort',...
+				if isempty(me.tcp)
+					me.tcp = dataConnection('rAddress', me.calibration.ip,'rPort',...
 					me.calibration.tcpport);
-				me.udp = dataConnection('rAddress', me.calibration.ip,'rPort',...
-					me.calibration.udpport);
+				end
+				if isempty(me.udp)
+					me.udp = dataConnection('rAddress', me.calibration.ip,'rPort',...
+					me.calibration.udpport,'protocol','udp');
+				end
+				try 
+					open(me.tcp);
+					open(me.udp);
+					me.udp.write(int32(1e6));
+					me.isConnected = true;
+					me.salutation('Initialise', ...
+						sprintf('Running on a iRec | Screen %i %i x %i @ %iHz', ...
+						me.screen.screen,...
+						me.screen.winRect(3),...
+						me.screen.winRect(4),...
+						me.screen.screenVals.fps),true);
+				catch
+					me.salutation('Initialise', 'Cannot connect, running in Dummy Mode', true);
+					me.isConnected = false;
+					me.isDummy = true;
+				end
 
-				me.salutation('Initialise', ...
-					sprintf('Running on a iRec | Screen %i %i x %i @ %iHz', ...
-					me.screen.screen,...
-					me.screen.winRect(3),...
-					me.screen.winRect(4),...
-					me.screen.screenVals.fps),true);
 			end
-
 			success = true;
-		end
-		
-		% ===================================================================
-		%> @brief
-		%>
-		% ===================================================================
-		function updateDefaults(me)
-			
 		end
 
 		% ===================================================================
@@ -165,160 +173,62 @@ classdef iRecManager < eyetrackerCore
 				warning('Eyetracker not connected, cannot calibrate!');
 				return
 			end
-			if me.useOperatorScreen && ~me.closeSecondScreen; open(me.operatorScreen); end
+			if me.useOperatorScreen && isa(me.operatorScreen,'screenManager'); open(me.operatorScreen); end
 			if me.isDummy
-				disp('--->>> Tobii Dummy Mode: calibration skipped')
+				disp('--->>> iRec Dummy Mode: calibration skipped')
 				return;
 			end
 			if ~me.screen.isOpen 
 				open(me.screen);
 			end
-			fprintf('\n===>>> CALIBRATING TOBII... <<<===\n');
-			if ~exist('incal','var');incal=[];end
-			wasRecording = me.isRecording;
-			if wasRecording; stopRecording(me);	end
-			updateDefaults(me); % make sure we send any other settings changes
-			ListenChar(-1);
-			if ~isempty(me.operatorScreen) && isa(me.operatorScreen,'screenManager')
-				if ~me.operatorScreen.isOpen
-					me.operatorScreen.open();
-				end
-				if me.manualCalibration
-					if ~isempty(incal) && isstruct(incal) && isfield(incal,'type') && contains(incal.type,'manual')
-						me.calibration = me.tobii.calibrateManual([me.screen.win me.operatorScreen.win], incal); 
-					else
-						me.calibration = me.tobii.calibrateManual([me.screen.win me.operatorScreen.win]);
-					end
-				else
-					if ~isempty(incal) && isstruct(incal) && isfield(incal,'type') && contains(incal.type,'standard')
-						me.calibration = me.tobii.calibrate([me.screen.win me.operatorScreen.win], [], incal); 
-					else
-						me.calibration = me.tobii.calibrate([me.screen.win me.operatorScreen.win]);
-					end
-				end
-			else
-				me.calibration = me.tobii.calibrate(me.screen.win,[],incal); %start calibration
-			end
-			ListenChar(0);
-			if strcmpi(me.calibrationStimulus,'movie')
-				me.calStim.movie.reset();
-				%me.calStim.movie.setup(me.screen);
-			end
-			if ~isempty(me.calibration) && me.calibration.wasSkipped ~= 1
-				cal = me.calibration;
-				if isfield(me.calibration,'selectedCal')
-					try
-						calMsg = me.tobii.getValidationQualityMessage(me.calibration);
-						fprintf('-+-+-> CAL RESULT = ');
-						disp(calMsg);
-					end
-				end
-			else
-% 				disp('---!!! The calibration was unsuccesful or skipped !!!---')
-			end
-			if me.useOperatorScreen && me.closeSecondScreen && me.operatorScreen.isOpen
-				close(me.operatorScreen); 
-				WaitSecs('YieldSecs',0.2); 
-			end
-			resetAll(me);
-			if wasRecording; startRecording(me); end
-			me.isRecording_ = me.isRecording;
-		end
-		
-		% ===================================================================
-		%> @brief wrapper for StartRecording
-		%>
-		%> @param override - to keep compatibility with the eyelinkManager
-		%> API we need to only start and stop recording using a passed
-		%> parameter, as the eyelink requires start and stop on every trial
-		%> but the tobii does not. So by default without override==true this
-		%> will just return.
-		% ===================================================================
-		function startRecording(me, override)
-			if ~exist('override','var') || isempty(override) || override~=true; return; end
-			if me.isConnected && ~me.isRecording
-				success = me.tobii.buffer.start('gaze');
-				if success
-					me.statusMessage('Starting to record gaze...');
-				else
-					warning('Can''t START buffer() GAZE recording!!!')
-				end
-				success = me.tobii.buffer.start('positioning');
-				if success
-					me.statusMessage('Starting to record Position...');
-				else
-					warning('Can''t START buffer() Position recording!!!')
-				end
-				success = me.tobii.buffer.start('externalSignal');
-				if success
-					me.statusMessage('Starting to record TTLs...');
-				else
-					warning('Can''t START buffer() TTL recording!!!')
-				end
-				success = me.tobii.buffer.start('timeSync');
-				if success
-					me.statusMessage('Starting to record timeSync...');
-				else
-					warning('Can''t START buffer() timeSync recording!!!')
-				end
-			end
-			me.isRecording_ = me.isRecording;
-		end
-		
-		% ===================================================================
-		%> @brief wrapper for StopRecording
-		%>
-		%> @param override - to keep compatibility with the eyelinkManager
-		%> API we need to only start and stop recording using a passed
-		%> parameter, as the eyelink requires start and stop on every trial
-		%> but the tobii does not. So by default without override==true this
-		%> will just return.
-		% ===================================================================
-		function stopRecording(me, override)
-			if ~exist('override','var') || isempty(override) || override~=true; return; end
-			if me.isConnected && me.isRecording
-				if me.tobii.buffer.hasStream('eyeImage') && me.tobii.buffer.isRecording('eyeImage')
-					success = me.tobii.buffer.stop('eyeImage');
-					if success
-						me.statusMessage('Stopping to record eyeImage...');
-					else
-						warning('Can''t STOP buffer() eyeImage recording!!!')
-					end
-				end
-				if me.tobii.buffer.isRecording('timeSync')
-					success = me.tobii.buffer.stop('timeSync');
-					if success
-						me.statusMessage('Stopping to record timeSync...');
-					else
-						warning('Can''t STOP buffer() timeSync recording!!!')
-					end
-				end
-				if me.tobii.buffer.isRecording('externalSignal')
-					success = me.tobii.buffer.stop('externalSignal');
-					if success
-						me.statusMessage('Stopping to record TTLs...');
-					else
-						warning('Can''t STOP buffer() TTL recording!!!')
-					end
-				end
-				if me.tobii.buffer.isRecording('positioning')
-					success = me.tobii.buffer.stop('positioning');
-					if success
-						me.statusMessage('Stopping to record Position...');
-					else
-						warning('Can''t STOP buffer() TTL recording!!!')
-					end
-				end
-				success = me.tobii.buffer.stop('gaze');
-				if success
-					me.statusMessage('Stopping to record Gaze...');
-				else
-					warning('Can''t STOP buffer() GAZE recording!!!')
-				end
-			end
-			me.isRecording_ = me.isRecording;
-		end
+			fprintf('\n===>>> CALIBRATING IREC... <<<===\n');
+			
+			RestrictKeysForKbCheck([27 48:57]);
 
+			f = fixationCrossStimulus();
+			f.size = 2;
+			hide(f);
+			
+			setup(f, me.screen);
+			
+			pos = [-15 0; 0 -15; 0 0; 0 15; 15 0];
+			nPositions = size(pos,1);
+			
+			f.xPositionOut = pos(1,1);
+			f.yPositionOut = pos(1,2);
+			update(f);
+			loop = true;
+			thisPos = 0;
+			
+			while loop
+			
+				[pressed,~,keys] = KbCheck(-1);
+				if pressed
+					k = lower(KbName(keys));
+					if matches(k,'escape'); loop = false; end
+					if length(k) == 2; k = k(1); end
+					k = str2double(k);
+					if k == 0
+						hide(f);
+					elseif k > 0 && k <= nPositions
+						show(f);
+						f.xPositionOut = pos(k,1);
+						f.yPositionOut = pos(k,2);
+						update(f);
+						disp('Change Calibration Position...');
+					end
+				end
+				drawGrid(s);
+				draw(f);
+				flip(s);
+			
+			end
+
+
+			resetAll(me);
+			RestrictKeysForKbCheck([]);
+		end
+		
 		% ===================================================================
 		%> @brief get a sample from the tracker, if dummymode=true then use
 		%> the mouse as an eye signal
@@ -344,42 +254,26 @@ classdef iRecManager < eyetrackerCore
 				me.yAll			= [me.yAll me.y];
 				me.pupilAll		= [me.pupilAll me.pupil];
 				%if me.verbose;fprintf('>>X: %.2f | Y: %.2f | P: %.2f\n',me.x,me.y,me.pupil);end
-			elseif me.isConnected && me.isRecording_
+			elseif me.isConnected && me.isRecording
 				xy				= [];
-				td				= me.tobii.buffer.peekN('gaze',me.smoothing.nSamples);
+				td				= me.tcp.readLines(me.smoothing.nSamples,'last');
 				if isempty(td);me.currentSample=sample;return;end
+				td				= str2num(td); %#ok<*ST2NM> 
 				sample.raw		= td;
-				sample.time		= double(td.systemTimeStamp(end)); %remember these are in microseconds
-				sample.timeD	= double(td.deviceTimeStamp(end));
-				if any(td.left.gazePoint.valid) || any(td.right.gazePoint.valid)
-					switch me.smoothing.eyes
-						case 'left'
-							xy	= td.left.gazePoint.onDisplayArea(:,td.left.gazePoint.valid);
-						case 'right'
-							xy	= td.right.gazePoint.onDisplayArea(:,td.right.gazePoint.valid);
-						otherwise
-							if all(td.left.gazePoint.valid & td.right.gazePoint.valid)
-								v = td.left.gazePoint.valid & td.right.gazePoint.valid;
-								xy = [td.left.gazePoint.onDisplayArea(:,v);...
-									td.right.gazePoint.onDisplayArea(:,v)];
-							else
-								xy = [td.left.gazePoint.onDisplayArea(:,td.left.gazePoint.valid),...
-									td.right.gazePoint.onDisplayArea(:,td.right.gazePoint.valid)];
-							end
-					end
-				end
+				sample.time		= td(end,1);
+				sample.timeD	= GetSecs * 1e6;
+				xy(1,:)			=  td(:,2)';
+				xy(2,:)			= -td(:,3)';
 				if ~isempty(xy)
 					sample.valid = true;
 					xy			= doSmoothing(me,xy);
-					xy			= toPixels(me, xy,'','relative');
 					sample.gx	= xy(1);
 					sample.gy	= xy(2);
-					sample.pa	= nanmean(td.left.pupil.diameter);
-					xy			= me.toDegrees(xy);
+					sample.pa	= median(td(:,4));
 					me.x		= xy(1);
 					me.y		= xy(2);
 					me.pupil	= sample.pa;
-					%if me.verbose;fprintf('>>X: %2.2f | Y: %2.2f | P: %.2f\n',me.x,me.y,me.pupil);end
+					if me.verbose;fprintf('>>X: %2.2f | Y: %2.2f | P: %.2f\n',me.x,me.y,me.pupil);end
 				else
 					sample.gx	= NaN;
 					sample.gy	= NaN;
@@ -430,50 +324,16 @@ classdef iRecManager < eyetrackerCore
 				end
 			end
 		end
-
-		% ===================================================================
-		%> @brief Save the data
-		%>
-		% ===================================================================
-		function saveData(me,tofile)
-			if ~exist('tofile','var') || isempty(tofile); tofile = true; end
-			ts = tic;
-			me.data = [];
-			if me.isConnected
-				me.data = me.tobii.collectSessionData();
-			end
-			me.initialiseSaveFile();
-			if ~isempty(me.data) && tofile
-				tobii = me;
-				if exist(me.saveFile,'file')
-					[p,f,e] = fileparts(me.saveFile);
-					me.saveFile = [p filesep f me.savePrefix e];
-				end
-				save(me.saveFile,'tobii')
-				disp('===========================')
-				me.salutation('saveData',sprintf('Save: %s in %.1fms\n',strrep(me.saveFile,'\','/'),toc(ts)*1e3),true);
-				disp('===========================')
-				clear tobii
-			elseif isempty(me.data)
-				me.salutation('saveData',sprintf('NO data available... (%.1fms)...\n',toc(ts)*1e3),true);
-			elseif ~isempty(me.data)
-				me.salutation('saveData',sprintf('Data retrieved to object in %.1fms)...\n',toc(ts)*1e3),true);
-			end
-		end
 		
 		% ===================================================================
 		%> @brief send message to store in tracker data
 		%>
 		%>
 		% ===================================================================
-		function trackerMessage(me, message, vbl)
+		function trackerMessage(me, message, varargin)
 			if me.isConnected
-				if exist('vbl','var')
-					me.tobii.sendMessage(message, vbl);
-				else
-					me.tobii.sendMessage(message);
-				end
-				if me.verbose; fprintf('-+-+->TOBII Message: %s\n',message);end
+				me.udp.write(int32(message));
+				if me.verbose; fprintf('-+-+->IREC Message: %s\n',message);end
 			end
 		end
 
@@ -484,20 +344,18 @@ classdef iRecManager < eyetrackerCore
 		% ===================================================================
 		function close(me)
 			try
-				stopRecording(me);
-				out = me.tobii.deInit();
+				try stopRecording(me); end
 				me.isConnected = false;
 				me.isRecording_ = false;
-				resetFixation(me);
+				resetAll(me);
 				if me.secondScreen && ~isempty(me.operatorScreen) && isa(me.operatorScreen,'screenManager')
-					me.operatorScreen.close;
+					try close(me.operatorScreen); end
 				end
 			catch ME
 				me.salutation('Close Method','Couldn''t stop recording, forcing shutdown...',true)
-				me.tobii.deInit();
 				me.isConnected = false;
-				me.isRecording_ = false;
-				resetFixation(me);
+				me.isRecording = false;
+				resetAll(me);
 				if me.secondScreen && ~isempty(me.operatorScreen) && isa(me.operatorScreen,'screenManager')
 					me.operatorScreen.close;
 				end
@@ -506,97 +364,7 @@ classdef iRecManager < eyetrackerCore
 		end
 		
 		% ===================================================================
-		%> @brief Sync time with tracker
-		%>
-		% ===================================================================
-		function syncTrackerTime(me)
-			if me.isConnected
-				me.tobii.getSystemTime;
-			end
-		end
-		
-		% ===================================================================
-		%> @brief Train to use tracker
-		%>
-		% ===================================================================
-		function runTimingTest(me,sRate,interval)
-			ofilename = me.saveFile;
-			me.initialiseSaveFile();
-			[p,~,e]=fileparts(me.saveFile);
-			me.saveFile = [p filesep 'tobiiTimingTest-' me.savePrefix e];
-			try
-				if isa(me.screen,'screenManager') && ~isempty(me.screen)
-					s = me.screen;
-				else
-					s = screenManager('blend',true,'pixelsPerCm',36,'distance',60);
-				end
-				s.disableSyncTests = false;
-				s.backgroundColour = [0.5 0.5 0.5 0];
-				me.sampleRate = sRate;
-				sv=open(s); %open our screen
-				initialise(me,s); %initialise tobii with our screen
-				trackerSetup(me);
-				ShowCursor; %titta fails to show cursor so we must do it
-				Priority(MaxPriority(s.win));
-				startRecording(me);
-				WaitSecs('YieldSecs',1);
-				drawCross(s);
-				vbl = flip(s);
-				trackerMessage(me,'STARTVBL',vbl);
-				sampleInterval = interval;
-				nSamples = 2000;
-				ti = zeros(nSamples,1) * NaN;
-				tx = zeros(nSamples,1) * NaN;
-				tj = zeros(nSamples,1);
-				for i = 1 : nSamples
-					td = me.tobii.buffer.peekN('gaze',1);
-					if ~isempty(td)
-						ti(i) = double(td.systemTimeStamp);
-						tx(i) = td.left.gazePoint.onDisplayArea(1);
-					end
-					tj(i) = WaitSecs(sampleInterval);
-				end
-				vbl=flip(s);
-				trackerMessage(me,'ENDVBL',vbl);
-				ti = (ti - ti(1)) / 1e3;
-				tj = (tj - tj(1)) * 1e3;
-				sdi = std(diff(ti));
-				sdj = std(diff(tj));
-				WaitSecs('YieldSecs',0.5);
-				assignin('base','ti',ti);
-				assignin('base','tj',tj);
-				assignin('base','ti',ti);
-				assignin('base','tx',tx);
-				figure;
-				subplot(2,1,1);
-				plot(diff(tj),'LineWidth',1.5);set(gca,'YScale','linear');ylabel('Time Delta (ms)');xlabel(['PTB Timestamp SD=' num2str(sdj) 'ms']);
-				ylim([0 max(diff(ti))]);line([0 nSamples],[sampleInterval*1e3 sampleInterval*1e3],'LineStyle','-.','LineWidth',1,'Color','red');
-				title(['Sample Interval: ' num2str(sampleInterval*1e3) 'ms | Tobii Sample Rate: ' num2str(sRate) 'hz']);
-				legend('Raw Timestamps','Sample Interval')
-				subplot(2,1,2);
-				plot(diff(ti),'LineWidth',1.5);set(gca,'YScale','linear');ylabel('Time Delta (ms)');xlabel(['Tobii Timestamp SD=' num2str(sdi) 'ms']);
-				ylim([0 max(diff(ti))]);line([0 nSamples],[sampleInterval*1e3 sampleInterval*1e3],'LineStyle','-.','LineWidth',1,'Color','red');
-				ListenChar(0); Priority(0); ShowCursor;
-				stopRecording(me);
-				close(s);
-				saveData(me,false);
-				close(me);
-				me.saveFile = ofilename;
-				clear s
-			catch ME
-				ListenChar(0);Priority(0);ShowCursor;
-				me.saveFile = ofilename;
-				getReport(ME)
-				close(s);
-				sca;
-				close(me);
-				clear s
-				rethrow(ME)
-			end
-		end
-		
-		% ===================================================================
-		%> @brief runs a demo of the tobii workflow, testing this class
+		%> @brief runs a demo of the workflow, testing this class
 		%>
 		% ===================================================================
 		function runDemo(me,forcescreen)
@@ -608,32 +376,34 @@ classdef iRecManager < eyetrackerCore
 			rightKey			= KbName('rightarrow');
 			calibkey			= KbName('c');
 			ofixation			= me.fixation; 
-			me.sampletime		= [];
 			osmoothing			= me.smoothing;
 			ofilename			= me.saveFile;
 			oldexc				= me.exclusionZone;
 			oldfixinit			= me.fixInit;
 			me.initialiseSaveFile();
 			[p,~,e]				= fileparts(me.saveFile);
-			me.saveFile			= [p filesep 'tobiiRunDemo-' me.savePrefix e];
+			me.saveFile			= [p filesep 'iRecRunDemo-' me.savePrefix e];
 			useS2				= false;
 			try
 				if isa(me.screen,'screenManager') && ~isempty(me.screen)
 					s = me.screen;
 				else
-					s = screenManager('blend',true,'pixelsPerCm',36,'distance',60);
+					s = screenManager('blend',true,'pixelsPerCm',36,'distance',57.3);
 				end
-				s.disableSyncTests		= false;
+				s.disableSyncTests		= true;
 				if exist('forcescreen','var'); s.screen = forcescreen; end
-				s.backgroundColour		= [0.5 0.5 0.5 0];
-				if length(Screen('Screens'))>1 && s.screen - 1 >= 0
+				if me.secondScreen || (length(Screen('Screens'))>1 && s.screen - 1 >= 0)
 					useS2				= true;
-					s2.pixelsPerCm		= 45;
-					s2					= screenManager;
-					s2.screen			= s.screen - 1;
-					s2.backgroundColour	= s.backgroundColour;
-					[w,h]				= Screen('WindowSize',s2.screen);
-					s2.windowed			= [0 0 round(w/2) round(h/2)];
+					if isa(me.operatorScreen,'screenManager')
+						s2 = me.operatorScreen;
+					else
+						s2					= screenManager;
+						s2.pixelsPerCm		= 15;
+						s2.screen			= s.screen - 1;
+						s2.backgroundColour	= s.backgroundColour;
+						[w,h]				= Screen('WindowSize',s2.screen);
+						s2.windowed			= [0 0 round(w/2) round(h/2)];
+					end
 					s2.bitDepth			= '8bit';
 					s2.blend			= true;
 					s2.disableSyncTests	= true;
@@ -642,11 +412,10 @@ classdef iRecManager < eyetrackerCore
 				sv=open(s); %open our screen
 				
 				if useS2
-					me.closeSecondScreen = false;
-					initialise(me, s, s2); %initialise tobii with our screen
+					initialise(me, s, s2); %initialise with our screen
 					s2.open();
 				else
-					initialise(me, s); %initialise tobii with our screen
+					initialise(me, s); %initialise with our screen
 				end
 				trackerSetup(me);
 				ShowCursor; %titta fails to show cursor so we must do it
@@ -706,14 +475,14 @@ classdef iRecManager < eyetrackerCore
 				update(o); %make sure stimuli are set back to their start state
 				update(f);
 				WaitSecs('YieldSecs',0.5);
-				trackerMessage(me,'!!! Starting Demo...')
+				trackerMessage(me,0)
 				while trialn <= maxTrials && endExp == 0
 					trialtick = 1;
-					trackerMessage(me,sprintf('Settings for Trial %i, X=%.2f Y=%.2f, SZ=%.2f',trialn,me.fixation.X,me.fixation.Y,o.sizeOut))
+					trackerMessage(me,1)
 					drawPhotoDiodeSquare(s,[0 0 0 1]);
 					flip(s2,[],[],2);
 					vbl = flip(s); tstart=vbl+sv.ifi;
-					trackerMessage(me,'STARTVBL',vbl);
+					trackerMessage(me,1);
 					while vbl < tstart + 6
 						Screen('FillRect',s.win,[0.7 0.7 0.7 0.5],exc); Screen('DrawText',s.win,'Exclusion Zone',exc(1),exc(2),[0.8 0.8 0.8]);
 						draw(o); draw(f);
@@ -730,7 +499,6 @@ classdef iRecManager < eyetrackerCore
 								me.fixTotal,me.fixLength,me.isExclusion,me.isInitFail);
 							Screen('DrawText', s.win, txt, 10, 10,[1 1 1]);
 							drawEyePosition(me,true);
-							%psn{trialn} = me.tobii.buffer.peekN('positioning',1);
 						end
 						if useS2
 							drawGrid(s2);
@@ -741,7 +509,6 @@ classdef iRecManager < eyetrackerCore
 						animate(o);
 						
 						vbl(end+1) = Screen('Flip', s.win, vbl(end) + s.screenVals.halfifi);
-						if trialtick==1; me.tobii.sendMessage('SYNC = 255', vbl);end
 						if useS2; flip(s2,[],[],2); end
 						[keyDown, ~, keyCode] = KbCheck(-1);
 						if keyDown
@@ -759,9 +526,7 @@ classdef iRecManager < eyetrackerCore
 						drawPhotoDiodeSquare(s,[0 0 0 1]);
 						vbl = flip(s);
 						if useS2; flip(s2,[],[],2); end
-						trackerMessage(me,'END_RT',vbl);
-						trackerMessage(me,'TRIAL_RESULT 1')
-						trackerMessage(me,sprintf('Ending trial %i @ %i',trialn,int64(round(vbl*1e6))))
+						trackerMessage(me,-1);
 						resetFixation(me);
 						me.fixation.X = randi([-7 7]);
 						me.fixation.Y = randi([-7 7]);
@@ -785,9 +550,7 @@ classdef iRecManager < eyetrackerCore
 					else
 						drawPhotoDiodeSquare(s,[0 0 0 1]);
 						vbl = flip(s);
-						trackerMessage(me,'END_RT',vbl);
-						trackerMessage(me,'TRIAL_RESULT -10 ABORT')
-						trackerMessage(me,sprintf('Aborting %i @ %i', trialn, int64(round(vbl*1e6))))
+						trackerMessage(me,-100);
 					end
 				end
 				stopRecording(me);
@@ -812,23 +575,14 @@ classdef iRecManager < eyetrackerCore
 				me.fixInit = oldfixinit;
 				ListenChar(0);Priority(0);ShowCursor;
 				getReport(ME)
-				close(s);
+				try close(s); end
+				try close(s2); end
 				sca;
-				close(me);
-				clear s o
+				try close(me); end
+				clear s s2 o
 				rethrow(ME)
 			end
 			
-		end
-		
-		% ===================================================================
-		%> @brief
-		%>
-		% ===================================================================
-		function doCalibration(me)
-			if me.isConnected
-				me.trackerSetup();
-			end
 		end
 		
 		% ===================================================================
@@ -873,11 +627,10 @@ classdef iRecManager < eyetrackerCore
 		% ===================================================================
 		function value = checkRecording(me)
 			if me.isConnected
-				value = me.tobii.buffer.isRecording('gaze');
+				value = true;
 			else
 				value = false;
 			end
-			me.isRecording_ = value;
 		end
 		
 		% ===================================================================
@@ -894,6 +647,68 @@ classdef iRecManager < eyetrackerCore
 	methods (Hidden = true) %--HIDDEN METHODS (compatibility with eyelinkManager)
 		%============================================================================
 		
+
+		% ===================================================================
+		%> @brief wrapper for StartRecording
+		%>
+		%> @param override - to keep compatibility with the eyelinkManager
+		%> API we need to only start and stop recording using a passed
+		%> parameter, as the eyelink requires start and stop on every trial
+		%> but the does not. So by default without override==true this
+		%> will just return.
+		% ===================================================================
+		function startRecording(me, ~)
+			me.tcp.write(int8('start'));
+			me.isRecording = true;
+		end
+		
+		% ===================================================================
+		%> @brief wrapper for StopRecording
+		%>
+		%> @param override - to keep compatibility with the eyelinkManager
+		%> API we need to only start and stop recording using a passed
+		%> parameter, as the eyelink requires start and stop on every trial
+		%> but the does not. So by default without override==true this
+		%> will just return.
+		% ===================================================================
+		function stopRecording(me, ~)
+			me.tcp.write(int8('stop'));
+			me.isRecording = true;
+		end
+
+		% ===================================================================
+		%> @brief Sync time with tracker
+		%>
+		% ===================================================================
+		function syncTrackerTime(me)
+			
+		end
+
+		% ===================================================================
+		%> @brief
+		%>
+		% ===================================================================
+		function doCalibration(me)
+			if me.isConnected
+				me.trackerSetup();
+			end
+		end
+
+		% ===================================================================
+		%> @brief Save the data
+		%>
+		% ===================================================================
+		function saveData(me,tofile)
+			
+		end
+		% ===================================================================
+		%> @brief
+		%>
+		% ===================================================================
+		function updateDefaults(me)
+			
+		end
+
 		% ===================================================================
 		%> @brief checks which eye is available, force left eye if
 		%> binocular is enabled
@@ -950,7 +765,7 @@ classdef iRecManager < eyetrackerCore
 		end
 		
 		% ===================================================================
-		%> @brief check what mode the tobii is in
+		%> @brief check what mode the is in
 		%>
 		% ========================a===========================================
 		function mode = currentMode(me)
@@ -1053,16 +868,6 @@ classdef iRecManager < eyetrackerCore
 				end
 				out(k,:) = in;
 			end
-		end
-		
-		% ===================================================================
-		%> @brief
-		%>
-		% ===================================================================
-		function initTracker(me)
-			me.settings = Titta.getDefaults(me.calibration.model);
-			me.settings.cal.bgColor = 127;
-			me.tobii = Titta(me.settings);
 		end
 		
 	end %------------------END PRIVATE METHODS
