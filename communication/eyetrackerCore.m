@@ -123,7 +123,9 @@ classdef eyetrackerCore < optickaCore
 		%> is operator screen being used?
 		secondScreen			= false
 		%> size to draw eye position on screen
-		eyeSize double					= 6
+		eyeSize double			= 6
+		%> for trackerFlip, we can only flip every X frames
+		skipFlips				= 5
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -180,6 +182,8 @@ classdef eyetrackerCore < optickaCore
 	end
 	
 	properties (SetAccess = protected, GetAccess = ?optickaCore)
+		%> flipTick
+		flipTick				= 0
 		%> currentSample template
 		sampleTemplate struct	= struct('raw',[],'time',NaN,'timeD',NaN,'gx',NaN,'gy',NaN,...
 									'pa',NaN,'valid',false)
@@ -233,6 +237,7 @@ classdef eyetrackerCore < optickaCore
 			resetFixInit(me);
 			resetOffset(me);
 			resetFixation(me,true);
+			me.flipTick = 0;
 		end
 		
 		% ===================================================================
@@ -320,7 +325,7 @@ classdef eyetrackerCore < optickaCore
 			calibkey			= KbName('C');
 			driftkey			= KbName('D');
 			if me.isConnected || me.isDummy
-				x = me.toPixels(me.fixation.X,'x'); %#ok<*PROPLC>
+				x = me.toPixels(me.fixation.X,'x'); %#ok<*PROP,*PROPLC>
 				y = me.toPixels(me.fixation.Y,'y');
 				Screen('Flip',me.screen.win);
 				ifi = me.screen.screenVals.ifi;
@@ -877,10 +882,13 @@ classdef eyetrackerCore < optickaCore
 		%> @brief draw the fixation box on the tracker display
 		%>
 		% ===================================================================
-		function trackerFlip(me,dontclear)
-			if ~me.isConnected || ~me.operatorScreen.isOpen; return; end
-			if ~exist('dontclear','var');dontclear = 1; end
+		function trackerFlip(me, dontclear)
+			if ~me.isConnected || ~me.operatorScreen.isOpen || me.flipTick > 0; return; end
+			if ~exist('dontclear','var'); dontclear = 1; end
+			% 'Flip', [, when] [, dontclear] [, dontsync] [, multiflip])
 			me.operatorScreen.flip([], dontclear, 2);
+			me.flipTick = me.flipTick + 1;
+			if me.flipTick > me.skipFlips; me.flipTick = 0; end
 		end
 		
 	end%-------------------------END PUBLIC METHODS--------------------------------%

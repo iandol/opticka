@@ -71,7 +71,7 @@ tS.checkKeysDuringStimulus  = false;	%==allow keyboard control within stimulus s
 tS.recordEyePosition		= false;	%==record local copy of eye position, **in addition** to the eyetracker?
 tS.askForComments			= false;	%==UI requestor asks for comments before/after run
 tS.saveData					= true;		%==save behavioural and eye movement data?
-tS.showBehaviourPlot		= false;	%==open the behaviourPlot figure? Can cause more memory use
+tS.showBehaviourPlot		= true;		%==open the behaviourPlot figure? Can cause more memory use
 tS.nStims					= stims.n;	%==number of stimuli, taken from metaStimulus object
 tS.tOut						= 5;		%==if wrong response, how long to time out before next trial
 tS.CORRECT					= 1;		%==the code to send eyetracker for correct trials
@@ -164,10 +164,8 @@ tS.firstFixRadius			= 1;
 tS.strict					= true;
 % do we add an exclusion zone where subject cannot saccade to...
 tS.exclusionZone			= [];
-% time to fix on the stimulus
-tS.stimulusFixTime			= 0.25;
 % time to show both fix and stim
-tS.fixstimTime				= 1.5;
+tS.fixAndStimTime			= 0.5;
 % in this task the subject must saccade to the pro-saccade target location.
 % These settings define the rules to "accept" the target fixation as
 % correct
