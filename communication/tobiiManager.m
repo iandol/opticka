@@ -68,9 +68,6 @@ classdef tobiiManager < eyetrackerCore
 		systemTime		= 0
 		calibData
 		calStim
-		%> currentSample template
-		sampleTemplate struct	= struct('raw',[],'time',NaN,'timeD',NaN,'gx',NaN,'gy',NaN,...
-									'pa',NaN,'valid',false)
 		%> allowed properties passed to object upon construction
 		allowedProperties = {'calibration', 'settings','useOperatorScreen','smoothing'}
 	end
@@ -819,8 +816,8 @@ classdef tobiiManager < eyetrackerCore
 					trialtick = 1;
 					trackerMessage(me,sprintf('Settings for Trial %i, X=%.2f Y=%.2f, SZ=%.2f',trialn,me.fixation.X,me.fixation.Y,o.sizeOut))
 					drawPhotoDiodeSquare(s,[0 0 0 1]);
-					flip(s2,[],[],2);
 					vbl = flip(s); tstart=vbl+sv.ifi;
+					if useS2;flip(s2,[],[],2);end
 					trackerMessage(me,'STARTVBL',vbl);
 					while vbl < tstart + 6
 						Screen('FillRect',s.win,[0.7 0.7 0.7 0.5],exc); Screen('DrawText',s.win,'Exclusion Zone',exc(1),exc(2),[0.8 0.8 0.8]);
@@ -894,6 +891,7 @@ classdef tobiiManager < eyetrackerCore
 					else
 						drawPhotoDiodeSquare(s,[0 0 0 1]);
 						vbl = flip(s);
+						if useS2; flip(s2,[],[],2); end
 						trackerMessage(me,'END_RT',vbl);
 						trackerMessage(me,'TRIAL_RESULT -10 ABORT')
 						trackerMessage(me,sprintf('Aborting %i @ %i', trialn, int64(round(vbl*1e6))))
@@ -901,7 +899,7 @@ classdef tobiiManager < eyetrackerCore
 				end
 				stopRecording(me);
 				ListenChar(0); Priority(0); ShowCursor; RestrictKeysForKbCheck([]);
-				try close(s); close(s2);end %#ok<*TRYNC>
+				try close(s); if useS2;close(s2);end; end %#ok<*TRYNC>
 				saveData(me);
 				assignin('base','psn',psn);
 				assignin('base','data',me.data);
@@ -922,9 +920,10 @@ classdef tobiiManager < eyetrackerCore
 				ListenChar(0); Priority(0); ShowCursor; RestrictKeysForKbCheck([]);
 				getReport(ME)
 				close(s);
+				if useS2;close(s2);end
 				sca;
 				close(me);
-				clear s o
+				clear s s2 o
 				rethrow(ME)
 			end
 			

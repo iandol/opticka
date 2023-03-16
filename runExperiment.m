@@ -769,7 +769,9 @@ classdef runExperiment < optickaCore
 				uF.stims = stims; uF.io = io; uF.rM = rM;
 
 				%================================initialise the state machine
-				sM						= stateMachine('verbose',me.verbose,'realTime',task.realTime,'timeDelta',1e-4,'name',me.name); 
+				sM						= stateMachine('verbose', me.verbose,...
+						'realTime', task.realTime, 'timeDelta', s.screenVals.ifi, ...
+						'name', me.name);
 				me.stateMachine			= sM;
 				sM.fnTimers				= me.logStateTimers; %record fn evaluations?
 				if isempty(me.stateInfoFile) || ~exist(me.stateInfoFile,'file') || strcmp(me.stateInfoFile, 'DefaultStateInfo.m')

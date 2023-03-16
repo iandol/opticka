@@ -180,6 +180,9 @@ classdef eyetrackerCore < optickaCore
 	end
 	
 	properties (SetAccess = protected, GetAccess = ?optickaCore)
+		%> currentSample template
+		sampleTemplate struct	= struct('raw',[],'time',NaN,'timeD',NaN,'gx',NaN,'gy',NaN,...
+									'pa',NaN,'valid',false)
 		%> the PTB screen handle, normally set by screenManager but can force it to use another screen
 		win						= []
 		ppd_					= 36
