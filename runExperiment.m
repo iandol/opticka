@@ -835,13 +835,13 @@ classdef runExperiment < optickaCore
 					end
 					flip(s);
 					KbCheck(-1);
-					if eT.secondScreen; trackerFlip(eT,1); end
+					if eT.secondScreen; trackerFlip(eT, 1); end
 				end
 				update(stims); %make sure all stimuli are set back to their start state
 				resetLog(stims);
 				if ~isempty(me.eyetracker.device)
 					resetAll(eT);
-					if eT.secondScreen; trackerClearScreen(eT); trackerFlip(eT,0); end 
+					if eT.secondScreen; trackerClearScreen(eT); trackerFlip(eT, 0, true); end 
 				end
 				resetStrobe(io); flip(s); flip(s); % reset the strobe system
 
@@ -908,7 +908,6 @@ classdef runExperiment < optickaCore
 				tS.initialTaskIdx.comment	= 'This is the task index before the task starts, it may be modified by resetRun() during task...';
 				tS.initialTaskIdx.index		= task.outIndex;
 				tS.initialTaskIdx.vars		= task.outValues;
-				thisTobiiFlip			= inf;
 				
 				%===========================double check the labJackT handle is still valid
 				if isa(io,'labJackT') && ~io.isHandleValid
@@ -1042,13 +1041,12 @@ classdef runExperiment < optickaCore
 					end  % END me.doFlip
 
 					%----- For second display, do we flip? -----%
-					if strcmp(me.eyetracker.device, 'tobii') && me.doTrackerFlip > -1 
-						if thisTobiiFlip >= tS.tobiiFlipRate
-							trackerFlip(eT, me.doTrackerFlip)
-							thisTobiiFlip = 1;
-						else
-							thisTobiiFlip = thisTobiiFlip + 1;
-						end
+					if me.doTrackerFlip == 1 
+						trackerFlip(eT)
+					elseif me.doTrackerFlip == 2 
+						trackerFlip(eT, 1)
+					elseif me.doTrackerFlip == 3 
+						trackerFlip(eT, 1, true)
 					end
 					
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1510,7 +1508,7 @@ classdef runExperiment < optickaCore
 		%> @fn needFlipTracker
 		%>
 		%> enables/disable the flip for the tracker display window
-		%> @param value -1 disable flip, 0 enable + clear, 1 enable + don't clear
+		%> @param 0: disable flip, 1 enable + clear, 2 enable + don't clear, 3 force
 		% ===================================================================
 			if ~exist('value','var'); value = 0; end
 			me.doTrackerFlip = value;

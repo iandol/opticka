@@ -57,11 +57,14 @@ classdef opticka < optickaCore
 		%> which UI settings should be saved locally to the machine?
 		uiPrefsList cell = {'OKOmniplexIP','OKMonitorDistance','OKpixelsPerCm',...
 			'OKbackgroundColour','OKAntiAliasing','OKbitDepth','OKUseRetina',...
-			'OKHideFlash','OKlogFrames','OKUsePhotoDiode','OKResearcher',...
-			'OKSubject','OKarduinoPort','OKArduinoType','OKdPPMode','OKDebug',...
-			'OKOpenGLBlending','OKCalEditField','OKValEditField',...
-			'OKTrackerDropDown','OKWindowSize','OKUseDummy','OKINTANPort','OKControlIntan',...
-			'OKCalibProp','OKELManualMode','OKTobiiManualMode'}
+			'OKHideFlash','OKlogFrames','OKlogStateTimers','OKUsePhotoDiode','OKResearcher',...
+			'OKSubject','OKarduinoPort','OKArduinoType','OKDebug',...
+			'OKOpenGLBlending','OKWindowSize',...
+			'OKUseDummy','OKINTANPort', ...
+			'OKCalibProp','OKELManualMode',...
+			'OKTobiiCal','OKTobiiVal',...
+			'OKTobiiManualMode', 'OKTobiiTrackingMode',...
+			'OKTobiiTracker','OKTobiiOperatorScreen'}
 	end
 	
 	%=======================================================================
@@ -912,13 +915,20 @@ classdef opticka < optickaCore
 									myhandle.Value = prf;
 									thisVal = prf;
 								end
+							case 'uimenu'
+								myhandle.Checked = prf;
+							case 'uirockerswitch'
+								myhandle.Value = prf;
 						end
 						prefnames = [prefnames ' ' prfname '«' thisVal '»'];
+						if ~mod(i,4);prefnames = [prefnames '\n']; end
 						if ~anyLoaded; anyLoaded = true; end
 					end
 				end	
 			end
-			if anyLoaded; fprintf('\n===>>> Opticka loaded its local preferences: %s \n',prefnames); end
+			if anyLoaded
+				fprintf('\n===>>> Opticka Load Preferences:\n'); fprintf(prefnames); fprintf('\n');
+			end
 		end
 		
 		% ===================================================================
@@ -930,30 +940,30 @@ classdef opticka < optickaCore
 			if isempty(me.ui); return; end
 			anySaved = false; prefnames = '';
 			for i = 1:length(me.uiPrefsList)
+				prf = [];
 				prfname = me.uiPrefsList{i};
-				if ~isprop(me.ui,prfname)
-					continue
-				end
+				if ~isprop(me.ui,prfname); continue; end
 				try
-				myhandle = me.ui.(prfname);
-				uiType = myhandle.Type;
-				switch uiType
-					case 'uieditfield'
-						prf = myhandle.Value;
+					myhandle = me.ui.(prfname);
+					uiType = myhandle.Type;
+					switch uiType
+						case {'uieditfield','uidropdown','uirockerswitch'}
+							prf = myhandle.Value;
+						case 'uicheckbox'
+							prf = myhandle.Value;
+							if ~islogical(prf); prf=logical(prf);end
+						case 'uimenu'
+							prf = myhandle.Checked;
+					end
+					if ~isempty(prf) 
 						setpref('opticka', prfname, prf);
-					case 'uicheckbox'
-						prf = myhandle.Value;
-						if ~islogical(prf); prf=logical(prf);end
-						setpref('opticka', prfname, prf);
-					case 'uidropdown'
-						prf = myhandle.Value;
-						setpref('opticka', prfname, prf);
-				end
-				prefnames = [prefnames ' ' prfname '«' num2str(prf) '»'];
-				if ~anySaved; anySaved = true; end
+						prefnames = [prefnames ' ' prfname '«' num2str(prf) '»'];
+						if ~mod(i,4);prefnames = [prefnames '\n']; end
+					end
+					if ~anySaved; anySaved = true; end
 				end
 			end
-			if anySaved; fprintf('\n===>>> Opticka saved its local preferences: %s\n', prefnames); end
+			if anySaved; fprintf('\n===>>> Opticka Save Preferences:\n'); fprintf(prefnames); fprintf('\n');end
 		end
 		
 	end

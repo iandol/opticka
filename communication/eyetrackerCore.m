@@ -82,25 +82,23 @@ classdef eyetrackerCore < optickaCore
 		%> guessing and "cheating", by forcing a minimum delay (default =
 		%> 100ms / 0.1s) before initiating a saccade. Only used if X
 		%> position is not empty.
-		fixInit				= struct('X',[],'Y',[],'time',0.1,'radius',2)
+		fixInit				= struct('X', [],'Y', [],'time', 0.1,'radius', 2)
 		%> add a manual offset to the eye position, similar to a drift correction
 		%> but handled by the eyelinkManager.
-		offset				= struct('X',0,'Y',0)
+		offset				= struct('X', 0,'Y', 0)
 		%> tracker update speed (Hz)
 		sampleRate			= 300
 		%> start eyetracker in dummy mode?
 		isDummy				= false
 		%> do we record and retrieve eyetracker EDF file?
 		recordData			= true
-		%> use an operator screen for calibration etc.
+		%> use an operator screen for online display etc.
 		useOperatorScreen	= false
 		%> do we ignore blinks, if true then we do not update X and Y position
 		%> from previous eye location, meaning the various methods will maintain
 		%> position, e.g. if you are fixated and blink, the within-fixation X
 		%> and Y position are retained so that a blink does not "break"
-		%> fixation. a blink is defined as a state whre gx and gy are MISSING
-		%> and pa is 0. Technically we can't really tell if a subject is
-		%> blinking or has removed their head using the float data.
+		%> fixation. 
 		ignoreBlinks		= false
 		%> name of eyetracker EDF file
 		saveFile			= 'myData'
@@ -125,7 +123,7 @@ classdef eyetrackerCore < optickaCore
 		%> size to draw eye position on screen
 		eyeSize double			= 6
 		%> for trackerFlip, we can only flip every X frames
-		skipFlips				= 5
+		skipFlips				= 8
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -497,14 +495,14 @@ classdef eyetrackerCore < optickaCore
 			end
 			
 			% ---- test for fix initiation start window
-			ft = (me.currentSample.time - me.fixInitStartTime) / 1e3;
+			ft = (me.currentSample.time - me.fixInitStartTime);
 			if ~isempty(me.fixInit.X) && ft <= me.fixInit.time
 				r = sqrt((x - me.fixInit.X).^2 + (y - me.fixInit.Y).^2);
 				window = find(r < me.fixInit.radius);
 				if ~any(window)
 					searching = false; fixinit = true;
 					me.isInitFail = true; me.isFix = false;
-					fprintf('-+-+-> eyelinkManager: Eye left fix init window @ %.3f secs!\n',ft);
+					if me.verbose;fprintf('-+-+-> eyelinkManager: Eye left fix init window @ %.3f secs!\n',ft);end
 					return;
 				end
 			end
@@ -524,7 +522,7 @@ classdef eyetrackerCore < optickaCore
 				end
 			end
 			me.fixWindow = window;
-			me.fixTotal = (me.currentSample.time - me.fixInitStartTime) / 1e3;
+			me.fixTotal = (me.currentSample.time - me.fixInitStartTime);
 			if any(window) % inside fixation window
 				if me.fixN == 0
 					me.fixN = 1;
@@ -535,7 +533,7 @@ classdef eyetrackerCore < optickaCore
 						me.fixStartTime = me.currentSample.time;
 					end
 					fixated = true; searching = false;
-					me.fixLength = (me.currentSample.time - me.fixStartTime) / 1e3;
+					me.fixLength = (me.currentSample.time - me.fixStartTime);
 					if me.fixLength >= me.fixation.time
 						fixtime = true;
 					end
@@ -547,7 +545,7 @@ classdef eyetrackerCore < optickaCore
 				if me.fixN == 1
 					me.fixN = -100;
 				end
-				me.fixInitLength = (me.currentSample.time - me.fixInitStartTime) / 1e3;
+				me.fixInitLength = (me.currentSample.time - me.fixInitStartTime);
 				if me.fixInitLength < me.fixation.initTime
 					searching = true;
 				else
@@ -781,7 +779,8 @@ classdef eyetrackerCore < optickaCore
 			trackerDrawStimuli(me, stimPos);
 			trackerDrawEyePositions(me);
 			if ~isempty(comment);trackerDrawText(me, comment);end
-			trackerFlip(me,dontClear);
+			me.flipTick = 0;
+			trackerFlip(me, dontClear, true);
 		end
 
 		% ===================================================================
@@ -882,13 +881,16 @@ classdef eyetrackerCore < optickaCore
 		%> @brief draw the fixation box on the tracker display
 		%>
 		% ===================================================================
-		function trackerFlip(me, dontclear)
-			if ~me.isConnected || ~me.operatorScreen.isOpen || me.flipTick > 0; return; end
+		function trackerFlip(me, dontclear, force)
+			me.flipTick = me.flipTick + 1;
+			if ~exist('force','var'); force = false; end
+			if force || me.flipTick > me.skipFlips; me.flipTick = 1; end
+
+			if me.flipTick > 1 || ~me.isConnected || ~me.operatorScreen.isOpen; return; end
+
 			if ~exist('dontclear','var'); dontclear = 1; end
 			% 'Flip', [, when] [, dontclear] [, dontsync] [, multiflip])
 			me.operatorScreen.flip([], dontclear, 2);
-			me.flipTick = me.flipTick + 1;
-			if me.flipTick > me.skipFlips; me.flipTick = 0; end
 		end
 		
 	end%-------------------------END PUBLIC METHODS--------------------------------%
@@ -901,7 +903,7 @@ classdef eyetrackerCore < optickaCore
 		%> @brief send message to store in EDF data
 		% ===================================================================
 		function edfMessage(me, message)
-			
+			me.trackerMessage(message)
 		end
 
 		% ===================================================================

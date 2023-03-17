@@ -145,8 +145,8 @@ me.lastYExclusion			= [];
 % settings you can test if they are empty or not and set them based on
 % that...
 eT.name				= tS.name;
-if me.eyetracker.dummy == true;	eT.isDummy = true; end %===use dummy or real eyetracker? 
-if tS.saveData;		eT.recordData = true; end %===save ET data?					
+if me.eyetracker.dummy;	eT.isDummy = true; end %===use dummy or real eyetracker? 
+if tS.saveData;		eT.recordData = true; end %===save Eyetracker data?					
 if strcmp(me.eyetracker.device, 'eyelink')
 	if isempty(me.eyetracker.esettings)		%==check if GUI settings are empty
 		eT.sampleRate				= 250;		%==sampling rate
@@ -427,7 +427,7 @@ correctExitFn = {
 
 %========================================================INCORRECT
 %--------------------incorrect entry
-incEntryFn = { 
+incEntryFn = {
 	@()beep(aM,400,0.5,1);
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.INCORRECT));
@@ -459,8 +459,8 @@ incExitFn = {
 %--------------------break entry
 breakEntryFn = {
 	@()beep(aM,400,0.5,1);
-	@()edfMessage(eT,'END_RT');
-	@()edfMessage(eT,['TRIAL_RESULT ' num2str(tS.BREAKFIX)]);
+	@()trackerMessage(eT,'END_RT');
+	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.BREAKFIX));
 	@()trackerDrawStatus(eT,'BREAKFIX! :-(', stims.stimulusPositions, 0);
 	@()stopRecording(eT);
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
@@ -501,16 +501,15 @@ calibrateFn = {
 	@()drawBackground(s); %blank the display
 	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
-	@()rstop(io); 
 	@()trackerSetup(eT);  %enter tracker calibrate/validate setup mode
 };
 
 %--------------------drift correction function
-driftFn = { 
+driftFn = {
 	@()drawBackground(s); %blank the display
 	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
-	@()driftCorrection(eT) % enter drift correct (only eyelink) (only eyelink)
+	@()driftCorrection(eT) % enter drift correct (only eyelink)
 };
 offsetFcn = {
 	@()drawBackground(s); %blank the display

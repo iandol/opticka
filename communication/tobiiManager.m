@@ -54,8 +54,6 @@ classdef tobiiManager < eyetrackerCore
 		tobii
 		%> 
 		sampletime		= []
-		%> should we close it after calibration
-		closeSecondScreen logical = false
 	end
 	
 	properties (SetAccess = protected, GetAccess = public, Dependent = true)
@@ -269,45 +267,41 @@ classdef tobiiManager < eyetrackerCore
 				warning('Eyetracker not connected, cannot calibrate!');
 				return
 			end
-			if me.useOperatorScreen && ~me.closeSecondScreen && ~me.operatorScreen.isOpen; open(me.operatorScreen); end
+
+			if ~me.screen.isOpen; open(me.screen); end
+			if ~me.operatorScreen.isOpen; open(me.operatorScreen); end
+
 			if me.isDummy
 				disp('--->>> Tobii Dummy Mode: calibration skipped')
 				return;
-			end
-			if ~me.screen.isOpen 
-				open(me.screen);
 			end
 			fprintf('\n===>>> CALIBRATING TOBII... <<<===\n');
 			if ~exist('incal','var');incal=[];end
 			wasRecording = me.isRecording;
 			if wasRecording; stopRecording(me);	end
 			updateDefaults(me); % make sure we send any other settings changes
+			
 			ListenChar(-1);
-			if ~isempty(me.operatorScreen) && isa(me.operatorScreen,'screenManager')
-				if ~me.operatorScreen.isOpen
-					me.operatorScreen.open();
-				end
-				if me.manualCalibration
-					if ~isempty(incal) && isstruct(incal) && isfield(incal,'type') && contains(incal.type,'manual')
-						me.calibration = me.tobii.calibrateManual([me.screen.win me.operatorScreen.win], incal); 
-					else
-						me.calibration = me.tobii.calibrateManual([me.screen.win me.operatorScreen.win]);
-					end
+			if me.manualCalibration
+				if ~isempty(incal) && isstruct(incal) && isfield(incal,'type') && contains(incal.type,'manual')
+					me.calibration = me.tobii.calibrateManual([me.screen.win me.operatorScreen.win], incal); 
 				else
-					if ~isempty(incal) && isstruct(incal) && isfield(incal,'type') && contains(incal.type,'standard')
-						me.calibration = me.tobii.calibrate([me.screen.win me.operatorScreen.win], [], incal); 
-					else
-						me.calibration = me.tobii.calibrate([me.screen.win me.operatorScreen.win]);
-					end
+					me.calibration = me.tobii.calibrateManual([me.screen.win me.operatorScreen.win]);
 				end
 			else
-				me.calibration = me.tobii.calibrate(me.screen.win,[],incal); %start calibration
+				if ~isempty(incal) && isstruct(incal) && isfield(incal,'type') && contains(incal.type,'standard')
+					me.calibration = me.tobii.calibrate([me.screen.win me.operatorScreen.win], [], incal); 
+				else
+					me.calibration = me.tobii.calibrate([me.screen.win me.operatorScreen.win]);
+				end
 			end
 			ListenChar(0);
+
 			if strcmpi(me.calibrationStimulus,'movie')
 				me.calStim.movie.reset();
 				%me.calStim.movie.setup(me.screen);
 			end
+
 			if ~isempty(me.calibration) && me.calibration.wasSkipped ~= 1
 				cal = me.calibration;
 				if isfield(me.calibration,'selectedCal')
@@ -318,15 +312,13 @@ classdef tobiiManager < eyetrackerCore
 					end
 				end
 			else
-% 				disp('---!!! The calibration was unsuccesful or skipped !!!---')
+ 				disp('-+-+!!! The calibration was unsuccesful or skipped !!!+-+-')
 			end
-			if me.useOperatorScreen && me.closeSecondScreen && me.operatorScreen.isOpen
-				close(me.operatorScreen); 
-				WaitSecs('YieldSecs',0.2); 
+			if ~me.useOperatorScreen
+				try close(me.operatorScreen); end
 			end
 			resetAll(me);
 			if wasRecording; startRecording(me); end
-			me.isRecording_ = me.isRecording;
 		end
 		
 		% ===================================================================
@@ -441,7 +433,7 @@ classdef tobiiManager < eyetrackerCore
 				sample.gx		= mx;
 				sample.gy		= my;
 				sample.pa		= me.pupil;
-				sample.time		= GetSecs * 1e6;
+				sample.time		= GetSecs;
 				xy				= me.toDegrees([sample.gx sample.gy]);
 				me.x = xy(1); me.y = xy(2);
 				me.xAll			= [me.xAll me.x];
@@ -453,8 +445,8 @@ classdef tobiiManager < eyetrackerCore
 				td				= me.tobii.buffer.peekN('gaze',me.smoothing.nSamples);
 				if isempty(td);me.currentSample=sample;return;end
 				sample.raw		= td;
-				sample.time		= double(td.systemTimeStamp(end)); %remember these are in microseconds
-				sample.timeD	= double(td.deviceTimeStamp(end));
+				sample.time		= double(td.systemTimeStamp(end)) / 1e6; %remember these are in microseconds
+				sample.timeD	= double(td.deviceTimeStamp(end)) / 1e6;
 				if any(td.left.gazePoint.valid) || any(td.right.gazePoint.valid)
 					switch me.smoothing.eyes
 						case 'left'
