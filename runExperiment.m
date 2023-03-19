@@ -1211,9 +1211,15 @@ classdef runExperiment < optickaCore
 				me.dPixx = dPixxManager();
 			end
 			
-			if ~isdeployed && (~isfield(me.paths,'stateInfoFile') || isempty(me.paths.stateInfoFile))
+			if ~isdeployed && isempty(me.stateInfoFile)
 				if exist([me.paths.root filesep 'DefaultStateInfo.m'],'file')
-					me.paths.stateInfoFile = [me.paths.root filesep 'DefaultStateInfo.m'];
+					me.stateInfoFile = [me.paths.root filesep 'DefaultStateInfo.m'];
+				end
+			end
+
+			if ~isdeployed && isempty(me.userFunctionsFile)
+				if exist([me.paths.root filesep 'userFunctions.m'],'file')
+					me.userFunctionsFile = [me.paths.root filesep 'userFunctions.m'];
 				end
 			end
 				

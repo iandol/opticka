@@ -338,7 +338,11 @@ classdef metaStimulus < optickaCore
 							logs = [logs 'XY: ' num2str(stims(j)) ];
 						elseif isprop(me.stimuli{stims(j)}, [name 'Out'])
 							me.stimuli{stims(j)}.([name 'Out']) = values;
-							logs = [logs ' || ' name 'Out: ' num2str(values)];
+							if iscell(values)
+								logs = [logs ' || ' name 'Out: ' num2str(values{1})];
+							else
+								logs = [logs ' || ' name 'Out: ' num2str(values)];
+							end
 							if ~isempty(offset)
 								me.stimuli{offset(1)}.([name 'Out']) = values + offset(2);
 								logs = [logs ' || OFFSET' name 'Out: ' num2str(values + offset(2))];

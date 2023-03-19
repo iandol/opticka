@@ -528,7 +528,15 @@ classdef optickaCore < handle
 				fnames = intersect(findAttributes(me,'SetAccess','public'),fieldnames(args));
 				for i=1:length(fnames)
 					try
-						me.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
+						if isstruct(me.(fnames{i})) && isstruct(args.(fnames{i}))
+							fn = fieldnames(args.(fnames{i}));
+							for j = 1:length(fn)
+								me.(fnames{i}).(fn{j}) = args.(fnames{i}).(fn{j})
+							end
+						else
+							me.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
+						
+						end
 						me.salutation(fnames{i},'SET property')
 					catch
 						me.salutation(fnames{i},'Property INVALID!',true);

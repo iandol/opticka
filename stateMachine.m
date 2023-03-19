@@ -78,7 +78,8 @@ classdef stateMachine < optickaCore
 		%> to set this value each time. This can be used in an experiment
 		%> where you set this when you are in state A, and based on a
 		%> probability you can transition to state B or state C for
-		%> example...
+		%> example. See taskSequence.trialVar and runExperiment.updateNextState
+		%> for the tools to use this.
 		tempNextState char			= ''
 		%> verbose logging to command window?
 		verbose						= false

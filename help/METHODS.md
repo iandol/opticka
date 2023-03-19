@@ -64,6 +64,9 @@ The principal class object that 'runs' the experiment.
 - `updateConditionalFixationTarget(me, stimulus, variable, value, varargin)`  
 	Say you have 4 stimuli each with a different angle changed on every trial by the task object, and want the stimulus matching `angle = 90` to be used as the fixation target. This method finds which stimulus is set to a particular variable value and assigns the fixation target X and Y position to that stimulus.  
 
+- `updateNextState(me, type)`  
+	It is possible to force the stateMachine to jump to a tranisition to a named state by editing stateMachine.tempNextState. This method takes the current taskSequence trialVar or blockVar and sets the next state name to the value contained for the current trial. So for example you can set trialVar to `{'stimulus','catch'}` which randomises each trial with either 'stimulus' or 'catch', then use `@()updateNextState(me,'trial')` to choose this value as the temporary next state name.  
+
 -----------------------------------
 
 ## Task sequence manager ("task" in the state file)
@@ -151,8 +154,8 @@ This class manages groups of stimuli as a single object. Each stimulus can be sh
 
 ------------
 
-* **Question:** .
-* **Answer:** .
+* **Question:** I want to randomise some values of the stimuli but not include them as an indepedant variable.
+* **Answer:** The metaStimulus object contains a stimulusTable which allows you to make changes to stimuli without them added to the trial structure. This is useful during training, or if you need randomisation tangential to the task. As an example, in Chen et al., 2020 Science their Saccade-to-Phosphene task randomises the size and colour of the target but this is not used as a task variable. In this case set stimulusTable and then call `@()randomise(stims);` in the state machine functions (normally just before you call `@()update(stims);`). This will give randomised size and colour without adding any independant variables.
 
 ------------
 

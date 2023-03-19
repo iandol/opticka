@@ -1019,8 +1019,8 @@ classdef opticka < optickaCore
 		%> Save Protocol
 		%> @param 
 		% ===================================================================
-		function saveProtocol(me, copy)
-			if ~exist('copy','var'); copy = false; end
+		function saveProtocol(me, copyIt)
+			if ~exist('copyIt','var') || isempty(copyIt); copyIt = false; end
 			me.paths.currentPath = pwd;
 			cd(me.paths.protocols);
 			if isfield(me.store,'protocolName')
@@ -1030,6 +1030,8 @@ classdef opticka < optickaCore
 			end
 			[f,p] = uiputfile('*.mat','Save Opticka Protocol',fname);
 			if f ~= 0
+				me.store.protocolName = f;
+				me.r.paths.protocolName = me.store.protocolName;
 				if contains(p,[filesep 'opticka' filesep])
 					resp=questdlg('Are you sure you want write to the Opticka folder!? You should save protocols outside the program folder as they will be overwritten on an update...','Opticka','Yes','No','No');
 					if matches(resp,'No')
@@ -1045,7 +1047,7 @@ classdef opticka < optickaCore
 				tmp.ui = struct(); %remove the handles to the UI which will not be valid on reload
 				
 				[~, ff, ee] = fileparts(me.r.stateInfoFile);
-				if copy == true
+				if copyIt == true
 					tmp.r.stateInfoFile = [pwd filesep ff ee];
 					if ~strcmpi(me.r.stateInfoFile,tmp.r.stateInfoFile)
 						[status, msg] = copyfile(me.r.stateInfoFile, tmp.r.stateInfoFile, 'f');

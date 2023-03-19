@@ -43,8 +43,7 @@ classdef fixationCrossStimulus < baseStimulus
 	end
 	
 	properties (Dependent = true, SetAccess = private, GetAccess = private)
-		%> a dependant property to track when to switch from ON to OFF of
-		%flash.
+		%> dependant property to track when to switch from ON to OFF flash.
 		flashSwitch
 	end
 

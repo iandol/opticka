@@ -97,7 +97,7 @@ classdef eyelinkManager < eyetrackerCore
 			end
 			me.screen = sM;
 			
-			if ~isempty(me.calibration.IP) && ~me.isDummy
+			if isfield(me.calibration,'IP') && ~isempty(me.calibration.IP) && ~me.isDummy
 				me.salutation('Eyelink Initialise',['Trying to set custom IP address: ' me.calibration.IP],true)
 				ret = Eyelink('SetAddress', me.calibration.IP);
 				if ret ~= 0
