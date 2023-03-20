@@ -36,9 +36,11 @@
 %=========================================================================
 %----------------------General Settings----------------------------
 tS.name						= 'saccade-to-phosphene';
-% if training then show the saccade target and don't stimuluate, if
+% if 'training' then show the saccade target and don't stimuluate, if
 % 'stimulate' then we hide the saccade target and stimulate:
-tS.type						= 'training';
+tS.type						= 'stimulate';
+% which pin to use for stimulation
+tS.stimPin					= 11;
 % includeErrors: update the trial number for incorrect saccades: if true then we
 % call updateTask for both correct and incorrect trials, otherwise we only call
 % updateTask() for correct responses. 'false' is useful during training.
@@ -52,7 +54,7 @@ tS.askForComments			= false;	%==UI requestor asks for comments before/after run
 tS.saveData					= true;		%==save behavioural and eye movement data?
 tS.showBehaviourPlot		= true;		%==open the behaviourPlot figure? Can cause more memory use
 tS.nStims					= stims.n;	%==number of stimuli, taken from metaStimulus object
-tS.tOut						= 1;		%==if wrong response, how long to time out before next trial
+tS.tOut						= 5;		%==if wrong response, how long to time out before next trial
 tS.CORRECT					= 1;		%==the code to send eyetracker for correct trials
 tS.BREAKFIX					= -1;		%==the code to send eyetracker for break fix trials
 tS.INCORRECT				= -5;		%==the code to send eyetracker for incorrect trials
@@ -62,7 +64,7 @@ tS.INCORRECT				= -5;		%==the code to send eyetracker for incorrect trials
 % uncomment each line to get specific verbose logging from each of these
 % components; you can also set verbose in the opticka GUI to enable all of
 % these…
-sM.verbose					= true;		%==print out stateMachine info for debugging
+%sM.verbose					= true;		%==print out stateMachine info for debugging
 %stims.verbose				= true;		%==print out metaStimulus info for debugging
 %io.verbose					= true;		%==print out io commands for debugging
 %eT.verbose					= true;		%==print out eyelink commands for debugging
@@ -99,7 +101,7 @@ ts.catchTrialTime			= 1;
 % visual target
 tS.targetFixInit			= 0.25; % time to find the target
 tS.targetFixTime			= 0.75; % to to maintain fixation on target 
-tS.targetRadius				= 4; %radius to fix within.
+tS.targetRadius				= [10 10]; %radius to fix within.
 % initial values for historical log of X / Y position and exclusion zone
 me.lastXPosition			= tS.fixX;
 me.lastYPosition			= tS.fixY;
@@ -238,7 +240,7 @@ pfEntry = {
 };
 
 pfWithin = {
-	@()trackerDrawEyePosition(eT); % for tobii
+	@()drawPhotoDiode(s,[0 0 0]);
 };
 
 pfExit = {
@@ -259,7 +261,7 @@ fixEntry = {
 %--------------------fix within
 fixWithin = {
 	@()draw(stims); %draw stimulus
-	@()trackerDrawEyePosition(eT); % for tobii
+	@()drawPhotoDiode(s,[0 0 0]);
 };
 
 %--------------------test we are fixated for a certain length of time
@@ -290,6 +292,7 @@ catchEntry = {
 % what to run when we are showing stimuli
 catchWithin = { 
 	@()draw(stims);
+	@()drawPhotoDiode(s,[1 1 1]);
 };
 
 % test we are finding the new target (stimulus 1, the saccade target)
@@ -297,7 +300,7 @@ catchFix = {
 	@()testHoldFixation(eT,'correct','breakfix'); % tests finding and maintaining fixation
 };
 
-%as we exit stim presentation state
+%as we exit catch trial
 catchExit = { 
 	@()setStrobeValue(me,255); 
 	@()doStrobe(me,true);
@@ -312,17 +315,17 @@ stimEntry = {
 	% stims.fixationChoice above
 	@()updateFixationTarget(me, tS.useTask);
 	@()doStrobe(me,true);
-	@()logRun(me,'STIMULUS'); %fprintf current trial info to command window
 };
 if matches(tS.type,'training')
-	stimEntry = [ {@()hide(stims,2);@()show(stims, 1)}; stimEntry ]; % make sure our taskSequence is moved to the next trial
+	stimEntry = [ {@()show(stims)}; stimEntry ]; % make sure our taskSequence is moved to the next trial
 else
-	stimEntry = [ {@()hide(stims);@()timedTTL(rM,11,2)}; stimEntry ]; % we randomise the run within this block to make it harder to guess next trial
+	stimEntry = [ {@()timedTTL(rM,tS.stimPin,2)}; stimEntry ]; % we randomise the run within this block to make it harder to guess next trial
 end
 
 % what to run when we are showing stimuli
 stimWithin = { 
 	@()draw(stims);
+	@()drawPhotoDiode(s,[1 1 1]);
 };
 
 % test we are finding the new target (stimulus 1, the saccade target)
