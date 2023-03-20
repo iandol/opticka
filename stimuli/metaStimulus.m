@@ -321,14 +321,17 @@ classdef metaStimulus < optickaCore
 				if ~isempty(stims) && ~isempty(name)
 
 					[r,c] = size(me.stimulusTable(i).values);
-					if r > 1 && c > 1
+					if c > 1 && r == 1
+						values = me.stimulusTable(i).values(1,randi(c));
+					elseif c > 1 && r > 1
 						values = me.stimulusTable(i).values(randi(r),:);
-					elseif r > 1
+					elseif c == 1 && r > 1
 						values = me.stimulusTable(i).values(randi(r),1);
 					else
-						values = me.stimulusTable(i).values(1,randi(c));
+						values = me.stimulusTable(i).values(1,1);
 					end
-
+					if iscell(values); values = values{1}; end	
+					
 					for j=1:length(stims)
 						if strcmpi(name,'xyPosition')
 							me.stimuli{stims(j)}.xPositionOut = values(1);
@@ -338,11 +341,7 @@ classdef metaStimulus < optickaCore
 							logs = [logs 'XY: ' num2str(stims(j)) ];
 						elseif isprop(me.stimuli{stims(j)}, [name 'Out'])
 							me.stimuli{stims(j)}.([name 'Out']) = values;
-							if iscell(values)
-								logs = [logs ' || ' name 'Out: ' num2str(values{1})];
-							else
-								logs = [logs ' || ' name 'Out: ' num2str(values)];
-							end
+							logs = [logs ' || ' name 'Out: ' num2str(values)];
 							if ~isempty(offset)
 								me.stimuli{offset(1)}.([name 'Out']) = values + offset(2);
 								logs = [logs ' || OFFSET' name 'Out: ' num2str(values + offset(2))];

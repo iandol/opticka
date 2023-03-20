@@ -531,7 +531,7 @@ classdef optickaCore < handle
 						if isstruct(me.(fnames{i})) && isstruct(args.(fnames{i}))
 							fn = fieldnames(args.(fnames{i}));
 							for j = 1:length(fn)
-								me.(fnames{i}).(fn{j}) = args.(fnames{i}).(fn{j})
+								me.(fnames{i}).(fn{j}) = args.(fnames{i}).(fn{j});
 							end
 						else
 							me.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure

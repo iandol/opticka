@@ -646,13 +646,11 @@ classdef taskSequence < optickaCore & dynamicprops
 				fnOut = intersect(fn,fnTemplate);
 				for ii = 1:idx
 					for i = 1:length(fnOut)
-						if ~isempty(invalue(ii).(fn{i}))
-							me.nVar(ii).(fn{i}) = invalue(ii).(fn{i});
-						end
+						me.nVar(ii).(fn{i}) = invalue(ii).(fn{i});
 					end
-					% if isempty(me.nVar(idx).(fnTemplate{1})) || me.nVar(idx).(fnTemplate{2}) == 0 || isempty(me.nVar(idx).(fnTemplate{3}))
-					%  	fprintf('---> Variable %g is not properly formed!!!\n',idx);
-					% end
+					if isempty(me.nVar(ii).offsetstimulus)
+						me.nVar(ii).offsetvalue = [];
+					end
 				end
 			end
 		end

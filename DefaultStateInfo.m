@@ -63,8 +63,8 @@
 %> uF       = user functions - add your own functions to this class
 %> tS		= structure to hold general variables, will be saved as part of the data
 
-%==================================================================
-%------------------------General Settings--------------------------
+%=========================================================================
+%----------------------General Settings----------------------------
 % These settings are make changing the behaviour of the protocol easier. tS
 % is just a struct(), so you can add your own switches or values here and
 % use them lower down. Some basic switches like saveData, useTask,
@@ -89,7 +89,7 @@ tS.CORRECT					= 1;		%==the code to send eyetracker for correct trials
 tS.BREAKFIX					= -1;		%==the code to send eyetracker for break fix trials
 tS.INCORRECT				= -5;		%==the code to send eyetracker for incorrect trials
 
-%=================================================================
+%=========================================================================
 %----------------Debug logging to command window------------------
 % uncomment each line to get specific verbose logging from each of these
 % components; you can also set verbose in the opticka GUI to enable all of
@@ -101,23 +101,23 @@ tS.INCORRECT				= -5;		%==the code to send eyetracker for incorrect trials
 %rM.verbose					= true;		%==print out reward commands for debugging
 %task.verbose				= true;		%==print out task info for debugging
 
-%==================================================================
+%=========================================================================
 %-----------------INITIAL Eyetracker Settings----------------------
 % These settings define the initial fixation window and set up for the
-% eyetracker. They may be modified during the task (i.e. moving the
-% fixation window towards a target, enabling an exclusion window to stop
-% the subject entering a specific set of display areas etc.)
+% eyetracker. They may be modified during the task (i.e. moving the fixation
+% window towards a target, enabling an exclusion window to stop the subject
+% entering a specific set of display areas etc.)
 %
-% IMPORTANT: you need to make sure that the global state time is larger
-% than the fixation timers specified here. Each state has a global timer,
-% so if the state timer is 5 seconds but your fixation timer is 6 seconds,
-% then the state will finish before the fixation time was completed!
-
+% **IMPORTANT**: you need to make sure that the global state time is larger than
+% any fixation timers specified here. Each state has a global timer, so if the
+% state timer is 5 seconds but your fixation timer is 6 seconds, then the state
+% will finish before the fixation time was completed!
+%------------------------------------------------------------------
 % initial fixation X position in degrees (0° is screen centre)
 tS.fixX						= 0;
-% initial fixation Y position in degrees
+% initial fixation Y position in degrees  (0° is screen centre)
 tS.fixY						= 0;
-% time to search and enter fixation window
+% time to search and enter fixation window (Initiate fixation)
 tS.firstFixInit				= 3;
 % time to maintain initial fixation within window, can be single value or a
 % range to randomise between
@@ -137,13 +137,11 @@ me.lastYPosition			= tS.fixY;
 me.lastXExclusion			= [];
 me.lastYExclusion			= [];
 
-%==================================================================
+%=========================================================================
 %---------------------------Eyetracker setup-----------------------
-% NOTE: the opticka GUI can set eyetracker options too, if you set options
-% here they will OVERRIDE the GUI ones; if they are commented then the GUI
-% options are used. me.elsettings and me.tobiisettings contain the GUI
-% settings you can test if they are empty or not and set them based on
-% that...
+% NOTE: the opticka GUI can set eyetracker options too; me.eyetracker.esettings
+% and me.eyetracker.tsettings contain the GUI settings. We test if they are
+% empty or not and set general values based on that...
 eT.name				= tS.name;
 if me.eyetracker.dummy;	eT.isDummy = true; end %===use dummy or real eyetracker? 
 if tS.saveData;		eT.recordData = true; end %===save Eyetracker data?					
@@ -188,23 +186,20 @@ updateFixationValues(eT, tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.
 %Ensure we don't start with any exclusion zones set up
 resetAll(eT);
 
-%==================================================================
-%----WHICH states assigned as correct or break for online plot?----
-%----You need to use regex patterns for the match (doc regexp)-----
+%=========================================================================
+%----------------------ONLINE Behaviour Plot-----------------------
+% WHICH states assigned as correct or break for online plot?
+% You need to use regex patterns for the match (doc regexp).
 bR.correctStateName				= "correct";
 bR.breakStateName				= ["breakfix","incorrect"];
 
-%==================================================================
-%--------------randomise stimulus variables every trial?-----------
-% if you want to have some randomisation of stimuls variables without using
-% taskSequence task (i.e. general training tasks), you can uncomment this
-% and runExperiment can use this structure to change e.g. X or Y position,
-% size, angle see metaStimulus for more details. Remember this will not be
-% "Saved" for later use, if you want to do controlled methods of constants
-% experiments use taskSequence to define proper randomised and balanced
-% variable sets and triggers to send to recording equipment etc...
-%
-% stims.choice					= [];
+%=========================================================================
+%--------------Randomise stimulus variables every trial?-----------
+% If you want to have some randomisation of stimuls variables WITHOUT using
+% taskSequence task. Remember this will not be "Saved" for later use, if you
+% want to do controlled experiments use taskSequence to define proper randomised
+% and balanced variable sets and triggers to send to recording equipment etc...
+% Good for training tasks, or stimulus variability irrelevant to the task.
 % n								= 1;
 % in(n).name					= 'xyPosition';
 % in(n).values					= [6 6; 6 -6; -6 6; -6 -6; -6 0; 6 0];
@@ -214,7 +209,7 @@ bR.breakStateName				= ["breakfix","incorrect"];
 stims.choice					= [];
 stims.stimulusTable				= [];
 
-%=======================================================================
+%=========================================================================
 %-------------allows using arrow keys to control variables?-------------
 % another option is to enable manual control of a table of variables
 % this is useful to probe RF properties or other features while still
@@ -230,7 +225,7 @@ stims.stimulusSets				= {[1,2],[1]};
 stims.setChoice					= 1;
 hide(stims);
 
-%======================================================================
+%=========================================================================
 % N x 2 cell array of regexpi strings, list to skip the current -> next
 % state's exit functions; for example skipExitStates =
 % {'fixate','incorrect|breakfix'}; means that if the currentstate is
@@ -239,9 +234,19 @@ hide(stims);
 % exit states.
 sM.skipExitStates			= {'fixate','incorrect|breakfix'};
 
-%===================================================================
-%===================================================================
-%===================================================================
+%=========================================================================
+% which stimulus in the list is used for a fixation target? For this
+% protocol it means the subject must saccade this stimulus (the saccade
+% target is #1 in the list) to get the reward. Also which stimulus to set an
+% exclusion zone around (where a saccade into this area causes an immediate
+% break fixation).
+stims.fixationChoice		= 1;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%------------------------------------------------------------------------%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%=========================================================================
 %------------------State Machine Task Functions---------------------
 % Each cell {array} holds a set of anonymous function handles which are
 % executed by the state machine to control the experiment. The state
@@ -252,13 +257,11 @@ sM.skipExitStates			= {'fixate','incorrect|breakfix'};
 % also add global variables/objects then use these. The values entered here
 % are set on load, if you want up-to-date values then you need to use
 % methods/function wrappers to retrieve/set them.
-%===================================================================
-%===================================================================
-%===================================================================
+%=========================================================================
 
-%========================================================
+%==============================================================
 %========================================================PAUSE
-%========================================================
+%==============================================================
 
 %--------------------pause entry
 pauseEntryFn = {
@@ -285,9 +288,9 @@ pauseExitFn = {
 	@()startRecording(eT, true); 
 }; 
 
-%========================================================
-%========================================================PREFIXATE
-%========================================================
+%==============================================================
+%====================================================PRE-FIXATION
+%==============================================================
 %--------------------prefixate entry
 prefixEntryFn = { 
 	@()needFlip(me, true); 
@@ -314,9 +317,9 @@ prefixExitFn = {
 	@()trackerDrawStatus(eT,'Init Fix...', stims.stimulusPositions);
 };
 
-%========================================================
-%========================================================FIXATE
-%========================================================
+%==============================================================
+%====================================================FIXATION
+%==============================================================
 %--------------------fixate entry
 fixEntryFn = { 
 	@()show(stims{tS.nStims});
@@ -529,6 +532,10 @@ flashFn = { @()flashScreen(s, 0.2) }; % fullscreen flash mode for visual backgro
 
 %--------------------show 1deg size grid
 gridFn = { @()drawGrid(s) };
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%------------------------------------------------------------------------%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %==========================================================================
 %==========================================================================
