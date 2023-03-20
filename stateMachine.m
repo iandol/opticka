@@ -149,17 +149,6 @@ classdef stateMachine < optickaCore
 			'timeDelta','skipExitStates','tempNextState'}
 	end
 	
-	%events
-		%> called at run start
-		%runStart
-		%> called at run end
-		%runFinish
-		%> entering state
-		%enterState
-		%> exiting state
-		%exitState
-	%end
-	
 	%=======================================================================
 	methods %------------------PUBLIC METHODS
 	%=======================================================================
@@ -384,7 +373,6 @@ classdef stateMachine < optickaCore
 		% ===================================================================
 		function finish(me)
 			if me.isFinishing == true
-				%me.notify('runFinish');
 				me.finalTime = feval(me.clockFcn) - me.startTime;
 				me.finalTick = me.totalTicks;
 				me.isRunning = false;
@@ -489,6 +477,7 @@ classdef stateMachine < optickaCore
 			me.finalTick = [];
 			me.nextTickOut = [];
 			me.nextTimeOut = [];
+			me.fevalTime = [];
 		end
 		
 		% ===================================================================
@@ -609,7 +598,7 @@ classdef stateMachine < optickaCore
 		% ===================================================================
 		% call transitionFevalable before exiting last and entering next state
 		function transitionToStateWithName(me, nextName)
-			if strcmpi(nextName,'useTemp'); nextName=me.tempNextState; end
+			if ~exist('nextName','var') || strcmpi(nextName,'useTemp'); nextName=me.tempNextState; end
 			[isState, index] = isStateName(me, nextName);
 			if isState
 				if ~isempty(me.skipExitStates)
@@ -645,10 +634,6 @@ classdef stateMachine < optickaCore
 			
 			storeCurrentStateInfo(me);
 			me.tempNextState = '';
-			me.currentEntryFcn = {};
-			me.currentEntryTime = [];
-			me.nextTickOut = [];
-			me.nextTimeOut = [];
 			
 			if me.verbose; me.salutation(['Exit state: ' me.currentState.name ' @ ' num2str(me.log(end).tnow-me.startTime) 's | ' num2str(me.log(end).stateTimeToNow) 'secs | ' num2str(me.log(end).tick) '/' num2str(me.totalTicks) 'ticks'],'',false); end
 		end
@@ -662,7 +647,6 @@ classdef stateMachine < optickaCore
 			me.currentIndex = thisIndex;
 			if length(me.stateList) >= thisIndex
 				
-				%me.notify('enterState');
 				thisState = me.stateList(me.currentIndex);
 				me.currentEntryTime = feval(me.clockFcn);
 				me.currentTick = 1;

@@ -739,11 +739,7 @@ classdef runExperiment < optickaCore
 				
 				%================================open the PTB screen and setup stimuli
 				me.screenVals			= s.open(me.debug,tL);
-				if me.screenVals.fps < 90
-					me.fInc = 6;
-				else
-					me.fInc = 8;
-				end
+				me.fInc = round(0.3 / (1 / me.screenVals.ifi)); %roughly <0.3s key press
 				stims.verbose			= me.verbose;
 				setup(stims, s); %run setup() for each stimulus
 				task.fps				= s.screenVals.fps;
@@ -1227,6 +1223,8 @@ classdef runExperiment < optickaCore
 			try me.ptb=Screen('version'); end
 		
 			if ~isempty(me.screen); me.screenVals = me.screen.screenVals; end
+
+			me.fInc = round(0.3 / (1/me.screenVals.ifi));
 			
 			me.stopTask = false;
 			
@@ -1752,11 +1750,7 @@ classdef runExperiment < optickaCore
 		%> @param
 		% ===================================================================
 			me.screenVals = me.screen.prepareScreen();
-			if me.screenVals.fps < 90
-				me.fInc = 6;
-			else
-				me.fInc = 8;
-			end
+			me.fInc = round(0.3 / (1 / me.screenVals.ifi)); %roughly <0.3s key press
 		end
 
 		% ===================================================================
@@ -1926,7 +1920,7 @@ classdef runExperiment < optickaCore
 				if ~rM.isOpen || rM.silentMode
 					rM.reset();
 					rM.silentMode = false;
-					if ~isempty(me.arduinoPort);rM.port = me.arduinoPort;end
+					if ~isempty(me.arduinoPort); rM.port = me.arduinoPort; end
 					rM.open();
 				end
 				me.arduino = rM;
@@ -2233,7 +2227,7 @@ classdef runExperiment < optickaCore
 			tS.keyTicks = tS.keyTicks + 1;
 			%now lets check whether any keyboard commands are pressed...
 			[keyIsDown, ~, keyCode] = KbCheck(-1);
-			if keyIsDown == 1
+			if keyIsDown
 				rchar = KbName(keyCode);
 				if iscell(rchar);rchar=rchar{1};end
 				switch rchar
@@ -2379,7 +2373,7 @@ classdef runExperiment < optickaCore
 							tS.keyHold = tS.keyTicks + me.fInc;
 						end
 					case 'r'
-						timedTTL(rM,rM.rewardPin,rM.rewardTime);
+						timedTTL(me.arduino);
 					case '=+'
 						if tS.keyTicks > tS.keyHold
 							me.screen.screenXOffset = me.screen.screenXOffset + 1;

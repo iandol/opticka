@@ -35,7 +35,10 @@
 
 %=========================================================================
 %----------------------General Settings----------------------------
-tS.name						= 'saccade-phosphene';
+tS.name						= 'saccade-to-phosphene';
+% if training then show the saccade target and don't stimuluate, if
+% 'stimulate' then we hide the saccade target and stimulate:
+tS.type						= 'training';
 % includeErrors: update the trial number for incorrect saccades: if true then we
 % call updateTask for both correct and incorrect trials, otherwise we only call
 % updateTask() for correct responses. 'false' is useful during training.
@@ -91,9 +94,11 @@ tS.firstFixTime				= [0.3 0.9];
 tS.firstFixRadius			= 2;
 % do we forbid eye to enter-exit-reenter fixation window?
 tS.strict					= true;
+% CATCH TRIAL TIME:
+ts.catchTrialTime			= 1;
 % visual target
 tS.targetFixInit			= 0.25; % time to find the target
-tS.targetFixTime			= 1; % to to maintain fixation on target 
+tS.targetFixTime			= 0.75; % to to maintain fixation on target 
 tS.targetRadius				= 4; %radius to fix within.
 % initial values for historical log of X / Y position and exclusion zone
 me.lastXPosition			= tS.fixX;
@@ -261,24 +266,23 @@ fixWithin = {
 initFix = { 
 	% this command performs the logic to search and then maintain fixation
 	% inside the fixation window. The eyetracker parameters are defined above.
-	% If the subject does initiate and then maintain fixation, then 'fixstim'
+	% If the subject does initiate and then maintain fixation, then sM.tempNextState
 	% is returned and the state machine will jump to that state,
 	% otherwise 'incorrect' is returned and the state machine will jump there. 
+	% sM.tempNextState is set using @()updateNextState(me,'trial') above.
 	% If neither condition matches, then the state table below
 	% defines that after 5 seconds we will switch to the incorrect state.
-	@()testSearchHoldFixation(eT,'stimulus','incorrect')
+	@()testSearchHoldFixation(eT, sM.tempNextState, 'incorrect')
 };
 
-fixExit = { 
-	
-};
+fixExit = { };
 
 %==============================================================
 %====================================================CATCH TRIAL
 %==============================================================
 % what to run when we enter the stim presentation state
 catchEntry = {
-	@()updateFixationValues(eT,[],[],[],0.5); %reset fixation window
+	@()updateFixationValues(eT,[],[],[],ts.catchTrialTime); %reset fixation window
 	@()doStrobe(me,true);
 	@()logRun(me,'CATCH'); %fprintf current trial info to command window
 };
@@ -304,15 +308,17 @@ catchExit = {
 %==============================================================
 % what to run when we enter the stim presentation state
 stimEntry = {
-	@()hide(stims,2);
-	@()show(stims, 1);
 	% use our saccade target stimulus for next fix X and Y, see
 	% stims.fixationChoice above
 	@()updateFixationTarget(me, tS.useTask);
 	@()doStrobe(me,true);
-	%@()timedTTL(io,4,10);
 	@()logRun(me,'STIMULUS'); %fprintf current trial info to command window
 };
+if matches(tS.type,'training')
+	stimEntry = [ {@()hide(stims,2);@()show(stims, 1)}; stimEntry ]; % make sure our taskSequence is moved to the next trial
+else
+	stimEntry = [ {@()hide(stims);@()timedTTL(rM,11,2)}; stimEntry ]; % we randomise the run within this block to make it harder to guess next trial
+end
 
 % what to run when we are showing stimuli
 stimWithin = { 
@@ -475,7 +481,7 @@ stateInfoTmp = {
 'pause'		'prefix'	inf		pauseEntry		{}				{}				pauseExit;
 'prefix'	'fixate'	0.5		pfEntry			pfWithin		{}				pfExit;
 'fixate'	'incorrect'	5		fixEntry		fixWithin		initFix			fixExit;
-'catch'		'incorrect'	5		catchEntry		catchWithin		{}				catchExit
+'catchtrial' 'incorrect' 5		catchEntry		catchWithin		catchFix		catchExit
 'stimulus'	'incorrect'	5		stimEntry		stimWithin		targetFix		stimExit;
 'correct'	'prefix'	0.25	correctEntry	correctWithin	{}				correctExit;
 'incorrect'	'timeout'	0.25	incEntry		incWithin		{}				incExit;
