@@ -365,13 +365,12 @@ classdef eyelinkManager < eyetrackerCore
 					&& me.currentSample.gy(me.eyeUsed+1) == me.MISSING_DATA ...
 					&& me.currentSample.pa(me.eyeUsed+1) == 0 ...
 					&& me.ignoreBlinks
-						%me.x = toPixels(me,me.fixation.X,'x');
-						%me.y = toPixels(me,me.fixation.Y,'y');
+						me.currentSample.time = me.currentSample.time / 1e3;
 						me.currentSample.valid = false;
 						me.pupil = 0;
 						me.isBlink = true;
 					else
-						me.currentSample.time = me.currentSample.time * 1e3;
+						me.currentSample.time = me.currentSample.time / 1e3;
 						me.currentSample.valid = true;
 						xy = toDegrees(me, [me.currentSample.gx(me.eyeUsed+1) me.currentSample.gy(me.eyeUsed+1)]);
 						me.x = xy(1); me.y = xy(2);
