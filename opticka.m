@@ -37,7 +37,7 @@ classdef opticka < optickaCore
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> version number
-		optickaVersion char		= '2.15.0'
+		optickaVersion char		= '2.15.1'
 		%> is this a remote instance?
 		remote					= false
 	end
