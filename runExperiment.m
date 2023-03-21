@@ -1450,7 +1450,7 @@ classdef runExperiment < optickaCore
 		%>
 		%> @param value the value to set the I/O system
 		% ===================================================================
-			if value == Inf; value = me.stimOFFValue; end
+			if value == Inf; value = me.strobe.stimOFFValue; end
 			if strcmp(me.strobe.device, 'display++')
 				prepareStrobe(me.dPP, value);
 			elseif strcmp(me.strobe.device, 'datapixx')
@@ -1549,7 +1549,7 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 			if me.isRunning
 				if ~exist('tag','var'); tag = '#'; end
-				t = sprintf('===>%s:%s %s-UUID:%s',tag,infoText(me),me.stateMachine.currentName,me.stateMachine.currentUUID);
+				t = sprintf('===>%s:%s',tag,infoText(me));
 				fprintf('%s\n',t);
 				me.behaviouralRecord.info = t;
 				if me.isRunTask
@@ -1859,7 +1859,6 @@ classdef runExperiment < optickaCore
 				io = me.dPP;  %#ok<*PROP>
 				io.sM = me.screen;
 				io.strobeMode = me.dPPMode;
-				me.stimOFFValue = 255;
 				io.name = me.name;
 				io.verbose = me.verbose;
 				io.name = 'runinstance';
@@ -1870,7 +1869,6 @@ classdef runExperiment < optickaCore
 					me.dPixx = dPixxManager('verbose',me.verbose);
 				end
 				io = me.dPixx; io.name = me.name;
-				io.stimOFFValue = 2^15;
 				io.silentMode = false;
 				io.verbose = me.verbose;
 				io.name = 'runinstance';
@@ -2109,7 +2107,7 @@ classdef runExperiment < optickaCore
 						me.task.switchTime=me.task.switchTime+me.task.isTimeNow;
 						me.task.switchTick=me.task.switchTick+(ceil(me.task.isTimeNow*me.screenVals.fps));
 					end
-					setStrobeValue(me,me.stimOFFValue);%get the strobe word to signify stimulus OFF ready
+					setStrobeValue(me,me.strobe.stimOFFValue);%get the strobe word to signify stimulus OFF ready
 				else %we have to show the new run on the next flip
 					me.task.switchTime=me.task.switchTime+me.task.trialTime; %update our timer
 					me.task.switchTick=me.task.switchTick+(ceil(me.task.trialTime*me.screenVals.fps)); %update our timer

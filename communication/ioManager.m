@@ -14,6 +14,8 @@ classdef ioManager < optickaCore
 		io
 		%>
 		silentMode logical = true
+		%>
+		stimOFFValue = 255
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Dependent = true)
