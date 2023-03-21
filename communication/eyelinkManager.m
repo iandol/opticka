@@ -190,7 +190,7 @@ classdef eyelinkManager < eyetrackerCore
 				%Eyelink('Command', 'use_ellipse_fitter = no');
 				Eyelink('Command', 'sample_rate = %d',me.sampleRate);
 			end
-		end
+		   end
 		
 		% ===================================================================
 		%> @brief
@@ -310,8 +310,8 @@ classdef eyelinkManager < eyetrackerCore
 		% ===================================================================
 		function success = driftCorrection(me)
 			success = false;
-			x=me.toPixels(me.fixation.X,'x'); %#ok<*PROPLC>
-			y=me.toPixels(me.fixation.Y,'y');
+			x=me.toPixels(me.fixation.X(1),'x'); %#ok<*PROPLC>
+			y=me.toPixels(me.fixation.Y(1),'y');
 			if me.isConnected
 				resetOffset(me);
 				Eyelink('Command', 'driftcorrect_cr_disable = OFF');
@@ -324,7 +324,7 @@ classdef eyelinkManager < eyetrackerCore
 				success = EyelinkDoDriftCorrection(me.defaults, round(x), round(y), 1, 1);
 				[result,out] = Eyelink('CalMessage');
 				fprintf('DriftCorrect @ %.2f/%.2f px (%.2f/%.2f deg): result = %i msg = %s\n',...
-					x,y, me.fixation.X, me.fixation.Y,result,out);
+					x,y, me.fixation.X(1), me.fixation.Y(1),result,out);
 				if success ~= 0
 					me.salutation('Drift Correct','FAILED',true);
 				end
@@ -504,7 +504,7 @@ classdef eyelinkManager < eyetrackerCore
 		% ===================================================================
 		function trackerClearScreen(me)
 			if ~me.isConnected; return; end
-			Eyelink('Command', 'clear_screen 0');
+			Eyelink('Command', 'clear_screen 1');
 		end
 
 		% ===================================================================
@@ -515,8 +515,8 @@ classdef eyelinkManager < eyetrackerCore
 			if ~me.isConnected; return; end
 			if ~exist('comment','var'); comment=''; end
 			if ~exist('ts','var'); ts = []; end
-			if ~exist('dontClear','var');dontClear = false; end
-			if dontClear==false; trackerClearScreen(me); end
+			if ~exist('dontClear','var'); dontClear = false; end
+			if dontClear == false; trackerClearScreen(me); end
 			trackerDrawExclusion(me);
 			trackerDrawFixation(me);
 			if ~isempty(ts);trackerDrawStimuli(me, ts);end
@@ -551,9 +551,9 @@ classdef eyelinkManager < eyetrackerCore
 				if convertToPixels; rect = toPixels(me, rect,'rect'); end
 				rect = round(rect);
 				if me.stimulusPositions(i).selected == true
-					Eyelink('Command', 'draw_box %d %d %d %d 10', rect(1), rect(2), rect(3), rect(4));
+					Eyelink('Command', 'draw_box %d %d %d %d 15', rect(1), rect(2), rect(3), rect(4));
 				else
-					Eyelink('Command', 'draw_box %d %d %d %d 11', rect(1), rect(2), rect(3), rect(4));
+					Eyelink('Command', 'draw_box %d %d %d %d 13', rect(1), rect(2), rect(3), rect(4));
 				end
 			end			
 		end
@@ -564,8 +564,11 @@ classdef eyelinkManager < eyetrackerCore
 		% ===================================================================
 		function trackerDrawFixation(me)
 			if ~me.isConnected; return; end
-			size = me.fixation.radius * 2;
-			rect = [0 0 size size];
+			if length(me.fixation.radius) == 1
+				rect = [0 0 me.fixation.radius*2 me.fixation.radius*2];
+			else
+				rect = [0 0 me.fixation.radius(1)*2 me.fixation.radius(2)*2];
+			end
 			for i = 1:length(me.fixation.X)
 				nrect = CenterRectOnPoint(rect, me.fixation.X(i), me.fixation.Y(i));
 				nrect = round(toPixels(me, nrect, 'rect'));
@@ -687,10 +690,11 @@ classdef eyelinkManager < eyetrackerCore
 			%set up a figure to plot eye position
 			figure;plot(0,0,'ro');ax=gca;hold on;xlim([-20 20]);ylim([-20 20]);set(ax,'YDir','reverse');
 			title('eyelinkManager Demo');xlabel('X eye position (deg)');ylabel('Y eye position (deg)');grid on;grid minor;drawnow;
+			drawnow;
 			% DEMO EXPERIMENT:
 			try
 				%open screen manager and dots stimulus
-				s = screenManager('debug',true,'pixelsPerCm',27,'distance',66);
+				s = screenManager('debug',true,'pixelsPerCm',36,'distance',57.3);
 				s.font.TextSize = 18;
 				if exist('forcescreen','var'); s.screen = forcescreen; end
 				s.backgroundColour = [0.5 0.5 0.5 0]; %s.windowed = [0 0 900 900];
@@ -702,7 +706,7 @@ classdef eyelinkManager < eyetrackerCore
 				if ~me.isDummy && ~me.isConnected
 					reset(o);
 					close(s);
-					error('Could not connect to Eyelink or use Dummy mode...')
+					error('Could not connect to Eyelink or use Dummy mode...');
 				end
 				%ListenChar(-1); % capture the keyboard settings
 				trackerSetup(me); % setup + calibrate the eyelink
@@ -711,22 +715,22 @@ classdef eyelinkManager < eyetrackerCore
 				% x,y,inittime,fixtime,radius,strict
 				me.updateFixationValues([0 -10],[0 -10],3,1,1,true);
 				o.sizeOut = me.fixation.radius(1) * 2;
-				o.xPositionOut = me.fixation.X;
-				o.yPositionOut = me.fixation.Y;
-				ts.x = me.fixation.X; %ts is a simple structure that we can pass to eyelink to draw on its screen
-				ts.y = me.fixation.Y;
-				ts.size = o.sizeOut;
-				ts.selected = true;
+				o.xPositionOut = me.fixation.X(1);
+				o.yPositionOut = me.fixation.Y(1);
+				for i = 1:length(me.fixation.X)
+					ts(i).x = me.toPixels(me.fixation.X(i),'x');
+					ts(i).y = me.toPixels(me.fixation.Y(i),'y');
+					ts(i).size = o.sizeOut;
+					ts(i).selected = true;
+				end
+				update(o);
 				
 				% setup an exclusion zone where eye is not allowed
-				me.exclusionZone = [8 15 10 15];
+				me.exclusionZone = [10 12 10 12];
 				exc = me.toPixels(me.exclusionZone);
 				exc = [exc(1) exc(3) exc(2) exc(4)]; %psychrect=[left,top,right,bottom] 
 				
 				setOffline(me); %Eyelink('Command', 'set_idle_mode');
-				trackerClearScreen(me); % clear eyelink screen
-				trackerDrawFixation(me); % draw fixation window on tracker
-				trackerDrawStimuli(me,ts); % draw stimulus on tracker
 				
 				Priority(MaxPriority(s.win));
 				blockLoop = true;
@@ -739,11 +743,12 @@ classdef eyelinkManager < eyetrackerCore
 					xst = [];
 					yst = [];
 					correct = false;
+					trackerDrawStatus(me,'',ts)
 					% !!! these messages define the trail start in the EDF for
 					% offline analysis
 					trackerMessage(me,'V_RT MESSAGE END_FIX END_RT');
 					trackerMessage(me,['TRIALID ' num2str(a)]);
-					% start the eyelink recording data for this trail
+					% start the eyelink recording data for this trial
 					startRecording(me);
 					% this draws the text to the tracker info box
 					statusMessage(me,sprintf('DEMO Running Trial=%i X Pos = %g | Y Pos = %g | Radius = %g',a,me.fixation.X,me.fixation.Y,me.fixation.radius));
@@ -757,7 +762,7 @@ classdef eyelinkManager < eyetrackerCore
 						draw(o);
 						drawGrid(s);
 						drawScreenCenter(s);
-						
+
 						% get the current eye position and save x and y for local
 						% plotting
 						getSample(me); xst(b)=me.x - me.offset.X; yst(b)=me.y - me.offset.Y;
@@ -804,7 +809,7 @@ classdef eyelinkManager < eyetrackerCore
 					end
 					% stop recording data
 					stopRecording(me);
-					setOffline(me); %Eyelink('Command', 'set_idle_mode');
+					setOffline(me);
 					resetFixation(me);
 
 					% set up the fix init system, whereby the subject must
@@ -817,20 +822,21 @@ classdef eyelinkManager < eyetrackerCore
 					
 					% prepare a random position for next trial
 					me.updateFixationValues([randi([-5 5]) -10],[randi([-5 5]) -10],[],[],randi([1 5]));
-					o.sizeOut = me.fixation.radius*2;
+					o.sizeOut = me.fixation.radius(1)*2;
 					%me.fixation.radius = [me.fixation.radius me.fixation.radius];
 					o.xPositionOut = me.fixation.X(1);
 					o.yPositionOut = me.fixation.Y(1);
 					update(o);
 					% use this struct for the parameters to draw stimulus
 					% to screen
-					ts.x = me.fixation.X(1);
-					ts.y = me.fixation.Y(1);
-					ts.size = me.fixation.radius;
-					ts.selected = true;
+					for i = 1:length(me.fixation.X)
+						ts(i).x = me.toPixels(me.fixation.X(i),'x');
+						ts(i).y = me.toPixels(me.fixation.Y(i),'y');
+						ts(i).size = o.sizeOut;
+						ts(i).selected = true;
+					end
 					% clear tracker display
-					trackerDrawStimuli(me,ts,true);
-					trackerDrawFixation(me);
+					trackerClearScreen(me);
 					% plot eye position for last trial and ITI
 					plot(ax,xst,yst);drawnow;
 					while GetSecs <= vbl + 1

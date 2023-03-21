@@ -72,6 +72,7 @@ classdef arduinoIOPort < handle
 
 			% define IOPort serial object
 			oldv = IOPort('Verbosity',0);
+			if strcmp(port,'/dev/ttyS0');error('Cannot use /dev/ttyS0!!!');return;end
 			[a.conn, err] = IOPort('OpenSerialPort', port, a.params);
 			IOPort('Verbosity',oldv);
 			if a.conn == -1
@@ -106,8 +107,6 @@ classdef arduinoIOPort < handle
 			% exit if there was no answer
 			if isempty(r)
 				IOPort('CloseAll');
-				try delete(a.conn); end
-				try delete(a); end
 				error('Connection unsuccessful!!! Please make sure that the board is powered on, \nrunning a sketch provided with the package, \nand connected to the indicated serial port. \nYou might also try to unplug and re-plug the USB cable before attempting a reconnection.');
 			end
 			a.sktc = r(1)-48; %-48 to get the numeric value from the ASCII one [char(48)==0]

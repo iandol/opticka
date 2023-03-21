@@ -99,9 +99,9 @@ tS.strict					= true;
 % CATCH TRIAL TIME:
 ts.catchTrialTime			= 1;
 % visual target
-tS.targetFixInit			= 0.25; % time to find the target
+tS.targetFixInit			= 0.5; % time to find the target
 tS.targetFixTime			= 0.75; % to to maintain fixation on target 
-tS.targetRadius				= [10 10]; %radius to fix within.
+tS.targetRadius				= [8 15]; %radius widthxheight to fix within.
 % initial values for historical log of X / Y position and exclusion zone
 me.lastXPosition			= tS.fixX;
 me.lastYPosition			= tS.fixY;
@@ -207,8 +207,9 @@ pauseEntry = {
 	@()drawBackground(s); %blank the subject display
 	@()drawTextNow(s,'PAUSED, press [p] to resume...');
 	@()disp('PAUSED, press [p] to resume...');
+	@()trackerClearScreen(eT);
+	@()trackerDrawText(eT,'PAUSED, press [p] to resume');
 	@()statusMessage(eT,'PAUSED');
-	@()trackerDrawStatus(eT,'PAUSED, press [p] to resume', stims.stimulusPositions);
 	@()trackerMessage(eT,'TRIAL_RESULT -100'); %store message in EDF
 	@()resetAll(eT); % reset all fixation markers to initial state
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
@@ -226,7 +227,6 @@ pauseExit = {
 %====================================================PRE-FIXATION
 %==============================================================
 pfEntry = { 
-	@()startRecording(eT);
 	@()needEyeSample(me,true); % make sure we start measuring eye position
 	@()needFlip(me, true);
 	@()needFlipTracker(me, 2); % eyetracker operator screen flip
@@ -234,10 +234,13 @@ pfEntry = {
 	@()updateFixationValues(eT,tS.fixX,tS.fixY,tS.firstFixInit,tS.firstFixTime,tS.firstFixRadius,tS.strict); %reset fixation window
 	@()resetFixationHistory(eT); % reset the recent eye position history
 	@()resetExclusionZones(eT); % reset the exclusion zones on eyetracker
+	@()trackerMessage(eT,'V_RT MESSAGE END_FIX END_RT');
 	@()trackerMessage(eT,sprintf('TRIALID %i',getTaskIndex(me))); %Eyelink start trial marker
+	@()startRecording(eT);
 	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
 	% draw general state to the eyetracker display (eyelink or tobii)
-	@()trackerDrawStatus(eT,'Pre-fixation...', [], true);
+	@()trackerClearScreen(eT);
+	@()trackerDrawText(eT,'Pre-fixation');
 };
 
 pfWithin = {
@@ -255,7 +258,7 @@ pfExit = {
 fixEntry = { 
 	% show stimulus 3 = fixation cross
 	@()show(stims, 2);
-	@()trackerDrawStatus(eT,'Pre-fixation...', stims.stimulusPositions, true);
+	@()trackerDrawStatus(eT,'Fixation...');
 	@()statusMessage(eT,'FIXATE');
 	@()logRun(me,'INITFIX'); %fprintf current trial info to command window
 	@()updateNextState(me,'trial'); %use taskSequence.trialVar for the next state
@@ -288,6 +291,7 @@ fixExit = { };
 % what to run when we enter the stim presentation state
 catchEntry = {
 	@()updateFixationValues(eT,[],[],[],ts.catchTrialTime); %reset fixation window
+	@()trackerClearScreen(eT);
 	@()trackerDrawFixation(eT);
 	@()doStrobe(me,true);
 	@()statusMessage(eT,'CATCH TRIAL');
@@ -317,9 +321,10 @@ catchExit = {
 stimEntry = {
 	% use our saccade target stimulus for next fix X and Y, see
 	% stims.fixationChoice above
-	@()updateFixationTarget(me, tS.useTask);
+	@()updateFixationTarget(me, tS.useTask, tS.targetFixInit, tS.targetFixTime, tS.targetRadius);
+	@()trackerClearScreen(eT);
 	@()trackerDrawFixation(eT);
-	@()statusMessage(eT,'SACCADE TRIAL');
+	@()statusMessage(eT,'SACCADE');
 	@()doStrobe(me, true);
 };
 if matches(tS.type,'training')
@@ -356,13 +361,13 @@ correctEntry = {
 	@()beep(aM, 2000, 0.1, 0.1); % correct beep
 	@()trackerMessage(eT,'END_RT'); %send END_RT message to tracker
 	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.CORRECT)); %send TRIAL_RESULT message to tracker
-	@()trackerDrawStatus(eT,'Correct! :-)',[],true);
+	@()trackerDrawStatus(eT,'Correct! :-)',[]);
+	@()statusMessage(eT,'CORRECT');
 	@()needFlipTracker(me, 0); % eyetracker operator screen flip
 	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()needEyeSample(me,false); % no need to collect eye data until we start the next trial
 	@()hide(stims); % hide all stims
-	@()statusMessage(eT,'CATCH TRIAL');
 	@()logRun(me,'CORRECT'); % print current trial info
 };
 
@@ -387,7 +392,8 @@ incEntry = {
 	@()beep(aM,400,0.5,1);
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.INCORRECT));
-	@()trackerDrawStatus(eT,'INCORRECT! :-(',[],true);
+	@()trackerDrawStatus(eT,'INCORRECT! :-(');
+	@()statusMessage(eT,'INCORRECT');
 	@()needFlipTracker(me, 0); % eyetracker operator screen flip
 	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
@@ -420,9 +426,12 @@ breakEntry = {
 	@()beep(aM, 400, 0.5, 1);
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.BREAKFIX));
-	@()trackerDrawStatus(eT,'Fail to Saccade to Target! :-(', [],true);
+	@()trackerDrawStatus(eT,'Fail to Saccade to Target! :-(');
+	@()statusMessage(eT,'BREAKFIX');
 	@()needFlipTracker(me, 0); % eyetracker operator screen flip
 	@()needEyeSample(me,false);
+	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()hide(stims);
 	@()logRun(me,'BREAKFIX'); %fprintf current trial info
 };
@@ -432,7 +441,10 @@ exclEntry = {
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,['TRIAL_RESULT ' str2double(tS.BREAKFIX)]);
 	@()trackerDrawStatus(eT,'Exclusion Zone entered! :-(', [],true);
+	@()statusMessage(eT,'EXCLUSION');
 	@()needEyeSample(me,false);
+	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()hide(stims);
 	@()logRun(me,'EXCLUSION'); %fprintf current trial info
 };

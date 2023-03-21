@@ -837,7 +837,8 @@ classdef runExperiment < optickaCore
 				resetLog(stims);
 				if ~isempty(me.eyetracker.device)
 					resetAll(eT);
-					if eT.secondScreen; trackerClearScreen(eT); trackerFlip(eT, 0, true); end 
+					trackerClearScreen(eT);
+					if eT.secondScreen; trackerFlip(eT, 0, true); end 
 				end
 				resetStrobe(io); flip(s); flip(s); % reset the strobe system
 

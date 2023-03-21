@@ -63,7 +63,7 @@ classdef eyetrackerCore < optickaCore
 		%>
 		%> if radius has as single value, assume circular window if radius
 		%> has 2 values assume width × height rectangle (not strictly a
-		%> radius!)
+		%> radius I know!)
 		%>
 		%> initTime is the time the subject has to initiate fixation
 		%>
@@ -323,8 +323,8 @@ classdef eyetrackerCore < optickaCore
 			calibkey			= KbName('C');
 			driftkey			= KbName('D');
 			if me.isConnected || me.isDummy
-				x = me.toPixels(me.fixation.X,'x'); %#ok<*PROP,*PROPLC>
-				y = me.toPixels(me.fixation.Y,'y');
+				x = me.toPixels(me.fixation.X(1),'x'); %#ok<*PROP,*PROPLC>
+				y = me.toPixels(me.fixation.Y(1),'y');
 				Screen('Flip',me.screen.win);
 				ifi = me.screen.screenVals.ifi;
 				breakLoop = false; i = 1; flash = true;
@@ -355,10 +355,10 @@ classdef eyetrackerCore < optickaCore
 					if keyCode(driftkey); driftCorrection(me); break; end
 					i = i + 1;
 				end
-				if correct && length(xs) > 5 && length(ys) > 5
+				if correct && length(xs) > 15 && length(ys) > 15
 					success = true;
-					me.offset.X = median(xs) - me.fixation.X;
-					me.offset.Y = median(ys) - me.fixation.Y;
+					me.offset.X = median(xs(end-10:end)) - me.fixation.X(1);
+					me.offset.Y = median(ys(end-10:end)) - me.fixation.Y(1);
 					t = sprintf('Offset: X = %.2f Y = %.2f\n',me.offset.X,me.offset.Y);
 					me.salutation('Drift [SELF]Correct',t,true);
 					Screen('DrawText',me.screen.win,t,10,10,[0.4 0.4 0.4]);
@@ -970,12 +970,12 @@ classdef eyetrackerCore < optickaCore
 
 		% ===================================================================
 		%> @brief to pixels from visual degrees / relative
-		%>
+		%> input can be [x] [y] [-x -y +x +y]('rect') [xy] or [-x +x -y +y]
 		% ===================================================================
-		function out = toPixels(me,in,axis,inputtype)
+		function out = toPixels(me, in, axis, inputtype)
 			if ~exist('axis','var') || isempty(axis); axis=''; end
 			if ~exist('inputtype','var') || isempty(inputtype); inputtype = 'degrees'; end
-			out = 0;
+			out = zeros(size(in));
 			if length(in)>4; return; end
 			switch axis
 				case 'x'
@@ -991,6 +991,17 @@ classdef eyetrackerCore < optickaCore
 							out = (in * me.ppd_) + me.screen.yCenter;
 						case 'relative'
 							out = in * me.screen.screenVals.height;
+					end
+				case 'rect'
+					switch inputtype
+						case 'degrees'
+							w = ([in(1) in(3)] * me.ppd_) + me.screen.xCenter;
+							h = ([in(2) in(4)] * me.ppd_) + me.screen.yCenter;
+							out = [w(1) h(1) w(2) h(2)];
+						case 'relative'
+							w = [in(1) in(3)] * me.screen.screenVals.width;
+							h = [in(2) in(4)] * me.screen.screenVals.height;
+							out = [w(1) h(1) w(2) h(2)];
 					end
 				otherwise
 					switch inputtype
