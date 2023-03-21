@@ -54,6 +54,8 @@ classdef tobiiManager < eyetrackerCore
 		tobii
 		%> 
 		sampletime		= []
+		%>
+		calib
 	end
 	
 	properties (SetAccess = protected, GetAccess = public, Dependent = true)
@@ -262,6 +264,7 @@ classdef tobiiManager < eyetrackerCore
 		%>
 		% ===================================================================
 		function cal = trackerSetup(me,incal)
+			ListenChar(0); RestrictKeysForKbCheck([]);
 			cal = [];
 			if ~me.isConnected 
 				warning('Eyetracker not connected, cannot calibrate!');
@@ -282,40 +285,37 @@ classdef tobiiManager < eyetrackerCore
 			updateDefaults(me); % make sure we send any other settings changes
 			
 			ListenChar(-1);
-			if me.manualCalibration
+			if me.calibration.manual
 				if ~isempty(incal) && isstruct(incal) && isfield(incal,'type') && contains(incal.type,'manual')
-					me.calibration = me.tobii.calibrateManual([me.screen.win me.operatorScreen.win], incal); 
+					me.calib = me.tobii.calibrateManual([me.screen.win me.operatorScreen.win], incal); 
 				else
-					me.calibration = me.tobii.calibrateManual([me.screen.win me.operatorScreen.win]);
+					me.calib = me.tobii.calibrateManual([me.screen.win me.operatorScreen.win]);
 				end
 			else
 				if ~isempty(incal) && isstruct(incal) && isfield(incal,'type') && contains(incal.type,'standard')
-					me.calibration = me.tobii.calibrate([me.screen.win me.operatorScreen.win], [], incal); 
+					me.calib = me.tobii.calibrate([me.screen.win me.operatorScreen.win], [], incal); 
 				else
-					me.calibration = me.tobii.calibrate([me.screen.win me.operatorScreen.win]);
+					me.calib = me.tobii.calibrate([me.screen.win me.operatorScreen.win]);
 				end
 			end
 			ListenChar(0);
 
-			if strcmpi(me.calibrationStimulus,'movie')
+			if strcmpi(me.calibration.stimulus,'movie')
 				me.calStim.movie.reset();
 				%me.calStim.movie.setup(me.screen);
 			end
 
-			if ~isempty(me.calibration) && me.calibration.wasSkipped ~= 1
-				cal = me.calibration;
-				if isfield(me.calibration,'selectedCal')
+			if ~isempty(me.calib) && me.calib.wasSkipped ~= 1
+				cal = me.calib;
+				if isfield(me.calib,'selectedCal')
 					try
-						calMsg = me.tobii.getValidationQualityMessage(me.calibration);
+						calMsg = me.tobii.getValidationQualityMessage(me.calib);
 						fprintf('-+-+-> CAL RESULT = ');
 						disp(calMsg);
 					end
 				end
 			else
  				disp('-+-+!!! The calibration was unsuccesful or skipped !!!+-+-')
-			end
-			if ~me.useOperatorScreen
-				try close(me.operatorScreen); end
 			end
 			resetAll(me);
 			if wasRecording; startRecording(me); end
@@ -440,7 +440,7 @@ classdef tobiiManager < eyetrackerCore
 				me.yAll			= [me.yAll me.y];
 				me.pupilAll		= [me.pupilAll me.pupil];
 				%if me.verbose;fprintf('>>X: %.2f | Y: %.2f | P: %.2f\n',me.x,me.y,me.pupil);end
-			elseif me.isConnected && me.isRecording_
+			elseif me.isConnected && me.isRecording
 				xy				= [];
 				td				= me.tobii.buffer.peekN('gaze',me.smoothing.nSamples);
 				if isempty(td);me.currentSample=sample;return;end
@@ -724,6 +724,7 @@ classdef tobiiManager < eyetrackerCore
 				s.backgroundColour		= [0.5 0.5 0.5 0];
 				if length(Screen('Screens'))>1 && s.screen - 1 >= 0
 					useS2				= true;
+					me.useOperatorScreen = true;
 					s2					= screenManager;
 					s2.pixelsPerCm		= 20;
 					s2.screen			= s.screen - 1;
@@ -739,7 +740,6 @@ classdef tobiiManager < eyetrackerCore
 				sv=open(s); %open our screen
 				
 				if useS2
-					me.closeSecondScreen = false;
 					initialise(me, s, s2); %initialise tobii with our screen
 					s2.open();
 				else
@@ -766,7 +766,7 @@ classdef tobiiManager < eyetrackerCore
 				f.xPositionOut = me.fixation.X;
 				
 				% set up an exclusion zone where eye is not allowed
-				me.exclusionZone = [8 12 9 12];
+				me.exclusionZone = [8 10 8 10];
 				exc = me.toPixels(me.exclusionZone);
 				exc = [exc(1) exc(3) exc(2) exc(4)]; %psychrect=[left,top,right,bottom] 
 
@@ -977,7 +977,7 @@ classdef tobiiManager < eyetrackerCore
 			else
 				value = false;
 			end
-			me.isRecording_ = value;
+			me.isRecording = value;
 		end
 		
 		% ===================================================================
