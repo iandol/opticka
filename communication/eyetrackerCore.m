@@ -313,66 +313,77 @@ classdef eyetrackerCore < optickaCore
 		% ===================================================================
 		function success = driftOffset(me)
 		%> @fn driftOffset
-		%> @brief wrapper for EyelinkDoDriftCorrection
+		%> @brief our own version of drift correct
 		%>
 		% ===================================================================
 			success = false;
+			if ~me.isConnected || ~me.isDummy; return; end
+			
+			Listenchar(0); FlushEvents;
+			oldrk = RestrictKeysForKbCheck([]); %just in case someone has restricted keys
+			success = false;
+			if matches(me.type,'eyelink')
+				startRecording(me);
+				statusMessage(me,'Drift Offset');
+			end
+			trackerMessage(me,'Drift OFFSET');
+			trackerClearScreen(me);
+			trackerDrawStatus(me,'Drift Offset');
 			escapeKey			= KbName('ESCAPE');
 			stopkey				= KbName('Q');
 			nextKey				= KbName('SPACE');
 			calibkey			= KbName('C');
 			driftkey			= KbName('D');
-			if me.isConnected || me.isDummy
-				x = me.toPixels(me.fixation.X(1),'x'); %#ok<*PROP,*PROPLC>
-				y = me.toPixels(me.fixation.Y(1),'y');
-				Screen('Flip',me.screen.win);
-				ifi = me.screen.screenVals.ifi;
-				breakLoop = false; i = 1; flash = true;
-				correct = false;
-				xs = [];
-				ys = [];
-				while ~breakLoop
-					getSample(me);
-					xs(i) = me.x;
-					ys(i) = me.y;
-					if mod(i,10) == 0
-						flash = ~flash;
-					end
-					Screen('DrawText',me.screen.win,'Drift Correction...',10,10,[0.4 0.4 0.4]);
-					if flash
-						Screen('gluDisk',me.screen.win,[1 0 1 0.75],x,y,10);
-						Screen('gluDisk',me.screen.win,[1 1 1 1],x,y,4);
-					else
-						Screen('gluDisk',me.screen.win,[1 1 0 0.75],x,y,10);
-						Screen('gluDisk',me.screen.win,[0 0 0 1],x,y,4);
-					end
-					me.screen.drawCross(0.6,[0 0 0],x,y,0.1,false);
-					Screen('Flip',me.screen.win);
-					[~, ~, keyCode] = KbCheck(-1);
-					if keyCode(stopkey) || keyCode(escapeKey); breakLoop = true; break;	end
-					if keyCode(nextKey); correct = true; break; end
-					if keyCode(calibkey); trackerSetup(me); break; end
-					if keyCode(driftkey); driftCorrection(me); break; end
-					i = i + 1;
+			x = me.toPixels(me.fixation.X(1),'x'); %#ok<*PROP,*PROPLC>
+			y = me.toPixels(me.fixation.Y(1),'y');
+			Screen('Flip',me.screen.win);
+			ifi = me.screen.screenVals.ifi;
+			breakLoop = false; i = 1; flash = true;
+			correct = false;
+			xs = [];
+			ys = [];
+			while ~breakLoop
+				getSample(me);
+				xs(i) = me.x;
+				ys(i) = me.y;
+				if mod(i,10) == 0
+					flash = ~flash;
 				end
-				if correct && length(xs) > 15 && length(ys) > 15
-					success = true;
-					me.offset.X = median(xs(end-10:end)) - me.fixation.X(1);
-					me.offset.Y = median(ys(end-10:end)) - me.fixation.Y(1);
-					t = sprintf('Offset: X = %.2f Y = %.2f\n',me.offset.X,me.offset.Y);
-					me.salutation('Drift [SELF]Correct',t,true);
-					Screen('DrawText',me.screen.win,t,10,10,[0.4 0.4 0.4]);
-					Screen('Flip',me.screen.win);
+				Screen('DrawText',me.screen.win,'Drift Correction...',10,10,[0.4 0.4 0.4]);
+				if flash
+					Screen('gluDisk',me.screen.win,[1 0 1 0.75],x,y,10);
+					Screen('gluDisk',me.screen.win,[1 1 1 1],x,y,4);
 				else
-					me.offset.X = 0;
-					me.offset.Y = 0;
-					t = sprintf('Offset: X = %.2f Y = %.2f\n',me.offset.X,me.offset.Y);
-					me.salutation('REMOVE Drift [SELF]Offset',t,true);
-					Screen('DrawText',me.screen.win,'Reset Drift Offset...',10,10,[0.4 0.4 0.4]);
-					Screen('Flip',me.screen.win);
+					Screen('gluDisk',me.screen.win,[1 1 0 0.75],x,y,10);
+					Screen('gluDisk',me.screen.win,[0 0 0 1],x,y,4);
 				end
-				WaitSecs('YieldSecs',1);
+				me.screen.drawCross(0.6,[0 0 0],x,y,0.1,false);
+				Screen('Flip',me.screen.win);
+				[~, ~, keyCode] = KbCheck(-1);
+				if keyCode(stopkey) || keyCode(escapeKey); breakLoop = true; break;	end
+				if keyCode(nextKey); correct = true; break; end
+				if keyCode(calibkey); trackerSetup(me); break; end
+				if keyCode(driftkey); driftCorrection(me); break; end
+				i = i + 1;
 			end
+			if correct && length(xs) > 15 && length(ys) > 15
+				success = true;
+				me.offset.X = median(xs(end-10:end)) - me.fixation.X(1);
+				me.offset.Y = median(ys(end-10:end)) - me.fixation.Y(1);
+				t = sprintf('Offset: X = %.2f Y = %.2f\n',me.offset.X,me.offset.Y);
+				me.salutation('Drift [SELF]Correct',t,true);
+				Screen('DrawText',me.screen.win,t,10,10,[0.4 0.4 0.4]);
+				Screen('Flip',me.screen.win);
+			else
+				me.offset.X = 0;
+				me.offset.Y = 0;
+				t = sprintf('Offset: X = %.2f Y = %.2f\n',me.offset.X,me.offset.Y);
+				me.salutation('REMOVE Drift [SELF]Offset',t,true);
+				Screen('DrawText',me.screen.win,'Reset Drift Offset...',10,10,[0.4 0.4 0.4]);
+				Screen('Flip',me.screen.win);
+			end
+			WaitSecs('YieldSecs',1);
+			RestrictKeysForKbCheck(oldrk);
 		end
 		
 		

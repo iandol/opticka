@@ -48,8 +48,8 @@ classdef screenManager < optickaCore
 		%> doublebuffering is enabled)
 		doubleBuffer(1,1) uint8				= 1
 		%> Mirror the content to a second window. In this case we need a
-		%screen 0 and screen 1 and the main output to screen 1. We will get
-		%and overlay window for this too we can draw to
+		%> screen 0 and screen 1 and the main output to screen 1. We will get
+		%> and overlay window for this too we can draw to
 		mirrorDisplay(1,1) logical			= false
 		%> float precision and bitDepth of framebuffer/output: '8bit' is
 		%> best for old GPUs, but choose 'FloatingPoint32BitIfPossible' for
@@ -70,7 +70,7 @@ classdef screenManager < optickaCore
 			'EnableBits++Bits++Output'; 'EnableBits++Color++Output';...
 			'EnableBits++Mono++Output';'EnableBits++Mono++OutputWithOverlay';...
 			'EnableDataPixxM16Output';...
-			'EnableDataPixxC48Output'})} = 'FloatingPoint32BitIfPossible'
+			'EnableDataPixxC48Output'})} = '8bit'
 		%> timestamping mode 1=beamposition,kernel fallback | 2=beamposition
 		%> crossvalidate with kernel
 		timestampingMode double				= 1
@@ -81,7 +81,7 @@ classdef screenManager < optickaCore
 		%> background RGBA of display during stimulus presentation
 		backgroundColour(1,:) double		= [0.5 0.5 0.5 1.0]
 		%> use OpenGL blending mode
-		blend logical						= false
+		blend logical						= true
 		%> OpenGL blending source mode
 		srcMode char {mustBeMember(srcMode,{'GL_ZERO'; 'GL_ONE';...
 		'GL_DST_COLOR'; 'GL_ONE_MINUS_DST_COLOR';...
@@ -126,8 +126,8 @@ classdef screenManager < optickaCore
 		%> Details for drawing fonts, either sets defaults if window is closed or
 		%> or updates values if window open...
 		font struct							= struct('TextSize',20,...
-											'TextColor',[0.9 0.9 0.9 1],...
-											'TextBackgroundColor',[0.15 0.075 0 0.75],...
+											'TextColor',[0.95 0.95 0.95 1],...
+											'TextBackgroundColor',[0.1 0.2 0 0.3],...
 											'TextRenderer', 1,...
 											'FontName', 'Source Sans 3');
 	end
@@ -1937,8 +1937,8 @@ classdef screenManager < optickaCore
 				else
 					Screen('TextSize', me.win, me.font.TextSize);
 				end
-				o = Screen('TextColor', me.win, me.font.TextColor);
 				o = Screen('TextBackgroundColor', me.win, me.font.TextBackgroundColor);
+				o = Screen('TextColor', me.win, me.font.TextColor);
 				o = Screen('TextFont', me.win, me.font.FontName);
 				o = Screen('Preference', 'DefaultFontName', me.font.FontName);
 				o = Screen('Preference', 'TextRenderer', me.font.TextRenderer);

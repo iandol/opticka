@@ -616,7 +616,7 @@ classdef runExperiment < optickaCore
 		%>
 		% ===================================================================
 			% we try not to use global variables, however the external
-			% eyetracker API does not easily allow us to pass objects and so
+			% eyelink API does not easily allow us to pass objects and so
 			% we use global variables in this specific case...
 			global rM %#ok<*GVMIS> %global reward manager we can share with eyetracker 
 			global aM %global audio manager we can share with eyetracker

@@ -80,6 +80,16 @@ classdef eyelinkManager < eyetrackerCore
 		%>
 		% ===================================================================
 		function success = initialise(me,sM)
+			% we try not to use global variables, however the external
+			% eyelink API does not easily allow us to pass objects and so
+			% we use global variables in this specific case...
+			global rM %#ok<*GVMIS> %global reward manager we can share with eyetracker 
+			global aM %global audio manager we can share with eyetracker
+			if ~isa(rM,'arduinoManager');rM=arduinoManager();end
+			if ~isa(aM,'audioManager');aM=audioManager;end
+			aM.silentMode = false;
+			if ~aM.isSetup;	aM.setup; end
+			
 			success = false;
 			if ~exist('sM','var')
 				warning('Cannot initialise without a PTB screen')
@@ -105,20 +115,6 @@ classdef eyelinkManager < eyetrackerCore
 				end
 			end
 			
-			if ~isempty(me.calibration.callback) && me.calibration.enableCallbacks
-				[res,dummy] = EyelinkInit(me.isDummy, me.calibration.callback);
-			elseif me.calibration.enableCallbacks
-				[res,dummy] = EyelinkInit(me.isDummy,1);
-			else
-				[res,dummy] = EyelinkInit(me.isDummy,0);
-			end
-			me.isDummy = logical(dummy);
-			me.checkConnection();
-			if ~me.isConnected && ~me.isDummy
-				me.salutation('Eyelink Initialise','Could not connect, or enter Dummy mode...',true)
-				return
-			end
-			
 			if me.screen.isOpen == true 
 				me.win = me.screen.win;
 				me.defaults = EyelinkInitDefaults(me.win);
@@ -132,7 +128,7 @@ classdef eyelinkManager < eyetrackerCore
 			% this command is sent from EyelinkInitDefaults
  			% Eyelink('Command', 'screen_pixel_coords = %ld %ld %ld %ld',me.screen.winRect(1),me.screen.winRect(2),me.screen.winRect(3)-1,me.screen.winRect(4)-1);
 			if ~isempty(me.calibration.callback) && exist(me.calibration.callback,'file')
-				me.defaults.callback = me.calibration.callback;
+				%me.defaults.callback = me.calibration.callback;
 			end
 			me.defaults.backgroundcolour = me.screen.backgroundColour;
 			me.ppd_ = me.screen.ppd;
@@ -148,15 +144,23 @@ classdef eyelinkManager < eyetrackerCore
 			
 			me.defaults.verbose = me.verbose;
 			
-			%if ~isempty(me.calibration.customTarget)
-			%	me.customTarget.reset();
-			%	me.customTarget.setup(me.screen);
-			%	me.defaults.customTarget = me.customTarget;
-			%else
-			%	me.defaults.customTarget = [];
-			%end
-			
 			updateDefaults(me);
+
+			me.calibration.callback = '';
+			if ~isempty(me.calibration.callback) && me.calibration.enableCallbacks
+				[res,dummy] = EyelinkInit(me.isDummy, me.calibration.callback);
+			elseif me.calibration.enableCallbacks
+				[res,dummy] = EyelinkInit(me.isDummy,1);
+			else
+				[res,dummy] = EyelinkInit(me.isDummy,0);
+			end
+			if ~res
+				me.isConnected = false;
+				me.isDummy = true;
+			else
+				me.isDummy = logical(dummy);
+				me.checkConnection();
+			end
 			
 			if me.isDummy
 				me.version = 'Dummy Eyelink';
@@ -223,6 +227,7 @@ classdef eyelinkManager < eyetrackerCore
 		% ===================================================================
 		function trackerSetup(me)
 			if ~me.isConnected; return; end
+			FlushEvents; ListenChar(0);
 			oldrk = RestrictKeysForKbCheck([]); %just in case someone has restricted keys
 			fprintf('\n===>>> CALIBRATING EYELINK... <<<===\n');
 			Eyelink('Verbosity',me.verbosityLevel);
@@ -269,8 +274,9 @@ classdef eyelinkManager < eyetrackerCore
 			end
 			[result,out] = Eyelink('CalMessage');
 			fprintf('-+-+-> CAL RESULT =  %.2f | message: %s\n\n',result,out);
-			RestrictKeysForKbCheck(oldrk);
+			RestrictKeysForKbCheck(oldrk);FlushEvents;
 			checkEye(me);
+			try Snd('Close'); end
 		end
 		
 		% ===================================================================
@@ -309,6 +315,8 @@ classdef eyelinkManager < eyetrackerCore
 		%>
 		% ===================================================================
 		function success = driftCorrection(me)
+			Listenchar(0); FlushEvents;
+			oldrk = RestrictKeysForKbCheck([]); %just in case someone has restricted keys
 			success = false;
 			x=me.toPixels(me.fixation.X(1),'x'); %#ok<*PROPLC>
 			y=me.toPixels(me.fixation.Y(1),'y');
@@ -334,6 +342,7 @@ classdef eyelinkManager < eyetrackerCore
 					me.salutation('Drift Correct',sprintf('Results: %f %i %s\n',res,result,out),true);
 				end
 			end
+			RestrictKeysForKbCheck(oldrk);
 			WaitSecs('YieldSecs',1);
 		end
 
@@ -359,22 +368,21 @@ classdef eyelinkManager < eyetrackerCore
 		%>
 		% ===================================================================
 			if me.isConnected && Eyelink('NewFloatSampleAvailable') > 0
-				me.currentSample = Eyelink('NewestFloatSample');% get the sample in the form of an event structure
-				if ~isempty(me.currentSample) && isstruct(me.currentSample)
-					if me.currentSample.gx(me.eyeUsed+1) == me.MISSING_DATA ...
-					&& me.currentSample.gy(me.eyeUsed+1) == me.MISSING_DATA ...
-					&& me.currentSample.pa(me.eyeUsed+1) == 0 ...
-					&& me.ignoreBlinks
-						me.currentSample.time = me.currentSample.time / 1e3;
-						me.currentSample.valid = false;
+				sample = Eyelink('NewestFloatSample');% get the sample in the form of an event structure
+				if ~isempty(sample) && isstruct(sample)
+					sample.time = sample.time / 1e3;
+					x = sample.gx(me.eyeUsed+1);
+					y = sample.gy(me.eyeUsed+1);
+					p = sample.pa(me.eyeUsed+1);
+					if x == me.MISSING_DATA && y == me.MISSING_DATA && me.ignoreBlinks
+						sample.valid = false;
 						me.pupil = 0;
 						me.isBlink = true;
 					else
-						me.currentSample.time = me.currentSample.time / 1e3;
-						me.currentSample.valid = true;
-						xy = toDegrees(me, [me.currentSample.gx(me.eyeUsed+1) me.currentSample.gy(me.eyeUsed+1)]);
+						sample.valid = true;
+						xy = toDegrees(me, [x y]);
 						me.x = xy(1); me.y = xy(2);
-						me.pupil = me.currentSample.pa(me.eyeUsed+1);
+						me.pupil = p;
 						me.xAll = [me.xAll me.x];
 						me.yAll = [me.yAll me.y];
 						me.pupilAll = [me.pupilAll me.pupil];
@@ -382,7 +390,7 @@ classdef eyelinkManager < eyetrackerCore
 					end
 					%if me.verbose;fprintf('<GS X: %.2g | Y: %.2g | P: %.2g | isBlink: %i>\n',me.x,me.y,me.pupil,me.isBlink);end
 				end
-			elseif me.isDummy %lets use a mouse to simulate the eye signal
+			else
 				if ~isempty(me.win)
 					w = me.win;
 				elseif ~isempty(me.screen) && ~isempty(me.screen.screen)
@@ -394,17 +402,17 @@ classdef eyelinkManager < eyetrackerCore
 				xy = toDegrees(me, [x y]);
 				me.x = xy(1); me.y = xy(2);
 				me.pupil = 800 + randi(20);
-				me.currentSample.gx = me.x;
-				me.currentSample.gy = me.y;
-				me.currentSample.pa = me.pupil;
-				me.currentSample.time = GetSecs;
-				me.currentSample.valid = true;
+				sample.gx = me.x;
+				sample.gy = me.y;
+				sample.pa = me.pupil;
+				sample.time = GetSecs;
+				sample.valid = true;
 				me.xAll = [me.xAll me.x];
 				me.yAll = [me.yAll me.y];
 				me.pupilAll = [me.pupilAll me.pupil];
-				%if me.verbose;fprintf('<DM X: %.2f | Y: %.2f | P: %.2f | T: %f>\n',me.x,me.y,me.pupil,me.currentSample.time);end
+				%if me.verbose;fprintf('<DM X: %.2f | Y: %.2f | P: %.2f | T: %f>\n',me.x,me.y,me.pupil,sample.time);end
 			end
-			sample = me.currentSample;
+			me.currentSample = sample;
 		end
 		
 		% ===================================================================
@@ -700,6 +708,17 @@ classdef eyelinkManager < eyetrackerCore
 				s.backgroundColour = [0.5 0.5 0.5 0]; %s.windowed = [0 0 900 900];
 				o = dotsStimulus('size',me.fixation.radius(1)*2,'speed',2,'mask',true,'density',50); %test stimulus
 				open(s); % open our screen
+
+				%el=EyelinkInitDefaults(s.win);
+				%if ~EyelinkInit(me.isDummy,1)
+        		%	fprintf('Eyelink Init aborted.\n');
+        		%	Eyelink('Shutdown');
+				%	close(s);
+        		%	return;
+				%end
+				%EyelinkDoTrackerSetup(el);
+				%EyelinkDoDriftCorrection(el);
+
 				setup(o,s); % setup our stimulus with our screen object
 				
 				initialise(me,s); % initialise eyelink with our screen
@@ -708,6 +727,7 @@ classdef eyelinkManager < eyetrackerCore
 					close(s);
 					error('Could not connect to Eyelink or use Dummy mode...');
 				end
+
 				%ListenChar(-1); % capture the keyboard settings
 				trackerSetup(me); % setup + calibrate the eyelink
 				

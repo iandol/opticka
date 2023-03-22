@@ -39,7 +39,7 @@ function rc = eyelinkCustomCallback(callArgs, msg)
 
 % Cached texture handle for eyelink texture:
 persistent eyelinktex;
-global dw dh offscreen rM;
+global dw dh offscreen rM aM;
 
 % Cached window handle for target onscreen window:
 persistent eyewin;
@@ -157,7 +157,7 @@ switch eyecmd
                 timedTTL(rM,rM.rewardPin,rM.rewardTime);
             end
         end
-        if rc>0 && verbose; fprintf('--->>> EYELINKCALLBACK:2 Get Key: %g\n',rc); end
+        if rc > 0 && verbose; fprintf('--->>> EYELINKCALLBACK:2 Get Key: %g\n',rc); end
     case 3
         % Alert message:
         fprintf('--->>> EYELINKCALLBACK:3 Eyelink Alert: %s.\n', msg);
@@ -412,7 +412,6 @@ end
 function EyelinkMakeSound(el, s)
 % set all sounds in one place, sound params defined in
 % eyelinkInitDefaults
-global aM
 switch(s)
     case 'cal_target_beep'
         doBeep=el.targetbeep;
