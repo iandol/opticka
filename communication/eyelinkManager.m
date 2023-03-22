@@ -315,7 +315,7 @@ classdef eyelinkManager < eyetrackerCore
 		%>
 		% ===================================================================
 		function success = driftCorrection(me)
-			Listenchar(0); FlushEvents;
+			ListenChar(0); FlushEvents;
 			oldrk = RestrictKeysForKbCheck([]); %just in case someone has restricted keys
 			success = false;
 			x=me.toPixels(me.fixation.X(1),'x'); %#ok<*PROPLC>
