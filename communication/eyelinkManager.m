@@ -18,15 +18,12 @@ classdef eyelinkManager < eyetrackerCore
 		%> properties to setup and modify calibration
 		calibration			= struct( ...
 							'style','HV5', ...
-							'proportion',[0.7 0.7], ...
+							'proportion',[0.6 0.6], ...
 							'manual',false, ...
+							'paceDuration',1000,...
 							'IP','', ...
-							'enableCallbacks', true, ...
-							'callback', 'eyelinkCustomCallback', ...
-							'calibrationtargetcolour', [1 1 1], ...
-							'calibrationtargetsize', 2, 'calibrationtargetwidth', 0.1,...
-							'displayCalResults', 1, 'targetbeep', 1, 'devicenumber', -1,...
-							'waitformodereadytime', 500)
+							'enableCallbacks', true,...
+							'callback','')
 		%> eyetracker defaults structure
 		defaults			= struct()
 	end
@@ -45,7 +42,7 @@ classdef eyelinkManager < eyetrackerCore
 	properties (SetAccess = protected, GetAccess = ?optickaCore)
 		% value for missing data
 		MISSING_DATA		= -32768
-		tempFile char		= 'MYDATA.edf'
+		tempFile char		= 'eyeData'
 		error				= []
 		%> previous message sent to eyelink
 		previousMessage		= ''
@@ -66,12 +63,12 @@ classdef eyelinkManager < eyetrackerCore
 			me=me@eyetrackerCore(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
 			
-			me.defaults = EyelinkInitDefaults();
 			try % is eyelink interface working
 				me.version = Eyelink('GetTrackerVersion');
 			catch %#ok<CTCH>
 				me.version = 0;
 			end
+			me.defaults = EyelinkInitDefaults();
 		end
 		
 		% ===================================================================
@@ -79,17 +76,7 @@ classdef eyelinkManager < eyetrackerCore
 		%> and opening the EDF file if me.recordData is true
 		%>
 		% ===================================================================
-		function success = initialise(me,sM)
-			% we try not to use global variables, however the external
-			% eyelink API does not easily allow us to pass objects and so
-			% we use global variables in this specific case...
-			global rM %#ok<*GVMIS> %global reward manager we can share with eyetracker 
-			global aM %global audio manager we can share with eyetracker
-			if ~isa(rM,'arduinoManager');rM=arduinoManager();end
-			if ~isa(aM,'audioManager');aM=audioManager;end
-			aM.silentMode = false;
-			if ~aM.isSetup;	aM.setup; end
-			
+		function success = initialise(me, sM)
 			success = false;
 			if ~exist('sM','var')
 				warning('Cannot initialise without a PTB screen')
@@ -125,35 +112,33 @@ classdef eyelinkManager < eyetrackerCore
 			end
 			
 			me.defaults.winRect=me.screen.winRect;
-			% this command is sent from EyelinkInitDefaults
- 			% Eyelink('Command', 'screen_pixel_coords = %ld %ld %ld %ld',me.screen.winRect(1),me.screen.winRect(2),me.screen.winRect(3)-1,me.screen.winRect(4)-1);
-			if ~isempty(me.calibration.callback) && exist(me.calibration.callback,'file')
+			
+			%if ~isempty(me.calibration.callback) && exist(me.calibration.callback,'file')
 				%me.defaults.callback = me.calibration.callback;
-			end
-			me.defaults.backgroundcolour = me.screen.backgroundColour;
-			me.ppd_ = me.screen.ppd;
-			me.defaults.ppd = me.screen.ppd;
+			%end
+
+			%me.defaults.backgroundcolour = me.screen.backgroundColour;
+			%me.ppd_ = me.screen.ppd;
+			%me.defaults.ppd = me.screen.ppd;
 			
 			%structure of eyelink modifiers
-			fn = fieldnames(me.calibration);
-			for i = 1:length(fn)
-				if isfield(me.defaults,fn{i})
-					me.defaults.(fn{i}) = me.calibration.(fn{i});
-				end
-			end
+			%fn = fieldnames(me.calibration);
+			%for i = 1:length(fn)
+			%	if isfield(me.defaults,fn{i})
+			%		me.defaults.(fn{i}) = me.calibration.(fn{i});
+			%	end
+			%end
 			
-			me.defaults.verbose = me.verbose;
+			%me.defaults.verbose = me.verbose;
 			
 			updateDefaults(me);
 
-			me.calibration.callback = '';
-			if ~isempty(me.calibration.callback) && me.calibration.enableCallbacks
-				[res,dummy] = EyelinkInit(me.isDummy, me.calibration.callback);
-			elseif me.calibration.enableCallbacks
+			if me.calibration.enableCallbacks
 				[res,dummy] = EyelinkInit(me.isDummy,1);
 			else
 				[res,dummy] = EyelinkInit(me.isDummy,0);
 			end
+
 			if ~res
 				me.isConnected = false;
 				me.isDummy = true;
@@ -167,8 +152,8 @@ classdef eyelinkManager < eyetrackerCore
 			else
 				[~, me.version] = Eyelink('GetTrackerVersion');
 			end
-			getTrackerTime(me);
-			getTimeOffset(me);
+			%getTrackerTime(me);
+			%getTimeOffset(me);
 			me.salutation('Initialise Method', sprintf('Running on a %s @ %2.5g (time offset: %2.5g)', me.version, me.trackerTime,me.currentOffset),true);
 			% try to open file to record data to
 			if me.isConnected 
@@ -182,6 +167,7 @@ classdef eyelinkManager < eyetrackerCore
 						me.isRecording = true;
 					end
 				end
+				Eyelink('Command', 'screen_pixel_coords = %ld %ld %ld %ld',me.screen.winRect(1),me.screen.winRect(2),me.screen.winRect(3)-1,me.screen.winRect(4)-1);
 				Eyelink('Message', 'DISPLAY_COORDS %ld %ld %ld %ld',me.screen.winRect(1),me.screen.winRect(2),me.screen.winRect(3)-1,me.screen.winRect(4)-1);
 				Eyelink('Message', 'FRAMERATE %ld',round(me.screen.screenVals.fps));
 				Eyelink('Message', 'DISPLAY_PPD %ld', round(me.ppd_));
@@ -191,8 +177,8 @@ classdef eyelinkManager < eyetrackerCore
 				Eyelink('Command', 'link_sample_data  = LEFT,RIGHT,GAZE,GAZERES,AREA,STATUS');
 				Eyelink('Command', 'file_event_filter = LEFT,RIGHT,FIXATION,SACCADE,BLINK,MESSAGE,BUTTON');
 				Eyelink('Command', 'file_sample_data  = LEFT,RIGHT,GAZE,HREF,AREA,GAZERES,STATUS');
-				%Eyelink('Command', 'use_ellipse_fitter = no');
 				Eyelink('Command', 'sample_rate = %d',me.sampleRate);
+				Eyelink('Command', 'clear_screen 1')
 			end
 		   end
 		
@@ -226,9 +212,18 @@ classdef eyelinkManager < eyetrackerCore
 		%>
 		% ===================================================================
 		function trackerSetup(me)
+			global aM 
+			if isempty(aM) || ~isa(aM,'audioManager')
+				aM=audioManager;
+			end
+			aM.silentMode = false;
+			if ~aM.isOpen;	aM.open; end
+			aM.beep(1000,0.1,0.1);
+			Snd('Open', aM.aHandle, 1);
+
 			if ~me.isConnected; return; end
-			FlushEvents; ListenChar(0);
 			oldrk = RestrictKeysForKbCheck([]); %just in case someone has restricted keys
+			ListenChar(-1);
 			fprintf('\n===>>> CALIBRATING EYELINK... <<<===\n');
 			Eyelink('Verbosity',me.verbosityLevel);
 			if ~isempty(me.calibration.proportion) && length(me.calibration.proportion)==2
@@ -238,18 +233,22 @@ classdef eyelinkManager < eyetrackerCore
 				%Eyelink('Command','calibration_corner_scaling = %s', num2str([me.calibrationProportion(1)-0.1 me.calibrationProportion(2)-0.1])-);
 				%Eyelink('Command','validation_corner_scaling = %s', num2str([me.calibrationProportion(1)-0.1 me.calibrationProportion(2)-0.1]));
 			end
-			Eyelink('Command','horizontal_target_y = %i',me.screen.winRect(4)/2);
+			Eyelink('Command','screen_pixel_coords = %ld %ld %ld %ld',me.screen.winRect(1),me.screen.winRect(2),me.screen.winRect(3)-1,me.screen.winRect(4)-1);
+			Eyelink('Command','active_eye = LEFT');
+			%Eyelink('Command','horizontal_target_y = %i',round(me.screen.winRect(4)/2));
 			Eyelink('Command','calibration_type = %s', me.calibration.style);
-			Eyelink('Command','normal_click_dcorr = ON');
-			Eyelink('Command', 'driftcorrect_cr_disable = OFF');
-			Eyelink('Command', 'drift_correction_rpt_error = 10.0');
-			Eyelink('Command', 'online_dcorr_maxangle = 15.0');
-			Eyelink('Command','randomize_calibration_order = NO');
-			Eyelink('Command','randomize_validation_order = NO');
-			Eyelink('Command','cal_repeat_first_target = YES');
-			Eyelink('Command','val_repeat_first_target = YES');
-			Eyelink('Command','validation_online_fixup  = NO');
-			Eyelink('Command','generate_default_targets = YES');
+			Eyelink('Command','enable_automatic_calibration = YES');
+			Eyelink('Command','automatic_calibration_pacing = %s',num2str(round(me.calibration.paceDuration)));
+			%Eyelink('Command','normal_click_dcorr = ON');
+			%Eyelink('Command','driftcorrect_cr_disable = OFF');
+			%Eyelink('Command','drift_correction_rpt_error = 10.0');
+			%Eyelink('Command','online_dcorr_maxangle = 15.0');
+			%Eyelink('Command','randomize_calibration_order = NO');
+			%Eyelink('Command','randomize_validation_order = NO');
+			%Eyelink('Command','cal_repeat_first_target = YES');
+			%Eyelink('Command','val_repeat_first_target = YES');
+			%Eyelink('Command','validation_online_fixup  = NO');
+			%Eyelink('Command','generate_default_targets = YES');
 			if me.calibration.manual
 				Eyelink('Command','remote_cal_enable = 1');
 				Eyelink('Command','key_function 1 ''remote_cal_target 1''');
@@ -274,9 +273,8 @@ classdef eyelinkManager < eyetrackerCore
 			end
 			[result,out] = Eyelink('CalMessage');
 			fprintf('-+-+-> CAL RESULT =  %.2f | message: %s\n\n',result,out);
-			RestrictKeysForKbCheck(oldrk);FlushEvents;
+			RestrictKeysForKbCheck(oldrk);
 			checkEye(me);
-			try Snd('Close'); end
 		end
 		
 		% ===================================================================
@@ -315,7 +313,6 @@ classdef eyelinkManager < eyetrackerCore
 		%>
 		% ===================================================================
 		function success = driftCorrection(me)
-			ListenChar(0); FlushEvents;
 			oldrk = RestrictKeysForKbCheck([]); %just in case someone has restricted keys
 			success = false;
 			x=me.toPixels(me.fixation.X(1),'x'); %#ok<*PROPLC>
@@ -473,24 +470,26 @@ classdef eyelinkManager < eyetrackerCore
 				if me.isRecording == true && ~isempty(me.saveFile)
 					Eyelink('StopRecording');
 					Eyelink('CloseFile');
+					oldp = pwd;
 					try
+						cd(me.paths.savedData);
 						me.salutation('Close Method',sprintf('Receiving data file %s', me.tempFile),true);
 						status=Eyelink('ReceiveFile');
 						if status > 0
 							me.salutation('Close Method',sprintf('ReceiveFile status %d', status));
 						end
-						if exist(me.tempFile, 'file')
+						if exist([me.tempFile '.edf'], 'file')
 							me.salutation('Close Method',sprintf('Data file ''%s'' can be found in ''%s''', me.tempFile, strrep(pwd,'\','/')),true);
-							status = movefile(me.tempFile, me.saveFile,'f');
+							status = copyfile([me.tempFile '.edf'], [me.saveFile '.edf'],'f');
 							if status == 1
-								me.salutation('Close Method',sprintf('Data file copied to ''%s''', me.saveFile),true);
-								trackerDrawText(me,sprintf('Data file copied to ''%s''', me.saveFile));
+								me.salutation('Close Method',sprintf('Data file copied to ''%s''', [me.saveFile '.edf']),true);
 							end
 						end
 					catch ME
 						me.salutation('Close Method',sprintf('Problem receiving data file ''%s''', me.tempFile),true);
 						disp(ME.message);
 					end
+					cd(oldp);
 				end
 			catch ME
 				me.salutation('Close Method','Couldn''t stop recording, forcing shutdown...',true)
@@ -709,28 +708,23 @@ classdef eyelinkManager < eyetrackerCore
 				o = dotsStimulus('size',me.fixation.radius(1)*2,'speed',2,'mask',true,'density',50); %test stimulus
 				open(s); % open our screen
 
-				%el=EyelinkInitDefaults(s.win);
-				%if ~EyelinkInit(me.isDummy,1)
-        		%	fprintf('Eyelink Init aborted.\n');
-        		%	Eyelink('Shutdown');
-				%	close(s);
-        		%	return;
-				%end
-				%EyelinkDoTrackerSetup(el);
-				%EyelinkDoDriftCorrection(el);
+				% el=EyelinkInitDefaults(s.win);
+				% if ~EyelinkInit(me.isDummy,1)
+        		% 	fprintf('Eyelink Init aborted.\n');
+        		% 	Eyelink('Shutdown');
+				% 	close(s);
+        		% 	return;
+				% end
+				% EyelinkDoTrackerSetup(el);
+				% EyelinkDoDriftCorrection(el);
 
 				setup(o,s); % setup our stimulus with our screen object
 				
 				initialise(me,s); % initialise eyelink with our screen
-				if ~me.isDummy && ~me.isConnected
-					reset(o);
-					close(s);
-					error('Could not connect to Eyelink or use Dummy mode...');
-				end
-
-				%ListenChar(-1); % capture the keyboard settings
+				ListenChar(-1); % capture the keyboard settings
 				trackerSetup(me); % setup + calibrate the eyelink
-				
+				ListenChar(0);
+
 				% define our fixation widow and stimulus for first trial
 				% x,y,inittime,fixtime,radius,strict
 				me.updateFixationValues([0 -10],[0 -10],3,1,1,true);
@@ -841,7 +835,7 @@ classdef eyelinkManager < eyetrackerCore
 					%me.fixInit.radius = 3;
 					
 					% prepare a random position for next trial
-					me.updateFixationValues([randi([-5 5]) -10],[randi([-5 5]) -10],[],[],randi([1 5]));
+					me.updateFixationValues([randi([-5 5]) -10],[randi([-5 5]) -10],[],[],randi([2 4]));
 					o.sizeOut = me.fixation.radius(1)*2;
 					%me.fixation.radius = [me.fixation.radius me.fixation.radius];
 					o.xPositionOut = me.fixation.X(1);
