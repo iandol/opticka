@@ -191,10 +191,10 @@ classdef tobiiManager < eyetrackerCore
 				me.settings.cal.doRandomPointOrder	= false;
 			end
 			if ~isempty(me.calibration.calPositions)
-				me.settings.cal.pointPos			= me.calPositions;
+				me.settings.cal.pointPos			= me.calibration.calPositions;
 			end
 			if ~isempty(me.calibration.valPositions)
-				me.settings.val.pointPos			= me.valPositions;
+				me.settings.val.pointPos			= me.calibration.valPositions;
 			end
 			
 			me.settings.cal.pointNotifyFunction	= @tittaCalCallback;
