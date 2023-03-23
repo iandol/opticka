@@ -76,11 +76,11 @@ tS.useTask					= true;		%==use taskSequence (randomises stimulus variables)
 tS.rewardTime				= 250;		%==TTL time in milliseconds
 tS.rewardPin				= 2;		%==Output pin, 2 by default with Arduino.
 tS.keyExclusionPattern		= ["fixate","stimulus"]; %==which states to skip keyboard checking
-tS.enableTrainingKeys		= true;		%==enable keys useful during task training, but not for data recording
+tS.enableTrainingKeys		= false;		%==enable keys useful during task training, but not for data recording
 tS.recordEyePosition		= false;	%==record local copy of eye position, **in addition** to the eyetracker?
 tS.askForComments			= false;	%==UI requestor asks for comments before/after run
 tS.saveData					= false;	%==save behavioural and eye movement data?
-tS.showBehaviourPlot		= true;		%==open the behaviourPlot figure? Can cause more memory use…
+tS.showBehaviourPlot		= false;		%==open the behaviourPlot figure? Can cause more memory use…
 tS.includeErrors			= false;	%==do we update the trial number even for incorrect saccade/fixate, if true then we call updateTask for both correct and incorrect, otherwise we only call updateTask() for correct responses
 tS.name						= 'default protocol'; %==name of this protocol
 tS.nStims					= stims.n;	%==number of stimuli, taken from metaStimulus object
@@ -276,7 +276,7 @@ pauseEntryFn = {
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()stopRecording(eT, true); %stop recording eye position data, true=both eyelink & tobii
 	@()needFlip(me, false); % no need to flip the PTB screen
-	@()needEyeSample(me,false); % no need to check eye position
+	@()needEyeSample(me, false); % no need to check eye position
 };
 
 %--------------------pause exit
@@ -380,7 +380,7 @@ maintainFixFn = {
 	% otherwise 'breakfix' is returned and the state machine will jump to the
 	% breakfix state. If neither condition matches, then the state table below
 	% defines that after 5 seconds we will switch to the incorrect state.
-	@()testSearchHoldFixation(eT,'correct','breakfix'); 
+	@()testHoldFixation(eT,'correct','breakfix'); 
 };
 
 %as we exit stim presentation state

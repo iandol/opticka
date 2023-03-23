@@ -86,7 +86,7 @@ classdef stateMachine < optickaCore
 		%> pause function (WaitSecs from PTB is optimal…)
 		waitFcn function_handle		= @WaitSecs
 		%> do we run timers for function evaluations?
-		fnTimers logical			= true
+		fnTimers logical			= false
 	end
 	
 	properties (SetAccess = protected, GetAccess = public, Transient = true)
