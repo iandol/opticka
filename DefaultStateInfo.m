@@ -310,11 +310,11 @@ prefixEntryFn = {
 
 %--------------------prefixate within
 prefixFn = {
-	@()drawPhotoDiode(s,[0 0 0]);
+	%@()drawPhotoDiode(s,[0 0 0]);
 };
 
 prefixExitFn = {
-	@()trackerDrawStatus(eT,'Init Fix...', stims.stimulusPositions);
+	%@()trackerDrawStatus(eT,'Init Fix...', stims.stimulusPositions);
 };
 
 %==============================================================
@@ -323,7 +323,7 @@ prefixExitFn = {
 %--------------------fixate entry
 fixEntryFn = { 
 	@()show(stims{tS.nStims});
-	@()logRun(me,'INITFIX');
+	%@()logRun(me,'INITFIX');
 };
 
 %--------------------fix within
@@ -346,7 +346,7 @@ inFixFn = {
 
 %--------------------exit fixation phase
 fixExitFn = { 
-	@()statusMessage(eT,'Show Stimulus...');
+	%@()statusMessage(eT,'Show Stimulus...');
 	% reset fixation timers to maintain fixation for tS.stimulusFixTime seconds
 	@()updateFixationValues(eT,[],[],[],tS.stimulusFixTime); 
 	@()show(stims); % show all stims
@@ -368,7 +368,7 @@ stimEntryFn = {
 stimFn =  {
 	@()draw(stims);
 	@()drawPhotoDiode(s,[1 1 1]);
-	@()animate(stims); % animate stimuli for subsequent draw
+	@()animate(stims,1); % animate stimuli for subsequent draw
 };
 
 %-----------------------test we are maintaining fixation
@@ -380,7 +380,7 @@ maintainFixFn = {
 	% otherwise 'breakfix' is returned and the state machine will jump to the
 	% breakfix state. If neither condition matches, then the state table below
 	% defines that after 5 seconds we will switch to the incorrect state.
-	@()testSearchHoldFixation(eT,'correct','breakfix'); 
+	@()testHoldFixation(eT,'correct','breakfix'); 
 };
 
 %as we exit stim presentation state

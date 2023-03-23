@@ -146,6 +146,7 @@ myExp = runExperiment('stimuli', myStims,... %stimulus objects
 	'debug', false,... % debug mode for testing?
 	'useEyeLink', true, ... % use the eyelink manager
 	'dummyMode', true, ... % use dummy mode so the mouse replaces eye movements for testing
+	'logStateTimers',true,...
 	'subjectName', 'Simulcra', ...
 	'researcherName', 'Joanna Doe');
 

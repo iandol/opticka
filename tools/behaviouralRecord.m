@@ -397,17 +397,6 @@ classdef behaviouralRecord < optickaCore
 			me.h = [];
 		end
 		
-		% ===================================================================
-		%> @brief called on save
-		%>
-		%> @param
-		% ===================================================================
-		function out = saveobj(me)
-			%clearHandles(me);
-			fprintf('===> Saving behaviouralRecord object...\n');
-			out = me;
-		end
-		
 	end
 	
 	%=======================================================================

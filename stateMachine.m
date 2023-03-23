@@ -86,7 +86,7 @@ classdef stateMachine < optickaCore
 		%> pause function (WaitSecs from PTB is optimal…)
 		waitFcn function_handle		= @WaitSecs
 		%> do we run timers for function evaluations?
-		fnTimers logical			= true
+		fnTimers logical			= false
 	end
 	
 	properties (SetAccess = protected, GetAccess = public, Transient = true)
@@ -133,6 +133,8 @@ classdef stateMachine < optickaCore
 		stateListIndex
 		%> run state information
 		log = struct([])
+		%> for within feval timing
+		currentToc
 	end
 	
 	properties (SetAccess = protected, GetAccess = protected)
@@ -302,6 +304,7 @@ classdef stateMachine < optickaCore
 				%that the eye is fixated for the fixation time, returning
 				%an empty string until that is met, then return the name of
 				%a state to transition to.
+				if me.fnTimers; t=tic; end
 				if ~isempty(me.currentTransitionFcn)
 					tname = feval(me.currentTransitionFcn{1});
 					tname = strtok(tname);
@@ -315,7 +318,8 @@ classdef stateMachine < optickaCore
 				for i = 1:length(me.currentWithinFcn) %nested class
 					me.currentWithinFcn{i}();
 				end
-				
+				if me.fnTimers; me.currentToc(me.currentTick) = toc(t); end
+
 				%TODO lets assume to update a tick here, we may miss a tick on
 				%the tranition above, not sure of the implications of
 				%updating ticks before or after?
@@ -478,6 +482,7 @@ classdef stateMachine < optickaCore
 			me.nextTickOut = [];
 			me.nextTimeOut = [];
 			me.fevalTime = [];
+			me.currentToc = [];
 		end
 		
 		% ===================================================================
@@ -656,6 +661,7 @@ classdef stateMachine < optickaCore
 				me.currentWithinFcn = thisState.withinFcn;
 				me.currentTransitionFcn = thisState.transitionFcn;
 				me.currentState = thisState;
+				me.currentToc=[];
 				
 				if length(thisState.time) == 2
 					thisState.time = randi([thisState.time(1)*1e3, thisState.time(2)*1e3]) / 1e3;
@@ -701,7 +707,10 @@ classdef stateMachine < optickaCore
 			me.log(end).totalTime = me.log(end).entryTime - me.startTime;
 			me.log(end).timeError = me.log(end).tnow - me.log(end).nextTimeOut;
 			me.log(end).tickError = me.log(end).tick - me.log(end).nextTickOut;
-			if ~isempty(me.fevalTime);me.log(end).fevalTime = me.fevalTime;end
+			if ~isempty(me.fevalTime)
+				me.log(end).fevalTime = me.fevalTime;
+				me.log(end).toc = me.currentToc;
+			end
 			me.log(end).tempNextState = me.tempNextState;
 		end
 		
