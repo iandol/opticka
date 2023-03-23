@@ -76,11 +76,11 @@ tS.useTask					= true;		%==use taskSequence (randomises stimulus variables)
 tS.rewardTime				= 250;		%==TTL time in milliseconds
 tS.rewardPin				= 2;		%==Output pin, 2 by default with Arduino.
 tS.keyExclusionPattern		= ["fixate","stimulus"]; %==which states to skip keyboard checking
-tS.enableTrainingKeys		= true;		%==enable keys useful during task training, but not for data recording
+tS.enableTrainingKeys		= false;	%==enable keys useful during task training, but not for data recording
 tS.recordEyePosition		= false;	%==record local copy of eye position, **in addition** to the eyetracker?
 tS.askForComments			= false;	%==UI requestor asks for comments before/after run
 tS.saveData					= false;	%==save behavioural and eye movement data?
-tS.showBehaviourPlot		= true;		%==open the behaviourPlot figure? Can cause more memory use…
+tS.showBehaviourPlot		= false;	%==open the behaviourPlot figure? Can cause more memory use…
 tS.includeErrors			= false;	%==do we update the trial number even for incorrect saccade/fixate, if true then we call updateTask for both correct and incorrect, otherwise we only call updateTask() for correct responses
 tS.name						= 'default protocol'; %==name of this protocol
 tS.nStims					= stims.n;	%==number of stimuli, taken from metaStimulus object
@@ -276,7 +276,7 @@ pauseEntryFn = {
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()stopRecording(eT, true); %stop recording eye position data, true=both eyelink & tobii
 	@()needFlip(me, false); % no need to flip the PTB screen
-	@()needEyeSample(me,false); % no need to check eye position
+	@()needEyeSample(me, false); % no need to check eye position
 };
 
 %--------------------pause exit
@@ -295,7 +295,6 @@ pauseExitFn = {
 prefixEntryFn = { 
 	@()needFlip(me, true); 
 	@()needEyeSample(me, true); % make sure we start measuring eye position
-	@()hide(stims); % hide all stimuli
 	% update the fixation window to initial values
 	@()updateFixationValues(eT,tS.fixX,tS.fixY,[],tS.firstFixTime); %reset fixation window
 	@()startRecording(eT); % start eyelink recording for this trial (tobii ignores this)
@@ -310,11 +309,12 @@ prefixEntryFn = {
 
 %--------------------prefixate within
 prefixFn = {
-	%@()drawPhotoDiode(s,[0 0 0]);
+	@()drawPhotoDiode(s,[0 0 0]);
 };
 
 prefixExitFn = {
 	%@()trackerDrawStatus(eT,'Init Fix...', stims.stimulusPositions);
+	@()show(stims{end});
 };
 
 %==============================================================
@@ -322,8 +322,7 @@ prefixExitFn = {
 %==============================================================
 %--------------------fixate entry
 fixEntryFn = { 
-	@()show(stims{tS.nStims});
-	%@()logRun(me,'INITFIX');
+	@()logRun(me,'INITFIX');
 };
 
 %--------------------fix within
@@ -359,9 +358,9 @@ fixExitFn = {
 
 stimEntryFn = {
 	% send an eyeTracker sync message (reset relative time to 0 after first flip of this state)
-	@()doSyncTime(me);
+	%@()doSyncTime(me);
 	% send stimulus value strobe (value set by updateVariables(me) function)
-	@()doStrobe(me,true);
+	%@()doStrobe(me,true);
 };
 
 %--------------------what to run when we are showing stimuli
@@ -380,7 +379,7 @@ maintainFixFn = {
 	% otherwise 'breakfix' is returned and the state machine will jump to the
 	% breakfix state. If neither condition matches, then the state table below
 	% defines that after 5 seconds we will switch to the incorrect state.
-	@()testHoldFixation(eT,'correct','breakfix'); 
+	%@()testHoldFixation(eT,'correct','breakfix'); 
 };
 
 %as we exit stim presentation state
@@ -403,7 +402,7 @@ correctEntryFn = {
 	@()trackerDrawText(eT,'Correct! :-)');
 	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
-	@()needEyeSample(me,false); % no need to collect eye data until we start the next trial
+	@()needEyeSample(me, false); % no need to collect eye data until we start the next trial
 	@()hide(stims); % hide all stims
 	@()logRun(me,'CORRECT'); % print current trial info
 };
@@ -437,7 +436,7 @@ incEntryFn = {
 	@()trackerDrawStatus(eT,'INCORRECT! :-(', stims.stimulusPositions, 0);
 	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
-	@()needEyeSample(me,false);
+	@()needEyeSample(me, false);
 	@()hide(stims);
 	@()logRun(me,'INCORRECT'); %fprintf current trial info
 };
@@ -548,8 +547,8 @@ stateInfoTmp = {
 'pause'		'prefix'	inf		pauseEntryFn	{}				{}				pauseExitFn;
 %---------------------------------------------------------------------------------------------
 'prefix'	'fixate'	0.5		prefixEntryFn	prefixFn		{}				{};
-'fixate'	'incorrect'	10		fixEntryFn		fixFn			inFixFn			fixExitFn;
-'stimulus'	'incorrect'	10		stimEntryFn		stimFn			maintainFixFn	stimExitFn;
+'fixate'	'incorrect'	5		fixEntryFn		fixFn			inFixFn			fixExitFn;
+'stimulus'	'incorrect'	5		stimEntryFn		stimFn			maintainFixFn	stimExitFn;
 'incorrect'	'timeout'	0.5		incEntryFn		incFn			{}				incExitFn;
 'breakfix'	'timeout'	0.5		breakEntryFn	incFn			{}				breakExitFn;
 'correct'	'prefix'	0.5		correctEntryFn	correctFn		{}				correctExitFn;
