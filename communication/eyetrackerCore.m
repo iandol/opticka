@@ -319,7 +319,7 @@ classdef eyetrackerCore < optickaCore
 			success = false;
 			if ~me.isConnected || ~me.isDummy; return; end
 			
-			Listenchar(0); FlushEvents;
+			ListenChar(0); FlushEvents;
 			oldrk = RestrictKeysForKbCheck([]); %just in case someone has restricted keys
 			success = false;
 			if matches(me.type,'eyelink')
@@ -349,7 +349,7 @@ classdef eyetrackerCore < optickaCore
 				if mod(i,10) == 0
 					flash = ~flash;
 				end
-				Screen('DrawText',me.screen.win,'Drift Correction...',10,10,[0.4 0.4 0.4]);
+				drawText(me.screen,'Drift Correction...');
 				if flash
 					Screen('gluDisk',me.screen.win,[1 0 1 0.75],x,y,10);
 					Screen('gluDisk',me.screen.win,[1 1 1 1],x,y,4);
@@ -372,14 +372,14 @@ classdef eyetrackerCore < optickaCore
 				me.offset.Y = median(ys(end-10:end)) - me.fixation.Y(1);
 				t = sprintf('Offset: X = %.2f Y = %.2f\n',me.offset.X,me.offset.Y);
 				me.salutation('Drift [SELF]Correct',t,true);
-				Screen('DrawText',me.screen.win,t,10,10,[0.4 0.4 0.4]);
-				Screen('Flip',me.screen.win);
+				drawText(me.screen,t);
+				flip(me.screen);
 			else
 				me.offset.X = 0;
 				me.offset.Y = 0;
 				t = sprintf('Offset: X = %.2f Y = %.2f\n',me.offset.X,me.offset.Y);
 				me.salutation('REMOVE Drift [SELF]Offset',t,true);
-				Screen('DrawText',me.screen.win,'Reset Drift Offset...',10,10,[0.4 0.4 0.4]);
+				drawText(me.screen,'Reset Drift Offset...');
 				Screen('Flip',me.screen.win);
 			end
 			WaitSecs('YieldSecs',1);
@@ -889,18 +889,19 @@ classdef eyetrackerCore < optickaCore
 		end
 
 		% ===================================================================
-		%> @brief draw the fixation box on the tracker display
+		%> @brief flip the tracker display
 		%>
 		% ===================================================================
 		function trackerFlip(me, dontclear, force)
-			me.flipTick = me.flipTick + 1;
-			if ~exist('force','var'); force = false; end
-			if force || me.flipTick > me.skipFlips; me.flipTick = 1; end
-
-			if me.flipTick > 1 || ~me.isConnected || ~me.operatorScreen.isOpen; return; end
-
+			if ~me.isConnected || ~me.operatorScreen.isOpen; return; end
 			if ~exist('dontclear','var'); dontclear = 1; end
-			% 'Flip', [, when] [, dontclear] [, dontsync] [, multiflip])
+			if ~exist('force','var'); force = false; end
+
+			me.flipTick = me.flipTick + 1;
+			if force || me.flipTick >= me.skipFlips; me.flipTick = 1; end
+			if me.flipTick ~=1; return; end
+
+			if dontclear ~= 1; dontclear = []; end
 			me.operatorScreen.flip([], dontclear, 2);
 		end
 		

@@ -127,7 +127,7 @@ classdef screenManager < optickaCore
 		%> or updates values if window open...
 		font struct							= struct('TextSize',20,...
 											'TextColor',[0.95 0.95 0.95 1],...
-											'TextBackgroundColor',[0.1 0.2 0 0.3],...
+											'TextBackgroundColor',[0.1 0.2 0 0.3 1],...
 											'TextRenderer', 1,...
 											'FontName', 'Source Sans 3');
 	end
@@ -1253,7 +1253,7 @@ classdef screenManager < optickaCore
 			if ~exist('text','var');return;end
 			if ~exist('x','var');x = (-me.xCenter / me.ppd_) + 0.25;end
 			if ~exist('y','var');y = (-me.yCenter / me.ppd_) + 0.25;end
-			Screen('DrawText', me.win, text, (x * me.ppd_) + me.xCenter, (y * me.ppd_) + me.yCenter);
+			Screen('DrawText', me.win, text, (x * me.ppd_) + me.xCenter, (y * me.ppd_) + me.yCenter, me.font.TextColor);
 			flip(me,[],[],2);
 		end
 		
@@ -1312,16 +1312,17 @@ classdef screenManager < optickaCore
 		%> @brief draw box specified with x and y and size in degrees
 		%>
 		%> @param xy X is row1 and Y is row2 in degrees
-		%> @param size in degrees
+		%> @param size in degrees, either 1 or 2 values
 		%> @param colour RGB[A], use columns for multiple colours
 		%> @return
 		% ===================================================================
 		function drawBox(me,xy,boxsize,colour)
 			% drawBox(me, xy, size, colour)
 			if ~exist('xy','var');return;end
-			if ~exist('size','var') || isempty(boxsize); boxsize = 2; end
+			if ~exist('boxsize','var') || isempty(boxsize); boxsize = 2; end
 			if ~exist('colour','var') || isempty(colour); colour = [1 1 0]'; end
-			boxsize = boxsize * me.ppd_;
+			boxsize = boxsize .* me.ppd_;
+			if size(xy,1)==1 && size(xy,2)==2;xy = xy'; end
 			xy(1,:) = xy(1,:) * me.ppd_ + me.xCenter;
 			xy(2,:) = xy(2,:) * me.ppd_ + me.yCenter;
 			if length(boxsize) == 1

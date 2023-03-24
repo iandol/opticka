@@ -694,7 +694,6 @@ classdef runExperiment < optickaCore
 	
 			%------initialise time logs for this run
 			me.previousInfo.taskLog		= me.taskLog;
-			me.runLog					= [];
 			me.taskLog					= timeLogger();
 			tL							= me.taskLog; %short handle to log
 			tL.name						= me.name;

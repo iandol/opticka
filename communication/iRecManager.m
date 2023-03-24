@@ -45,10 +45,9 @@ classdef iRecManager < eyetrackerCore
 		%> options for online smoothing of peeked data {'median','heuristic','savitsky-golay'}
 		smoothing		= struct('nSamples',8,'method','median','window',3,...
 						'eyes','both')
-	end
-	
-	properties (Hidden = true)
-
+		%> we can optionally drive physical LEDs for calibration, each LED
+		%> is triggered by the me.calibration.calPositions order
+		useLEDs			= false
 	end
 	
 	properties (SetAccess = protected, GetAccess = public, Dependent = true)
@@ -57,9 +56,10 @@ classdef iRecManager < eyetrackerCore
 	end
 	
 	properties (SetAccess = protected, GetAccess = protected)
-		sv
+		sv					= []
+		fInc				= 8
 		%> tracker time stamp
-		systemTime						= 0
+		systemTime			= 0
 		calibData
 		calStim
 		%> allowed properties passed to object upon construction
@@ -117,7 +117,7 @@ classdef iRecManager < eyetrackerCore
 					'disableSyncTests',true,'backgroundColour',sM.backgroundColour,...
 					'screen', oscreen, 'specialFlags', kPsychGUIWindow);
 					[w,h]			= Screen('WindowSize',sM2.screen);
-					sM2.windowed	= [0 0 round(w/1.5) round(h/1.5)];
+					sM2.windowed	= [0 0 round(w/2) round(h/2)];
 					if ismac; sM2.useRetina = true; end
 			end
 			if ~exist('sM2','var') || ~isa(sM2,'screenManager')
@@ -140,6 +140,7 @@ classdef iRecManager < eyetrackerCore
 				end
 				try 
 					open(me.tcp);
+					if ~me.tcp.isOpen; warning('Cannot Connect to TCP');error('Cannot connect to TCP'); end
 					open(me.udp);
 					me.udp.write(int32(1e6));
 					me.isConnected = true;
@@ -187,53 +188,64 @@ classdef iRecManager < eyetrackerCore
 			
 			if strcmp(me.calibration.stimulus,'movie')
 				if isempty(me.stimulus.movie) || ~isa(me.stimulus.movie,'movieStimulus')
-					f = movieStimulus('size',me.calibration.size);
+					me.calStim = movieStimulus('size',me.calibration.size);
 				else
-					f = me.movie.movie;
-					f.size = me.calibration.size;
+					if ~isempty(me.calStim); try me.calStim.reset; end; end
+					me.calStim = me.movie.movie;
+					me.calStim.size = me.calibration.size;
 				end
 			else
-				f = fixationCrossStimulus('size',me.calibration.size,'type','pulse');
+				if ~isempty(me.calStim); try me.calStim.reset; end; end
+				me.calStim = fixationCrossStimulus('size',me.calibration.size,'lineWidth',me.calibration.size/8,'type','pulse');
 			end
 
-			hide(f);
-			setup(f, me.screen);
+			hide(me.calStim);
+			setup(me.calStim, me.screen);
 			
 			KbName('UnifyKeyNames');
-			one = KbName('1!');
-			two = KbName('2@');
-			three = KbName('3#');
-			four = KbName('4$');
-			five = KbName('5%');
-			six = KbName('6^');
-			seven = KbName('7&');
-			eight = KbName('8*');
-			nine = KbName('9(');
-			zero = KbName('0)');
-			esc = KbName('escape');
-			cal = KbName('c');
-			val = KbName('v');
-			dr = KbName('d');
-			menu = KbName('LeftShift');
-			RestrictKeysForKbCheck([one two three four five six seven eight nine zero esc cal val dr menu]);
+			one = KbName('1!'); two = KbName('2@'); three = KbName('3#');
+			four = KbName('4$'); five = KbName('5%'); six = KbName('6^');
+			seven = KbName('7&'); eight = KbName('8*'); nine = KbName('9(');
+			zero = KbName('0)'); esc = KbName('escape'); cal = KbName('c');
+			val = KbName('v'); dr = KbName('d'); menu = KbName('LeftShift');
+			oldr = RestrictKeysForKbCheck([one two three four five six seven eight nine zero esc cal val dr menu]);
 
-			pos = me.calibration.calPositions;
-			nPositions = size(pos,1);
+			cpos = me.calibration.calPositions;
+			vpos = me.calibration.valPositions;
 
-			f.xPositionOut = pos(1,1);
-			f.yPositionOut = pos(1,2);
-			update(f);
+			wd = abs(s.screenVals.leftInDegrees)*2;
+			hd = abs(s.screenVals.topInDegrees)*2;
+
+			me.calStim.xPositionOut = cpos(1,1);
+			me.calStim.yPositionOut = cpos(1,2);
+			update(me.calStim);
 			loop = true;
+			ref = s.screenVals.fps / 2;
 			thisPos = 0;
+			a = -1;
 			mode = 'menu';
 			
 			while loop
-
+				
 				switch mode
 					case 'menu'
 						cloop = true;
 						while cloop
-							[pressed,~,keys] = KbCheck();
+							a = a + 1;
+							me.getSample();
+							s.drawText('esc = exit | c = calibrate | v = validate | d = drift offset');
+							s.flip();
+							if me.useOperatorScreen
+								s2.drawText ('esc = exit | c = calibrate | v = validate | d = drift offset');
+								s2.drawSpot(1,[1 0.5 0 0.4],me.x,me.y);
+								if mod(a,ref) == 0
+									trackerFlip(me,0,true);
+								else
+									trackerFlip(me,1);
+								end
+							end
+
+							[pressed,~,keys] = getKeys(me);
 							if pressed
 								if keys(esc)
 									cloop = false; loop = false; break;
@@ -245,47 +257,52 @@ classdef iRecManager < eyetrackerCore
 									me.driftOffset();
 								end
 							end
-							me.getSample();
-							s2.drawSpot(2,[1 0.5 0 0.5],me.x,me.y);
-							s.drawText('esc = exit | c = calibrate | v = validate | d = drift offset');
-							s2.drawText ('esc = exit | c = calibrate | v = validate | d = drift offset');
-							s2.flip([],[],2);
-							s.flip();
 						end
 
 					case 'calibrate'
 						cloop = true;
 						thisX = 0;
 						thisY = 0;
+						nPositions = size(cpos,1);
 						while cloop
-							[pressed,~,keys] = KbCheck();
+							a = a + 1;
+							me.getSample();
+							drawGrid(s);
+							draw(me.calStim);
+							animate(me.calStim);
+							flip(s);
+							if me.useOperatorScreen
+								s2.drawCross(1,[],thisX,thisY);
+								s2.drawSpot(1,[1 0.5 0 0.4],me.x,me.y);
+								if mod(a,ref) == 0
+									trackerFlip(me,0,true);
+								else
+									trackerFlip(me,1);
+								end
+							end
+
+							[pressed,~,keys] = getKeys(me);
 							if pressed
 								if length(KbName(keys))==2 % assume a number
 									k = KbName(keys);
 									k = str2double(k(1));
 									if k == 0
-										hide(f);
+										hide(me.calStim);
+										s2.flip([],[],2);
 									elseif k > 0 && k <= nPositions
-										f.isVisible = ~f.isVisible;
-										thisX = pos(k,1);
-										thisY = pos(k,2);
-										f.xPositionOut = thisX;
-										f.yPositionOut = thisY;
-										update(f);
+										me.calStim.isVisible = ~me.calStim.isVisible;
+										thisX = cpos(k,1);
+										thisY = cpos(k,2);
+										me.calStim.xPositionOut = thisX;
+										me.calStim.yPositionOut = thisY;
+										update(me.calStim);
+										s2.flip([],[],2);
 									end
 								elseif keys(val)
-									mode = 'validate'; cloop=false; break;
-								elseif keys(esc) || keys(menu)
+									mode = 'validate'; cloop = false; break;
+								elseif keys(menu)
 									mode = 'menu'; cloop = false; break;
 								end
-							end
-							drawGrid(s);
-							draw(f);
-							animate(f);
-							flip(s);
-							if me.useOperatorScreen
-								s2.drawCross(1,[],thisX,thisY);
-								s2.flip([],[],2);
 							end
 						end
 
@@ -293,26 +310,58 @@ classdef iRecManager < eyetrackerCore
 						cloop = true;
 						thisX = 0;
 						thisY = 0;
+						nPositions = size(vpos,1);
 						while cloop
-							[pressed,~,keys] = KbCheck();
-							if pressed
-								if keys(esc) || keys(menu)
-									mode = 'menu'; cloop = false; break;
+							a = a + 1;
+							me.getSample();
+							drawGrid(s);
+							draw(me.calStim);
+							animate(me.calStim);
+							s.drawText('lshift = exit');
+							flip(s);
+							if me.useOperatorScreen
+								s2.drawCross(1,[],thisX,thisY);
+								s2.drawSpot(1,[1 0.5 0 0.4],me.x,me.y);
+								if mod(a,40) == 0
+									trackerFlip(me,0,true);
+								else
+									trackerFlip(me,1);
 								end
 							end
-							s.drawText('esc = exit');
-							s.flip();
-							if me.useOperatorScreen
-								s2.drawText('esc = exit');
-								s2.flip([],[],2);
+
+							[pressed,~,keys] = getKeys(me);
+							if pressed
+								if length(KbName(keys))==2 % assume a number
+									k = KbName(keys);
+									k = str2double(k(1));
+									if k == 0
+										hide(me.calStim);
+										s2.flip([],[],2);
+									elseif k > 0 && k <= nPositions
+										me.calStim.isVisible = ~me.calStim.isVisible;
+										thisX = vpos(k,1);
+										thisY = vpos(k,2);
+										me.calStim.xPositionOut = thisX;
+										me.calStim.yPositionOut = thisY;
+										update(me.calStim);
+										s2.flip([],[],2);
+									end
+								elseif keys(menu)
+									mode = 'menu'; cloop = false; break;
+								end
 							end
 						end
 				end
 			end
-			s.flip();s2.flip();
-			if ~useOperatorScreen; close(s2); end
+			s.drawText('Calibration finished...');
+			s2.drawText('Calibration finished...')
+			s.flip(); s2.flip(); s2.drawBackground; s2.flip();
+			reset(me.calStim);
+			if ~me.useOperatorScreen; close(s2); end
 			resetAll(me);
-			RestrictKeysForKbCheck([]);
+			RestrictKeysForKbCheck(oldr);
+			WaitSecs(0.25);
+			fprintf('===>>> CALIBRATING IREC FINISHED... <<<===\n');
 		end
 		
 		% ===================================================================
@@ -902,6 +951,16 @@ classdef iRecManager < eyetrackerCore
 	methods (Access = private) %------------------PRIVATE METHODS
 		%=======================================================================
 		
+		function [pressed, time, keys] = getKeys(me)
+			persistent keyTick keyTok
+			pressed = false; time = []; keys = [];
+			if isempty(keyTick); keyTick = 0; keyTok = 0;end
+			keyTick = keyTick + 1;
+			if keyTick > keyTok
+				[pressed, time, keys] = KbCheck();
+				keyTok = keyTick + me.fInc;
+			end
+		end
 		% ===================================================================
 		%> @brief Stampe 1993 heuristic filter as used by Eyelink
 		%>
