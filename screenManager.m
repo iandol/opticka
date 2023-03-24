@@ -127,7 +127,7 @@ classdef screenManager < optickaCore
 		%> or updates values if window open...
 		font struct							= struct('TextSize',20,...
 											'TextColor',[0.95 0.95 0.95 1],...
-											'TextBackgroundColor',[0.1 0.2 0 0.3 1],...
+											'TextBackgroundColor',[0.1 0.2 0.3 1],...
 											'TextRenderer', 1,...
 											'FontName', 'Source Sans 3');
 	end
@@ -1382,19 +1382,40 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief draw dots specified in degrees to pixel coordinates
+		%> @brief draw dots specified in degrees to pixel center coordinates
 		%>
 		%> @param xy x is row1 and y is row2
 		%> @return
 		% ===================================================================
 		function drawDots(me,xy,size,colour,center)
 			if ~exist('xy','var');return;end
-			if ~exist('size','var') || isempty(size); size = 5; end
-			if ~exist('colour','var') || isempty(colour); colour = [1 1 1]; end
+			if ~exist('size','var') || isempty(size); size = 0.5; end
+			if ~exist('colour','var') || isempty(colour); colour = [1 1 0 0.5]; end
 			if ~exist('center','var') || isempty(center); center = [0 0]; end
+			size = size * me.ppd_;
 			xy(1,:) = me.xCenter + (xy(1,:) * me.ppd_);
 			xy(2,:) = me.yCenter + (xy(2,:) * me.ppd_);
-			Screen('DrawDots', me.win, xy, size, colour, center);
+			Screen('DrawDots', me.win, xy, size, colour, center, 1);
+		end
+
+		% ===================================================================
+		%> @brief draw dots specified in degrees 
+		%>
+		%> @param xy x is row1 and y is row2
+		%> @return
+		% ===================================================================
+		function drawDotsDegs(me,xy,size,colour)
+			if ~exist('xy','var');return;end
+			if ~exist('size','var') || isempty(size); size = 0.5; end
+			if ~exist('colour','var') || isempty(colour); colour = [1 1 0 0.5]; end
+			size = size * me.ppd_;
+			xy(1,:) = me.xCenter + (xy(1,:) * me.ppd_);
+			xy(2,:) = me.yCenter + (xy(2,:) * me.ppd_);
+			center(1) = mean(xy(1,:));
+			center(2) = mean(xy(2,:));
+			xy(1,:) = xy(1,:) - center(1);
+			xy(2,:) = xy(2,:) - center(2);
+			Screen('DrawDots', me.win, xy, size, colour, center, 1);
 		end
 		
 		% ===================================================================

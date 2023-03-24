@@ -256,7 +256,7 @@ classdef dataConnection < handle
 					end
 					me.(name) = -1; me.(list) = [];
 				end
-				if me.conn == -1 && me.rconn == -1; me.isOpen = false; end
+				me.isOpen = false;
 			end
 		end
 		
@@ -480,7 +480,7 @@ classdef dataConnection < handle
 		%> @param sendPacket (0|1[default]) for UDP connections actually send the packet or wait to fill buffer with another call first
 		% ===================================================================
 		function write(me, data, formatted, sendPacket)
-			
+			if ~me.isOpen; return; end
 			if ~exist('data','var') || isempty(data)
 				data = me.dataOut;
 			end

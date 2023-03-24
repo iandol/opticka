@@ -121,7 +121,7 @@ classdef eyetrackerCore < optickaCore
 		%> is operator screen being used?
 		secondScreen			= false
 		%> size to draw eye position on screen
-		eyeSize double			= 6
+		eyeSize double			= 10
 		%> for trackerFlip, we can only flip every X frames
 		skipFlips				= 8
 	end
@@ -192,9 +192,9 @@ classdef eyetrackerCore < optickaCore
 		fixN double				= 0
 		fixSelection			= []
 		%> allowed properties passed to object upon construction
-		allowedPropertiesBase	= {'fixation', 'exclusionZone', 'fixInit', ...
+		allowedPropertiesBase	= {'useOperatorScreen','fixation', 'exclusionZone', 'fixInit', ...
 			'offset', 'sampleRate', 'ignoreBlinks', 'saveData',...
-			'recordData', 'verbose', 'isDummy', 'manualCalibration'}
+			'recordData', 'verbose', 'isDummy'}
 	end
 
 	%> ALL Children must implement these methods!
@@ -856,6 +856,7 @@ classdef eyetrackerCore < optickaCore
 		% ===================================================================
 		function trackerDrawEyePosition(me)
 			if ~me.isConnected || ~me.operatorScreen.isOpen; return; end
+			if isempty(me.x) || isempty(me.y); return;end
 			if me.isFix
 				if me.fixLength > me.fixation.time
 					drawSpot(me.operatorScreen,0.3,[0 1 0.25 0.75],me.x,me.y);
