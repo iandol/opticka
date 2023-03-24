@@ -115,7 +115,7 @@ randomiseTask(myTask);
 % several screen parameters, windowing, blending etc.
 myScreen = screenManager('distance', 57.3,... % display distance from observer
 	'pixelsPerCm', 27,... % calibration value for pixel density, measure using calibrateSize()
-	'windowed', [],... % use fullscreen [] or window [X Y]?
+	'windowed', [0 0 900 900],... % use fullscreen [] or window [X Y]?
 	'backgroundColour', [0.5 0.5 0.5],... % initial background colour
 	'blend', true,... % enable OpenGL blending, you can also set blend modes when needed
 	'bitDepth', '8bit'); % FloatingPoint32bit, 8bit, FloatingPoint16bit etc.

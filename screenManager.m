@@ -1413,7 +1413,8 @@ classdef screenManager < optickaCore
 		%> @return
 		% ===================================================================
 		function drawGrid(me)
-			Screen('DrawDots',me.win,me.grid,1,[1 1 0 1],[me.xCenter me.yCenter],1);
+			if me.useRetina; sz=2; else; sz = 1; end
+			Screen('DrawDots',me.win,me.grid,sz,[1 0.5 0 1],[me.xCenter me.yCenter],1);
 		end
 		
 		% ===================================================================
