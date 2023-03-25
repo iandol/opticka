@@ -95,14 +95,14 @@ classdef iRecManager < eyetrackerCore
 				if isempty(me.screen) || ~isa(me.screen,'screenManager')
 					me.screen		= screenManager();
 				end
-			else
-				me.screen			= sM;
+			elseif ~isa(me.screen,'screenManager') || ~strcmp(me.screen.uuid, sM.uuid)
+					me.screen			= sM;
 			end
 			me.ppd_					= me.screen.ppd;
 			if me.screen.isOpen
 				me.win				= me.screen.win;
 			end
-			if me.useOperatorScreen && ~exist('sM2','var')
+			if ~exist('sM2','var') && me.useOperatorScreen && ~isa(me.operatorScreen,'screenManager')
 				if me.screen.screen > 0
 					oscreen = me.screen.screen - 1;
 				else
@@ -111,19 +111,21 @@ classdef iRecManager < eyetrackerCore
 				sM2 = screenManager('pixelsPerCm',20,...
 					'disableSyncTests',true,'backgroundColour',sM.backgroundColour,...
 					'screen', oscreen, 'specialFlags', kPsychGUIWindow);
-					[w,h]			= Screen('WindowSize',sM2.screen);
-					sM2.windowed	= [0 0 round(w/2) round(h/2)];
-					if ismac; sM2.useRetina = true; end
-			end
-			if ~exist('sM2','var') || ~isa(sM2,'screenManager')
-				me.secondScreen		= false;
-			else
+				[w,h]			= Screen('WindowSize',sM2.screen);
+				sM2.windowed	= [0 0 round(w/2) round(h/2)];
+				if ismac; sM2.useRetina = true; end
 				me.operatorScreen	= sM2;
+				me.secondScreen		= true;
+			elseif me.useOperatorScreen
+				if ~isa(me.operatorScreen,'screenManager') || ~strcmp(me.operatorScreen.uuid,sM2.uuid)
+					me.operatorScreen	= sM2;
+				end
 				me.secondScreen		= true;
 			end
 			
 			if me.isDummy
 				me.salutation('Initialise', 'Running iRecH2 in Dummy Mode', true);
+				me.isConnected = false;
 			else
 				if isempty(me.tcp)
 					me.tcp = dataConnection('rAddress', me.calibration.ip,'rPort',...
@@ -180,8 +182,10 @@ classdef iRecManager < eyetrackerCore
 			if ~isempty(me.screen) && isa(me.screen,'screenManager'); open(me.screen); end
 			if me.useOperatorScreen && isa(me.operatorScreen,'screenManager'); open(me.operatorScreen); end
 			
+			
 			s = me.screen;
 			if me.useOperatorScreen; s2 = me.operatorScreen; end
+			me.fInc = round(s.screenVals.fps/6);
 
 			fprintf('\n===>>> CALIBRATING IREC... <<<===\n');
 			
@@ -288,23 +292,31 @@ classdef iRecManager < eyetrackerCore
 								end
 							end
 
-							[pressed,~,keys] = getKeys(me);
+							[pressed,name,keys] = getKeys(me);
 							if pressed
-								if length(KbName(keys))==2 % assume a number
-									k = KbName(keys);
-									k = str2double(k(1));
-									if k == 0
+								fprintf('key: %s\n',name);
+								if length(name)==2 % assume a number
+									k = str2double(name(1));
+									if k == 0 
 										hide(f);
 										s2.flip([],[],2);
 									elseif k > 0 && k <= nPositions
-										if k == lastK; f.isVisible = ~f.isVisible; end
+										thisPos = k;
+										if k == lastK && f.isVisible
+											f.isVisible = false;
+											thisPos = 0;
+										elseif ~f.isVisible
+											f.isVisible = true;
+										end
 										lastK = k;
-										thisX = cpos(k,1);
-										thisY = cpos(k,2);
-										f.xPositionOut = thisX;
-										f.yPositionOut = thisY;
-										update(f);
-										s2.flip([],[],2);
+										if thisPos > 0
+											thisX = vpos(thisPos,1);
+											thisY = vpos(thisPos,2);
+											f.xPositionOut = thisX;
+											f.yPositionOut = thisY;
+											update(f);
+										end
+										trackerFlip(me,0,true);
 									end
 								elseif keys(val)
 									mode = 'validate'; cloop = false; break;
@@ -335,37 +347,37 @@ classdef iRecManager < eyetrackerCore
 							s.drawText('lshift = exit | rshift = sample | # = point');
 							flip(s);
 							if me.useOperatorScreen
-								if ~isempty(me.x);s2.drawSpot(1,[1 0.5 0 0.4],me.x,me.y);end
+								if ~isempty(me.x); s2.drawSpot(1,[0 1 0.25 0.3],me.x,me.y); end
 								for j = 1:nPositions
 									s2.drawCross(1,[],vpos(j,1),vpos(j,2));
 									if ~isempty(vdata{j}) && size(vdata{j},1)==2
 										try drawDotsDegs(s2,vdata{j}); end
 									end
 								end
-								if mod(a,40) == 0
+								if mod(a,ref) == 0
 									trackerFlip(me,0,true);
 								else
 									trackerFlip(me,1);
 								end
 							end
 
-							[pressed,~,keys] = getKeys(me);
+							[pressed,name,keys] = getKeys(me);
 							if pressed
-								if length(KbName(keys))==2 % assume a number
-									k = KbName(keys);
-									k = str2double(k(1));
+								fprintf('key: %s\n',name);
+								if length(name)==2 % assume a number
+									k = str2double(name(1));
 									if k == 0
 										thisPos = 0;
 										resetAll(me);
 										hide(f);
 										s2.flip([],[],2);
 									elseif k > 0 && k <= nPositions
+										thisPos = k;
 										if k == lastK && f.isVisible
 											f.isVisible = false;
 											thisPos = 0;
-										elseif k == lastK && ~f.isVisible
+										elseif ~f.isVisible
 											f.isVisible = true;
-											thisPos = k;
 										end
 										lastK = k;
 										if thisPos > 0
@@ -375,12 +387,12 @@ classdef iRecManager < eyetrackerCore
 											f.yPositionOut = thisY;
 											update(f);
 										end
-										s2.flip([],[],2);
+										trackerFlip(me,0,true);
 									end
 								elseif keys(sample)
-									if length(me.xAll) > 20
-										vdata{lastK} = [me.xAll(end-20:end); me.yAll(end-20:end)];
-									elseif ~isempty(me.xAll)
+									if length(me.xAll) > 20 && vdata > 0
+										vdata{lastK} = [me.xAll(end-19:end); me.yAll(end-19:end)];
+									elseif ~isempty(me.xAll) && vdata > 0
 										vdata{lastK} = [me.xAll; me.yAll];
 									end
 									f.isVisible = false;
@@ -544,38 +556,23 @@ classdef iRecManager < eyetrackerCore
 				end
 				s.disableSyncTests		= true;
 				if exist('forcescreen','var'); s.screen = forcescreen; end
-				if me.secondScreen || (length(Screen('Screens'))>1 && s.screen - 1 >= 0)
-					useS2				= true;
-					if isa(me.operatorScreen,'screenManager')
-						s2 = me.operatorScreen;
-					else
-						s2					= screenManager;
-						s2.pixelsPerCm		= 15;
-						s2.screen			= s.screen - 1;
-						s2.backgroundColour	= s.backgroundColour;
-						[w,h]				= Screen('WindowSize',s2.screen);
-						s2.windowed			= [0 0 round(w/2) round(h/2)];
-						s2.specialFlags		= kPsychGUIWindow;
-					end
-					s2.bitDepth			= '8bit';
-					s2.blend			= true;
-					s2.disableSyncTests	= true;
-				end
+				
+				if me.useOperatorScreen; useS2 = true; end
 			
 				if ~me.isConnected
-					if ~s.isOpen; open(s); end
 					if useS2
 						initialise(me, s, s2);
-						if ~s2.isOpen; s2.open(); end
+						
 					else
 						initialise(me, s); 
 					end
 				end
+				if ~s.isOpen; open(s); end
+				if me.useOperatorScreen &&~s2.isOpen; s2.open(); end
 				sv = s.screenVals;
 				trackerSetup(me);
-				ShowCursor; %titta fails to show cursor so we must do it
 				drawPhotoDiodeSquare(s,[0 0 0 1]); flip(s); %make sure our photodiode patch is black
-				
+
 				% set up the size and position of the stimulus
 				o = dotsStimulus('size',me.fixation.radius(1)*2,'speed',2,'mask',true,'density',50); %test stimulus
 				if length(me.fixation.radius) == 1
@@ -946,18 +943,22 @@ classdef iRecManager < eyetrackerCore
 	
 	%=======================================================================
 	methods (Access = private) %------------------PRIVATE METHODS
-		%=======================================================================
+	%=======================================================================
 		
 		% ===================================================================
+		%> @brief Get Key
 		% ===================================================================
-		function [pressed, time, keys] = getKeys(me)
+		function [pressed, name, keys] = getKeys(me)
 			persistent keyTick keyTok
-			pressed = false; time = []; keys = [];
-			if isempty(keyTick); keyTick = 0; keyTok = 0;end
+			if isempty(keyTick); keyTick = 0; keyTok = 0; end
 			keyTick = keyTick + 1;
 			if keyTick > keyTok
-				[pressed, time, keys] = KbCheck();
+				fprintf('tok %i\n',keyTick);
+				[pressed, ~, keys] = KbCheck();
+				name = KbName(keys);
 				keyTok = keyTick + me.fInc;
+			else
+				pressed = false; name = []; keys = [];
 			end
 		end
 

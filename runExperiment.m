@@ -742,7 +742,7 @@ classdef runExperiment < optickaCore
 				
 				%================================open the PTB screen and setup stimuli
 				me.screenVals			= s.open(me.debug,tL);
-				me.fInc					= round(0.4 / (1 / me.screenVals.ifi)); %roughly <0.4s key press
+				me.fInc					= round(me.screenVals.fps/4); %roughly <0.4s key press
 				stims.verbose			= me.verbose;
 				task.fps				= s.screenVals.fps;
 				setup(stims, s);
@@ -2226,373 +2226,344 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
-		function [keyTicks, keyHold] = checkKeys(me, keyTicks, keyHold)
+		%> @brief Get Key
+		% ===================================================================
+		function [pressed, name, keys] = getKeys(me)
+			persistent keyTick keyTok
+			if isempty(keyTick); keyTick = 0; keyTok = 0; end
+			keyTick = keyTick + 1;
+			if keyTick > keyTok
+				[pressed, ~, keys] = KbCheck(me.keyboardDevice);
+				name = KbName(keys);
+				keyTok = keyTick + me.fInc;
+			else
+				pressed = false; name = []; keys = [];
+			end
+		end
+
+		% ===================================================================
+		function checkKeys(me)
 		%> @brief manage key commands during task loop
 		%>
 		%> @param args input structure
 		% ===================================================================
-			keyTicks = keyTicks + 1;
-			%now lets check whether any keyboard commands are pressed...
-			[keyIsDown, ~, keyCode] = KbCheck(me.keyboardDevice);
-			if keyIsDown
-				rchar = KbName(keyCode);
-				if iscell(rchar);rchar=rchar{1};end
-				switch rchar
-					case 'q' %quit
-						me.stopTask = true;
-					case 'p' %pause the display
-						if keyTicks > keyHold
-							if strcmpi(me.stateMachine.currentState.name, 'pause')
-								forceTransition(me.stateMachine, me.stateMachine.currentState.next);
+			[pressed, name, ~] = getkeys(me);
+			if ~ pressed; return; end
+			if iscell(name); name = name{end};end
+			switch name
+				case 'q' %quit
+
+					me.stopTask = true;
+
+				case 'p' %pause the display
+
+					if strcmpi(me.stateMachine.currentState.name, 'pause')
+						forceTransition(me.stateMachine, me.stateMachine.currentState.next);
+					else
+						flip(me.screen,[],[],2);flip(me.screen,[],[],2)
+						forceTransition(me.stateMachine, 'pause');
+						me.pauseToggle = me.pauseToggle + 1;
+					end
+					FlushEvents();
+
+				case {'UpArrow','up'}
+
+					if ~isempty(me.stimuli.controlTable)
+						maxl = length(me.stimuli.controlTable);
+						if isempty(me.stimuli.tableChoice) && maxl > 0
+							me.stimuli.tableChoice = 1;
+						end
+						if (me.stimuli.tableChoice > 0) && (me.stimuli.tableChoice < maxl)
+							me.stimuli.tableChoice = me.stimuli.tableChoice + 1;
+						end
+						var=me.stimuli.controlTable(me.stimuli.tableChoice).variable;
+						delta=me.stimuli.controlTable(me.stimuli.tableChoice).delta;
+						fprintf('======>>> Set Control table %g - %s : %g\n',me.stimuli.tableChoice,var,delta)
+					end	
+
+				case {'DownArrow','down'}
+					
+					if ~isempty(me.stimuli.controlTable)
+						maxl = length(me.stimuli.controlTable);
+						if isempty(me.stimuli.tableChoice) && maxl > 0
+							me.stimuli.tableChoice = 1;
+						end
+						if (me.stimuli.tableChoice > 1) && (me.stimuli.tableChoice <= maxl)
+							me.stimuli.tableChoice = me.stimuli.tableChoice - 1;
+						end
+						var=me.stimuli.controlTable(me.stimuli.tableChoice).variable;
+						delta=me.stimuli.controlTable(me.stimuli.tableChoice).delta;
+						fprintf('======>>> Set Control table %g - %s : %g\n',me.stimuli.tableChoice,var,delta)
+					end
+						
+				case {'LeftArrow','left'} %previous variable 1 value
+				
+					if ~isempty(me.stimuli.controlTable) && ~isempty(me.stimuli.controlTable.variable)
+						choice = me.stimuli.tableChoice;
+						if isempty(choice)
+							choice = 1;
+						end
+						var = me.stimuli.controlTable(choice).variable;
+						delta = me.stimuli.controlTable(choice).delta;
+						stims = me.stimuli.controlTable(choice).stimuli;
+						thisstim = me.stimuli.stimulusSets{me.stimuli.setChoice}; %what stimulus is visible?
+						stims = intersect(stims,thisstim); %only change the visible stimulus
+						limits = me.stimuli.controlTable(choice).limits;
+						correctPPD = 'size|dotSize|xPosition|yPosition';
+						for i = 1:length(stims)
+							if ~isempty(regexpi(var, correctPPD, 'once'))
+								oval = me.stimuli{stims(i)}.([var 'Out']) / me.stimuli{stims(i)}.ppd;
+							elseif strcmpi(var,'sf')
+								oval = me.stimuli{stims(i)}.getsfOut;
 							else
-								flip(me.screen,[],[],2);flip(me.screen,[],[],2)
-								forceTransition(me.stateMachine, 'pause');
-								me.pauseToggle = me.pauseToggle + 1;
+								oval = me.stimuli{stims(i)}.([var 'Out']);
 							end
-							FlushEvents();
-							keyHold = keyTicks + me.fInc;
+							val = oval - delta;
+							if min(val) < limits(1)
+								val(val < limits(1)) = limits(2);
+							elseif max(val) > limits(2)
+								val(val > limits(2)) = limits(1);
+							end
+							if length(val) > length(oval)
+								val = val(1:length(oval));
+							end
+							me.stimuli{stims(i)}.([var 'Out']) = val;
+							me.stimuli{stims(i)}.update();
+							fprintf('======>>> Stimulus #%i -- %s: %.3f (was %.3f)\n',stims(i),var,val,oval)
 						end
-					case {'UpArrow','up'}
-						if keyTicks > keyHold
-							if ~isempty(me.stimuli.controlTable)
-								maxl = length(me.stimuli.controlTable);
-								if isempty(me.stimuli.tableChoice) && maxl > 0
-									me.stimuli.tableChoice = 1;
-								end
-								if (me.stimuli.tableChoice > 0) && (me.stimuli.tableChoice < maxl)
-									me.stimuli.tableChoice = me.stimuli.tableChoice + 1;
-								end
-								var=me.stimuli.controlTable(me.stimuli.tableChoice).variable;
-								delta=me.stimuli.controlTable(me.stimuli.tableChoice).delta;
-								fprintf('======>>> Set Control table %g - %s : %g\n',me.stimuli.tableChoice,var,delta)
-							end
-							keyHold = keyTicks + me.fInc;
+					end
+						
+				case {'RightArrow','right'} %next variable 1 value
+					
+					if ~isempty(me.stimuli.controlTable) && ~isempty(me.stimuli.controlTable.variable)
+						choice = me.stimuli.tableChoice;
+						if isempty(choice)
+							choice = 1;
 						end
-					case {'DownArrow','down'}
-						if keyTicks > keyHold
-							if ~isempty(me.stimuli.controlTable)
-								maxl = length(me.stimuli.controlTable);
-								if isempty(me.stimuli.tableChoice) && maxl > 0
-									me.stimuli.tableChoice = 1;
-								end
-								if (me.stimuli.tableChoice > 1) && (me.stimuli.tableChoice <= maxl)
-									me.stimuli.tableChoice = me.stimuli.tableChoice - 1;
-								end
-								var=me.stimuli.controlTable(me.stimuli.tableChoice).variable;
-								delta=me.stimuli.controlTable(me.stimuli.tableChoice).delta;
-								fprintf('======>>> Set Control table %g - %s : %g\n',me.stimuli.tableChoice,var,delta)
+						var = me.stimuli.controlTable(choice).variable;
+						delta = me.stimuli.controlTable(choice).delta;
+						stims = me.stimuli.controlTable(choice).stimuli;
+						thisstim = me.stimuli.stimulusSets{me.stimuli.setChoice}; %what stimulus is visible?
+						stims = intersect(stims,thisstim); %only change the visible stimulus
+						limits = me.stimuli.controlTable(choice).limits;
+						correctPPD = 'size|dotSize|xPosition|yPosition';
+						for i = 1:length(stims)
+							if ~isempty(regexpi(var, correctPPD, 'once'))
+								oval = me.stimuli{stims(i)}.([var 'Out']) / me.stimuli{stims(i)}.ppd;
+							elseif strcmpi(var,'sf')
+								oval = me.stimuli{stims(i)}.getsfOut;
+							else
+								oval = me.stimuli{stims(i)}.([var 'Out']);
 							end
-							keyHold = keyTicks + me.fInc;
+							val = oval + delta;
+							if min(val) < limits(1)
+								val(val < limits(1)) = limits(2);
+							elseif max(val) > limits(2)
+								val(val > limits(2)) = limits(1);
+							end
+							if length(val) > length(oval)
+								val = val(1:length(oval));
+							end
+							me.stimuli{stims(i)}.([var 'Out']) = val;
+							me.stimuli{stims(i)}.update();
+							fprintf('======>>> Stimulus #%i -- %s: %.3f (%.3f)\n',stims(i),var,val,oval)
+						end
+					end
+						
+				case ',<'
+					
+					if me.stimuli.setChoice > 1
+						me.stimuli.setChoice = round(me.stimuli.setChoice - 1);
+						me.stimuli.showSet();
+					end
+					fprintf('======>>> Stimulus Set: #%g | Stimuli: %s\n',me.stimuli.setChoice, num2str(me.stimuli.stimulusSets{me.stimuli.setChoice}))
+					
+				case '.>'
+
+					if me.stimuli.setChoice < length(me.stimuli.stimulusSets)
+						me.stimuli.setChoice = me.stimuli.setChoice + 1;
+						me.stimuli.showSet();
+					end
+					fprintf('======>>> Stimulus Set: #%g | Stimuli: %s\n',me.stimuli.setChoice, num2str(me.stimuli.stimulusSets{me.stimuli.setChoice}))
+					
+				case 'r'
+
+					timedTTL(me.arduino);
+
+				case '=+'
+	
+					me.screen.screenXOffset = me.screen.screenXOffset + 1;
+					fprintf('======>>> Screen X Center: %g deg / %g pixels\n',me.screen.screenXOffset,me.screen.xCenter);
+						
+				case '-_'
+					
+					me.screen.screenXOffset = me.screen.screenXOffset - 1;
+					fprintf('======>>> Screen X Center: %g deg / %g pixels\n',me.screen.screenXOffset,me.screen.xCenter);
+					
+				case '[{'
+
+					me.screen.screenYOffset = me.screen.screenYOffset - 1;
+					fprintf('======>>> Screen Y Center: %g deg / %g pixels\n',me.screen.screenYOffset,me.screen.yCenter);
+					
+				case ']}'
+
+					me.screen.screenYOffset = me.screen.screenYOffset + 1;
+					fprintf('======>>> Screen Y Center: %g deg / %g pixels\n',me.screen.screenYOffset,me.screen.yCenter);
+						
+				case 'k'
+
+					stateName = 'blank';
+					[isState, index] = isStateName(me.stateMachine,stateName);
+					if isState
+						t = me.stateMachine.getState(stateName);
+						if isfield(t,'time')
+							tout = t.time - 0.25;
+							if min(tout) >= 0.1
+								me.stateMachine.editStateByName(stateName,'time',tout);
+								fprintf('======>>> Decrease %s time: %g:%g\n',t.name, min(tout),max(tout));
+							end
+						end
+					end
+					
+				case 'l'
+					
+					stateName = 'blank';
+					[isState, index] = isStateName(me.stateMachine,stateName);
+					if isState
+						t = me.stateMachine.getState(stateName);
+						if isfield(t,'time')
+							tout = t.time + 0.25;
+							me.stateMachine.editStateByName(stateName,'time',tout);
+							fprintf('======>>> Increase %s time: %g:%g\n',t.name, min(tout),max(tout));
 						end
 						
-					case {'LeftArrow','left'} %previous variable 1 value
-						if keyTicks > keyHold
-							if ~isempty(me.stimuli.controlTable) && ~isempty(me.stimuli.controlTable.variable)
-								choice = me.stimuli.tableChoice;
-								if isempty(choice)
-									choice = 1;
-								end
-								var = me.stimuli.controlTable(choice).variable;
-								delta = me.stimuli.controlTable(choice).delta;
-								stims = me.stimuli.controlTable(choice).stimuli;
-								thisstim = me.stimuli.stimulusSets{me.stimuli.setChoice}; %what stimulus is visible?
-								stims = intersect(stims,thisstim); %only change the visible stimulus
-								limits = me.stimuli.controlTable(choice).limits;
-								correctPPD = 'size|dotSize|xPosition|yPosition';
-								for i = 1:length(stims)
-									if ~isempty(regexpi(var, correctPPD, 'once'))
-										oval = me.stimuli{stims(i)}.([var 'Out']) / me.stimuli{stims(i)}.ppd;
-									elseif strcmpi(var,'sf')
-										oval = me.stimuli{stims(i)}.getsfOut;
-									else
-										oval = me.stimuli{stims(i)}.([var 'Out']);
-									end
-									val = oval - delta;
-									if min(val) < limits(1)
-										val(val < limits(1)) = limits(2);
-									elseif max(val) > limits(2)
-										val(val > limits(2)) = limits(1);
-									end
-									if length(val) > length(oval)
-										val = val(1:length(oval));
-									end
-									me.stimuli{stims(i)}.([var 'Out']) = val;
-									me.stimuli{stims(i)}.update();
-									fprintf('======>>> Stimulus #%i -- %s: %.3f (was %.3f)\n',stims(i),var,val,oval)
-								end
-							end
-							keyHold = keyTicks + me.fInc;
-						end
-					case {'RightArrow','right'} %next variable 1 value
-						if keyTicks > keyHold
-							if ~isempty(me.stimuli.controlTable) && ~isempty(me.stimuli.controlTable.variable)
-								choice = me.stimuli.tableChoice;
-								if isempty(choice)
-									choice = 1;
-								end
-								var = me.stimuli.controlTable(choice).variable;
-								delta = me.stimuli.controlTable(choice).delta;
-								stims = me.stimuli.controlTable(choice).stimuli;
-								thisstim = me.stimuli.stimulusSets{me.stimuli.setChoice}; %what stimulus is visible?
-								stims = intersect(stims,thisstim); %only change the visible stimulus
-								limits = me.stimuli.controlTable(choice).limits;
-								correctPPD = 'size|dotSize|xPosition|yPosition';
-								for i = 1:length(stims)
-									if ~isempty(regexpi(var, correctPPD, 'once'))
-										oval = me.stimuli{stims(i)}.([var 'Out']) / me.stimuli{stims(i)}.ppd;
-									elseif strcmpi(var,'sf')
-										oval = me.stimuli{stims(i)}.getsfOut;
-									else
-										oval = me.stimuli{stims(i)}.([var 'Out']);
-									end
-									val = oval + delta;
-									if min(val) < limits(1)
-										val(val < limits(1)) = limits(2);
-									elseif max(val) > limits(2)
-										val(val > limits(2)) = limits(1);
-									end
-									if length(val) > length(oval)
-										val = val(1:length(oval));
-									end
-									me.stimuli{stims(i)}.([var 'Out']) = val;
-									me.stimuli{stims(i)}.update();
-									fprintf('======>>> Stimulus #%i -- %s: %.3f (%.3f)\n',stims(i),var,val,oval)
-								end
-							end
-							keyHold = keyTicks + me.fInc;
-						end
-					case ',<'
-						if keyTicks > keyHold
-							if me.stimuli.setChoice > 1
-								me.stimuli.setChoice = round(me.stimuli.setChoice - 1);
-								me.stimuli.showSet();
-							end
-							fprintf('======>>> Stimulus Set: #%g | Stimuli: %s\n',me.stimuli.setChoice, num2str(me.stimuli.stimulusSets{me.stimuli.setChoice}))
-							keyHold = keyTicks + me.fInc;
-						end
-					case '.>'
-						if keyTicks > keyHold
-							if me.stimuli.setChoice < length(me.stimuli.stimulusSets)
-								me.stimuli.setChoice = me.stimuli.setChoice + 1;
-								me.stimuli.showSet();
-							end
-							fprintf('======>>> Stimulus Set: #%g | Stimuli: %s\n',me.stimuli.setChoice, num2str(me.stimuli.stimulusSets{me.stimuli.setChoice}))
-							keyHold = keyTicks + me.fInc;
-						end
-					case 'r'
-						timedTTL(me.arduino);
-					case '=+'
-						if keyTicks > keyHold
-							me.screen.screenXOffset = me.screen.screenXOffset + 1;
-							fprintf('======>>> Screen X Center: %g deg / %g pixels\n',me.screen.screenXOffset,me.screen.xCenter);
-							keyHold = keyTicks + me.fInc;
-						end
-					case '-_'
-						if keyTicks > keyHold
-							me.screen.screenXOffset = me.screen.screenXOffset - 1;
-							fprintf('======>>> Screen X Center: %g deg / %g pixels\n',me.screen.screenXOffset,me.screen.xCenter);
-							keyHold = keyTicks + me.fInc;
-						end
-					case '[{'
-						if keyTicks > keyHold
-							me.screen.screenYOffset = me.screen.screenYOffset - 1;
-							fprintf('======>>> Screen Y Center: %g deg / %g pixels\n',me.screen.screenYOffset,me.screen.yCenter);
-							keyHold = keyTicks + me.fInc;
-						end
-					case ']}'
-						if keyTicks > keyHold
-							me.screen.screenYOffset = me.screen.screenYOffset + 1;
-							fpridriftntf('======>>> Screen Y Center: %g deg / %g pixels\n',me.screen.screenYOffset,me.screen.yCenter);
-							keyHold = keyTicks + me.fInc;
-						end
-					case 'k'
-						if keyTicks > keyHold
-							stateName = 'blank';
-							[isState, index] = isStateName(me.stateMachine,stateName);
-							if isState
-								t = me.stateMachine.getState(stateName);
-								if isfield(t,'time')
-									tout = t.time - 0.25;
-									if min(tout) >= 0.1
-										me.stateMachine.editStateByName(stateName,'time',tout);
-										fprintf('======>>> Decrease %s time: %g:%g\n',t.name, min(tout),max(tout));
-									end
-								end
-							end
-							keyHold = keyTicks + me.fInc;
-						end
-					case 'l'
-						if keyTicks > keyHold
-							stateName = 'blank';
-							[isState, index] = isStateName(me.stateMachine,stateName);
-							if isState
-								t = me.stateMachine.getState(stateName);
-								if isfield(t,'time')
-									tout = t.time + 0.25;
-									me.stateMachine.editStateByName(stateName,'time',tout);
-									fprintf('======>>> Increase %s time: %g:%g\n',t.name, min(tout),max(tout));
-								end
-								
-							end
-							keyHold = keyTicks + me.fInc;
-						end
-					case 'y'
-						if keyTicks > keyHold
-							fprintf('======>>> Calibrate ENGAGED!\n');
-							me.pauseToggle = me.pauseToggle + 1; %we go to pause after this so toggle this
-							keyHold = keyTicks + me.fInc;
-							forceTransition(me.stateMachine, 'calibrate');
-							return
-						end
-					case 'u'
-						if keyTicks > keyHold
-							fprintf('======>>> Drift OFFSET ENGAGED!\n');
-							me.pauseToggle = me.pauseToggle + 1; %we go to pause after this so toggle this
-							keyHold = keyTicks + me.fInc;
-							forceTransition(me.stateMachine, 'offset');
-							return
-						end
-					case 'i'
-						if keyTicks > keyHold
-							fprintf('======>>> Drift CORRECT ENGAGED!\n');
-							me.pauseToggle = me.pauseToggle + 1; %we go to pause after this so toggle this
-							keyHold = keyTicks + me.fInc;
-							forceTransition(me.stateMachine, 'drift');
-							return
-						end
-					case 'f'
-						if keyTicks > keyHold
-							fprintf('======>>> Flash ENGAGED!\n');
-							me.pauseToggle = me.pauseToggle + 1; %we go to pause after this so toggle this
-							keyHold = keyTicks + me.fInc;
-							forceTransition(me.stateMachine, 'flash');
-							return
-						end
-					case 't'
-						if keyTicks > keyHold
-							fprintf('======>>> MagStim ENGAGED!\n');
-							me.pauseToggle = me.pauseToggle + 1; %we go to pause after this so toggle this
-							keyHold = keyTicks + me.fInc;
-							forceTransition(me.stateMachine, 'magstim');
-							return
-						end
-					case ';:'
-						if keyTicks > keyHold
-							if me.debug && ~isdeployed
-								fprintf('======>>> Override ENGAGED! This is a special DEBUG mode\n');
-								me.pauseToggle = me.pauseToggle + 1; %we go to pause after this so toggle this
-								keyHold = keyTicks + me.fInc;
-								forceTransition(me.stateMachine, 'override');
-							end
-							return
-						end
-					case 'g'
-						if keyTicks > keyHold
-							fprintf('======>>> grid ENGAGED!\n');
-							me.pauseToggle = me.pauseToggle + 1; %we go to pause after this so toggle this
-							keyHold = keyTicks + me.fInc;
-							forceTransition(me.stateMachine, 'showgrid');
-							return
-						end
-					case 'z'
-						if keyTicks > keyHold
-							me.eyeTracker.fixation.initTime = me.eyeTracker.fixation.initTime - 0.1;
-							if me.eyeTracker.fixation.initTime < 0.01
-								me.eyeTracker.fixation.initTime = 0.01;
-							end
-							fprintf('======>>> FIXATION INIT TIME: %g\n',me.eyeTracker.fixation.initTime)
-							keyHold = keyTicks + me.fInc;
-						end
-					case 'x'
-						if keyTicks > keyHold
-							me.eyeTracker.fixation.initTime = me.eyeTracker.fixation.initTime + 0.1;
-							fprintf('======>>> FIXATION INIT TIME: %g\n',me.eyeTracker.fixation.initTime)
-							keyHold = keyTicks + me.fInc;
-						end
-					case 'c'
-						if keyTicks > keyHold
-							me.eyeTracker.fixation.time = me.eyeTracker.fixation.time - 0.1;
-							if me.eyeTracker.fixation.time < 0.01
-								me.eyeTracker.fixation.time = 0.01;
-							end
-							fprintf('======>>> FIXATION TIME: %g\n',me.eyeTracker.fixation.time)
-							keyHold = keyTicks + me.fInc;
-						end
-					case 'v'
-						if keyTicks > keyHold
-							me.eyeTracker.fixation.time = me.eyeTracker.fixation.time + 0.1;
-							fprintf('======>>> FIXATION TIME: %g\n',me.eyeTracker.fixation.time)
-							keyHold = keyTicks + me.fInc;
-						end
-					case 'b'
-						if keyTicks > keyHold
-							me.eyeTracker.fixation.radius = me.eyeTracker.fixation.radius - 0.1;
-							if me.eyeTracker.fixation.radius < 0.1
-								me.eyeTracker.fixation.radius = 0.1;
-							end
-							fprintf('======>>> FIXATION RADIUS: %g\n',me.eyeTracker.fixation.radius)
-							keyHold = keyTicks + me.fInc;
-						end
-					case 'n'
-						if keyTicks > keyHold
-							me.eyeTracker.fixation.radius = me.eyeTracker.fixation.radius + 0.1;
-							fprintf('======>>> FIXATION RADIUS: %g\n',me.eyeTracker.fixation.radius)
-							keyHold = keyTicks + me.fInc;
-						end
-					case 's'
-						if keyTicks > keyHold
-							fprintf('======>>> Show Cursor!\n');
-							ShowCursor('CrossHair',me.screen.win);
-							keyHold = keyTicks + me.fInc;
-						end
-					case 'd'
-						if keyTicks > keyHold
-							fprintf('======>>> Hide Cursor!\n');
-							HideCursor(me.screen.win);
-							keyHold = keyTicks + me.fInc;
-						end
-					case '1!'
-						%if keyTicks > keyHold
-						%	if isfield(tS,'eO') && eO.isOpen == true
-						%		bothEyesOpen(eO)
-						%		Eyelink('Command','binocular_enabled = NO')
-						%		Eyelink('Command','active_eye = LEFT')
-						%	end
-						%	keyHold = keyTicks + me.fInc;
-						%end
-					case '2@'
-						%if keyTicks > keyHold
-						%	if isfield(tS,'eO') && eO.isOpen == true
-						%		bothEyesClosed(eO)
-						%		Eyelink('Command','binocular_enabled = NO');
-						%		Eyelink('Command','active_eye = LEFT');
-						%	end
-						%	keyHold = keyTicks + me.fInc;
-						%end
-					case '3#'
-						%if keyTicks > keyHold
-						%	if isfield(tS,'eO') && eO.isOpen == true
-						%		leftEyeClosed(eO)
-						%		Eyelink('Command','binocular_enabled = NO');
-						%		Eyelink('Command','active_eye = RIGHT');
-						%	end
-						%	keyHold = keyTicks + me.fInc;
-						%end
-					case '4$'
-						%if keyTicks > keyHold
-						%	if isfield(tS,'eO') && eO.isOpen == true
-						%		rightEyeClosed(eO)
-						%		Eyelink('Command','binocular_enabled = NO');
-						%		Eyelink('Command','active_eye = LEFT');
-						%	end
-						%	keyHold = keyTicks + me.fInc;
-						%end
-					case '0)'
-						if keyTicks > keyHold
-							if me.debug; me.screen.captureScreen(); end
-							keyHold = keyTicks + me.fInc;
-						end
-				end
+					end
+				
+				case 'y'
+					
+					fprintf('======>>> Calibrate ENGAGED!\n');
+					me.pauseToggle = me.pauseToggle + 1; %we go to pause after this so toggle this
+					forceTransition(me.stateMachine, 'calibrate');
+
+				case 'u'
+					
+					fprintf('======>>> Drift OFFSET ENGAGED!\n');
+					me.pauseToggle = me.pauseToggle + 1; %we go to pause after this so toggle this
+					forceTransition(me.stateMachine, 'offset');
+
+				case 'i'
+					
+					fprintf('======>>> Drift CORRECT ENGAGED!\n');
+					me.pauseToggle = me.pauseToggle + 1; %we go to pause after this so toggle this
+					forceTransition(me.stateMachine, 'drift');
+						
+				case 'f'
+					
+					fprintf('======>>> Flash ENGAGED!\n');
+					me.pauseToggle = me.pauseToggle + 1; %we go to pause after this so toggle this
+					forceTransition(me.stateMachine, 'flash');
+					
+				case 't'
+					
+					fprintf('======>>> MagStim ENGAGED!\n');
+					me.pauseToggle = me.pauseToggle + 1; %we go to pause after this so toggle this
+					forceTransition(me.stateMachine, 'magstim');
+
+				case ';:'
+
+					if me.debug && ~isdeployed
+						fprintf('======>>> Override ENGAGED! This is a special DEBUG mode\n');
+						me.pauseToggle = me.pauseToggle + 1; %we go to pause after this so toggle this
+						forceTransition(me.stateMachine, 'override');
+					end
+						
+				case 'g'
+					
+					fprintf('======>>> grid ENGAGED!\n');
+					me.pauseToggle = me.pauseToggle + 1; %we go to pause after this so toggle this
+					forceTransition(me.stateMachine, 'showgrid');
+						
+				case 'z'
+					
+					me.eyeTracker.fixation.initTime = me.eyeTracker.fixation.initTime - 0.1;
+					if me.eyeTracker.fixation.initTime < 0.01
+						me.eyeTracker.fixation.initTime = 0.01;
+					end
+					fprintf('======>>> FIXATION INIT TIME: %g\n',me.eyeTracker.fixation.initTime)
+					
+				case 'x'
+					
+					me.eyeTracker.fixation.initTime = me.eyeTracker.fixation.initTime + 0.1;
+					fprintf('======>>> FIXATION INIT TIME: %g\n',me.eyeTracker.fixation.initTime)
+
+				case 'c'
+
+					me.eyeTracker.fixation.time = me.eyeTracker.fixation.time - 0.1;
+					if me.eyeTracker.fixation.time < 0.01
+						me.eyeTracker.fixation.time = 0.01;
+					end
+					fprintf('======>>> FIXATION TIME: %g\n',me.eyeTracker.fixation.time)
+
+				case 'v'
+
+					me.eyeTracker.fixation.time = me.eyeTracker.fixation.time + 0.1;
+					fprintf('======>>> FIXATION TIME: %g\n',me.eyeTracker.fixation.time)
+
+				case 'b'
+					
+					me.eyeTracker.fixation.radius = me.eyeTracker.fixation.radius - 0.1;
+					if me.eyeTracker.fixation.radius < 0.1
+						me.eyeTracker.fixation.radius = 0.1;
+					end
+					fprintf('======>>> FIXATION RADIUS: %g\n',me.eyeTracker.fixation.radius)
+					
+				case 'n'
+					
+					me.eyeTracker.fixation.radius = me.eyeTracker.fixation.radius + 0.1;
+					fprintf('======>>> FIXATION RADIUS: %g\n',me.eyeTracker.fixation.radius)
+
+				case 's'
+
+					fprintf('======>>> Show Cursor!\n');
+					ShowCursor('CrossHair',me.screen.win);
+					
+				case 'd'
+					
+					fprintf('======>>> Hide Cursor!\n');
+					HideCursor(me.screen.win);
+	
+				case '1!'
+					%   if isfield(tS,'eO') && eO.isOpen == true
+					%		bothEyesOpen(eO)
+					%		Eyelink('Command','binocular_enabled = NO')
+					%		Eyelink('Command','active_eye = LEFT')
+					%	end
+				case '2@'
+					%	if isfield(tS,'eO') && eO.isOpen == true
+					%		bothEyesClosed(eO)
+					%		Eyelink('Command','binocular_enabled = NO');
+					%		Eyelink('Command','active_eye = LEFT');
+					%	end
+				case '3#'
+					
+					%	if isfield(tS,'eO') && eO.isOpen == true
+					%		leftEyeClosed(eO)
+					%		Eyelink('Command','binocular_enabled = NO');
+					%		Eyelink('Command','active_eye = RIGHT');
+					%	end
+					
+				case '4$'
+					
+					%	if isfield(tS,'eO') && eO.isOpen == true
+					%		rightEyeClosed(eO)
+					%		Eyelink('Command','binocular_enabled = NO');
+					%		Eyelink('Command','active_eye = LEFT');
+					%	end
+					
+				case '0)'
+					
+					if me.debug; me.screen.captureScreen(); end
+					
 			end
 		end
 		

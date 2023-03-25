@@ -894,7 +894,7 @@ classdef eyetrackerCore < optickaCore
 		%>
 		% ===================================================================
 		function trackerFlip(me, dontclear, force)
-			if ~me.isConnected || ~me.operatorScreen.isOpen; return; end
+			if (~me.isDummy && ~me.isConnected) || ~me.operatorScreen.isOpen; return; end
 			if ~exist('dontclear','var'); dontclear = 1; end
 			if ~exist('force','var'); force = false; end
 
