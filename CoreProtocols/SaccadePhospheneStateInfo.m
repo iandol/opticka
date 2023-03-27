@@ -99,7 +99,7 @@ tS.strict					= true;
 % CATCH TRIAL TIME:
 ts.catchTrialTime			= 1;
 % visual target
-tS.targetFixInit			= 0.5; % time to find the target
+tS.targetFixInit			= 0.75; % time to find the target
 tS.targetFixTime			= 0.75; % to to maintain fixation on target 
 tS.targetRadius				= [8 15]; %radius widthxheight to fix within.
 % initial values for historical log of X / Y position and exclusion zone

@@ -983,7 +983,7 @@ classdef runExperiment < optickaCore
 					% this off using either tS.keyExclusionPattern
 					% [per-state toggle] or tS.checkKeysDuringStimulus).
 					if ~matches(sM.currentName,tS.keyExclusionPattern)
-						[keyTicks, keyHold] = checkKeys(me, keyTicks, keyHold);
+						checkKeys(me);
 					end
 					
 					%-----FLIP: Show it at correct retrace: -----%
@@ -1219,6 +1219,7 @@ classdef runExperiment < optickaCore
 			if ~isdeployed && isempty(me.stateInfoFile)
 				if exist([me.paths.root filesep 'DefaultStateInfo.m'],'file')
 					me.stateInfoFile = [me.paths.root filesep 'DefaultStateInfo.m'];
+					me.paths.stateInfoFile = me.stateInfoFile;
 				end
 			end
 
@@ -2247,7 +2248,7 @@ classdef runExperiment < optickaCore
 		%>
 		%> @param args input structure
 		% ===================================================================
-			[pressed, name, ~] = getkeys(me);
+			[pressed, name, ~] = getKeys(me);
 			if ~ pressed; return; end
 			if iscell(name); name = name{end};end
 			switch name
