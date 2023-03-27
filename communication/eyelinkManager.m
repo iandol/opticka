@@ -102,16 +102,16 @@ classdef eyelinkManager < eyetrackerCore
 				end
 			end
 			
-			if me.screen.isOpen == true 
+			if me.screen.isOpen
 				me.win = me.screen.win;
-				me.defaults = EyelinkInitDefaults(me.win);
-			elseif ~isempty(me.win)
 				me.defaults = EyelinkInitDefaults(me.win);
 			else
 				me.defaults = EyelinkInitDefaults();
 			end
 			
-			me.defaults.winRect=me.screen.winRect;
+			if ~isempty(me.screen.winRect) && length(me.screen.winRect)==4
+				me.defaults.winRect=me.screen.winRect;
+			end
 			
 			%if ~isempty(me.calibration.callback) && exist(me.calibration.callback,'file')
 				%me.defaults.callback = me.calibration.callback;
@@ -212,18 +212,19 @@ classdef eyelinkManager < eyetrackerCore
 		%>
 		% ===================================================================
 		function trackerSetup(me)
-			global aM 
-			if isempty(aM) || ~isa(aM,'audioManager')
-				aM=audioManager;
-			end
-			aM.silentMode = false;
-			if ~aM.isOpen;	aM.open; end
-			aM.beep(1000,0.1,0.1);
-			Snd('Open', aM.aHandle, 1);
+			%global aM 
+			%if isempty(aM) || ~isa(aM,'audioManager')
+			%	aM=audioManager;
+			%end
+			%aM.silentMode = false;
+			%if ~aM.isOpen;	aM.open; end
+			%aM.beep(1000,0.1,0.1);
+			%Snd('Open', aM.aHandle, 1);
+
+			if isa(me.screen,'screenManager') && ~me.screen.isOpen; open(me.screen); end
 
 			if ~me.isConnected; return; end
 			oldrk = RestrictKeysForKbCheck([]); %just in case someone has restricted keys
-			ListenChar(-1);
 			fprintf('\n===>>> CALIBRATING EYELINK... <<<===\n');
 			Eyelink('Verbosity',me.verbosityLevel);
 			if ~isempty(me.calibration.proportion) && length(me.calibration.proportion)==2
@@ -466,7 +467,7 @@ classdef eyelinkManager < eyetrackerCore
 				%me.isDummy = false;
 				me.eyeUsed = -1;
 				me.screen = [];
-				trackerClearScreen(me);
+				try trackerClearScreen(me); end
 				if me.isRecording == true && ~isempty(me.saveFile)
 					Eyelink('StopRecording');
 					Eyelink('CloseFile');
@@ -701,25 +702,30 @@ classdef eyelinkManager < eyetrackerCore
 			% DEMO EXPERIMENT:
 			try
 				%open screen manager and dots stimulus
-				s = screenManager('debug',true,'pixelsPerCm',36,'distance',57.3);
-				s.font.TextSize = 18;
-				if exist('forcescreen','var'); s.screen = forcescreen; end
-				s.backgroundColour = [0.5 0.5 0.5 0]; %s.windowed = [0 0 900 900];
-				o = dotsStimulus('size',me.fixation.radius(1)*2,'speed',2,'mask',true,'density',50); %test stimulus
-				open(s); % open our screen
 
+				if isempty(me.screen) || ~isa(me.screen,'screenManager')
+					s = screenManager('debug',true,'pixelsPerCm',36,'distance',57.3);
+					s.font.TextSize = 18;
+					if exist('forcescreen','var'); s.screen = forcescreen; end
+					s.backgroundColour = [0.5 0.5 0.5 0]; %s.windowed = [0 0 900 900];
+				else
+					s = me.screen;
+				end
+				if ~s.isOpen; open(s); end
+
+				o = dotsStimulus('size',me.fixation.radius(1)*2,'speed',2,'mask',true,'density',50); %test stimulus
+				setup(o,s); % setup our stimulus with our screen object
+				
 				% el=EyelinkInitDefaults(s.win);
 				% if ~EyelinkInit(me.isDummy,1)
-        		% 	fprintf('Eyelink Init aborted.\n');
-        		% 	Eyelink('Shutdown');
+				% 	fprintf('Eyelink Init aborted.\n');
+				% 	Eyelink('Shutdown');
 				% 	close(s);
-        		% 	return;
+				% 	return;
 				% end
 				% EyelinkDoTrackerSetup(el);
 				% EyelinkDoDriftCorrection(el);
 
-				setup(o,s); % setup our stimulus with our screen object
-				
 				initialise(me,s); % initialise eyelink with our screen
 				ListenChar(-1); % capture the keyboard settings
 				trackerSetup(me); % setup + calibrate the eyelink
