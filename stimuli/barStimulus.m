@@ -7,38 +7,40 @@ classdef barStimulus < baseStimulus
 	
 	properties %--------------------PUBLIC PROPERTIES----------%
 		%> type of bar: 'solid','checkerboard','random','randomColour','randomN','randomBW'
-		type char = 'solid'
+		type char               = 'solid'
 		%> width of bar
-		barWidth double = 1
+		barWidth double         = 1
 		%> length of bar
-		barHeight double= 4
+		barHeight double        = 4
 		%> contrast multiplier
-		contrast double = 1
+		contrast double         = 1
 		%> texture scale
-		scale double = 1
+		scale double            = 1
 		%> sf in cycles per degree for checkerboard textures
-		sf double = 1
+		sf double               = 1
 		%> texture interpolation: 'nearest','linear','spline','cubic'
-		interpMethod char = 'nearest'
+		interpMethod char       = 'nearest'
 		%> For checkerboard, allow timed phase reversal
 		phaseReverseTime double = 0
 		%> update() method also regenerates the texture, this can be slow, but 
 		%> normally update() is only called after a trial has finished
-		regenerateTexture logical = true
+		regenerateTexture logical   = true
 		%> for checkerboard: the second colour
-		colour2 double = [0 0 0 1];
+		colour2 double          = [0 0 0 1];
 		%> modulate the colour
-		modulateColour double = []
+		modulateColour double   = []
+        %> turn stimulus on/off at X hz, [] diables this
+        visibleRate             = []
 	end
 
 	properties (Hidden = true)
 		%> floatprecision defines the precision with which the texture should
 		%> be stored and processed. 0=8bit, 1=16bit, 2=32bit
-		floatPrecision = 0
+		floatPrecision          = 0
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
-		family char = 'bar'
+		family char             = 'bar'
 		%> computed matrix for the bar
 		matrix
 	end
@@ -49,6 +51,8 @@ classdef barStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = protected, GetAccess = protected)
+        visibleTick
+        visibleFlip
 		baseColour
 		screenWidth
 		screenHeight
@@ -61,7 +65,7 @@ classdef barStimulus < baseStimulus
 		allowedProperties = {'modulateColour', 'colour2', 'regenerateTexture', ...
 			'type', 'barWidth', 'barHeight', 'angle', 'speed', 'contrast', 'scale', ...
 			'sf', 'interpMethod', 'phaseReverseTime'}
-		ignoreProperties = {'interpMethod', 'matrix', 'matrix2', 'phaseCounter', 'pixelScale'}
+		ignoreProperties = {'visibleRate','interpMethod', 'matrix', 'matrix2', 'phaseCounter', 'pixelScale'}
 	end
 	
 	%=======================================================================
@@ -142,7 +146,12 @@ classdef barStimulus < baseStimulus
 				me.texture2 = Screen('MakeTexture', me.sM.win, me.matrix2, 0, [], me.floatPrecision);
 				if me.verbose; fprintf('===>>>Made texture: %i kind: %i\n',me.texture2,Screen(me.texture2,'WindowKind')); end
 				me.phaseCounter = round( me.phaseReverseTime / me.sM.screenVals.ifi );
-			end
+            end
+
+            if ~isempty(me.visibleRate) && isnumeric(me.visibleRate)
+                me.visibleTick = 0;
+                me.visibleFlip = round((me.screenVals.fps/2) / me.visibleRate);
+            end
 			
 			me.inSetup = false; me.isSetup = true;
 			computePosition(me);
@@ -217,6 +226,8 @@ classdef barStimulus < baseStimulus
 		% ===================================================================
 		function update(me)
 			resetTicks(me);
+            me.isVisible = true;
+            me.visibleTick = 0;
 			if me.sizeOut > 0; me.barHeightOut = me.sizeOut; me.barWidthOut = me.sizeOut; end
 			if me.phaseReverseTime > 0 
 				me.phaseCounter = round( me.phaseReverseTime / me.sM.screenVals.ifi );
@@ -234,14 +245,18 @@ classdef barStimulus < baseStimulus
 		%> 
 		% ===================================================================
 		function animate(me)
-			if me.isVisible && me.tick >= me.delayTicks
+			if (me.isVisible || ~isempty(me.visibleRate)) && me.tick >= me.delayTicks
 				if me.mouseOverride
 					getMousePosition(me);
 					if me.mouseValid
 						me.mvRect = CenterRectOnPointd(me.mvRect, me.mouseX, me.mouseY);
-					end
-				else
-				end
+                    end
+                end
+                me.visibleTick = me.visibleTick + 1;
+                if me.visibleTick > me.visibleFlip
+                    me.isVisible = ~me.isVisible;
+                    me.visibleTick = 0;
+                end
 				if me.doMotion == 1
 					me.mvRect=OffsetRect(me.mvRect,me.dX_,me.dY_);
 				end

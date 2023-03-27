@@ -69,6 +69,8 @@ classdef colourGratingStimulus < baseStimulus
 		sigma(1,1) double			= -1
 		%> aspect ratio of the grating
 		aspectRatio(1,1) double		= 1;
+        %> turn stimulus on/off at X hz, [] diables this
+        visibleRate             = []
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -100,7 +102,7 @@ classdef colourGratingStimulus < baseStimulus
 			'contrast', 'mask', 'reverseDirection', 'speed', 'startPosition', 'aspectRatio' ... 
 			'sigma', 'correctPhase', 'phaseReverseTime', 'phaseOfReverse'}
 		%> properties to not create transient copies of during setup phase
-		ignoreProperties = {'type', 'scale', 'phaseIncrement', 'correctPhase', 'contrastMult', 'mask', 'typeList'}
+		ignoreProperties = {'visibleRate','type', 'scale', 'phaseIncrement', 'correctPhase', 'contrastMult', 'mask', 'typeList'}
 		%> how many frames between phase reverses
 		phaseCounter			= 0
 		%> mask value (radius for the procedural shader)
@@ -111,6 +113,8 @@ classdef colourGratingStimulus < baseStimulus
 		%to regenerate the shader
 		colourCache
 		colour2Cache
+        visibleTick
+        visibleFlip
 	end
 	
 	%=======================================================================
@@ -259,6 +263,11 @@ classdef colourGratingStimulus < baseStimulus
 			[me.texture, ~, me.shader] = CreateProceduralColorGrating(me.sM.win, me.res(1),...
 				me.res(2), me.colourOut, me.colour2Out, me.maskValue);
 			me.colourCache = me.colourOut; me.colour2Cache = me.colour2Out;
+
+            if ~isempty(me.visibleRate) && isnumeric(me.visibleRate)
+                me.visibleTick = 0;
+                me.visibleFlip = round((me.screenVals.fps/2) / me.visibleRate);
+            end
 			
 			me.inSetup = false; me.isSetup = true;
 			computePosition(me);
@@ -323,6 +332,8 @@ classdef colourGratingStimulus < baseStimulus
 		% ===================================================================
 		function update(me)
 			resetTicks(me);
+            me.isVisible = true;
+            me.visibleTick = 0;
 			if me.correctPhase
 				ps=me.calculatePhase;
 				me.driftPhase=me.phaseOut-ps;
@@ -368,7 +379,7 @@ classdef colourGratingStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function animate(me)
-			if me.isVisible && me.tick >= me.delayTicks
+			if (me.isVisible || ~isempty(me.visibleRate)) && me.tick >= me.delayTicks
 				if me.mouseOverride
 					getMousePosition(me);
 					if me.mouseValid
@@ -383,7 +394,12 @@ classdef colourGratingStimulus < baseStimulus
 				end
 				if mod(me.tick,me.phaseCounter) == 0
 					me.driftPhase = me.driftPhase + me.phaseOfReverse;
-				end
+                end
+                me.visibleTick = me.visibleTick + 1;
+                if me.visibleTick > me.visibleFlip
+                    me.isVisible = ~me.isVisible;
+                    me.visibleTick = 0;
+                end
 			end
 		end
 		
