@@ -93,34 +93,34 @@ classdef iRecManager < eyetrackerCore
 		function success = initialise(me,sM,sM2)
 			if ~exist('sM','var') || isempty(sM)
 				if isempty(me.screen) || ~isa(me.screen,'screenManager')
-					me.screen		= screenManager();
+					me.screen		= screenManager;
 				end
-			elseif ~isa(me.screen,'screenManager') || ~strcmp(me.screen.uuid, sM.uuid)
+			elseif isa(me.screen,'screenManager') || ~strcmp(me.screen.uuid, sM.uuid)
 					me.screen			= sM;
 			end
 			me.ppd_					= me.screen.ppd;
 			if me.screen.isOpen
 				me.win				= me.screen.win;
 			end
-			if ~exist('sM2','var') && me.useOperatorScreen && ~isa(me.operatorScreen,'screenManager')
-				if me.screen.screen > 0
-					oscreen = me.screen.screen - 1;
-				else
-					oscreen = 0;
+			if me.screen.screen > 0
+				oscreen = me.screen.screen - 1;
+			else
+				oscreen = 0;
+			end
+			if me.useOperatorScreen && exist('sM2','var')
+				if isempty(me.operatorScreen) || (isa(me.operatorScreen,'screenManager') && ~strcmp(me.operatorScreen.uuid,sM2.uuid))
+					me.operatorScreen = sM2;
 				end
-				sM2 = screenManager('pixelsPerCm',20,...
-					'disableSyncTests',true,'backgroundColour',sM.backgroundColour,...
+				me.secondScreen		= true;
+				if ismac; me.operatorScreen.useRetina = true; end
+			elseif me.useOperatorScreen && isempty(me.operatorScreen)
+				me.operatorScreen = screenManager('pixelsPerCm',20,...
+					'disableSyncTests',true,'backgroundColour',me.screen.backgroundColour,...
 					'screen', oscreen, 'specialFlags', kPsychGUIWindow);
-				[w,h]			= Screen('WindowSize',sM2.screen);
-				sM2.windowed	= [0 0 round(w/2) round(h/2)];
-				if ismac; sM2.useRetina = true; end
-				me.operatorScreen	= sM2;
+				[w,h]			= Screen('WindowSize',me.operatorScreen.screen);
+				me.operatorScreen.windowed	= [0 0 round(w/2) round(h/2)];
 				me.secondScreen		= true;
-			elseif me.useOperatorScreen
-				if ~isa(me.operatorScreen,'screenManager') || ~strcmp(me.operatorScreen.uuid,sM2.uuid)
-					me.operatorScreen	= sM2;
-				end
-				me.secondScreen		= true;
+				if ismac; me.operatorScreen.useRetina = true; end
 			end
 			
 			if me.isDummy
@@ -543,34 +543,20 @@ classdef iRecManager < eyetrackerCore
 			leftKey				= KbName('leftarrow');
 			rightKey			= KbName('rightarrow');
 			calibkey			= KbName('c');
+			driftkey			= KbName('v');
 			ofixation			= me.fixation; 
 			osmoothing			= me.smoothing;
 			oldexc				= me.exclusionZone;
 			oldfixinit			= me.fixInit;
-			useS2				= false;
 			try
-				if isa(me.screen,'screenManager') && ~isempty(me.screen)
-					s = me.screen;
-				else
-					s = screenManager('blend',true,'pixelsPerCm',36,'distance',57.3);
-				end
-				s.disableSyncTests		= true;
+				if ~me.isConnected; initialise(me);end
 				if exist('forcescreen','var'); s.screen = forcescreen; end
-				
-				if me.useOperatorScreen; useS2 = true; end
-			
-				if ~me.isConnected
-					if useS2
-						initialise(me, s, s2);
-						
-					else
-						initialise(me, s); 
-					end
-				end
+	
 				if ~s.isOpen; open(s); end
-				if me.useOperatorScreen &&~s2.isOpen; s2.open(); end
+				if me.useOperatorScreen && ~s2.isOpen; s2.open(); end
 				sv = s.screenVals;
 				trackerSetup(me);
+
 				drawPhotoDiodeSquare(s,[0 0 0 1]); flip(s); %make sure our photodiode patch is black
 
 				% set up the size and position of the stimulus
@@ -630,7 +616,7 @@ classdef iRecManager < eyetrackerCore
 						end
 						animate(o);
 
-						if useS2
+						if me.useOperatorScreen
 							drawGrid(s2);
 							trackerDrawExclusion(me);
 							trackerDrawFixation(me);
@@ -638,7 +624,7 @@ classdef iRecManager < eyetrackerCore
 						end
 						
 						vbl(end+1) = Screen('Flip', s.win, vbl(end) + s.screenVals.halfifi);
-						if useS2; trackerFlip(me,0,true); end
+						if me.useOperatorScreen; trackerFlip(me,0,true); end
 
 						[keyDown, ~, keyCode] = KbCheck(-1);
 						if keyDown
@@ -657,7 +643,7 @@ classdef iRecManager < eyetrackerCore
 						vbl = flip(s);
 						trackerMessage(me,-1);
 		
-						if useS2; trackerDrawStatus(me,'Finished Trial'); trackerFlip(me,0,true); end
+						if me.useOperatorScreen; trackerDrawStatus(me,'Finished Trial'); trackerFlip(me,0,true); end
 					
 						resetAll(me);
 
