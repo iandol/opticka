@@ -61,6 +61,8 @@ classdef dataConnection < handle
 		readTimeOut		= 0
 		%> default write timeout
 		writeTimeOut	= 0
+		%> default size of chunk to read for tcp
+		readSize		= 1024
 		%> sometimes we shouldn't cleanup connections on delete, e.g. when we pass this
 		%> object to another matlab instance as we will close the wrong connections!!!
 		cleanup			= true
@@ -306,7 +308,7 @@ classdef dataConnection < handle
 						me.hasData = true;
 					end
 				case 'tcp'%============================TCP
-					data = pnet(conn, 'read', 1024, me.dataType, 'noblock', 'view');
+					data = pnet(conn, 'read', me.readSize, me.dataType, 'noblock', 'view');
 					if ~isempty(data)
 						me.hasData = true;
 					end
@@ -321,7 +323,9 @@ classdef dataConnection < handle
 		%> Close all connections
 		% ===================================================================
 		function flush(me)
-			try flushStatus(me); end
+			while me.checkData
+				pnet(me.conn,'read', 256000);
+			end
 		end
 		
 		% ===================================================================
@@ -347,7 +351,7 @@ classdef dataConnection < handle
 						data = pnet(conn, 'readline', nBytes, 'noblock');
 					end
 				case 'tcp'%============================TCP
-					data = pnet(conn, 'readline', 1024,' noblock');
+					data = pnet(conn, 'readline', me.readSize,' noblock');
 			end
 			me.dataIn = data;
 		end
@@ -388,7 +392,7 @@ classdef dataConnection < handle
 		%> @param (optional) size is size in bytes to read
 		%> @return data the data returned from the connection
 		% ===================================================================
-		function data = read(me,all,dataType,size)
+		function data = read(me, all, dataType, size)
 			
 			if ~exist('all','var')
 				all = 0;
@@ -451,7 +455,7 @@ classdef dataConnection < handle
 					me.dataIn = data;
 					%============================TCP
 				case 'tcp'
-					if ~exist('size','var');size=256000;end
+					if ~exist('size','var');size=me.readSize;end
 					while loop > 0
 						dataIn=pnet(me.conn,'read', size, dataType,'noblock');
 						if all == false
@@ -791,7 +795,7 @@ classdef dataConnection < handle
 					fprintf('Waiting for %s command...',me.remoteCmd);
 					while ~strcmpi(str,me.remoteCmd) && pnet(me.rconn,'status')
 						pause(0.01);
-						str=pnet(me.rconn,'readline',1024,'noblock');
+						str=pnet(me.rconn,'readline',me.readSize,'noblock');
 						if checkForEscape(me)
 							pnet(me.rconn,'close');
 							return;
@@ -876,16 +880,16 @@ classdef dataConnection < handle
 		%>
 		%> Flush the server messagelist
 		% ===================================================================
-		function stat=flushStatus(me, num)
+		function stat = flushStatus(me, num)
 			if ~exist('number','var'); num = 1; end
 			while 1 % Loop that finds, returns and leaves last text line in buffer.
-				str=pnet(me.conn,'read', 1024,'view','noblock');
+				str=pnet(me.conn,'read', me.readSize,'view','noblock');
 				if length(regexp([str,' '],'\n'))<=num
-					stat=pnet(me.conn,'readline',1024,'view','noblock'); % The return
+					stat=pnet(me.conn,'readline',me.readSize,'view','noblock'); % The return
 					stat=stat(3:end-2);
 					return;
 				end
-				dump=pnet(me.conn,'readline',1024,'noblock'); % Then remove last line
+				dump=pnet(me.conn,'readline',me.readSize,'noblock'); % Then remove last line
 			end
 		end
 		
@@ -1018,7 +1022,7 @@ classdef dataConnection < handle
 					lp = 25;
 					while lp > 0 
 						lp = lp - 1;
-						dataclass=pnet(thisConnection,'readline',1024);
+						dataclass=pnet(thisConnection,'readline',me.readSize);
 						switch dataclass
 							case {'double' 'char' 'int8' 'int16' 'int32' 'uint8' 'uint16' 'uint32'}
 								datadims=double(pnet(thisConnection,'Read',1,'uint32'));
