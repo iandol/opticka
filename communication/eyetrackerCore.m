@@ -729,20 +729,11 @@ classdef eyetrackerCore < optickaCore
 		%>
 		% ===================================================================
 		function eyeUsed = checkEye(me)
-			if me.isConnected
-				me.eyeUsed = Eyelink('EyeAvailable'); % get eye that's tracked
-				if me.eyeUsed == me.defaults.BINOCULAR % if both eyes are tracked
-					me.eyeUsed = me.defaults.LEFT_EYE; % use left eye
-				end
-				eyeUsed = me.eyeUsed;
-			else
-				me.eyeUsed = -1;
-				eyeUsed = me.eyeUsed;
-			end
+			eyeUsed = 'both';
 		end
 		
 		% ===================================================================
-		%> @brief draw the current eye position on the PTB display
+		%> @brief draw the current eye position on the main PTB display
 		%>
 		% ===================================================================
 		function drawEyePosition(me,varargin)
@@ -750,17 +741,17 @@ classdef eyetrackerCore < optickaCore
 				xy = toPixels(me,[me.x-me.offset.X me.y-me.offset.Y]);
 				if me.isFix
 					if me.fixLength > me.fixation.time && ~me.isBlink
-						Screen('DrawDots', me.win, xy, me.eyeSize, [0 1 0.25 1], [], 3);
+						Screen('DrawDots', me.screen.win, xy, me.eyeSize, [0 1 0.25 1], [], 3);
 					elseif ~me.isBlink
-						Screen('DrawDots', me.win, xy, me.eyeSize, [0.75 0 0.75 1], [], 3);
+						Screen('DrawDots', me.screen.win, xy, me.eyeSize, [0.75 0 0.75 1], [], 3);
 					else
-						Screen('DrawDots', me.win, xy, me.eyeSize, [0.75 0 0 1], [], 3);
+						Screen('DrawDots', me.screen.win, xy, me.eyeSize, [0.75 0 0 1], [], 3);
 					end
 				else
 					if ~me.isBlink
-						Screen('DrawDots', me.win, xy, me.eyeSize, [0.75 0.5 0 1], [], 3);
+						Screen('DrawDots', me.screen.win, xy, me.eyeSize, [0.75 0.5 0 1], [], 3);
 					else
-						Screen('DrawDots', me.win, xy, me.eyeSize, [0.75 0 0 1], [], 3);
+						Screen('DrawDots', me.screen.win, xy, me.eyeSize, [0.75 0 0 1], [], 3);
 					end
 				end
 			end

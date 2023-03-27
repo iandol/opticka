@@ -39,8 +39,8 @@ classdef iRecManager < eyetrackerCore
 	properties
 		%> setup and calibration values
 		calibration		= struct('ip','127.0.0.1','udpport',35000,'tcpport',35001,...
-						'stimulus','animated','calPositions',[-15 0; 0 -15; 0 0; 0 15; 15 0],...
-						'valPositions',[-15 0; 0 -15; 0 0; 0 15; 15 0],...
+						'stimulus','animated','calPositions',[-12 0; 0 -12; 0 0; 0 12; 12 0],...
+						'valPositions',[-12 0; 0 -12; 0 0; 0 12; 12 0],...
 						'size',2,'manual', false, 'movie', [])
 		%> options for online smoothing of peeked data {'median','heuristic','savitsky-golay'}
 		smoothing		= struct('nSamples',8,'method','median','window',3,...
@@ -127,17 +127,21 @@ classdef iRecManager < eyetrackerCore
 				me.salutation('Initialise', 'Running iRecH2 in Dummy Mode', true);
 				me.isConnected = false;
 			else
-				if isempty(me.tcp)
+				if isempty(me.tcp) || ~isa(me.tcp,'dataConnection')
 					me.tcp = dataConnection('rAddress', me.calibration.ip,'rPort',...
-					me.calibration.tcpport);
+					me.calibration.tcpport,'protocol','tcp');
 				else
 					me.tcp.close();
+					me.tcp.rAddress = me.calibration.ip;
+					me.tcp.rPort = me.calibration.tcpport;
 				end
-				if isempty(me.udp)
+				if isempty(me.udp) || ~isa(me.udp,'dataConnection')
 					me.udp = dataConnection('rAddress', me.calibration.ip,'rPort',...
 					me.calibration.udpport,'protocol','udp');
 				else 
 					me.udp.close();
+					me.udp.rAddress = me.calibration.ip;
+					me.udp.rPort = me.calibration.udpport;
 				end
 				try 
 					open(me.tcp);
@@ -179,13 +183,14 @@ classdef iRecManager < eyetrackerCore
 				warning('Eyetracker not connected, cannot calibrate!');
 				return
 			end
+
 			if ~isempty(me.screen) && isa(me.screen,'screenManager'); open(me.screen); end
 			if me.useOperatorScreen && isa(me.operatorScreen,'screenManager'); open(me.operatorScreen); end
-			
-			
 			s = me.screen;
 			if me.useOperatorScreen; s2 = me.operatorScreen; end
 			me.fInc = round(s.screenVals.fps/6);
+			me.win = me.screen.win;
+			me.ppd_ = me.screen.ppd;
 
 			fprintf('\n===>>> CALIBRATING IREC... <<<===\n');
 			
@@ -216,22 +221,22 @@ classdef iRecManager < eyetrackerCore
 			zero = KbName('0)'); esc = KbName('escape'); cal = KbName('c');
 			val = KbName('v'); dr = KbName('d'); menu = KbName('LeftShift');
 			sample = KbName('RightShift');
-			oldr = RestrictKeysForKbCheck([one two three four five six seven eight nine zero esc cal val dr menu sample]);
+			oldr = RestrictKeysForKbCheck([one two three four five six seven ...
+				eight nine zero esc cal val dr menu sample]);
 
 			cpos = me.calibration.calPositions;
 			vpos = me.calibration.valPositions;
-
-			wd = abs(s.screenVals.leftInDegrees)*2;
-			hd = abs(s.screenVals.topInDegrees)*2;
+			vdata = cell(size(vpos,1),1);
 
 			loop = true;
-			ref = s.screenVals.fps / 2;
+			ref = s.screenVals.fps;
 			a = -1;
 			mode = 'menu';
 			
 			while loop
 				
 				switch mode
+
 					case 'menu'
 						cloop = true;
 						resetAll(me);
@@ -242,7 +247,13 @@ classdef iRecManager < eyetrackerCore
 							s.flip();
 							if me.useOperatorScreen
 								s2.drawText ('esc = exit | c = calibrate | v = validate | d = drift offset');
-								if ~isempty(me.x);s2.drawSpot(1,[1 0.5 0 0.4],me.x,me.y);end
+								if ~isempty(me.x);s2.drawSpot(0.75,[0 1 0.25 0.2],me.x,me.y);end
+								for j = 1:length(vdata)
+									s2.drawCross(1,[],vpos(j,1),vpos(j,2));
+									if ~isempty(vdata{j}) && size(vdata{j},1)==2
+										try drawDotsDegs(s2,vdata{j},0.3,[1 0.5 0 0.25]); end
+									end
+								end
 								if mod(a,ref) == 0
 									trackerFlip(me,0,true);
 								else
@@ -259,10 +270,16 @@ classdef iRecManager < eyetrackerCore
 								elseif keys(val)
 									mode = 'validate'; cloop = false; break;
 								elseif keys(dr)
-									me.driftOffset();
+									mode = 'validate'; cloop = false; break;
 								end
 							end
 						end
+
+					case 'driftoffset'
+						oldrr = RestrictKeysForKbCheck([]);
+						me.driftOffset();
+						RestrictKeysForKbCheck(oldrr);
+						WaitSecs(0.5);
 
 					case 'calibrate'
 						cloop = true;
@@ -284,7 +301,7 @@ classdef iRecManager < eyetrackerCore
 							flip(s);
 							if me.useOperatorScreen
 								s2.drawCross(1,[],thisX,thisY);
-								s2.drawSpot(1,[1 0.5 0 0.4],me.x,me.y);
+								if ~isempty(me.x);s2.drawSpot(0.75,[0 1 0.25 0.1],me.x,me.y);end
 								if mod(a,ref) == 0
 									trackerFlip(me,0,true);
 								else
@@ -318,8 +335,6 @@ classdef iRecManager < eyetrackerCore
 										end
 										trackerFlip(me,0,true);
 									end
-								elseif keys(val)
-									mode = 'validate'; cloop = false; break;
 								elseif keys(menu)
 									mode = 'menu'; cloop = false; break;
 								end
@@ -347,11 +362,11 @@ classdef iRecManager < eyetrackerCore
 							s.drawText('lshift = exit | rshift = sample | # = point');
 							flip(s);
 							if me.useOperatorScreen
-								if ~isempty(me.x); s2.drawSpot(1,[0 1 0.25 0.3],me.x,me.y); end
+								if ~isempty(me.x); s2.drawSpot(0.75,[0 1 0.25 0.25],me.x,me.y); end
 								for j = 1:nPositions
 									s2.drawCross(1,[],vpos(j,1),vpos(j,2));
 									if ~isempty(vdata{j}) && size(vdata{j},1)==2
-										try drawDotsDegs(s2,vdata{j}); end
+										try drawDotsDegs(s2,vdata{j},0.3,[1 0.5 0 0.25]); end
 									end
 								end
 								if mod(a,ref) == 0
@@ -390,13 +405,15 @@ classdef iRecManager < eyetrackerCore
 										trackerFlip(me,0,true);
 									end
 								elseif keys(sample)
-									if length(me.xAll) > 20 && vdata > 0
+									if ~exist('lastK','var') || ~exist('vdata','var') || lastK > length(vdata); return; end
+									if length(me.xAll) > 20 && iscell(vdata)
 										vdata{lastK} = [me.xAll(end-19:end); me.yAll(end-19:end)];
-									elseif ~isempty(me.xAll) && vdata > 0
+									elseif ~isempty(me.xAll) && iscell(vdata)
 										vdata{lastK} = [me.xAll; me.yAll];
 									end
 									f.isVisible = false;
 									thisPos = 0;
+									resetFixationHistory(me);
 								elseif keys(menu)
 									mode = 'menu'; cloop = false; break;
 								end
@@ -408,7 +425,6 @@ classdef iRecManager < eyetrackerCore
 			s2.drawText('Calibration finished...')
 			s.flip(); s2.flip(); s2.drawBackground; s2.flip();
 			reset(f);
-			if ~me.useOperatorScreen; close(s2); end
 			resetAll(me);
 			RestrictKeysForKbCheck(oldr);
 			stopRecording(me);
@@ -535,7 +551,7 @@ classdef iRecManager < eyetrackerCore
 		%> @brief runs a demo of the workflow, testing this class
 		%>
 		% ===================================================================
-		function runDemo(me,forcescreen)
+		function runDemo(me, forcescreen)
 			KbName('UnifyKeyNames')
 			stopkey				= KbName('q');
 			upKey				= KbName('uparrow');
@@ -543,18 +559,19 @@ classdef iRecManager < eyetrackerCore
 			leftKey				= KbName('leftarrow');
 			rightKey			= KbName('rightarrow');
 			calibkey			= KbName('c');
-			driftkey			= KbName('v');
+			driftkey			= KbName('d');
 			ofixation			= me.fixation; 
 			osmoothing			= me.smoothing;
 			oldexc				= me.exclusionZone;
 			oldfixinit			= me.fixInit;
 			try
 				if ~me.isConnected; initialise(me);end
-				if exist('forcescreen','var'); s.screen = forcescreen; end
-	
+				s = me.screen; s2 = me.operatorScreen;
+				if exist('forcescreen','var'); close(s); s.screen = forcescreen; end
 				if ~s.isOpen; open(s); end
 				if me.useOperatorScreen && ~s2.isOpen; s2.open(); end
 				sv = s.screenVals;
+				
 				trackerSetup(me);
 
 				drawPhotoDiodeSquare(s,[0 0 0 1]); flip(s); %make sure our photodiode patch is black
@@ -939,7 +956,6 @@ classdef iRecManager < eyetrackerCore
 			if isempty(keyTick); keyTick = 0; keyTok = 0; end
 			keyTick = keyTick + 1;
 			if keyTick > keyTok
-				fprintf('tok %i\n',keyTick);
 				[pressed, ~, keys] = KbCheck();
 				name = KbName(keys);
 				keyTok = keyTick + me.fInc;
