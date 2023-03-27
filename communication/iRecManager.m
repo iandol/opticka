@@ -79,7 +79,8 @@ classdef iRecManager < eyetrackerCore
 		%> @param varargin can be passed as a structure or name,arg pairs
 		%> @return instance of the class.
 		% ===================================================================
-			args = optickaCore.addDefaults(varargin,struct('name','iRec','sampleRate',500));
+			args = optickaCore.addDefaults(varargin,struct('name','iRec',...
+				'useOperatorScreen',true,'sampleRate',500));
 			me=me@eyetrackerCore(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
 		end
@@ -243,10 +244,10 @@ classdef iRecManager < eyetrackerCore
 						while cloop
 							a = a + 1;
 							me.getSample();
-							s.drawText('esc = exit | c = calibrate | v = validate | d = drift offset');
+							s.drawText('MENU: esc = exit | c = calibrate | v = validate | d = drift offset');
 							s.flip();
 							if me.useOperatorScreen
-								s2.drawText ('esc = exit | c = calibrate | v = validate | d = drift offset');
+								s2.drawText ('MENU: esc = exit | c = calibrate | v = validate | d = drift offset');
 								if ~isempty(me.x);s2.drawSpot(0.75,[0 1 0.25 0.2],me.x,me.y);end
 								for j = 1:length(vdata)
 									s2.drawCross(1,[],vpos(j,1),vpos(j,2));
@@ -270,12 +271,13 @@ classdef iRecManager < eyetrackerCore
 								elseif keys(val)
 									mode = 'validate'; cloop = false; break;
 								elseif keys(dr)
-									mode = 'validate'; cloop = false; break;
+									mode = 'driftoffset'; cloop = false; break;
 								end
 							end
 						end
 
 					case 'driftoffset'
+						trackerFlip(me,0,true);
 						oldrr = RestrictKeysForKbCheck([]);
 						me.driftOffset();
 						RestrictKeysForKbCheck(oldrr);
@@ -300,6 +302,7 @@ classdef iRecManager < eyetrackerCore
 							animate(f);
 							flip(s);
 							if me.useOperatorScreen
+								s2.drawText ('CALIBRATE: lshift = exit | # = point');
 								s2.drawCross(1,[],thisX,thisY);
 								if ~isempty(me.x);s2.drawSpot(0.75,[0 1 0.25 0.1],me.x,me.y);end
 								if mod(a,ref) == 0
@@ -316,7 +319,7 @@ classdef iRecManager < eyetrackerCore
 									k = str2double(name(1));
 									if k == 0 
 										hide(f);
-										s2.flip([],[],2);
+										trackerFlip(me,0,true);
 									elseif k > 0 && k <= nPositions
 										thisPos = k;
 										if k == lastK && f.isVisible
@@ -336,22 +339,22 @@ classdef iRecManager < eyetrackerCore
 										trackerFlip(me,0,true);
 									end
 								elseif keys(menu)
-									mode = 'menu'; cloop = false; break;
+									trackerFlip(me,0,true);
+									mode = 'menu'; cloop = false;
 								end
 							end
 						end
 
 					case 'validate'
 						cloop = true;
-						thisPos = 1;
+						thisPos = 1; lastK = thisPos;
 						thisX = vpos(thisPos,1);
 						thisY = vpos(thisPos,2);
 						f.xPositionOut = thisX;
 						f.yPositionOut = thisY;
 						update(f);
 						vdata = cell(size(vpos,1),1);
-						lastK = 0;
-						resetAll(me);
+						resetFixationHistory(me);
 						nPositions = size(vpos,1);
 						while cloop
 							a = a + 1;
@@ -359,9 +362,9 @@ classdef iRecManager < eyetrackerCore
 							drawGrid(s);
 							draw(f);
 							animate(f);
-							s.drawText('lshift = exit | rshift = sample | # = point');
 							flip(s);
 							if me.useOperatorScreen
+								s2.drawText('VALIDATE: lshift = exit | rshift = sample | # = point');
 								if ~isempty(me.x); s2.drawSpot(0.75,[0 1 0.25 0.25],me.x,me.y); end
 								for j = 1:nPositions
 									s2.drawCross(1,[],vpos(j,1),vpos(j,2));
@@ -382,10 +385,10 @@ classdef iRecManager < eyetrackerCore
 								if length(name)==2 % assume a number
 									k = str2double(name(1));
 									if k == 0
+										resetFixationHistory(me);
 										thisPos = 0;
-										resetAll(me);
 										hide(f);
-										s2.flip([],[],2);
+										trackerFlip(me,0,true);
 									elseif k > 0 && k <= nPositions
 										thisPos = k;
 										if k == lastK && f.isVisible
@@ -405,17 +408,17 @@ classdef iRecManager < eyetrackerCore
 										trackerFlip(me,0,true);
 									end
 								elseif keys(sample)
-									if ~exist('lastK','var') || ~exist('vdata','var') || lastK > length(vdata); return; end
-									if length(me.xAll) > 20 && iscell(vdata)
-										vdata{lastK} = [me.xAll(end-19:end); me.yAll(end-19:end)];
-									elseif ~isempty(me.xAll) && iscell(vdata)
+									if length(me.xAll) > 20 && lastK > 0 && lastK <= length(vdata)
+										 vdata{lastK} = [me.xAll(end-19:end); me.yAll(end-19:end)];
+									elseif ~isempty(me.xAll) && lastK > 0 && lastK <= length(vdata)
 										vdata{lastK} = [me.xAll; me.yAll];
 									end
 									f.isVisible = false;
 									thisPos = 0;
 									resetFixationHistory(me);
+									trackerFlip(me,0,true);
 								elseif keys(menu)
-									mode = 'menu'; cloop = false; break;
+									mode = 'menu'; cloop = false;
 								end
 							end
 						end
@@ -568,6 +571,7 @@ classdef iRecManager < eyetrackerCore
 				if ~me.isConnected; initialise(me);end
 				s = me.screen; s2 = me.operatorScreen;
 				if exist('forcescreen','var'); close(s); s.screen = forcescreen; end
+				s.disableSyncTests = true; s2.disableSyncTests = true;
 				if ~s.isOpen; open(s); end
 				if me.useOperatorScreen && ~s2.isOpen; s2.open(); end
 				sv = s.screenVals;
