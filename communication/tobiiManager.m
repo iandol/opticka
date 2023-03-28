@@ -41,20 +41,20 @@ classdef tobiiManager < eyetrackerCore
 		calibration		= struct('model','Tobii Pro Spectrum','mode','human',...
 							'stimulus','animated','calPositions',[],'valPositions',[],...
 							'manual', false, 'autoPace',true,'paceDuration',0.8,'eyeUsed','both',...
-							'movie',[])
+							'movie',[],'reloadCalibration',true,'calFile','tobiiCalibration.mat')
 		%> options for online smoothing of peeked data {'median','heuristic','savitsky-golay'}
 		smoothing		= struct('nSamples',8,'method','median','window',3,...
 							'eyes','both')
 	end
 	
 	properties (Hidden = true)
-		%> Titta settings structure
+		%> Settings structure from Titta
 		settings struct	= []
 		%> Titta class object
 		tobii
 		%> 
 		sampletime		= []
-		%>
+		%> last calibration data
 		calib
 	end
 	
@@ -264,41 +264,64 @@ classdef tobiiManager < eyetrackerCore
 		%>
 		% ===================================================================
 		function cal = trackerSetup(me,incal)
-			ListenChar(0); RestrictKeysForKbCheck([]);
 			cal = [];
+			
 			if ~me.isConnected 
-				warning('Eyetracker not connected, cannot calibrate!');
-				return
+				warning('Eyetracker not connected, cannot calibrate!'); return
 			end
 
 			if ~me.screen.isOpen; open(me.screen); end
 			if ~me.operatorScreen.isOpen; open(me.operatorScreen); end
 
 			if me.isDummy
-				disp('--->>> Tobii Dummy Mode: calibration skipped')
-				return;
+				disp('--->>> Tobii Dummy Mode: calibration skipped');return;
 			end
+
+			eT.settings.cal.doRandomPointOrder  = false;
+			[p,f,~]=fileparts(me.calibration.calFile);
+			e = '.mat';
+			if isempty(f); f = 'tobiiCalibration'; end
+			if isempty(p) || ~exist('p','dir'); p = eT.paths.calibration; end
+			me.calibration.calFile = [p filesep f e];
+
+			if me.calibration.reloadCalibration && exist(me.calibration.calFile,'file')
+				load(me.calibration.calFile);
+				if isfield(cal,'attempt') && ~isempty(cal.attempt); incal = cal; cal = []; end
+			elseif exist('incal','var') && isstruct(incal) && ~isempty(incal)
+				me.calib = incal;
+			else
+				incal = [];
+			end
+
 			fprintf('\n===>>> CALIBRATING TOBII... <<<===\n');
-			if ~exist('incal','var');incal=[];end
 			wasRecording = me.isRecording;
 			if wasRecording; stopRecording(me);	end
 			updateDefaults(me); % make sure we send any other settings changes
 			
+			oldrk = RestrictKeysForKbCheck([]);
 			ListenChar(-1);
 			if me.calibration.manual
 				if ~isempty(incal) && isstruct(incal) && isfield(incal,'type') && contains(incal.type,'manual')
-					me.calib = me.tobii.calibrateManual([me.screen.win me.operatorScreen.win], incal); 
+					cal = me.tobii.calibrateManual([me.screen.win me.operatorScreen.win], incal); 
 				else
-					me.calib = me.tobii.calibrateManual([me.screen.win me.operatorScreen.win]);
+					cal = me.tobii.calibrateManual([me.screen.win me.operatorScreen.win]);
 				end
 			else
 				if ~isempty(incal) && isstruct(incal) && isfield(incal,'type') && contains(incal.type,'standard')
-					me.calib = me.tobii.calibrate([me.screen.win me.operatorScreen.win], [], incal); 
+					cal = me.tobii.calibrate([me.screen.win me.operatorScreen.win], [], incal); 
 				else
-					me.calib = me.tobii.calibrate([me.screen.win me.operatorScreen.win]);
+					cal = me.tobii.calibrate([me.screen.win me.operatorScreen.win]);
 				end
 			end
 			ListenChar(0);
+			RestrictKeysForKbCheck(oldrk);
+
+			if ~isempty(cal) && isfield(cal,'attempt')
+				cal.date = me.dateStamp;
+				assignin('base','cal',cal); %put our calibration ready to save manually
+				save(me.calibration.calFile,'cal');
+				me.calib = cal;
+			end
 
 			if strcmpi(me.calibration.stimulus,'movie')
 				me.calStim.movie.reset();
@@ -306,7 +329,6 @@ classdef tobiiManager < eyetrackerCore
 			end
 
 			if ~isempty(me.calib) && me.calib.wasSkipped ~= 1
-				cal = me.calib;
 				if isfield(me.calib,'selectedCal')
 					try
 						calMsg = me.tobii.getValidationQualityMessage(me.calib);
