@@ -102,6 +102,8 @@ classdef eyetrackerCore < optickaCore
 		ignoreBlinks		= false
 		%> name of eyetracker EDF file
 		saveFile			= 'eyetrackerData'
+		%> subject name
+		subjectName			= ''
 		%> do we log debug messages to the command window?
 		verbose					= false
 	end

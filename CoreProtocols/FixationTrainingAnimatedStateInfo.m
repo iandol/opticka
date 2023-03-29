@@ -95,41 +95,44 @@ me.lastYExclusion			= [];
 % defaults based on that...
 eT.name 				= tS.name;
 if me.eyetracker.dummy == true;		eT.isDummy = true; end %===use dummy or real eyetracker? 
-if tS.saveData == true;	eT.recordData = true; end %===save ET data?					
-if strcmp(me.eyetracker.device, 'eyelink')
-	if isempty(me.eyetracker.esettings)
-		eT.sampleRate 				= 250; % sampling rate
-		eT.calibrationStyle 		= 'HV5'; % calibration style
-		eT.calibrationProportion	= [0.4 0.4]; %the proportion of the screen occupied by the calibration stimuli
-		%-----------------------
-		% remote calibration enables manual control and selection of each fixation
-		% this is useful for a baby or monkey who has not been trained for fixation
-		% use 1-9 to show each dot, space to select fix as valid, INS key ON EYELINK KEYBOARD to
-		% accept calibration!
-		eT.remoteCalibration		= false; 
-		%-----------------------
-		eT.modify.calibrationtargetcolour = [1 1 1]; % calibration target colour
-		eT.modify.calibrationtargetsize = 2; % size of calibration target as percentage of screen
-		eT.modify.calibrationtargetwidth = 0.15; % width of calibration target's border as percentage of screen
-		eT.modify.waitformodereadytime	= 500;
-		eT.modify.devicenumber 			= -1; % -1 = use any attachedkeyboard
-		eT.modify.targetbeep 			= 1; % beep during calibration
-	end
-elseif strcmp(me.eyetracker.device, 'tobii')
-	if isempty(me.eyetracker.tsettings)
-		eT.model					= 'Tobii Pro Spectrum';
-		eT.sampleRate				= 300;
-		eT.trackingMode				= 'human';
-		eT.calibrationStimulus		= 'animated';
-		eT.autoPace					= true;
-		%-----------------------
-		% remote calibration enables manual control and selection of each fixation
-		% this is useful for a baby or monkey who has not been trained for fixation
-		eT.manualCalibration		= false;
-		%-----------------------
-		eT.calPositions				= [ .2 .5; .5 .5; .8 .5 ];
-		eT.valPositions				= [ .5 .5 ];
-	end
+if tS.saveData == true;	eT.recordData = true; end %===save ET data?		
+switch me.eyetracker.device
+	case 'eyelink'
+		if isempty(me.eyetracker.esettings)
+			eT.sampleRate 				= 250; % sampling rate
+			eT.calibrationStyle 		= 'HV5'; % calibration style
+			eT.calibrationProportion	= [0.4 0.4]; %the proportion of the screen occupied by the calibration stimuli
+			%-----------------------
+			% remote calibration enables manual control and selection of each fixation
+			% this is useful for a baby or monkey who has not been trained for fixation
+			% use 1-9 to show each dot, space to select fix as valid, INS key ON EYELINK KEYBOARD to
+			% accept calibration!
+			eT.remoteCalibration		= false; 
+			%-----------------------
+			eT.modify.calibrationtargetcolour = [1 1 1]; % calibration target colour
+			eT.modify.calibrationtargetsize = 2; % size of calibration target as percentage of screen
+			eT.modify.calibrationtargetwidth = 0.15; % width of calibration target's border as percentage of screen
+			eT.modify.waitformodereadytime	= 500;
+			eT.modify.devicenumber 			= -1; % -1 = use any attachedkeyboard
+			eT.modify.targetbeep 			= 1; % beep during calibration
+		end
+	case 'tobii'
+		if isempty(me.eyetracker.tsettings)
+			eT.model					= 'Tobii Pro Spectrum';
+			eT.sampleRate				= 300;
+			eT.trackingMode				= 'human';
+			eT.calibrationStimulus		= 'animated';
+			eT.autoPace					= true;
+			%-----------------------
+			% remote calibration enables manual control and selection of each fixation
+			% this is useful for a baby or monkey who has not been trained for fixation
+			eT.manualCalibration		= false;
+			%-----------------------
+			eT.calPositions				= [ .2 .5; .5 .5; .8 .5 ];
+			eT.valPositions				= [ .5 .5 ];
+		end
+	case 'irec'
+
 end
 %Initialise the eyeTracker object with X, Y, FixInitTime, FixTime, Radius, StrictFix
 eT.updateFixationValues(tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
