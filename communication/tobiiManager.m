@@ -85,19 +85,13 @@ classdef tobiiManager < eyetrackerCore
 		%> @param varargin can be passed as a structure or name,arg pairs
 		%> @return instance of the class.
 		% ===================================================================
-			args = optickaCore.addDefaults(varargin,struct('name','Tobii','sampleRate',300));
+			args = optickaCore.addDefaults(varargin,struct('name','Tobii',...
+				'sampleRate',300,'useOperatorScreen',true,'eyeUsed','both'));
 			me=me@eyetrackerCore(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
 			
 			try % is tobii working?
 				assert(exist('Titta','class')==8,'TOBIIMANAGER:NO-TITTA','Cannot find Titta toolbox, please install instead of Tobii SDK; exiting...');
-				initTracker(me);
-				assert(isa(me.tobii,'Titta'),'TOBIIMANAGER:INIT-ERROR','Cannot Initialise...')
-			catch ME
-				ME.getReport
-				fprintf('!!! Error initialising Tobii: %s\n\t going into Dummy mode...\n',ME.message);
-				me.tobii = [];
-				me.isDummy = true;
 			end
 			if contains(me.calibration.model,{'Tobii 4C','IS4_Large_Peripheral'})
 				me.model = 'IS4_Large_Peripheral';
@@ -125,26 +119,28 @@ classdef tobiiManager < eyetrackerCore
 				me.screen			= sM;
 			end
 			if me.useOperatorScreen && ~exist('sM2','var')
-				sM2 = screenManager('windowed',[0 0 1000 1000],'pixelsPerCm',25,...
+				[w,h]=Screen('WindowSize',0);
+				sM2 = screenManager('windowed',round([0 0 w/1.25 h/1.5]),'pixelsPerCm',15,...
 					'disableSyncTests',true,'backgroundColour',sM.backgroundColour,...
-					'specialFlags', kPsychGUIWindow);
+					'specialFlags', kPsychGUIWindow,'blend',true);
+				if sM.screen > 0
+					sM2.screen = sM.screen - 1;
+				else
+					sM2.screen = 0;
+				end
 			end
 			if ~exist('sM2','var') || ~isa(sM2,'screenManager')
 				me.secondScreen		= false;
 			else
 				me.operatorScreen	= sM2;
+				me.useOperatorScreen = true;
 				me.secondScreen		= true;
 			end
+			
 			if contains(me.calibration.model,{'Tobii 4C','IS4_Large_Peripheral'})
-				me.calibration.model = 'IS4_Large_Peripheral';
+				me.model = 'IS4_Large_Peripheral';
 				me.sampleRate = 90; 
 				me.calibration.mode = 'Default';
-			end
-			if ~isa(me.tobii, 'Titta') || isempty(me.tobii); initTracker(me); end
-			assert(isa(me.tobii,'Titta'),'TOBIIMANAGER:INIT-ERROR','Cannot Initialise...')
-			
-			if me.isDummy
-				me.tobii			= me.tobii.setDummyMode();
 			end
 			
 			me.settings								= Titta.getDefaults(me.calibration.model);
@@ -155,7 +151,7 @@ classdef tobiiManager < eyetrackerCore
 			me.settings.calibrateEye				= me.calibration.eyeUsed;
 			me.settings.cal.bgColor					= floor(me.screen.backgroundColour*255);
 			me.settings.UI.setup.bgColor			= me.settings.cal.bgColor;
-			me.settings.UI.setup.showFixPointsToSubject		= false;
+			%me.settings.UI.setup.showFixPointsToSubject		= false;
 			me.settings.UI.setup.showHeadToSubject			= true;   
 			me.settings.UI.setup.showInstructionToSubject	= true;
 			me.settings.UI.setup.eyeClr						= 255;
@@ -183,7 +179,7 @@ classdef tobiiManager < eyetrackerCore
 				me.settings.cal.drawFunction		= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);
 				if me.manualCalibration;me.settings.mancal.drawFunction	= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);end
 			end
-			me.settings.cal.autoPace				= me.calibration.autoPace;
+			%me.settings.cal.autoPace				= me.calibration.autoPace;
 			me.settings.cal.paceDuration			= me.calibration.paceDuration;
 			if me.calibration.autoPace
 				me.settings.cal.doRandomPointOrder	= true;
@@ -196,9 +192,9 @@ classdef tobiiManager < eyetrackerCore
 			if ~isempty(me.calibration.valPositions)
 				me.settings.val.pointPos			= me.calibration.valPositions;
 			end
-			
-			me.settings.cal.pointNotifyFunction	= @tittaCalCallback;
-			me.settings.val.pointNotifyFunction	= @tittaCalCallback;
+			if me.verbose; me.settings.debugMode=true; end
+			%me.settings.cal.pointNotifyFunction	= @tittaCalCallback;
+			%me.settings.val.pointNotifyFunction	= @tittaCalCallback;
 			
 			if me.calibration.manual
 				me.settings.UI.mancal.bgColor		= floor(me.screen.backgroundColour*255);
@@ -209,32 +205,43 @@ classdef tobiiManager < eyetrackerCore
 				me.settings.mancal.val.paceDuration	= me.calibration.paceDuration;
 				me.settings.UI.mancal.showHead		= true;
 				me.settings.UI.mancal.headScale		= 0.4;
-				me.settings.mancal.cal.pointNotifyFunction	= @tittaCalCallback;
-				me.settings.mancal.val.pointNotifyFunction	= @tittaCalCallback;
+				%me.settings.mancal.cal.pointNotifyFunction	= @tittaCalCallback;
+				%me.settings.mancal.val.pointNotifyFunction	= @tittaCalCallback;
 			end
-			updateDefaults(me);
+
+			if ~isa(me.tobii, 'Titta') || isempty(me.tobii); initTracker(me); end
+			assert(isa(me.tobii,'Titta'),'TOBIIMANAGER:INIT-ERROR','Cannot Initialise...')
+			if me.isDummy; me.tobii = me.tobii.setDummyMode(); end
+			
 			me.tobii.init();
-			me.isConnected							= true;
+			checkConnection(me);
 			me.systemTime							= me.tobii.getTimeAsSystemTime;
-			me.ppd_									= me.screen.ppd;
+			
 			if me.screen.isOpen == true
 				me.win								= me.screen.win;
 			end
+			me.ppd_									= me.screen.ppd;
 			
 			if ~me.isDummy
-				me.salutation('Initialise', ...
-					sprintf('Running on a %s (%s) @ %iHz mode:%s | Screen %i %i x %i @ %iHz', ...
+				me.version = sprintf('Running on a %s (%s) @ %iHz mode:%s [%s:%s]\nScreen %i %i x %i @ %iHz', ...
 					me.tobii.systemInfo.model, ...
 					me.tobii.systemInfo.deviceName,...
 					me.tobii.systemInfo.frequency,...
 					me.tobii.systemInfo.trackingMode,...
+					me.tobii.systemInfo.firmwareVersion,...
+					me.tobii.systemInfo.runtimeVersion,...
 					me.screen.screen,...
 					me.screen.winRect(3),...
 					me.screen.winRect(4),...
-					me.screen.screenVals.fps),true);
+					me.screen.screenVals.fps);
 			else
-				me.salutation('Initialise', 'Running in Dummy Mode', true);
+				me.version = sprintf('Running in Dummy Mode\nScreen %i %i x %i @ %iHz',...
+					me.screen.screen,...
+					me.screen.winRect(3),...
+					me.screen.winRect(4),...
+					me.screen.screenVals.fps);
 			end
+			me.salutation('tobiiManager.initialise()', me.version, true);
 			success = true;
 		end
 		
@@ -253,21 +260,22 @@ classdef tobiiManager < eyetrackerCore
 		%>
 		% ===================================================================
 		function connected = checkConnection(me)
-			connected = false;
-			if isa(me.tobii,'Titta') && me.tobii.isInitialized
-				connected = true;
+			if isa(me.tobii,'Titta')
+				me.isConnected = true;
+			else
+				me.isConnected = false;
 			end
+			connected = me.isConnected;
 		end
 		
 		% ===================================================================
 		%> @brief sets up the calibration and validation
 		%>
 		% ===================================================================
-		function cal = trackerSetup(me,incal)
+		function cal = trackerSetup(me, incal)
 			cal = [];
-			
 			if ~me.isConnected 
-				warning('Eyetracker not connected, cannot calibrate!'); return
+				warning('Eyetracker not connected [must initialise first], cannot calibrate!'); return
 			end
 
 			if ~me.screen.isOpen; open(me.screen); end
@@ -277,16 +285,18 @@ classdef tobiiManager < eyetrackerCore
 				disp('--->>> Tobii Dummy Mode: calibration skipped');return;
 			end
 
-			eT.settings.cal.doRandomPointOrder  = false;
 			[p,f,~]=fileparts(me.calibration.calFile);
 			e = '.mat';
 			if isempty(f); f = 'tobiiCalibration'; end
-			if isempty(p) || ~exist('p','dir'); p = eT.paths.calibration; end
+			if isempty(p) || ~exist('p','dir'); p = me.paths.calibration; end
 			me.calibration.calFile = [p filesep f e];
 
+			if ~exist('incal','var'); incal = []; end
 			if me.calibration.reloadCalibration && exist(me.calibration.calFile,'file')
 				load(me.calibration.calFile);
-				if isfield(cal,'attempt') && ~isempty(cal.attempt); incal = cal; cal = []; end
+				if (isfield(cal,'attempt') && ~isempty(cal.attempt)) && (isfield(cal,'wasSkipped') && ~cal.wasSkipped)
+					incal = cal; cal = []; 
+				end
 			elseif exist('incal','var') && isstruct(incal) && ~isempty(incal)
 				me.calib = incal;
 			else
@@ -295,28 +305,32 @@ classdef tobiiManager < eyetrackerCore
 
 			fprintf('\n===>>> CALIBRATING TOBII... <<<===\n');
 			wasRecording = me.isRecording;
-			if wasRecording; stopRecording(me);	end
-			updateDefaults(me); % make sure we send any other settings changes
+			if wasRecording; stopRecording(me,true); end
+			%updateDefaults(me); % make sure we send any other settings changes
 			
-			oldrk = RestrictKeysForKbCheck([]);
+			oldr = RestrictKeysForKbCheck([]);
 			ListenChar(-1);
 			if me.calibration.manual
-				if ~isempty(incal) && isstruct(incal) && isfield(incal,'type') && contains(incal.type,'manual')
+				if ~isempty(incal) && isstruct(incal)...
+						&& (isfield(incal,'type') && contains(incal.type,'manual'))...
+						&& (isfield(cal,'wasSkipped') && ~cal.wasSkipped)
 					cal = me.tobii.calibrateManual([me.screen.win me.operatorScreen.win], incal); 
 				else
 					cal = me.tobii.calibrateManual([me.screen.win me.operatorScreen.win]);
 				end
 			else
-				if ~isempty(incal) && isstruct(incal) && isfield(incal,'type') && contains(incal.type,'standard')
+				if ~isempty(incal) && isstruct(incal)...
+						&& (isfield(incal,'type') && contains(incal.type,'standard'))...
+						&& (isfield(cal,'wasSkipped') && ~cal.wasSkipped)
 					cal = me.tobii.calibrate([me.screen.win me.operatorScreen.win], [], incal); 
 				else
 					cal = me.tobii.calibrate([me.screen.win me.operatorScreen.win]);
 				end
 			end
 			ListenChar(0);
-			RestrictKeysForKbCheck(oldrk);
+			RestrictKeysForKbCheck(oldr);
 
-			if ~isempty(cal) && isfield(cal,'attempt')
+			if ~isempty(cal) && isfield(cal,'wasSkipped') && ~cal.wasSkipped
 				cal.date = me.dateStamp;
 				assignin('base','cal',cal); %put our calibration ready to save manually
 				save(me.calibration.calFile,'cal');
@@ -340,7 +354,7 @@ classdef tobiiManager < eyetrackerCore
  				disp('-+-+!!! The calibration was unsuccesful or skipped !!!+-+-')
 			end
 			resetAll(me);
-			if wasRecording; startRecording(me); end
+			if wasRecording; startRecording(me,true); end
 		end
 		
 		% ===================================================================
@@ -354,7 +368,7 @@ classdef tobiiManager < eyetrackerCore
 		% ===================================================================
 		function startRecording(me, override)
 			if ~exist('override','var') || isempty(override) || override~=true; return; end
-			if me.isConnected && ~me.isRecording
+			if me.isConnected
 				success = me.tobii.buffer.start('gaze');
 				if success
 					me.statusMessage('Starting to record gaze...');
@@ -380,7 +394,7 @@ classdef tobiiManager < eyetrackerCore
 					warning('Can''t START buffer() timeSync recording!!!')
 				end
 			end
-			me.isRecording = true;
+			me.isRecording = me.tobii.buffer.isRecording('gaze');
 		end
 		
 		% ===================================================================
@@ -394,7 +408,7 @@ classdef tobiiManager < eyetrackerCore
 		% ===================================================================
 		function stopRecording(me, override)
 			if ~exist('override','var') || isempty(override) || override~=true; return; end
-			if me.isConnected && me.isRecording
+			try
 				if me.tobii.buffer.hasStream('eyeImage') && me.tobii.buffer.isRecording('eyeImage')
 					success = me.tobii.buffer.stop('eyeImage');
 					if success
@@ -434,7 +448,7 @@ classdef tobiiManager < eyetrackerCore
 					warning('Can''t STOP buffer() GAZE recording!!!')
 				end
 			end
-			me.isRecording = false;
+			me.isRecording = me.tobii.buffer.isRecording('gaze');
 		end
 
 		% ===================================================================
@@ -601,7 +615,7 @@ classdef tobiiManager < eyetrackerCore
 		% ===================================================================
 		function close(me)
 			try
-				stopRecording(me);
+				stopRecording(me,true);
 				out = me.tobii.deInit();
 				me.isConnected = false;
 				me.isRecording = false;
@@ -724,7 +738,6 @@ classdef tobiiManager < eyetrackerCore
 			leftKey				= KbName('leftarrow');
 			rightKey			= KbName('rightarrow');
 			calibKey			= KbName('c');
-			RestrictKeysForKbCheck([stopKey upKey downKey leftKey rightKey calibKey]);
 			ofixation			= me.fixation; 
 			me.sampletime		= [];
 			osmoothing			= me.smoothing;
@@ -744,31 +757,14 @@ classdef tobiiManager < eyetrackerCore
 				
 				if exist('forcescreen','var'); s.screen = forcescreen; end
 				s.backgroundColour		= [0.5 0.5 0.5 0];
-				if length(Screen('Screens'))>1 && s.screen - 1 >= 0
-					useS2				= true;
-					me.useOperatorScreen = true;
-					s2					= screenManager;
-					s2.pixelsPerCm		= 20;
-					s2.screen			= s.screen - 1;
-					s2.backgroundColour	= s.backgroundColour;
-					[w,h]				= Screen('WindowSize',s2.screen);
-					s2.windowed			= [0 0 round(w/2) round(h/2)];
-					s2.bitDepth			= '8bit';
-					s2.blend			= true;
-					s2.disableSyncTests	= true;
-					s2.specialFlags		= kPsychGUIWindow;
-				end
 			
-				sv=open(s); %open our screen
+				if ~s.isOpen; sv=open(s); else; sv=s.screenVals; end
+				initialise(me, s);
+				if me.useOperatorScreen; s2 = me.operatorScreen; end
+				if ~s2.isOpen; open(s2); useS2 = true; end
 				
-				if useS2
-					initialise(me, s, s2); %initialise tobii with our screen
-					s2.open();
-				else
-					initialise(me, s); %initialise tobii with our screen
-				end
-				trackerSetup(me);
-				ShowCursor; %titta fails to show cursor so we must do it
+				trackerSetup(me); ShowCursor;
+
 				drawPhotoDiodeSquare(s,[0 0 0 1]); flip(s); %make sure our photodiode patch is black
 				
 				% set up the size and position of the stimulus
@@ -792,6 +788,8 @@ classdef tobiiManager < eyetrackerCore
 				exc = me.toPixels(me.exclusionZone);
 				exc = [exc(1) exc(3) exc(2) exc(4)]; %psychrect=[left,top,right,bottom] 
 
+				RestrictKeysForKbCheck([stopKey upKey downKey leftKey rightKey calibKey]);
+			
 				% warm up
 				fprintf('\n===>>> Warming up the GPU, Eyetracker etc... <<<===\n')
 				Priority(MaxPriority(s.win));
@@ -911,7 +909,7 @@ classdef tobiiManager < eyetrackerCore
 						trackerMessage(me,sprintf('Aborting %i @ %i', trialn, int64(round(vbl*1e6))))
 					end
 				end
-				stopRecording(me);
+				stopRecording(me,true);
 				ListenChar(0); Priority(0); ShowCursor; RestrictKeysForKbCheck([]);
 				try close(s); if useS2;close(s2);end; end %#ok<*TRYNC>
 				saveData(me);
@@ -925,7 +923,7 @@ classdef tobiiManager < eyetrackerCore
 				me.fixInit = oldfixinit;
 				clear s s2 o
 			catch ME
-				stopRecording(me);
+				stopRecording(me,true);
 				me.fixation = ofixation;
 				me.saveFile = ofilename;
 				me.smoothing = osmoothing;
@@ -933,12 +931,12 @@ classdef tobiiManager < eyetrackerCore
 				me.fixInit = oldfixinit;
 				ListenChar(0); Priority(0); ShowCursor; RestrictKeysForKbCheck([]);
 				getReport(ME)
-				close(s);
-				if useS2;close(s2);end
+				try close(s); end
+				try if useS2;close(s2);end; end
 				sca;
-				close(me);
+				try close(me); end
 				clear s s2 o
-				rethrow(ME)
+				rethrow(ME);
 			end
 			
 		end
@@ -1182,8 +1180,9 @@ classdef tobiiManager < eyetrackerCore
 		%>
 		% ===================================================================
 		function initTracker(me)
-			me.settings = Titta.getDefaults(me.calibration.model);
-			me.settings.cal.bgColor = 127;
+			if isempty(me.settings)
+				me.settings = Titta.getDefaults(me.calibration.model);
+			end
 			me.tobii = Titta(me.settings);
 		end
 		

@@ -102,7 +102,7 @@ classdef eyetrackerCore < optickaCore
 		ignoreBlinks		= false
 		%> name of eyetracker EDF file
 		saveFile			= 'eyetrackerData'
-		%> do we log messages to the command window?
+		%> do we log debug messages to the command window?
 		verbose					= false
 	end
 
@@ -260,6 +260,7 @@ classdef eyetrackerCore < optickaCore
 			me.isBlink				= false;
 			me.isExclusion			= false;
 			me.isInitFail			= false;
+			me.flipTick				= 0;
 			if me.verbose
 				fprintf('-+-+-> Eye Tracker:reset fixation: %i %i %i\n',me.fixLength,me.fixTotal,me.fixN);
 			end
@@ -867,7 +868,7 @@ classdef eyetrackerCore < optickaCore
 			if ~me.isConnected || ~me.operatorScreen.isOpen; return; end
 			if ~isempty(me.xAll) && ~isempty(me.yAll) && (length(me.xAll)==length(me.yAll))
 				xy = [me.xAll;me.yAll];
-				drawDots(me.operatorScreen,xy,8,[0.5 1 0 0.2]);
+				drawDots(me.operatorScreen,xy,0.5,[0.5 0.9 0 0.2]);
 			end
 		end
 

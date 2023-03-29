@@ -1825,20 +1825,9 @@ classdef runExperiment < optickaCore
 			if ~exist('eT','var');error('You need to pass the eyetracker manager object!');end
 			if ~exist('s','var');error('You need to pass the screen manager object!');end
 			if strcmp(me.eyetracker.device, 'tobii')
-				if eT.useOperatorScreen && length(Screen('Screens')) > 1 && s.screen - 1 >= 0
-					ss					= screenManager;
-					ss.screen			= 0;
-					ss.windowed			= [0 0 800 650];
-					ss.specialFlags		= kPsychGUIWindow;
-					ss.backgroundColour	= s.backgroundColour;
-					ss.bitDepth			= '8bit';
-					ss.blend			= true;
-					ss.pixelsPerCm		= 30;
-					initialise(eT,s,ss);
-				else
-					initialise(eT,s);
-				end
-				trackerSetup(eT); 
+				eT.useOperatorScreen = true;
+				initialise(eT,s);
+				trackerSetup(eT);
 				ShowCursor();
 				if ~eT.isConnected && ~eT.isDummy
 					warning('Eyetracker is not connected and not in dummy mode, potential connection issue...')
