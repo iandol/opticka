@@ -100,9 +100,9 @@ classdef colourGratingStimulus < baseStimulus
 		%> allowed properties passed to object upon construction
 		allowedProperties = {'colour2', 'sf', 'tf', 'angle', 'direction', 'phase', 'rotateTexture' ... 
 			'contrast', 'mask', 'reverseDirection', 'speed', 'startPosition', 'aspectRatio' ... 
-			'sigma', 'correctPhase', 'phaseReverseTime', 'phaseOfReverse'}
+			'sigma', 'correctPhase', 'phaseReverseTime', 'phaseOfReverse','visibleRate'}
 		%> properties to not create transient copies of during setup phase
-		ignoreProperties = {'visibleRate','type', 'scale', 'phaseIncrement', 'correctPhase', 'contrastMult', 'mask', 'typeList'}
+		ignoreProperties = {'type', 'scale', 'phaseIncrement', 'correctPhase', 'contrastMult', 'mask', 'typeList'}
 		%> how many frames between phase reverses
 		phaseCounter			= 0
 		%> mask value (radius for the procedural shader)
@@ -264,10 +264,10 @@ classdef colourGratingStimulus < baseStimulus
 				me.res(2), me.colourOut, me.colour2Out, me.maskValue);
 			me.colourCache = me.colourOut; me.colour2Cache = me.colour2Out;
 
-            if ~isempty(me.visibleRate) && isnumeric(me.visibleRate)
+            if ~isempty(me.visibleRateOut) && isnumeric(me.visibleRateOut)
                 me.visibleTick = 0;
-                me.visibleFlip = round((me.screenVals.fps/2) / me.visibleRate);
-            end
+                me.visibleFlip = round((me.screenVals.fps/2) / me.visibleRateOut);
+			end
 			
 			me.inSetup = false; me.isSetup = true;
 			computePosition(me);
@@ -355,6 +355,10 @@ classdef colourGratingStimulus < baseStimulus
 				glUniform1f(glGetUniformLocation(me.shader, 'radius'), me.maskValue);
 				glUseProgram(0);
 				me.colourCache = me.colourOut; me.colour2Cache = me.colour2Out;
+			end
+			if ~isempty(me.visibleRateOut) && isnumeric(me.visibleRateOut)
+                me.visibleTick = 0;
+                me.visibleFlip = round((me.screenVals.fps/2) / me.visibleRateOut);
 			end
 			computePosition(me);
 			setRect(me);

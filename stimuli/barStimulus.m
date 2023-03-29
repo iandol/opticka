@@ -64,8 +64,8 @@ classdef barStimulus < baseStimulus
 		phaseCounter double = 0
 		allowedProperties = {'modulateColour', 'colour2', 'regenerateTexture', ...
 			'type', 'barWidth', 'barHeight', 'angle', 'speed', 'contrast', 'scale', ...
-			'sf', 'interpMethod', 'phaseReverseTime'}
-		ignoreProperties = {'visibleRate','interpMethod', 'matrix', 'matrix2', 'phaseCounter', 'pixelScale'}
+			'sf', 'interpMethod', 'phaseReverseTime','visibleRate'}
+		ignoreProperties = {'interpMethod', 'matrix', 'matrix2', 'phaseCounter', 'pixelScale'}
 	end
 	
 	%=======================================================================
@@ -148,9 +148,9 @@ classdef barStimulus < baseStimulus
 				me.phaseCounter = round( me.phaseReverseTime / me.sM.screenVals.ifi );
             end
 
-            if ~isempty(me.visibleRate) && isnumeric(me.visibleRate)
+            if ~isempty(me.visibleRateOut) && isnumeric(me.visibleRateOut)
                 me.visibleTick = 0;
-                me.visibleFlip = round((me.screenVals.fps/2) / me.visibleRate);
+                me.visibleFlip = round((me.screenVals.fps/2) / me.visibleRateOut);
             end
 			
 			me.inSetup = false; me.isSetup = true;
@@ -231,6 +231,10 @@ classdef barStimulus < baseStimulus
 			if me.sizeOut > 0; me.barHeightOut = me.sizeOut; me.barWidthOut = me.sizeOut; end
 			if me.phaseReverseTime > 0 
 				me.phaseCounter = round( me.phaseReverseTime / me.sM.screenVals.ifi );
+			end
+			if ~isempty(me.visibleRateOut) && isnumeric(me.visibleRateOut)
+                me.visibleTick = 0;
+                me.visibleFlip = round((me.screenVals.fps/2) / me.visibleRateOut);
 			end
 			if me.regenerateTexture && Screen(me.sM.win,'WindowKind') == 1
 				refreshTexture(me);

@@ -96,7 +96,7 @@ classdef iRecManager < eyetrackerCore
 				if isempty(me.screen) || ~isa(me.screen,'screenManager')
 					me.screen		= screenManager;
 				end
-			elseif isa(me.screen,'screenManager') || ~strcmp(me.screen.uuid, sM.uuid)
+			elseif ~isa(me.screen,'screenManager') ||strcmpi(sM.uuid,me.screen.uuid)
 					me.screen			= sM;
 			end
 			me.ppd_					= me.screen.ppd;
@@ -119,7 +119,7 @@ classdef iRecManager < eyetrackerCore
 					'disableSyncTests',true,'backgroundColour',me.screen.backgroundColour,...
 					'screen', oscreen, 'specialFlags', kPsychGUIWindow);
 				[w,h]			= Screen('WindowSize',me.operatorScreen.screen);
-				me.operatorScreen.windowed	= [0 0 round(w/2) round(h/2)];
+				me.operatorScreen.windowed	= [0 0 round(w/1.6) round(h/1.8)];
 				me.secondScreen		= true;
 				if ismac; me.operatorScreen.useRetina = true; end
 			end
@@ -148,7 +148,7 @@ classdef iRecManager < eyetrackerCore
 					open(me.tcp);
 					if ~me.tcp.isOpen; warning('Cannot Connect to TCP');error('Cannot connect to TCP'); end
 					open(me.udp);
-					me.udp.write(intmax('int32'));
+					me.udp.write(intmin('int32'));
 					me.isConnected = true;
 					me.salutation('Initialise', ...
 						sprintf('Running on a iRecH2 | Screen %i %i x %i @ %iHz', ...
@@ -527,13 +527,14 @@ classdef iRecManager < eyetrackerCore
 		% ===================================================================
 		function close(me)
 			try
+				try me.udp.write(int32(intmin('int32')));
 				try stopRecording(me); end
 				try me.tcp.close; end
 				try me.udp.close; end
 				me.isConnected = false;
 				me.isRecording = false;
 				resetAll(me);
-				if me.secondScreen && ~isempty(me.operatorScreen) && isa(me.operatorScreen,'screenManager')
+				if ~isempty(me.operatorScreen) && isa(me.operatorScreen,'screenManager')
 					try close(me.operatorScreen); end
 				end
 			catch ME

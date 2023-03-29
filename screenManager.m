@@ -829,13 +829,11 @@ classdef screenManager < optickaCore
 			kind = Screen(me.win, 'WindowKind');
 			try
 				if kind == 1 
-					fprintf('\n\n---> screenManager %s: Closing screen = %i, Win = %i, Kind = %i\n',me.uuid, me.screen,me.win,kind);
+					fprintf('\n\n---> screenManager %s: Closing screen = %i, Win = %i, Kind = %i\n', me.uuid, me.screen, me.win, kind);
 					Screen('Close',me.win);
 				end
 			catch ME
-				if me.verbose 
-					getReport(ME) 
-				end
+				if me.verbose; getReport(ME); end
 			end
 			me.win=[]; 
 			if isfield(me.screenVals,'win');me.screenVals=rmfield(me.screenVals,'win');end

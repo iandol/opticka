@@ -151,9 +151,9 @@ classdef tobiiManager < eyetrackerCore
 			me.settings.calibrateEye				= me.calibration.eyeUsed;
 			me.settings.cal.bgColor					= floor(me.screen.backgroundColour*255);
 			me.settings.UI.setup.bgColor			= me.settings.cal.bgColor;
-			%me.settings.UI.setup.showFixPointsToSubject		= false;
-			me.settings.UI.setup.showHeadToSubject			= true;   
-			me.settings.UI.setup.showInstructionToSubject	= true;
+			%me.settings.UI.setup.showFixPointsToSubject	= false;
+			%me.settings.UI.setup.showHeadToSubject			= true;   
+			%me.settings.UI.setup.showInstructionToSubject	= true;
 			me.settings.UI.setup.eyeClr						= 255;
 			if strcmpi(me.calibration.stimulus,'animated')
 				me.calStim							= AnimatedCalibrationDisplay();
@@ -179,7 +179,11 @@ classdef tobiiManager < eyetrackerCore
 				me.settings.cal.drawFunction		= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);
 				if me.manualCalibration;me.settings.mancal.drawFunction	= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);end
 			end
-			%me.settings.cal.autoPace				= me.calibration.autoPace;
+			if me.calibration.autoPace
+				me.settings.cal.autoPace			= 2;
+			else
+				me.settings.cal.autoPace			= 0;
+			end
 			me.settings.cal.paceDuration			= me.calibration.paceDuration;
 			if me.calibration.autoPace
 				me.settings.cal.doRandomPointOrder	= true;
@@ -193,8 +197,8 @@ classdef tobiiManager < eyetrackerCore
 				me.settings.val.pointPos			= me.calibration.valPositions;
 			end
 			if me.verbose; me.settings.debugMode=true; end
-			%me.settings.cal.pointNotifyFunction	= @tittaCalCallback;
-			%me.settings.val.pointNotifyFunction	= @tittaCalCallback;
+			me.settings.cal.pointNotifyFunction	= @tittaCalCallback;
+			me.settings.val.pointNotifyFunction	= @tittaCalCallback;
 			
 			if me.calibration.manual
 				me.settings.UI.mancal.bgColor		= floor(me.screen.backgroundColour*255);
@@ -205,8 +209,8 @@ classdef tobiiManager < eyetrackerCore
 				me.settings.mancal.val.paceDuration	= me.calibration.paceDuration;
 				me.settings.UI.mancal.showHead		= true;
 				me.settings.UI.mancal.headScale		= 0.4;
-				%me.settings.mancal.cal.pointNotifyFunction	= @tittaCalCallback;
-				%me.settings.mancal.val.pointNotifyFunction	= @tittaCalCallback;
+				me.settings.mancal.cal.pointNotifyFunction	= @tittaCalCallback;
+				me.settings.mancal.val.pointNotifyFunction	= @tittaCalCallback;
 			end
 
 			if ~isa(me.tobii, 'Titta') || isempty(me.tobii); initTracker(me); end

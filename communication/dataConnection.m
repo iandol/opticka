@@ -865,7 +865,7 @@ classdef dataConnection < handle
 						pnet(me.rconn,'printf','\n--ready--\n');
 					else
 						pnet(me.rconn,'printf','\n--error--\n');
-						disp(sprintf('\nERROR: %s\n',lasterr));
+						fprintf('\nERROR: %s\n\n', lasterr);
 					end
 					
 				end %END WHILE ls
