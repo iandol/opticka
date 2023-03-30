@@ -5,26 +5,32 @@ classdef audioManager < optickaCore
 		fileName char		= ''
 		numChannels double	= 2
 		frequency double	= 44100
-		lowLatency logical	= true
-		silentMode logical	= false %this allows us to be called even if no sound is attached
+		lowLatency logical	= false
+		latencyLevel		= 1
+		%> this allows us to be used even if no sound is attached
+		silentMode logical	= false 
+		%> chain snd() function to use psychportaudio?
+		chainSnd			= false 
 		verbose				= true
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
-		isBuffered logical	= false
 		aHandle
-		status
-		fileNames			= {};
 		devices
+		status
+		isBuffered logical	= false
+		fileNames cell		= {};
 		isSetup logical		= false
 		isOpen logical		= false
+		isSample logical	= false
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
 		handles				= []
 		isFiles logical		= false
-		allowedProperties char ='numChannels|frequency|lowLatency|device|fileName|silentMode|verbose'
-	end
+		allowedProperties char = {'numChannels', 'frequency', 'lowLatency', ...
+			'device', 'fileName', 'silentMode', 'verbose'}
+	end 
 	
 	%=======================================================================
 	methods     %------------------PUBLIC METHODS--------------%
@@ -42,6 +48,7 @@ classdef audioManager < optickaCore
 				me.salutation('constructor','Please ensure valid file/dir name');
 			end
 			try
+				PsychPortAudio('Close');
 				InitializePsychSound(me.lowLatency);
 				me.devices = PsychPortAudio('GetDevices');
 			catch
@@ -76,10 +83,16 @@ classdef audioManager < optickaCore
 				fprintf('Using device %i: %s\n',me.device,me.devices(1).DeviceName);
 			end
 			try
+				PsychPortAudio('Close');
 				if isempty(me.aHandle)
-					me.aHandle = PsychPortAudio('Open', me.device, 1, 1);
+					% PsychPortAudio('Open' [, deviceid][, mode][, reqlatencyclass][, freq]
+					% [, channels][, buffersize][, suggestedLatency][, selectchannels]
+					% [, specialFlags=0]);
+					me.aHandle = PsychPortAudio('Open', me.device, 1, me.latencyLevel);
 				end
-				Snd('Open',me.aHandle); % chain Snd() to this instance
+				if me.chainSnd
+					Snd('Open',me.aHandle); % chain Snd() to this instance
+				end
 				PsychPortAudio('Volume', me.aHandle, 1);
 				me.status = PsychPortAudio('GetStatus', me.aHandle);
 				me.frequency = me.status.SampleRate;
@@ -103,6 +116,7 @@ classdef audioManager < optickaCore
 				[audiodata, ~] = psychwavread(me.fileName);
 			end
 			PsychPortAudio('FillBuffer', me.aHandle, audiodata');
+			me.isSample = true;
 		end
 
 		% ===================================================================
@@ -113,7 +127,8 @@ classdef audioManager < optickaCore
 			if me.silentMode; return; end
 			if ~exist('when','var'); when = []; end
 			if ~me.isSetup; setup(me);end
-			if me.isSetup
+			if ~me.isSample; loadSamples(me);end
+			if me.isSetup && me.isSample
 				PsychPortAudio('Start', me.aHandle, [], when);
 			end
 		end
@@ -137,10 +152,9 @@ classdef audioManager < optickaCore
 			if me.silentMode; return; end
 			if ~me.isSetup; setup(me);end
 			
-			if ~exist('freq', 'var');freq = 400;end
+			if ~exist('freq', 'var');freq = 1000;end
 			if ~exist('durationSec', 'var');durationSec = 0.15;	end
-			if ~exist('fVolume', 'var')
-				fVolume = 0.5;
+			if ~exist('fVolume', 'var'); fVolume = 0.5;
 			else
 				% Clamp if necessary
 				if (fVolume > 1.0)
@@ -191,12 +205,12 @@ classdef audioManager < optickaCore
 				me.aHandle = [];
 				me.status = [];
 				me.frequency = [];
-				me.isSetup = false; me.isOpen = false;
+				me.isSetup = false; me.isOpen = false; me.isSample = false;
 			catch ME
 				me.aHandle = [];
 				me.status = [];
 				me.frequency = [];
-				me.isSetup = false; me.isOpen = false;
+				me.isSetup = false; me.isOpen = false; me.isSample = false;
 				getReport(ME)
 			end
 		end
