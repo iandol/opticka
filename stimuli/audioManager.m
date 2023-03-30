@@ -28,7 +28,7 @@ classdef audioManager < optickaCore
 	properties (SetAccess = private, GetAccess = private)
 		handles				= []
 		isFiles logical		= false
-		allowedProperties char = {'numChannels', 'frequency', 'lowLatency', ...
+		allowedProperties = {'numChannels', 'frequency', 'lowLatency', ...
 			'device', 'fileName', 'silentMode', 'verbose'}
 	end 
 	
@@ -199,9 +199,13 @@ classdef audioManager < optickaCore
 			try 
 				if ~isempty(me.aHandle)
 					PsychPortAudio('Stop', me.aHandle, 0, 1); 
-					PsychPortAudio('DeleteBuffer');
 				end
-				try PsychPortAudio('Close'); end %#ok<*TRYNC> 
+				try PsychPortAudio('DeleteBuffer'); end %#ok<*TRYNC> 
+				try 
+					PsychPortAudio('Close',me.aHandle); 
+				catch
+					PsychPortAudio('Close');
+				end 
 				me.aHandle = [];
 				me.status = [];
 				me.frequency = [];
