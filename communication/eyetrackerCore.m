@@ -474,6 +474,9 @@ classdef eyetrackerCore < optickaCore
 		%> @return fixated boolean if we are fixated
 		%> @return fixtime boolean if we're fixed for fixation time
 		%> @return searching boolean for if we are still searching for fixation
+		%> @return window which fixation window matched
+		%> @return exclusion was any exclusion window entered?
+		%> @return fixinit did subject break fixinit rule?
 		% ===================================================================
 		function [fixated, fixtime, searching, window, exclusion, fixinit] = isFixated(me)
 			fixated = false; fixtime = false; searching = true; 

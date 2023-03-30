@@ -96,7 +96,7 @@ classdef iRecManager < eyetrackerCore
 				if isempty(me.screen) || ~isa(me.screen,'screenManager')
 					me.screen		= screenManager;
 				end
-			elseif ~isa(me.screen,'screenManager') ||strcmpi(sM.uuid,me.screen.uuid)
+			elseif ~isa(me.screen,'screenManager') || strcmpi(sM.uuid,me.screen.uuid)
 					me.screen			= sM;
 			end
 			me.ppd_					= me.screen.ppd;
@@ -502,10 +502,8 @@ classdef iRecManager < eyetrackerCore
 		%> @brief draw N last eye position on the PTB display
 		%>
 		% ===================================================================
-		function drawEyePositions(me,dataDur)
-			if (~me.isDummy || me.isConnected) && me.screen.isOpen
-				
-			end
+		function drawEyePositions(me, ~)
+			
 		end
 		
 		% ===================================================================
@@ -513,7 +511,7 @@ classdef iRecManager < eyetrackerCore
 		%>
 		%>
 		% ===================================================================
-		function trackerMessage(me, message, varargin)
+		function trackerMessage(me, message, ~)
 			if me.isConnected
 				me.udp.write(int32(message));
 				if me.verbose; fprintf('-+-+->IREC Message: %s\n',message);end
@@ -527,7 +525,7 @@ classdef iRecManager < eyetrackerCore
 		% ===================================================================
 		function close(me)
 			try
-				try me.udp.write(int32(intmin('int32')));
+				try me.udp.write(int32(intmin('int32'))); end
 				try stopRecording(me); end
 				try me.tcp.close; end
 				try me.udp.close; end
