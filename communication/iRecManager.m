@@ -38,10 +38,16 @@ classdef iRecManager < eyetrackerCore
 
 	properties
 		%> setup and calibration values
-		calibration		= struct('ip','127.0.0.1','udpport',35000,'tcpport',35001,...
-						'stimulus','animated','calPositions',[-12 0; 0 -12; 0 0; 0 12; 12 0],...
+		calibration		= struct(...
+						'ip','127.0.0.1',...
+						'udpport',35000,...
+						'tcpport',35001,...
+						'stimulus','animated',...
+						'calPositions',[-12 0; 0 -12; 0 0; 0 12; 12 0],...
 						'valPositions',[-12 0; 0 -12; 0 0; 0 12; 12 0],...
-						'size',2,'manual', false, 'movie', [])
+						'size',2,...
+						'manual', false,...
+						'movie', [])
 		%> options for online smoothing of peeked data {'median','heuristic','savitsky-golay'}
 		smoothing		= struct('nSamples',8,'method','median','window',3,...
 						'eyes','both')
@@ -166,14 +172,6 @@ classdef iRecManager < eyetrackerCore
 			success = true;
 		end
 
-		% ===================================================================
-		%> @brief check the connection with the tobii
-		%>
-		% ===================================================================
-		function connected = checkConnection(me)
-			connected = me.isConnected;
-		end
-		
 		% ===================================================================
 		%> @brief sets up the calibration and validation
 		%>
@@ -453,7 +451,7 @@ classdef iRecManager < eyetrackerCore
 				sample.gx		= mx;
 				sample.gy		= my;
 				sample.pa		= me.pupil;
-				sample.time		= GetSecs * 1e6;
+				sample.time		= GetSecs;
 				me.x			= me.toDegrees(sample.gx,'x');
 				me.y			= me.toDegrees(sample.gy,'y');
 				me.xAll			= [me.xAll me.x];
@@ -463,11 +461,11 @@ classdef iRecManager < eyetrackerCore
 			elseif me.isConnected && me.isRecording
 				xy				= [];
 				td				= me.tcp.readLines(me.smoothing.nSamples,'last');
-				if isempty(td);me.currentSample=sample;return;end
+				if isempty(td); me.currentSample=sample; return; end
 				td				= str2num(td); %#ok<*ST2NM> 
 				sample.raw		= td;
 				sample.time		= td(end,1);
-				sample.timeD	= GetSecs * 1e6;
+				sample.timeD	= GetSecs;
 				xy(1,:)			=  td(:,2)';
 				xy(2,:)			= -td(:,3)';
 				if ~isempty(xy)
@@ -498,13 +496,7 @@ classdef iRecManager < eyetrackerCore
 			me.currentSample	= sample;
 		end
 		
-		% ===================================================================
-		%> @brief draw N last eye position on the PTB display
-		%>
-		% ===================================================================
-		function drawEyePositions(me, ~)
-			
-		end
+		
 		
 		% ===================================================================
 		%> @brief send message to store in tracker data
@@ -756,17 +748,7 @@ classdef iRecManager < eyetrackerCore
 			end
 		end
 		
-		% ===================================================================
-		%> @brief
-		%>
-		% ===================================================================
-		function value = checkRecording(me)
-			if me.isConnected
-				value = true;
-			else
-				value = false;
-			end
-		end
+		
 		
 		% ===================================================================
 		%> @brief
@@ -847,6 +829,14 @@ classdef iRecManager < eyetrackerCore
 		end
 
 		% ===================================================================
+		%> @brief draw N last eye position on the PTB display
+		%>
+		% ===================================================================
+		function drawEyePositions(me, ~)
+			
+		end
+
+		% ===================================================================
 		%> @brief checks which eye is available, force left eye if
 		%> binocular is enabled
 		%>
@@ -892,6 +882,15 @@ classdef iRecManager < eyetrackerCore
 		function setOffline(me)
 			
 		end
+
+		% ===================================================================
+		%> @brief check the connection with the tobii
+		%>
+		% ===================================================================
+		function connected = checkConnection(me)
+			connected = me.isConnected;
+		end
+		
 		
 		% ===================================================================
 		%> @brief wrapper for EyelinkDoDriftCorrection
@@ -943,6 +942,18 @@ classdef iRecManager < eyetrackerCore
 		% ===================================================================
 		function evt = getEvent(me)
 			
+		end
+
+		% ===================================================================
+		%> @brief
+		%>
+		% ===================================================================
+		function value = checkRecording(me)
+			if me.isConnected
+				value = true;
+			else
+				value = false;
+			end
 		end
 		
 	end%-------------------------END HIDDEN METHODS--------------------------------%
