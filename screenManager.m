@@ -835,7 +835,7 @@ classdef screenManager < optickaCore
 			catch ME
 				if me.verbose; getReport(ME); end
 			end
-			me.win=[]; 
+			me.win = [];
 			if isfield(me.screenVals,'win');me.screenVals=rmfield(me.screenVals,'win');end
 			me.isOpen = false;
 			me.isPlusPlus = false;
@@ -1812,9 +1812,9 @@ classdef screenManager < optickaCore
 		%>
 		% ===================================================================
 		function validateDisplayPlusPlus()
-			screenManager.bitsCheckOpen([],false)
-			BitsPlusImagingPipelineTest
-			BitsPlusIdentityClutTest
+			screenManager.bitsCheckOpen([],false);
+			BitsPlusImagingPipelineTest;
+			BitsPlusIdentityClutTest;
 		end
 		
 		% ===================================================================
@@ -1836,7 +1836,7 @@ classdef screenManager < optickaCore
 				Screen('Flip',wins(a));
 				a = a + 1;
 			end
-			WaitSecs(2)
+			WaitSecs(2);
 			for i = 1:length(wins)
 				Screen('Close',wins(i));
 			end
@@ -1915,10 +1915,11 @@ classdef screenManager < optickaCore
 			sv.topInDegrees = -me.yCenter / me.ppd;
 			sv.rightInDegrees = -sv.leftInDegrees;
 			sv.bottomInDegrees = -sv.topInDegrees;
+			sv.rectInDegrees = [sv.leftInDegrees sv.topInDegrees sv.rightInDegrees sv.bottomInDegrees];
 		end
 		
 		% ===================================================================
-		%> @brief Makes a 15x15 1deg dot grid for debug mode
+		%> @brief Makes a 20x20 1deg dot grid for debug mode
 		%> This is always updated on setting distance or pixelsPerCm
 		% ===================================================================
 		function makeGrid(me)

@@ -379,7 +379,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 					s.blend = true;
 					s.disableSyncTests = true;
 					s.visualDebug = true;
-					s.bitDepth = 'FloatingPoint32BitIfPossible';
+					s.bitDepth = '8bit';
 				end
 				if ~exist('forceScreen','var') || isempty(forceScreen); forceScreen = -1; end
 				if ~exist('showVBL','var') || isempty(showVBL); showVBL = false; end
@@ -944,9 +944,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		% ===================================================================
 		function distance = findDistance(x1, y1, x2, y2)
 		% findDistance(x1, y1, x2, y2)
-			dx = x2 - x1;
-			dy = y2 - y1;
-			distance=sqrt(dx^2 + dy^2);
+			distance=sqrt((x2 - x1)^2 + (y2 - y1)^2);
 		end
 		
 		% ===================================================================
@@ -981,7 +979,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		end
 
 		% ===================================================================
-		%> @brief addRuntimeProperties
+		%> @brief updateRuntimeProperties
 		%> these are transient properties that specify actions during runtime
 		% ===================================================================
 		function updateRuntimeProperties(me)
@@ -1004,8 +1002,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 		% ===================================================================
 		%> @brief setRect
 		%> setRect makes the PsychRect based on the texture and screen
-		%> values, you should call computePosition() first to get xOut and
-		%> yOut
+		%> values, you should call computePosition() first to get xFinal and
+		%> yFinal. 
 		% ===================================================================
 		function setRect(me)
 			if ~isempty(me.texture)
@@ -1034,7 +1032,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		end
 		
 		% ===================================================================
-		%> @brief compute xOut and yOut
+		%> @brief compute xFinal and yFinal
 		%>
 		% ===================================================================
 		function computePosition(me)
