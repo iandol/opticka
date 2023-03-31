@@ -1,4 +1,5 @@
 % ========================================================================
+classdef eyelinkManager < eyetrackerCore
 %> @class eyelinkManager
 %> @brief eyelinkManager wraps around the eyelink toolbox functions offering a
 %> consistent interface and methods for fixation window control
@@ -7,13 +8,14 @@
 %> 
 %> Copyright ©2014-2023 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
-classdef eyelinkManager < eyetrackerCore
 
+%-----------------CONTROLLED PROPERTIES-------------%
 	properties (SetAccess = protected, GetAccess = public)
 		%> type of eyetracker
 		type				= 'eyelink'
 	end
 	
+	%---------------PUBLIC PROPERTIES---------------%
 	properties
 		%> properties to setup and modify calibration
 		calibration			= struct( ...
@@ -28,6 +30,7 @@ classdef eyelinkManager < eyetrackerCore
 		defaults			= struct()
 	end
 	
+	%---------------HIDDEN PROPERTIES---------------%
 	properties (Hidden = true)
 		%> verbosity level
 		verbosityLevel		= 4
@@ -39,6 +42,7 @@ classdef eyelinkManager < eyetrackerCore
 		customTarget		= []
 	end
 	
+	%--------------------PROTECTED PROPERTIES----------%
 	properties (SetAccess = protected, GetAccess = ?optickaCore)
 		% value for missing data
 		MISSING_DATA		= -32768
@@ -48,17 +52,22 @@ classdef eyelinkManager < eyetrackerCore
 		previousMessage		= ''
 	end
 
+	%--------------------PROTECTED PROPERTIES----------%
 	properties (SetAccess = protected, GetAccess = protected)
 		%> allowed properties passed to object upon construction
 		allowedProperties	= {'calibration', 'defaults','verbosityLevel'}
 	end
 	
-	methods
+	%=======================================================================
+	methods %------------------PUBLIC METHODS
+	%=======================================================================
+
 		% ===================================================================
+		function me = eyelinkManager(varargin)
+		%> @fn eyelinkManager(varargin)
 		%> @brief This is the constructor for this class
 		%>
 		% ===================================================================
-		function me = eyelinkManager(varargin)
 			args = optickaCore.addDefaults(varargin,struct('name','Eyelink','sampleRate',1000));
 			me=me@eyetrackerCore(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
@@ -72,11 +81,11 @@ classdef eyelinkManager < eyetrackerCore
 		end
 		
 		% ===================================================================
+		function success = initialise(me, sM)
 		%> @brief initialise the eyelink, setting up the proper settings
 		%> and opening the EDF file if me.recordData is true
 		%>
 		% ===================================================================
-		function success = initialise(me, sM)
 			success = false;
 			if ~exist('sM','var')
 				warning('Cannot initialise without a PTB screen')
@@ -121,7 +130,6 @@ classdef eyelinkManager < eyetrackerCore
 			me.ppd_ = me.screen.ppd;
 			me.defaults.ppd = me.screen.ppd;
 			
-			structure of eyelink modifiers
 			fn = fieldnames(me.calibration);
 			for i = 1:length(fn)
 				if isfield(me.defaults,fn{i})
@@ -184,18 +192,18 @@ classdef eyelinkManager < eyetrackerCore
 		   end
 		
 		% ===================================================================
+		function updateDefaults(me)
 		%> @brief
 		%>
 		% ===================================================================
-		function updateDefaults(me)
 			EyelinkUpdateDefaults(me.defaults);
 		end
 		
 		% ===================================================================
+		function connected = checkConnection(me)
 		%> @brief check the connection with the eyelink
 		%>
 		% ===================================================================
-		function connected = checkConnection(me)
 			isc = Eyelink('IsConnected');
 			if isc == 1
 				me.isConnected = true;
@@ -209,10 +217,10 @@ classdef eyelinkManager < eyetrackerCore
 		end
 		
 		% ===================================================================
+		function trackerSetup(me)
 		%> @brief sets up the calibration and validation
 		%>
 		% ===================================================================
-		function trackerSetup(me)
 			%global aM 
 			%if isempty(aM) || ~isa(aM,'audioManager')
 			%	aM=audioManager;
@@ -280,10 +288,10 @@ classdef eyelinkManager < eyetrackerCore
 		end
 		
 		% ===================================================================
+		function startRecording(me,~)
 		%> @brief wrapper for StartRecording
 		%>
 		% ===================================================================
-		function startRecording(me,~)
 			if me.isConnected
 				Eyelink('StartRecording');
 				checkEye(me);
@@ -291,30 +299,30 @@ classdef eyelinkManager < eyetrackerCore
 		end
 		
 		% ===================================================================
+		function stopRecording(me,~)
 		%> @brief wrapper for StopRecording
 		%>
 		% ===================================================================
-		function stopRecording(me,~)
 			if me.isConnected
 				Eyelink('StopRecording');
 			end
 		end
 		
 		% ===================================================================
+		function setOffline(me)
 		%> @brief set into offline / idle mode
 		%>
 		% ===================================================================
-		function setOffline(me)
 			if me.isConnected
 				Eyelink('Command', 'set_idle_mode');
 			end
 		end
 		
 		% ===================================================================
+		function success = driftCorrection(me)
 		%> @brief wrapper for EyelinkDoDriftCorrection
 		%>
 		% ===================================================================
-		function success = driftCorrection(me)
 			oldrk = RestrictKeysForKbCheck([]); %just in case someone has restricted keys
 			success = false;
 			x=me.toPixels(me.fixation.X(1),'x'); %#ok<*PROPLC>
@@ -415,11 +423,11 @@ classdef eyelinkManager < eyetrackerCore
 		end
 		
 		% ===================================================================
+		function eyeUsed = checkEye(me)
 		%> @brief checks which eye is available, force left eye if
 		%> binocular is enabled
 		%>
 		% ===================================================================
-		function eyeUsed = checkEye(me)
 			if me.isConnected
 				me.eyeUsed = Eyelink('EyeAvailable'); % get eye that's tracked
 				if me.eyeUsed == me.defaults.BINOCULAR % if both eyes are tracked
@@ -433,11 +441,11 @@ classdef eyelinkManager < eyetrackerCore
 		end
 		
 		% ===================================================================
+		function statusMessage(me,message)
 		%> @brief displays status message on tracker, only sets it if
 		%> message is not the previous message, so loop safe.
 		%>
 		% ===================================================================
-		function statusMessage(me,message)
 			if ~strcmpi(message,me.previousMessage) && me.isConnected
 				me.previousMessage = message;
 				Eyelink('Command',['record_status_message ''' message '''']);
@@ -446,11 +454,11 @@ classdef eyelinkManager < eyetrackerCore
 		end
 		
 		% ===================================================================
+		function trackerMessage(me, message, varargin)
 		%> @brief send message to store in EDF data
 		%>
 		%>
 		% ===================================================================
-		function trackerMessage(me, message, varargin)
 			if me.isConnected
 				Eyelink('Message', message );
 				if me.verbose; fprintf('-+-+-> EDF Message: %s\n',message);end
@@ -458,11 +466,11 @@ classdef eyelinkManager < eyetrackerCore
 		end
 		
 		% ===================================================================
+		function close(me)
 		%> @brief close the eyelink and cleanup, send EDF file if recording
 		%> is enabled
 		%>
 		% ===================================================================
-		function close(me)
 			try
 				me.isConnected = false;
 				%me.isDummy = false;
@@ -508,19 +516,19 @@ classdef eyelinkManager < eyetrackerCore
 		end
 		
 		% ===================================================================
+		function trackerClearScreen(me)
 		%> @brief draw the background colour
 		%>
 		% ===================================================================
-		function trackerClearScreen(me)
 			if ~me.isConnected; return; end
 			Eyelink('Command', 'clear_screen 1');
 		end
 
 		% ===================================================================
+		function trackerDrawStatus(me, comment, ts, dontClear)
 		%> @brief draw general status
 		%>
 		% ===================================================================
-		function trackerDrawStatus(me, comment, ts, dontClear)
 			if ~me.isConnected; return; end
 			if ~exist('comment','var'); comment=''; end
 			if ~exist('ts','var'); ts = []; end
@@ -533,10 +541,10 @@ classdef eyelinkManager < eyetrackerCore
 		end
 		
 		% ===================================================================
+		function trackerDrawStimuli(me, ts, dontClear, convertToPixels)
 		%> @brief draw the stimuli boxes on the tracker display
 		%>
 		% ===================================================================
-		function trackerDrawStimuli(me, ts, dontClear, convertToPixels)
 			if ~me.isConnected; return; end
 			if exist('ts','var') && isstruct(ts) && ~isempty(fields(ts))
 				me.stimulusPositions = ts;
@@ -568,10 +576,10 @@ classdef eyelinkManager < eyetrackerCore
 		end
 		
 		% ===================================================================
+		function trackerDrawFixation(me)
 		%> @brief draw the fixation box on the tracker display
 		%>
 		% ===================================================================
-		function trackerDrawFixation(me)
 			if ~me.isConnected; return; end
 			if length(me.fixation.radius) == 1
 				rect = [0 0 me.fixation.radius*2 me.fixation.radius*2];
@@ -586,10 +594,10 @@ classdef eyelinkManager < eyetrackerCore
 		end
 		
 		% ===================================================================
+		function trackerDrawExclusion(me)
 		%> @brief draw the fixation box on the tracker display
 		%>
 		% ===================================================================
-		function trackerDrawExclusion(me)
 			if ~me.isConnected; return; end
 			if ~isempty(me.exclusionZone) && size(me.exclusionZone,2)==4
 				for i = 1:size(me.exclusionZone,1)
@@ -612,10 +620,10 @@ classdef eyelinkManager < eyetrackerCore
 		end
 		
 		% ===================================================================
+		function trackerDrawText(me,textIn)
 		%> @brief draw the fixation box on the tracker display
 		%>
 		% ===================================================================
-		function trackerDrawText(me,textIn)
 			if ~me.isConnected; return; end
 			if exist('textIn','var') && ~isempty(textIn)
 				xDraw = toPixels(me, 0, 'x');
@@ -625,6 +633,7 @@ classdef eyelinkManager < eyetrackerCore
 		end
 		
 		% ===================================================================
+		function mode = currentMode(me)
 		%> @brief check what mode the eyelink is in
 		%> ##define IN_UNKNOWN_MODE 0
 		%> #define IN_IDLE_MODE 1
@@ -637,7 +646,6 @@ classdef eyelinkManager < eyetrackerCore
 		%> #define IN_PLAYBACK_MODE 256
 		%> #define LINK_TERMINATED_RESULT -100
 		% ===================================================================
-		function mode = currentMode(me)
 			if me.isConnected
 				mode = Eyelink('CurrentMode');
 			else
@@ -646,19 +654,19 @@ classdef eyelinkManager < eyetrackerCore
 		end
 		
 		% ===================================================================
+		function syncTime(me)
 		%> @brief Sync time message for EDF file
 		%>
 		% ===================================================================
-		function syncTime(me)
 			if ~me.isConnected; return; end
 			Eyelink('Message', 'SYNCTIME');		%zero-plot time for EDFVIEW
 		end
 		
 		% ===================================================================
+		function offset = getTimeOffset(me)
 		%> @brief Get offset between tracker and display computers
 		%>
 		% ===================================================================
-		function offset = getTimeOffset(me)
 			if me.isConnected
 				offset = Eyelink('TimeOffset');
 				me.currentOffset = offset;
@@ -668,10 +676,10 @@ classdef eyelinkManager < eyetrackerCore
 		end
 		
 		% ===================================================================
+		function time = getTrackerTime(me)
 		%> @brief Get offset between tracker and display computers
 		%>
 		% ===================================================================
-		function time = getTrackerTime(me)
 			if me.isConnected
 				time = Eyelink('TrackerTime');
 				me.trackerTime = time;
@@ -681,10 +689,10 @@ classdef eyelinkManager < eyetrackerCore
 		end
 		
 		% ===================================================================
+		function runDemo(me, forcescreen)
 		%> @brief runs a demo of the eyelink, tests this class
 		%>
 		% ===================================================================
-		function runDemo(me, forcescreen)
 			PsychDefaultSetup(2);
 			stopkey				= KbName('Q');
 			nextKey				= KbName('SPACE');
@@ -918,27 +926,27 @@ classdef eyelinkManager < eyetrackerCore
 	%=======================================================================
 	
 		% ===================================================================
+		function evt = getEvent(me)
 		%> @brief TODO
 		%>
 		% ===================================================================
-		function evt = getEvent(me)
 			
 		end
 
 		% ===================================================================
+		function saveData(me,args)
 		%> @brief compatibility with tobiiManager
 		%>
 		% ===================================================================
-		function saveData(me,args)
 			
 		end
 		
 		% ===================================================================
+		function edfMessage(me, message)
 		%> @brief send message to store in EDF data, USE trackerMessage
 		%>
 		%>
 		% ===================================================================
-		function edfMessage(me, message)
 			if me.isConnected
 				Eyelink('Message', message );
 				if me.verbose; fprintf('-+-+->EDF Message: %s\n',message);end

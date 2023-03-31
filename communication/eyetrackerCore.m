@@ -1,5 +1,5 @@
 % ========================================================================
-%> @class eyeTracker CORE -- parent class for all eyetrackers
+%> @class eyetrackerCore -- parent class for all eyetrackers
 %> Class methods enable the user to test for common behavioural eye tracking
 %> tasks with single commands. For example, to initiate a task we normally
 %> place a fixation cross on the screen and ask the subject to saccade to

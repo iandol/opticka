@@ -1,6 +1,6 @@
 % ========================================================================
 classdef iRecManager < eyetrackerCore & eyetrackerSmooth
-%> @class irecManager
+%> @class iRecManager
 %> @brief Manages the iRec eyetrackers https://staff.aist.go.jp/k.matsuda/iRecHS2/index_e.html
 %>
 %> The eyetrackerCore methods enable the user to test for common behavioural
@@ -24,7 +24,6 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 %> happened. Other methods include isFixated(), testFixationTime(),
 %> testHoldFixation().
 %>
-%>
 %> Copyright ©2014-2023 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 	
@@ -33,9 +32,9 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		%> type of eyetracker
 		type			= 'iRec'
 		%> TCP interface
-		tcp
+		tcp				= []
 		%> udp interface
-		udp
+		udp				= []
 	end
 
 	%---------------PUBLIC PROPERTIES---------------%
@@ -43,9 +42,9 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		%> initis setup and calibration values
 		calibration		= struct(...
 						'ip', '127.0.0.1',...
-						'udpport', 35000,...
-						'tcpport', 35001,...
-						'stimulus','animated',... % can be animated, movie
+						'udpport', 35000,... % used to send messages
+						'tcpport', 35001,... % used to send commands
+						'stimulus','animated',... % calibration stimulus can be animated, movie
 						'movie', [],... % if movie pass a movieStimulus 
 						'calPositions', [-12 0; 0 -12; 0 0; 0 12; 12 0],...
 						'valPositions', [-12 0; 0 -12; 0 0; 0 12; 12 0],...
@@ -58,12 +57,14 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 	
 	%--------------------PROTECTED PROPERTIES----------%
 	properties (SetAccess = protected, GetAccess = protected)
-		sv					= []
-		fInc				= 8
+		% screen values taken from screenManager
+		sv				= []
+		% keyboard timer to stop repeat key presses
+		fInc			= 8
 		%> tracker time stamp
-		systemTime			= 0
-		calibData
-		calStim
+		systemTime		= 0
+		% stimulus used for calibration
+		calStim			= []
 		%> allowed properties passed to object upon construction
 		allowedProperties	= {'calibration', 'smoothing'}
 	end
