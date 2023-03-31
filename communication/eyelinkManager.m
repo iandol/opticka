@@ -23,7 +23,7 @@ classdef eyelinkManager < eyetrackerCore
 							'paceDuration',1000,...
 							'IP','', ...
 							'enableCallbacks', true,...
-							'callback','')
+							'callback','eyelinkCustomCallback')
 		%> eyetracker defaults structure
 		defaults			= struct()
 	end
@@ -50,7 +50,7 @@ classdef eyelinkManager < eyetrackerCore
 
 	properties (SetAccess = protected, GetAccess = protected)
 		%> allowed properties passed to object upon construction
-		allowedProperties	= {'calibration', 'defaults','modify'}
+		allowedProperties	= {'calibration', 'defaults','verbosityLevel'}
 	end
 	
 	methods
@@ -113,23 +113,24 @@ classdef eyelinkManager < eyetrackerCore
 				me.defaults.winRect=me.screen.winRect;
 			end
 			
-			%if ~isempty(me.calibration.callback) && exist(me.calibration.callback,'file')
-				%me.defaults.callback = me.calibration.callback;
-			%end
+			if ~isempty(me.calibration.callback) && exist(me.calibration.callback,'file')
+				me.defaults.callback = me.calibration.callback;
+			end
 
-			%me.defaults.backgroundcolour = me.screen.backgroundColour;
-			%me.ppd_ = me.screen.ppd;
-			%me.defaults.ppd = me.screen.ppd;
+			me.defaults.backgroundcolour = me.screen.backgroundColour;
+			me.ppd_ = me.screen.ppd;
+			me.defaults.ppd = me.screen.ppd;
 			
-			%structure of eyelink modifiers
-			%fn = fieldnames(me.calibration);
-			%for i = 1:length(fn)
-			%	if isfield(me.defaults,fn{i})
-			%		me.defaults.(fn{i}) = me.calibration.(fn{i});
-			%	end
-			%end
+			structure of eyelink modifiers
+			fn = fieldnames(me.calibration);
+			for i = 1:length(fn)
+				if isfield(me.defaults,fn{i})
+					me.defaults.(fn{i}) = me.calibration.(fn{i});
+				end
+			end
 			
-			%me.defaults.verbose = me.verbose;
+			me.defaults.verbose = me.verbose;
+			me.defaults.debugPrint = me.verbose;
 			
 			updateDefaults(me);
 
