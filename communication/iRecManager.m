@@ -714,7 +714,7 @@ classdef iRecManager < eyetrackerCore
 		
 		% ===================================================================
 		%> @brief smooth data in M x N where M = 2 (x&y trace) or M = 4 is x&y
-		%> for both eyes. Output is 2 x 1 x&y averages position
+		%> for both eyes. Output is 2 x 1 x + y average position
 		%>
 		% ===================================================================
 		function out = doSmoothing(me,in)
@@ -748,8 +748,6 @@ classdef iRecManager < eyetrackerCore
 			end
 		end
 		
-		
-		
 		% ===================================================================
 		%> @brief
 		%>
@@ -762,19 +760,18 @@ classdef iRecManager < eyetrackerCore
 	
 	%============================================================================
 	methods (Hidden = true) %--HIDDEN METHODS (compatibility with eyelinkManager)
-		%============================================================================
+	%============================================================================
 		
-
 		% ===================================================================
 		%> @brief wrapper for StartRecording
 		%>
 		%> @param override - to keep compatibility with the eyelinkManager
 		%> API we need to only start and stop recording using a passed
 		%> parameter, as the eyelink requires start and stop on every trial
-		%> but the does not. So by default without override==true this
+		%> but the tobii does not. So by default without override==true this
 		%> will just return.
 		% ===================================================================
-		function startRecording(me, ~)
+		function startRecording(me, override)
 			if me.isDummy; return; end
 			if me.tcp.isOpen; me.tcp.write(int8('start')); end
 			me.isRecording = true;

@@ -200,9 +200,9 @@ classdef eyetrackerCore < optickaCore
 	end
 
 	%> ALL Children must implement these methods!
-	%=======================================================================
-	methods (Abstract)%------------------ABSTRACT METHODS
-	%=======================================================================
+	%========================================================================
+	methods (Abstract) %-----------------ABSTRACT METHODS
+	%========================================================================
 		out = initialise(in)
 		out = close(in)
 		out = checkConnection(in)
@@ -217,7 +217,10 @@ classdef eyetrackerCore < optickaCore
 	end %---END ABSTRACT METHODS---%
 		
 	
-	methods
+	%========================================================================
+	methods %----------------------------PUBLIC METHODS
+	%========================================================================
+
 		% ===================================================================
 		%> @brief This is the constructor for this class
 		%>
@@ -269,7 +272,7 @@ classdef eyetrackerCore < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief reset the fixation counters ready for a new trial
+		%> @brief reset the exclusion state ready for a new trial
 		%>
 		% ===================================================================
 		function resetExclusionZones(me)
@@ -277,7 +280,7 @@ classdef eyetrackerCore < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief reset the fixation counters ready for a new trial
+		%> @brief reset the fixation time ready for a new trial
 		%>
 		% ===================================================================
 		function resetFixationTime(me)
@@ -286,7 +289,7 @@ classdef eyetrackerCore < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief reset the fixation history: xAll yAll pupilAll
+		%> @brief reset the recent fixation history: xAll yAll pupilAll
 		%>
 		% ===================================================================
 		function resetFixationHistory(me)
@@ -296,7 +299,7 @@ classdef eyetrackerCore < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief reset the fixation offset to 0
+		%> @brief reset the fixation initiation to 0
 		%>
 		% ===================================================================
 		function resetFixInit(me)
@@ -316,21 +319,20 @@ classdef eyetrackerCore < optickaCore
 		% ===================================================================
 		function success = driftOffset(me)
 		%> @fn driftOffset
-		%> @brief our own version of drift correct
+		%> @brief our own version of eyelink's drift correct
 		%>
 		% ===================================================================
 			success = false;
 			if ~me.isConnected || ~me.isDummy; return; end
 			
-			ListenChar(0); FlushEvents;
+			ListenChar(0);
 			oldrk = RestrictKeysForKbCheck([]); %just in case someone has restricted keys
 			success = false;
 			if matches(me.type,'eyelink')
 				startRecording(me);
-				statusMessage(me,'Drift Offset');
+				statusMessage(me,'Drift Offset Initiated');
 			end
 			trackerMessage(me,'Drift OFFSET');
-			trackerClearScreen(me);
 			trackerDrawStatus(me,'Drift Offset');
 			escapeKey			= KbName('ESCAPE');
 			stopkey				= KbName('Q');
@@ -764,6 +766,17 @@ classdef eyetrackerCore < optickaCore
 		end
 
 		% ===================================================================
+		%> @brief draw the sampled eye positions in xAll yAll
+		%>
+		% ===================================================================
+		function drawEyePositions(me)
+			if (me.isDummy || me.isConnected) && isa(me.screen,'screenManager') && me.screen.isOpen && ~isempty(me.xAll)
+				xy = [me.xAll;me.yAll];
+				drawDots(me.operatorScreen, xy, me.eyeSize, [0.5 0.9 0 0.2]);
+			end
+		end
+
+		% ===================================================================
 		%> @brief draw the background colour
 		%>
 		% ===================================================================
@@ -779,14 +792,16 @@ classdef eyetrackerCore < optickaCore
 		function trackerDrawStatus(me, comment, stimPos, dontClear)
 			if ~me.isConnected || ~me.operatorScreen.isOpen; return;end
 			if ~exist('comment','var'); comment=''; end
-			if ~exist('stimPos','var'); stimPos = struct; end
+			if ~exist('stimPos','var'); stimPos = []; end
 			if ~exist('dontClear','var'); dontClear = 0; end
-			if ~dontClear; trackerClearScreen(me); end
-			trackerDrawExclusion(me);
+			
+			if dontClear==0; trackerClearScreen(me); end
 			trackerDrawFixation(me);
-			trackerDrawStimuli(me, stimPos);
-			trackerDrawEyePositions(me);
+			if ~isempty(me.exclusionZone);trackerDrawExclusion(me);end
+			if ~isempty(stimPos); trackerDrawStimuli(me, stimPos); end
 			if ~isempty(comment);trackerDrawText(me, comment);end
+			if ~isempty(me.xAll);trackerDrawEyePositions(me);end
+			
 			me.flipTick = 0;
 			trackerFlip(me, dontClear, true);
 		end
