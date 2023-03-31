@@ -1,66 +1,62 @@
 % ========================================================================
-classdef iRecManager < eyetrackerCore
+classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 %> @class irecManager
-%> @brief Manages the iRec eyetrackers
+%> @brief Manages the iRec eyetrackers https://staff.aist.go.jp/k.matsuda/iRecHS2/index_e.html
 %>
-%> The core methods enable the user to test for common behavioural eye
-%> tracking tasks with single commands. For example, to initiate a task we
-%> normally place a fixation cross on the screen and ask the subject to
-%> saccade to the cross and maintain fixation for a particular duration. This
-%> is achieved using testSearchHoldFixation('yes','no'), using the properties:
+%> The eyetrackerCore methods enable the user to test for common behavioural
+%> eye tracking tasks with single commands.
+%>
+%> Multiple fixation windows can be assigned, the windows can be either
+%> circular or rectangular. In addition rectangular exclusion windows can ensure a
+%> subject doesn't saccade to particular parts of the screen. fixInit allows
+%> you to define a minimum time with which the subject must initiate a
+%> saccade away from a position (which stops a subject cheating in a trial).
+%>
+%> To initiate a task we normally place a fixation cross on the screen and
+%> ask the subject to saccade to the cross and maintain fixation for a
+%> particular duration. This is achieved using
+%> testSearchHoldFixation('yes','no'), using the properties:
 %> fixation.initTime to time how long the subject has to saccade into the
 %> window, fixation.time for how long they must maintain fixation,
-%> fixation.radius for the radius around fixation.X and fixation.Y
-%> position. The method returns the 'yes' string if the rules are matched, 
-%> and 'no' if they are not, thus enabling experiment code to simply define what 
+%> fixation.radius for the radius around fixation.X and fixation.Y position.
+%> The method returns the 'yes' string if the rules are matched, and 'no' if
+%> they are not, thus enabling experiment code to simply define what
 %> happened. Other methods include isFixated(), testFixationTime(),
-%> testHoldFixation(). 
+%> testHoldFixation().
 %>
-%> Multiple fixation windows can be assigned, and in addition exclusion
-%> windows can ensure a subject doesn't saccade to particular parts of the
-%> screen. fixInit allows you to define a minimum time with which the subject
-%> must initiate a saccade away from a position (which stops a subject cheating).
-%>
-%> @todo refactor this and eyelinkManager to inherit from a common eyelinkManager
-%> @todo handle new eye-openness signals in new SDK https://developer.tobiipro.com/commonconcepts/eyeopenness.html
 %>
 %> Copyright ©2014-2023 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 	
+%-----------------CONTROLLED PROPERTIES-------------%
 	properties (SetAccess = protected, GetAccess = public)
 		%> type of eyetracker
-		type							= 'iRec'
+		type			= 'iRec'
 		%> TCP interface
 		tcp
 		%> udp interface
 		udp
 	end
 
+	%---------------PUBLIC PROPERTIES---------------%
 	properties
-		%> setup and calibration values
+		%> initis setup and calibration values
 		calibration		= struct(...
-						'ip','127.0.0.1',...
-						'udpport',35000,...
-						'tcpport',35001,...
-						'stimulus','animated',...
-						'calPositions',[-12 0; 0 -12; 0 0; 0 12; 12 0],...
-						'valPositions',[-12 0; 0 -12; 0 0; 0 12; 12 0],...
-						'size',2,...
-						'manual', false,...
-						'movie', [])
-		%> options for online smoothing of peeked data {'median','heuristic','savitsky-golay'}
-		smoothing		= struct('nSamples',8,'method','median','window',3,...
-						'eyes','both')
-		%> we can optionally drive physical LEDs for calibration, each LED
+						'ip', '127.0.0.1',...
+						'udpport', 35000,...
+						'tcpport', 35001,...
+						'stimulus','animated',... % can be animated, movie
+						'movie', [],... % if movie pass a movieStimulus 
+						'calPositions', [-12 0; 0 -12; 0 0; 0 12; 12 0],...
+						'valPositions', [-12 0; 0 -12; 0 0; 0 12; 12 0],...
+						'size', 2,... % size of calibration cross in degrees
+						'manual', false)
+		%> WIP we can optionally drive physical LEDs for calibration, each LED
 		%> is triggered by the me.calibration.calPositions order
 		useLEDs			= false
 	end
 	
-	properties (SetAccess = protected, GetAccess = public, Dependent = true)
-		% calculates the smoothing in ms
-		smoothingTime double
-	end
-	
+	%--------------------PROTECTED PROPERTIES----------%
 	properties (SetAccess = protected, GetAccess = protected)
 		sv					= []
 		fInc				= 8
@@ -78,57 +74,57 @@ classdef iRecManager < eyetrackerCore
 	
 		% ===================================================================
 		function me = iRecManager(varargin)
-		%> @fn iRecManager
+		%> @fn iRecManager(varargin)
 		%>
 		%> iRecManager CONSTRUCTOR
 		%>
-		%> @param varargin can be passed as a structure or name,arg pairs
+		%> @param varargin can be passed as a structure, or name+arg pairs
 		%> @return instance of the class.
 		% ===================================================================
 			args = optickaCore.addDefaults(varargin,struct('name','iRec',...
 				'useOperatorScreen',true,'sampleRate',500));
 			me=me@eyetrackerCore(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
+			me.smoothing.sampleRate = me.sampleRate;
 		end
 		
 		% ===================================================================
+		function success = initialise(me,sM,sM2)
+		%> @fn initialise(me, sM, sM2)
 		%> @brief initialise 
 		%>
 		%> @param sM - screenManager object we will use
-		%> @param sM2 - a second screenManager used during calibration
+		%> @param sM2 - a second screenManager used during calibration, if
+		%> none is provided a default will be made.
 		% ===================================================================
-		function success = initialise(me,sM,sM2)
 			if ~exist('sM','var') || isempty(sM)
 				if isempty(me.screen) || ~isa(me.screen,'screenManager')
 					me.screen		= screenManager;
 				end
-			elseif ~isa(me.screen,'screenManager') || strcmpi(sM.uuid,me.screen.uuid)
+			else
 					me.screen			= sM;
 			end
 			me.ppd_					= me.screen.ppd;
-			if me.screen.isOpen
-				me.win				= me.screen.win;
-			end
+			if me.screen.isOpen; me.win	= me.screen.win; end
+
 			if me.screen.screen > 0
 				oscreen = me.screen.screen - 1;
 			else
 				oscreen = 0;
 			end
-			if me.useOperatorScreen && exist('sM2','var')
-				if isempty(me.operatorScreen) || (isa(me.operatorScreen,'screenManager') && ~strcmp(me.operatorScreen.uuid,sM2.uuid))
-					me.operatorScreen = sM2;
-				end
-				me.secondScreen		= true;
-				if ismac; me.operatorScreen.useRetina = true; end
-			elseif me.useOperatorScreen && isempty(me.operatorScreen)
+			if exist('sM2','var')
+				me.operatorScreen = sM2;
+			elseif isempty(me.operatorScreen)
 				me.operatorScreen = screenManager('pixelsPerCm',20,...
 					'disableSyncTests',true,'backgroundColour',me.screen.backgroundColour,...
 					'screen', oscreen, 'specialFlags', kPsychGUIWindow);
 				[w,h]			= Screen('WindowSize',me.operatorScreen.screen);
 				me.operatorScreen.windowed	= [0 0 round(w/1.6) round(h/1.8)];
-				me.secondScreen		= true;
-				if ismac; me.operatorScreen.useRetina = true; end
 			end
+			me.secondScreen		= true;
+			if ismac; me.operatorScreen.useRetina = true; end
+
+			me.smoothing.sampleRate = me.sampleRate;
 			
 			if me.isDummy
 				me.salutation('Initialise', 'Running iRecH2 in Dummy Mode', true);
@@ -173,10 +169,11 @@ classdef iRecManager < eyetrackerCore
 		end
 
 		% ===================================================================
-		%> @brief sets up the calibration and validation
+		function cal = trackerSetup(me,varargin)
+		%> @fn trackerSetup(me, varargin)
+		%> @brief calibration + validation
 		%>
 		% ===================================================================
-		function cal = trackerSetup(me,varargin)
 			cal = [];
 			if ~me.isConnected && ~me.isDummy
 				warning('Eyetracker not connected, cannot calibrate!');
@@ -263,13 +260,13 @@ classdef iRecManager < eyetrackerCore
 							[pressed,~,keys] = getKeys(me);
 							if pressed
 								if keys(esc)
-									cloop = false; loop = false; break;
+									cloop = false; loop = false;
 								elseif keys(cal)
-									mode = 'calibrate'; cloop = false; break;
+									mode = 'calibrate'; cloop = false;
 								elseif keys(val)
-									mode = 'validate'; cloop = false; break;
+									mode = 'validate'; cloop = false;
 								elseif keys(dr)
-									mode = 'driftoffset'; cloop = false; break;
+									mode = 'driftoffset'; cloop = false;
 								end
 							end
 						end
@@ -277,8 +274,10 @@ classdef iRecManager < eyetrackerCore
 					case 'driftoffset'
 						trackerFlip(me,0,true);
 						oldrr = RestrictKeysForKbCheck([]);
-						me.driftOffset();
+						driftOffset(me);
 						RestrictKeysForKbCheck(oldrr);
+						vdata = cell(size(vpos,1),1);
+						mode = 'menu';
 						WaitSecs(0.5);
 
 					case 'calibrate'
@@ -339,6 +338,8 @@ classdef iRecManager < eyetrackerCore
 								elseif keys(menu)
 									trackerFlip(me,0,true);
 									mode = 'menu'; cloop = false;
+								elseif keys(val)
+									mode = 'validate'; cloop = false;
 								end
 							end
 						end
@@ -432,13 +433,38 @@ classdef iRecManager < eyetrackerCore
 			WaitSecs(0.25);
 			fprintf('===>>> CALIBRATING IREC FINISHED... <<<===\n');
 		end
+
+		% ===================================================================
+		function startRecording(me, ~)
+		%> @fn startRecording(me,~)
+		%> @brief startRecording - for iRec this just starts TCP online
+		%> access, all data is saved to CSV irrespective of this
+		%>
+		% ===================================================================
+			if me.isDummy; return; end
+			if me.tcp.isOpen; me.tcp.write(int8('start')); end
+			me.isRecording = true;
+		end
 		
 		% ===================================================================
-		%> @brief get a sample from the tracker, if dummymode=true then use
+		function stopRecording(me, ~)
+		%> @fn stopRecording(me,~)
+		%> @brief stopRecording - for iRec this just stops TCP online
+		%> access, all data is saved to CSV irrespective of this
+		%>
+		% ===================================================================
+			if me.isDummy; return; end
+			if me.tcp.isOpen; me.tcp.write(int8('stop')); end
+			me.isRecording = false;
+		end
+		
+		% ===================================================================
+		function sample = getSample(me)
+		%> @fn getSample()
+		%> @brief get latest sample from the tracker, if dummymode=true then use
 		%> the mouse as an eye signal
 		%>
 		% ===================================================================
-		function sample = getSample(me)
 			sample				= me.sampleTemplate;
 			if me.isDummy %lets use a mouse to simulate the eye signal
 				if ~isempty(me.win)
@@ -496,14 +522,14 @@ classdef iRecManager < eyetrackerCore
 			me.currentSample	= sample;
 		end
 		
-		
-		
-		% ===================================================================
-		%> @brief send message to store in tracker data
-		%>
-		%>
 		% ===================================================================
 		function trackerMessage(me, message, ~)
+		%> @fn trackerMessage(me, message)
+		%> @brief Send message to store in tracker data, for iRec this can
+		%> only be a single 32bit signed integer.
+		%>
+		% ===================================================================
+		
 			if me.isConnected
 				me.udp.write(int32(message));
 				if me.verbose; fprintf('-+-+->IREC Message: %s\n',message);end
@@ -511,11 +537,11 @@ classdef iRecManager < eyetrackerCore
 		end
 
 		% ===================================================================
-		%> @brief close the tobii and cleanup
-		%> is enabled
+		function close(me)
+		%> @fn close(me)
+		%> @brief close the iRec and cleanup, call after experiment finishes
 		%>
 		% ===================================================================
-		function close(me)
 			try
 				try me.udp.write(int32(intmin('int32'))); end
 				try stopRecording(me); end
@@ -542,10 +568,12 @@ classdef iRecManager < eyetrackerCore
 		end
 		
 		% ===================================================================
-		%> @brief runs a demo of the workflow, testing this class
-		%>
-		% ===================================================================
 		function runDemo(me, forcescreen)
+		%> @fn runDemo(me, forceScreen)
+		%> @brief runs a demo of this class, useful for testing
+		%>
+		%> @param forcescreen forces to use a specific screen number
+		% ===================================================================
 			KbName('UnifyKeyNames')
 			stopkey				= KbName('q');
 			upKey				= KbName('uparrow');
@@ -641,7 +669,7 @@ classdef iRecManager < eyetrackerCore
 						[keyDown, ~, keyCode] = KbCheck(-1);
 						if keyDown
 							if keyCode(stopkey); endExp = true; break;
-							elseif keyCode(calibkey); me.doCalibration;
+							elseif keyCode(calibkey); me.trackerSetup;
 							elseif keyCode(upKey); me.smoothing.nSamples = me.smoothing.nSamples + 1; if me.smoothing.nSamples > 400; me.smoothing.nSamples=400;end
 							elseif keyCode(downKey); me.smoothing.nSamples = me.smoothing.nSamples - 1; if me.smoothing.nSamples < 1; me.smoothing.nSamples=1;end
 							elseif keyCode(leftKey); m=m+1; if m>5;m=1;end; me.smoothing.method = methodl{m};
@@ -712,85 +740,12 @@ classdef iRecManager < eyetrackerCore
 			
 		end
 		
-		% ===================================================================
-		%> @brief smooth data in M x N where M = 2 (x&y trace) or M = 4 is x&y
-		%> for both eyes. Output is 2 x 1 x + y average position
-		%>
-		% ===================================================================
-		function out = doSmoothing(me,in)
-			if size(in,2) > me.smoothing.window * 2
-				switch me.smoothing.method
-					case 'median'
-						out = movmedian(in,me.smoothing.window,2);
-						out = median(out, 2);
-					case {'heuristic','heuristic1'}
-						out = me.heuristicFilter(in,1);
-						out = median(out, 2);
-					case 'heuristic2'
-						out = me.heuristicFilter(in,2);
-						out = median(out, 2);
-					case {'sg','savitzky-golay'}
-						out = sgolayfilt(in,1,me.smoothing.window,[],2);
-						out = median(out, 2);
-					otherwise
-						out = median(in, 2);
-				end
-			elseif size(in, 2) > 1
-				out = median(in, 2);
-			else
-				out = in;
-			end
-			if size(out,1)==4 % XY for both eyes, combine together.
-				out = [mean([out(1) out(3)]); mean([out(2) out(4)])];
-			end
-			if length(out) ~= 2
-				out = [NaN NaN];
-			end
-		end
-		
-		% ===================================================================
-		%> @brief
-		%>
-		% ===================================================================
-		function value = get.smoothingTime(me)
-			value = (1000 / me.sampleRate) * me.smoothing.nSamples;
-		end
-		
 	end%-------------------------END PUBLIC METHODS--------------------------------%
 	
 	%============================================================================
 	methods (Hidden = true) %--HIDDEN METHODS (compatibility with eyelinkManager)
 	%============================================================================
 		
-		% ===================================================================
-		%> @brief wrapper for StartRecording
-		%>
-		%> @param override - to keep compatibility with the eyelinkManager
-		%> API we need to only start and stop recording using a passed
-		%> parameter, as the eyelink requires start and stop on every trial
-		%> but the tobii does not. So by default without override==true this
-		%> will just return.
-		% ===================================================================
-		function startRecording(me, override)
-			if me.isDummy; return; end
-			if me.tcp.isOpen; me.tcp.write(int8('start')); end
-			me.isRecording = true;
-		end
-		
-		% ===================================================================
-		%> @brief wrapper for StopRecording
-		%>
-		%> @param override - to keep compatibility with the eyelinkManager
-		%> API we need to only start and stop recording using a passed
-		%> parameter, as the eyelink requires start and stop on every trial
-		%> but the does not. So by default without override==true this
-		%> will just return.
-		% ===================================================================
-		function stopRecording(me, ~)
-			if me.isDummy; return; end
-			if me.tcp.isOpen; me.tcp.write(int8('stop')); end
-			me.isRecording = false;
-		end
 
 		% ===================================================================
 		%> @brief Sync time with tracker
@@ -798,16 +753,6 @@ classdef iRecManager < eyetrackerCore
 		% ===================================================================
 		function syncTrackerTime(me)
 			
-		end
-
-		% ===================================================================
-		%> @brief
-		%>
-		% ===================================================================
-		function doCalibration(me)
-			if me.isConnected
-				me.trackerSetup();
-			end
 		end
 
 		% ===================================================================
@@ -972,60 +917,6 @@ classdef iRecManager < eyetrackerCore
 				keyTok = keyTick + me.fInc;
 			else
 				pressed = false; name = []; keys = [];
-			end
-		end
-
-		% ===================================================================
-		%> @brief Stampe 1993 heuristic filter as used by Eyelink
-		%>
-		%> @param indata - input data
-		%> @param level - 1 = filter level 1, 2 = filter level 1+2
-		%> @param steps - we step every # steps along the in data, changes the filter characteristics, 3 is the default (filter 2 is #+1)
-		%> @out out - smoothed data
-		% ===================================================================
-		function out = heuristicFilter(~,indata,level,steps)
-			if ~exist('level','var'); level = 1; end %filter level 1 [std] or 2 [extra]
-			if ~exist('steps','var'); steps = 3; end %step along the data every n steps
-			out=zeros(size(indata));
-			for k = 1:2 % x (row1) and y (row2) eye samples
-				in = indata(k,:);
-				%filter 1 from Stampe 1993, see Fig. 2a
-				if level > 0
-					for i = 1:steps:length(in)-2
-						x = in(i); x1 = in(i+1); x2 = in(i+2); %#ok<*PROPLC>
-						if ((x2 > x1) && (x1 < x)) || ((x2 < x1) && (x1 > x))
-							if abs(x1-x) < abs(x2-x1) %i is closest
-								x1 = x;
-							else
-								x1 = x2;
-							end
-						end
-						x2 = x1;
-						x1 = x;
-						in(i)=x; in(i+1) = x1; in(i+2) = x2;
-					end
-				end
-				%filter2 from Stampe 1993, see Fig. 2b
-				if level > 1
-					for i = 1:steps+1:length(in)-3
-						x = in(i); x1 = in(i+1); x2 = in(i+2); x3 = in(i+3);
-						if x2 == x1 && (x == x1 || x2 == x3)
-							x3 = x2;
-							x2 = x1;
-							x1 = x;
-						else %x2 and x1 are the same, find closest of x2 or x
-							if abs(x1 - x3) < abs(x1 - x)
-								x2 = x3;
-								x1 = x3;
-							else
-								x2 = x;
-								x1 = x;
-							end
-						end
-						in(i)=x; in(i+1) = x1; in(i+2) = x2; in(i+3) = x3;
-					end
-				end
-				out(k,:) = in;
 			end
 		end
 		

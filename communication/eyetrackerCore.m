@@ -87,7 +87,7 @@ classdef eyetrackerCore < optickaCore
 		%> but handled by the eyelinkManager.
 		offset				= struct('X', 0,'Y', 0)
 		%> tracker update speed (Hz)
-		sampleRate			= 300
+		sampleRate			= 500
 		%> start eyetracker in dummy mode?
 		isDummy				= false
 		%> do we record and retrieve eyetracker EDF file?

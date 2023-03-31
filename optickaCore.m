@@ -1,6 +1,7 @@
 % ========================================================================
+classdef optickaCore < handle
 %> @class optickaCore
-%> @brief optickaCore base class inherited by many other opticka classes.
+%> @brief optickaCore base class inherited by other opticka classes.
 %>
 %> @section intro Introduction
 %>
@@ -9,10 +10,9 @@
 %> clone the object, parse arguments safely on construction and add default
 %> properties such as datestamp, UUID and name/comment management.
 %>
-%> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2023 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
-classdef optickaCore < handle
-	
+
 	%--------------------PUBLIC PROPERTIES----------%
 	properties
 		%> object name
