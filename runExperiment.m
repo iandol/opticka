@@ -51,7 +51,7 @@ classdef runExperiment < optickaCore
 		%> filename for a stateMachine state info file
 		stateInfoFile char			= ''
 		%> user functions file that can be passed to the state machine
-		userFunctionsFile			= ''
+		userFunctionsFile char		= ''
 		%> what strobe device to use
 		%> device = display++ | datapixx | labjackt | labjack | arduino
 		%> optional port = not needed for most of the interfaces
@@ -101,7 +101,7 @@ classdef runExperiment < optickaCore
 		%> which stimulus is selected?
 		thisStim					= []
 		%> tS is the runtime settings structure, saved here as a backup
-		tS
+		tS struct
 		%> what mode to run the Display++ digital I/O in? Plexon requires
 		%> the use of a strobe trigger line, whereas most other equipment
 		%> just uses simple threshold reading
@@ -119,9 +119,9 @@ classdef runExperiment < optickaCore
 		%> opticka version, passed on first use by opticka
 		optickaVersion char
 		%> do we record times for every function run by state machine?
-		logStateTimers				= false
+		logStateTimers logical		= false
 		%> do we ask for comments for runMOC
-		comments					= true
+		comments logical			= true
 		%> our old stimulus structure used to be a simple cell, now we use metaStimulus
 		stimulus
 	end
@@ -137,7 +137,13 @@ classdef runExperiment < optickaCore
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
-		%> stateMachine
+		%> log of timings for MOC tasks
+		runLog
+		%> log of timings for state machine tasks
+		taskLog
+		%> behavioural responses log
+		behaviouralRecord
+		%> stateMachine object
 		stateMachine
 		%> eyetracker manager object
 		eyeTracker 
@@ -163,12 +169,6 @@ classdef runExperiment < optickaCore
 		ptb
 		%> copy of screen settings from screenManager
 		screenVals struct
-		%> log of timings for MOC tasks
-		runLog
-		%> log of timings for state machine tasks
-		taskLog
-		%> behavioural responses log
-		behaviouralRecord
 		%> previous info populated during load of a saved object
 		previousInfo struct			= struct()
 	end
