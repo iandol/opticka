@@ -870,7 +870,6 @@ classdef runExperiment < optickaCore
 				end
 				
 				%===========================Start amplifier
-				% 
 				if strcmp(me.control.device,'intan')
 					try
 						if ~dC.isOpen; open(dC); end
@@ -975,7 +974,7 @@ classdef runExperiment < optickaCore
 					%------run the stateMachine one step forward
 					update(sM);
 					if me.doFlip && s.visualDebug; s.drawGrid; me.infoTextScreen; end
-					if me.doFlip; s.finishDrawing(); end % potential optimisation, but note stateMachine may run non-drawing tasks in update()
+					if me.doFlip; s.finishDrawing(); end % potential optimisation...
 					
 					%------check eye position manually. Also potentially log
 					% this retrieved value, but REMEMBER eyetracker will save
@@ -990,7 +989,7 @@ classdef runExperiment < optickaCore
 					%------Check keyboard for commands (remember we can turn
 					% this off using either tS.keyExclusionPattern
 					% [per-state toggle] or tS.checkKeysDuringStimulus).
-					if ~matches(sM.currentName,tS.keyExclusionPattern)
+					if isempty(tS.keyExclusionPattern) || ~matches(sM.currentName,tS.keyExclusionPattern)
 						checkKeys(me);
 					end
 					
@@ -1027,7 +1026,6 @@ classdef runExperiment < optickaCore
 						%----- LabJack: I/O needs to send strobe immediately after screen flip -----%
 						if me.sendStrobe && matches(me.strobe.device,'labjackt')
 							sendStrobe(io); me.sendStrobe = false;
-							%Eyelink('Message', sprintf('MSG:SYNCSTROBE value:%i @ vbl:%20.40g / totalTicks: %i', io.sendValue, tL.lastvbl, tS.totalTicks));
 						end
 
 						%----- Send Eyetracker messages -----%
@@ -1053,13 +1051,16 @@ classdef runExperiment < optickaCore
 						WaitSecs(s.screenVals.ifi);
 					end  % END me.doFlip
 
-					%----- For second display, do we flip? -----%
+					%----- For operator display, do we flip? -----%
 					if me.doTrackerFlip == 1 
-						trackerFlip(eT)
+						trackerFlip(eT);
 					elseif me.doTrackerFlip == 2 
-						trackerFlip(eT, 1)
+						trackerFlip(eT, 1);
 					elseif me.doTrackerFlip == 3 
-						trackerFlip(eT, 1, true)
+						trackerFlip(eT, 1, true);
+					elseif me.doTrackerFlip == 4
+						trackerFlip(eT, 1, true);
+						me.doTrackerFlip = 1;
 					end
 					
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

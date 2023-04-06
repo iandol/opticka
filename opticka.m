@@ -1291,6 +1291,7 @@ classdef opticka < optickaCore
 				me.ui.OKuseDataPixx.Checked			= 'off';
 				me.ui.OKuseDisplayPP.Checked		= 'off';
 				me.ui.OKuseEyelink.Checked			= 'off';
+				me.ui.OKuseIRec2HS.Checked			= 'off';
 				me.ui.OKuseTobii.Checked			= 'off';
 				me.ui.OKuseLabJackReward.Checked	= 'off';
 				me.ui.OKuseArduino.Checked			= 'off';
@@ -1322,11 +1323,9 @@ classdef opticka < optickaCore
 				if optickaCore.hasKey(tmp.r,'useTobii') && me.r.useTobii == true
 					me.r.useTobii = tmp.r.useTobii;
 					me.ui.OKuseTobii.Checked = 'on';
-					me.ui.OKuseEyelink.Checked = 'off';
 				elseif optickaCore.hasKey(tmp.r,'useEyeLink') && me.r.useEyeLink == true
 					me.r.useEyeLink = tmp.r.useEyeLink;
-					me.ui.OKuseEyelink.Checked = 'on'; 
-					me.ui.OKuseTobii.Checked = 'off';
+					me.ui.OKuseEyelink.Checked = 'on';
 				end
 
 				% New properties
@@ -1359,6 +1358,8 @@ classdef opticka < optickaCore
 							me.ui.OKuseTobii.Checked = 'on';
 						case 'eyelink'
 							me.ui.OKuseEyelink.Checked = 'on';
+						case 'irec'
+							me.ui.OKuseIRec2HS.Checked = 'on';
 					end
 				end
 			end % runExperiment

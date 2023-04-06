@@ -59,24 +59,18 @@ tS.fixY						= 0;		% X position in degrees
 tS.firstFixInit				= 3;		% time to search and enter fixation window
 tS.firstFixTime				= [0.4 0.8];% time to maintain fixation within window
 tS.firstFixRadius			= 2;		% radius in degrees
-tS.strict					= false;	% do we forbid eye to enter-exit-reenter fixation window?
-tS.exclusionZone			= [];		% do we add an exclusion zone where subject cannot saccade to...
-me.lastXPosition			= tS.fixX;
-me.lastYPosition			= tS.fixY;
+tS.strict					= false;	% do we forbid [true] eye to enter-exit-reenter fixation window?
 
 %=========================================================================
 %-------------------------------Eyetracker setup--------------------------
 % NOTE: the opticka GUI can set eyetracker options too; me.eyetracker.esettings
 % and me.eyetracker.tsettings contain the GUI settings. We test if they are
 % empty or not and set general values based on that...
-
 eT.name				= tS.name;
 if me.eyetracker.dummy == true;	eT.isDummy = true; end %===use dummy or real eyetracker? 
 if tS.saveData;		eT.recordData = true; end %===save ET data?
 %Initialise the eyeTracker object with X, Y, FixInitTime, FixTime, Radius, StrictFix
 updateFixationValues(eT, tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
-%Ensure we don't start with any exclusion zones set up
-resetAll(eT);
 
 %==================================================================
 %----WHICH states assigned as correct or break for online plot?----
@@ -153,21 +147,21 @@ stims.fixationChoice = 1;
 
 %--------------------enter pause state
 pauseEntryFcn = {
-@()hide(stims);
+	@()hide(stims);
 	@()drawBackground(s); %blank the subject display
 	@()drawTextNow(s,'PAUSED, press [p] to resume...');
 	@()disp('PAUSED, press [p] to resume...');
 	@()trackerDrawStatus(eT,'PAUSED, press [p] to resume', stims.stimulusPositions);
 	@()trackerMessage(eT,'TRIAL_RESULT -100'); %store message in EDF
-	@()resetAll(eT); % reset all fixation markers to initial state
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()stopRecording(eT, true); %stop recording eye position data, true=both eyelink & tobii
-	@()needFlip(me, false); % no need to flip the PTB screen
+	@()needFlip(me, false, 0); % no need to flip the PTB screen
 	@()needEyeSample(me, false); % no need to check eye position
-};
+	};
 
 %--------------------pause exit
 pauseExitFcn = {
+	@()fprintf('\n===>>>EXIT PAUSE STATE\n')
 	%start recording eye position data again, note true is required here as
 	%the eyelink is started and stopped on each trial, but the tobii runs
 	%continuously, so @()startRecording(eT) only affects eyelink but
@@ -180,20 +174,21 @@ pauseExitFcn = {
 %========================================================
 %prestim entry
 blEntryFcn = {
-	@()needFlip(me, true, true); % start PTB screen flips
+	@()needFlip(me, true, 1); % start PTB screen flips
 	@()needEyeSample(me, true); % make sure we start measuring eye position
-	@()resetAll(eT);
 	@()startRecording(eT);
-	% the fixation cross is moving around, so we need to find its current
-	% position and update the fixation window
-	@()updateFixationTarget(me, true, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius);
 	@()update(stims);
+	@()updateFixationTarget(me, true, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius);
+	@()resetAll(eT);
 	@()trackerDrawStatus(eT,'Fixation Only Trial');
 	@()logRun(me,'PRESTIM'); %fprintf current trial info
 };
 
 %prestimulus blank
-blFcn = { };
+blFcn = { 
+	@()trackerDrawFixation(eT);
+	@()trackerDrawEyePosition(eT); % draw the fixation position on the eyetracker
+};
 
 %exiting prestimulus state
 blExitFcn = {
@@ -208,9 +203,8 @@ stimEntryFcn = {
 %what to run when we are showing stimuli
 stimFcn = {
 	@()draw(stims);
-	@()trackerDrawFixation(eT); % this shows the eye position on tobii
-	@()trackerDrawEyePosition(eT); % this shows the eye position on tobii
 	@()animate(stims); % animate stimuli for subsequent draw
+	@()trackerDrawEyePosition(eT); % this shows the eye position on tobii
 };
 
 %test we are maintaining fixation
@@ -220,28 +214,32 @@ maintainFixFcn = {
 
 %as we exit stim presentation state
 stimExitFcn = {
-	@()hide(stims);
+	
 };
 
 %if the subject is correct (small reward)
 correctEntryFcn = {
 	@()timedTTL(rM, tS.rewardPin, tS.rewardTime); % send a reward TTL
 	@()beep(aM,2000,0.1,0.1); % correct beep
+	@()trackerDrawStatus(eT,'CORRECT! :-)', stims.stimulusPositions);
+	@()needFlipTracker(me, 0); %for operator screen stop flip
 	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()needEyeSample(me,false);
+	@()hide(stims);
 	@()logRun(me,'CORRECT'); %fprintf current trial info
 };
 
 %correct stimulus
 correctFcn = { 
-	@()drawBackground(s);
-	@()trackerDrawStatus(eT,'CORRECT! :-)', [], 0);
+	
 };
 
 %break entry
 breakEntryFcn = {
 	@()beep(aM,400,0.5,1);
+	@()trackerDrawStatus(eT,'BREAK! :-(', stims.stimulusPositions);
+	@()needFlipTracker(me, 0); %for tobii stop flip
 	@()logRun(me,'BREAK'); %fprintf current trial info
 };
 
@@ -249,6 +247,7 @@ breakEntryFcn = {
 inEntryFcn = {
 	@()beep(aM,400,0.5,1);
 	@()trackerDrawStatus(eT,'INCORRECT! :-(', stims.stimulusPositions, 0);
+	@()needFlipTracker(me, 0); %for tobii stop flip
 	@()logRun(me,'INCORRECT'); %fprintf current trial info
 };
 
@@ -263,6 +262,7 @@ breakFcn = {
 ExitFcn = {
 	@()updatePlot(bR, me); %update our behavioural plot
 	@()needEyeSample(me,false); 
+	@()needFlip(me, false, 0);
 	@()randomise(stims); %uses stimulusTable to give new values to variables (not saved in data, used for training)
 	@()getStimulusPositions(stims); % make a struct the eT can use for drawing stim positions
 	@()plot(bR, 1); % actually do our behaviour record drawing

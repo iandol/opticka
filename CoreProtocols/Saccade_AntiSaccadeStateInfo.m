@@ -118,13 +118,13 @@ tS.strict					= true;
 % do we add an exclusion zone where subject cannot saccade to...
 tS.exclusionZone			= [];
 % time to show both fix and stim
-tS.fixAndStimTime			= 0.5;
+tS.fixAndStimTime			= 0;
 % in this task the subject must saccade to the pro-saccade target location.
 % These settings define the rules to "accept" the target fixation as
 % correct
 tS.targetFixInit			= 3; % time to find the target
 tS.targetFixTime			= 1; % to to maintain fixation on target 
-tS.targetRadius				= 4; %radius to fix within.
+tS.targetRadius				= 5; %radius to fix within.
 % this task will establish an exclusion zone against the anti-saccade
 % target for the pro and anti-saccade task. We can change the size of the
 % exclusion zone, here set to 5° around the X and Y position of the
@@ -145,44 +145,6 @@ me.lastYExclusion			= [];
 eT.name				= tS.name;
 if me.eyetracker.dummy;	eT.isDummy = true; end %===use dummy or real eyetracker? 
 if tS.saveData;		eT.recordData = true; end %===save Eyetracker data?					
-switch me.eyetracker.device
-	case 'eyelink'
-	warning('Note: this protocol file is optimised for the Tobii eyetracker...')
-	if isempty(me.eyetracker.esettings)		%==check if GUI settings are empty
-		eT.sampleRate				= 250;		%==sampling rate
-		eT.calibrationStyle			= 'HV5';	%==calibration style
-		eT.calibrationProportion	= [0.4 0.4]; %==the proportion of the screen occupied by the calibration stimuli
-		%-----------------------
-		% remote calibration enables manual control and selection of each
-		% fixation this is useful for a baby or monkey who has not been trained
-		% for fixation use 1-9 to show each dot, space to select fix as valid,
-		% INS key ON EYELINK KEYBOARD to accept calibration!
-		eT.remoteCalibration				= false; 
-		%-----------------------
-		eT.modify.calibrationtargetcolour	= [1 1 1]; %==calibration target colour
-		eT.modify.calibrationtargetsize		= 2;		%==size of calibration target as percentage of screen
-		eT.modify.calibrationtargetwidth	= 0.15;	%==width of calibration target's border as percentage of screen
-		eT.modify.waitformodereadytime		= 500;
-		eT.modify.devicenumber				= -1;		%==-1 = use any attachedkeyboard
-		eT.modify.targetbeep				= 1;		%==beep during calibration
-	end
-case 'tobii'
-	if isempty(me.eyetracker.tsettings)	%==check if GUI settings are empty
-		eT.model					= 'Tobii Pro Spectrum';
-		eT.sampleRate				= 300;
-		eT.trackingMode				= 'human';
-		eT.calibrationStimulus		= 'animated';
-		eT.autoPace					= true;
-		%-----------------------
-		% remote calibration enables manual control and selection of each
-		% fixation this is useful for a baby or monkey who has not been trained
-		% for fixation
-		eT.manualCalibration		= false;
-		%-----------------------
-		eT.calPositions				= [ .2 .5; .5 .5; .8 .5];
-		eT.valPositions				= [ .5 .5 ];
-	end
-end
 %Initialise the eyeTracker object with X, Y, FixInitTime, FixTime, Radius, StrictFix
 updateFixationValues(eT, tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
 %Ensure we don't start with any exclusion zones set up
@@ -270,7 +232,7 @@ stims.exclusionChoice		= 2;
 %========================================================
 
 %--------------------pause entry
-pauseEntry = { 
+pauseEntryFn = { 
 	@()hide(stims);
 	@()drawBackground(s); %blank the subject display
 	@()drawTextNow(s,'PAUSED, press [p] to resume...');
@@ -280,55 +242,55 @@ pauseEntry = {
 	@()resetAll(eT); % reset all fixation markers to initial state
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()stopRecording(eT, true); %stop recording eye position data, true=both eyelink & tobii
-	@()needFlip(me, false); % no need to flip the PTB screen
+	@()needFlip(me, false, 0); % no need to flip the PTB screen
 	@()needEyeSample(me,false); % no need to check eye position
 };
 
 %--------------------pause exit
-pauseExit = {
+pauseExitFn = {
 	@()startRecording(eT, true); %start recording eye position data again
 }; 
 
 %====================================================PRE-FIXATION
-pfEntry = { 
+pfEntryFn = { 
 	@()startRecording(eT);
 	@()needEyeSample(me,true); % make sure we start measuring eye position
-	@()needFlip(me, true);
-	@()needFlipTracker(me, 2); % eyetracker operator screen flip
+	@()needFlip(me, true, 1);
 	@()getStimulusPositions(stims,true); %make a struct the eT can use for drawing stim positions
 	@()updateFixationValues(eT,tS.fixX,tS.fixY,tS.firstFixInit,tS.firstFixTime,tS.firstFixRadius,tS.strict); %reset fixation window
-	@()resetFixationHistory(eT); % reset the recent eye position history
-	@()resetExclusionZones(eT); % reset the exclusion zones on eyetracker
+	@()resetAll(eT); %reset all fixation counters and history ready for a new trial
 	@()trackerMessage(eT,sprintf('TRIALID %i',getTaskIndex(me))); %Eyelink start trial marker
 	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
 	% draw general state to the eyetracker display (eyelink or tobii)
 	@()trackerDrawStatus(eT,'Pre-fixation...', stims.stimulusPositions);
+	@()logRun(me,'PREFIX'); % log current trial info to command window AND timeLogger
 };
 
-pfWithin = {
-	@()trackerDrawEyePosition(eT); % for tobii
+pfWithinFn = {
+	@()trackerDrawFixation(eT);
+	@()trackerDrawEyePosition(eT);
 };
 
-pfExit = {
+pfExitFn = {
 	
 };
 
 %====================================================FIXATION
 %--------------------fixate entry
-fixEntry = { 
+fixEntryFn = { 
 	% show stimulus 3 = fixation cross
 	@()show(stims, 3);
 	@()logRun(me,'INITFIX'); %fprintf current trial info to command window
 };
 
 %--------------------fix within
-fixWithin = {
+fixWithinFn = {
 	@()draw(stims); %draw stimulus
 	@()trackerDrawEyePosition(eT); % for tobii
 };
 
 %--------------------test we are fixated for a certain length of time
-initFix = { 
+initFixFn = { 
 	% this command performs the logic to search and then maintain fixation
 	% inside the fixation window. The eyetracker parameters are defined above.
 	% If the subject does initiate and then maintain fixation, then 'fixstim'
@@ -341,12 +303,12 @@ initFix = {
 
 %--------------------exit fixation phase
 if strcmpi(tS.type,'saccade')
-	fixExit = { 
+	fixExitFn = { 
 		@()show(stims, [1 3]); 
 		@()edit(stims,1,'alphaOut',tS.targetAlpha1);
 	};
 else
-	fixExit = { 
+	fixExitFn = { 
 		@()show(stims, [1 2 3]); 
 		@()edit(stims,1,'alphaOut',tS.targetAlpha1);
 		@()edit(stims,2,'alphaOut',tS.antitargetAlpha1)
@@ -354,24 +316,24 @@ else
 end
 
 %====================================================FIX + TARGET STIMULUS
-fsEntry = {
-	@()updateFixationValues(eT,[],[],[],tS.fixAndStimTime); %reset the fixation timer for 0.5 secs
+fsEntryFn = {
+	@()updateFixationValues(eT,[],[],[],tS.fixAndStimTime); %reset the fixation timer 
 	@()logRun(me,'FIX+STIM'); %fprintf current trial info to command window
 };
 
-fsWithin = {
+fsWithinFn = {
 	@()draw(stims); %draw stimulus
 	@()trackerDrawEyePosition(eT);
 };
 
 % test we are fixated for a certain length of time, testHoldFixation assumes
 % we are already fixated which we are coming from the fixate state...
-fsFix = { 
+fsFixFn = { 
 	@()testHoldFixation(eT,'stimulus','incorrect')
 };
 
 % exit fixation phase
-fsExit = { 
+fsExitFn = { 
 	% use our saccade target stimulus for next fix X and Y, see
 	% stims.fixationChoice above
 	@()updateFixationTarget(me, tS.useTask, tS.targetFixInit, tS.targetFixTime, tS.targetRadius, tS.strict);
@@ -382,32 +344,31 @@ fsExit = {
 	@()hide(stims, 3);
 };
 if strcmpi(tS.type,'saccade')
-	fsExit = [ fsExit; { @()edit(stims,1,'alphaOut',tS.targetAlpha2) } ];
+	fsExitFn = [ fsExitFn; { @()edit(stims,1,'alphaOut',tS.targetAlpha2) } ];
 else
-	fsExit = [ fsExit; { @()edit(stims,1,'alphaOut',tS.targetAlpha2); @()edit(stims,2,'alphaOut',tS.antitargetAlpha2) } ];
+	fsExitFn = [ fsExitFn; { @()edit(stims,1,'alphaOut',tS.targetAlpha2); @()edit(stims,2,'alphaOut',tS.antitargetAlpha2) } ];
 end
 
 %====================================================TARGET STIMULUS ALONE
 % what to run when we enter the stim presentation state
-stimEntry = { 
+stimEntryFn = { 
 	@()doStrobe(me,true);
-	@()logRun(me,'STIMULUS'); %fprintf current trial info to command window
 };
 
 % what to run when we are showing stimuli
-stimWithin = { 
+stimWithinFn = { 
 	@()draw(stims);
 	@()animate(stims); % animate stimuli for subsequent draw
 	@()trackerDrawEyePosition(eT);
 };
 
 % test we are finding the new target (stimulus 1, the saccade target)
-targetFix = {
+targetFixFn = {
 	@()testSearchHoldFixation(eT,'correct','breakfix'); % tests finding and maintaining fixation
 };
 
 %as we exit stim presentation state
-stimExit = { 
+stimExitFn = { 
 	@()setStrobeValue(me,255); 
 	@()doStrobe(me,true);
 };
@@ -415,7 +376,7 @@ stimExit = {
 %====================================================DECISION
 
 %if the subject is correct (small reward)
-correctEntry = { 
+correctEntryFn = { 
 	@()timedTTL(rM, tS.rewardPin, tS.rewardTime); % send a reward TTL
 	@()beep(aM, 2000, 0.1, 0.1); % correct beep
 	@()trackerMessage(eT,'END_RT'); %send END_RT message to tracker
@@ -430,12 +391,12 @@ correctEntry = {
 };
 
 %correct stimulus
-correctWithin = { 
+correctWithinFn = { 
 	
 };
 
 %when we exit the correct state
-correctExit = {
+correctExitFn = {
 	@()updatePlot(bR, me); %update our behavioural plot, must come before updateTask() / updateVariables()
 	@()updateTask(me,tS.CORRECT); %make sure our taskSequence is moved to the next trial
 	@()updateVariables(me); %randomise our stimuli, and set strobe value too
@@ -447,7 +408,7 @@ correctExit = {
 
 %========================================================INCORRECT
 %--------------------incorrect entry
-incEntry = {
+incEntryFn = {
 	@()beep(aM,400,0.5,1);
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.INCORRECT));
@@ -461,12 +422,12 @@ incEntry = {
 };
 
 %our incorrect stimulus
-incWithin = {
+incWithinFn = {
 	
 };
 
 %incorrect / break exit
-incExit = {
+incExitFn = {
 	@()updatePlot(bR, me); %update our behavioural plot, must come before updateTask() / updateVariables()
 	@()updateVariables(me); %randomise our stimuli, set strobe value too
 	@()update(stims); %update our stimuli ready for display
@@ -475,13 +436,13 @@ incExit = {
 	@()plot(bR, 1); % actually do our drawing
 };
 if tS.includeErrors
-	incExit = [ {@()updateTask(me,tS.BREAKFIX)}; incExit ]; % make sure our taskSequence is moved to the next trial
+	incExitFn = [ {@()updateTask(me,tS.BREAKFIX)}; incExitFn ]; % make sure our taskSequence is moved to the next trial
 else
-	incExit = [ {@()resetRun(task)}; incExit ]; % we randomise the run within this block to make it harder to guess next trial
+	incExitFn = [ {@()resetRun(task)}; incExitFn ]; % we randomise the run within this block to make it harder to guess next trial
 end
 
 %break entry
-breakEntry = {
+breakEntryFn = {
 	@()beep(aM, 400, 0.5, 1);
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.BREAKFIX));
@@ -492,7 +453,7 @@ breakEntry = {
 	@()logRun(me,'BREAKFIX'); %fprintf current trial info
 };
 
-exclEntry = {
+exclEntryFn = {
 	@()beep(aM, 400, 0.5, 1);
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,['TRIAL_RESULT ' str2double(tS.BREAKFIX)]);
@@ -520,7 +481,7 @@ driftFn = {
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()driftCorrection(eT) % enter drift correct (only eyelink)
 };
-offsetFcn = {
+offsetFn = {
 	@()drawBackground(s); %blank the display
 	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
@@ -547,20 +508,21 @@ gridFn = { @()drawGrid(s) };
 stateInfoTmp = {
 'name'		'next'		'time'	'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn';
 %---------------------------------------------------------------------------------------------
-'pause'		'prefix'	inf		pauseEntry		{}				{}				pauseExit;
-'prefix'	'fixate'	0.5		pfEntry			pfWithin		{}				pfExit;
-'fixate'	'incorrect'	5		fixEntry		fixWithin		initFix			fixExit;
-'fixstim'	'incorrect'	5		fsEntry			fsWithin		fsFix			fsExit
-'stimulus'	'incorrect'	5		stimEntry		stimWithin		targetFix		stimExit;
-'correct'	'prefix'	0.25	correctEntry	correctWithin	{}				correctExit;
-'incorrect'	'timeout'	0.25	incEntry		incWithin		{}				incExit;
-'breakfix'	'timeout'	0.25	breakEntry		incWithin		{}				incExit;
-'exclusion'	'timeout'	0.25	exclEntry		incWithin		{}				incExit;
+'pause'		'prefix'	inf		pauseEntryFn	{}				{}				pauseExitFn;
+%---------------------------------------------------------------------------------------------
+'prefix'	'fixate'	0.5		pfEntryFn		pfWithinFn		{}				pfExitFn;
+'fixate'	'incorrect'	5		fixEntryFn		fixWithinFn		initFixFn		fixExitFn;
+'fixstim'	'incorrect'	5		fsEntryFn		fsWithinFn		fsFixFn			fsExitFn
+'stimulus'	'incorrect'	5		stimEntryFn		stimWithinFn	targetFixFn		stimExitFn;
+'correct'	'prefix'	0.25	correctEntryFn	correctWithinFn	{}				correctExitFn;
+'incorrect'	'timeout'	0.25	incEntryFn		incWithinFn		{}				incExitFn;
+'breakfix'	'timeout'	0.25	breakEntryFn	incWithinFn		{}				incExitFn;
+'exclusion'	'timeout'	0.25	exclEntryFn		incWithinFn		{}				incExitFn;
 'timeout'	'prefix'	tS.tOut	{}				{}				{}				{};
 %---------------------------------------------------------------------------------------------
 'calibrate'	'pause'		0.5		calibrateFn		{}				{}				{};
 'drift'		'pause'		0.5		driftFn			{}				{}					{};
-'offset'	'pause'		0.5		offsetFcn		{}				{}					{};
+'offset'	'pause'		0.5		offsetFn		{}				{}					{};
 %---------------------------------------------------------------------------------------------
 'override'	'pause'		0.5		overrideFn		{}				{}				{};
 'flash'		'pause'		0.5		flashFn			{}				{}				{};
@@ -573,3 +535,4 @@ stateInfoTmp = {
 disp('================>> Building state info file <<================')
 disp(stateInfoTmp)
 disp('=================>> Loaded state info file <<=================')
+clearvars -regexp '.+Fn'

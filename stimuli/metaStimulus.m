@@ -351,6 +351,7 @@ classdef metaStimulus < optickaCore
 				
 				end
 			end
+			update(me);
 			me.salutation(logs);
 		end
 		

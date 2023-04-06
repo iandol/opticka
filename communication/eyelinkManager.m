@@ -540,10 +540,10 @@ classdef eyelinkManager < eyetrackerCore
 			if ~exist('ts','var'); ts = []; end
 			if ~exist('dontClear','var'); dontClear = false; end
 			if dontClear == false; trackerClearScreen(me); end
-			trackerDrawExclusion(me);
 			trackerDrawFixation(me);
+			if ~isempty(me.exclusionZone);trackerDrawExclusion(me);end
 			if ~isempty(ts);trackerDrawStimuli(me, ts);end
-			if ~isempty(comment);trackerDrawText(me, comment);end
+			if ~isempty(comment);statusMessage(me, comment);end
 		end
 		
 		% ===================================================================

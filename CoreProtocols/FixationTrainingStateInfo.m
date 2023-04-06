@@ -22,11 +22,11 @@
 
 %==================================================================
 %----------------------General Settings----------------------------
-tS.useTask					= true;	%==use taskSequence (randomises stimulus variables)
+tS.useTask					= true;		%==use taskSequence (randomises stimulus variables)
 tS.rewardTime				= 250;		%==TTL time in milliseconds
 tS.rewardPin				= 2;		%==Output pin, 2 by default with Arduino.
-tS.checkKeysDuringStimulus  = true;		%==allow keyboard control within stimulus state? Slight drop in performance…
-tS.recordEyePosition		= true;		%==record local copy of eye position, **in addition** to the eyetracker?
+tS.keyExclusionPattern		= [];		%==which states to skip keyboard checking
+tS.recordEyePosition		= false;	%==record local copy of eye position, **in addition** to the eyetracker?
 tS.askForComments			= false;	%==UI requestor asks for comments before/after run
 tS.saveData					= true;		%==save behavioural and eye movement data?
 tS.name						= 'fixation training'; %==name of this protocol
@@ -44,7 +44,7 @@ tS.INCORRECT				= -5;		%==the code to send eyetracker for incorrect trials
 %sM.verbose					= true;		%==print out stateMachine info for debugging
 %stims.verbose				= true;		%==print out metaStimulus info for debugging
 %io.verbose					= true;		%==print out io commands for debugging
-eT.verbose					= true;		%==print out eyelink commands for debugging
+%eT.verbose					= true;		%==print out eyelink commands for debugging
 %rM.verbose					= true;		%==print out reward commands for debugging
 %task.verbose				= true;		%==print out task info for debugging
 
@@ -63,7 +63,7 @@ tS.fixY						= 0;
 tS.firstFixInit				= 3;
 % time to maintain fixation within window, can be single value or a range
 % to randomise between
-tS.firstFixTime				= 0.5;
+tS.firstFixTime				= 0.25;
 % circular fixation window radius in degrees
 tS.firstFixRadius			= 5;
 % do we forbid eye to enter-exit-reenter fixation window?
@@ -86,46 +86,9 @@ me.lastYExclusion			= [];
 % defaults based on that...
 eT.name 					= tS.name;
 if tS.saveData == true;	eT.recordData = true; end %===save ET data?					
-switch me.eyetracker.device
-	case 'eyelink'
-	if isempty(me.eyetracker.esettings)
-		eT.sampleRate 				= 250; % sampling rate
-		eT.calibrationStyle 		= 'HV5'; % calibration style
-		eT.calibrationProportion	= [0.4 0.4]; %the proportion of the screen occupied by the calibration stimuli
-		%-----------------------
-		% remote calibration enables manual control and selection of each fixation
-		% this is useful for a baby or monkey who has not been trained for fixation
-		% use 1-9 to show each dot, space to select fix as valid, INS key ON EYELINK KEYBOARD to
-		% accept calibration!
-		eT.remoteCalibration		= false; 
-		%-----------------------
-		eT.modify.calibrationtargetcolour = [1 1 1]; % calibration target colour
-		eT.modify.calibrationtargetsize = 2; % size of calibration target as percentage of screen
-		eT.modify.calibrationtargetwidth = 0.15; % width of calibration target's border as percentage of screen
-		eT.modify.waitformodereadytime	= 500;
-		eT.modify.devicenumber 			= -1; % -1 = use any attachedkeyboard
-		eT.modify.targetbeep 			= 1; % beep during calibration
-	end
-case 'tobii'
-	if isempty(me.eyetracker.tsettings)
-		eT.model					= 'Tobii Pro Spectrum';
-		eT.sampleRate				= 300;
-		eT.trackingMode				= 'human';
-		eT.calibrationStimulus		= 'animated';
-		eT.autoPace					= true;
-		%-----------------------
-		% remote calibration enables manual control and selection of each fixation
-		% this is useful for a baby or monkey who has not been trained for fixation
-		eT.manualCalibration		= false;
-		%-----------------------
-		eT.calPositions				= [ .2 .5; .5 .5; .8 .5 ];
-		eT.valPositions				= [ .5 .5 ];
-	end
-end
 %Initialise the eyeTracker object with X, Y, FixInitTime, FixTime, Radius, StrictFix
 eT.updateFixationValues(tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
-%Ensure we don't start with any exclusion zones set up
-eT.resetExclusionZones();
+eT.resetAll();
 
 %==================================================================
 %----WHICH states assigned as correct or break for online plot?----
@@ -144,7 +107,7 @@ bR.breakStateName				= ["breakfix","incorrect"];
 % variable sets and triggers to send to recording equipment etc...
 %
 % n								= 1;
-% in(n).name						= 'xyPosition';
+% in(n).name					= 'xyPosition';
 % in(n).values					= [6 6; 6 -6; -6 6; -6 -6; -6 0; 6 0];
 % in(n).stimuli					= 1;
 % in(n).offset					= [];
@@ -162,17 +125,17 @@ n								= 1;
 stims.controlTable(n).variable	= 'size';
 stims.controlTable(n).delta		= 0.5;
 stims.controlTable(n).stimuli	= [1 2];
-stims.controlTable(n).limits	= [0.5 20];
+stims.controlTable(n).limits	= [0.5 10];
 n								= n + 1;
 stims.controlTable(n).variable	= 'xPosition';
-stims.controlTable(n).delta		= 1;
+stims.controlTable(n).delta		= 3;
 stims.controlTable(n).stimuli	= [1 2];
-stims.controlTable(n).limits	= [-15 15];
+stims.controlTable(n).limits	= [-16 16];
 n								= n + 1;
 stims.controlTable(n).variable	= 'yPosition';
-stims.controlTable(n).delta		= 1;
+stims.controlTable(n).delta		= 3;
 stims.controlTable(n).stimuli	= [1 2];
-stims.controlTable(n).limits	= [-15 15];
+stims.controlTable(n).limits	= [-16 16];
 
 %==================================================================
 %this allows us to enable subsets from our stimulus list
@@ -219,63 +182,57 @@ pauseEntryFn = {
 	@()drawBackground(s); %blank the subject display
 	@()drawTextNow(s,'PAUSED, press [p] to resume...');
 	@()disp('PAUSED, press [p] to resume...');
-	@()trackerClearScreen(eT); % blank the eyelink screen
-	@()trackerDrawText(eT,'PAUSED, press [P] to resume...');
-	@()trackerFlip(eT); %for tobii show info if operator screen enabled
+	@()trackerDrawStatus(eT,'PAUSED, press [P] to resume...');
 	@()trackerMessage(eT,'TRIAL_RESULT -100'); %store message in EDF
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()stopRecording(eT, true); %stop recording eye position data
-	@()needFlip(me, false); % no need to flip the PTB screen
+	@()needFlip(me, false, 0); % no need to flip the PTB screen
 	@()needEyeSample(me,false); % no need to check eye position
 };
 
 %--------------------exit pause state
 pauseExitFn = {
 	@()fprintf('\n===>>>EXIT PAUSE STATE\n')
-	@()needFlip(me, true); % start PTB screen flips
+	@()needFlip(me, true, 1); % start PTB screen flips
 	@()startRecording(eT, true); % start eyetracker recording for this trial
 };
 
 %---------------------prestim entry
 psEntryFn = {
-	@()resetFixation(eT); %reset the fixation counters ready for a new trial
-	@()resetFixationHistory(eT); %reset the fixation counters ready for a new trial
-	@()startRecording(eT); % start eyelink recording for this trial
-	@()trackerMessage(eT,'V_RT MESSAGE END_FIX END_RT'); % Eyelink commands
-	@()trackerMessage(eT,sprintf('TRIALID %i',getTaskIndex(me))); %Eyelink start trial marker
+	@()needFlip(me, true, 1); % start PTB screen flips, and tracker screen flip
+	@()needEyeSample(me, true); % make sure we start measuring eye position
+	@()startRecording(eT); % start eyelink recording for this trial (ignored by tobii/irec as they always records)
+	@()updateFixationTarget(me, true);
+	@()resetAll(eT); %reset all fixation counters and history ready for a new trial
+	@()getStimulusPositions(stims,true); %make a struct the eT can use for drawing stim positions
+	@()trackerMessage(eT,'V_RT MESSAGE END_FIX END_RT'); % Eyelink-specific commands, ignored by other eyetrackers
+	@()trackerMessage(eT,sprintf('TRIALID %i',getTaskIndex(me))); %Eyetracker start trial marker
 	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
-	@()statusMessage(eT,'Pre-fixation...'); %status text on the eyelink
-	@()trackerClearScreen(eT); % blank the eyelink screen
-	@()trackerDrawFixation(eT); % draw the fixation window
-	@()trackerFlip(eT,1); %for tobii show info if operator screen enabled
-	@()needEyeSample(me,true); % make sure we start measuring eye position
-	@()logRun(me,'PREFIX'); %fprintf current trial info to command window
+	@()trackerClearScreen(eT); %draw status to eyetracker display
+	@()logRun(me,'PREFIX'); % log current trial info to command window AND timeLogger
 };
 
 %---------------------prestimulus blank
 prestimulusFn = {
-	@()drawBackground(s); % only draw a background colour to the PTB screen
-	@()trackerDrawEyePosition(eT); % draw the fixation window
-	@()trackerFlip(eT,1); %for tobii show info if operator screen enabled
+	@()trackerDrawFixation(eT);
+	@()trackerDrawEyePosition(eT); % draw the fixation point
 };
 
 %---------------------exiting prestimulus state
 psExitFn = {
 	@()show(stims); % make sure we prepare to show the stimulus set
-	@()statusMessage(eT,'Stimulus...'); % show eyetracker status message
 };
 
 %---------------------stimulus entry state
 stimEntryFn = {
-	@()logRun(me,'SHOW Fixation Spot'); % log start to command window
+	
 };
 
 %---------------------stimulus within state
 stimFn = {
 	@()draw(stims); % draw the stimuli
 	@()animate(stims); % animate stimuli for subsequent draw
-	@()trackerDrawEyePosition(eT); % draw the fixation window
-	@()trackerFlip(eT,1); %for tobii show info if operator screen enabled
+	@()trackerDrawEyePosition(eT); % draw the fixation point
 };
 
 %-----------------------test we are maintaining fixation
@@ -299,13 +256,11 @@ stimExitFn = {
 %-----------------------if the subject is correct (small reward)
 correctEntryFn = {
 	@()timedTTL(rM, tS.rewardPin, tS.rewardTime); % send a reward TTL
-	@()beep(aM,2000); % correct beep
+	@()beep(aM,2000,0.1,0.1); % correct beep
 	@()trackerMessage(eT,['TRIAL_RESULT ' num2str(tS.CORRECT)]); % tell EDF trial was a correct
-	@()statusMessage(eT,'Correct! :-)'); %show it on the eyelink screen
-	@()trackerClearScreen(eT);
-	@()trackerDrawText(eT,'Correct! :-)');
-	@()trackerDrawEyePositions(eT); % draw the fixation window
-	@()trackerFlip(eT); %for tobii show info if operator screen enabled
+	@()statusMessage(eT,'CORRECT! :-)'); %show it on the eyelink screen
+	@()trackerDrawStatus(eT,'CORRECT! :-)');
+	@()needFlipTracker(me, 0); %for operator screen stop flip
 	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()needEyeSample(me,false); % no need to collect eye data until we start the next trial
@@ -314,8 +269,7 @@ correctEntryFn = {
 
 %-----------------------correct stimulus
 correctFn = {
-	@()drawBackground(s); % draw background colour
-	@()drawText(s,'Correct! :-)'); % draw text
+	
 };
 
 %----------------------when we exit the correct state
@@ -324,38 +278,38 @@ correctExitFn = {
 	@()updateVariables(me,[],[],true); ... %update the task variables
 	@()update(stims); ... %update our stimuli ready for display
 	@()checkTaskEnded(me);
-	@()drawnow; % ensure we update the figure
+	@()plot(bR, 1); % actually do our behaviour record drawing
 };
 
 %----------------------break entry
 breakEntryFn = {
-	@()beep(aM,200,0.5,1);
-	@()trackerClearScreen(eT);
-	@()trackerDrawText(eT,'Broke fix! :-(');
-	@()trackerDrawEyePositions(eT); % draw the fixation window
-	@()trackerFlip(eT); %for tobii show info if operator screen enabled
+	@()beep(aM,400,0.5,1);
 	@()trackerMessage(eT,['TRIAL_RESULT ' num2str(tS.BREAKFIX)]); %trial incorrect message
+	@()trackerDrawStatus(eT,'BROKE FIX! :-(');
+	@()needFlipTracker(me, 0); %for operator screen stop flip
 	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()needEyeSample(me,false);
+	@()hide(stims);
 	@()logRun(me,'BREAKFIX'); %fprintf current trial info
 };
 
 %----------------------inc entry
 incEntryFn = { 
-	@()beep(aM,200,0.5,1);
+	@()beep(aM,400,0.5,1);
 	@()trackerMessage(eT,['TRIAL_RESULT ' num2str(tS.INCORRECT)]); %trial incorrect message
-	@()trackerDrawStatus(eT,'Incorrect! :-(', stims.stimulusPositions);
+	@()trackerDrawStatus(eT,'INCORRECT! :-(', stims.stimulusPositions);
+	@()needFlipTracker(me, 0); %for operator screen stop flip
 	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()needEyeSample(me,false);
+	@()hide(stims);
 	@()logRun(me,'INCORRECT'); %fprintf current trial info
 };
 
 %----------------------our incorrect stimulus
 breakFn =  {
-	@()drawBackground(s);
-	@()drawText(s,'Wrong');
+	
 };
 
 %----------------------break exit
@@ -364,7 +318,7 @@ breakExitFn = {
 	@()updateVariables(me,[],[],false); ... %update the task variables
 	@()update(stims); %update our stimuli ready for display
 	@()checkTaskEnded(me);
-	@()drawnow;
+	@()plot(bR, 1); % actually do our behaviour record drawing
 };
 
 %--------------------calibration function
@@ -389,12 +343,6 @@ driftFn = {
 	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()driftCorrection(eT) % enter drift correct (only eyelink)
-};
-offsetFcn = {
-	@()drawBackground(s); %blank the display
-	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
-	@()setOffline(eT); % set eyelink offline [tobii ignores this]
-	@()driftOffset(eT) % enter drift offset (works on tobii & eyelink)
 };
 
 %--------------------screenflash
@@ -430,16 +378,18 @@ stateInfoTmp = {
 'name'		'next'		'time' 'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn';
 %---------------------------------------------------------------------------------------------
 'pause'		'blank'		inf		pauseEntryFn	{}				{}				pauseExitFn;
+%---------------------------------------------------------------------------------------------
 'blank'		'stimulus'	0.5		psEntryFn		prestimulusFn	{}				psExitFn;
 'stimulus'	'incorrect'	5		stimEntryFn		stimFn			maintainFixFn	stimExitFn;
 'incorrect'	'timeout'	2		incEntryFn		breakFn			{}				breakExitFn;
 'breakfix'	'timeout'	2		breakEntryFn	breakFn			{}				breakExitFn;
 'correct'	'blank'		0.5		correctEntryFn	correctFn		{}				correctExitFn;
 'timeout'	'blank'		tS.tOut	{}				{}				{}				{};
+%---------------------------------------------------------------------------------------------
 'calibrate' 'pause'		0.5		calibrateFn		{}				{}				{};
 'offset'	'pause'		0.5		offsetFn		{}				{}				{};
 'drift'		'pause'		0.5		driftFn			{}				{}					{};
-'offset'	'pause'		0.5		offsetFcn		{}				{}					{};
+%---------------------------------------------------------------------------------------------
 'flash'		'pause'		0.5		{}				flashFn			{}				{};
 'override'	'pause'		0.5		{}				overrideFn		{}				{};
 'showgrid'	'pause'		1		{}				gridFn			{}				{};
