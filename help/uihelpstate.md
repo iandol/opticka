@@ -2,18 +2,25 @@
 toc: true
 ---
 
-# StateMachine Info Files
+# State Machine Info Files
 
-Any experiment can be thought of as a series of states (delay, fixating, stimulation, reward) and transitions between them. State Machines are a widely used control system for these types of scenarios. The important definition is: 
+Any experiment can be thought of as a series of states (delay, fixate, stimulus, reward, timeout e.t.c.) and transitions between these states. State Machines are a widely used control system for these types of scenarios. The important definition of a state machine is: 
 
-1. a state machine can be in exactly one of a finite number of states at any given time. 
-1. The state machine can change from one state to another in response to some inputs; the change from one state to another is called a **transition**. A MATLAB function controls the transition, where it can return a state name that forces a transition to that state.
-1. MATLAB functions can run when we **enter**, are **within**, or **exit** a state.
-1. An FSM is defined by a *table* of its states, its initial state, and the inputs that trigger each transition
+1. The state machine must be in exactly one of a finite number of states at any given time. States usually run for a defined amount of time.
+1. The state machine can also change from one state to another in response to some input; the change from one state to another is called a **transition** (`transitionFcn`). A function controls the transition, returning a different state name that forces a transition to this new state.
+1. Functions can run when we **enter** (`enterFcn`), are **within** (`withinFcn`), or **exit** (`exitFcn`) a state.
 
-Opticka uses a state-machine specified by `StateInfo.m` files that controls *which* functions run when we **enter**, are **within**, when we **exit**, and **transition** experiment states. See below for the core functions that can run at any point; you can write your own functions and store data in a [userFunctions.m](uihelpfunctions.html) file.
+Opticka defines all of this in a `StateInfo.m` file that specifies function arrays and then assigns them to a state list. The Opticka GUI visualises the state table and shows each function array. 
 
-For example the `DefaultStateInfo.m` file defines several experimental states (*prefix*, *fixate*, *stimulus*, *incorrect*, *breakfix*, *correct*, *timeout*) and how the task switches between them (either with a timer or transitioned using an eyetracker to check fixation):
+For example this cell array identifies two functions which draw and animate our `stims` stimulus object:
+
+```matlab
+{ @()draw(stims); @()animate(stims); }
+```
+
+See details below for the core functions that can run during the state machine traversal. You can additionally write your own functions and store them in a [userFunctions.m](uihelpfunctions.html) class file.
+
+For example the `DefaultStateInfo.m` file defines several experiment states (*prefix*, *fixate*, *stimulus*, *incorrect*, *breakfix*, *correct*, *timeout*) and how the task switches between them (either with a timer or transitioned using an eyetracker):
 
 ```{.smaller}
                                                        ┌───────────────────┐
@@ -47,7 +54,7 @@ For example the `DefaultStateInfo.m` file defines several experimental states (*
                                                        └───────────────────┘
 ```
 
-State info files, being plain `.m` files, should be edited in the MATLAB editor (the GUI has an edit button that opens the file in the editor for you). You can use the class methods for the screen manager (`s`), state machine (`sM`), task sequence (`task`), stimulus list (`stims`), eyetracker (`eT`), digital I/O (`io`) etc. You can also add custom functions to a [userFunctions](uihelpfunctions.html) file. The most important built-in methods are shown below…
+State info files, being plain `.m` files, should be edited in the MATLAB editor (the GUI has an edit button that opens the file in the editor for you).  
 
 ----------------------------------------------
 

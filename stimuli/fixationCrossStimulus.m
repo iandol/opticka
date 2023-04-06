@@ -39,7 +39,7 @@ classdef fixationCrossStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Hidden = true)
-		typeList = {'simple','flash'}
+		typeList = {'simple','pulse','flash'}
 	end
 	
 	properties (Dependent = true, SetAccess = private, GetAccess = private)

@@ -31,15 +31,15 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 	properties (SetAccess = protected, GetAccess = public)
 		%> type of eyetracker
 		type			= 'iRec'
-		%> TCP interface
-		tcp				= []
-		%> udp interface
-		udp				= []
+		%> TCP interface objec (dataConnection class)
+		tcp				= dataConnection
+		%> udp interface object (dataConnection class)
+		udp				= dataConnection
 	end
 
 	%---------------PUBLIC PROPERTIES---------------%
 	properties
-		%> initis setup and calibration values
+		%> initial setup and calibration values
 		calibration		= struct(...
 						'ip', '127.0.0.1',...
 						'udpport', 35000,... % used to send messages
@@ -258,7 +258,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 								end
 							end
 
-							[pressed,~,keys] = getKeys(me);
+							[pressed,~,keys] = optickaCore.getKeys();
 							if pressed
 								if keys(esc)
 									cloop = false; loop = false;
@@ -310,7 +310,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 								end
 							end
 
-							[pressed,name,keys] = getKeys(me);
+							[pressed,name,keys] = optickaCore.getKeys();
 							if pressed
 								fprintf('key: %s\n',name);
 								if length(name)==2 % assume a number
@@ -379,7 +379,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 								end
 							end
 
-							[pressed,name,keys] = getKeys(me);
+							[pressed,name,keys] = optickaCore.getKeys();
 							if pressed
 								fprintf('key: %s\n',name);
 								if length(name)==2 % assume a number
@@ -529,11 +529,30 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		%> @brief Send message to store in tracker data, for iRec this can
 		%> only be a single 32bit signed integer.
 		%>
+		%> As we do send strings to eyelink / tobii, we process string messages
+		%> TRIALID and TRIALRESULT we extract the integer value, END_FIX becomes
+		%> -1500 and END_RT becomes -1501
 		% ===================================================================
-		
 			if me.isConnected
+				if isnumeric(message)
+					me.udp.write(int32(message));
+				elseif ischar(message)
+					if contains(message,'TRIAL_RESULT') || contains(message,'TRIALID')
+						message = strsplit(message, ' ');
+						if length(message)==2
+							message = str2double(message{2});
+						else 
+							message = [];
+						end
+					elseif contains(message,'END_FIX')
+						message = -1500;
+					elseif contains(message,'END_RT')
+						message = -1501;
+					end
+				end
+				if isempty(message); return; end
 				me.udp.write(int32(message));
-				if me.verbose; fprintf('-+-+->IREC Message: %s\n',message);end
+				if me.verbose; fprintf('-+-+->IREC Message: %i\n', message);end
 			end
 		end
 
@@ -667,7 +686,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 						vbl(end+1) = Screen('Flip', s.win, vbl(end) + s.screenVals.halfifi);
 						if me.useOperatorScreen; trackerFlip(me,0,true); end
 
-						[keyDown, ~, keyCode] = KbCheck(-1);
+						[keyDown, ~, keyCode] = optickaCore.getKeys();
 						if keyDown
 							if keyCode(stopkey); endExp = true; break;
 							elseif keyCode(calibkey); me.trackerSetup;
@@ -905,21 +924,6 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 	methods (Access = private) %------------------PRIVATE METHODS
 	%=======================================================================
 		
-		% ===================================================================
-		%> @brief Get Key
-		% ===================================================================
-		function [pressed, name, keys] = getKeys(me)
-			persistent keyTick keyTok
-			if isempty(keyTick); keyTick = 0; keyTok = 0; end
-			keyTick = keyTick + 1;
-			if keyTick > keyTok
-				[pressed, ~, keys] = KbCheck();
-				name = KbName(keys);
-				keyTok = keyTick + me.fInc;
-			else
-				pressed = false; name = []; keys = [];
-			end
-		end
 		
 	end %------------------END PRIVATE METHODS
 end

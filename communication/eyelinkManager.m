@@ -2,14 +2,13 @@
 classdef eyelinkManager < eyetrackerCore
 %> @class eyelinkManager
 %> @brief eyelinkManager wraps around the eyelink toolbox functions offering a
-%> consistent interface and methods for fixation window control
-%>
-%> @todo refactor this and tobiiManager to inherit from a common eyelinkManager
+%> consistent interface and methods for fixation window control. See
+%> eyetrackerCore for the common methods that handle fixation windows etc.
 %> 
 %> Copyright ©2014-2023 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 
-%-----------------CONTROLLED PROPERTIES-------------%
+	%-----------------CONTROLLED PROPERTIES-------------%
 	properties (SetAccess = protected, GetAccess = public)
 		%> type of eyetracker
 		type				= 'eyelink'
@@ -42,11 +41,11 @@ classdef eyelinkManager < eyetrackerCore
 		customTarget		= []
 	end
 	
-	%--------------------PROTECTED PROPERTIES----------%
+	%---------------SEMI-PROTECTED PROPERTIES----------%
 	properties (SetAccess = protected, GetAccess = ?optickaCore)
 		% value for missing data
 		MISSING_DATA		= -32768
-		tempFile char		= 'eyeData'
+		tempFile			= 'eyeData'
 		error				= []
 		%> previous message sent to eyelink
 		previousMessage		= ''
@@ -82,9 +81,12 @@ classdef eyelinkManager < eyetrackerCore
 		
 		% ===================================================================
 		function success = initialise(me, sM)
-		%> @brief initialise the eyelink, setting up the proper settings
-		%> and opening the EDF file if me.recordData is true
+		%> @fn initialise
+		%> @brief initialise the eyelink with the screenManager object, setting
+		%> up the calibration options and opening the EDF file if me.recordData
+		%> is true.
 		%>
+		%> @param sM screenManager to link to
 		% ===================================================================
 			success = false;
 			if ~exist('sM','var')
@@ -193,7 +195,9 @@ classdef eyelinkManager < eyetrackerCore
 		
 		% ===================================================================
 		function updateDefaults(me)
-		%> @brief
+		%> @fn updateDefaults
+		%> @brief whenever you change me.defaults you should run this to update
+		%> the eyelink toolbox
 		%>
 		% ===================================================================
 			EyelinkUpdateDefaults(me.defaults);
@@ -201,7 +205,8 @@ classdef eyelinkManager < eyetrackerCore
 		
 		% ===================================================================
 		function connected = checkConnection(me)
-		%> @brief check the connection with the eyelink
+		%> @fn checkConnection
+		%> @brief check the connection with the eyelink is valid
 		%>
 		% ===================================================================
 			isc = Eyelink('IsConnected');
@@ -218,7 +223,8 @@ classdef eyelinkManager < eyetrackerCore
 		
 		% ===================================================================
 		function trackerSetup(me)
-		%> @brief sets up the calibration and validation
+		%> @fn trackerSetup
+		%> @brief runs the calibration and validation
 		%>
 		% ===================================================================
 			%global aM 
@@ -817,7 +823,7 @@ classdef eyelinkManager < eyetrackerCore
 						vbl=Screen('Flip',s.win, vbl + s.screenVals.halfisi);
 						
 						% check the keyboard
-						[keyDown, ~, keyCode] = KbCheck(-1);
+						[keyDown, ~, keyCode] = optickaCore.getKeys();
 						if keyDown
 							if keyCode(stopkey); trialLoop = 0; blockLoop = 0; break;	end
 							if keyCode(nextKey); trialLoop = 0; correct = true; break; end
@@ -870,7 +876,7 @@ classdef eyelinkManager < eyetrackerCore
 					plot(ax,xst,yst);drawnow;
 					while GetSecs <= vbl + 1
 						% check the keyboard
-						[~, ~, keyCode] = KbCheck(-1);
+						[~, ~, keyCode] = optickaCore.getKeys();
 						if keyCode(calibkey); trackerSetup(me); break; end
 						if keyCode(driftkey); driftCorrection(me); break; end
 						if keyCode(offsetkey); driftOffset(me); break; end

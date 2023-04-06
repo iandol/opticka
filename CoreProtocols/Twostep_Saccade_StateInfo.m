@@ -88,7 +88,8 @@ me.lastYExclusion			= [];
 %==================================================================
 %---------------------------Eyetracker setup-----------------------
 % note: opticka UI sets some defaults, but these will override the UI
-if strcmp(me.eyetracker.device, 'eyelink')
+switch me.eyetracker.device
+	case 'eyelink'
 	warning('Note this protocol is optimised for the Tobii eyetracker, beware...')
 	eT.name 					= tS.name;
 	eT.sampleRate 				= 250; % sampling rate
@@ -108,7 +109,7 @@ if strcmp(me.eyetracker.device, 'eyelink')
 	eT.modify.waitformodereadytime	= 500;
 	eT.modify.devicenumber 			= -1; % -1 = use any attachedkeyboard
 	eT.modify.targetbeep 			= 1; % beep during calibration
-elseif strcmp(me.eyetracker.device, 'tobii')
+case 'tobii'
 	eT.name 					= tS.name;
 	%eT.model					= 'Tobii Pro Spectrum';
 	%eT.sampleRate				= 300;

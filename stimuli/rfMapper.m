@@ -432,42 +432,33 @@ classdef rfMapper < barStimulus
 		%> @return
 		% ===================================================================
 		function checkKeys(me,mX,mY)
-			persistent keyTicks
-			fInc = 6;
-			if isempty(keyTicks);keyTicks = 0; end
-			keyTicks = keyTicks + 1;
-			[keyIsDown, ~, keyCode] = KbCheck;
+			[keyIsDown, me.rchar, ~] = optickaCore.getKeys();
 			if keyIsDown == 1
-				me.rchar = KbName(keyCode);
 				if iscell(me.rchar);me.rchar=me.rchar{1};end
 				switch me.rchar
-					case 'q' %quit
-						if keyTicks > fInc
-							keyTicks = 0;
-							me.stopTask = true;
-						end
+					case 'q' %quit	
+
+						me.stopTask = true;
+						
 					case 'a'
-						if keyTicks > fInc
-							keyTicks = 0;
-							me.showGrid = ~me.showGrid;
-						end
+						
+						me.showGrid = ~me.showGrid;
+						
 					case 's'
-						if keyTicks > fInc
-							keyTicks = 0;
-							me.showText = ~me.showText;
-						end
+						
+						me.showText = ~me.showText;
+						
 					case 'c'
-						if keyTicks > fInc
-							keyTicks = 0;
-							me.cursor = ~me.cursor;
-							if me.cursor
-								fprintf('Show cursor\n');
-								ShowCursor('Hand',me.sM.win);
-							else
-								fprintf('Hide cursor\n');
-								HideCursor(me.sM.win);
-							end
+						
+						me.cursor = ~me.cursor;
+						if me.cursor
+							fprintf('Show cursor\n');
+							ShowCursor('Hand',me.sM.win);
+						else
+							fprintf('Hide cursor\n');
+							HideCursor(me.sM.win);
 						end
+						
 					case 'l' %increase length
 							switch me.stimulus
 								case 'bar'
@@ -523,25 +514,22 @@ classdef rfMapper < barStimulus
 						end
 						
 					case 's'
-						if keyTicks > fInc
-							keyTicks = 0;
-							switch me.stimulus
+
+						switch me.stimulus
 							case 'bar'
 								%me.stimulus = 'grating';
 							case 'grating'
 								%me.stimulus = 'bar';
-							end
 						end
 						
 					case 'x'
-						if keyTicks > fInc
-							keyTicks = 0;
-							if me.isVisible == true
-								me.hide;
-							else
-								me.show;
-							end
+
+						if me.isVisible == true
+							me.hide;
+						else
+							me.show;
 						end
+						
 					case {'LeftArrow','left'}
 						me.angleOut = me.angleOut - 3;
 					case {'RightArrow','right'}
@@ -553,129 +541,114 @@ classdef rfMapper < barStimulus
 						me.alphaOut = me.alphaOut - 0.05;
 						if me.alpha < 0;me.alpha = 0;end
 					case ',<'
-						if keyTicks > fInc
-							keyTicks = 0;
-							if max(me.backgroundColour)>0.1
-								me.backgroundColour = me.backgroundColour .* 0.9;
-								me.backgroundColour(me.backgroundColour<0) = 0;
-							end
+						
+						if max(me.backgroundColour)>0.1
+							me.backgroundColour = me.backgroundColour .* 0.9;
+							me.backgroundColour(me.backgroundColour<0) = 0;
 						end
+						
 					case '.>'
-						if keyTicks > fInc
-							keyTicks = 0;
-							me.backgroundColour = me.backgroundColour .* 1.1;
-							me.backgroundColour(me.backgroundColour>1) = 1;
-						end
+						
+						me.backgroundColour = me.backgroundColour .* 1.1;
+						me.backgroundColour(me.backgroundColour>1) = 1;
+						
 					case 'r'
-						if keyTicks > fInc
-							keyTicks = 0;
-							me.backgroundColour(1) = me.backgroundColour(1) + 0.01;
-							if me.backgroundColour(1) > 1
-								me.backgroundColour(1) = 0;
-							end
+						
+						me.backgroundColour(1) = me.backgroundColour(1) + 0.01;
+						if me.backgroundColour(1) > 1
+							me.backgroundColour(1) = 0;
 						end
 
 					case 'g'
-						if keyTicks > fInc
-							keyTicks = 0;
-							me.backgroundColour(2) = me.backgroundColour(2) + 0.01;
-							if me.backgroundColour(2) > 1
-								me.backgroundColour(2) = 0;
-							end
+						
+						me.backgroundColour(2) = me.backgroundColour(2) + 0.01;
+						if me.backgroundColour(2) > 1
+							me.backgroundColour(2) = 0;
 						end
+						
 					case 'b'
-						if keyTicks > fInc
-							keyTicks = 0;
-							me.backgroundColour(3) = me.backgroundColour(3) + 0.01;
-							if me.backgroundColour(3) > 1
-								me.backgroundColour(3) = 0;
-							end
+						
+						me.backgroundColour(3) = me.backgroundColour(3) + 0.01;
+						if me.backgroundColour(3) > 1
+							me.backgroundColour(3) = 0;
 						end
+						
 					case 'e'
-						if keyTicks > fInc
-							keyTicks = 0;
-							me.backgroundColour(1) = me.backgroundColour(1) - 0.01;
-							if me.backgroundColour(1) < 0.01
-								me.backgroundColour(1) = 1;
-							end
+						
+						me.backgroundColour(1) = me.backgroundColour(1) - 0.01;
+						if me.backgroundColour(1) < 0.01
+							me.backgroundColour(1) = 1;
 						end
+						
 					case 'f'
-						if keyTicks > fInc
-							keyTicks = 0;
-							me.backgroundColour(2) = me.backgroundColour(2) - 0.01;
-							if me.backgroundColour(2) < 0.01
-								me.backgroundColour(2) = 1;
-							end
+						
+						me.backgroundColour(2) = me.backgroundColour(2) - 0.01;
+						if me.backgroundColour(2) < 0.01
+							me.backgroundColour(2) = 1;
 						end
+						
 					case 'v'
-						if keyTicks > fInc
-							me.backgroundColour(3) = me.backgroundColour(3) - 0.01;
-							if me.backgroundColour(3) < 0.01
-								me.backgroundColour(3) = 1;
-							end
-							keyTicks = 0;
+						
+						if me.backgroundColour(3) < 0.01
+							me.backgroundColour(3) = 1;
 						end
 					case '1!'
-						if keyTicks > fInc
-							me.colourIndex = me.colourIndex+1;
-							me.setColours;
-							me.regenerate;
-							keyTicks = 0;
-						end
+						
+						me.colourIndex = me.colourIndex+1;
+						me.setColours;
+						me.regenerate;
+
 					case '2@'
-						if keyTicks > fInc
-							me.bgcolourIndex = me.bgcolourIndex+1;
-							me.setColours;
-							WaitSecs(0.05);
-							me.regenerate;
-							keyTicks = 0;
-						end
+						
+						me.bgcolourIndex = me.bgcolourIndex+1;
+						me.setColours;
+						WaitSecs(0.05);
+						me.regenerate;
+						
 					case '3#'
-						if keyTicks > fInc
-							ol = me.scaleOut;
-							switch me.stimulus
-								case 'bar'
-									me.scaleOut = me.scaleOut - 1;
-									if me.scaleOut < 1;me.scaleOut = 1;end
-									nw = me.scaleOut;
-							end
-							if ol~=nw;me.regenerate;end
-							keyTicks = 0;
+						
+						ol = me.scaleOut;
+						switch me.stimulus
+							case 'bar'
+								me.scaleOut = me.scaleOut - 1;
+								if me.scaleOut < 1;me.scaleOut = 1;end
+								nw = me.scaleOut;
 						end
-					case '4$'
-						if keyTicks > fInc
-							ol = me.scaleOut;
-							switch me.stimulus
-								case 'bar'
-									me.scaleOut = me.scaleOut + 1;
-									if me.scaleOut >50;me.scaleOut = 50;end
-									nw = me.scaleOut;
-							end
-							if ol~=nw;me.regenerate;end
-							keyTicks = 0;
-						end
-					case '6^'
-							ol = me.sfOut;
-							switch me.stimulus
-								case 'bar'
-									me.sfOut = me.sfOut + 0.1;
-									if me.sfOut > 10;me.scaleOut = 10;end
-							end
-							nw = me.sfOut;
-							if ol~=nw;me.regenerate;end
+						if ol~=nw;me.regenerate;end
 							
+					case '4$'
+						
+						ol = me.scaleOut;
+						switch me.stimulus
+							case 'bar'
+								me.scaleOut = me.scaleOut + 1;
+								if me.scaleOut >50;me.scaleOut = 50;end
+								nw = me.scaleOut;
+						end
+						if ol~=nw;me.regenerate;end
+							
+					case '6^'
+						ol = me.sfOut;
+						switch me.stimulus
+							case 'bar'
+								me.sfOut = me.sfOut + 0.1;
+								if me.sfOut > 10;me.scaleOut = 10;end
+						end
+						nw = me.sfOut;
+						if ol~=nw;me.regenerate;end
+
 					case '5%'
-							ol = me.sfOut;
-							switch me.stimulus
-								case 'bar'
-									me.sfOut = me.sfOut -0.1;
-									if me.sfOut <0.1;me.sfOut = 0.1;end
-							end
-							nw = me.sfOut;
-							if ol~=nw;me.regenerate;end
+						ol = me.sfOut;
+						switch me.stimulus
+							case 'bar'
+								me.sfOut = me.sfOut -0.1;
+								if me.sfOut <0.1;me.sfOut = 0.1;end
+						end
+						nw = me.sfOut;
+						if ol~=nw;me.regenerate;end
 					case '/?'
-						if keyTicks > fInc
-							switch me.stimulus
+
+						switch me.stimulus
 							case 'bar'
 								if me.phaseReverseTime == 0
 									me.phaseReverseTime = 0.2;
@@ -684,12 +657,12 @@ classdef rfMapper < barStimulus
 									me.phaseReverseTime = 0;
 								end
 								me.regenerate;
-							end
-							keyTicks = 0;
 						end
+							
+
 					case 'space'
-						if keyTicks > fInc
-							switch me.stimulus
+						
+						switch me.stimulus
 							case 'bar'
 								me.textureIndex = me.textureIndex + 1;
 								%me.barWidth = me.dstRect(3)/me.ppd;
@@ -697,29 +670,25 @@ classdef rfMapper < barStimulus
 								me.type = me.textureList{me.textureIndex};
 								me.regenerate;
 							case 'grating'
-							end
-							keyTicks = 0;
 						end
+
 					case {';:',';'}
-						if keyTicks > fInc
-							me.showClicks = ~me.showClicks;
-							keyTicks = 0;
-						end
+
+						me.showClicks = ~me.showClicks;
+
 					case {'''"',''''}
-						if keyTicks > fInc
-							figure(me.fhandle);
-							cla;
-							me.xClick = 0;
-							me.yClick = 0;
-							me.dStartTick = 1;
-							me.dEndTick = 1;
-							me.xyDots = vertcat((me.xClick.*me.ppd),(me.yClick*me.ppd));
-							keyTicks = 0;
-						end
+
+						figure(me.fhandle);
+						cla;
+						me.xClick = 0;
+						me.yClick = 0;
+						me.dStartTick = 1;
+						me.dEndTick = 1;
+						me.xyDots = vertcat((me.xClick.*me.ppd),(me.yClick*me.ppd));
+							
 				end
 			end
 		end
-		
 		
 	end
 	

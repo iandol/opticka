@@ -136,17 +136,17 @@ me.lastYPosition			= tS.fixY;
 me.lastXExclusion			= [];
 me.lastYExclusion			= [];
 
-%==================================================================
-%---------------------------Eyetracker setup-----------------------
-% NOTE: the opticka GUI can set eyetracker options too, if you set options
-% here they will OVERRIDE the GUI ones; if they are commented then the GUI
-% options are used. me.elsettings and me.tobiisettings contain the GUI
-% settings you can test if they are empty or not and set them based on
-% that...
+%=========================================================================
+%-------------------------------Eyetracker setup--------------------------
+% NOTE: the opticka GUI can set eyetracker options too; me.eyetracker.esettings
+% and me.eyetracker.tsettings contain the GUI settings. We test if they are
+% empty or not and set general values based on that...
+
 eT.name				= tS.name;
 if me.eyetracker.dummy;	eT.isDummy = true; end %===use dummy or real eyetracker? 
 if tS.saveData;		eT.recordData = true; end %===save Eyetracker data?					
-if strcmp(me.eyetracker.device, 'eyelink')
+switch me.eyetracker.device
+	case 'eyelink'
 	warning('Note: this protocol file is optimised for the Tobii eyetracker...')
 	if isempty(me.eyetracker.esettings)		%==check if GUI settings are empty
 		eT.sampleRate				= 250;		%==sampling rate
@@ -166,7 +166,7 @@ if strcmp(me.eyetracker.device, 'eyelink')
 		eT.modify.devicenumber				= -1;		%==-1 = use any attachedkeyboard
 		eT.modify.targetbeep				= 1;		%==beep during calibration
 	end
-elseif strcmp(me.eyetracker.device, 'tobii')
+case 'tobii'
 	if isempty(me.eyetracker.tsettings)	%==check if GUI settings are empty
 		eT.model					= 'Tobii Pro Spectrum';
 		eT.sampleRate				= 300;

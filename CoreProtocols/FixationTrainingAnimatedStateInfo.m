@@ -33,11 +33,11 @@ tS.useTask					= true;		%==use taskSequence (randomises stimulus variables)
 tS.rewardTime				= 250;		%==TTL time in milliseconds
 tS.rewardPin				= 2;		%==Output pin, 2 by default with Arduino.
 tS.keyExclusionPattern		= ["fixate","stimulus"]; %==which states to skip keyboard checking
-tS.recordEyePosition		= false;		%==record local copy of eye position, **in addition** to the eyetracker?
+tS.recordEyePosition		= false;	%==record local copy of eye position, **in addition** to the eyetracker?
 tS.askForComments			= false;	%==UI requestor asks for comments before/after run
 tS.saveData					= true;		%==save behavioural and eye movement data?
 tS.showBehaviourPlot		= true;		%==open the behaviourPlot figure? Can cause more memory use
-tS.name						= 'animated fixation training'; %==name of this protocol
+tS.name						= 'fixation training'; %==name of this protocol
 tS.nStims					= stims.n;	%==number of stimuli, taken from metaStimulus object
 tS.tOut						= 2;		%==if wrong response, how long to time out before next trial
 tS.CORRECT					= 1;		%==the code to send eyetracker for correct trials
@@ -252,17 +252,16 @@ pauseExitFn = {
 %====================================================PRESTIMULUS
 %---------------------prestim entry
 psEntryFn = {
-	@()needFlip(me, true); % start PTB screen flips
+	@()needFlip(me, true, true); % start PTB screen flips, and tracker screen flip
 	@()needEyeSample(me, true); % make sure we start measuring eye position
-	@()needFlipTracker(me, 1); % set tobii operator screen to flip and not clear
-	@()startRecording(eT); % start eyelink recording for this trial [ignored by tobii as it always records]
+	@()startRecording(eT); % start eyelink recording for this trial (ignored by tobii as it always records)
 	@()updateFixationTarget(me, tS.useTask, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
-	@()resetAll(eT); %reset the fixation counters ready for a new trial
+	@()resetAll(eT); %reset all fixation counters and history ready for a new trial
 	@()getStimulusPositions(stims,true); %make a struct the eT can use for drawing stim positions
-	@()trackerMessage(eT,'V_RT MESSAGE END_FIX END_RT'); % Eyelink commands
-	@()trackerMessage(eT,sprintf('TRIALID %i',getTaskIndex(me))); %Eyelink start trial marker
+	@()trackerMessage(eT,'V_RT MESSAGE END_FIX END_RT'); % Eyelink-specific commands, ignored by other eyetrackers
+	@()trackerMessage(eT,sprintf('TRIALID %i',getTaskIndex(me))); %Eyetracker start trial marker
 	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
-	@()trackerDrawStatus(eT,'Prestim...', stims.stimulusPositions, 0);
+	@()trackerDrawStatus(eT,'Prestim...', stims.stimulusPositions); %draw status to eyetracker display
 	@()logRun(me,'PREFIX'); % log current trial info to command window AND timeLogger
 };
 
@@ -279,14 +278,14 @@ psExitFn = {
 %====================================================TARGET STIMULUS ALONE
 %---------------------stimulus entry state
 stimEntryFn = {
-	@()doSyncTime(me);
+	@()doSyncTime(me); % send SYNCTIME message to eyetracker after flip
 };
 
 %---------------------stimulus within state
 stimFn = {
 	@()draw(stims); % draw the stimuli
 	@()animate(stims); % animate stimuli for subsequent draw
-	@()trackerDrawEyePosition(eT); % draw the fixation window
+	@()trackerDrawEyePosition(eT); % draw the fixation position on the eyetracker
 };
 
 %-----------------------test we are maintaining fixation
@@ -303,8 +302,8 @@ maintainFixFn = {
 
 %-----------------------as we exit stim presentation state
 stimExitFn = {
-	@()trackerMessage(eT,'END_FIX'); % tell EDF we finish fix
-	@()trackerMessage(eT,'END_RT'); % tell EDF we finish reaction time
+	@()trackerMessage(eT,'END_FIX'); % tell eyetracker we finish fix
+	@()trackerMessage(eT,'END_RT'); % tell eyetracker we finish reaction time
 };
 
 %====================================================DECISION
@@ -312,14 +311,14 @@ stimExitFn = {
 %-----------------------if the subject is correct (small reward)
 correctEntryFn = {
 	@()timedTTL(rM, tS.rewardPin, tS.rewardTime); % send a reward TTL
-	@()beep(aM,2000); % correct beep
+	@()beep(aM,2000,0.1,0.1); % correct beep
 	@()trackerMessage(eT,['TRIAL_RESULT ' num2str(tS.CORRECT)]); % tell EDF trial was a correct
-	@()trackerDrawStatus(eT,'CORRECT! :-)', stims.stimulusPositions, 0);
+	@()trackerDrawStatus(eT,'CORRECT! :-)', stims.stimulusPositions);
 	@()needFlipTracker(me, -1); %for tobii stop flip
 	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()needEyeSample(me,false); % no need to collect eye data until we start the next trial
-	@()hide(stims);
+	@()hide(stims); % hide all stimuli
 	@()logRun(me,'CORRECT'); %fprintf current trial info
 };
 
@@ -342,7 +341,7 @@ correctExitFn = {
 breakEntryFn = {
 	@()beep(aM,400,0.5,1);
 	@()trackerMessage(eT,['TRIAL_RESULT ' num2str(tS.BREAKFIX)]); %trial incorrect message
-	@()trackerDrawStatus(eT,'BREAK! :-(', stims.stimulusPositions, 0);
+	@()trackerDrawStatus(eT,'BREAK! :-(', stims.stimulusPositions);
 	@()needFlipTracker(me, -1); %for tobii stop flip
 	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
@@ -355,7 +354,7 @@ breakEntryFn = {
 incEntryFn = { 
 	@()beep(aM,400,0.5,1);
 	@()trackerMessage(eT,['TRIAL_RESULT ' num2str(tS.INCORRECT)]); %trial incorrect message
-	@()trackerDrawStatus(eT,'INCORRECT! :-(', stims.stimulusPositions, 0);
+	@()trackerDrawStatus(eT,'INCORRECT! :-(', stims.stimulusPositions);
 	@()needFlipTracker(me, -1); %for tobii stop flip
 	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]

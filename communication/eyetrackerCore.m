@@ -44,8 +44,6 @@
 %> a reward systems during calibration / validation to improve subject
 %> performance compared to the eyelink toolbox alone.
 %>
-%> WIP
-%> 
 %> Copyright ©2014-2023 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef eyetrackerCore < optickaCore
@@ -364,7 +362,7 @@ classdef eyetrackerCore < optickaCore
 				end
 				me.screen.drawCross(0.6,[0 0 0],x,y,0.1,false);
 				Screen('Flip',me.screen.win);
-				[~, ~, keyCode] = KbCheck(-1);
+				[~, ~, keyCode] = optickaCore.getKeys;
 				if keyCode(stopkey) || keyCode(escapeKey); breakLoop = true; break;	end
 				if keyCode(nextKey); correct = true; break; end
 				if keyCode(calibkey); trackerSetup(me); break; end
@@ -407,7 +405,7 @@ classdef eyetrackerCore < optickaCore
 		%> @paran radius radius of fixation window
 		%> @param strict allow or disallow re-entering the fixation window
 		% ===================================================================
-			resetFixation(me);
+			resetFixation(me, true);
 			if nargin > 1 && ~isempty(x)
 				if isinf(x)
 					me.fixation.X = me.screen.screenXOffset;
@@ -766,7 +764,8 @@ classdef eyetrackerCore < optickaCore
 		end
 
 		% ===================================================================
-		%> @brief draw the sampled eye positions in xAll yAll
+		%> @brief draw the sampled eye positions in xAll yAll on the subject
+		%> screen
 		%>
 		% ===================================================================
 		function drawEyePositions(me)
@@ -800,7 +799,7 @@ classdef eyetrackerCore < optickaCore
 			if ~isempty(me.exclusionZone);trackerDrawExclusion(me);end
 			if ~isempty(stimPos); trackerDrawStimuli(me, stimPos); end
 			if ~isempty(comment);trackerDrawText(me, comment);end
-			if ~isempty(me.xAll);trackerDrawEyePositions(me);end
+			if ~isempty(me.xAll);trackerDrawEyePosition(me);end
 			
 			me.flipTick = 0;
 			trackerFlip(me, dontClear, true);

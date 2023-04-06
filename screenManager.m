@@ -1057,7 +1057,7 @@ classdef screenManager < optickaCore
 			if ~me.isOpen; return; end
 			int = round(interval / me.screenVals.ifi);
 			KbReleaseWait;
-			while ~KbCheck(-1)
+			while ~KbCheck()
 				if mod(me.flashTick,int) == 0
 					me.flashOn = not(me.flashOn);
 					me.flashTick = 0;

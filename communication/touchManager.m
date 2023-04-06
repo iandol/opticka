@@ -305,7 +305,7 @@ classdef touchManager < optickaCore
 							txt = sprintf('OUT window x = %.2f y = %.2f [esc to exit]',x,y);
 						end
 						flush(me);
-						[~,~,keys] = KbCheck(-1);
+						[~,~,keys] = optickaCore.getKeys();
 						if any(keys(quitKey)); doQuit = true; break; end
 					end
 					flip(sM); WaitSecs(1);

@@ -3,12 +3,13 @@ classdef runExperiment < optickaCore
 %> @class runExperiment
 %> @brief The main experiment manager.
 %>
-%> RUNEXPERIMENT accepts a task « taskSequence », stimuli « metaStimulus » and
-%> for behavioural tasks a « stateMachine » state machine file, and runs the
-%> stimuli based on the task objects passed. This class uses the fundamental
-%> configuration of the screen (calibration, size etc. via « screenManager »),
-%> and manages communication to a DAQ systems using digital I/O and
-%> communication over a TCP/UDP client⇄server socket (via «dataConnection»).
+%> RUNEXPERIMENT accepts a variable sequence « taskSequence », stimulus set «
+%> metaStimulus » and for behavioural tasks a « stateMachine » state machine
+%> file, and runs the stimuli based on the task objects passed. This class uses
+%> the fundamental configuration of the screen (calibration, size etc. via «
+%> screenManager »), and manages communication to a DAQ systems using digital I/O
+%> and communication over a TCP/UDP client⇄server socket (via «dataConnection»).
+%> It also interfaces with hardware like eyetrackers
 %>
 %> There are 2 main experiment types:
 %>  1) MOC (method of constants) tasks -- uses stimuli and task objects
@@ -379,7 +380,7 @@ classdef runExperiment < optickaCore
 					animate(stims);
 					if ~mod(i,10); io.sendStrobe(me.strobe.stimOFFValue); end
 					flip(s);
-					KbCheck(-1);
+					optickaCore.getKeys();
 				end
 				update(stims); %make sure stimuli are set back to their start state
 				if ismethod(me,'resetLog'); resetLog(me); end
@@ -439,8 +440,8 @@ classdef runExperiment < optickaCore
 					%========= check for keyboard if in blank ========%
 					if task.isBlank
 						if strcmpi(me.uiCommand,'stop');break;end
-						[~,~,kc] = KbCheck(me.keyboardDevice);
-						if strcmpi(KbName(kc),'q'); break; end
+						[~,name,~] = optickaCore.getKeys(me.keyboardDevice);
+						if strcmpi(name,'q'); break; end
 					end
 
 					%================= UPDATE TASK ===================%
@@ -720,12 +721,19 @@ classdef runExperiment < optickaCore
 				me.isRunTask			= true;
 				
 				%================================open the eyetracker interface
-				if strcmp(me.eyetracker.device, 'tobii')
-					me.eyeTracker		= tobiiManager();
-					if ~isempty(me.eyetracker.tsettings); me.eyeTracker.addArgs(me.eyetracker.tsettings); end
-				else
-					me.eyeTracker		= eyelinkManager();
-					if ~isempty(me.eyetracker.esettings); me.eyeTracker.addArgs(me.eyetracker.esettings); end
+				switch lower(me.eyetracker.device)
+					case 'tobii'
+						me.eyeTracker		= tobiiManager();
+						if ~isempty(me.eyetracker.tsettings); me.eyeTracker.addArgs(me.eyetracker.tsettings); end
+					case 'eyelink'
+						me.eyeTracker		= eyelinkManager();
+						if ~isempty(me.eyetracker.esettings); me.eyeTracker.addArgs(me.eyetracker.esettings); end
+					case 'irec'
+						me.eyeTracker		= iRecManager();
+						if ~isempty(me.eyetracker.isettings); me.eyeTracker.addArgs(me.eyetracker.isettings); end
+					otherwise
+						me.eyeTracker		= iRecManager();
+						me.eyeTracker.isDummy = true;
 				end
 				eT						= me.eyeTracker;
 				eT.verbose				= me.verbose;
@@ -769,18 +777,18 @@ classdef runExperiment < optickaCore
 
 				%================================initialise the state machine
 				sM						= stateMachine('verbose', me.verbose,...
-						'realTime', task.realTime, 'timeDelta', s.screenVals.ifi, ...
-						'name', me.name);
+										'realTime', task.realTime, 'timeDelta', s.screenVals.ifi, ...
+										'name', me.name);
 				me.stateMachine			= sM;
 				sM.fnTimers				= me.logStateTimers; %record fn evaluations?
-				if isempty(me.stateInfoFile) || ~exist(me.stateInfoFile,'file') || strcmp(me.stateInfoFile, 'DefaultStateInfo.m')
-					me.stateInfoFile = [me.paths.root filesep 'DefaultStateInfo.m'];
-					me.paths.stateInfoFile = me.stateInfoFile; 
+				if isempty(me.stateInfoFile) || ~exist(me.stateInfoFile,'file') || contains(me.stateInfoFile, 'DefaultStateInfo')
+					me.stateInfoFile		= [me.paths.root filesep 'DefaultStateInfo.m'];
+					me.paths.stateInfoFil	= me.stateInfoFile; 
 				end
 				if ~exist(me.stateInfoFile,'file')
 					errordlg('runExperiment.runTask(): Please specify a valid State Machine file!!!')
 				else
-					me.stateInfoFile = regexprep(me.stateInfoFile,'\s+','\\ ');
+					me.stateInfoFile	= regexprep(me.stateInfoFile,'\s+','\\ ');
 					disp(['======>>> Loading State File: ' me.stateInfoFile]);
 					clear(me.stateInfoFile);
 					if ~isdeployed
@@ -788,7 +796,7 @@ classdef runExperiment < optickaCore
 					else
 						runDeployed(me.stateInfoFile);
 					end
-					me.stateInfo = stateInfoTmp;
+					me.stateInfo		= stateInfoTmp;
 					addStates(sM, me.stateInfo);
 					me.paths.stateInfoFile = me.stateInfoFile;
 				end
@@ -833,7 +841,7 @@ classdef runExperiment < optickaCore
 						end
 					end
 					flip(s);
-					KbCheck(-1);
+					optickaCore.getKeys(me.keyboardDevice);
 					if eT.secondScreen; trackerFlip(eT, 1); end
 				end
 				update(stims); %make sure all stimuli are set back to their start state
@@ -1488,7 +1496,7 @@ classdef runExperiment < optickaCore
 		function doSyncTime(me)
 		%> @fn doSyncTime
 		%>
-		%> send SYNCTIME message to eyelink after flip
+		%> send SYNCTIME message to eyetracker after flip
 		%> 
 		% ===================================================================
 			me.sendSyncTime = true;
@@ -1507,14 +1515,15 @@ classdef runExperiment < optickaCore
 		end
 
 		% ===================================================================
-		function needFlip(me, value)
+		function needFlip(me, value, trackervalue)
 		%> @fn enableFlip
 		%>
 		%> Enable screen flip
-		%> 
+		%> @param value - true/false for subject screen
+		%> @param trackervalue - 0: disable flip, 1 enable + clear, 2 enable + don't clear, 3 force
 		% ===================================================================
-			if ~exist('value','var'); value = true; end
-			me.doFlip = value;
+			if exist('value','var'); me.doFlip = value; end
+			if exist('trackervalue','var'); me.doTrackerFlip = trackervalue; end
 		end
 
 		% ===================================================================
@@ -1524,8 +1533,7 @@ classdef runExperiment < optickaCore
 		%> enables/disable the flip for the tracker display window
 		%> @param 0: disable flip, 1 enable + clear, 2 enable + don't clear, 3 force
 		% ===================================================================
-			if ~exist('value','var'); value = 0; end
-			me.doTrackerFlip = value;
+			if exist('value','var'); me.doTrackerFlip = value; end
 		end
 		
 		% ===================================================================
@@ -2214,31 +2222,16 @@ classdef runExperiment < optickaCore
 				end
 			end
 		end
-		
-		% ===================================================================
-		%> @brief Get Key
-		% ===================================================================
-		function [pressed, name, keys] = getKeys(me)
-			persistent keyTick keyTok
-			if isempty(keyTick); keyTick = 0; keyTok = 0; end
-			keyTick = keyTick + 1;
-			if keyTick > keyTok
-				[pressed, ~, keys] = KbCheck(me.keyboardDevice);
-				name = KbName(keys);
-				keyTok = keyTick + me.fInc;
-			else
-				pressed = false; name = []; keys = [];
-			end
-		end
 
 		% ===================================================================
-		function checkKeys(me)
+		function checkKeys(me, trainingSet)
 		%> @brief manage key commands during task loop
 		%>
 		%> @param args input structure
 		% ===================================================================
-			[pressed, name, ~] = getKeys(me);
-			if ~ pressed; return; end
+			if ~exist('trainingSet','var'); trainingSet = true; end
+			[pressed, name, ~] = optickaCore.getKeys(me.keyboardDevice);
+			if ~pressed; return; end
 			if iscell(name); name = name{end};end
 			switch name
 				case 'q' %quit
@@ -2258,7 +2251,7 @@ classdef runExperiment < optickaCore
 
 				case {'UpArrow','up'}
 
-					if ~isempty(me.stimuli.controlTable)
+					if trainingSet && ~isempty(me.stimuli.controlTable)
 						maxl = length(me.stimuli.controlTable);
 						if isempty(me.stimuli.tableChoice) && maxl > 0
 							me.stimuli.tableChoice = 1;
@@ -2273,7 +2266,7 @@ classdef runExperiment < optickaCore
 
 				case {'DownArrow','down'}
 					
-					if ~isempty(me.stimuli.controlTable)
+					if trainingSet && ~isempty(me.stimuli.controlTable)
 						maxl = length(me.stimuli.controlTable);
 						if isempty(me.stimuli.tableChoice) && maxl > 0
 							me.stimuli.tableChoice = 1;
@@ -2288,7 +2281,7 @@ classdef runExperiment < optickaCore
 						
 				case {'LeftArrow','left'} %previous variable 1 value
 				
-					if ~isempty(me.stimuli.controlTable) && ~isempty(me.stimuli.controlTable.variable)
+					if trainingSet && ~isempty(me.stimuli.controlTable) && ~isempty(me.stimuli.controlTable.variable)
 						choice = me.stimuli.tableChoice;
 						if isempty(choice)
 							choice = 1;
@@ -2325,7 +2318,7 @@ classdef runExperiment < optickaCore
 						
 				case {'RightArrow','right'} %next variable 1 value
 					
-					if ~isempty(me.stimuli.controlTable) && ~isempty(me.stimuli.controlTable.variable)
+					if trainingSet && ~isempty(me.stimuli.controlTable) && ~isempty(me.stimuli.controlTable.variable)
 						choice = me.stimuli.tableChoice;
 						if isempty(choice)
 							choice = 1;
@@ -2362,20 +2355,24 @@ classdef runExperiment < optickaCore
 						
 				case ',<'
 					
-					if me.stimuli.setChoice > 1
-						me.stimuli.setChoice = round(me.stimuli.setChoice - 1);
-						me.stimuli.showSet();
+					if trainingSet
+						if me.stimuli.setChoice > 1
+							me.stimuli.setChoice = round(me.stimuli.setChoice - 1);
+							me.stimuli.showSet();
+						end
+						fprintf('======>>> Stimulus Set: #%g | Stimuli: %s\n',me.stimuli.setChoice, num2str(me.stimuli.stimulusSets{me.stimuli.setChoice}))
 					end
-					fprintf('======>>> Stimulus Set: #%g | Stimuli: %s\n',me.stimuli.setChoice, num2str(me.stimuli.stimulusSets{me.stimuli.setChoice}))
-					
+
 				case '.>'
 
-					if me.stimuli.setChoice < length(me.stimuli.stimulusSets)
-						me.stimuli.setChoice = me.stimuli.setChoice + 1;
-						me.stimuli.showSet();
+					if trainingSet
+						if me.stimuli.setChoice < length(me.stimuli.stimulusSets)
+							me.stimuli.setChoice = me.stimuli.setChoice + 1;
+							me.stimuli.showSet();
+						end
+						fprintf('======>>> Stimulus Set: #%g | Stimuli: %s\n',me.stimuli.setChoice, num2str(me.stimuli.stimulusSets{me.stimuli.setChoice}))
 					end
-					fprintf('======>>> Stimulus Set: #%g | Stimuli: %s\n',me.stimuli.setChoice, num2str(me.stimuli.stimulusSets{me.stimuli.setChoice}))
-					
+
 				case 'r'
 
 					timedTTL(me.arduino);
@@ -2387,46 +2384,56 @@ classdef runExperiment < optickaCore
 						
 				case '-_'
 					
-					me.screen.screenXOffset = me.screen.screenXOffset - 1;
-					fprintf('======>>> Screen X Center: %g deg / %g pixels\n',me.screen.screenXOffset,me.screen.xCenter);
-					
+					if trainingSet
+						me.screen.screenXOffset = me.screen.screenXOffset - 1;
+						fprintf('======>>> Screen X Center: %g deg / %g pixels\n',me.screen.screenXOffset,me.screen.xCenter);
+					end
+
 				case '[{'
 
-					me.screen.screenYOffset = me.screen.screenYOffset - 1;
-					fprintf('======>>> Screen Y Center: %g deg / %g pixels\n',me.screen.screenYOffset,me.screen.yCenter);
-					
+					if trainingSet
+						me.screen.screenYOffset = me.screen.screenYOffset - 1;
+						fprintf('======>>> Screen Y Center: %g deg / %g pixels\n',me.screen.screenYOffset,me.screen.yCenter);
+					end
+
 				case ']}'
 
-					me.screen.screenYOffset = me.screen.screenYOffset + 1;
-					fprintf('======>>> Screen Y Center: %g deg / %g pixels\n',me.screen.screenYOffset,me.screen.yCenter);
-						
+					if trainingSet
+						me.screen.screenYOffset = me.screen.screenYOffset + 1;
+						fprintf('======>>> Screen Y Center: %g deg / %g pixels\n',me.screen.screenYOffset,me.screen.yCenter);
+					end	
+
 				case 'k'
 
-					stateName = 'blank';
-					[isState, index] = isStateName(me.stateMachine,stateName);
-					if isState
-						t = me.stateMachine.getState(stateName);
-						if isfield(t,'time')
-							tout = t.time - 0.25;
-							if min(tout) >= 0.1
-								me.stateMachine.editStateByName(stateName,'time',tout);
-								fprintf('======>>> Decrease %s time: %g:%g\n',t.name, min(tout),max(tout));
+					if trainingSet
+						stateName = 'blank';
+						[isState, index] = isStateName(me.stateMachine,stateName);
+						if isState
+							t = me.stateMachine.getState(stateName);
+							if isfield(t,'time')
+								tout = t.time - 0.25;
+								if min(tout) >= 0.1
+									me.stateMachine.editStateByName(stateName,'time',tout);
+									fprintf('======>>> Decrease %s time: %g:%g\n',t.name, min(tout),max(tout));
+								end
 							end
 						end
 					end
 					
 				case 'l'
 					
-					stateName = 'blank';
-					[isState, index] = isStateName(me.stateMachine,stateName);
-					if isState
-						t = me.stateMachine.getState(stateName);
-						if isfield(t,'time')
-							tout = t.time + 0.25;
-							me.stateMachine.editStateByName(stateName,'time',tout);
-							fprintf('======>>> Increase %s time: %g:%g\n',t.name, min(tout),max(tout));
+					if trainingSet
+						stateName = 'blank';
+						[isState, index] = isStateName(me.stateMachine,stateName);
+						if isState
+							t = me.stateMachine.getState(stateName);
+							if isfield(t,'time')
+								tout = t.time + 0.25;
+								me.stateMachine.editStateByName(stateName,'time',tout);
+								fprintf('======>>> Increase %s time: %g:%g\n',t.name, min(tout),max(tout));
+							end
+							
 						end
-						
 					end
 				
 				case 'y'
@@ -2475,42 +2482,54 @@ classdef runExperiment < optickaCore
 						
 				case 'z'
 					
-					me.eyeTracker.fixation.initTime = me.eyeTracker.fixation.initTime - 0.1;
-					if me.eyeTracker.fixation.initTime < 0.01
-						me.eyeTracker.fixation.initTime = 0.01;
+					if trainingSet
+						me.eyeTracker.fixation.initTime = me.eyeTracker.fixation.initTime - 0.1;
+						if me.eyeTracker.fixation.initTime < 0.01
+							me.eyeTracker.fixation.initTime = 0.01;
+						end
+						fprintf('======>>> FIXATION INIT TIME: %g\n',me.eyeTracker.fixation.initTime)
 					end
-					fprintf('======>>> FIXATION INIT TIME: %g\n',me.eyeTracker.fixation.initTime)
-					
+
 				case 'x'
 					
-					me.eyeTracker.fixation.initTime = me.eyeTracker.fixation.initTime + 0.1;
-					fprintf('======>>> FIXATION INIT TIME: %g\n',me.eyeTracker.fixation.initTime)
+					if trainingSet
+						me.eyeTracker.fixation.initTime = me.eyeTracker.fixation.initTime + 0.1;
+						fprintf('======>>> FIXATION INIT TIME: %g\n',me.eyeTracker.fixation.initTime)
+					end
 
 				case 'c'
 
-					me.eyeTracker.fixation.time = me.eyeTracker.fixation.time - 0.1;
-					if me.eyeTracker.fixation.time < 0.01
-						me.eyeTracker.fixation.time = 0.01;
+					if trainingSet
+						me.eyeTracker.fixation.time = me.eyeTracker.fixation.time - 0.1;
+						if me.eyeTracker.fixation.time < 0.01
+							me.eyeTracker.fixation.time = 0.01;
+						end
+						fprintf('======>>> FIXATION TIME: %g\n',me.eyeTracker.fixation.time)
 					end
-					fprintf('======>>> FIXATION TIME: %g\n',me.eyeTracker.fixation.time)
 
 				case 'v'
 
-					me.eyeTracker.fixation.time = me.eyeTracker.fixation.time + 0.1;
-					fprintf('======>>> FIXATION TIME: %g\n',me.eyeTracker.fixation.time)
+					if trainingSet
+						me.eyeTracker.fixation.time = me.eyeTracker.fixation.time + 0.1;
+						fprintf('======>>> FIXATION TIME: %g\n',me.eyeTracker.fixation.time)
+					end
 
 				case 'b'
 					
-					me.eyeTracker.fixation.radius = me.eyeTracker.fixation.radius - 0.1;
-					if me.eyeTracker.fixation.radius < 0.1
-						me.eyeTracker.fixation.radius = 0.1;
+					if trainingSet
+						me.eyeTracker.fixation.radius = me.eyeTracker.fixation.radius - 0.1;
+						if me.eyeTracker.fixation.radius < 0.1
+							me.eyeTracker.fixation.radius = 0.1;
+						end
+						fprintf('======>>> FIXATION RADIUS: %g\n',me.eyeTracker.fixation.radius)
 					end
-					fprintf('======>>> FIXATION RADIUS: %g\n',me.eyeTracker.fixation.radius)
-					
+
 				case 'n'
 					
-					me.eyeTracker.fixation.radius = me.eyeTracker.fixation.radius + 0.1;
-					fprintf('======>>> FIXATION RADIUS: %g\n',me.eyeTracker.fixation.radius)
+					if trainingSet
+						me.eyeTracker.fixation.radius = me.eyeTracker.fixation.radius + 0.1;
+						fprintf('======>>> FIXATION RADIUS: %g\n',me.eyeTracker.fixation.radius)
+					end
 
 				case 's'
 

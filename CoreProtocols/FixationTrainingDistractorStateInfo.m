@@ -81,7 +81,8 @@ me.lastYPosition			= tS.fixY;
 % them based on that...
 eT.name 					= tS.name;
 if tS.saveData == true;		eT.recordData = true; end %===save ET data?					
-if strcmp(me.eyetracker.device, 'eyelink')
+switch me.eyetracker.device
+	case 'eyelink'
 	if isempty(me.eyetracker.esettings)
 		eT.sampleRate 				= 250; % sampling rate
 		eT.calibrationStyle 		= 'HV5'; % calibration style
@@ -100,7 +101,7 @@ if strcmp(me.eyetracker.device, 'eyelink')
 		eT.modify.devicenumber 			= -1; % -1 = use any attachedkeyboard
 		eT.modify.targetbeep 			= 1; % beep during calibration
 	end
-elseif strcmp(me.eyetracker.device, 'tobii')
+case 'tobii'
 	if isempty(tobiisettings)
 		eT.model					= 'Tobii Pro Spectrum';
 		eT.sampleRate				= 300;

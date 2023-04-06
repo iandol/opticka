@@ -37,7 +37,7 @@ classdef opticka < optickaCore
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> version number
-		optickaVersion char		= '2.15.5'
+		optickaVersion char		= '2.15.6'
 		%> is this a remote instance?
 		remote					= false
 	end
@@ -53,7 +53,7 @@ classdef opticka < optickaCore
 		%> spash screen handle
 		ss
 		%> used to sanitise passed values on construction
-		allowedProperties char = 'verbose|initUI'
+		allowedProperties = {'verbose','initUI'}
 		%> which UI settings should be saved locally to the machine?
 		uiPrefsList cell = {'OKOmniplexIP','OKMonitorDistance','OKpixelsPerCm',...
 			'OKbackgroundColour','OKAntiAliasing','OKbitDepth','OKUseRetina',...
@@ -211,6 +211,7 @@ classdef opticka < optickaCore
 		%> @brief Start the UI
 		% ===================================================================
 			try
+				t = tic;
 				jv = version('-java');
 				if contains(jv,'not enabled');isjava=false;else;isjava=true;end
 				if isjava
@@ -261,17 +262,13 @@ classdef opticka < optickaCore
 
 				me.ui = opticka_ui(me); %our GUI file
 				
-				me.loadPrefs();
-				me.getScreenVals();
-				me.getTaskVals();
-				me.loadCalibration();
-				me.refreshProtocolsList();
+				loadPrefs(me);
+				getScreenVals(me);
+				getTaskVals(me);
+				loadCalibration(me);
+				refreshProtocolsList(me);
 
 				me.ui.getEyetrackerSettings();
-				
-				%addlistener(me.r,'abortRun',@me.abortRunEvent);
-				%addlistener(me.r,'endAllRuns',@me.endRunEvent);
-				%addlistener(me.r,'runInfo',@me.runInfoEvent);
 				
 				if exist([me.paths.root filesep 'DefaultStateInfo.m'],'file')
 					me.paths.stateInfoFile = [me.paths.root filesep 'DefaultStateInfo.m'];
@@ -280,14 +277,15 @@ classdef opticka < optickaCore
 					me.paths.stateInfoFile = [me.paths.whereami filesep 'DefaultStateInfo.m'];
 					me.r.stateInfoFile = me.paths.stateInfoFile;
 				end
-
 				if exist([me.paths.protocols filesep 'userFunctions.m'],'file')
 					me.r.userFunctionsFile = [me.paths.protocols filesep 'userFunctions.m'];
 				elseif ~isdeployed
 					me.r.userFunctionsFile = [me.paths.whereami filesep 'userFunctions.m'];
 				end
-				
 				getStateInfo(me);
+
+				fprintf('===>>> Opticka UI took %.2fsecs to initialise\n',toc(t));
+
 				try if ~isempty(me.ss); pause(0.1); delete(me.ss); me.ss = []; end; end
 			catch ME
 				try if ~isempty(me.ss); delete(me.ss); me.ss = []; end; end
@@ -463,26 +461,29 @@ classdef opticka < optickaCore
 		end
 		
 		% ===================================================================
-		function getStateInfo(me, kind)
-		%> @fn getStateInfo 
+		function getStateInfo(met, kind)
+		%> @fn getStateInfo -- NOTE: to load the state info file we need to
+		%> change the name of SELF from 'me' as this is what is used within
+		%> runExperiment. In this case me is a fake self just to load state info
+		%> file.
 		%>
 		%> Load the state info and user function files into the UI.
 		% ===================================================================
 			if ~exist('kind','var'); kind = 'b'; end
-			if contains(kind,{'b','s'}) && ~isempty(me.r.stateInfoFile) && ischar(me.r.stateInfoFile)
-				if ~exist(me.r.stateInfoFile,'file')
-					if ~isempty(regexpi(me.r.stateInfoFile,'^\w:\\', 'once')) %is it a windows path?
-						f = split(me.r.stateInfoFile,'\');
+			if contains(kind,{'b','s'}) && ~isempty(met.r.stateInfoFile) && ischar(met.r.stateInfoFile)
+				if ~exist(met.r.stateInfoFile,'file')
+					if ~isempty(regexpi(met.r.stateInfoFile,'^\w:\\', 'once')) %is it a windows path?
+						f = split(met.r.stateInfoFile,'\');
 						f = f{end};
 					else
-						[~,f,e] = fileparts(me.r.stateInfoFile);
+						[~,f,e] = fileparts(met.r.stateInfoFile);
 						f = [f e];
 					end
-					me.r.stateInfoFile = [pwd filesep f];
+					met.r.stateInfoFile = [pwd filesep f];
 				end
-				if exist(me.r.stateInfoFile,'file')
+				if exist(met.r.stateInfoFile,'file')
 					o.store.statetext = {};
-					fid = fopen(me.r.stateInfoFile);
+					fid = fopen(met.r.stateInfoFile);
 					tline = fgetl(fid);
 					i=1;
 					while ischar(tline)
@@ -492,16 +493,33 @@ classdef opticka < optickaCore
 						i=i+1;
 					end
 					fclose(fid);
-					set(me.ui.OKTrainingText,'Value',o.store.statetext);
-					set(me.ui.OKTrainingFileName,'Text',['State-Machine File:  ' me.r.stateInfoFile]);
+					set(met.ui.OKTrainingText,'Value',o.store.statetext);
+					set(met.ui.OKTrainingFileName,'Text',['State-File:  ' met.r.stateInfoFile]);
+
+					try
+						stims = metaStimulus;
+						me = runExperiment;
+						eT = eyelinkManager;
+						run(met.r.stateInfoFile)
+						if exist('stateInfoTmp','var')
+							stateInfoTmp{1,1} = 'STATE';
+							met.ui.OKStateTable.ColumnName = stateInfoTmp(1,:); %#ok<*USENS>
+							met.ui.OKStateTable.Data = cell2table(stateInfoTmp(2:end,:));
+						end
+						clear me stims eT
+					catch ME
+						getReport(ME);
+					end
+
 				else
-					set(me.ui.OKTrainingText,'Value','');
-					set(me.ui.OKTrainingFileName,'Text','No File Specified...');
+					set(met.ui.OKTrainingText,'Value','');
+					set(met.ui.OKTrainingFileName,'Text','No File Specified...');
 				end
+
 			end
-			if contains(kind,{'b','f'}) && ~isempty(me.r.userFunctionsFile) && exist(me.r.userFunctionsFile,'file')
+			if contains(kind,{'b','f'}) && ~isempty(met.r.userFunctionsFile) && exist(met.r.userFunctionsFile,'file')
 				o.store.usertext = {};
-				fid = fopen(me.r.userFunctionsFile);
+				fid = fopen(met.r.userFunctionsFile);
 				tline = fgetl(fid);
 				i=1;
 				while ischar(tline)
@@ -511,11 +529,11 @@ classdef opticka < optickaCore
 					i=i+1;
 				end
 				fclose(fid);
-				set(me.ui.OKFunctionsText,'Value',o.store.usertext);
-				set(me.ui.OKFunctionsFileName,'Text',['User-Functions File:' me.r.userFunctionsFile]);
-			elseif ~exist(me.r.userFunctionsFile,'file')
-				set(me.ui.OKFunctionsText,'Value','');
-				set(me.ui.OKFunctionsFileName,'Text','No Valid File Specified...');
+				set(met.ui.OKFunctionsText,'Value',o.store.usertext);
+				set(met.ui.OKFunctionsFileName,'Text',['User-Functions File:' met.r.userFunctionsFile]);
+			elseif ~exist(met.r.userFunctionsFile,'file')
+				set(met.ui.OKFunctionsText,'Value','');
+				set(met.ui.OKFunctionsFileName,'Text','No Valid File Specified...');
 			end
 		end
 		

@@ -58,19 +58,16 @@ tS.stimulusFixTime			= 2;		% time to fix on the stimulus
 me.lastXPosition			= tS.fixX;
 me.lastYPosition			= tS.fixY;
 
-%==================================================================
-%---------------------------Eyetracker setup-----------------------
-% NOTE: the opticka GUI can set eyetracker options too, if you set options
-% here they will OVERRIDE the GUI ones; if they are commented then the GUI
-% options are used. me.elsettings and me.tobiisettings contain the GUI
-% settings you can test if they are empty or not and set them based on
-% that...
-eT.name 					= tS.name;
-if tS.saveData == true;		eT.recordData = true; end %===save ET data?
-if strcmp(me.eyetracker.device, 'eyelink')
-	eT.name 						= tS.name;
-	if me.eyetracker.dummy == true;				eT.isDummy = true; end %===use dummy or real eyetracker? 
-	if tS.saveData == true;			eT.recordData = true; end %===save EDF file?
+%=========================================================================
+%-------------------------------Eyetracker setup--------------------------
+% NOTE: the opticka GUI can set eyetracker options too; me.eyetracker.esettings
+% and me.eyetracker.tsettings contain the GUI settings. We test if they are
+% empty or not and set general values based on that...
+eT.name				= tS.name;
+if me.eyetracker.dummy;	eT.isDummy = true; end %===use dummy or real eyetracker? 
+if tS.saveData;		eT.recordData = true; end %===save Eyetracker data?					
+switch me.eyetracker.device
+case 'eyelink'
 	if isempty(me.eyetracker.esettings)		%==check if GUI settings are empty
 		eT.sampleRate				= 250;		%==sampling rate
 		eT.calibrationStyle			= 'HV5';	%==calibration style
@@ -89,9 +86,7 @@ if strcmp(me.eyetracker.device, 'eyelink')
 		eT.modify.devicenumber				= -1;		%==-1 = use any attachedkeyboard
 		eT.modify.targetbeep				= 1;		%==beep during calibration
 	end
-elseif strcmp(me.eyetracker.device, 'tobii')
-	eT.name 						= tS.name;
-	if me.eyetracker.dummy == true;				eT.isDummy = true; end %===use dummy or real eyetracker? 
+case 'tobii'
 	if isempty(me.eyetracker.tsettings)	%==check if GUI settings are empty
 		eT.model					= 'Tobii Pro Spectrum';
 		eT.sampleRate				= 300;
