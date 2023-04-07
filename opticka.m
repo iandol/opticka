@@ -330,6 +330,8 @@ classdef opticka < optickaCore
 			me.r.subjectName = me.gv(me.ui.OKSubject);
 			me.r.researcherName = me.gv(me.ui.OKResearcher);
 
+			me.r.audioDevice = me.gd(me.ui.OKaudioDevice);
+
 			me.r.screen.screen = me.gd(me.ui.OKSelectScreen);
 			
 			me.r.screen.distance = me.gd(me.ui.OKMonitorDistance);
@@ -410,10 +412,13 @@ classdef opticka < optickaCore
 			end
 
 			me.r.eyetracker.dummy = logical(me.ui.OKUseDummy.Checked);
-			if me.ui.OKuseEyelink.Checked == true
+			if me.ui.OKuseIRec2HS.Checked == true
+				me.r.eyetracker.device = 'irec';
+			elseif me.ui.OKuseEyelink.Checked == true
 				me.r.eyetracker.device = 'eyelink';
 			elseif me.ui.OKuseTobii.Checked == true
 				me.r.eyetracker.device = 'tobii';
+
 			else
 				me.r.eyetracker.device = '';
 			end

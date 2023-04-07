@@ -124,6 +124,8 @@ classdef runExperiment < optickaCore
 		comments logical			= true
 		%> our old stimulus structure used to be a simple cell, now we use metaStimulus
 		stimulus
+		%> audio device
+		audioDevice					= []
 	end
 
 	properties (Transient = true, Hidden = true)
@@ -662,8 +664,10 @@ classdef runExperiment < optickaCore
 			if ~exist('aM','var') || isempty(aM) || ~isa(aM,'audioManager')
 				aM=audioManager;
 			end
+			aM.device = me.audioDevice;
 			aM.silentMode = false;
-			if ~aM.isSetup;	aM.setup; end
+			reset(aM);
+			if ~aM.isSetup;	try setup(aM); end; end
 			aM.beep(1000,0.1,0.1);
 			
 			if isempty(regexpi(me.comment, '^Protocol','once'))
@@ -721,6 +725,7 @@ classdef runExperiment < optickaCore
 				me.isRunTask			= true;
 				
 				%================================open the eyetracker interface
+				if ~isfield(me.eyetracker,'isettings'); me.eyetracker.isettings = []; end
 				switch lower(me.eyetracker.device)
 					case 'tobii'
 						me.eyeTracker		= tobiiManager();
@@ -733,6 +738,7 @@ classdef runExperiment < optickaCore
 						if ~isempty(me.eyetracker.isettings); me.eyeTracker.addArgs(me.eyetracker.isettings); end
 					otherwise
 						me.eyeTracker		= iRecManager();
+						if ~isempty(me.eyetracker.isettings); me.eyeTracker.addArgs(me.eyetracker.isettings); end
 						me.eyeTracker.isDummy = true;
 				end
 				eT						= me.eyeTracker;
@@ -982,7 +988,7 @@ classdef runExperiment < optickaCore
 					% just a backup sampled at the GPU FPS wrapped in the
 					% PTB loop.
 					if me.needSample; getSample(eT); end
-					if tS.recordEyePosition && strcmp(me.eyetracker.device,'eyelink')
+					if tS.recordEyePosition
 						saveEyeInfo(me, sM, eT, tS);
 					end
 					
@@ -1833,22 +1839,17 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 			if ~exist('eT','var');error('You need to pass the eyetracker manager object!');end
 			if ~exist('s','var');error('You need to pass the screen manager object!');end
-			if strcmp(me.eyetracker.device, 'tobii')
+			if strcmp(me.eyetracker.device, 'irec')|| strcmp(me.eyetracker.device, 'tobii')
 				eT.useOperatorScreen = true;
-				initialise(eT,s);
-				trackerSetup(eT);
-				ShowCursor();
-				if ~eT.isConnected && ~eT.isDummy
-					warning('Eyetracker is not connected and not in dummy mode, potential connection issue...')
-				end
-			elseif strcmp(me.eyetracker.device, 'eyelink') || me.eyetracker.dummy
-				if me.eyetracker.dummy == true
-					fprintf('\n===>>> Dummy eyelink being initialised...\n')
-				else
-					fprintf('\n===>>> Handing over to Eyelink for calibration & validation...\n')
-				end
 				initialise(eT, s);
 				trackerSetup(eT);
+			elseif strcmp(me.eyetracker.device, 'eyelink') || me.eyetracker.dummy
+				initialise(eT, s);
+				trackerSetup(eT);
+			end
+			ShowCursor();
+			if ~eT.isConnected && ~eT.isDummy
+				warning('Eyetracker is not connected and not in dummy mode, potential connection issue...')
 			end
 		end
 		% ===================================================================
