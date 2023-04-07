@@ -175,6 +175,12 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		%> @brief calibration + validation
 		%>
 		% ===================================================================
+            global rM %#ok<*GVMIS> %global reward manager we can share with eyetracker 
+			if ~isa(rM,'arduinoManager') 
+				rM=arduinoManager();
+			end
+			if ~rM.isOpen; rM.close; rM.reset; rM.open; end
+
 			cal = [];
 			if ~me.isConnected && ~me.isDummy
 				warning('Eyetracker not connected, cannot calibrate!');
@@ -325,6 +331,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 											thisPos = 0;
 										elseif ~f.isVisible
 											f.isVisible = true;
+
 										end
 										lastK = k;
 										if thisPos > 0
@@ -336,6 +343,10 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 										end
 										trackerFlip(me,0,true);
 									end
+								elseif keys(sample)
+									hide(f);
+									trackerFlip(me,0,true);
+									rM.timedTTL;
 								elseif keys(menu)
 									trackerFlip(me,0,true);
 									mode = 'menu'; cloop = false;
@@ -413,6 +424,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 									elseif ~isempty(me.xAll) && lastK > 0 && lastK <= length(vdata)
 										vdata{lastK} = [me.xAll; me.yAll];
 									end
+									rM.timedTTL;
 									f.isVisible = false;
 									thisPos = 0;
 									resetFixationHistory(me);
