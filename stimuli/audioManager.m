@@ -100,6 +100,7 @@ classdef audioManager < optickaCore
 				PsychPortAudio('Volume', me.aHandle, 1);
 				me.status = PsychPortAudio('GetStatus', me.aHandle);
 				me.frequency = me.status.SampleRate;
+				me.silentMode = false;
 				me.isSetup = true;
 				me.isOpen = true;
 			catch 
@@ -210,10 +211,12 @@ classdef audioManager < optickaCore
 				catch
 					PsychPortAudio('Close');
 				end 
+				if isnan(me.device); me.device = []; end
 				me.aHandle = [];
 				me.status = [];
 				me.frequency = [];
 				me.isSetup = false; me.isOpen = false; me.isSample = false;
+				me.silentMode = false;
 			catch ME
 				me.aHandle = [];
 				me.status = [];
