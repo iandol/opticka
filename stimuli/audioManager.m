@@ -76,7 +76,11 @@ classdef audioManager < optickaCore
 			if ~isValid
 				warning('NO valid file/dir name');
 			end
+
+			PsychPortAudio('Close');
+			InitializePsychSound(me.lowLatency);
 			me.devices = PsychPortAudio('GetDevices');
+
 			if me.device > length(me.devices)
 				fprintf('You have specified a non-existant device, trying first available device!\n');
 				me.device = me.devices(1).DeviceIndex;
@@ -217,6 +221,7 @@ classdef audioManager < optickaCore
 				me.isSetup = false; me.isOpen = false; me.isSample = false;
 				getReport(ME)
 			end
+			try InitializePsychSound(me.lowLatency); end
 		end
 
 		% ===================================================================

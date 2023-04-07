@@ -24,7 +24,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 %> happened. Other methods include isFixated(), testFixationTime(),
 %> testHoldFixation().
 %>
-%> Copyright ©2014-2023 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2023 Ian Max Andolina — released: LGPL3, see LIv12345c12345CENCE.md
 % ========================================================================
 	
 %-----------------CONTROLLED PROPERTIES-------------%
@@ -87,6 +87,15 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 			me=me@eyetrackerCore(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
 			me.smoothing.sampleRate = me.sampleRate;
+
+			me.udp.protocol = 'udp';
+			me.udp.rAddress = me.calibration.ip;
+			me.udp.rPort = me.calibration.udpport;
+
+			me.tcp.protocol = 'tcp';
+			me.tcp.rAddress = me.calibration.ip;
+			me.tcp.rPort = me.calibration.tcpport;
+
 		end
 		
 		% ===================================================================
@@ -136,6 +145,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 					me.calibration.tcpport,'protocol','tcp');
 				else
 					me.tcp.close();
+					me.tcp.protocol = 'tcp';
 					me.tcp.rAddress = me.calibration.ip;
 					me.tcp.rPort = me.calibration.tcpport;
 				end
@@ -144,6 +154,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 					me.calibration.udpport,'protocol','udp');
 				else 
 					me.udp.close();
+					me.udp.protocol = 'udp';
 					me.udp.rAddress = me.calibration.ip;
 					me.udp.rPort = me.calibration.udpport;
 				end
