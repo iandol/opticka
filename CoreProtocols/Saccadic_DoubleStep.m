@@ -40,10 +40,10 @@ tL.stimStateNames			= ["onestep","twostep"];
 
 %==================================================================
 %----------------------Staircase manager---------------------------
-scopts = struct('up',1,'down',3,'StepSizeDown',0.05,...
-					'StepSizeUp',0.05,'stopcriterion','trials',...
-					'stoprule',50,'startvalue',0.3);
-task.staircase = staircaseManager('udsettings',{scopts});
+task.staircase = PAL_AMUD_setupUD('down',1,'stepSizeUp',47,'stepSizeDown',47,...
+					'startValue',225,'xMin',25,'xMax',475);
+task.staircaseType = 'UD';
+task.staircaseInvert = false; % a correct decreases value.
 
 %==================================================================
 %----------------------General Settings----------------------------
@@ -53,19 +53,27 @@ tS.rewardPin				= 2; %==Output pin, 2 by default with Arduino.
 tS.recordEyePosition		= false; %==record eye position within PTB, **in addition** to the EDF?
 tS.askForComments			= false; %==little UI requestor asks for comments before/after run
 tS.saveData					= true; %==save behavioural and eye movement data?
-tS.name						= 'twostep-saccade'; %==name of this protocol
+tS.name						= 'doublestep-saccade'; %==name of this protocol
 tS.nStims					= stims.n;	%==number of stimuli
 tS.tOut						= 1; %if wrong response, how long to time out before next trial
 tS.CORRECT 					= 1; %==the code to send eyetracker for correct trials
 tS.BREAKFIX 				= -1; %==the code to send eyetracker for break fix trials
 tS.INCORRECT 				= -5; %==the code to send eyetracker for incorrect trials
 tS.keyExclusionPattern		= ["fixate","onestep","twostep"]; % avoid keyboard commands for these states
+tS.correctSound				= [2000, 0.1, 0.1]; %==freq,length,volume
+tS.errorSound				= [300, 1, 1]; %==freq,length,volume
 
-%==================================================================
-%------------Debug logging to command window-----------------
-%io.verbose					= true;	%==print out io commands for debugging
-%eT.verbose					= true;	%==print out eyelink commands for debugging
-%rM.verbose					= true;	%==print out reward commands for debugging
+%=========================================================================
+%----------------Debug logging to command window------------------
+% uncomment each line to get specific verbose logging from each of these
+% components; you can also set verbose in the opticka GUI to enable all of
+% these…
+%sM.verbose					= true;		%==print out stateMachine info for debugging
+%stims.verbose				= true;		%==print out metaStimulus info for debugging
+%io.verbose					= true;		%==print out io commands for debugging
+%eT.verbose					= true;		%==print out eyelink commands for debugging
+%rM.verbose					= true;		%==print out reward commands for debugging
+%task.verbose				= true;		%==print out task info for debugging
 
 %==================================================================
 %-----------------INITIAL Eyetracker Settings----------------------
@@ -79,98 +87,24 @@ tS.exclusionRadius			= 5; % radius of the exclusion zone...
 tS.targetFixInit			= 3; % time to find the target
 tS.targetFixTime			= 0.25; % to to maintain fixation on target 
 tS.targetRadius				= 6; %radius to fix within.
-me.lastXPosition			= tS.fixX;
-me.lastYPosition			= tS.fixY;
-me.lastXExclusion			= [];
-me.lastYExclusion			= [];
 
-%==================================================================
-%---------------------------Eyetracker setup-----------------------
-% note: opticka UI sets some defaults, but these will override the UI
-switch me.eyetracker.device
-	case 'eyelink'
-	warning('Note this protocol is optimised for the Tobii eyetracker, beware...')
-	eT.name 					= tS.name;
-	eT.sampleRate 				= 250; % sampling rate
-	eT.calibrationStyle 		= 'HV5'; % calibration style
-	eT.calibrationProportion	= [0.4 0.4]; %the proportion of the screen occupied by the calibration stimuli
-	if tS.saveData == true;		eT.recordData = true; end %===save EDF file?
-	%-----------------------
-	% remote calibration enables manual control and selection of each fixation
-	% this is useful for a baby or monkey who has not been trained for fixation
-	% use 1-9 to show each dot, space to select fix as valid, INS key ON EYELINK KEYBOARD to
-	% accept calibration!
-	eT.remoteCalibration		= false; 
-	%-----------------------
-	eT.modify.calibrationtargetcolour = [1 1 1]; % calibration target colour
-	eT.modify.calibrationtargetsize = 2; % size of calibration target as percentage of screen
-	eT.modify.calibrationtargetwidth = 0.15; % width of calibration target's border as percentage of screen
-	eT.modify.waitformodereadytime	= 500;
-	eT.modify.devicenumber 			= -1; % -1 = use any attachedkeyboard
-	eT.modify.targetbeep 			= 1; % beep during calibration
-case 'tobii'
-	eT.name 					= tS.name;
-	%eT.model					= 'Tobii Pro Spectrum';
-	%eT.sampleRate				= 300;
-	%eT.trackingMode				= 'human';
-	%eT.calibrationStimulus		= 'animated';
-	%eT.autoPace					= true;
-	%-----------------------
-	% remote calibration enables manual control and selection of each fixation
-	% this is useful for a baby or monkey who has not been trained for fixation
-	%eT.manualCalibration		= false;
-	%-----------------------
-	%eT.calPositions				= [ .2 .5; .5 .5; .8 .5];
-	%eT.valPositions				= [ .5 .5 ];
-end
-%Initialise the eyeTracker object with X, Y, FixInitTime, FixTime, Radius, StrictFix
-eT.updateFixationValues(tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
-%make sure we don't start with any exclusion zones set up
-eT.resetExclusionZones();
+%=========================================================================
+%-------------------------------Eyetracker setup--------------------------
+% NOTE: the opticka GUI sets eyetracker options, you can override them here if
+% you need...
+eT.name				= tS.name;
+if me.eyetracker.dummy;	eT.isDummy = true; end %===use dummy or real eyetracker? 
+if tS.saveData;		eT.recordData = true; end %===save Eyetracker data?					
+% Initialise eyetracker with X, Y, FixInitTime, FixTime, Radius, StrictFix
+% values
+updateFixationValues(eT, tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
+
 
 %==================================================================
 %----WHICH states assigned as correct or break for online plot?----
 %----You need to use regex patterns for the match (doc regexp)-----
 bR.correctStateName				= "correct";
 bR.breakStateName				= ["breakfix","incorrect"];
-
-%==================================================================
-%-----simplistic randomisation of stimulus variables every trial?-----
-% if you want to have some randomisation of stimuls variables without using
-% taskSequence task (e.g. for training), you can uncomment this and
-% runExperiment can use this structure to change e.g. X or Y position,
-% size, angle see metaStimulus for more details. Remember this will not be
-% "Saved" for later use, if you want to do controlled methods of constants
-% experiments use taskSequence to define proper randomised and balanced
-% variable sets and triggers to send to recording equipment etc...
-%
-stims.stimulusTable 		= [];
-stims.choice 				= [];
-
-%==================================================================
-%-------------allows using arrow keys to control variables?-------------
-% another option is to enable manual control of a table of variables
-% this is useful to probe RF properties or other features while still
-% allowing for fixation or other behavioural control.
-% Use arrow keys <- -> to control value and up/down to control variable
-stims.controlTable = [];
-stims.tableChoice = 1;
-
-%==================================================================
-%this allows us to enable subsets from our stimulus list
-% 1 = grating | 2 = fixation cross
-stims.stimulusSets = {[2],[1,2]};
-stims.setChoice = 1;
-hide(stims);
-
-%==================================================================
-% which stimulus in the list is used for a fixation target? For this
-% protocol it means the subject must fixate this stimulus (the saccade
-% target is #1 in the list) to get the reward. Also which stimulus to set
-% an exclusion zone around (where a saccade into this area causes an
-% immediate break fixation).
-stims.fixationChoice = [1 2];
-stims.exclusionChoice = [];
 
 %==================================================================
 % N x 2 cell array of regexpi strings, list to skip the current -> next
@@ -181,6 +115,14 @@ stims.exclusionChoice = [];
 % exit states.
 sM.skipExitStates			= {'fixate','incorrect|breakfix'};
 
+%==================================================================
+% which stimulus in the list is used for a fixation target? For this
+% protocol it means the subject must fixate this stimulus (the saccade
+% target is #1 in the list) to get the reward. Also which stimulus to set
+% an exclusion zone around (where a saccade into this area causes an
+% immediate break fixation).
+stims.fixationChoice = [1 2];
+stims.exclusionChoice = [];
 
 %===================================================================
 %===================================================================
@@ -219,13 +161,19 @@ pauseExitFcn = {
 
 %====================================================PREFIXATION
 prefixEntryFcn = { 
-	@()needFlip(me, true); 
-	@()hide(stims);
+	@()needFlip(me, true, 1); % enable the screen and trackerscreen flip
+	@()needEyeSample(me, true); % make sure we start measuring eye position
+	@()hide(stims); % hide all stimuli
 	@()edit(stims,3,'alphaOut',0.5); 
 	@()edit(stims,3,'alpha2Out',1);
-	@()resetFixationHistory(eT); % reset the recent eye position history
-	@()resetExclusionZones(eT); % reset any exclusion zones on eyetracker
+	@()resetAll(eT); % reset the recent eye position history
 	@()updateFixationValues(eT,tS.fixX,tS.fixY,[],tS.firstFixTime); %reset fixation window to initial values
+	@()startRecording(eT); % start eyelink recording for this trial (tobii/irec ignore this)
+	% tracker messages that define a trial start
+	@()trackerMessage(eT,'V_RT MESSAGE END_FIX END_RT'); % Eyelink commands
+	@()trackerMessage(eT,sprintf('TRIALID %i',getTaskIndex(me))); %Eyelink start trial marker
+	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
+	@()trackerDrawStatus(eT,'PREFIX', stims.stimulusPositions);
 	% updateNextState method is critical, it reads the independent trial factor in
 	% taskSequence to select state to transition to next. This sets
 	% stateMachine.tempNextState to override the state table's default next field.
@@ -233,19 +181,11 @@ prefixEntryFcn = {
 };
 
 prefixFcn = {
-	
+	@()drawPhotoDiode(s,[0 0 0]);
 };
 
 prefixExitFcn = { 
-	@()trackerMessage(eT,sprintf('TRIALID %i',getTaskIndex(me))); %Eyelink start trial marker
-	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
-	@()trackerClearScreen(eT); % blank the eyelink screen
-	@()trackerDrawFixation(eT); % draw fixation window on eyetracker display
-	@()trackerDrawStimuli(eT,stims.stimulusPositions); %draw location of stimulus on eyetracker
-	@()needEyeSample(me,true); % make sure we start measuring eye position
-	% IMPORTANT! updateNextState uses the trial/block factor in task to select
-	% which state to transition to next
-	@()updateNextState(me,'trial');
+	
 };
 
 %====================================================ONESTEP FIXATION + STIMULATION
@@ -493,21 +433,26 @@ gridFcn = {
 % specify our cell array that is read by the stateMachine
 stateInfoTmp = {
 'name'      'next'		'time'  'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn';
+%---------------------------------------------------------------------------------------------
 'pause'		'prefix'	inf		pauseEntryFcn	{}				{}				pauseExitFcn;
 'prefix'	'UseTemp'	2		prefixEntryFcn	prefixFcn		{}				prefixExitFcn;
-'fix1Step' 'incorrect'	5	 	fixOSEntryFcn	fixOSFcn		inFixOSFcn		fixOSExitFcn;
-'fix2Step' 'incorrect'	5	 	fixTSEntryFcn	fixTSFcn		inFixTSFcn		fixTSExitFcn;
+%---------------------------------------------------------------------------------------------
+'fix1step'	'incorrect'	5	 	fixOSEntryFcn	fixOSFcn		inFixOSFcn		fixOSExitFcn;
+'fix2step'	'incorrect'	5	 	fixTSEntryFcn	fixTSFcn		inFixTSFcn		fixTSExitFcn;
 'onestep'	'incorrect'	5		osEntryFcn		osFcn			maintainFixFcn	sExitFcn;
 'twostep'	'incorrect'	5		tsEntryFcn		tsFcn			maintainFixFcn	sExitFcn;
+%---------------------------------------------------------------------------------------------
 'incorrect'	'timeout'	0.5		incEntryFcn		incFcn			{}				incExitFcn;
 'breakfix'	'timeout'	0.5		breakEntryFcn	incFcn			{}				incExitFcn;
 'exclusion'	'timeout'	0.5		exclEntryFcn	incFcn			{}				incExitFcn;
 'correct'	'prefix'	0.5		correctEntryFcn	correctFcn		{}				correctExitFcn;
 'useTemp'	'prefix'	0.5		{}				{}				{}				{};
 'timeout'	'prefix'	tS.tOut	{}				{}				{}				{};
+%---------------------------------------------------------------------------------------------
 'calibrate' 'pause'		0.5		calibrateFcn	{}				{}				{};
 'drift'		'pause'		0.5		driftFcn		{}				{}				{};
 'override'	'pause'		0.5		overrideFcn		{}				{}				{};
+%---------------------------------------------------------------------------------------------
 'flash'		'pause'		0.5		flashFcn		{}				{}				{};
 'showgrid'	'pause'		10		{}				gridFcn			{}				{};
 };

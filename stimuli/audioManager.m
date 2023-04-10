@@ -150,14 +150,15 @@ classdef audioManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief  
+		%> @brief 
 		%>
 		% ===================================================================
 		function beep(me,freq,durationSec,fVolume)
 			if me.silentMode; return; end
 			if ~me.isSetup; setup(me);end
-			
+
 			if ~exist('freq', 'var');freq = 1000;end
+			if isnumeric(freq) && length(freq) == 3; fVolume = freq(3); durationSec=freq(2); freq = freq(1); end
 			if ~exist('durationSec', 'var');durationSec = 0.15;	end
 			if ~exist('fVolume', 'var'); fVolume = 0.5;
 			else

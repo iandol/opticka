@@ -47,6 +47,14 @@ classdef taskSequence < optickaCore & dynamicprops
 		trialVar struct
 		%> number of repeated blocks to present
 		nBlocks double			= 1
+		%> staircase manager, uses Palamedes PAL_AM* functions, pass the
+		%> output of the setup function
+		staircase
+		%> type of staircase: UD=up/down RF=QUEST PM=Psi-Method
+		%> This generates the correct update function, e.g. PAL_AMUD_updateUD
+		staircaseType			= 'UD'
+		%> normally, correct = 1 steps down, we can invert it to "step up"
+		staircaseInvert			= false;
 		%> whether to randomise nVar (true) or run sequentially (false)
 		randomise logical		= true
 		%> insert a blank condition in each block?
@@ -85,8 +93,6 @@ classdef taskSequence < optickaCore & dynamicprops
 		ibTime double			= 2
 		%> original index before any resetRun()s
 		startIndex
-		%> staircase manager
-		staircase
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -142,7 +148,7 @@ classdef taskSequence < optickaCore & dynamicprops
 		%> properties allowed during initial construction
 		allowedProperties = {'randomise','nVar','blockVar','trialVar','nBlocks',...
 			'trialTime','isTime','ibTime','realTime','randomSeed','fps',...
-			'randomGenerator','verbose','addBlank'}
+			'randomGenerator','verbose','addBlank','staircase'}
 		%> used to handle problems with dependant property nVar: the problem
 		%> is that set.nVar gets called before static loadobj, and therefore
 		%> we need to handle this differently. Initially set to empty, set
@@ -152,7 +158,7 @@ classdef taskSequence < optickaCore & dynamicprops
 		%> this stops loading old randstreams etc.
 		loadProperties cell = {'randomise','nVar','nBlocks','trialTime','isTime','ibTime','verbose',...
 			'realTime','randomSeed','randomGenerator','outValues','outVars','addBlank', ...
-			'outIndex', 'outMap', 'minTrials','states','nState','name'}
+			'outIndex', 'outMap', 'minTrials','states','nState','name','staircase'}
 		%> nVar template and default values
 		varTemplate struct = struct('name','','stimulus',[],'values',[],'offsetstimulus',[],'offsetvalue',[])
 		%> blockVar template and default values
@@ -472,6 +478,22 @@ classdef taskSequence < optickaCore & dynamicprops
 
 			if ~isempty(me.resetLog) && me.resetLog(end).totalRuns == me.totalRuns && me.resetLog(end).success == true
 				me.responseInfo{me.totalRuns} = {me.resetLog(end).message, me.responseInfo{me.totalRuns}};
+			end
+
+			if ~isempty(me.staircase) && isstruct(me.staircase) && isfield(me.staircase,'xCurrent')
+				if ~me.staircaseInvert
+					res = 1; 
+				else
+					res = 0; 
+				end
+				if thisResponse == true || thisResponse == 1
+					response = res;
+				else
+					response = ~res;
+				end
+				cmd = ['me.staircase = PAL_AM' me.staircaseType '_update' me.staircaseType '(me.staircase, ' num2str(response) ');'];
+				eval(cmd);
+				if me.staircase.stop; fprintf('--->>> taskSequence Staircase has stopped...\n'); end
 			end
 
 			if me.verbose

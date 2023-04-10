@@ -665,10 +665,14 @@ classdef runExperiment < optickaCore
 				aM=audioManager;
 			end
 			aM.device = me.audioDevice;
-			aM.silentMode = false;
-			reset(aM);
-			if ~aM.isSetup;	try setup(aM); end; end
-			aM.beep(1000,0.1,0.1);
+			if isempty(me.audioDevice) || me.audioDevice >= 0
+				aM.silentMode = false;
+				reset(aM);
+				if ~aM.isSetup;	try setup(aM); end; end
+				aM.beep(1000,0.1,0.1);
+			else
+				aM.silentMode = true;
+			end
 			
 			if isempty(regexpi(me.comment, '^Protocol','once'))
 				me.comment = '';
@@ -684,18 +688,16 @@ classdef runExperiment < optickaCore
 			tS.name						= 'generic';%==name of this protocol
 			tS.useTask					= false;	%==use taskSequence (randomised variable task object)
 			tS.keyExclusionPattern		= ["fixate","stimulus"]; %==which states skip keyboard check
-			tS.checkKeysDuringStimulus	= false;	%==allow keyboard control? Slight drop in performance
 			tS.enableTrainingKeys		= false;	%==enable keys useful during task training, but not for data recording
 			tS.recordEyePosition		= false;	%==record eye position within PTB, **in addition** to the eyetracker?
 			tS.askForComments			= false;	%==little UI requestor asks for comments before/after run
 			tS.saveData					= false;	%==save behavioural and eye movement data?
-			tS.controlPlexon			= false;	%==send start/stop commands to a plexon?
 			tS.showBehaviourPlot		= true;		%==open the behaviourPlot figure? Can cause more memory use
 			tS.rewardTime				= 250;		%==TTL time in milliseconds
 			tS.rewardPin				= 2;		%==Output pin, 2 by default with Arduino.
 			tS.tOut						= 5;		%==if wrong response, how long to time out before next trial
-			tS.useMagStim				= false;	%==set up magstim [deprecated]?
-			tS.tobiiFlipRate			= 8;		%==how many flip frames constitute 1 tobii flip?
+			tS.correctSound				= [2000, 0.1, 0.1]; %==freq,length,volume
+			tS.errorSound				= [300, 1, 1]; %==freq,length,volume
 	
 			%------initialise time logs for this run
 			me.previousInfo.taskLog		= me.taskLog;
@@ -807,6 +809,13 @@ classdef runExperiment < optickaCore
 					me.paths.stateInfoFile = me.stateInfoFile;
 				end
 				uF.sM = sM;
+				me.lastXPosition			= tS.fixX;
+				me.lastYPosition			= tS.fixY;
+				me.lastXExclusion			= [];
+				me.lastYExclusion			= [];
+				me.eyetracker.name			= tS.name;
+				if me.eyetracker.dummy;		eT.isDummy = true; end %===use dummy or real eyetracker? 
+				if tS.saveData;				eT.recordData = true; end %===save Eyetracker data?			
 				
 				%================================set up the eyetracker interface
 				configureEyetracker(me, eT, s);
@@ -1342,6 +1351,8 @@ classdef runExperiment < optickaCore
 				updateExclusionZones(me.eyeTracker, me.stimuli.lastXExclusion, me.stimuli.lastYExclusion, radius);
 			end
 		end
+
+
 		
 		% ===================================================================
 		function updateConditionalFixationTarget(me, stimulus, variable, value, varargin)

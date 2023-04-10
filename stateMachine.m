@@ -308,6 +308,9 @@ classdef stateMachine < optickaCore
 					if ischar(tname) && isStateName(me,tname) % a valid name was returned, time to transition
 						me.transitionToStateWithName(tname);
 						return
+					elseif matches(tname,'tempNextState') && ~isempty(me.tempNextState) && isStateName(me, me.tempNextState)
+						me.transitionToStateWithName(me.tempNextState);
+						return
 					end
 				end
 				

@@ -15,7 +15,7 @@ classdef userFunctions < handle %#ok<*MCFIL>
 %> same). They can add their own methods. The class will be added as a uF
 %> object and these methods can be used via the state info file.
 %>
-%> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2023 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 
 	% task object handles are added here by runExperiment, DO NOT EDIT
@@ -26,7 +26,7 @@ classdef userFunctions < handle %#ok<*MCFIL>
 		sM
 		%> screenManager
 		s
-		%> taskManager
+		%> taskSequence
 		task
 		%> metaStimulus stimluli
 		stims
@@ -69,8 +69,20 @@ classdef userFunctions < handle %#ok<*MCFIL>
 			end
 		end
 
+		% ===================================================================
+		function setDelayTimeWithStaircase(me, stim)
+		%> uses a staircase to set the off time for a specific stimulus
+		%>   
+		% ===================================================================
+			if ~isempty(me.task.staircase)
+				me.stims{stim}.delayTime = me.task.staircase.xCurrent;
+				fprintf('===>>> SET OFFTIME on stim %i to %.2f\n', stim, me.stims{stim}.offTime);
+			end
+		end
+
 		% ADD YOUR FUNCTIONS BELOW ↓
 
+		% ===================================================================
 		function myText(me)
 			me.s.drawText('Hello from myFunctions')
 		end

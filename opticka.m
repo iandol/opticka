@@ -1071,9 +1071,10 @@ classdef opticka < optickaCore
 				tmp.store = struct(); %lets just nuke this incase some rogue handles are lurking
 				tmp.ui = struct(); %remove the handles to the UI which will not be valid on reload
 				
-				[~, ff, ee] = fileparts(me.r.stateInfoFile);
+				[~, ~, ee] = fileparts(me.r.stateInfoFile);
 				if copyIt == true
-					tmp.r.stateInfoFile = [pwd filesep ff ee];
+					nm = regexprep(me.store.protocolName,'\.mat$','');
+					tmp.r.stateInfoFile = [pwd filesep nm ee];
 					if ~strcmpi(me.r.stateInfoFile,tmp.r.stateInfoFile)
 						[status, msg] = copyfile(me.r.stateInfoFile, tmp.r.stateInfoFile, 'f');
 						if status ~= 1

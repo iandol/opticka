@@ -294,6 +294,23 @@ classdef baseStimulus < optickaCore & dynamicprops
 		function hide(me)
 			me.isVisible = false;
 		end
+
+		% ===================================================================
+		%> @brief set offTime
+		%>
+		% ===================================================================
+		function setOffTime(me, time)
+			me.offTime = time;
+		end
+
+		% ===================================================================
+		%> @brief set offTime
+		%>
+		% ===================================================================
+		function setDelayTime(me, time)
+			me.delayTime = time;
+		end
+
 		
 		% ===================================================================
 		%> @brief reset the various tick counters for our stimulus
