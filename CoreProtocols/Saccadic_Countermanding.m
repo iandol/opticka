@@ -24,10 +24,22 @@
 % taskSequence, so when we run task.updateTask it also updates the
 % staircase for us. See Palamedes toolbox for the PAL_AM methods.
 % 1up / 1down staircase starts at 225ms and steps at 47ms
+assert(exist('PAL_AMUD_setupUD','file'),'MUST Install Palamedes Toolbox: https://www.palamedestoolbox.org')
 task.staircase = PAL_AMUD_setupUD('down',1,'stepSizeUp',47,'stepSizeDown',47,...
 					'startValue',225,'xMin',25,'xMax',475);
 task.staircaseType = 'UD';
 task.staircaseInvert = false; % a correct decreases value.
+% do we update the trial number even for incorrect saccades, if true then we
+% call updateTask for both correct and incorrect, otherwise we only call
+% updateTask() for correct responses
+tS.includeErrors			= false; 
+% we use taskSequence to randomise which state to switch to (independent
+% trial-level factor). We call
+% @()updateNextState(me,'trial') in the prefixation state; this sets one of
+% these two trialVar.values as the next state. The nostop and stop
+% states will then call nostop2 or stop2 stimulus states. Therefore we can
+% call different experiment structures based on this trial-level factor.
+tL.stimStateNames			= ["nostop2","stop2"];
 
 %=========================================================================
 %-----------------------------General Settings----------------------------
@@ -41,14 +53,14 @@ task.staircaseInvert = false; % a correct decreases value.
 tS.useTask					= true;		%==use taskSequence (randomises stimulus variables)
 tS.rewardTime				= 250;		%==TTL time in milliseconds
 tS.rewardPin				= 2;		%==Output pin, 2 by default with Arduino.
-tS.keyExclusionPattern		= ["fixate","nostop","stop"]; %==which states to skip keyboard checking (slightly improve performance)
+tS.keyExclusionPattern		= ["nostop","nostop2","stop","stop2"]; %==which states to skip keyboard checking (slightly improve performance)
 tS.enableTrainingKeys		= false;	%==enable keys useful during task training, but not for data recording
 tS.recordEyePosition		= false;	%==record a local copy of eye position, **in addition** to the eyetracker?
 tS.askForComments			= false;	%==UI requestor asks for comments before/after run
 tS.saveData					= true;		%==save behavioural and eye movement data?
 tS.showBehaviourPlot		= true;		%==open the behaviourPlot figure? Can cause more memory use…
 tS.includeErrors			= true;		%==do we update the trial number even for incorrect saccade/fixate, if true then we call updateTask for both correct and incorrect, otherwise we only call updateTask() for correct responses
-tS.name						= 'Saccade Countermanding'; %==name of this protocol
+tS.name						= 'Saccadic Countermanding'; %==name of this protocol
 tS.nStims					= stims.n;	%==number of stimuli, taken from metaStimulus object
 tS.tOut						= 5;		%==if wrong response, how long to time out before next trial
 tS.CORRECT					= 1;		%==the code to send eyetracker for correct trials

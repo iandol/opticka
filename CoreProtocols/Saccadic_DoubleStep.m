@@ -23,6 +23,15 @@
 
 %==================================================================
 %---------------------------TASK CONFIG----------------------------
+% we use a up/down staircase to control the SSD, note this is controlled by
+% taskSequence, so when we run task.updateTask it also updates the
+% staircase for us. See Palamedes toolbox for the PAL_AM methods.
+% 1up / 1down staircase starts at 225ms and steps at 47ms
+assert(exist('PAL_AMUD_setupUD','file'),'MUST Install Palamedes Toolbox: https://www.palamedestoolbox.org')
+task.staircase = PAL_AMUD_setupUD('down',1,'stepSizeUp',47,'stepSizeDown',47,...
+					'startValue',225,'xMin',25,'xMax',475);
+task.staircaseType = 'UD';
+task.staircaseInvert = false; % a correct decreases value.
 %do we update the trial number even for incorrect saccades, if true then we
 %call updateTask for both correct and incorrect, otherwise we only call
 %updateTask() for correct responses
@@ -37,13 +46,6 @@ tS.includeErrors			= false;
 %task.trialVar.probability	= [0.6 0.4];
 task.trialVar.comment		= 'one or twostep trial based on 60:40 probability';
 tL.stimStateNames			= ["onestep","twostep"];
-
-%==================================================================
-%----------------------Staircase manager---------------------------
-task.staircase = PAL_AMUD_setupUD('down',1,'stepSizeUp',47,'stepSizeDown',47,...
-					'startValue',225,'xMin',25,'xMax',475);
-task.staircaseType = 'UD';
-task.staircaseInvert = false; % a correct decreases value.
 
 %==================================================================
 %----------------------General Settings----------------------------

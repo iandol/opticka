@@ -1,4 +1,4 @@
-qqqq% FIXATION TRAINING state configuration file
+% FIXATION TRAINING state configuration file
 %
 % This presents a fixation spot with a flashing disk in a loop to train for
 % fixation. There is a distractor that moves around and subject must ignore
