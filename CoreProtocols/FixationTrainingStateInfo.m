@@ -1,10 +1,14 @@
-%FIXATION TRAINING state configuration file
+% FIXATION TRAINING 
 %
-% This presents a fixation cross with a stimulus in a loop to train for
-% fixation. stims should contain 2 stimuli: stims{1} is a attention
-% grabber, stims{2} is the fixation cross. Adjust stimulus sizes and
-% eyetracker setting values over training to refine behaviour The following
-% class objects are already loaded and available to use:
+% Protocol presents a pulsing fixation cross with a stimulus in a loop to train
+% for fixation. stims should contain 2 stimuli: stims{1} is a attention grabber,
+% stims{2} is the fixation cross. Adjust stimulus sizes and eyetracker setting
+% values over training to refine behaviour. You can use the ↑ ↓ keys to set the
+% variable (size, xPosition, yPosition) and ← → to change the value of the
+% variable. You can also use keys to change fixation window size, and time to
+% fixate during the session.
+%
+% The following class objects are already loaded and available to use:
 % 
 %
 % me		= runExperiment object ('self' in OOP terminology) 
@@ -29,7 +33,7 @@ tS.keyExclusionPattern		= [];		%==which states to skip keyboard checking
 tS.recordEyePosition		= false;	%==record local copy of eye position, **in addition** to the eyetracker?
 tS.askForComments			= false;	%==UI requestor asks for comments before/after run
 tS.saveData					= true;		%==save behavioural and eye movement data?
-tS.name						= 'fixation training'; %==name of this protocol
+tS.name						= 'Fixation training'; %==name of this protocol
 tS.nStims					= stims.n;	%==number of stimuli, taken from metaStimulus object
 tS.tOut						= 5;		%==if wrong response, how long to time out before next trial
 tS.CORRECT					= 1;		%==the code to send eyetracker for correct trials
@@ -66,7 +70,8 @@ tS.firstFixInit				= 3;
 tS.firstFixTime				= 0.25;
 % circular fixation window radius in degrees
 tS.firstFixRadius			= 5;
-% do we forbid eye to enter-exit-reenter fixation window?
+% do we forbid eye to enter-exit-reenter fixation window? Set false to make it
+% easier during training, nd set to true for final data collection.
 tS.strict					= false;
 % do we add an exclusion zone where subject cannot saccade to...
 tS.exclusionZone			= [];
@@ -119,7 +124,8 @@ stims.choice					= [];
 %-------------allows using arrow keys to control variables?-------------
 % another option is to enable manual control of a table of variables
 % this is useful to probe RF properties or other features while still
-% allowing for fixation or other behavioural control.
+% allowing for fixation or other behavioural control. This is also useful for
+% training.
 stims.tableChoice				= 1;
 n								= 1;
 stims.controlTable(n).variable	= 'size';
@@ -157,9 +163,14 @@ stims.exclusionChoice = [];
 % state's exit functions; for example skipExitStates =
 % {'fixate','incorrect|breakfix'}; means that if the currentstate is
 % 'fixate' and the next state is either incorrect OR breakfix, then skip
-% the FIXATE exit state. Add multiple rows for skipping multiple state's
-% exit states.
-sM.skipExitStates			= {'fixate','incorrect|breakfix'};
+% running the fixate exit state functions. Add multiple rows for skipping
+% multiple exit states. Sometimes the exit functions prepare for some new
+% state, and those functions are not relevant if another state comes after.
+% In the example, the idea is fixate should go to stimulus, so run
+% preparatory functions in exitFcn, but if the subject didn't properly
+% fixate, then when going to incorrect we don't need to prepare the
+% stimulus.
+sM.skipExitStates = {'fixate','incorrect|breakfix'};
 
 %===================================================================
 %===================================================================
@@ -258,7 +269,6 @@ correctEntryFn = {
 	@()timedTTL(rM, tS.rewardPin, tS.rewardTime); % send a reward TTL
 	@()beep(aM,2000,0.1,0.1); % correct beep
 	@()trackerMessage(eT,['TRIAL_RESULT ' num2str(tS.CORRECT)]); % tell EDF trial was a correct
-	@()statusMessage(eT,'CORRECT! :-)'); %show it on the eyelink screen
 	@()trackerDrawStatus(eT,'CORRECT! :-)');
 	@()needFlipTracker(me, 0); %for operator screen stop flip
 	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
@@ -361,14 +371,6 @@ gridFn = {
 	@()drawGrid(s); 
 	@()drawScreenCenter(s);
 };
-
-% N x 2 cell array of regexpi strings, list to skip the current -> next
-% state's exit functions; for example skipExitStates =
-% {'fixate','incorrect|breakfix'}; means that if the currentstate is
-% 'fixate' and the next state is either incorrect OR breakfix, then skip
-% the FIXATE exit state. Add multiple rows for skipping multiple state's
-% exit states.
-sM.skipExitStates = {'fixate','incorrect|breakfix'};
 
 %==================================================================
 %----------------------State Machine Table-------------------------

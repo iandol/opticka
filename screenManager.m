@@ -388,7 +388,7 @@ classdef screenManager < optickaCore
 					Screen('Preference', 'SuppressAllWarnings', 0);
 				else
 					if me.disableSyncTests
-						fprintf('\n---> screenManager: Sync Tests OVERRIDDEN, do not use for real experiments!!!\n');
+						fprintf('\n---> screenManager: Sync Tests OVERRIDDEN, do NOT use for real experiments!!!\n');
 						Screen('Preference', 'SkipSyncTests', 2);
 					else
 						fprintf('\n---> screenManager: Normal Screen Preferences used.\n');
@@ -490,6 +490,7 @@ classdef screenManager < optickaCore
 				end
 				if me.windowed == false %full-screen
 					winSize = [];
+					sf = me.specialFlags;
 				else %windowed
 					if length(me.windowed) == 2
 						winSize = [0 0 me.windowed(1) me.windowed(2)];
@@ -497,6 +498,11 @@ classdef screenManager < optickaCore
 						winSize = me.windowed;
 					else
 						winSize=[0 0 800 800];
+					end
+					if isempty(me.specialFlags)
+						sf = kPsychGUIWindow;
+					else
+						sf = me.specialFlags;
 					end
 				end
 
@@ -508,7 +514,7 @@ classdef screenManager < optickaCore
 				% ==============================================================
 				[me.win, me.winRect] = PsychImaging('OpenWindow', thisScreen, ...
 					me.backgroundColour, winSize, [], me.doubleBuffer+1,[], ...
-					me.antiAlias, [], me.specialFlags);
+					me.antiAlias, [], sf);
 				me.isOpen = true;
 				% ==============================================================
 

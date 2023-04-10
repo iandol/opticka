@@ -190,7 +190,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 			if ~isa(rM,'arduinoManager') 
 				rM=arduinoManager();
 			end
-			if ~rM.isOpen; rM.close; rM.reset; rM.open; end
+			if ~rM.silentMode && ~rM.isOpen; rM.close; rM.open; end
 
 			cal = [];
 			if ~me.isConnected && ~me.isDummy

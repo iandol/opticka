@@ -657,7 +657,7 @@ classdef runExperiment < optickaCore
 				rM=arduinoManager();
 			end
 			if rM.isOpen
-				rM.close; rM.reset;
+				try rM.close; rM.reset; end
 			end
 			
 			%------initialise an audioManager for beeps,playing sounds etc.
@@ -1692,7 +1692,7 @@ classdef runExperiment < optickaCore
 						if ischar(offsetvalue)
 							mtch = regexpi(offsetvalue,'^(?<name>[^\(\s\d]*)(\(?)(?<num>\d*)(\)?)','names');
 							nme = mtch.name;
-							num = str2double(mtch.num);
+							num = str2num(mtch.num);
 							if ~isempty(nme)
 								switch (lower(nme))
 									case {'invert'}
@@ -1703,18 +1703,20 @@ classdef runExperiment < optickaCore
 										end
 									case {'yvar'}
 										if doXY && ~isnan(num) && ~isempty(num) && length(value)==2
-											if rand < 0.5
-												val = [value(1) value(2)-num];
+											if length(num)==1; var = 0.5; else; var = num(2); end
+											if rand < var
+												val = [value(1) value(2)-num(1)];
 											else
-												val = [value(1) value(2)+num];
+												val = [value(1) value(2)+num(1)];
 											end
 										end
 									case {'xvar'}
 										if doXY && ~isnan(num) && ~isempty(num) && length(value)==2
-											if rand< 0.5
-												val = [value(1)-num value(2)];
+											if length(num)==1; var = 0.5; else; var = num(2); end
+											if rand < var
+												val = [value(1)-num(1) value(2)];
 											else
-												val = [value(1)+num value(2)];
+												val = [value(1)+num(1) value(2)];
 											end
 										end
 									case {'yoffset'}
@@ -1963,8 +1965,6 @@ classdef runExperiment < optickaCore
 				catch
 					warning('Cannot open Intan connection!');
 				end
-			else
-				me.dC = dataConnection();
 			end
 			
 		end
