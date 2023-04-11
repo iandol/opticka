@@ -16,6 +16,13 @@
 % ======================================================================
 classdef opticka < optickaCore
 	
+	properties (SetAccess = protected, GetAccess = public)
+		%> version number
+		optickaVersion char		= '2.15.7'
+		%> is this a remote instance?
+		remote					= false
+	end
+	
 	properties
 		%> this is the main runExperiment object
 		r runExperiment
@@ -33,13 +40,6 @@ classdef opticka < optickaCore
 	properties (SetAccess = protected, GetAccess = public, Transient = true)
 		%> all of the handles to the opticka_ui GUI
 		ui
-	end
-	
-	properties (SetAccess = protected, GetAccess = public)
-		%> version number
-		optickaVersion char		= '2.15.6'
-		%> is this a remote instance?
-		remote					= false
 	end
 
 	properties (SetAccess = protected, GetAccess = public, Hidden = true)
