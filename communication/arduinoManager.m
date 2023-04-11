@@ -86,8 +86,11 @@ classdef arduinoManager < optickaCore
 		%===============OPEN DEVICE================%
 		function open(me)
 			if me.isOpen || ~isempty(me.device);disp('-->arduinoManager: Already open!');return;end
-			if me.silentMode;disp('-->arduinoManager: In silent mode, try to close() then open()!');me.isOpen=false;return;end
-			if isempty(me.port);warning('--->arduinoManager: Better specify the port to use; will try to select one from available ports!');return;end
+			if me.silentMode;disp('-->arduinoManager: In silent mode, try to reset() then open()!');me.isOpen=false;return;end
+			if isempty(me.port)
+				warning('--->arduinoManager: Better specify the port to use; will try to select one from available ports!');
+				me.port = char(me.ports(end));
+			end
 			close(me); checkPorts(me);
 			try
 				if IsWin && ~isempty(regexp(me.port, '^/dev/', 'once'))
@@ -114,13 +117,16 @@ classdef arduinoManager < optickaCore
 				
 				try
 					me.device = arduinoIOPort(me.port,endPin,startPin);
-				catch
+					failToOpen = false;
+				catch ME
 					me.device.isDemo = true;
+					failToOpen = true;
+					getReport(ME);
 				end
 				
-				if me.device.isDemo
+				if failToOpen
 					me.isOpen = false; me.silentMode = true;
-					warning('--->arduinoManager: IOport couldn''t open the port, going into silent mode!');
+					uiwait(warndlg('--->arduinoManager: IOport couldn''t open the port, going into silent mode!','arduinoManager','modal'));
 					return
 				else
 					me.deviceID = me.port;

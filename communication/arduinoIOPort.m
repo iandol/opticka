@@ -60,7 +60,9 @@ classdef arduinoIOPort < handle
 				a.startPin = startPin;
 			end
 			% check port
-			if ~ischar(port)
+			if isstring(port)
+				port = char(port);
+			elseif ~ischar(port)
 				error('The input argument must be a string, e.g. ''/dev/ttyACM0'' ');
 			end
 			if strcmpi(port,'DEMO')

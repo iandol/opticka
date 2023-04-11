@@ -105,6 +105,7 @@ classdef audioManager < optickaCore
 				me.isOpen = true;
 			catch 
 				me.reset();
+				warning('--->audioManager: setup failed, going into silent mode, note you will have no sound!')
 				me.silentMode = true;
 			end
 		end

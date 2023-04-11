@@ -33,12 +33,15 @@ tS.keyExclusionPattern		= [];		%==which states to skip keyboard checking
 tS.recordEyePosition		= false;	%==record local copy of eye position, **in addition** to the eyetracker?
 tS.askForComments			= false;	%==UI requestor asks for comments before/after run
 tS.saveData					= true;		%==save behavioural and eye movement data?
+tS.showBehaviourPlot		= true;		%==open the behaviourPlot figure? Can cause more memory use
 tS.name						= 'Fixation training'; %==name of this protocol
 tS.nStims					= stims.n;	%==number of stimuli, taken from metaStimulus object
 tS.tOut						= 5;		%==if wrong response, how long to time out before next trial
 tS.CORRECT					= 1;		%==the code to send eyetracker for correct trials
 tS.BREAKFIX					= -1;		%==the code to send eyetracker for break fix trials
 tS.INCORRECT				= -5;		%==the code to send eyetracker for incorrect trials
+tS.correctSound				= [2000, 0.1, 0.1]; %==freq,length,volume
+tS.errorSound				= [300, 1, 1];		%==freq,length,volume
 
 %==================================================================
 %----------------Debug logging to command window------------------
@@ -73,52 +76,14 @@ tS.firstFixRadius			= 5;
 % do we forbid eye to enter-exit-reenter fixation window? Set false to make it
 % easier during training, nd set to true for final data collection.
 tS.strict					= false;
-% do we add an exclusion zone where subject cannot saccade to...
-tS.exclusionZone			= [];
-%tS.stimulusFixTime			= 0.5;		%==time to fix on the stimulus
-% historical log of X and Y position, and exclusion zone
-me.lastXPosition			= tS.fixX;
-me.lastYPosition			= tS.fixY;
-me.lastXExclusion			= [];
-me.lastYExclusion			= [];
-
-%==================================================================
-%---------------------------Eyetracker setup-----------------------
-% NOTE: the opticka GUI can set eyetracker options too, if you set options here
-% they will OVERRIDE the GUI ones; if they are commented then the GUI options
-% are used. runExperiment.elsettings and runExperiment.tobiisettings
-% contain the GUI settings; we test if they are empty or not and set
-% defaults based on that...
-eT.name 					= tS.name;
-if tS.saveData == true;	eT.recordData = true; end %===save ET data?					
-%Initialise the eyeTracker object with X, Y, FixInitTime, FixTime, Radius, StrictFix
-eT.updateFixationValues(tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
-eT.resetAll();
+% Initialise eyetracker with X, Y, FixInitTime, FixTime, Radius, StrictFix values
+updateFixationValues(eT, tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
 
 %==================================================================
 %----WHICH states assigned as correct or break for online plot?----
 %----You need to use regex patterns for the match (doc regexp)-----
 bR.correctStateName				= "correct";
 bR.breakStateName				= ["breakfix","incorrect"];
-
-%==================================================================
-%--------------randomise stimulus variables every trial?-----------
-% if you want to have some randomisation of stimuls variables without using
-% taskSequence task (i.e. general training tasks), you can uncomment this
-% and runExperiment can use this structure to change e.g. X or Y position,
-% size, angle see metaStimulus for more details. Remember this will not be
-% "Saved" for later use, if you want to do controlled methods of constants
-% experiments use taskSequence to define proper randomised and balanced
-% variable sets and triggers to send to recording equipment etc...
-%
-% n								= 1;
-% in(n).name					= 'xyPosition';
-% in(n).values					= [6 6; 6 -6; -6 6; -6 -6; -6 0; 6 0];
-% in(n).stimuli					= 1;
-% in(n).offset					= [];
-% stims.stimulusTable				= in;
-stims.stimulusTable				= [];
-stims.choice					= [];
 
 %==================================================================
 %-------------allows using arrow keys to control variables?-------------
@@ -204,7 +169,6 @@ pauseEntryFn = {
 %--------------------exit pause state
 pauseExitFn = {
 	@()fprintf('\n===>>>EXIT PAUSE STATE\n')
-	@()needFlip(me, true, 1); % start PTB screen flips
 	@()startRecording(eT, true); % start eyetracker recording for this trial
 };
 
@@ -213,13 +177,13 @@ psEntryFn = {
 	@()needFlip(me, true, 1); % start PTB screen flips, and tracker screen flip
 	@()needEyeSample(me, true); % make sure we start measuring eye position
 	@()startRecording(eT); % start eyelink recording for this trial (ignored by tobii/irec as they always records)
+	@()getStimulusPositions(stims,true); %make a struct the eT can use for drawing stim positions
 	@()updateFixationTarget(me, true);
 	@()resetAll(eT); %reset all fixation counters and history ready for a new trial
-	@()getStimulusPositions(stims,true); %make a struct the eT can use for drawing stim positions
 	@()trackerMessage(eT,'V_RT MESSAGE END_FIX END_RT'); % Eyelink-specific commands, ignored by other eyetrackers
 	@()trackerMessage(eT,sprintf('TRIALID %i',getTaskIndex(me))); %Eyetracker start trial marker
 	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
-	@()trackerClearScreen(eT); %draw status to eyetracker display
+	@()trackerDrawStatus(eT,'Pre-stimulus...', stims.stimulusPositions);
 	@()logRun(me,'PREFIX'); % log current trial info to command window AND timeLogger
 };
 
@@ -260,20 +224,20 @@ maintainFixFn = {
 
 %-----------------------as we exit stim presentation state
 stimExitFn = {
-	@()trackerMessage(eT,'END_FIX'); % tell EDF we finish fix
-	@()trackerMessage(eT,'END_RT'); % tell EDF we finish reaction time
+	@()trackerMessage(eT,'END_FIX'); % tell eyetracker we finish fix
+	@()trackerMessage(eT,'END_RT'); % tell eyetracker we finish reaction time
 };
 
 %-----------------------if the subject is correct (small reward)
 correctEntryFn = {
 	@()timedTTL(rM, tS.rewardPin, tS.rewardTime); % send a reward TTL
-	@()beep(aM,2000,0.1,0.1); % correct beep
 	@()trackerMessage(eT,['TRIAL_RESULT ' num2str(tS.CORRECT)]); % tell EDF trial was a correct
 	@()trackerDrawStatus(eT,'CORRECT! :-)');
 	@()needFlipTracker(me, 0); %for operator screen stop flip
 	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()needEyeSample(me,false); % no need to collect eye data until we start the next trial
+	@()beep(aM,2000,0.1,0.1); % correct beep
 	@()logRun(me,'CORRECT'); %fprintf current trial info
 };
 
@@ -293,7 +257,6 @@ correctExitFn = {
 
 %----------------------break entry
 breakEntryFn = {
-	@()beep(aM,400,0.5,1);
 	@()trackerMessage(eT,['TRIAL_RESULT ' num2str(tS.BREAKFIX)]); %trial incorrect message
 	@()trackerDrawStatus(eT,'BROKE FIX! :-(');
 	@()needFlipTracker(me, 0); %for operator screen stop flip
@@ -301,12 +264,12 @@ breakEntryFn = {
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()needEyeSample(me,false);
 	@()hide(stims);
+	@()beep(aM,400,0.5,1);
 	@()logRun(me,'BREAKFIX'); %fprintf current trial info
 };
 
 %----------------------inc entry
 incEntryFn = { 
-	@()beep(aM,400,0.5,1);
 	@()trackerMessage(eT,['TRIAL_RESULT ' num2str(tS.INCORRECT)]); %trial incorrect message
 	@()trackerDrawStatus(eT,'INCORRECT! :-(', stims.stimulusPositions);
 	@()needFlipTracker(me, 0); %for operator screen stop flip
@@ -314,6 +277,7 @@ incEntryFn = {
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()needEyeSample(me,false);
 	@()hide(stims);
+	@()beep(aM,400,0.5,1);
 	@()logRun(me,'INCORRECT'); %fprintf current trial info
 };
 

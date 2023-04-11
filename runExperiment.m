@@ -659,6 +659,8 @@ classdef runExperiment < optickaCore
 			if rM.isOpen
 				try rM.close; rM.reset; end
 			end
+			if ~isempty(me.reward.port); rM.port = me.reward.port; end
+			if ~isempty(me.reward.board); rM.board = me.reward.board; end	
 			
 			%------initialise an audioManager for beeps,playing sounds etc.
 			if ~exist('aM','var') || isempty(aM) || ~isa(aM,'audioManager')
@@ -765,13 +767,13 @@ classdef runExperiment < optickaCore
 				
 				%================================initialise and set up I/O
 				io						= configureIO(me);
-				dC						= me.dC;
-				
+				dC						= me.dC;				
 				%================================initialise the user functions object
 				if ~exist(me.userFunctionsFile,'file')
 					me.userFunctionsFile = [me.paths.root filesep 'userFunctions.m'];
 				end
 				[p,f] = fileparts(me.userFunctionsFile);
+				if matches(p,me.paths.root); p = me.paths.protocols; end
 				if ~matches(f,"userFunctions")
 					copyfile(me.userFunctionsFile,[p filesep 'userFunctions.m']);
 					run([p filesep 'userFunctions.m']);
@@ -871,7 +873,7 @@ classdef runExperiment < optickaCore
 				%=============================Premptive save in case of crash or error: SAVES IN /TMP
 				rE = me;
 				tS.tmpFile = [tempdir filesep me.name '.mat'];
-				fprintf('===>>> Save initial state: %s ...\n',tS.tmpFile);
+				fprintf('\n===>>> Save initial state: %s ...\n',tS.tmpFile);
 				save(tS.tmpFile,'rE','tS');
 				fprintf('\t ... Saved!\n');
 
@@ -955,8 +957,10 @@ classdef runExperiment < optickaCore
 					try commandwindow; end
 				end
 				fprintf('===>>> Increasing Priority...\n');
+				op = Screen('Preference', 'Verbosity',4);
 				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
-
+				Screen('Preference', 'Verbosity',op);
+				
 				%=============================profiling starts here if uncommented
 				%profile clear; profile on;
 				
@@ -1937,10 +1941,11 @@ classdef runExperiment < optickaCore
 				if ~isa(rM,'arduinoManager')
                     rM = arduinoManager();
 				end
+				if ~isempty(me.reward.port); rM.port = me.reward.port; end
+				if ~isempty(me.reward.board); rM.board = me.reward.board; end
 				if ~rM.isOpen || rM.silentMode
 					rM.reset();
 					rM.silentMode = false;
-					if ~isempty(me.arduinoPort); rM.port = me.arduinoPort; end
 					rM.open();
 				end
 				me.arduino = rM;
@@ -2860,21 +2865,23 @@ classdef runExperiment < optickaCore
 						fprintf(' | loaded screenManager');
 					end
 				end
-				try
-					lobj.previousInfo.runLog = in.runLog;
-					lobj.previousInfo.computer = in.computer;
-					lobj.previousInfo.ptb = in.ptb;
-					lobj.previousInfo.screenVals = in.screenVals;
-					lobj.previousInfo.screenSettings = in.screenSettings;
-					lobj.previousInfo.all = in;
+				if ~isObjectLoaded
+					try
+						lobj.previousInfo.runLog = in.runLog;
+						lobj.previousInfo.computer = in.computer;
+						lobj.previousInfo.ptb = in.ptb;
+						lobj.previousInfo.screenVals = in.screenVals;
+						lobj.previousInfo.screenSettings = in.screenSettings;
+						lobj.previousInfo.all = in;
+					end
+					try lobj.stateMachine		= in.stateMachine; end
+					try lobj.eyeTracker			= in.eyeTracker; end
+					try lobj.behaviouralRecord	= in.behaviouralRecord; end
+					try lobj.runLog				= in.runLog; end
+					try lobj.taskLog			= in.taskLog; end
+					try lobj.stateInfo			= in.stateInfo; end
+					try lobj.comment			= in.comment; end
 				end
-				try lobj.stateMachine		= in.stateMachine; end
-				try lobj.eyeTracker			= in.eyeTracker; end
-				try lobj.behaviouralRecord	= in.behaviouralRecord; end
-				try lobj.runLog				= in.runLog; end
-				try lobj.taskLog			= in.taskLog; end
-				try lobj.stateInfo			= in.stateInfo; end
-				try lobj.comment			= in.comment; end
 				fprintf('\n');
 			end
 		end

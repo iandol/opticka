@@ -99,7 +99,7 @@ classdef eyelinkManager < eyetrackerCore
 					Eyelink('Shutdown'); %just make sure link is closed
 				catch ME
 					getReport(ME)
-					warning('Problems with Eyelink initialise, make sure you install Eyelink Developer libraries!');
+					uiwait(warndlg('Problems with Eyelink initialise, make sure you install Eyelink Developer libraries!','eyelinkManager','modal'));
 					me.isDummy = true;
 				end
 			end
@@ -613,17 +613,6 @@ classdef eyelinkManager < eyetrackerCore
 				end
 			end
 		end
-
-		% === NOOPS
-		function trackerDrawEyePosition(me)
-			
-		end
-		function trackerDrawEyePositions(me)
-			
-		end
-		function trackerFlip(me,dontclear)
-			
-		end
 		
 		% ===================================================================
 		function trackerDrawText(me,textIn)
@@ -886,7 +875,7 @@ classdef eyelinkManager < eyetrackerCore
 				% clear tracker display
 				trackerClearScreen(me);
 				trackerDrawText(me,'FINISHED eyelinkManager Demo!!!');
-				ListenChar(0);Priority(0);ShowCursor;RestrictKeysForKbCheck([])
+				ListenChar(0);Priority(0);ShowCursor;RestrictKeysForKbCheck([]);
 				close(s);
 				close(me);
 				clear s o
@@ -911,7 +900,7 @@ classdef eyelinkManager < eyetrackerCore
 				me.fixInit = oldfixinit;
 				me.resetFixation;
 				me.resetOffset;
-				ListenChar(0);Priority(0);ShowCursor;RestrictKeysForKbCheck([])
+				ListenChar(0);Priority(0);ShowCursor;RestrictKeysForKbCheck([]);
 				me.salutation('runDemo ERROR!!!')
 				try Eyelink('Shutdown'); end
 				try close(s); end
@@ -931,6 +920,17 @@ classdef eyelinkManager < eyetrackerCore
 	methods (Hidden = true) %------------------HIDDEN METHODS
 	%=======================================================================
 	
+		% === NOOPS
+		function trackerDrawEyePosition(~, varargin)
+			
+		end
+		function trackerDrawEyePositions(~, varargin)
+			
+		end
+		function trackerFlip(~, varargin)
+			
+		end
+
 		% ===================================================================
 		function evt = getEvent(me)
 		%> @brief TODO

@@ -1361,6 +1361,7 @@ classdef opticka < optickaCore
 				end
 				if optickaCore.hasKey(tmp.r,'eyetracker')
 					me.r.eyetracker = tmp.r.eyetracker;
+					me.ui.OKUseDummy.Checked = tmp.r.eyetracker.dummy;
 					switch me.r.eyetracker.device
 						case 'tobii'
 							me.ui.OKuseTobii.Checked = 'on';
