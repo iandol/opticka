@@ -659,8 +659,10 @@ classdef runExperiment < optickaCore
 			if rM.isOpen
 				try rM.close; rM.reset; end
 			end
-			if ~isempty(me.reward.port); rM.port = me.reward.port; end
-			if ~isempty(me.reward.board); rM.board = me.reward.board; end	
+			try
+				if isfield(me.reward,'port') && ~isempty(me.reward.port); rM.port = me.reward.port; end
+				if isfield(me.reward,'board') && ~isempty(me.reward.board); rM.board = me.reward.board; end	
+			end
 			
 			%------initialise an audioManager for beeps,playing sounds etc.
 			if ~exist('aM','var') || isempty(aM) || ~isa(aM,'audioManager')

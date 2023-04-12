@@ -113,8 +113,8 @@ classdef colourGratingStimulus < baseStimulus
 		%to regenerate the shader
 		colourCache
 		colour2Cache
-        visibleTick
-        visibleFlip
+        visibleTick				= 0
+		visibleFlip				= Inf
 	end
 	
 	%=======================================================================
@@ -264,9 +264,11 @@ classdef colourGratingStimulus < baseStimulus
 				me.res(2), me.colourOut, me.colour2Out, me.maskValue);
 			me.colourCache = me.colourOut; me.colour2Cache = me.colour2Out;
 
-            if ~isempty(me.visibleRateOut) && isnumeric(me.visibleRateOut)
+			if ~isempty(me.visibleRateOut) && isnumeric(me.visibleRateOut)
                 me.visibleTick = 0;
                 me.visibleFlip = round((me.screenVals.fps/2) / me.visibleRateOut);
+			else
+				me.visibleFlip = Inf; me.visibleTick = 0;
 			end
 			
 			me.inSetup = false; me.isSetup = true;
@@ -359,6 +361,8 @@ classdef colourGratingStimulus < baseStimulus
 			if ~isempty(me.visibleRateOut) && isnumeric(me.visibleRateOut)
                 me.visibleTick = 0;
                 me.visibleFlip = round((me.screenVals.fps/2) / me.visibleRateOut);
+			else
+				me.visibleFlip = Inf; me.visibleTick = 0;
 			end
 			computePosition(me);
 			setRect(me);
@@ -398,7 +402,7 @@ classdef colourGratingStimulus < baseStimulus
 				end
 				if mod(me.tick,me.phaseCounter) == 0
 					me.driftPhase = me.driftPhase + me.phaseOfReverse;
-                end
+				end
                 me.visibleTick = me.visibleTick + 1;
                 if me.visibleTick > me.visibleFlip
                     me.isVisible = ~me.isVisible;
@@ -420,6 +424,7 @@ classdef colourGratingStimulus < baseStimulus
 			if ~isempty(me.texture) && Screen(me.texture,'WindowKind') == -1
 				try Screen('Close',me.texture); end %#ok<*TRYNC>
 			end
+			me.visibleFlip = Inf; me.visibleTick = 0;
 			me.texture=[];
 			me.shader=[];
 			if me.mask > 0

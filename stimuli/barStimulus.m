@@ -51,8 +51,8 @@ classdef barStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = protected, GetAccess = protected)
-        visibleTick
-        visibleFlip
+        visibleTick				= 0
+        visibleFlip				= Inf
 		baseColour
 		screenWidth
 		screenHeight
@@ -151,7 +151,9 @@ classdef barStimulus < baseStimulus
             if ~isempty(me.visibleRateOut) && isnumeric(me.visibleRateOut)
                 me.visibleTick = 0;
                 me.visibleFlip = round((me.screenVals.fps/2) / me.visibleRateOut);
-            end
+            else
+				me.visibleFlip = Inf; me.visibleTick = 0;
+			end
 			
 			me.inSetup = false; me.isSetup = true;
 			computePosition(me);
@@ -235,6 +237,8 @@ classdef barStimulus < baseStimulus
 			if ~isempty(me.visibleRateOut) && isnumeric(me.visibleRateOut)
                 me.visibleTick = 0;
                 me.visibleFlip = round((me.screenVals.fps/2) / me.visibleRateOut);
+			else
+				me.visibleFlip = Inf; me.visibleTick = 0;
 			end
 			if me.regenerateTexture && Screen(me.sM.win,'WindowKind') == 1
 				refreshTexture(me);
@@ -288,12 +292,14 @@ classdef barStimulus < baseStimulus
 				try Screen('Close',me.texture2); end %#ok<*TRYNC>
 			end
 			me.texture=[]; me.texture2 = [];
-			me.matrix = [];
-			me.mvRect = [];
-			me.dstRect = [];
-			me.screenWidth = [];
-			me.screenHeight = [];
-			me.ppd = [];
+			me.matrix			= [];
+			me.mvRect			= [];
+			me.dstRect			= [];
+			me.screenWidth		= [];
+			me.screenHeight		= [];
+			me.ppd				= [];
+			me.visibleTick		= 0;
+			me.visibleFlip		= Inf;
 			removeTmpProperties(me);
 			resetTicks(me);
 		end

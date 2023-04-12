@@ -1055,6 +1055,7 @@ classdef opticka < optickaCore
 			end
 			[f,p] = uiputfile('*.mat','Save Opticka Protocol',fname);
 			if f ~= 0
+				f = regexprep(f,'-','_'); f = regexprep(f,' ','_');
 				me.store.protocolName = f;
 				me.r.paths.protocolName = me.store.protocolName;
 				if contains(p,[filesep 'opticka' filesep])
