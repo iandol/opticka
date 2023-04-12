@@ -32,7 +32,7 @@
 tS.useTask					= true;		%==use taskSequence (randomises stimulus variables)
 tS.rewardTime				= 250;		%==TTL time in milliseconds
 tS.rewardPin				= 2;		%==Output pin, 2 by default with Arduino.
-tS.keyExclusionPattern		= ["fixate","stimulus"]; %==which states to skip keyboard checking
+tS.keyExclusionPattern		= []; %==which states to skip keyboard checking
 tS.recordEyePosition		= false;	%==record local copy of eye position, **in addition** to the eyetracker?
 tS.askForComments			= false;	%==UI requestor asks for comments before/after run
 tS.saveData					= true;		%==save behavioural and eye movement data?
@@ -106,26 +106,6 @@ bR.correctStateName				= "correct";
 bR.breakStateName				= ["breakfix","incorrect"];
 
 %==================================================================
-%--------------randomise stimulus variables every trial?-----------
-% if you want to have some randomisation of stimuls variables without using
-% taskSequence task (i.e. general training tasks), you can uncomment this
-% and runExperiment can use this structure to change e.g. X or Y position,
-% size, angle see metaStimulus for more details. Remember this will not be
-% "Saved" for later use, if you want to do controlled methods of constants
-% experiments use taskSequence to define proper randomised and balanced
-% variable sets and triggers to send to recording equipment etc...
-%
-% stims.choice					= [];
-% n								= 1;
-% in(n).name					= 'xyPosition';
-% in(n).values					= [6 6; 6 -6; -6 6; -6 -6; -6 0; 6 0];
-% in(n).stimuli					= 1;
-% in(n).offset					= [];
-% stims.stimulusTable			= in;
-stims.choice					= [];
-stims.stimulusTable				= [];
-
-%==================================================================
 %-------------allows using arrow keys to control variables?-------------
 % another option is to enable manual control of a table of variables
 % this is useful to probe RF properties or other features while still
@@ -136,16 +116,6 @@ stims.controlTable(n).variable	= 'size';
 stims.controlTable(n).delta		= 0.5;
 stims.controlTable(n).stimuli	= [1 2];
 stims.controlTable(n).limits	= [0.5 20];
-n								= n + 1;
-stims.controlTable(n).variable	= 'xPosition';
-stims.controlTable(n).delta		= 5;
-stims.controlTable(n).stimuli	= [1 2];
-stims.controlTable(n).limits	= [-20 20];
-n								= n + 1;
-stims.controlTable(n).variable	= 'yPosition';
-stims.controlTable(n).delta		= 5;
-stims.controlTable(n).stimuli	= [1 2];
-stims.controlTable(n).limits	= [-20 20];
 
 %==================================================================
 %this allows us to enable subsets from our stimulus list
@@ -212,7 +182,7 @@ psEntryFn = {
 	@()needFlip(me, true, 1); % start PTB screen flips, and tracker screen flip
 	@()needEyeSample(me, true); % make sure we start measuring eye position
 	@()startRecording(eT); % start eyelink recording for this trial (ignored by tobii/irec as they always records)
-	@()updateFixationTarget(me, true, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
+	@()updateFixationTarget(me, true);
 	@()resetAll(eT); %reset all fixation counters and history ready for a new trial
 	@()getStimulusPositions(stims,true); %make a struct the eT can use for drawing stim positions
 	@()trackerMessage(eT,'V_RT MESSAGE END_FIX END_RT'); % Eyelink-specific commands, ignored by other eyetrackers
@@ -224,7 +194,7 @@ psEntryFn = {
 
 %---------------------prestimulus blank
 prestimulusFn = {
-	@()trackerDrawFixation(eT);
+	@()trackerDrawFixation(eT); % draw fixation window on eyetracker display
 	@()trackerDrawEyePosition(eT); % draw the fixation position on the eyetracker
 };
 

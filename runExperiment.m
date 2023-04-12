@@ -671,7 +671,7 @@ classdef runExperiment < optickaCore
 				aM.silentMode = false;
 				reset(aM);
 				if ~aM.isSetup;	try setup(aM); end; end
-				aM.beep(1000,0.1,0.1);
+				aM.beep(2000,0.1,0.1);
 			else
 				aM.silentMode = true;
 			end
@@ -741,6 +741,7 @@ classdef runExperiment < optickaCore
 						me.eyeTracker		= iRecManager();
 						if ~isempty(me.eyetracker.isettings); me.eyeTracker.addArgs(me.eyetracker.isettings); end
 					otherwise
+						me.eyetracker.device = 'irec';
 						me.eyeTracker		= iRecManager();
 						if ~isempty(me.eyetracker.isettings); me.eyeTracker.addArgs(me.eyetracker.isettings); end
 						me.eyeTracker.isDummy = true;

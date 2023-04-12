@@ -206,6 +206,9 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 			me.win = me.screen.win;
 			me.ppd_ = me.screen.ppd;
 
+			if ischar(me.calibration.calPositions); me.calibration.calPositions = str2num(me.calibration.calPositions); end
+			if ischar(me.calibration.valPositions); me.calibration.valPositions = str2num(me.calibration.valPositions); end
+
 			fprintf('\n===>>> CALIBRATING IREC... <<<===\n');
 			
 			if strcmp(me.calibration.stimulus,'movie')

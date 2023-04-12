@@ -101,7 +101,7 @@ tS.fixY						= 0;
 tS.firstFixInit				= 3;
 % time to maintain initial fixation within window, can be single value or a
 % range to randomise between
-tS.firstFixTime				= [0.4 0.8];
+tS.firstFixTime				= [1];
 % fixation window radius in degrees; if you enter [x y] the window will be
 % rectangular.
 tS.firstFixRadius			= 2;
@@ -109,8 +109,8 @@ tS.firstFixRadius			= 2;
 tS.strict					= true;
 % ---------------------------------------------------
 % in this task after iitial fixation a target appears
-tS.targetFixInit			= 0.3;
-tS.targetFixTime			= 0.3;
+tS.targetFixInit			= 3;
+tS.targetFixTime			= 1;
 tS.targetFixRadius			= 4;
 
 %=========================================================================
@@ -228,13 +228,14 @@ prefixExitFcn = {
 %========================================================
 
 nsEntryFcn = { 
-	@()show(stims{end});
-	@()logRun(me,'NOSTOPFIX');
+	@()show(stims{2});
+	@()logRun(me,'NOSTOP-FIXATE');
 };
 
 %--------------------fix within
 nsFcn = {
-	@()draw(stims{end}); %draw stimuli
+	@()draw(stims{2}); %draw stimuli
+	@()trackerDrawEyePosition(eT);
 	@()drawPhotoDiode(s,[0 0 0]);
 };
 
@@ -252,16 +253,17 @@ nsFixFcn = {
 
 %--------------------exit fixation phase
 nsExitFcn = {
-	@()updateFixationValues(eT,[],[],tS.targetFixInit,tS.targetFixTime,tS.targetFixRadius); 
+	@()updateFixationTarget(me, true, tS.targetFixInit, tS.targetFixTime, tS.targetRadius, tS.strict);
 	@()hide(stims{2});
 	@()show(stims{1}); 
 }; 
 
-ns2EntryFcn = { };
+ns2EntryFcn = { @()trackerDrawFixation(eT); };
 
 %--------------------fix within
 ns2Fcn = {
 	@()draw(stims{1}); %draw stimuli
+	@()trackerDrawEyePosition(eT);
 	@()drawPhotoDiode(s,[1 1 1]);
 };
 
@@ -274,13 +276,12 @@ ns2FixFcn = {
 	% otherwise 'breakfix' is returned and the state machine will jump to the
 	% breakfix state. If neither condition matches, then the state table below
 	% defines that after 5 seconds we will switch to the incorrect state.
-	@()testHoldFixation(eT,'correct','incorrect')
+	@()testSearchHoldFixation(eT,'correct','incorrect')
 };
 
 %--------------------exit fixation phase
 ns2ExitFcn = { 
-	@()hide(stims{2});
-	@()show(stims{1}); % show all stims
+	@()sendStrobe(io,255);
 }; 
 
 
@@ -289,12 +290,13 @@ ns2ExitFcn = {
 %========================================================
 
 sEntryFcn = {
-	@()show(stims{end});
-	@()logRun(me,'NOSTOPFIX');
+	@()show(stims{2});
+	@()logRun(me,'STOP-FIXATE');
 };
 
 sFcn =  {
 	@()draw(stims{2});
+	@()trackerDrawEyePosition(eT);
 	@()drawPhotoDiode(s,[0 0 0]);
 };
 
@@ -307,7 +309,6 @@ sFixFcn = {
 %as we exit stim presentation state
 sExitFcn = {
 	@()updateFixationValues(eT,[],[], 0.5, 0.2, tS.targetFixRadius);
-	@()show(stims);
 	@()setDelayTimeWithStaircase(uF,2); %sets the delayTime for fixation cross to reappear
 	@()resetTicks(stims{2});
 };
@@ -318,6 +319,7 @@ s2EntryFcn = {
 
 s2Fcn =  {
 	@()draw(stims);
+	@()trackerDrawEyePosition(eT);
 	@()drawPhotoDiode(s,[1 1 1]);
 };
 
