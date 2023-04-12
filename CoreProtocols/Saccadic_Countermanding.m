@@ -202,6 +202,7 @@ prefixEntryFcn = {
 	% update the fixation window to initial values
 	@()updateFixationValues(eT,tS.fixX,tS.fixY,tS.firstFixInit,tS.firstFixTime,tS.firstFixRadius); %reset fixation window
 	@()startRecording(eT); % start eyelink recording for this trial (tobii/irec ignore this)
+	@()statusMessage(eT,'Start Trial');
 	% tracker messages that define a trial start
 	@()trackerMessage(eT,'V_RT MESSAGE END_FIX END_RT'); % Eyelink commands
 	@()trackerMessage(eT,sprintf('TRIALID %i',getTaskIndex(me))); %Eyelink start trial marker
@@ -253,12 +254,12 @@ nsFixFcn = {
 
 %--------------------exit fixation phase
 nsExitFcn = {
-	@()updateFixationTarget(me, true, tS.targetFixInit, tS.targetFixTime, tS.targetRadius, tS.strict);
+	@()updateFixationTarget(me, true, tS.targetFixInit, tS.targetFixTime, tS.targetFixRadius, tS.strict);
 	@()hide(stims{2});
 	@()show(stims{1}); 
 }; 
 
-ns2EntryFcn = { @()trackerDrawFixation(eT); };
+ns2EntryFcn = { @()trackerDrawStatus(eT,'Saccade'); };
 
 %--------------------fix within
 ns2Fcn = {

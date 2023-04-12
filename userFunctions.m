@@ -80,12 +80,19 @@ classdef userFunctions < handle %#ok<*MCFIL>
 			end
 		end
 
+		% ===================================================================
+		function resetDelayTime(me, stim, value)
+		%> uses a staircase to set the off time for a specific stimulus
+		%>   
+		% ===================================================================
+			if ~isempty(me.task.staircase)
+				me.stims{stim}.delayTime = value;
+				fprintf('===>>> SET OFFTIME on stim %i to %.2f\n', stim, me.stims{stim}.offTime);
+			end
+		end
+
 		% ADD YOUR FUNCTIONS BELOW ↓
 
-		% ===================================================================
-		function myText(me)
-			me.s.drawText('Hello from myFunctions')
-		end
 
 	end
 end

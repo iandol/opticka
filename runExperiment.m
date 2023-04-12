@@ -857,10 +857,11 @@ classdef runExperiment < optickaCore
 							trackerMessage(eT,sprintf('WARMUP_TEST %i',getTaskIndex(me)));
 							trackerDrawStatus(eT,'Warming Up System',stims.stimulusPositions); 
 						end
+						trackerDrawEyePosition(eT);
 					end
 					flip(s);
 					optickaCore.getKeys(me.keyboardDevice);
-					if eT.secondScreen; trackerFlip(eT, 1); end
+					if eT.secondScreen; trackerFlip(eT, 1, false); end
 				end
 				update(stims); %make sure all stimuli are set back to their start state
 				resetLog(stims);
@@ -1681,7 +1682,7 @@ classdef runExperiment < optickaCore
 				t = sprintf('updateVariables: B:%i R:%i T:%i V:%i>',thisBlock, thisRun, index, thisVar);
 				for i=1:me.task.nVars
 					valueList = cell(1); oValueList = cell(1); %#ok<NASGU>
-					doXY = false;
+					doXY = false; doColour = false;
 					stimIdx = me.task.nVar(i).stimulus; %which stimuli
 					value=me.task.outVars{thisBlock,i}(thisRun);
 					if iscell(value)
@@ -1690,15 +1691,17 @@ classdef runExperiment < optickaCore
 					[valueList{1,1:size(stimIdx,2)}] = deal(value);
 					name=[me.task.nVar(i).name 'Out']; %which parameter
 					
-					if regexpi(name,'^xyPositionOut','once')
+					if matches(name,'colourBothOut')
+						doColour = true;
+					elseif matches(name,'xyPositionOut')
 						doXY = true;
 						me.lastXPosition = value(1);
 						me.lastYPosition = value(2);
-					elseif regexpi(name,'^xPositionOut','once')
+					elseif matches(name,'xPositionOut')
 						me.lastXPosition = value;
-					elseif regexpi(name,'^yPositionOut','once')
+					elseif matches(name,'yPositionOut')
 						me.lastYPosition = value;
-					elseif regexpi(name,'^sizeOut','once')
+					elseif matches(name,'sizeOut')
 						me.lastSize = value;
 					end
 					
@@ -1759,7 +1762,10 @@ classdef runExperiment < optickaCore
 					a = 1;
 					for j = stimIdx %loop through our stimuli references for this variable
 						t = [t sprintf('S%i:%s=%s ',j,name,num2str(valueList{a}, '%g '))];
-						if ~doXY
+						if doColour && ~doXY
+							me.stimuli{j}.colourOut=valueList{a}(1:3);
+							me.stimuli{j}.colour2Out=valueList{a}(4:6);
+						elseif ~doColour && ~doXY
 							me.stimuli{j}.(name)=valueList{a};
 						else
 							me.stimuli{j}.xPositionOut=valueList{a}(1);

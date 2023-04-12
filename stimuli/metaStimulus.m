@@ -339,6 +339,14 @@ classdef metaStimulus < optickaCore
 							me.lastXPosition = values(1);
 							me.lastYPosition = values(2);
 							logs = [logs 'XY: ' num2str(stims(j)) ];
+						elseif strcmpi(name,'colourBoth')
+							me.stimuli{stims(j)}.colourOut = values(1:3);
+							me.stimuli{stims(j)}.colour2Out = values(4:6);
+							logs = [logs ' || colourBoth: ' num2str(values)];
+							if ~isempty(offset)
+								me.stimuli{offset(1)}.([name 'Out']) = values + offset(2);
+								logs = [logs ' || OFFSETcolourBoth: ' num2str(values + offset(2))];
+							end
 						elseif isprop(me.stimuli{stims(j)}, [name 'Out'])
 							me.stimuli{stims(j)}.([name 'Out']) = values;
 							logs = [logs ' || ' name 'Out: ' num2str(values)];

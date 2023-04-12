@@ -543,7 +543,7 @@ classdef eyelinkManager < eyetrackerCore
 			trackerDrawFixation(me);
 			if ~isempty(me.exclusionZone);trackerDrawExclusion(me);end
 			if ~isempty(ts);trackerDrawStimuli(me, ts);end
-			if ~isempty(comment);statusMessage(me, comment);end
+			if ~isempty(comment);trackerDrawText(me, comment);end
 		end
 		
 		% ===================================================================
