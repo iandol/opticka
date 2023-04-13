@@ -23,6 +23,7 @@ classdef eyelinkManager < eyetrackerCore
 							'manual',false, ...
 							'paceDuration',1000, ...
 							'IP','', ...
+							'eyeUsed', 0, ...
 							'enableCallbacks', true, ...
 							'callback','PsychEyelinkDispatchCallback', ...
 							'devicenumber', [], ...
@@ -256,7 +257,13 @@ classdef eyelinkManager < eyetrackerCore
 				%Eyelink('Command','validation_corner_scaling = %s', num2str([me.calibrationProportion(1)-0.1 me.calibrationProportion(2)-0.1]));
 			end
 			Eyelink('Command','screen_pixel_coords = %ld %ld %ld %ld',me.screen.winRect(1),me.screen.winRect(2),me.screen.winRect(3)-1,me.screen.winRect(4)-1);
-			Eyelink('Command','active_eye = LEFT');
+			if me.calibration.eyeUsed == me.defaults.LEFT_EYE
+				Eyelink('Command','active_eye = LEFT');
+			elseif me.calibration.eyeUsed == me.defaults.RIGHT_EYE
+				Eyelink('Command','active_eye = RIGHT');
+			else
+				Eyelink('Command','active_eye = LEFT');
+			end
 			%Eyelink('Command','horizontal_target_y = %i',round(me.screen.winRect(4)/2));
 			Eyelink('Command','calibration_type = %s', me.calibration.style);
 			Eyelink('Command','enable_automatic_calibration = YES');
@@ -871,10 +878,13 @@ classdef eyelinkManager < eyetrackerCore
 					plot(ax,xst,yst);drawnow;
 					while GetSecs <= vbl + 1
 						% check the keyboard
-						[~, ~, keyCode] = optickaCore.getKeys();
-						if keyCode(calibkey); trackerSetup(me); break; end
-						if keyCode(driftkey); driftCorrection(me); break; end
-						if keyCode(offsetkey); driftOffset(me); break; end
+						[keyDown, ~, keyCode] = optickaCore.getKeys();
+						if keyDown
+							if keyCode(calibkey); trackerSetup(me); break; end
+							if keyCode(driftkey); driftCorrection(me); break; end
+							if keyCode(offsetkey); driftOffset(me); break; end
+						 end
+						WaitSecs(0.01);
 					end
 					a=a+1;
 				end
