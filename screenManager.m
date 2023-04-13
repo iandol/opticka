@@ -1354,7 +1354,7 @@ classdef screenManager < optickaCore
 		function drawBoxPx(me,xy,boxsize,colour)
 			% drawBox(me, xy, size, colour)
 			if ~exist('xy','var');return;end
-			if ~exist('size','var') || isempty(boxsize); boxsize = 2; end
+			if ~exist('boxsize','var') || isempty(boxsize); boxsize = 50; end
 			if ~exist('colour','var') || isempty(colour); colour = [1 1 0.75]'; end
 			if length(boxsize) == 1
 				xbs = boxsize;

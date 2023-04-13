@@ -230,6 +230,7 @@ prefixExitFcn = {
 
 nsEntryFcn = { 
 	@()show(stims{2});
+	@()trackerDrawStatus(eT,'NOSTOP', stims.stimulusPositions);
 	@()logRun(me,'NOSTOP-FIXATE');
 };
 

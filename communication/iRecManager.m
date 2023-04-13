@@ -680,15 +680,15 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 				while trialn <= maxTrials && ~endExp 
 					trialtick = 1;
 					drawPhotoDiodeSquare(s,[0 0 0 1]);
-					trackerFlip(me,0,true);
-					resetAll(me);
-					vbl = flip(s); tstart=vbl+sv.ifi;
-					trackerMessage(me,trialn);
+					trackerDrawStatus(me,'Start Trial');
+					resetFixation(me);
+					vbl = flip(s); tstart = vbl + sv.ifi;
+					trackerMessage(me, trialn);
 					while vbl < tstart + 6
-						Screen('FillRect',s.win,[0.7 0.7 0.7 0.5],exc); Screen('DrawText',s.win,'Exclusion Zone',exc(1),exc(2),[0.8 0.8 0.8]);
+						Screen('FillRect', s.win, [0.7 0.7 0.7 0.5],exc); Screen('DrawText',s.win,'Exclusion Zone',exc(1),exc(2),[0.8 0.8 0.8]);
 						drawGrid(s); draw(o); draw(f);
-						drawCross(s,0.5,[1 1 0],me.fixation.X,me.fixation.Y);
-						drawPhotoDiodeSquare(s,[1 1 1 1]);
+						drawCross(s, 0.5, [1 1 0], me.fixation.X, me.fixation.Y);
+						drawPhotoDiodeSquare(s, [1 1 1 1]);
 						
 						getSample(me); isFixated(me);
 						
@@ -698,19 +698,18 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 								me.smoothing.method, me.smoothing.eyes, sprintf('%1.1f ',me.fixation.radius), ...
 								me.fixTotal,me.fixLength,me.isExclusion,me.isInitFail);
 							Screen('DrawText', s.win, txt, 10, 10,[1 1 1]);
-							drawEyePosition(me,true);
+							if ~me.useOperatorScreen;drawEyePosition(me,true);end
 						end
 						animate(o);
 
 						if me.useOperatorScreen
-							drawGrid(s2);
 							trackerDrawExclusion(me);
 							trackerDrawFixation(me);
 							trackerDrawEyePosition(me);
 						end
 						
 						vbl(end+1) = Screen('Flip', s.win, vbl(end) + s.screenVals.halfifi);
-						if me.useOperatorScreen; trackerFlip(me,0,true); end
+						if me.useOperatorScreen; trackerFlip(me); end
 
 						[keyDown, ~, keyCode] = optickaCore.getKeys();
 						if keyDown
@@ -729,7 +728,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 						vbl = flip(s);
 						trackerMessage(me,-1);
 		
-						if me.useOperatorScreen; trackerDrawStatus(me,'Finished Trial'); trackerFlip(me,0,true); end
+						if me.useOperatorScreen; trackerDrawStatus(me,'Finished Trial'); end
 					
 						resetAll(me);
 
@@ -797,7 +796,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		%> @brief Sync time with tracker
 		%>
 		% ===================================================================
-		function syncTrackerTime(me)
+		function syncTrackerTime(varargin)
 			
 		end
 
@@ -805,22 +804,14 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		%> @brief Save the data
 		%>
 		% ===================================================================
-		function saveData(me,tofile)
+		function saveData(varargin)
 			
 		end
 		% ===================================================================
 		%> @brief
 		%>
 		% ===================================================================
-		function updateDefaults(me)
-			
-		end
-
-		% ===================================================================
-		%> @brief draw N last eye position on the PTB display
-		%>
-		% ===================================================================
-		function drawEyePositions(me, ~)
+		function updateDefaults(varargin)
 			
 		end
 
@@ -842,7 +833,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		% ===================================================================
 		function statusMessage(me,message)
 			if me.isConnected
-				if me.verbose; fprintf('-+-+->Tobii status message: %s\n',message);end
+				if me.verbose; fprintf('-+-+->iRec status message: %s\n',message);end
 			end
 		end
 		
@@ -899,7 +890,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		end
 		
 		% ===================================================================
-		%> @brief Sync time with tracker
+		%> @brief Sync time with tracker: send int32(-1000)
 		%>
 		% ===================================================================
 		function syncTime(me)
@@ -922,14 +913,6 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		function [trackertime, systemtime] = getTrackerTime(me)
 			trackertime = 0;
 			systemtime = 0;
-		end
-		
-		% ===================================================================
-		%> @brief TODO
-		%>
-		% ===================================================================
-		function evt = getEvent(me)
-			
 		end
 
 		% ===================================================================

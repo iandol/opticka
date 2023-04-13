@@ -794,6 +794,7 @@ classdef eyetrackerCore < optickaCore
 			
 			if dontClear==0; trackerClearScreen(me); end
 			trackerDrawFixation(me);
+			drawGrid(me.operatorScreen);
 			if ~isempty(me.exclusionZone);trackerDrawExclusion(me);end
 			if ~isempty(stimPos); trackerDrawStimuli(me, stimPos); end
 			if ~isempty(comment);trackerDrawText(me, comment);end
@@ -801,6 +802,7 @@ classdef eyetrackerCore < optickaCore
 			
 			me.flipTick = 0;
 			trackerFlip(me, dontClear, true);
+			me.flipTick = 1;
 		end
 
 		% ===================================================================
