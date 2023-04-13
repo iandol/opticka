@@ -66,7 +66,8 @@ classdef opticka < optickaCore
 			'OKCalibProp','OKELManualMode',...
 			'OKTobiiCal','OKTobiiVal',...
 			'OKTobiiManualMode', 'OKTobiiTrackingMode',...
-			'OKTobiiTracker','OKTobiiOperatorScreen'}
+			'OKTobiiTracker','OKTobiiOperatorScreen',...
+			'OKiRecCal','OKiRecVal','OKiRecAddress','OKiRecTCP','OKiRecUDP'}
 	end
 	
 	%=======================================================================
@@ -400,15 +401,18 @@ classdef opticka < optickaCore
 				me.r.strobe.device = '';
 			end
 
-			me.r.reward.port = me.ui.OKarduinoPort.Value;
+			me.r.reward.port = me.gv(me.ui.OKarduinoPort);
+			me.r.reward.board = me.gv(me.ui.OKArduinoType);
 			if me.ui.OKuseArduino.Checked == true
 				me.r.reward.device = 'arduino';
-				me.r.reward.port = me.gv(me.ui.OKarduinoPort);
-				me.r.reward.board = me.gv(me.ui.OKArduinoType);
 			elseif me.ui.OKuseLabJackReward.Checked == true
 				me.r.reward.device = 'labjack';
+				me.r.reward.port = '';
+				me.r.reward.board = '';
 			else
 				me.r.reward.device = '';
+				me.r.reward.port = '';
+				me.r.reward.board = '';
 			end
 
 			me.r.eyetracker.dummy = logical(me.ui.OKUseDummy.Checked);
