@@ -209,9 +209,9 @@ stims.fixationChoice		= 1;
 
 %--------------------pause entry
 pauseEntryFcn = {
-	@()hide(stims);
-	@()drawBackground(s); %blank the subject display
-	@()drawPhotoDiode(s,[0 0 0]); %draw black photodiode
+	@()hide(stims); % hide all stimuli
+	@()drawBackground(s); % blank the subject display
+	@()drawPhotoDiode(s,[0 0 0]); % draw black photodiode
 	@()drawTextNow(s,'PAUSED, press [p] to resume...');
 	@()disp('PAUSED, press [p] to resume...');
 	@()trackerDrawStatus(eT,'PAUSED, press [p] to resume', stims.stimulusPositions);
@@ -291,8 +291,6 @@ inFixFcn = {
 
 %--------------------exit fixation phase
 fixExitFcn = { 
-	@()statusMessage(eT,'Show Stimulus...');
-	% reset fixation timers to maintain fixation for tS.stimulusFixTime seconds
 	@()updateFixationValues(eT,[],[],[],tS.stimulusFixTime); 
 	@()show(stims); % show all stims
 	@()trackerMessage(eT,'END_FIX'); %eyetracker message saved to data stream
@@ -330,7 +328,8 @@ maintainFixFcn = {
 
 %as we exit stim presentation state
 stimExitFcn = {
-	@()sendStrobe(io,255);
+	@()prepareStrobe(io, 255); % 255 indicates stimulus OFF
+	@()doStrobe(me, true);
 };
 
 %========================================================
@@ -409,7 +408,6 @@ breakEntryFcn = {
 	@()stopRecording(eT);
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()needEyeSample(me,false);
-	@()sendStrobe(io,252);
 	@()hide(stims);
 	@()logRun(me,'BREAKFIX'); %fprintf current trial info
 };

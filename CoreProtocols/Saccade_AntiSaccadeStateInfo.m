@@ -33,13 +33,13 @@
 
 %==================================================================
 %--------------------TASK SPECIFIC CONFIG--------------------------
-tS.name						= 'saccade-antisaccade'; %==name of this protocol
+% is this run a 'saccade' or 'anti-saccade' task run?
+tS.type						= 'saccade';
 % update the trial number for incorrect saccades: if true then we call
 % updateTask for both correct and incorrect trials, otherwise we only call
 % updateTask() for correct responses. 'false' is useful during training.
 tS.includeErrors			= false; 
-% is this run a 'saccade' or 'anti-saccade' task run?
-tS.type						= 'saccade';
+tS.name						= 'saccade-antisaccade'; %==name of this protocol
 if strcmp(tS.type,'saccade')
 	% a flag to conditionally set visualisation on the eye tracker interface
 	stims{1}.showOnTracker	= true;
