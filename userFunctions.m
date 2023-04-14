@@ -58,8 +58,32 @@ classdef userFunctions < handle %#ok<*MCFIL>
 		end
 
 		% ===================================================================
+		function setDelayTimeWithStaircase(me, stim)
+		%> uses a staircase to set the off time for a specific stimulus
+		%>   
+		% ===================================================================
+			if ~isempty(me.task.staircase)
+				me.stims{stim}.delayTime = me.task.staircase.xCurrent;
+				me.stims{stim}.resetTicks();
+				fprintf('===>>> SET OFFTIME on stim %i to %.2f\n', stim, me.stims{stim}.delayTime);
+			end
+		end
+
+		% ===================================================================
+		function resetDelayTime(me, stim, value)
+		%> reset stimulus delay on time
+		%>   
+		% ===================================================================
+			if ~isempty(me.task.staircase)
+				me.stims{stim}.delayTime = value;
+				me.stims{stim}.resetTicks();
+				fprintf('===>>> SET OFFTIME on stim %i to %.2f\n', stim, me.stims{stim}.delayTime);
+			end
+		end
+
+		% ===================================================================
 		function testFunction(me)
-		%>testFunction test method
+		%> testFunction test method
 		%>   Just prints a message
 		% ===================================================================
 			if isa(me.rE, 'runExperiment')
@@ -69,27 +93,6 @@ classdef userFunctions < handle %#ok<*MCFIL>
 			end
 		end
 
-		% ===================================================================
-		function setDelayTimeWithStaircase(me, stim)
-		%> uses a staircase to set the off time for a specific stimulus
-		%>   
-		% ===================================================================
-			if ~isempty(me.task.staircase)
-				me.stims{stim}.delayTime = me.task.staircase.xCurrent;
-				fprintf('===>>> SET OFFTIME on stim %i to %.2f\n', stim, me.stims{stim}.offTime);
-			end
-		end
-
-		% ===================================================================
-		function resetDelayTime(me, stim, value)
-		%> uses a staircase to set the off time for a specific stimulus
-		%>   
-		% ===================================================================
-			if ~isempty(me.task.staircase)
-				me.stims{stim}.delayTime = value;
-				fprintf('===>>> SET OFFTIME on stim %i to %.2f\n', stim, me.stims{stim}.offTime);
-			end
-		end
 
 		% ADD YOUR FUNCTIONS BELOW ↓
 

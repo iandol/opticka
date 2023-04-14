@@ -221,7 +221,8 @@ prefixFcn = {
 
 %--------------------prefixate exit
 prefixExitFcn = {
-	
+	@()resetDelayTime(uF, 2, 0); % reset the delay time for stim 2 to 0;
+	@()show(stims{2});
 };
 
 %========================================================
@@ -229,7 +230,6 @@ prefixExitFcn = {
 %========================================================
 
 nsEntryFcn = { 
-	@()show(stims{2});
 	@()trackerDrawStatus(eT,'NOSTOP', stims.stimulusPositions);
 	@()logRun(me,'NOSTOP-FIXATE');
 };
@@ -292,7 +292,6 @@ ns2ExitFcn = {
 %========================================================
 
 sEntryFcn = {
-	@()show(stims{2});
 	@()logRun(me,'STOP-FIXATE');
 };
 
@@ -310,13 +309,13 @@ sFixFcn = {
 
 %as we exit stim presentation state
 sExitFcn = {
-	@()updateFixationValues(eT,[],[], 0.5, 0.2, tS.targetFixRadius);
+	@()show(stims);
+	@()updateFixationValues(eT,[],[], 0.5, 1, tS.targetFixRadius);
 	@()setDelayTimeWithStaircase(uF,2); %sets the delayTime for fixation cross to reappear
-	@()resetTicks(stims{2});
 };
 
 s2EntryFcn = {
-	
+
 };
 
 s2Fcn =  {
@@ -326,7 +325,7 @@ s2Fcn =  {
 };
 
 s2FixFcn = {
-	% this command performs the logic to search and then maintain fixation
+	% this command performs the logic to maintain fixation
 	% inside the fixation window. 
 	@()testHoldFixation(eT,'correct','breakfix'); 
 };
@@ -491,7 +490,7 @@ stateInfoTmp = {
 %---------------------------------------------------------------------------------------------
 'pause'		'prefix'	inf		pauseEntryFcn	{}				{}				pauseExitFcn;
 %---------------------------------------------------------------------------------------------
-'prefix'	'nostop'	0.5		prefixEntryFcn	prefixFcn		{}				{};
+'prefix'	'nostop'	1		prefixEntryFcn	prefixFcn		{}				prefixExitFcn;
 %---------------------------------------------------------------------------------------------
 'nostop'	'incorrect'	5		nsEntryFcn		nsFcn			nsFixFcn		nsExitFcn;
 'nostop2'	'incorrect'	5		ns2EntryFcn		ns2Fcn			ns2FixFcn		ns2ExitFcn;
