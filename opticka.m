@@ -18,7 +18,7 @@ classdef opticka < optickaCore
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> version number
-		optickaVersion char		= '2.15.7'
+		optickaVersion char		= '2.15.8'
 		%> is this a remote instance?
 		remote					= false
 	end
@@ -331,7 +331,7 @@ classdef opticka < optickaCore
 			me.r.subjectName = me.gv(me.ui.OKSubject);
 			me.r.researcherName = me.gv(me.ui.OKResearcher);
 
-			me.r.audioDevice = me.gd(me.ui.OKaudioDevice);
+			me.r.audioDevice = me.gn(me.ui.OKaudioDevice);
 
 			me.r.screen.screen = me.gd(me.ui.OKSelectScreen);
 			

@@ -75,6 +75,7 @@ function rc = eyelinkCustomCallback(callArgs, msg)
 persistent eyelinktex;
 global dw dh offscreen;
 global eyelinkanimationtarget;
+global rM aM;
 
 % Cached window handle for target onscreen window:
 persistent eyewin;
@@ -106,7 +107,6 @@ if isempty(verbose); verbose = false; end
 if 0 == Screen('WindowKind', eyelinktex)
     eyelinktex = []; % Previous PTB Screen() window has closed, needs to be recreated.
 end
-
 
 if isempty(eyelinktex)
     % Define the two OpenGL constants we actually need. No point in
@@ -591,8 +591,9 @@ return;
                 d=1.5;
         end
         
-        if doBeep==1
-           Beeper(f, v, d);
+        if doBeep==1 && exist('aM','var')
+           %Beeper(f, v, d);
+		   aM.beep(f,d,v);
         end
     end
 end

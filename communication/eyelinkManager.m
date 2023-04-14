@@ -169,6 +169,12 @@ classdef eyelinkManager < eyetrackerCore
 				me.version = 'Dummy Eyelink';
 			else
 				[~, me.version] = Eyelink('GetTrackerVersion');
+				try
+					[~,majorVersion]=regexp(me.version,'.*?(\d)\.\d*?','Match','Tokens');
+					majorVersion = majorVersion{1}{1};
+				catch
+					majorVersion = 4;
+				end
 			end
 			%getTrackerTime(me);
 			%getTimeOffset(me);
@@ -191,10 +197,15 @@ classdef eyelinkManager < eyetrackerCore
 				Eyelink('Message', 'DISPLAY_PPD %ld', round(me.ppd_));
 				Eyelink('Message', 'DISPLAY_DISTANCE %ld', round(me.screen.distance));
 				Eyelink('Message', 'DISPLAY_PIXELSPERCM %ld', round(me.screen.pixelsPerCm));
-				Eyelink('Command', 'link_event_filter = LEFT,RIGHT,FIXATION,SACCADE,BLINK,MESSAGE,BUTTON');
-				Eyelink('Command', 'link_sample_data  = LEFT,RIGHT,GAZE,GAZERES,AREA,STATUS');
-				Eyelink('Command', 'file_event_filter = LEFT,RIGHT,FIXATION,SACCADE,BLINK,MESSAGE,BUTTON');
-				Eyelink('Command', 'file_sample_data  = LEFT,RIGHT,GAZE,HREF,AREA,GAZERES,STATUS');
+				Eyelink('Command', 'link_event_filter = LEFT,RIGHT,FIXATION,SACCADE,BLINK,BUTTON,FIXUPDATE,INPUT');
+				Eyelink('Command', 'file_event_filter = LEFT,RIGHT,FIXATION,SACCADE,BLINK,MESSAGE,BUTTON,INPUT');
+				if majorVersion > 3  % Check tracker version and include 'HTARGET' to save head target sticker data for supported eye trackers
+					Eyelink('Command', 'file_sample_data  = LEFT,RIGHT,GAZE,HREF,RAW,AREA,HTARGET,GAZERES,BUTTON,STATUS,INPUT');
+					Eyelink('Command', 'link_sample_data  = LEFT,RIGHT,GAZE,GAZERES,AREA,HTARGET,STATUS,INPUT');
+				else
+					Eyelink('Command', 'file_sample_data  = LEFT,RIGHT,GAZE,HREF,RAW,AREA,GAZERES,BUTTON,STATUS,INPUT');
+					Eyelink('Command', 'link_sample_data  = LEFT,RIGHT,GAZE,GAZERES,AREA,STATUS,INPUT');
+				end
 				Eyelink('Command', 'sample_rate = %d',me.sampleRate);
 				Eyelink('Command', 'clear_screen 1')
 			end
@@ -496,33 +507,35 @@ classdef eyelinkManager < eyetrackerCore
 				me.eyeUsed = -1;
 				me.screen = [];
 				try trackerClearScreen(me); end
-				if me.isRecording == true && ~isempty(me.saveFile)
+				if me.isRecording == true
 					Eyelink('StopRecording');
 					Eyelink('CloseFile');
 					oldp = pwd;
 					try
 						cd(me.paths.savedData);
-						me.salutation('Close Method',sprintf('Receiving data file %s', me.tempFile),true);
+						me.salutation('Close Method',sprintf('Receiving data file %s.edf', me.tempFile),true);
 						status=Eyelink('ReceiveFile');
 						if status > 0
 							me.salutation('Close Method',sprintf('ReceiveFile status %d', status));
 						end
 						if exist([me.tempFile '.edf'], 'file')
-							me.salutation('Close Method',sprintf('Data file ''%s'' can be found in ''%s''', me.tempFile, strrep(pwd,'\','/')),true);
-							status = copyfile([me.tempFile '.edf'], [me.saveFile '.edf'],'f');
+							me.salutation('Close Method',sprintf('Data file ''%s.edf'' can be found in ''%s''', me.tempFile, strrep(pwd,'\','/')),true);
+							if ~contains(me.saveFile,'.edf'); me.saveFile = [me.saveFile '.edf']; end
+							status = copyfile([me.tempFile '.edf'], me.saveFile, 'f');
 							if status == 1
-								me.salutation('Close Method',sprintf('Data file copied to ''%s''', [me.saveFile '.edf']),true);
+								me.salutation('Close Method',sprintf('Data file copied to ''%s''', me.saveFile),true);
 							end
 						end
 					catch ME
 						me.salutation('Close Method',sprintf('Problem receiving data file ''%s''', me.tempFile),true);
+						warning('eyelinkManager.close(): EYELINK DATA NOT RECEIVED!')
 						disp(ME.message);
 					end
 					cd(oldp);
 				end
 			catch ME
 				me.salutation('Close Method','Couldn''t stop recording, forcing shutdown...',true)
-				trackerClearScreen(me);
+				try trackerClearScreen(me); end
 				Eyelink('Shutdown');
 				me.error = ME;
 				me.salutation(ME.message);
@@ -773,26 +786,24 @@ classdef eyelinkManager < eyetrackerCore
 				blockLoop = true;
 				a = 1;
 				
-				while blockLoop
+				while a < 6 && blockLoop
+					setOffline(me);
 					% some general variables
-					trialLoop = true;
 					b = 1;
 					xst = [];
 					yst = [];
-					correct = false;
-					trackerDrawStatus(me,'',ts)
+					trackerDrawStatus(me,'',ts);
 					% !!! these messages define the trail start in the EDF for
 					% offline analysis
 					trackerMessage(me,'V_RT MESSAGE END_FIX END_RT');
 					trackerMessage(me,['TRIALID ' num2str(a)]);
 					% start the eyelink recording data for this trial
-					startRecording(me);
+					setOffline(me);startRecording(me);
 					% this draws the text to the tracker info box
 					statusMessage(me,sprintf('DEMO Running Trial=%i X Pos = %g | Y Pos = %g | Radius = %g',a,me.fixation.X,me.fixation.Y,me.fixation.radius));
-					WaitSecs('YieldSecs',0.25);
-					vbl = flip(s);
-					syncTime(me);
-					while trialLoop
+					WaitSecs('YieldSecs',1);
+					vbl = flip(s); tStart = vbl;
+					while vbl < tStart + 5
 						Screen('FillRect',s.win,[0.7 0.7 0.7 0.5],exc); Screen('DrawText',s.win,'Exclusion Zone',exc(1),exc(2),[0.8 0.8 0.8]);
 						drawSpot(s,me.fixation.radius,[0.5 0.6 0.5 0.25],me.fixation.X,me.fixation.Y);
 						drawCross(s,0.5,[1 1 0.5],me.fixation.X,me.fixation.Y);
@@ -827,26 +838,29 @@ classdef eyelinkManager < eyetrackerCore
 						% check the keyboard
 						[keyDown, ~, keyCode] = optickaCore.getKeys();
 						if keyDown
-							if keyCode(stopkey); trialLoop = 0; blockLoop = 0; break;	end
-							if keyCode(nextKey); trialLoop = 0; correct = true; break; end
+							if keyCode(stopkey); blockLoop = false; break;	end
+							if keyCode(nextKey); correct = true; end
 							if keyCode(calibkey); trackerSetup(me); break; end
 							if keyCode(driftkey); driftCorrection(me); break; end
 							if keyCode(offsetkey); driftOffset(me); break; end
 						end
 						% send a message for the EDF after 60 frames
-						if b == 60; trackerMessage(me,'END_FIX');end
+						if b == 60; trackerMessage(me,'END_FIX'); syncTime(me);end
 						b=b+1;
 					end
+					correct = true;
 					% tell EDF end of reaction time portion
 					trackerMessage(me,'END_RT');
+					% stop recording data
+					WaitSecs(0.1);
+					stopRecording(me);
+					setOffline(me);
 					if correct
 						trackerMessage(me,'TRIAL_RESULT 1');
 					else
 						trackerMessage(me,'TRIAL_RESULT 0');
 					end
-					% stop recording data
-					stopRecording(me);
-					setOffline(me);
+					
 					resetFixation(me);
 
 					% set up the fix init system, whereby the subject must
@@ -900,7 +914,7 @@ classdef eyelinkManager < eyetrackerCore
 					if strcmpi(an,'yes')
 						if ~isdeployed; commandwindow; end
 						evalin('base',['eA=eyelinkAnalysis(''dir'',''' ...
-							me.paths.savedData ''', ''file'',''myData.edf'');eA.parseSimple;eA.plot']);
+							me.paths.savedData ''', ''file'',''' me.saveFile ''');eA.parseSimple;eA.plot']);
 					end
 				end
 				me.resetFixation;
