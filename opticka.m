@@ -269,7 +269,6 @@ classdef opticka < optickaCore
 				getScreenVals(me);
 				getTaskVals(me);
 				loadCalibration(me);
-				refreshProtocolsList(me);
 
 				me.ui.getEyetrackerSettings();
 				
@@ -285,7 +284,6 @@ classdef opticka < optickaCore
 				elseif ~isdeployed
 					me.r.userFunctionsFile = [me.paths.whereami filesep 'userFunctions.m'];
 				end
-				getStateInfo(me);
 
 				fprintf('===>>> Opticka UI took %.2fsecs to initialise\n',toc(t));
 
@@ -1496,13 +1494,8 @@ classdef opticka < optickaCore
 			
 			figure(me.ui.OKRoot);
 		end
-	end
 
-	%========================================================
-	methods ( Access = private ) %----------PRIVATE METHODS
-	%========================================================
 
-		
 		% ======================================================================
 		%> @brief Refresh the UI list of Protocols
 		%> Refresh the UI list of Protocols
@@ -1538,6 +1531,11 @@ classdef opticka < optickaCore
 			set(me.ui.OKProtocolsList,'Items',filelist);
 			cd(me.paths.currentPath);
 		end
+	end
+
+	%========================================================
+	methods ( Access = private ) %----------PRIVATE METHODS
+	%========================================================
 		
 		% ===================================================================
 		%> @brief refreshStimulusList

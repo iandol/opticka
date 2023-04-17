@@ -129,7 +129,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 					'disableSyncTests',true,'backgroundColour',me.screen.backgroundColour,...
 					'screen', oscreen, 'specialFlags', kPsychGUIWindow);
 				[w,h]			= Screen('WindowSize',me.operatorScreen.screen);
-				me.operatorScreen.windowed	= [0 0 round(w/1.6) round(h/1.8)];
+				me.operatorScreen.windowed	= [20 20 round(w/1.6) round(h/1.8)];
 			end
 			me.secondScreen		= true;
 			if ismac; me.operatorScreen.useRetina = true; end

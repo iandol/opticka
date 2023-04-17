@@ -1,45 +1,27 @@
-%> SACCADE COUNTERMANDING TASK  -- See Thakkar 2011
-%> A fixation cross appears and after a delay it disappears and a saccade
-%> target appears. On 70% of trials a speeded saccade in <500ms is rewarded.
-%> In 30% of trials, the fixation cross reappears (STOP signal) after a delay and the
-%> subject MUST maintain fixation. The stop signal delay (SSD) is controlled by a
-%> staircase, and the choice of STOP / NOSTOP trial is controlled by taskSequence.trialVar 
-%>
-%> me		= runExperiment object ('self' in OOP terminology) 
-%> s		= screenManager object
-%> aM		= audioManager object
-%> stims	= our list of stimuli (metaStimulus class)
-%> sM		= State Machine (stateMachine class)
-%> task		= task sequence (taskSequence class)
-%> eT		= eyetracker manager
-%> io		= digital I/O to recording system
-%> rM		= Reward Manager (LabJack or Arduino TTL trigger to reward system/Magstim)
-%> bR		= behavioural record plot (on-screen GUI during a task run)
-%> uF       = user functions - add your own functions to this class
-%> tS		= structure to hold general variables, will be saved as part of the data
+% SACCADE COUNTERMANDING TASK - See Thakkar et al., 2011 | Hanes & Schall 1995
+% A fixation cross appears and after a delay it disappears and a saccade
+% target appears. On 70% of trials a speeded saccade in <500ms is rewarded.
+% In 30% of trials, the fixation cross reappears (STOP signal) after a
+% delay and the subject MUST maintain fixation. The stop signal delay (SSD)
+% is controlled by a staircase, and the percentage choice of STOP / NOSTOP
+% trial is controlled by taskSequence.trialVar
 
 %=========================================================================
 %-------------------------------Task Settings-----------------------------
-% we use a up/down staircase to control the SSD (delay in seconds), note this is controlled by
-% taskSequence, so when we run task.updateTask it also updates the
-% staircase for us. See Palamedes toolbox for the PAL_AM methods.
-% 1up / 1down staircase starts at 225ms and steps at 47ms
+% we use a up/down staircase to control the SSD (delay in seconds)
 assert(exist('PAL_AMUD_setupUD','file'),'MUST Install Palamedes Toolbox: https://www.palamedestoolbox.org')
-task.staircase = PAL_AMUD_setupUD('down',1,'stepSizeUp',0.032,'stepSizeDown',0.032,...
-					'startValue',0.25,'xMin',0.016,'xMax',0.5);
+% Note this is managed by taskSequence, See Palamedes toolbox for the
+% PAL_AM methods. 1up / 1down staircase starts at 225ms and steps at 32ms
 task.staircaseType = 'UD';
-task.staircaseInvert = false; % a correct decreases value.
-% do we update the trial number even for incorrect saccades, if true then we
-% call updateTask for both correct and incorrect, otherwise we only call
-% updateTask() for correct responses
-tS.includeErrors			= false; 
+task.staircase = PAL_AMUD_setupUD('up',1,'down',1,'stepSizeUp',0.05,'stepSizeDown',0.05,...
+					'stopRule',64,'startValue',0.25,'xMin',0.015,'xMax',0.5);
+task.staircaseInvert = true; % a correct increases value.
 % we use taskSequence to randomise which state to switch to (independent
-% trial-level factor). We call
-% @()updateNextState(me,'trial') in the prefixation state; this sets one of
-% these two trialVar.values as the next state. The nostop and stop
-% states will then call nostop2 or stop2 stimulus states. Therefore we can
-% call different experiment structures based on this trial-level factor.
-tL.stimStateNames			= ["nostop2","stop2"];
+% trial-level factor). We call @()updateNextState(me,'trial') in the
+% prefixation state; this sets one of these two trialVar.values as the next
+% state. The nostopfix and stopfix states will then call nostop or stop
+% stimulus states.
+tL.stimStateNames			= ["nostop","stop"];
 
 %=========================================================================
 %-----------------------------General Settings----------------------------
@@ -53,21 +35,20 @@ tL.stimStateNames			= ["nostop2","stop2"];
 tS.useTask					= true;		%==use taskSequence (randomises stimulus variables)
 tS.rewardTime				= 250;		%==TTL time in milliseconds
 tS.rewardPin				= 2;		%==Output pin, 2 by default with Arduino.
-tS.keyExclusionPattern		= ["nostop","nostop2","stop","stop2"]; %==which states to skip keyboard checking (slightly improve performance)
+tS.keyExclusionPattern		= ["nostopfix","nostop","stopfix","stop"]; %==which states to skip keyboard checking (slightly improve performance)
 tS.enableTrainingKeys		= false;	%==enable keys useful during task training, but not for data recording
 tS.recordEyePosition		= false;	%==record a local copy of eye position, **in addition** to the eyetracker?
 tS.askForComments			= false;	%==UI requestor asks for comments before/after run
 tS.saveData					= true;		%==save behavioural and eye movement data?
 tS.showBehaviourPlot		= true;		%==open the behaviourPlot figure? Can cause more memory use…
-tS.includeErrors			= true;		%==do we update the trial number even for incorrect saccade/fixate, if true then we call updateTask for both correct and incorrect, otherwise we only call updateTask() for correct responses
 tS.name						= 'Saccadic Countermanding'; %==name of this protocol
 tS.nStims					= stims.n;	%==number of stimuli, taken from metaStimulus object
-tS.tOut						= 5;		%==if wrong response, how long to time out before next trial
+tS.timeOut					= 1;		%==if wrong response, how long to time out before next trial
 tS.CORRECT					= 1;		%==the code to send eyetracker for correct trials
 tS.BREAKFIX					= -1;		%==the code to send eyetracker for break fix trials
 tS.INCORRECT				= -5;		%==the code to send eyetracker for incorrect trials
 tS.correctSound				= [2000, 0.1, 0.1]; %==freq,length,volume
-tS.errorSound				= [300, 1, 1]; %==freq,length,volume
+tS.errorSound				= [300,  1.0, 1.0]; %==freq,length,volume
 
 %=========================================================================
 %----------------Debug logging to command window------------------
@@ -101,7 +82,7 @@ tS.fixY						= 0;
 tS.firstFixInit				= 3;
 % time to maintain initial fixation within window, can be single value or a
 % range to randomise between
-tS.firstFixTime				= [1];
+tS.firstFixTime				= [0.9 1.1];
 % fixation window radius in degrees; if you enter [x y] the window will be
 % rectangular.
 tS.firstFixRadius			= 2;
@@ -129,15 +110,6 @@ updateFixationValues(eT, tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.
 % WHICH states assigned as correct or break for online plot?
 bR.correctStateName				= "correct";
 bR.breakStateName				= ["breakfix","incorrect"];
-
-%=========================================================================
-% N x 2 cell array of regexpi strings, list to skip the current -> next
-% state's exit functions; for example skipExitStates =
-% {'fixate','incorrect|breakfix'}; means that if the currentstate is
-% 'fixate' and the next state is either incorrect OR breakfix, then skip
-% the FIXATE exit state. Add multiple rows for skipping multiple state's
-% exit states.
-sM.skipExitStates			= {'fixate','incorrect|breakfix'};
 
 %=========================================================================
 % which stimulus in the list is used for a fixation target? For this
@@ -169,11 +141,10 @@ stims.fixationChoice		= 1;
 %--------------------pause entry
 pauseEntryFcn = {
 	@()hide(stims);
-	@()drawBackground(s); %blank the subject display
 	@()drawPhotoDiode(s,[0 0 0]); %draw black photodiode
 	@()drawTextNow(s,'PAUSED, press [p] to resume...');
 	@()disp('PAUSED, press [p] to resume...');
-	@()trackerDrawStatus(eT,'PAUSED, press [p] to resume', stims.stimulusPositions);
+	@()trackerDrawStatus(eT,'PAUSED, press [p] to resume');
 	@()trackerMessage(eT,'TRIAL_RESULT -100'); %store message in EDF
 	@()resetAll(eT); % reset all fixation markers to initial state
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
@@ -200,17 +171,17 @@ prefixEntryFcn = {
 	@()needEyeSample(me, true); % make sure we start measuring eye position
 	@()hide(stims); % hide all stimuli
 	% update the fixation window to initial values
-	@()updateFixationValues(eT,tS.fixX,tS.fixY,tS.firstFixInit,tS.firstFixTime,tS.firstFixRadius); %reset fixation window
-	@()startRecording(eT); % start eyelink recording for this trial (tobii/irec ignore this)
-	@()statusMessage(eT,'Start Trial');
+	@()updateFixationValues(eT,tS.fixX,tS.fixY,tS.firstFixInit,tS.firstFixTime,tS.firstFixRadius,tS.strict); %reset fixation window
 	% tracker messages that define a trial start
 	@()trackerMessage(eT,'V_RT MESSAGE END_FIX END_RT'); % Eyelink commands
 	@()trackerMessage(eT,sprintf('TRIALID %i',getTaskIndex(me))); %Eyelink start trial marker
 	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
+	@()startRecording(eT); % start eyelink recording for this trial (tobii/irec ignore this)
 	@()trackerDrawStatus(eT,'PREFIX', stims.stimulusPositions);
+	@()statusMessage(eT,'Start Trial');
 	% updateNextState method is critical, it reads the independent trial factor in
 	% taskSequence to select state to transition to next. This sets
-	% stateMachine.tempNextState to override the state table's default next field.
+	% stateMachine.tempNextState.
 	@()updateNextState(me,'trial'); 
 };
 
@@ -250,7 +221,7 @@ nsFixFcn = {
 	% otherwise 'breakfix' is returned and the state machine will jump to the
 	% breakfix state. If neither condition matches, then the state table below
 	% defines that after 5 seconds we will switch to the incorrect state.
-	@()testSearchHoldFixation(eT,'nostop','incorrect')
+	@()testSearchHoldFixation(eT,'nostop','breakfix')
 };
 
 %--------------------exit fixation phase
@@ -260,7 +231,7 @@ nsExitFcn = {
 	@()show(stims{1});
 }; 
 
-ns2EntryFcn = { @()trackerDrawStatus(eT,'Nostop Saccade'); };
+ns2EntryFcn = {  };
 
 %--------------------fix within
 ns2Fcn = {
@@ -286,12 +257,12 @@ ns2ExitFcn = {
 	@()sendStrobe(io,255);
 }; 
 
-
 %========================================================
 %========================================================STOPSIGNAL
 %========================================================
 
 sEntryFcn = {
+	@()trackerDrawStatus(eT,'STOP', stims.stimulusPositions);
 	@()logRun(me,'STOP-FIXATE');
 };
 
@@ -327,7 +298,7 @@ s2Fcn =  {
 s2FixFcn = {
 	% this command performs the logic to maintain fixation
 	% inside the fixation window. 
-	@()testHoldFixation(eT,'correct','breakfix'); 
+	@()testHoldFixation(eT,'correct','incorrect'); 
 };
 
 %as we exit stim presentation state
@@ -395,7 +366,8 @@ incFcn = {
 %--------------------incorrect exit
 incExitFcn = {
 	@()updatePlot(bR, me); % update our behavioural plot, must come before updateTask() / updateVariables()
-	@()updateStaircaseAfterState(me,tS.INCORRECT,'stop'); % only update staircase after a stop trial
+	@()updateTask(me,tS.BREAKFIX); % make sure our taskSequence is moved to the next trial
+	@()updateStaircaseAfterState(me,tS.BREAKFIX,'stop'); % only update staircase after a stop trial
 	@()updateVariables(me); % randomise our stimuli, set strobe value too
 	@()update(stims); % update our stimuli ready for display
 	@()getStimulusPositions(stims); % make a struct the eT can use for drawing stim positions
@@ -409,7 +381,7 @@ breakEntryFcn = {
 	@()beep(aM, tS.errorSound);
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.BREAKFIX));
-	@()trackerDrawStatus(eT,'BREAKFIX! :-(', stims.stimulusPositions, 0);
+	@()trackerDrawStatus(eT,'BREAKFIX before complete trial! :-(', stims.stimulusPositions, 0);
 	@()stopRecording(eT);
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()needEyeSample(me,false);
@@ -417,29 +389,28 @@ breakEntryFcn = {
 	@()logRun(me,'BREAKFIX'); %fprintf current trial info
 };
 
+
 %--------------------break exit
-breakExitFcn = incExitFcn; % we copy the incorrect exit functions
+breakExitFcn = {
+	@()updatePlot(bR, me); % update our behavioural plot, must come before updateTask() / updateVariables()
+	@()updateVariables(me); % randomise our stimuli, set strobe value too
+	@()update(stims); % update our stimuli ready for display
+	@()getStimulusPositions(stims); % make a struct the eT can use for drawing stim positions
+	@()trackerClearScreen(eT); 
+	@()resetAll(eT); % resets the fixation state timers
+	@()plot(bR, 1); % actually do our behavioural record drawing
+};
 
 %--------------------change functions based on tS settings
 % this shows an example of how to use tS options to change the function
 % lists run by the state machine. We can prepend or append new functions to
 % the cell arrays.
-% updateTask = updates task object
-% resetRun = randomise current trial within the block
-% checkTaskEnded = see if taskSequence has finished
-if tS.includeErrors % we want to update our task even if there were errors
-	incExitFcn = [ {@()updateTask(me,tS.INCORRECT)}; incExitFcn ]; %update our taskSequence 
-	breakExitFcn = [ {@()updateTask(me,tS.BREAKFIX)}; breakExitFcn ]; %update our taskSequence 
-end
 if tS.useTask %we are using task
 	correctExitFcn = [ correctExitFcn; {@()checkTaskEnded(me)} ];
 	incExitFcn = [ incExitFcn; {@()checkTaskEnded(me)} ];
 	breakExitFcn = [ breakExitFcn; {@()checkTaskEnded(me)} ];
-	if ~tS.includeErrors % using task but don't include errors 
-		incExitFcn = [ {@()resetRun(task)}; incExitFcn ]; %we randomise the run within this block to make it harder to guess next trial
-		breakExitFcn = [ {@()resetRun(task)}; breakExitFcn ]; %we randomise the run within this block to make it harder to guess next trial
-	end
 end
+
 %========================================================
 %========================================================EYETRACKER
 %========================================================
@@ -493,15 +464,15 @@ stateInfoTmp = {
 %---------------------------------------------------------------------------------------------
 'prefix'	'nostop'	1		prefixEntryFcn	prefixFcn		{}				prefixExitFcn;
 %---------------------------------------------------------------------------------------------
-'nostopfix'	'incorrect'	5		nsEntryFcn		nsFcn			nsFixFcn		nsExitFcn;
-'nostop'	'incorrect'	5		ns2EntryFcn		ns2Fcn			ns2FixFcn		ns2ExitFcn;
-'stopfix'	'incorrect'	5		sEntryFcn		sFcn			sFixFcn			sExitFcn;
-'stop'		'incorrect'	5		s2EntryFcn		s2Fcn			s2FixFcn		s2ExitFcn;
+'nostopfix'	'breakfix'	8		nsEntryFcn		nsFcn			nsFixFcn		nsExitFcn;
+'nostop'	'breakfix'	8		ns2EntryFcn		ns2Fcn			ns2FixFcn		ns2ExitFcn;
+'stopfix'	'breakfix'	8		sEntryFcn		sFcn			sFixFcn			sExitFcn;
+'stop'		'breakfix'	8		s2EntryFcn		s2Fcn			s2FixFcn		s2ExitFcn;
 %---------------------------------------------------------------------------------------------
-'incorrect'	'timeout'	0.5		incEntryFcn		incFcn			{}				incExitFcn;
 'breakfix'	'timeout'	0.5		breakEntryFcn	incFcn			{}				breakExitFcn;
+'incorrect'	'timeout'	0.5		incEntryFcn		incFcn			{}				incExitFcn;
 'correct'	'prefix'	0.5		correctEntryFcn	correctFcn		{}				correctExitFcn;
-'timeout'	'prefix'	tS.tOut	{}				incFcn			{}				{};
+'timeout'	'prefix'	tS.timeOut	{}				incFcn			{}				{};
 %---------------------------------------------------------------------------------------------
 'calibrate'	'pause'		0.5		calibrateFcn	{}				{}				{};
 'drift'		'pause'		0.5		driftFcn		{}				{}				{};
