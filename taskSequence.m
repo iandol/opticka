@@ -471,6 +471,7 @@ classdef taskSequence < optickaCore & dynamicprops
 			if ~exist('thisResponse','var') || isempty(thisResponse); thisResponse = NaN; end
 			if ~exist('runTime','var') || isempty(runTime); runTime = GetSecs; end
 			if ~exist('info','var') || isempty(info); info = 'none'; end
+			
 
 			me.response(me.totalRuns) = thisResponse;
 			me.responseInfo{me.totalRuns} = info;
@@ -478,22 +479,6 @@ classdef taskSequence < optickaCore & dynamicprops
 
 			if ~isempty(me.resetLog) && me.resetLog(end).totalRuns == me.totalRuns && me.resetLog(end).success == true
 				me.responseInfo{me.totalRuns} = {me.resetLog(end).message, me.responseInfo{me.totalRuns}};
-			end
-
-			if ~isempty(me.staircase) && isstruct(me.staircase) && isfield(me.staircase,'xCurrent')
-				if ~me.staircaseInvert
-					res = 1; 
-				else
-					res = 0; 
-				end
-				if thisResponse == true || thisResponse == 1
-					response = res;
-				else
-					response = ~res;
-				end
-				cmd = ['me.staircase = PAL_AM' me.staircaseType '_update' me.staircaseType '(me.staircase, ' num2str(response) ');'];
-				eval(cmd);
-				if me.staircase.stop; fprintf('--->>> taskSequence Staircase has stopped...\n'); end
 			end
 
 			if me.verbose
@@ -508,6 +493,32 @@ classdef taskSequence < optickaCore & dynamicprops
 			elseif me.totalRuns >= me.nRuns
 				me.taskFinished = true;
 				fprintf('---> taskSequence.updateTask: Task FINISHED, no more updates allowed\n');
+			end
+		end
+
+		% ===================================================================
+		function updateStaircase(me, thisResponse)
+		%> @fn updateTask
+		%> @brief update the task with a response
+		%>
+		%> This method allows us to update the task with a response, and
+		%> will track when the task is finished: setting taskFinished==true
+		% ===================================================================
+			if ~isempty(me.staircase) && isstruct(me.staircase) && isfield(me.staircase,'xCurrent')
+				if ~me.staircaseInvert
+					res = 1; 
+				else
+					res = 0; 
+				end
+				if thisResponse == true || thisResponse == 1
+					response = res;
+				else
+					response = ~res;
+				end
+				cmd = ['me.staircase = PAL_AM' me.staircaseType '_update' me.staircaseType '(me.staircase, ' num2str(response) ');'];
+				eval(cmd);
+				if me.verbose;fprintf('--->>> taskSequence.updateStaircase() Result %i:\n',response);end
+				if me.staircase.stop; fprintf('===>>> taskSequence Staircase has stopped...\n'); end
 			end
 		end
 		
@@ -545,7 +556,6 @@ classdef taskSequence < optickaCore & dynamicprops
 				me.totalRuns = me.totalRuns - 1;
 				[me.thisBlock, me.thisRun] = findRun(me);
 				fprintf('===!!! REWIND Run to %i:',me.totalRuns);
-				
 			end
 		end
 		

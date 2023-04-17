@@ -65,7 +65,7 @@ classdef userFunctions < handle %#ok<*MCFIL>
 			if ~isempty(me.task.staircase)
 				me.stims{stim}.delayTime = me.task.staircase.xCurrent;
 				me.stims{stim}.resetTicks();
-				fprintf('===>>> SET OFFTIME on stim %i to %.2f\n', stim, me.stims{stim}.delayTime);
+				fprintf('===>>> SET DELAYTIME on stim %i to %.2f\n', stim, me.stims{stim}.delayTime);
 			end
 		end
 
@@ -77,7 +77,7 @@ classdef userFunctions < handle %#ok<*MCFIL>
 			if ~isempty(me.task.staircase)
 				me.stims{stim}.delayTime = value;
 				me.stims{stim}.resetTicks();
-				fprintf('===>>> SET OFFTIME on stim %i to %.2f\n', stim, me.stims{stim}.delayTime);
+				fprintf('===>>> SET DELAYTIME on stim %i to %.2f\n', stim, me.stims{stim}.delayTime);
 			end
 		end
 

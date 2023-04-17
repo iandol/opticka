@@ -20,13 +20,13 @@
 
 %=========================================================================
 %-------------------------------Task Settings-----------------------------
-% we use a up/down staircase to control the SSD, note this is controlled by
+% we use a up/down staircase to control the SSD (delay in seconds), note this is controlled by
 % taskSequence, so when we run task.updateTask it also updates the
 % staircase for us. See Palamedes toolbox for the PAL_AM methods.
 % 1up / 1down staircase starts at 225ms and steps at 47ms
 assert(exist('PAL_AMUD_setupUD','file'),'MUST Install Palamedes Toolbox: https://www.palamedestoolbox.org')
-task.staircase = PAL_AMUD_setupUD('down',1,'stepSizeUp',47,'stepSizeDown',47,...
-					'startValue',225,'xMin',25,'xMax',475);
+task.staircase = PAL_AMUD_setupUD('down',1,'stepSizeUp',0.032,'stepSizeDown',0.032,...
+					'startValue',0.25,'xMin',0.016,'xMax',0.5);
 task.staircaseType = 'UD';
 task.staircaseInvert = false; % a correct decreases value.
 % do we update the trial number even for incorrect saccades, if true then we
@@ -250,17 +250,17 @@ nsFixFcn = {
 	% otherwise 'breakfix' is returned and the state machine will jump to the
 	% breakfix state. If neither condition matches, then the state table below
 	% defines that after 5 seconds we will switch to the incorrect state.
-	@()testSearchHoldFixation(eT,'nostop2','incorrect')
+	@()testSearchHoldFixation(eT,'nostop','incorrect')
 };
 
 %--------------------exit fixation phase
 nsExitFcn = {
 	@()updateFixationTarget(me, true, tS.targetFixInit, tS.targetFixTime, tS.targetFixRadius, tS.strict);
 	@()hide(stims{2});
-	@()show(stims{1}); 
+	@()show(stims{1});
 }; 
 
-ns2EntryFcn = { @()trackerDrawStatus(eT,'Saccade'); };
+ns2EntryFcn = { @()trackerDrawStatus(eT,'Nostop Saccade'); };
 
 %--------------------fix within
 ns2Fcn = {
@@ -304,7 +304,7 @@ sFcn =  {
 sFixFcn = {
 	% this command performs the logic to search and then maintain fixation
 	% inside the fixation window. 
-	@()testSearchHoldFixation(eT,'stop2','breakfix'); 
+	@()testSearchHoldFixation(eT,'stop','breakfix'); 
 };
 
 %as we exit stim presentation state
@@ -363,9 +363,10 @@ correctFcn = {
 correctExitFcn = {
 	@()updatePlot(bR, me); % update our behavioural record, MUST be done before we update variables
 	@()updateTask(me,tS.CORRECT); % make sure our taskSequence is moved to the next trial
+	@()updateStaircaseAfterState(me,tS.CORRECT,'stop'); % only update staircase after a stop trial
 	@()updateVariables(me); % randomise our stimuli, and set strobe value too
 	@()update(stims); % update our stimuli ready for display
-	@()getStimulusPositions(stims); % make a struct the eT can use for drawing stim positions
+	@()getStimulusPositions(stims); % make a struct the eyetracker can use for drawing stim positions
 	@()trackerClearScreen(eT); 
 	@()resetAll(eT); % resets the fixation state timers	
 	@()checkTaskEnded(me); % check if task is finished
@@ -394,12 +395,13 @@ incFcn = {
 %--------------------incorrect exit
 incExitFcn = {
 	@()updatePlot(bR, me); % update our behavioural plot, must come before updateTask() / updateVariables()
+	@()updateStaircaseAfterState(me,tS.INCORRECT,'stop'); % only update staircase after a stop trial
 	@()updateVariables(me); % randomise our stimuli, set strobe value too
 	@()update(stims); % update our stimuli ready for display
 	@()getStimulusPositions(stims); % make a struct the eT can use for drawing stim positions
 	@()trackerClearScreen(eT); 
 	@()resetAll(eT); % resets the fixation state timers
-	@()plot(bR, 1); % actually do our drawing
+	@()plot(bR, 1); % actually do our behavioural record drawing
 };
 
 %--------------------break entry
@@ -411,7 +413,6 @@ breakEntryFcn = {
 	@()stopRecording(eT);
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()needEyeSample(me,false);
-	@()sendStrobe(io,252);
 	@()hide(stims);
 	@()logRun(me,'BREAKFIX'); %fprintf current trial info
 };
@@ -492,10 +493,10 @@ stateInfoTmp = {
 %---------------------------------------------------------------------------------------------
 'prefix'	'nostop'	1		prefixEntryFcn	prefixFcn		{}				prefixExitFcn;
 %---------------------------------------------------------------------------------------------
-'nostop'	'incorrect'	5		nsEntryFcn		nsFcn			nsFixFcn		nsExitFcn;
-'nostop2'	'incorrect'	5		ns2EntryFcn		ns2Fcn			ns2FixFcn		ns2ExitFcn;
-'stop'		'incorrect'	5		sEntryFcn		sFcn			sFixFcn			sExitFcn;
-'stop2'		'incorrect'	5		s2EntryFcn		s2Fcn			s2FixFcn		s2ExitFcn;
+'nostopfix'	'incorrect'	5		nsEntryFcn		nsFcn			nsFixFcn		nsExitFcn;
+'nostop'	'incorrect'	5		ns2EntryFcn		ns2Fcn			ns2FixFcn		ns2ExitFcn;
+'stopfix'	'incorrect'	5		sEntryFcn		sFcn			sFixFcn			sExitFcn;
+'stop'		'incorrect'	5		s2EntryFcn		s2Fcn			s2FixFcn		s2ExitFcn;
 %---------------------------------------------------------------------------------------------
 'incorrect'	'timeout'	0.5		incEntryFcn		incFcn			{}				incExitFcn;
 'breakfix'	'timeout'	0.5		breakEntryFcn	incFcn			{}				breakExitFcn;

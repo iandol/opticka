@@ -1623,6 +1623,19 @@ classdef runExperiment < optickaCore
 			info = [info ' ' sinfo '\n' me.variableInfo];
 			updateTask(me.task,result,GetSecs,info); %do this before getting index
 		end
+
+		% ===================================================================
+		function updateStaircaseAfterState(me, result, state)
+		%> @fn updateStaircaseAfterState 
+		%> Updates taskSequence with current info and the result for that trial
+		%> running the taskSequence.updateTask function
+		%>
+		%> @param result an integer result, e.g. 1 = correct or -1 = breakfix
+		% ===================================================================
+			if matches(me.stateMachine.log(end).name, state)
+				me.task.updateStaircase(result);
+			end
+		end
 		
 		% ===================================================================
 		function updateNextState(me, type)

@@ -1,6 +1,6 @@
 # Useful Task Methods
 
-The state machine (`stateMachine` class) defines states and the connections between them. The state machine can run cell arrays of methods (`@()` anonymous functions) when states are entered (run once), within (repeated on every screen redraw) and exited (run once). In addition there are ways to transition *out* of a state if some condition is met. For example if we are in a `[STATE 1]` state and the eyetracker tells us the subject has fixated for the correct time, then transition functions can jump us to another state to e.g. show a stimulus.
+The state machine (`stateMachine` class) defines states and the connections between them. The state machine can run cell arrays of methods (`@()` anonymous functions) when states are entered (run once), within (repeated on every screen redraw) and exited (run once). In addition there are ways to transition *out* of a state if some condition is met. For example if we are in `[STATE 1]` and the eyetracker tells us the subject has fixated for the correct time, then transition functions can jump us to another state to e.g. show a stimulus.
 
 
 ```{.smaller}
@@ -25,7 +25,7 @@ The state machine (`stateMachine` class) defines states and the connections betw
                                             └──────────┘
 ```
 
-These various methods control the logic and flow of experiments. This document lists the most important ones used in flexible behavioural task design. It is better for these methods to evaluate properties (properties are the variables managed by the class object). Because of this we choose to create methods that alter the properties of each class. For example, `show(stims)` is a method that allows the stimulus manager to show all stimuli in the list; it does this by setting each stimulus' `isVisible` property to `true`. `hide(stims)` hides all stimuli bby setting `isVisible` property to `false`, or you could just hide the 3rd stimulus in the list: `hide(stims, 3)`.
+These various methods control the logic and flow of experiments. This document lists the most important ones used in flexible behavioural task design. It is better for methods to evaluate properties (properties are the variables managed by the class object). Because of this we choose to create methods that alter the properties of each class. For example, `show(stims)` is a method that allows the stimulus manager to show all stimuli in the list; it does this by setting each stimulus' `isVisible` property to `true`. `hide(stims)` hides all stimuli bby setting `isVisible` property to `false`, or you could just hide the 3rd stimulus in the list: `hide(stims, 3)`.
 
 For those unfamiliar with object-oriented design, a *CLASS* (e.g. `stateMachine`) is initiated as an *OBJECT* variable (named `sM` during the experiment run, it is an *instance* of the class). **ALL** Opticka classes are [**handle classes**](https://www.mathworks.com/help/matlab/handle-classes.html); this means if we assign `sM2 = sM` — **both** of these named instances point to the **same** object. 
 
