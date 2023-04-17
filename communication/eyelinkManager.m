@@ -18,19 +18,19 @@ classdef eyelinkManager < eyetrackerCore
 	properties
 		%> properties to setup and modify calibration
 		calibration			= struct( ...
-							'style','HV5', ...
+							'style','HV9', ...
 							'proportion',[0.6 0.6], ...
 							'manual',false, ...
 							'paceDuration',1000, ...
 							'IP','', ...
 							'eyeUsed', 0, ...
 							'enableCallbacks', true, ...
-							'callback','PsychEyelinkDispatchCallback', ...
+							'callback', 'eyelinkCustomCallback', ...
 							'devicenumber', [], ...
 							'targetbeep', 1, ...
 							'feedbackbeep', 1, ...
 							'calibrationtargetsize', 3, ...
-							'calibrationtargetwidth', 1.5, ...
+							'calibrationtargetwidth', 1, ...
 							'calibrationtargetcolour', [1 1 1])
 		%> eyetracker defaults structure
 		defaults			= struct()
@@ -152,7 +152,7 @@ classdef eyelinkManager < eyetrackerCore
 			updateDefaults(me);
 
 			if me.calibration.enableCallbacks
-				[res,dummy] = EyelinkInit(me.isDummy,1);
+				[res,dummy] = EyelinkInit(me.isDummy, me.calibration.callback);
 			else
 				[res,dummy] = EyelinkInit(me.isDummy,0);
 			end
@@ -714,6 +714,10 @@ classdef eyelinkManager < eyetrackerCore
 		%> @brief runs a demo of the eyelink, tests this class
 		%>
 		% ===================================================================
+			global aM rM
+			if isempty(aM) || ~isa(aM,'audioManager');aM=audioManager;end
+			if ~aM.isSetup;	try setup(aM); aM.beep(2000,0.1,0.1); end; end
+			if ~isa(rM,'arduinoManager');rM=arduinoManager();end
 			PsychDefaultSetup(2);
 			stopkey				= KbName('Q');
 			nextKey				= KbName('SPACE');
@@ -725,7 +729,6 @@ classdef eyelinkManager < eyetrackerCore
 			oldexc				= me.exclusionZone;
 			oldfixinit			= me.fixInit;
 			me.recordData		= true; %lets save an EDF file
-			%set up a figure to plot eye position
 			figure;plot(0,0,'ro');ax=gca;hold on;xlim([-20 20]);ylim([-20 20]);set(ax,'YDir','reverse');
 			title('eyelinkManager Demo');xlabel('X eye position (deg)');ylabel('Y eye position (deg)');grid on;grid minor;drawnow;
 			drawnow;
@@ -736,8 +739,9 @@ classdef eyelinkManager < eyetrackerCore
 				if isempty(me.screen) || ~isa(me.screen,'screenManager')
 					s = screenManager('debug',true,'pixelsPerCm',36,'distance',57.3);
 					s.font.TextSize = 18;
+					s.font.TextBackgroundColor = [0.5 0.5 0.5 1];
 					if exist('forcescreen','var'); s.screen = forcescreen; end
-					s.backgroundColour = [0.5 0.5 0.5 0]; %s.windowed = [0 0 900 900];
+					s.backgroundColour = [0.5 0.5 0.5 1]; %s.windowed = [0 0 900 900];
 				else
 					s = me.screen;
 				end
@@ -848,19 +852,17 @@ classdef eyelinkManager < eyetrackerCore
 						if b == 60; trackerMessage(me,'END_FIX'); syncTime(me);end
 						b=b+1;
 					end
-					correct = true;
+					Screen('Flip',s.win);
+					% clear tracker display
+					trackerClearScreen(me);
 					% tell EDF end of reaction time portion
 					trackerMessage(me,'END_RT');
 					% stop recording data
 					WaitSecs(0.1);
 					stopRecording(me);
 					setOffline(me);
-					if correct
-						trackerMessage(me,'TRIAL_RESULT 1');
-					else
-						trackerMessage(me,'TRIAL_RESULT 0');
-					end
-					
+					WaitSecs(0.1);
+					trackerMessage(me,'TRIAL_RESULT 1');
 					resetFixation(me);
 
 					% set up the fix init system, whereby the subject must
@@ -872,7 +874,7 @@ classdef eyelinkManager < eyetrackerCore
 					%me.fixInit.radius = 3;
 					
 					% prepare a random position for next trial
-					me.updateFixationValues([randi([-5 5]) -10],[randi([-5 5]) -10],[],[],randi([2 4]));
+					me.updateFixationValues([randi([-4 4]) -10],[randi([-4 4]) -10],[],[],randi([1 4]));
 					o.sizeOut = me.fixation.radius(1)*2;
 					%me.fixation.radius = [me.fixation.radius me.fixation.radius];
 					o.xPositionOut = me.fixation.X(1);
@@ -886,8 +888,6 @@ classdef eyelinkManager < eyetrackerCore
 						ts(i).size = o.sizeOut;
 						ts(i).selected = true;
 					end
-					% clear tracker display
-					trackerClearScreen(me);
 					% plot eye position for last trial and ITI
 					plot(ax,xst,yst);drawnow;
 					while GetSecs <= vbl + 1

@@ -1,5 +1,5 @@
 function rc = eyelinkCustomCallback(callArgs, msg)
-% PsychEyelinkDispatchCallback implementes the EyeLink Core Graphics part
+% eyelinkCustomCallback implementes the EyeLink Core Graphics part
 % of the EyeLink API. This "Core Graphics" part of our API is responsible
 % for handling the times when the API and Host PC takes control of the eye
 % tracking procedures. This includes the functionality to stream camera
@@ -75,7 +75,7 @@ function rc = eyelinkCustomCallback(callArgs, msg)
 persistent eyelinktex;
 global dw dh offscreen;
 global eyelinkanimationtarget;
-global rM aM;
+global aM rM;
 
 % Cached window handle for target onscreen window:
 persistent eyewin;
@@ -97,16 +97,15 @@ persistent GL_RGBA;
 persistent GL_RGBA8;
 persistent hostDataFormat;
 
-persistent verbose;
 persistent inDrift;
 offscreen = 0;
 newImage = 0;
 
-if isempty(verbose); verbose = false; end
 
 if 0 == Screen('WindowKind', eyelinktex)
     eyelinktex = []; % Previous PTB Screen() window has closed, needs to be recreated.
 end
+
 
 if isempty(eyelinktex)
     % Define the two OpenGL constants we actually need. No point in
@@ -157,9 +156,6 @@ if isstruct(callArgs) && isfield(callArgs,'window')
     lastImageTime=GetSecs;
     ineyeimagemodedisplay=0;
     drawInstructions=1;
-    if isfield(el,'verbose')
-        verbose = el.verbose;
-    end
     return;
 end
 
@@ -188,15 +184,12 @@ switch eyecmd
         
     case 2  % EyeLink Keyboard Query
         [rc, el] = EyelinkGetKey(el);
-        if rc == 32
-            if exist('rM','var') && isa(rM,'arduinoManager') && rM.isOpen
-                timedTTL(rM);
-            end
-        end
-        if rc > 0 && verbose; fprintf('--->>> EYELINKCALLBACK:2 Get Key: %g\n',rc); end
+		if rc == 32 && exist('rM','var') && isa(rM,'arduinoManager') && rM.isOpen
+			timedTTL(rM);
+		end
         
     case 3  % Alert message
-        fprintf('--->>> EYELINKCALLBACK:3 Eyelink Alert: %s.\n', msg);
+        fprintf('Eyelink Alert: %s.\n', msg);
         needsupdate = 1;
         
     case 4  % Camera Image Caption Text
@@ -217,13 +210,11 @@ switch eyecmd
             end
             Screen('PlayMovie', eyelinkanimationtarget.movie, 1, el.calAnimationLoopParam, el.calAnimationAudioVolume)
         end
-        if verbose; fprintf('--->>> EYELINKCALLBACK:5 draw_cal_target: X=%.2g Y=%.2g\n', callArgs(2), callArgs(3)); end
         
     case 6  % Clear Cal Display
         clearScreen=1;
         drawInstructions=1;
         needsupdate = 1;
-        if verbose; fprintf('--->>> EYELINKCALLBACK:6 clear_cal_display.\n'); end
         
     case 7  % Setup Cal Display
         if inDrift
@@ -235,7 +226,6 @@ switch eyecmd
         drawcount = 0;
         lastImageTime = GetSecs;
         needsupdate = 1;
-        if verbose; fprintf('--->>> EYELINKCALLBACK:7 Setup cal display\n'); end
         
     case 8  % Setup Image Display
         newImage = 1;
@@ -246,17 +236,12 @@ switch eyecmd
         ineyeimagemodedisplay=1;
         drawInstructions=1;
         needsupdate = 1;
-         if verbose; fprintf('--->>> EYELINKCALLBACK:8 setup_image_display for %i x %i pixels.\n', eyewidth, eyeheight); end
         
     case 9  % Exit Image Display
         clearScreen=1;
         ineyeimagemodedisplay=0;
         drawInstructions=1;
         needsupdate = 1;
-        if verbose
-            fprintf('--->>> EYELINKCALLBACK:9 exit_image_display.\n');
-            fprintf('--->>> EYELINKCALLBACK AVG FPS = %f Hz\n', drawcount / (GetSecs - lastImageTime));
-        end
         
     case 10 % Erase Cal Target
         calxy = [];
@@ -275,7 +260,6 @@ switch eyecmd
         end
         
 
-        if verbose; fprintf('--->>> EYELINKCALLBACK:10 erase_cal_target.\n'); end
         
     case 11 % Exit Cal Display
         calxy = [];
@@ -308,7 +292,6 @@ switch eyecmd
         
     case 14 % Cal Done Sound
         errc = callArgs(2);
-        if verbose; fprintf('--->>> EYELINKCALLBACK:14 cal_done_beep_hook: %i\n', errc); end
         if errc > 0
             % Failed
             EyelinkMakeSound(el, 'calibration_failed_beep');
@@ -319,7 +302,6 @@ switch eyecmd
         
     case 15 % Drift Chk/Corr Done Sound
         errc = callArgs(2);
-        if verbose; fprintf('--->>> EYELINKCALLBACK:15 dc_done_beep_hook: %i\n', errc); end
         if errc > 0
             % Failed
             EyelinkMakeSound(el, 'drift_correction_failed_beep');
@@ -534,13 +516,10 @@ return;
                 otherwise
                     % default to el.calTargetType = 'ellipse' target
                     % drawing
-                    size=round(el.calibrationtargetsize/100*960); %BRtodo - add/test 'width' instead of 960
-                    inset=round(el.calibrationtargetwidth/100*960);%BRtodo - add/test 'width' instead of 960
-                    insetSize = size-2*inset;
-                    if insetSize < 1
-                        insetSize = 1;
-                    end
-                    
+                    size=round(el.calibrationtargetsize/100*1080); %BRtodo - add/test 'width' instead of 960
+                    inset=round(el.calibrationtargetwidth/100*1080);%BRtodo - add/test 'width' instead of 960
+					if size < 4; size = 4; end
+					if inset < 2; inset = 2; end
                     % Use FillOval for larger dots:
                     Screen('FillOval', eyewin, el.calibrationtargetcolour, [calxy(1)-size/2 calxy(2)-size/2 calxy(1)+size/2 calxy(2)+size/2], size+2);
                     Screen('FillOval', eyewin, el.backgroundcolour, [calxy(1)-inset/2 calxy(2)-inset/2 calxy(1)+inset/2 calxy(2)+inset/2], inset+2)
@@ -552,6 +531,7 @@ return;
     function EyelinkMakeSound(el, s)
         % set all sounds in one place, sound params defined in
         % eyelinkInitDefaults
+		if ~exist('aM','var') || ~isa(aM,'audioManager'); return; end
         switch(s)
             case 'cal_target_beep'
                 doBeep=el.targetbeep;
@@ -591,9 +571,8 @@ return;
                 d=1.5;
         end
         
-        if doBeep==1 && exist('aM','var')
-           %Beeper(f, v, d);
-		   aM.beep(f,d,v);
+        if doBeep==1
+		   beep(aM, f, d, v);
         end
     end
 end
