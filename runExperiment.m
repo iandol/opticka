@@ -1729,6 +1729,9 @@ classdef runExperiment < optickaCore
 							num = str2num(mtch.num);
 							if ~isempty(nme)
 								switch (lower(nme))
+									case {'shift'}
+										if isnan(num) || isempty(num)
+											val = -value;
 									case {'invert'}
 										if isnan(num) || isempty(num)
 											val = -value;

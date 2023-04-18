@@ -1415,8 +1415,8 @@ classdef screenManager < optickaCore
 			size = size * me.ppd_;
 			xy(1,:) = me.xCenter + (xy(1,:) * me.ppd_);
 			xy(2,:) = me.yCenter + (xy(2,:) * me.ppd_);
-			center(1) = mean(xy(1,:));
-			center(2) = mean(xy(2,:));
+			center(1) = round(mean(xy(1,:)));
+			center(2) = round(mean(xy(2,:)));
 			xy(1,:) = xy(1,:) - center(1);
 			xy(2,:) = xy(2,:) - center(2);
 			Screen('DrawDots', me.win, xy, size, colour, center, 1);
@@ -1739,6 +1739,22 @@ classdef screenManager < optickaCore
 	%=======================================================================
 	
 		% ===================================================================
+		function out = equidistantPoints(n,distance,phase)
+		%> @fn rectToPos
+		%>
+		%> @param n number of points
+		%> @param distance distance from center
+		%> @return array of X,Y positions
+		% ===================================================================
+			th = linspace(0,360,n+1);
+			th = th(1:end-1) + phase;
+			out = zeros(2,length(th));
+			for i = 1:length(th)
+				[out(1,i),out(2,i)] = pol2cart(deg2rad(th(i)),distance);
+			end
+		end
+
+		% ===================================================================
 		function out = rectToPos(rect)
 		%> @fn rectToPos
 		%>
@@ -1750,7 +1766,7 @@ classdef screenManager < optickaCore
 		end
 
 		% ===================================================================
-		function out = posToRect(pos);
+		function out = posToRect(pos)
 		%> @fn posToRectpos
 		%>
 		%> @param
