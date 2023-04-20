@@ -628,6 +628,11 @@ classdef runExperiment < optickaCore
 			global rM %#ok<*GVMIS> %global reward manager we can share with eyetracker 
 			global aM %global audio manager we can share with eyetracker
 
+			if exist(me.stateInfoFile,'file') && contains(me.stateInfoFile, 'DefaultStateInfo') && me.stimuli.n == 0
+				warning('You are trying to start a Default behavioural task without stimuli!');
+				return
+			end
+
 			refreshScreen(me);
 			initialiseSaveFile(me); %generate a savePrefix for this run
 			me.comment = [me.comment ' ' me.name];
@@ -689,8 +694,10 @@ classdef runExperiment < optickaCore
 			% after the run; prefer structure over class to keep it light. These
 			% defaults can be overwritten by the StateFile.m
 			tS							= struct();
+			tS.runName					= me.name;  %==name of this run
 			tS.name						= 'generic';%==name of this protocol
 			tS.useTask					= false;	%==use taskSequence (randomised variable task object)
+			tS.includeErrors			= false;	%==do error trials count to move taskSequence forward
 			tS.keyExclusionPattern		= ["fixate","stimulus"]; %==which states skip keyboard check
 			tS.enableTrainingKeys		= false;	%==enable keys useful during task training, but not for data recording
 			tS.recordEyePosition		= false;	%==record eye position within PTB, **in addition** to the eyetracker?
@@ -763,14 +770,14 @@ classdef runExperiment < optickaCore
 				
 				%================================open the PTB screen and setup stimuli
 				me.screenVals			= s.open(me.debug,tL);
-				me.fInc					= round(me.screenVals.fps/4); %roughly <0.4s key press
 				stims.verbose			= me.verbose;
 				task.fps				= s.screenVals.fps;
 				setup(stims, s);
 				
 				%================================initialise and set up I/O
 				io						= configureIO(me);
-				dC						= me.dC;				
+				dC						= me.dC;
+
 				%================================initialise the user functions object
 				if ~exist(me.userFunctionsFile,'file')
 					me.userFunctionsFile = [me.paths.root filesep 'userFunctions.m'];
@@ -786,7 +793,7 @@ classdef runExperiment < optickaCore
 				me.userFunctions		= ans; %#ok<NOANS> 
 				uF						= me.userFunctions;
 				uF.rE = me; uF.s = s; uF.task = task; uF.eT = eT;
-				uF.stims = stims; uF.io = io; uF.rM = rM;
+				uF.stims = stims; uF.io = io; uF.rM = rM; uF.verbose = me.verbose;
 
 				%================================initialise the state machine
 				sM						= stateMachine('verbose', me.verbose,...
@@ -814,13 +821,13 @@ classdef runExperiment < optickaCore
 					me.paths.stateInfoFile = me.stateInfoFile;
 				end
 				uF.sM = sM;
-				me.lastXPosition			= tS.fixX;
-				me.lastYPosition			= tS.fixY;
-				me.lastXExclusion			= [];
-				me.lastYExclusion			= [];
-				me.eyetracker.name			= tS.name;
-				if me.eyetracker.dummy;		eT.isDummy = true; end %===use dummy or real eyetracker? 
-				if tS.saveData;				eT.recordData = true; end %===save Eyetracker data?			
+				me.lastXPosition		= tS.fixX;
+				me.lastYPosition		= tS.fixY;
+				me.lastXExclusion		= [];
+				me.lastYExclusion		= [];
+				me.eyetracker.name		= tS.name;
+				if me.eyetracker.dummy;	eT.isDummy = true; end %===use dummy or real eyetracker? 
+				if tS.saveData;			eT.recordData = true; end %===save Eyetracker data?			
 				
 				%================================set up the eyetracker interface
 				configureEyetracker(me, eT, s);
@@ -949,7 +956,7 @@ classdef runExperiment < optickaCore
 				if tS.showBehaviourPlot
 					fprintf('===>>> Creating Behavioural Record Plot Window...\n');
 					createPlot(bR, eT); 
-					drawnow; 
+					drawnow;
 				end
 
 				%===========================take over the keyboard + max priority
@@ -989,7 +996,9 @@ classdef runExperiment < optickaCore
 
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				% Display + task loop
+				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				while me.stopTask == false
@@ -1075,19 +1084,21 @@ classdef runExperiment < optickaCore
 					end  % END me.doFlip
 
 					%----- For operator display, do we flip? -----%
-					if me.doTrackerFlip == 1 
-						trackerFlip(eT);
-					elseif me.doTrackerFlip == 2 
+					if me.doTrackerFlip > 0 && me.doTrackerFlip < 3 
 						trackerFlip(eT, 1);
 					elseif me.doTrackerFlip == 3 
-						trackerFlip(eT, 1, true);
+						trackerFlip(eT, 0, true);
 					elseif me.doTrackerFlip == 4
-						trackerFlip(eT, 1, true);
-						me.doTrackerFlip = 1;
+						trackerFlip(eT, 0, true);
+						me.doTrackerFlip = 2;
 					end
 					
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				end %======================END OF TASK LOOP=========================
+				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				
 				tL.screenLog.afterDisplay = tL.lastvbl;
@@ -1174,6 +1185,9 @@ classdef runExperiment < optickaCore
 					save(sname,'rE','tS');
 					fprintf('\n\n#####################\n===>>> <strong>SAVED DATA to: %s</strong>\n#####################\n\n',sname)
 					assignin('base', 'tS', tS); % assign tS in base for manual checking
+					if ~isempty(me.task.staircase) && isstruct(me.task.staircase)
+						assignin('base', 'staircase', me.task.staircase); % assign tS in base for manual checking
+					end
 				end
 
 				%------disable diary logging 
@@ -1329,10 +1343,12 @@ classdef runExperiment < optickaCore
 		%>
 		%> @param useStimuli do we use the current stimuli positions or the last
 		%> known positions that are stored in me.stimuli.last[X|Y]Position.
+		%> If this is a number we force it to the specific stimuli.
 		%> @param varargin the rest of the parameters normally passed to 
 		%> eyeTracker.updateFixationValues: inittime,fixtime,radius,strict
 		% ===================================================================
 			if ~exist('useStimuli','var');	useStimuli = false; end
+			if isnumeric(useStimuli); setProp(me.stimuli,'fixationChoice',useStimuli); useStimuli=true; end
 			if useStimuli 
 				[me.lastXPosition,me.lastYPosition] = getFixationPositions(me.stimuli);
 				updateFixationValues(me.eyeTracker, me.lastXPosition, me.lastYPosition, varargin);
@@ -1669,8 +1685,8 @@ classdef runExperiment < optickaCore
 		%> Updates the stimulus objects with the current variable set from taskSequence()
 		%> 
 		%> @param index a single value of which the overall trial number is
-		%> @param override - forces updating even if it is the same trial
-		%> @param update - do we also run taskSequence.updateTask() as well?
+		%> @param override [true] - forces updating even if it is the same trial
+		%> @param update [false] - do we also run taskSequence.updateTask() as well?
 		% ===================================================================
 			if ~exist('update','var') || isempty(update)
 				update = false;
@@ -1730,8 +1746,20 @@ classdef runExperiment < optickaCore
 							if ~isempty(nme)
 								switch (lower(nme))
 									case {'shift'}
+										% what is the index of this variable?
+										thisVarIndex = me.task.outMap(index, i);
+										thisVarMax   = max(me.task.outMap(:, i));
 										if isnan(num) || isempty(num)
-											val = -value;
+											newIdx = thisVarIndex + 1;
+											if newIdx > thisVarMax; newIdx = 1; end
+										else
+											if num >= thisVarMax; num = 0; end
+											newIdx = thisVarIndex + num;
+											if newIdx > thisVarMax; newIdx = newIdx - thisVarMax; end
+											if newIdx < 1; newIdx = thisVarMax - abs(newIdx); end
+										end
+										f = find(me.task.outMap(:, i)==newIdx);
+										val = me.task.outValues{f(1), i};
 									case {'invert'}
 										if isnan(num) || isempty(num)
 											val = -value;
@@ -2418,13 +2446,15 @@ classdef runExperiment < optickaCore
 
 				case 'r'
 
-					timedTTL(me.arduino);
+					if isa(me.arduino,'arduinoManager');timedTTL(me.arduino);end
 
 				case '=+'
 	
-					me.screen.screenXOffset = me.screen.screenXOffset + 1;
-					fprintf('======>>> Screen X Center: %g deg / %g pixels\n',me.screen.screenXOffset,me.screen.xCenter);
-						
+					if trainingSet
+						me.screen.screenXOffset = me.screen.screenXOffset + 1;
+						fprintf('======>>> Screen X Center: %g deg / %g pixels\n',me.screen.screenXOffset,me.screen.xCenter);
+					end
+
 				case '-_'
 					
 					if trainingSet

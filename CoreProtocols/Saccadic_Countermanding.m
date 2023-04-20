@@ -12,15 +12,21 @@
 assert(exist('PAL_AMUD_setupUD','file'),'MUST Install Palamedes Toolbox: https://www.palamedestoolbox.org')
 % Note this is managed by taskSequence, See Palamedes toolbox for the
 % PAL_AM methods. 1up / 1down staircase starts at 225ms and steps at 32ms
-task.staircaseType = 'UD';
-task.staircase = PAL_AMUD_setupUD('up',1,'down',1,'stepSizeUp',0.05,'stepSizeDown',0.05,...
+task.staircase = [];
+task.staircase.type = 'UD';
+task.staircase.sc = PAL_AMUD_setupUD('up',1,'down',1,'stepSizeUp',0.05,'stepSizeDown',0.05,...
 					'stopRule',64,'startValue',0.25,'xMin',0.015,'xMax',0.5);
-task.staircaseInvert = true; % a correct increases value.
+task.staircase.invert = true; % a correct increases value.
 % we use taskSequence to randomise which state to switch to (independent
 % trial-level factor). We call @()updateNextState(me,'trial') in the
 % prefixation state; this sets one of these two trialVar.values as the next
 % state. The nostopfix and stopfix states will then call nostop or stop
 % stimulus states.
+% These are actually set by the opticka GUI, but this is the task code
+%    task.trialVar.values		= {'nostopfix','stopfix'};
+%    task.trialVar.probability	= [0.6 0.4];
+%    task.trialVar.comment		= 'nostep or step trial based on 60:40 probability';
+% tell timeLog which states are "stimulus" states
 tL.stimStateNames			= ["nostop","stop"];
 
 %=========================================================================
@@ -43,7 +49,7 @@ tS.saveData					= true;		%==save behavioural and eye movement data?
 tS.showBehaviourPlot		= true;		%==open the behaviourPlot figure? Can cause more memory use…
 tS.name						= 'Saccadic Countermanding'; %==name of this protocol
 tS.nStims					= stims.n;	%==number of stimuli, taken from metaStimulus object
-tS.timeOut					= 1;		%==if wrong response, how long to time out before next trial
+tS.tOut						= 1;		%==if wrong response, how long to time out before next trial
 tS.CORRECT					= 1;		%==the code to send eyetracker for correct trials
 tS.BREAKFIX					= -1;		%==the code to send eyetracker for break fix trials
 tS.INCORRECT				= -5;		%==the code to send eyetracker for incorrect trials
@@ -60,7 +66,8 @@ tS.errorSound				= [300,  1.0, 1.0]; %==freq,length,volume
 %io.verbose					= true;		%==print out io commands for debugging
 %eT.verbose					= true;		%==print out eyelink commands for debugging
 %rM.verbose					= true;		%==print out reward commands for debugging
-%task.verbose				= true;		%==print out task info for debugging
+task.verbose				= true;		%==print out task info for debugging
+uF.verbose					= true;		%==print out user function logg for debugging
 
 %=========================================================================
 %-----------------INITIAL Eyetracker Settings----------------------
@@ -82,7 +89,7 @@ tS.fixY						= 0;
 tS.firstFixInit				= 3;
 % time to maintain initial fixation within window, can be single value or a
 % range to randomise between
-tS.firstFixTime				= [0.9 1.1];
+tS.firstFixTime				= [0.5 1.0];
 % fixation window radius in degrees; if you enter [x y] the window will be
 % rectangular.
 tS.firstFixRadius			= 2;
@@ -92,15 +99,15 @@ tS.strict					= true;
 % in this task after iitial fixation a target appears
 tS.targetFixInit			= 3;
 tS.targetFixTime			= 1;
-tS.targetFixRadius			= 4;
+tS.targetFixRadius			= 5;
 
 %=========================================================================
 %-------------------------------Eyetracker setup--------------------------
 % NOTE: the opticka GUI sets eyetracker options, you can override them here if
 % you need...
-eT.name				= tS.name;
-if me.eyetracker.dummy;	eT.isDummy = true; end %===use dummy or real eyetracker? 
-if tS.saveData;		eT.recordData = true; end %===save Eyetracker data?					
+eT.name						= tS.name;
+if me.eyetracker.dummy;		eT.isDummy = true; end %===use dummy or real eyetracker? 
+if tS.saveData;				eT.recordData = true; end %===save Eyetracker data?					
 % Initialise eyetracker with X, Y, FixInitTime, FixTime, Radius, StrictFix
 % values
 updateFixationValues(eT, tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
@@ -167,18 +174,19 @@ pauseExitFcn = {
 %==============================================================
 %--------------------prefixate entry
 prefixEntryFcn = { 
-	@()needFlip(me, true, 1); % enable the screen and trackerscreen flip
+	@()setOffline(eT); % set eyelink offline [tobii/irec ignores this]
+	@()needFlip(me, true, 2); % enable the screen and trackerscreen flip
 	@()needEyeSample(me, true); % make sure we start measuring eye position
 	@()hide(stims); % hide all stimuli
-	% update the fixation window to initial values
+	@()resetAll(eT); % reset the recent eye position history
 	@()updateFixationValues(eT,tS.fixX,tS.fixY,tS.firstFixInit,tS.firstFixTime,tS.firstFixRadius,tS.strict); %reset fixation window
+	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions
 	% tracker messages that define a trial start
 	@()trackerMessage(eT,'V_RT MESSAGE END_FIX END_RT'); % Eyelink commands
 	@()trackerMessage(eT,sprintf('TRIALID %i',getTaskIndex(me))); %Eyelink start trial marker
 	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
 	@()startRecording(eT); % start eyelink recording for this trial (tobii/irec ignore this)
 	@()trackerDrawStatus(eT,'PREFIX', stims.stimulusPositions);
-	@()statusMessage(eT,'Start Trial');
 	% updateNextState method is critical, it reads the independent trial factor in
 	% taskSequence to select state to transition to next. This sets
 	% stateMachine.tempNextState.
@@ -231,7 +239,7 @@ nsExitFcn = {
 	@()show(stims{1});
 }; 
 
-ns2EntryFcn = {  };
+ns2EntryFcn = { @()doStrobe(me,true); };
 
 %--------------------fix within
 ns2Fcn = {
@@ -254,56 +262,58 @@ ns2FixFcn = {
 
 %--------------------exit fixation phase
 ns2ExitFcn = { 
-	@()sendStrobe(io,255);
+	@()setStrobeValue(me,255); 
+	@()doStrobe(me,true);
 }; 
 
 %========================================================
 %========================================================STOPSIGNAL
 %========================================================
 
-sEntryFcn = {
+sfEntryFcn = {
 	@()trackerDrawStatus(eT,'STOP', stims.stimulusPositions);
 	@()logRun(me,'STOP-FIXATE');
 };
 
-sFcn =  {
+sfFcn =  {
 	@()draw(stims{2});
 	@()trackerDrawEyePosition(eT);
 	@()drawPhotoDiode(s,[0 0 0]);
 };
 
-sFixFcn = {
+sfFixFcn = {
 	% this command performs the logic to search and then maintain fixation
 	% inside the fixation window. 
 	@()testSearchHoldFixation(eT,'stop','breakfix'); 
 };
 
 %as we exit stim presentation state
-sExitFcn = {
+sfExitFcn = {
 	@()show(stims);
 	@()updateFixationValues(eT,[],[], 0.5, 1, tS.targetFixRadius);
 	@()setDelayTimeWithStaircase(uF,2); %sets the delayTime for fixation cross to reappear
 };
 
-s2EntryFcn = {
-
+sEntryFcn = {
+	@()doStrobe(me,true);
 };
 
-s2Fcn =  {
+sFcn =  {
 	@()draw(stims);
 	@()trackerDrawEyePosition(eT);
 	@()drawPhotoDiode(s,[1 1 1]);
 };
 
-s2FixFcn = {
+sFixFcn = {
 	% this command performs the logic to maintain fixation
 	% inside the fixation window. 
 	@()testHoldFixation(eT,'correct','incorrect'); 
 };
 
 %as we exit stim presentation state
-s2ExitFcn = {
-	@()sendStrobe(io,255);
+sExitFcn = {
+	@()setStrobeValue(me,255); 
+	@()doStrobe(me,true);
 };
 
 %========================================================
@@ -318,8 +328,6 @@ correctEntryFcn = {
 	@()trackerMessage(eT,'END_RT'); %send END_RT message to tracker
 	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.CORRECT)); %send TRIAL_RESULT message to tracker
 	@()trackerDrawStatus(eT, 'CORRECT! :-)');
-	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
-	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()needEyeSample(me,false); % no need to collect eye data until we start the next trial
 	@()hide(stims); % hide all stims
 	@()logRun(me,'CORRECT'); % print current trial info
@@ -332,14 +340,13 @@ correctFcn = {
 
 %--------------------when we exit the correct state
 correctExitFcn = {
+	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()updatePlot(bR, me); % update our behavioural record, MUST be done before we update variables
 	@()updateTask(me,tS.CORRECT); % make sure our taskSequence is moved to the next trial
 	@()updateStaircaseAfterState(me,tS.CORRECT,'stop'); % only update staircase after a stop trial
 	@()updateVariables(me); % randomise our stimuli, and set strobe value too
 	@()update(stims); % update our stimuli ready for display
-	@()getStimulusPositions(stims); % make a struct the eyetracker can use for drawing stim positions
-	@()trackerClearScreen(eT); 
-	@()resetAll(eT); % resets the fixation state timers	
 	@()checkTaskEnded(me); % check if task is finished
 	@()plot(bR, 1); % actually do our behaviour record drawing
 };
@@ -370,9 +377,6 @@ incExitFcn = {
 	@()updateStaircaseAfterState(me,tS.BREAKFIX,'stop'); % only update staircase after a stop trial
 	@()updateVariables(me); % randomise our stimuli, set strobe value too
 	@()update(stims); % update our stimuli ready for display
-	@()getStimulusPositions(stims); % make a struct the eT can use for drawing stim positions
-	@()trackerClearScreen(eT); 
-	@()resetAll(eT); % resets the fixation state timers
 	@()plot(bR, 1); % actually do our behavioural record drawing
 };
 
@@ -395,9 +399,6 @@ breakExitFcn = {
 	@()updatePlot(bR, me); % update our behavioural plot, must come before updateTask() / updateVariables()
 	@()updateVariables(me); % randomise our stimuli, set strobe value too
 	@()update(stims); % update our stimuli ready for display
-	@()getStimulusPositions(stims); % make a struct the eT can use for drawing stim positions
-	@()trackerClearScreen(eT); 
-	@()resetAll(eT); % resets the fixation state timers
 	@()plot(bR, 1); % actually do our behavioural record drawing
 };
 

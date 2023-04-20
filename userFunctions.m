@@ -58,14 +58,17 @@ classdef userFunctions < handle %#ok<*MCFIL>
 		end
 
 		% ===================================================================
-		function setDelayTimeWithStaircase(me, stim)
+		function setDelayTimeWithStaircase(me, stim, duration)
 		%> uses a staircase to set the off time for a specific stimulus
 		%>   
 		% ===================================================================
 			if ~isempty(me.task.staircase)
-				me.stims{stim}.delayTime = me.task.staircase.xCurrent;
+				me.stims{stim}.delayTime = me.task.staircase(1).sc.xCurrent;
+				if exist('duration','var')
+					me.stims{stim}.offTime = me.stims{stim}.delayTime + duration;
+				end
 				me.stims{stim}.resetTicks();
-				fprintf('===>>> SET DELAYTIME on stim %i to %.2f\n', stim, me.stims{stim}.delayTime);
+				if me.verbose; fprintf('===>>> SET DELAYTIME on stim %i to %.2f off=%.2f\n', stim, me.stims{stim}.delayTime, me.stims{stim}.offTime);end
 			end
 		end
 
@@ -76,8 +79,9 @@ classdef userFunctions < handle %#ok<*MCFIL>
 		% ===================================================================
 			if ~isempty(me.task.staircase)
 				me.stims{stim}.delayTime = value;
+				me.stims{stim}.offTime = inf;
 				me.stims{stim}.resetTicks();
-				fprintf('===>>> SET DELAYTIME on stim %i to %.2f\n', stim, me.stims{stim}.delayTime);
+				if me.verbose;fprintf('===>>> SET DELAYTIME on stim %i to %.2f\n', stim, me.stims{stim}.delayTime);end
 			end
 		end
 

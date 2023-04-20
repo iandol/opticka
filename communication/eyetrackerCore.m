@@ -909,6 +909,7 @@ classdef eyetrackerCore < optickaCore
 			if me.flipTick ~=1; return; end
 
 			if dontclear ~= 1; dontclear = []; end
+			% Screen('Flip', windowPtr [, when] [, dontclear] [, dontsync] [, multiflip]);
 			me.operatorScreen.flip([], dontclear, 2);
 		end
 		

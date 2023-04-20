@@ -94,6 +94,7 @@ classdef metaStimulus < optickaCore
 		%> cache our dependent values for a bit more speed...
 		n_
 		nMask_
+		ppd_
 		%> allowed properties passed to object upon construction
 		allowedProperties = {'setChoice', 'stimulusSets', 'controlTable', 'showMask', ...
 		'maskStimuli', 'verbose', 'stimuli', 'screen', 'choice', 'fixationChoice', ...
@@ -139,6 +140,7 @@ classdef metaStimulus < optickaCore
 				for i = 1:me.nMask
 					setup(me.maskStimuli{i},s);
 				end
+				me.ppd_ = s.ppd;
 			else
 				error('metaStimulus setup: no screenManager has been provided!!!')
 			end
@@ -150,15 +152,14 @@ classdef metaStimulus < optickaCore
 		%> @param choice override a single choice
 		%> @return
 		% ===================================================================
-		function update(me,choice,mask)
+		function update(me, choice)
 			%tic
 			if ~exist('choice','var'); choice = me.choice; end
-			if ~exist('mask','var'); mask = false; end
 			if ~isempty(choice) && isnumeric(choice) %user forces specific stimuli
 				for i = choice
 					update(me.stimuli{i});
 				end
-			elseif mask && me.showMask == true && me.nMask_ > 0 %draw mask instead
+			elseif me.showMask == true && me.nMask_ > 0 %draw mask instead
 				for i = 1:me.nMask
 					update(me.maskStimuli{i});
 				end
@@ -176,7 +177,7 @@ classdef metaStimulus < optickaCore
 		%> @param choice override a single choice
 		%> @return
 		% ===================================================================
-		function draw(me,choice)
+		function draw(me, choice)
 			if exist('choice','var') && isnumeric(choice) %user forces a single stimulus
 				
 				for i = choice
@@ -210,7 +211,7 @@ classdef metaStimulus < optickaCore
 		%> @param choice allow a single selected stimulus
 		%> @return
 		% ===================================================================
-		function animate(me,choice)
+		function animate(me, choice)
 			if exist('choice','var') && isnumeric(choice) %user forces a stimulus
 				
 				for i = choice
@@ -244,14 +245,22 @@ classdef metaStimulus < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function resetTicks(me)
+		function resetTicks(me, choice)
 
-			for i = 1:me.n
-				resetTicks(me.stimuli{i});
+			if exist('choice','var') && isnumeric(choice) %user forces a stimulus
+				for i = choice
+					resetTicks(me.stimuli{i});
+				end
+			else
+				for i = 1:me.n_
+					resetTicks(me.stimuli{i});
+				end
 			end
-				
-			for i = 1:me.nMask
-				resetTicks(me.maskStimuli{i});
+
+			if me.showMask == true && me.nMask_ > 0
+				for i = 1:me.nMask
+					resetTicks(me.maskStimuli{i});
+				end
 			end
 			
 		end
@@ -290,7 +299,7 @@ classdef metaStimulus < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function reset(me)
+		function reset(me, ~)
 
 			for i = 1:me.n
 				try reset(me.stimuli{i}); end %#ok<*TRYNC> 
@@ -373,7 +382,7 @@ classdef metaStimulus < optickaCore
 			for i = choice
 				show(me.stimuli{i});
 			end
-			if me.verbose;me.salutation('Show',['Show stimuli: ' num2str(choice)],true); end
+			if me.verbose;me.salutation('Show',['Show stimuli: ' num2str(choice,'%i ')],true); end
 		end
 				
 		% ===================================================================
@@ -386,7 +395,7 @@ classdef metaStimulus < optickaCore
 			for i = choice
 				hide(me.stimuli{i});
 			end
-			if me.verbose;me.salutation('Hide',['Hide stimuli: ' num2str(choice)],true); end
+			if me.verbose;me.salutation('Hide',['Hide stimuli: ' num2str(choice,'%i ')],true); end
 		end
 
 		% ===================================================================
@@ -433,8 +442,8 @@ classdef metaStimulus < optickaCore
 			if ~isempty(me.fixationChoice)
 				x=zeros(length(me.fixationChoice),1); y = x;
 				for i=1:length(me.fixationChoice)
-					x(i) = me.stimuli{me.fixationChoice(i)}.xPositionOut / me.screen.ppd;
-					y(i) = me.stimuli{me.fixationChoice(i)}.yPositionOut / me.screen.ppd;
+					x(i) = me.stimuli{me.fixationChoice(i)}.xPositionOut / me.ppd_;
+					y(i) = me.stimuli{me.fixationChoice(i)}.yPositionOut / me.ppd_;
 				end
 				me.lastXPosition = x;
 				me.lastYPosition = y;
@@ -453,8 +462,8 @@ classdef metaStimulus < optickaCore
 			if ~isempty(me.exclusionChoice)
 				x=zeros(length(me.exclusionChoice),1); y = x;
 				for i=1:length(me.exclusionChoice)
-					x(i) = me.stimuli{me.exclusionChoice(i)}.xPositionOut / me.screen.ppd;
-					y(i) = me.stimuli{me.exclusionChoice(i)}.yPositionOut / me.screen.ppd;
+					x(i) = me.stimuli{me.exclusionChoice(i)}.xPositionOut / me.ppd_;
+					y(i) = me.stimuli{me.exclusionChoice(i)}.yPositionOut / me.ppd_;
 				end
 				me.lastXExclusion = x;
 				me.lastYExclusion = y;
@@ -477,35 +486,32 @@ classdef metaStimulus < optickaCore
 			if ~exist('ignoreVisible','var'); ignoreVisible=false; end
 			a=1;
 			out = [];
-			me.stimulusPositions = out;
 			for i = 1:me.n_
 				if ignoreVisible; check = true; else; check = me.stimuli{i}.isVisible; end
 				if check && me.stimuli{i}.showOnTracker == true
 					if isprop(me.stimuli{i},'sizeOut')
 						if ~isempty(me.stimuli{i}.xFinal)
-							me.stimulusPositions(a).x = me.stimuli{i}.xFinal;
-							me.stimulusPositions(a).y = me.stimuli{i}.yFinal;
+							out(a).x = me.stimuli{i}.xFinal;
+							out(a).y = me.stimuli{i}.yFinal;
 						elseif ~isempty(me.stimuli{i}.mvRect)
 							r = me.stimuli{i}.mvRect;
-							me.stimulusPositions(a).x = r(3)-r(1);
-							me.stimulusPositions(a).y = r(4)-r(2);
+							out(a).x = r(3)-r(1);
+							out(a).y = r(4)-r(2);
 						else
-							me.stimulusPositions(a).x = me.stimuli{i}.xPositionOut;
-							me.stimulusPositions(a).y = me.stimuli{i}.yPositionOut;
+							out(a).x = me.stimuli{i}.xPositionOut;
+							out(a).y = me.stimuli{i}.yPositionOut;
 						end
-						me.stimulusPositions(a).size = me.stimuli{i}.sizeOut;
+						out(a).size = me.stimuli{i}.sizeOut;
 						if any(me.fixationChoice == i) 
-							me.stimulusPositions(a).selected = true;
+							out(a).selected = true;
 						else
-							me.stimulusPositions(a).selected = false;
+							out(a).selected = false;
 						end
 						a = a + 1;
 					end
 				end
 			end
-			if ~isempty(me.stimulusPositions)
-				out = me.stimulusPositions;
-			end
+			me.stimulusPositions = out;
 		end
 
 		% ===================================================================
@@ -679,9 +685,9 @@ classdef metaStimulus < optickaCore
 		end
 
 		% ===================================================================
-		%> @brief get nMask dependent method
+		%> @brief getTypes
 		%> @param
-		%> @return nMask number of mask stimuli
+		%> @return typeList types of stimuli
 		% ===================================================================
 		function typeList = getTypes(me)
 			typeList = {};
@@ -764,11 +770,5 @@ classdef metaStimulus < optickaCore
 			end
 		end
 	end%-------------------------END PUBLIC METHODS--------------------------------%
-	
-	%=======================================================================
-	methods (Access = private) %------------------PRIVATE METHODS
-	%=======================================================================
-		
-		
-	end
+
 end

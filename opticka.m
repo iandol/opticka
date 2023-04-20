@@ -514,10 +514,14 @@ classdef opticka < optickaCore
 							stateInfoTmp{1,1} = 'STATE';
 							met.ui.OKStateTable.ColumnName = stateInfoTmp(1,:); %#ok<*USENS>
 							met.ui.OKStateTable.Data = cell2table(stateInfoTmp(2:end,:));
+							met.ui.OKStateFcnView.Value = {''};
 						end
 						clear me stims eT
 					catch ME
 						getReport(ME);
+						met.ui.OKStateTable.ColumnName = {'STATE','Next','time','entry','within','transition','exit'}; %#ok<*USENS>
+						met.ui.OKStateTable.Data = cell2table(cell(7,7));
+						met.ui.OKStateFcnView.Value = {'Error loading state info',ME.message};
 					end
 
 				else

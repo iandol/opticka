@@ -47,14 +47,12 @@ classdef taskSequence < optickaCore & dynamicprops
 		trialVar struct
 		%> number of repeated blocks to present
 		nBlocks double			= 1
-		%> staircase manager, uses Palamedes PAL_AM* functions, pass the
-		%> output of the setup function
-		staircase
-		%> type of staircase: UD=up/down RF=QUEST PM=Psi-Method
-		%> This generates the correct update function, e.g. PAL_AMUD_updateUD
-		staircaseType			= 'UD'
-		%> normally, correct = 1 steps down, we can invert it to "step up"
-		staircaseInvert			= false;
+		% staircase manager, uses Palamedes PAL_AM* functions, pass the
+		% output of the setupXX function to 'sc'. type = type of staircase:
+		% UD=up/down RF=QUEST PM=Psi-Method, e.g. PAL_AMUD_updateUD = UD. 
+		% invert = false means correct steps down, we can invert it to 
+		% "step up" on correct.
+		staircase				= struct('sc',[],'type','UD','invert',false);
 		%> whether to randomise nVar (true) or run sequentially (false)
 		randomise logical		= true
 		%> insert a blank condition in each block?
@@ -121,6 +119,7 @@ classdef taskSequence < optickaCore & dynamicprops
 		%> which seed values were used?
 		thisSeed				= []
 		usedSeeds				= []
+		%> all indexes converted to a table for presentation
 		dataTable
 	end
 	
@@ -497,15 +496,17 @@ classdef taskSequence < optickaCore & dynamicprops
 		end
 
 		% ===================================================================
-		function updateStaircase(me, thisResponse)
+		function updateStaircase(me, thisResponse, n)
 		%> @fn updateTask
 		%> @brief update the task with a response
 		%>
 		%> This method allows us to update the task with a response, and
 		%> will track when the task is finished: setting taskFinished==true
 		% ===================================================================
-			if ~isempty(me.staircase) && isstruct(me.staircase) && isfield(me.staircase,'xCurrent')
-				if ~me.staircaseInvert
+			if ~exist('thisResponse','var'); warning('taskSequence.updateStaircase() update needs a response value');return; end
+			if ~exist('n','var'); n = 1; end
+			if ~isempty(me.staircase) && isstruct(me.staircase) && isfield(me.staircase(n).sc,'xCurrent')
+				if ~me.staircase(n).invert
 					res = 1; 
 				else
 					res = 0; 
@@ -515,10 +516,12 @@ classdef taskSequence < optickaCore & dynamicprops
 				else
 					response = ~res;
 				end
-				cmd = ['me.staircase = PAL_AM' me.staircaseType '_update' me.staircaseType '(me.staircase, ' num2str(response) ');'];
+				sc = ['me.staircase(' num2str(n) ').sc'];
+				ty = me.staircase(n).type;
+				cmd = [sc ' = PAL_AM' ty '_update' ty '(' sc ', ' num2str(response) ');'];
 				eval(cmd);
-				if me.verbose;fprintf('--->>> taskSequence.updateStaircase() Result %i:\n',response);end
-				if me.staircase.stop; fprintf('===>>> taskSequence Staircase has stopped...\n'); end
+				if me.verbose;fprintf('--->>> taskSequence.updateStaircase() Staircase %i - Result %i:\n',n,response);end
+				if me.staircase(n).sc.stop; fprintf('===>>> taskSequence Staircase %i has stopped...\n',n); end
 			end
 		end
 		

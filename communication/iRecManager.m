@@ -50,9 +50,14 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 						'valPositions', [-12 0; 0 -12; 0 0; 0 12; 12 0],...
 						'size', 2,... % size of calibration cross in degrees
 						'manual', false)
+	end
+
+	properties (Hidden = true)
 		%> WIP we can optionally drive physical LEDs for calibration, each LED
 		%> is triggered by the me.calibration.calPositions order
 		useLEDs			= false
+		startPin		= 2
+		arduino
 	end
 	
 	%--------------------PROTECTED PROPERTIES----------%
@@ -174,6 +179,22 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 					me.salutation('Initialise', 'Cannot connect, running in Dummy Mode', true);
 					me.isConnected = false;
 					me.isDummy = true;
+				end
+
+				if me.useLEDs
+					if isa(me.arduino,'arduinoManager')
+						me.arduino.open;
+						for i = 1:9
+							me.turnOnLED(i);
+							WaitSecs(0.1);
+						end
+						for i = 1:9
+							me.turnOffLED(i);
+							WaitSecs(0.1);
+						end
+					else
+						me.useLEDs = false;
+					end
 				end
 
 			end
@@ -337,15 +358,17 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 									k = str2double(name(1));
 									if k == 0 
 										hide(f);
+										for ii=1:9;me.turnOffLED(ii);end
 										trackerFlip(me,0,true);
 									elseif k > 0 && k <= nPositions
 										thisPos = k;
 										if k == lastK && f.isVisible
 											f.isVisible = false;
+											me.turnOffLED(k);
 											thisPos = 0;
 										elseif ~f.isVisible
 											f.isVisible = true;
-
+											me.turnOnLED(k);
 										end
 										lastK = k;
 										if thisPos > 0
@@ -413,14 +436,17 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 										resetFixationHistory(me);
 										thisPos = 0;
 										hide(f);
+										for ii=1:9;me.turnOffLED(ii);end
 										trackerFlip(me,0,true);
 									elseif k > 0 && k <= nPositions
 										thisPos = k;
 										if k == lastK && f.isVisible
 											f.isVisible = false;
+											me.turnOffLED(k);
 											thisPos = 0;
 										elseif ~f.isVisible
 											f.isVisible = true;
+											me.turnOnLED(k);
 										end
 										lastK = k;
 										if thisPos > 0
@@ -933,6 +959,16 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 	methods (Access = private) %------------------PRIVATE METHODS
 	%=======================================================================
 		
+		function turnOnLED(me, val)
+			if me.useLEDs
+				me.arduino.digitalWrite(val+me.startPin,1);
+			end
+		end
+		function turnOffLED(me, val)
+			if me.useLEDs
+				me.arduino.digitalWrite(val+me.startPin,0);
+			end
+		end
 		
 	end %------------------END PRIVATE METHODS
 end

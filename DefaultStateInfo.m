@@ -1,8 +1,8 @@
 %> DEFAULT state configuration file for runExperiment.runTask (full
 %> behavioural task design). This state file has a [prefix] state (a blank before
 %> fixation starts), then a [fixate] state for the subject to initiate fixation.
-%> If the subject fails initial fixation, an [incorrect] state is called. If the
-%> subject fails fixation DURING [stimulus] presentation, a [breakfix] state is
+%> If the subject fails initial fixation, an [breakfix] state is called. If the
+%> subject fails fixation DURING [stimulus] presentation, a [incorrect] state is
 %> called. It assumes there are TWO stimuli in the stims object, the first
 %> (stims{1}) is any type of visual stimulus and the second is a fixation cross
 %> (stims{2}). For this task most state transitions are deterministic, but for
@@ -17,7 +17,7 @@
 %>  │                                                      │                    │
 %>  │                                                      ▼                    │
 %>  │                         ┌───────────┐  inFixFcn:   ┌───────────────────┐  │
-%>  │                         │ incorrect │  incorrect   │      fixate       │  │
+%>  │                         │ breakfix  │  breakfix   │      fixate       │  │
 %>  │                         │           │ ◀─────────── │   show(stims,2)   │  │
 %>  │                         └───────────┘              └───────────────────┘  │
 %>  │                           │                          │ inFixFcn:          │
@@ -28,10 +28,10 @@
 %>│         │ ◀─────────────────┼─────────────────────── │ show(stims,[1 2]) │  │
 %>└─────────┘                   │                        └───────────────────┘  │
 %>                              │                          │ maintainFixFcn:    │
-%>                              │                          │ breakfix           │
+%>                              │                          │ incorrect          │
 %>                              │                          ▼                    │
 %>                              │                        ┌───────────────────┐  │
-%>                              │                        │     breakfix      │  │
+%>                              │                        │     incorrect     │  │
 %>                              │                        └───────────────────┘  │
 %>                              │                          │                    │
 %>                              │                          ▼                    │
@@ -286,7 +286,7 @@ inFixFcn = {
 	% otherwise 'breakfix' is returned and the state machine will jump to the
 	% breakfix state. If neither condition matches, then the state table below
 	% defines that after 5 seconds we will switch to the incorrect state.
-	@()testSearchHoldFixation(eT,'stimulus','incorrect')
+	@()testSearchHoldFixation(eT,'stimulus','breakfix')
 };
 
 %--------------------exit fixation phase
@@ -323,7 +323,7 @@ maintainFixFcn = {
 	% otherwise 'breakfix' is returned and the state machine will jump to the
 	% breakfix state. If neither condition matches, then the state table below
 	% defines that after 5 seconds we will switch to the incorrect state.
-	@()testHoldFixation(eT,'correct','breakfix'); 
+	@()testHoldFixation(eT,'correct','incorrect'); 
 };
 
 %as we exit stim presentation state
@@ -390,7 +390,6 @@ incFcn = {
 
 %--------------------incorrect exit
 incExitFcn = {
-	@()updatePlot(bR, me); % update our behavioural plot, must come before updateTask() / updateVariables()
 	@()updateVariables(me); % randomise our stimuli, set strobe value too
 	@()update(stims); % update our stimuli ready for display
 	@()getStimulusPositions(stims); % make a struct the eT can use for drawing stim positions
@@ -423,8 +422,11 @@ breakExitFcn = incExitFcn; % we copy the incorrect exit functions
 % resetRun = randomise current trial within the block
 % checkTaskEnded = see if taskSequence has finished
 if tS.includeErrors % we want to update our task even if there were errors
-	incExitFcn = [ {@()updateTask(me,tS.INCORRECT)}; incExitFcn ]; %update our taskSequence 
-	breakExitFcn = [ {@()updateTask(me,tS.BREAKFIX)}; breakExitFcn ]; %update our taskSequence 
+	incExitFcn = [ {@()updatePlot(bR, me); @()updateTask(me,tS.INCORRECT)} incExitFcn ]; %update our taskSequence 
+	breakExitFcn = [ {@()updatePlot(bR, me); @()updateTask(me,tS.BREAKFIX)} breakExitFcn ]; %update our taskSequence 
+else
+	incExitFcn = [ {@()updatePlot(bR, me)} incExitFcn ]; 
+	breakExitFcn = [ {@()updatePlot(bR, me)} breakExitFcn ];
 end
 if tS.useTask %we are using task
 	correctExitFcn = [ correctExitFcn; {@()checkTaskEnded(me)} ];
