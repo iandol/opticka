@@ -1104,6 +1104,7 @@ classdef runExperiment < optickaCore
 				tL.screenLog.afterDisplay = tL.lastvbl;
 				tL.screenLog.trackerEndTime = getTrackerTime(eT);
 				tL.screenLog.trackerEndOffset = getTimeOffset(eT);
+				tL.screenLog.totalTime = tL.screenLog.afterDisplay - tL.screenLog.beforeDisplay;
 				me.isRunning = false;
 				
 				try %#ok<*TRYNC> 
@@ -1276,11 +1277,18 @@ classdef runExperiment < optickaCore
 			end
 				
 			try me.computer=Screen('computer'); end
+			try 
+				if isMATLABReleaseOlderThan('R2022a')
+					me.computer.gpu = opengl('data'); 
+				else
+					me.computer.gpu = rendererinfo; 
+				end
+			end
 			try me.ptb=Screen('version'); end
 		
 			if ~isempty(me.screen); me.screenVals = me.screen.screenVals; end
 
-			me.fInc = round(0.3 / (1/me.screenVals.ifi));
+			try me.fInc = round(0.3 / (1/me.screenVals.ifi)); end
 			
 			me.stopTask = false;
 			
@@ -2767,7 +2775,7 @@ classdef runExperiment < optickaCore
 				if isfield(in,'name')
 					name = [name '<--OLD:' in.name];
 				end
-				fprintf('---> runExperiment loadobj %s: Loading legacy structure (Old UUID: %s)...\n',name,in.uuid);
+				fprintf('===> runExperiment loadobj %s: Loading legacy structure (Old UUID: %s)...\n',name,in.uuid);
 				isObjectLoaded = false;
 				lobj.initialise('notask noscreen nostimuli');
 				rebuild();
@@ -2776,34 +2784,34 @@ classdef runExperiment < optickaCore
 			% as we change runExperiment class, old files become structures and
 			% we need to migrate the settings to the new locations!
 			function me = rebuild()
-				fprintf('   > ');
+				fprintf('\n   > ');
 				try %#ok<*TRYNC>
 					if optickaCore.hasKey(in, 'stimuli') && isa(in.stimuli,'metaStimulus')
 						if ~isObjectLoaded
 							lobj.stimuli = in.stimuli;
-							fprintf('metaStimulus object loaded | ');
+							fprintf('metaStimulus object loaded');
 						else
-							fprintf('metaStimulus object present | ');
+							fprintf('metaStimulus object present');
 						end
 					elseif optickaCore.hasKey(in, 'stimuli')
 						if iscell(in.stimulus) && isa(in.stimulus{1},'baseStimulus')
 							lobj.stimuli = metaStimulus();
 							lobj.stimuli.stimuli = in.stimulus;
-							fprintf('Legacy Stimuli | ');
+							fprintf('Legacy Stimuli');
 						elseif isa(in.stimulus,'metaStimulus')
 							me.stimuli = in.stimulus;
-							fprintf('Stimuli (old field) = metaStimulus object | ');
+							fprintf('Stimuli (old field) = metaStimulus object');
 						else
-							fprintf('NO STIMULI!!! | ');
+							fprintf('NO STIMULI!!!');
 						end
 					end
-
+					fprintf('\n   > ');
 					if (~isObjectLoaded && isfield(in,'stateInfoFile') && ~isempty(in.stateInfoFile)) || ...
 					  (isObjectLoaded && isprop(in,'stateInfoFile') && ~isempty(in.stateInfoFile))
-						fprintf(['!!!SIF: ' in.stateInfoFile ' ']);
+						fprintf(['SIF: ' in.stateInfoFile ' ']);
 						lobj.stateInfoFile = in.stateInfoFile;
 					elseif isfield(in.paths,'stateInfoFile') && ~isempty(in.paths.stateInfoFile)
-						fprintf(['!!!PATH: ' in.paths.stateInfoFile ' ']);
+						fprintf(['PATH: ' in.paths.stateInfoFile ' ']);
 						lobj.stateInfoFile = in.paths.stateInfoFile;
 					end
 					if ~exist(lobj.stateInfoFile,'file')
@@ -2820,11 +2828,11 @@ classdef runExperiment < optickaCore
 						end
 					end
 					lobj.paths.stateInfoFile = in.stateInfoFile;
-					fprintf('stateInfoFile: %s assigned | ', lobj.stateInfoFile);
-
+					fprintf('\n   > stateInfoFile: %s assigned', lobj.stateInfoFile);
+					fprintf('\n   > ');
 					if isa(in.task,'taskSequence') 
 						lobj.task = in.task;
-						fprintf(' | loaded taskSequence');
+						fprintf('loaded taskSequence');
 					elseif isa(in.task,'stimulusSequence') || isstruct(in.task)
 						tso = fieldnames(in.task);
 						ts = taskSequence();
@@ -2856,15 +2864,17 @@ classdef runExperiment < optickaCore
 							ts.realTime = in.task.realTime;
 						end
 						lobj.task = ts;
-						fprintf(' | reconstructed taskSequence %s from %s',ts.fullName,tso.fullName);
+						fprintf('reconstructed taskSequence %s from %s',ts.fullName,tso.fullName);
 						clear tso ts
 					elseif isa(lobj.task,'taskSequence')
 						lobj.previousInfo.task = in.task;
-						fprintf(' | inherited taskSequence');
+						fprintf('inherited taskSequence');
 					else
 						lobj.task = taskSequence();
-						fprintf(' | new taskSequence');
+						fprintf('new taskSequence');
 					end
+					fprintf('\n   > Devices: ');
+					if isObjectLoaded; try fprintf('%s %s %s',lobj.reward.device,lobj.strobe.device,lobj.eyetracker.device); end; end
 					if ~isObjectLoaded && isfield(in,'verbose')
 						lobj.verbose = in.verbose;
 					end
@@ -2873,28 +2883,37 @@ classdef runExperiment < optickaCore
 					end
 					if ~isObjectLoaded && isfield(in,'useLabJackReward') && in.useLabJackReward
 						lobj.reward.device = 'labjack';
+						fprintf(' labjackreward ');
 					end
 					if ~isObjectLoaded && isfield(in,'useArduino') && in.useArduino
 						lobj.reward.device = 'arduino';
+						fprintf(' arduinoreward ');
 					end
 					if ~isObjectLoaded && isfield(in,'useLabJackStrobe') && in.useLabJackStrobe
 						lobj.strobe.device = 'labjack';
+						fprintf(' labjackstrobe ');
 					end
 					if ~isObjectLoaded && isfield(in,'useDisplayPP') && in.useDisplayPP
 						lobj.strobe.device = 'display++';
+						fprintf(' display++ ');
 					end
 					if ~isObjectLoaded && isfield(in,'useDataPixx') && in.useDataPixx
 						lobj.strobe.device = 'datapixx';
+						fprintf(' datapixx ');
 					end
 					if ~isObjectLoaded && isfield(in,'useLabJackTStrobe') && in.useLabJackTStrobe
 						lobj.strobe.device = 'labjackt';
+						fprintf(' labjackT ');
 					end
 					if ~isObjectLoaded && isfield(in,'useTobii') && in.useTobii
 						lobj.eyetracker.device = 'tobii';
+						fprintf(' Tobii ');
 					end
 					if ~isObjectLoaded && isfield(in,'useEyelink') && in.useEyelink
 						lobj.eyetracker.device = 'eyelink';
+						fprintf(' Eyelink ');
 					end
+					fprintf('\n');
 				end
 				try
 					if ~isa(in.screen,'screenManager') %this is an old object, pre screenManager
@@ -2910,23 +2929,19 @@ classdef runExperiment < optickaCore
 						lobj.screen.blend = in.blend;
 						lobj.screen.hideFlash = in.hideFlash;
 						lobj.screen.movieSettings = in.movieSettings;
-						fprintf(' | regenerated screenManager');
+						fprintf('   > regenerated screenManager');
 					elseif ~strcmpi(in.screen.uuid,lobj.screen.uuid)
 						lobj.screen = in.screen;
 						in.screen.verbose = false; %no printout
 						%in.screen = []; %force close any old screenManager instance;
-						fprintf(' | inherited screenManager');
+						fprintf('   > inherited screenManager');
 					else
-						fprintf(' | loaded screenManager');
+						fprintf('   > loaded screenManager');
 					end
+					fprintf('\n');
 				end
 				if ~isObjectLoaded
 					try
-						lobj.previousInfo.runLog = in.runLog;
-						lobj.previousInfo.computer = in.computer;
-						lobj.previousInfo.ptb = in.ptb;
-						lobj.previousInfo.screenVals = in.screenVals;
-						lobj.previousInfo.screenSettings = in.screenSettings;
 						lobj.previousInfo.all = in;
 					end
 					try lobj.stateMachine		= in.stateMachine; end
@@ -2935,9 +2950,23 @@ classdef runExperiment < optickaCore
 					try lobj.runLog				= in.runLog; end
 					try lobj.taskLog			= in.taskLog; end
 					try lobj.stateInfo			= in.stateInfo; end
-					try lobj.comment			= in.comment; end
 				end
-				fprintf('\n');
+				try lobj.computer = in.computer; end
+				try lobj.ptb = in.ptb; end
+				try lobj.name = in.name; end
+				try lobj.uuid = in.uuid; end
+				try lobj.savePrefix = in.savePrefix; end
+				try lobj.comment = in.comment; end
+				try lobj.subjectName = in.subjectName; end
+				try lobj.researcherName = in.researcherName; end
+				if isnumeric(in.dateStamp)
+					try lobj.dateStamp = datetime(in.dateStamp); end
+				elseif isa(in.dateStamp,'datetime')
+					lobj.dateStamp = in.dateStamp;
+				else
+					fprintf('   > {problem loading dateStamp}')
+				end
+				fprintf('\n\n');
 			end
 		end
 		

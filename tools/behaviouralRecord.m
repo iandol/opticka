@@ -110,17 +110,24 @@ classdef behaviouralRecord < optickaCore
 			tx{end+1} = ' ';
 			tx{end+1} = ['INIT TIME = ' num2str(eL.fixation.initTime)];
 			
+			lf = listfonts;
 			if ismac
-				nfont = 'avenir next';
-				mfont = 'menlo';
+				SansFont = 'Avenir Next'; %get(0,'defaultAxesFontName');
+				MonoFont = 'Menlo';
 			elseif ispc
-				nfont = 'calibri';
-				mfont = 'consolas';
+				SansFont = 'Calibri';
+				MonoFont = 'Consolas';
 			else %linux
-				nfont = 'Liberation Sans'; %get(0,'defaultAxesFontName');
-				mfont = 'Liberation Mono';
+				SansFont = 'Ubuntu'; 
+				MonoFont = 'Ubuntu Mono';
 			end
-
+			if any(matches(lf,'Source Sans 3'))
+				SansFont = 'Source Sans 3';
+			end
+			if any(matches(lf,'Fira Code'))
+				MonoFont = 'Fira Code';
+			end
+			set(groot,'DefaultFontName',SansFont);
 			me.h.root = uifigure('Name',me.fullName);
 			me.h.root.Units = 'normalized';
 			me.h.root.Position = [0.6 0 0.4 1];
@@ -130,7 +137,7 @@ classdef behaviouralRecord < optickaCore
 			me.h.grid.Padding = [3 3 3 3];
 			me.h.panel = uipanel(me.h.grid);
 			me.h.info = uitextarea(me.h.grid, 'HorizontalAlignment', 'center',...
-				'FontName', mfont, 'Editable', 'off', 'WordWrap', 'off');
+				'FontName', MonoFont, 'Editable', 'off', 'WordWrap', 'off');
 			me.h.box = tiledlayout(me.h.panel,3,3);
 			me.h.box.Padding='compact';
 			me.h.axis1 = nexttile(me.h.box, [2 2]);
@@ -298,8 +305,8 @@ classdef behaviouralRecord < optickaCore
 
 			%axis 5
 			if me.plotOnly && length(me.trials) > 1
+				set(me.h.axis5,'NextPlot','add')
 				for i = 1:length(me.trials)
-					set(me.h.axis5,'NextPlot','add')
 					if isfield(me.trials(i),'xAll')
 						plot(me.h.axis5, me.trials(i).xAll, me.trials(i).yAll, 'MarkerSize',15,'Marker', '.');
 					end
@@ -409,10 +416,24 @@ classdef behaviouralRecord < optickaCore
 		%> @param in input object/structure
 		% ===================================================================
 		function lobj=loadobj(in)
-			if isa(in,'behaviouralRecord') && ~isempty(in.h)
-				in.clearHandles();
+			if isa(in,'behaviouralRecord') 
+				if ~isempty(in.h);in.clearHandles();end
+				lobj = in;
+			else
+				lobj = behaviouralRecord;
+				fn = properties(lobj);
+				for i = 1:length(fn)
+					if isfield(in, fn{i})
+						lobj.(fn{i}) = in.(fn{i});
+					end
+				end
 			end
-			lobj = in;
+			if contains(in.correctStateName,'correct')
+				in.correctStateName = "correct";
+			end
+			if contains(in.breakStateName,'breakfix')
+				in.breakStateName = ["breakfix" "incorrect"];
+			end
 		end
 	end
 	

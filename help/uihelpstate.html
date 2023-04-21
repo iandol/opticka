@@ -189,42 +189,43 @@
 <h2 id="toc-title">Contents</h2>
 
 </nav>
-<h1 id="state-machine-info-files">State Machine Info Files</h1>
-<p>Any experiment can be thought of as a series of states (delay,
-fixate, stimulus, reward, timeout e.t.c.) and transitions between these
-states. State Machines are a widely used control system for these types
-of scenarios. The important definition of a state machine is:</p>
+<h1 id="controlling-behavioural-tasks-using-state-machines">Controlling
+Behavioural Tasks using State Machines</h1>
+<p>Any experiment can be thought of as a series of states (delay period,
+initiate fixation, present stimulus, give subject feedback, post-trial
+timeout, etc.) and conditions for switching between these states. State
+Machines are a widely used control system for these types of scenarios.
+The important definition of a state machine is:</p>
 <ol type="1">
 <li>The state machine must be in exactly one of a finite number of
-states at any given time. States usually run for a defined amount of
-time.</li>
-<li>The state machine can also change from one state to another in
-response to some input; the change from one state to another is called a
-<strong>transition</strong> (<code>transitionFcn</code>). A function
-controls the transition, returning a different state name that forces a
-transition to this new state.</li>
+states at any given time. States run for a defined amount of time by
+default before switching to a <code>next</code> state.</li>
+<li>The state machine cal also change from one state to another based on
+rules; the conditional change from one state to another is called a
+<strong>transition</strong>. A function controls the transition
+(<code>transitionFcn</code>), returning a different state name that
+forces a transition to this new state.</li>
 <li>Functions can run when we <strong>enter</strong>
 (<code>enterFcn</code>), are <strong>within</strong>
 (<code>withinFcn</code>), or <strong>exit</strong>
 (<code>exitFcn</code>) a state.</li>
 </ol>
 <p>Opticka defines all of this in a <code>StateInfo.m</code> file that
-specifies function arrays and then assigns them to a state list. The
-Opticka GUI visualises the state table and shows each function
-array.</p>
+specifies function arrays and assigns them to a state list. The Opticka
+GUI visualises the state table and lists out each function array.</p>
 <p>For example this cell array identifies two functions which draw and
-animate our <code>stims</code> stimulus object:</p>
+animate our <code>stims</code> stimulus object. The <code>@()</code>
+identifies these as MATLAB function handles:</p>
 <div class="sourceCode" id="cb1"><pre
 class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>{ <span class="op">@</span>()<span class="va">draw</span>(<span class="va">stims</span>)<span class="op">;</span> <span class="op">@</span>()<span class="va">animate</span>(<span class="va">stims</span>)<span class="op">;</span> }</span></code></pre></div>
-<p>See details below for the core functions that can run during the
-state machine traversal. You can additionally write your own functions
-and store them in a <a href="uihelpfunctions.html">userFunctions.m</a>
-class file.</p>
-<p>For example the <code>DefaultStateInfo.m</code> file defines several
-experiment states (<em>prefix</em>, <em>fixate</em>, <em>stimulus</em>,
-<em>incorrect</em>, <em>breakfix</em>, <em>correct</em>,
-<em>timeout</em>) and how the task switches between them (either with a
-timer or transitioned using an eyetracker):</p>
+<p>Opticka has many core functions that can run during state machine
+traversal. You can additionally write your own functions and store them
+in a <a href="uihelpfunctions.html">userFunctions.m</a> class file.</p>
+<p>As an example, the <code>DefaultStateInfo.m</code> file defines
+several experiment states (<em>prefix</em>, <em>fixate</em>,
+<em>stimulus</em>, <em>incorrect</em>, <em>breakfix</em>,
+<em>correct</em>, <em>timeout</em>) and how the task switches between
+them (either with a timer or transitioned using an eyetracker):</p>
 <pre class="smaller"><code>                                                       ┌───────────────────┐
                                                        │      prefix       │
   ┌──────────────────────────────────────────────────▶ │    hide(stims)    │ ◀┐
@@ -258,335 +259,6 @@ timer or transitioned using an eyetracker):</p>
 in the MATLAB editor (the GUI has an edit button that opens the file in
 the editor for you).</p>
 <hr />
-<h1 id="useful-task-methods">Useful Task Methods</h1>
-<p>The state machine (<code>stateMachine</code> class) defines states
-and the connections between them. The state machine can run cell arrays
-of methods (<code>@()</code> anonymous functions) when states are
-entered (run once), within (repeated on every screen redraw) and exited
-(run once). In addition there are ways to transition <em>out</em> of a
-state if some condition is met. For example if we are in a
-<code>[STATE 1]</code> state and the eyetracker tells us the subject has
-fixated for the correct time, then transition functions can jump us to
-another state to e.g. show a stimulus.</p>
-<pre class="smaller"><code>╔════════════════════════════════════════════════════════════════════════════════════════════════╗
-║                  ┌─────────┐                                       ┌─────────┐                 ║
-║                  │ STATE 1 │                                       │ STATE 2 │                 ║
-║       ┌──────────┴─────────┴───────────┐                ┌──────────┴─────────┴──────────┐      ║
-║  ┌────┴────┐      ┌────────┐      ┌────┴───┐       ┌────┴────┐      ┌────────┐     ┌────┴───┐  ║
-╚═▶│  ENTER  │─────▶│ WITHIN │─────▶│  EXIT  │══════▶│  ENTER  │─────▶│ WITHIN │────▶│  EXIT  │══╣
-   └────┬────┘      └────────┘      └────┬───┘       └────┬────┘      └────────┘     └────┬───┘  ║
-        │          ┌──────────┐          │                │          ┌──────────┐         │      ║
-        └──────────┤TRANSITION├──────────┘                └──────────┤TRANSITION├─────────┘      ║
-                   └─────╦────┘                                      └──────────┘                ║
-                         ║                  ┌─────────┐                                          ║
-                         ║                  │ STATE 3 │                                          ║
-                         ║       ┌──────────┴─────────┴───────────┐                              ║
-                         ║  ┌────┴────┐      ┌────────┐      ┌────┴───┐                          ║
-                         ╚═▶│  ENTER  │─────▶│ WITHIN │─────▶│  EXIT  │══════════════════════════╝
-                            └────┬────┘      └────────┘      └────┬───┘
-                                 │          ┌──────────┐          │
-                                 └──────────┤TRANSITION├──────────┘
-                                            └──────────┘</code></pre>
-<p>These various methods control the logic and flow of experiments. This
-document lists the most important ones used in flexible behavioural task
-design. It is better for these methods to evaluate properties
-(properties are the variables managed by the class object). Because of
-this we choose to create methods that alter the properties of each
-class. For example, <code>show(stims)</code> is a method that allows the
-stimulus manager to show all stimuli in the list; it does this by
-setting each stimulus’ <code>isVisible</code> property to
-<code>true</code>. <code>hide(stims)</code> hides all stimuli bby
-setting <code>isVisible</code> property to <code>false</code>, or you
-could just hide the 3rd stimulus in the list:
-<code>hide(stims, 3)</code>.</p>
-<p>For those unfamiliar with object-oriented design, a <em>CLASS</em>
-(e.g. <code>stateMachine</code>) is initiated as an <em>OBJECT</em>
-variable (named <code>sM</code> during the experiment run, it is an
-<em>instance</em> of the class). <strong>ALL</strong> Opticka classes
-are <a
-href="https://www.mathworks.com/help/matlab/handle-classes.html"><strong>handle
-classes</strong></a>; this means if we assign <code>sM2 = sM</code> —
-<strong>both</strong> of these named instances point to the
-<strong>same</strong> object.</p>
-<p>As experiments are run <strong><em>inside</em></strong> the
-<code>runExperiment.runTask()</code> method, this class refers to
-<em>itself</em> as <code>me</code>, so methods that <em>belong</em> to
-<code>runExperiment</code> can be called by using
-<code>me.myMethod()</code> or <code>myMethod(me)</code> (both forms are
-equivalent to MATLAB). Other important object instances, for example the
-<code>screenManager</code> class is called via <code>s</code>, so to
-call the method <code>drawSpot</code> from our
-<code>screenManager</code> instance <code>s</code>, we can use
-<code>drawSpot(s)</code> (or <code>s.drawSpot()</code>). You will see
-below the object names that are available as we run the experiment from
-<code>runExperiment</code>. The <code>runExperiment</code> object
-<code>me</code> keeps most of the objects as properties: so
-<code>s</code> is actually also stored in the property
-<code>me.screen</code>, <code>sM</code> is stored in the property
-<code>me.stateMachine</code> etc.</p>
-<h3 id="similar-named-methods">Similar named methods?</h3>
-<p>In some cases <code>runExperiment</code> manages an object with
-similar named methods. For example
-<code>runExperiment.updateTask()</code> will manage the call to
-<code>taskSequence.updateTask()</code>, this is often so that
-runExperiment can <em>co-ordinate</em> among objects and maintain state
-(when information needs to be shared between objects). If this is not
-required then we just call the object methods directly,
-e.g. <code>drawBackground(s)</code> uses <code>screenManager</code> to
-run the PTB Screen() functions to draw a background colour (the property
-<code>s.backgroundColour</code>) to the screen. See
-<code>DefaultStateInfo.m</code> and other CoreProtocols state info files
-for examples of their use…</p>
-<h3 id="user-functions-files">User Functions Files</h3>
-<p>If you want to write your own functions to be called by the
-<code>stateMachine</code>, then you can add them to a
-<code>userFunctions.m</code> file, <a href="uihelpfunctions.html">see
-the docs</a> for details.</p>
-<hr />
-<h1 id="list-of-methods">List of Methods</h1>
-<p>We highlight the main classes and methods that are most useful when
-building your paradigm:</p>
-<h2 id="runexperiment-me-in-the-state-file">runExperiment (“me” in the
-state file)</h2>
-<p>The principal class object that ‘runs’ the experiment.</p>
-<ul>
-<li><p><code>enableFlip(me)</code> || <code>disableFlip(me)</code><br />
-Enable or disable the PTB screen flip during the update loop.</p></li>
-<li><p><code>needEyeSample(me, value)</code><br />
-On each frame we can check the current eye position (called via
-<code>getSample(eT)</code>of the eye tracker object). This method allows
-us to turn this ON (<code>true</code>) or OFF
-(<code>false</code>).</p></li>
-<li><p><code>var = getTaskIndex(me)</code><br />
-It returns the current trial’s variable number by calling
-<code>task.outIndex(task.totalRuns)</code>. A trial variable number is
-unique to a particular task condition (see the <code>taskSequence</code>
-class which builds these randomised sequences).</p></li>
-<li><p><code>updateFixationTarget(me, useTask, varargin)</code> ||
-<code>updateExclusionZones(me, useTask, radius)</code><br />
-To manage several stimuli together, we use the <code>metaStimulus</code>
-class (object name: <code>stims</code>). If you set the
-<code>metaStimulus.fixationChoice</code> parameter you can specify from
-which stimuli to collect the X and Y positions from.
-<code>updateFixationTarget(me)</code> (calling
-<code>getFixationPositions(stims)</code> internally) iterates through
-each selected stimulus and returns the X and Y positions assigned to
-<code>me.lastXPosition</code> and <code>me.lastYPosition</code>. Having
-these values we can now assign them using
-<code>updateFixationValues(eT)</code>.
-<code>updateExclusionZones()</code> does the same using
-<code>metaStimulus.exclusionChoice</code> to recover the X and Y
-positions to set up exclusion zones around specified stimuli.</p></li>
-<li><p><code>updateConditionalFixationTarget(me, stimulus, variable, value, varargin)</code><br />
-Say you have 4 stimuli each with a different angle changed on every
-trial by the task object, and want the stimulus matching
-<code>angle = 90</code> to be used as the fixation target. This method
-finds which stimulus is set to a particular variable value and assigns
-the fixation target X and Y position to that stimulus.</p></li>
-<li><p><code>updateNextState(me, type)</code><br />
-It is possible to force the stateMachine to jump to a tranisition to a
-named state by editing stateMachine.tempNextState. This method takes the
-current taskSequence trialVar or blockVar and sets the next state name
-to the value contained for the current trial. So for example you can set
-trialVar to <code>{'stimulus','catch'}</code> which randomises each
-trial with either ‘stimulus’ or ‘catch’, then use
-<code>@()updateNextState(me,'trial')</code> to choose this value as the
-temporary next state name.</p></li>
-</ul>
-<hr />
-<h2 id="task-sequence-manager-task-in-the-state-file">Task sequence
-manager (“task” in the state file)</h2>
-<ul>
-<li><p><code>updateTask(me, thisResponse, runTime, info)</code><br />
-You can update the task by calling this method.
-<code>thisResponse</code> is the response to the trial (correct,
-incorrect etc. as you’ve defined), the runTime is the current time, and
-info is any other information (often the info given by
-<code>runExperiment</code>). In general, it is better to call
-<code>runExperiment.updateTask</code> which generates the
-<code>info</code> for you using the current information from the
-eyetracker and stimuli.</p></li>
-<li><p><code>resetRun(task)</code><br />
-If the subject fails to respond correctly, this method randomises the
-next trial within the block, minimising the possibility the subject just
-guesses. If you are at the last trial of a block then this will not do
-anything.</p></li>
-<li><p><code>rewindRun(task)</code><br />
-This method rewinds back one trial, allowing you to replay that run
-again.</p></li>
-</ul>
-<hr />
-<h2 id="the-eye-tracker-et-in-the-state-file">The eye tracker (“eT” in
-the state file)</h2>
-<ul>
-<li><p><code>updateFixationValues(eT, X, Y, inittime, fixtime, radius, strict)</code><br />
-This method allows us to update the <code>eT.fixation</code> structure
-property; we pass in the various parameters that define the fixation
-window:</p>
-<ul>
-<li><code>X</code> = X position in degrees relative to screen centre [0,
-0]. <code>+X</code> is to the left.</li>
-<li><code>Y</code> = Y position in degrees relative to screen centre [0,
-0]. <code>+Y</code> is upwards.</li>
-<li><code>inittime</code> = How long the subject is allowed to search
-before their eye enters the window.</li>
-<li><code>fixtime</code> = How long the subject must keep their eyes
-within the fixation window.</li>
-<li><code>radius</code> = if this is a single value, this is the
-circular radius around <code>X,Y</code>. If it is 2 values it defines
-the width × height of rectangle around <code>X,Y</code>.</li>
-<li><code>strict</code> = if strict is <code>true</code> then do not
-allow a subject to leave a fixation window once they enter. If
-<code>false</code> then a subject may enter, leave and re-enter without
-failure (but must still keep the eye inside the window for the required
-time).</li>
-</ul>
-<p>Note that this command implicitly calls
-<code>resetFixation(eT)</code> as any previous fixation becomes
-invalid.</p></li>
-<li><p><code>resetFixation(eT, removeHistory)</code> ||
-<code>resetFixationHistory(eT)</code> ||
-<code>resetFixationTime(eT)</code> ||
-<code>resetExclusionZone(eT)</code> || <code>resetFixInit(eT)</code></p>
-<ul>
-<li><code>resetFixation</code> resets all fixation counters that track
-how long a fixation was held for. Pass <code>removeHistory</code> ==
-true also calls <code>resetFixationHistory(eT)</code> to remove the
-temporary log of recent eye positions (this is useful for online
-plotting of the recent eye position for the last trial etc.)</li>
-<li><code>resetFixationTime</code> only reset the fixation window
-timers.</li>
-<li><code>resetExclusionZone</code>: resets (removes) the exclusion
-zones.</li>
-<li><code>resetFixInit</code>: <em>fixInit</em> is a timer that stops a
-saccade <em>away</em> from a screen position to occur too quickly
-(default = 100ms). This method removes this test.</li>
-</ul></li>
-<li><p><code>resetOffset(eT)</code><br />
-Reset the drift offset back to <code>X = 0; Y = 0</code> — see
-<code>driftOffset(eT)</code> for the method that sets this
-value.</p></li>
-<li><p><code>updateFixationValues(eT,x,y,inittime,fixtime,radius,strict)</code>
-|| <code>updateExclusionZones(eT,x,y,radius)</code><br />
-These methods allows you to change any of the parameters of the fixation
-window[s] or the exclusion zone[s]. The fixation window[s] can be
-circular or square, the exclusion zone[a] are square.</p></li>
-<li><p><code>getSample(eT)</code><br />
-</p>
-<p>This simply gets the current X, Y, pupil data from the eyetracker (or
-if in dummy mode from the mouse position). This is saved in
-<code>eT.x</code> <code>eT.y</code> <code>eT.pupil</code> and logged to
-<code>eT.xAll</code> <code>eT.yAll</code> <code>eT.pupilAll</code>.
-NORMALLY you do not need to call this is it is called by runExperiment
-for you on every frame, depending on whether
-<code>needEyeSample(me)</code> method was set to <code>true</code> or
-<code>false</code>.</p></li>
-</ul>
-<hr />
-<h2 id="metastimulus-stims-in-the-state-file">metaStimulus (“stims” in
-the state file)</h2>
-<p>This class manages groups of stimuli as a single object. Each
-stimulus can be shown or hidden and metaStimulus can also managed
-masking stimuli if needed.</p>
-<ul>
-<li><p><code>show(stims, [index])</code><br />
-Show enables a particular stimulus to be drawn to the screen. Without
-<code>[index]</code> all stimuli are shown. You can specify sets of
-stimuli, e.g. <code>show(stims, [2 4])</code> to show the second and
-fourth stimuli.</p></li>
-<li><p><code>hide(stims, [index])</code><br />
-The reverse of <code>show()</code>. if <code>index</code> is empty, hide
-all stimuli. You can specify sets of stimuli,
-e.g. <code>hide(stims, [2 4])</code> to hide the second and fourth
-stimuli.</p></li>
-<li><p><code>showSet(stims, n)</code><br />
-<code>stims.stimulusSets</code> is an array of ‘sets’ of stimuli, for
-example <code>{3, [1 3], [1 2 3]}</code> and calling
-e.g. <code>showSet(stims, 3)</code>, would first hide all the stims
-(<code>hide(stims)</code>), then run <code>show(stims, [1 2 3])</code>.
-This just makes it a bit easy to manage pre-specified stimulus
-sets.</p></li>
-<li><p><code>edit(stims,stimulus,variable,value)</code><br />
-Allows you to modify any parameter of a stimulus during the trial,
-e.g. <code>edit(stims,3,'sizeOut',2);</code> sets the size of stimulus 3
-to 2°.</p></li>
-<li><p><code>draw(stims)</code><br />
-Calls the <code>draw()</code> method on each of the managed stimuli.
-Note if you’ve used <code>show()</code> or <code>hide()</code> or
-<code>showSet()</code> then some stmuli may not be displayed. This
-should be called on every frame update, by setting it to run in the
-<code>withinFcn</code> array.</p></li>
-<li><p><code>animate(stims)</code><br />
-Calls the <code>animate()</code> method for each stimulus, which runs
-any required per-frame updates (for drifting gratings, moving dots,
-flashing spots etc.). This should be called after <code>draw()</code>
-for every frame update within a <code>withinFcn</code> cell
-array.</p></li>
-<li><p><code>update(stims)</code><br />
-For trial based designs, we may change a variable (like size, or spatial
-frequency), and <code>update()</code> ensures the stimulus recalculate
-for this new variable. This is usually run in a correct/incorrect
-<code>exitFcn</code> block after first calling
-<code>updateVariables(me)</code>. Note some variables (like phase for
-gratings) do not require an <code>update()</code> but are applied
-immediately; however this depends on their implementation in PTB.
-<code>update</code> can cost a bit of time depending on the stiulus
-type, so it is not recommended to call it on every frame, but only when
-necessary.</p></li>
-</ul>
-<hr />
-<h2 id="screen-manager-s-in-the-state-file">Screen Manager (“s” in the
-state file)</h2>
-<ul>
-<li><code>drawBackground(s)</code><br />
-Draws the s.backgroundColour to screen.</li>
-</ul>
-<h1 id="faq">FAQ</h1>
-<hr />
-<ul>
-<li><strong>Question:</strong> My subject gave an incorrect answer, but
-I don’t want to keep repeating the same stimulus.</li>
-<li><strong>Answer:</strong> Use resetRun(task) which chooses another
-run in the same block and swaps it. Note if we are on the last trial of
-a block, we cannot swap as we want to preserve repeats per block.</li>
-</ul>
-<hr />
-<ul>
-<li><strong>Question:</strong> I want to randomise some values of the
-stimuli but not include them as an indepedant variable.</li>
-<li><strong>Answer:</strong> The metaStimulus object contains a
-stimulusTable which allows you to make changes to stimuli without them
-added to the trial structure. This is useful during training, or if you
-need randomisation tangential to the task. As an example, in Chen et
-al., 2020 Science their Saccade-to-Phosphene task randomises the size
-and colour of the target but this is not used as a task variable. In
-this case set stimulusTable and then call
-<code>@()randomise(stims);</code> in the state machine functions
-(normally just before you call <code>@()update(stims);</code>). This
-will give randomised size and colour without adding any independant
-variables.</li>
-</ul>
-<hr />
-<h1 id="definitions">Definitions</h1>
-<dl>
-<dt>Class</dt>
-<dd>
-A class is a way to combine a set of related variables (properties) and
-functions (methods) in a unified object. In MATLAB we use
-<code>classdef</code> to build a class.
-</dd>
-<dt>Object</dt>
-<dd>
-A class is a kind of thing, but when we want to use that thing, we
-<em>instantiate</em> it into a ‘real’ object. So calling
-<code>s = screenManager</code> <em>instantiates</em> the
-<code>screenManager</code> class as an object called <code>s</code>.
-</dd>
-<dt>Method</dt>
-<dd>
-The name given by MATLAB to a function contined in a class.
-</dd>
-</dl>
 <!--
 digraph{
     prefix[label="prefix\nhide(stims)"];

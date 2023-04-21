@@ -188,27 +188,58 @@
 <h1 id="configuring-variables">Configuring Variables</h1>
 <p>Opticka uses the taskSequence class to specify one or more variable
 names and values [<code>nVar</code>] that can be randomised using
-blocked repetition and applied to one or multiple stimuli during a task.
-The taskSequence class can also specify independent trial level
-[<code>trialVar</code>] and block level [<code>blockVar</code>]
-randomisation values.</p>
-<h1 id="log-or-linear-interpolation">Log or Linear interpolation</h1>
-<p>You can enter 3 values, <code>start | end | steps</code>, and press
-the <kbd>log</kbd> or the <kbd>lin</kbd> buttons to interpolate a log or
-linear range, for example <code>1 2 5</code> would get converted to
-<code>1 1.1892 1.4142 1.6818 2</code> when pressing the <kbd>log</kbd>
-button.</p>
+balanced blocked repetition and applied to one or multiple stimuli
+during a task. The taskSequence class can also specify independent trial
+level [<code>trialVar</code>] and block level [<code>blockVar</code>]
+randomisation values. In addition, you can add a staircase (needs
+Palamedes toolbox), to run alongside the taskSequence (see the
+<code>Saccadic Countermanding</code> core protocol for an example of
+using a staircase).</p>
 <h1 id="variable-modifiers">Variable modifiers</h1>
 <p>Variables can have modifiers, best explained by example:</p>
 <ol type="1">
 <li>Name = <code>angle</code></li>
-<li>Values = <code>[-90 90]</code></li>
+<li>Values = <code>[-90 0 90]</code></li>
 <li>Affects = <code>1</code></li>
 <li>Modifier = <code>2; 90</code></li>
 </ol>
-<p>In this case, angle is varied -90° and 90° for stimulus 1. Stimulus 2
+<p>In this case, angle is varied -90° 0° 90° for stimulus 1. Stimulus 2
 has the modifier 90 applied, so for example if stimulus 1 =
 <code>-90°</code> then stimulus 2 = <code>-90° + 90° = 0°</code>.</p>
+<p>Modifiers can also be string commands:</p>
+<ol type="1">
+<li><code>2; 'shift(2)'</code> - shift +2 places in the Value list. For
+example say for stimulus 1
+<code>Values = [-90 -45 0 45 90 135 180]</code> and for this trial the
+fourth value <code>45</code> is randomly selected. For stimulus 2 we
+then shift two places to fetch the sixth value <code>135</code>. Shift
+wraps from end to start (e.g. if seventh value <code>180</code> was
+selected for stimulus 1 then second value <code>-45</code> would be
+selected for stimulus 2), and you can use negative values
+(<code>-1</code> would select the third place <code>0</code> for
+example).</li>
+<li><code>2; 'invert'</code> — take the current value and invert it, so
+if the current value is <code>+10°</code> then invert will make stimulus
+2 <code>-10°</code>.</li>
+<li><code>2; 'xvar(10, 0.5)'</code> — For <code>xyPosition</code>
+variables you can add a variable x position. In this case whatever the X
+position is, <code>xvar(10)</code> will add or subtract (50%
+probability) 10°. So for example if X position is <code>0°</code> then
+the modifier could result in <code>+10°</code> or <code>-10°</code> with
+a 50% probability. Change <code>0.5</code> to change the
+probability.</li>
+<li><code>2; 'yvar(10, 0.5)'</code> — Same as <code>xvar</code> but for
+Y axis.</li>
+<li><code>2; 'xoffset(5)'</code> — For <code>xyPosition</code> add a
+fixed X position offset, so in this case add 5° to whatever value the X
+axis position is.</li>
+<li><code>2; 'xoffset(5)'</code> — For <code>xyPosition</code> add a
+fixed X position offset, so in this case add 5° for stimulus 2 to
+whatever value the X axis position is of stimulus 1.</li>
+<li><code>2; 'yoffset(5)'</code> — For <code>xyPosition</code> add a
+fixed Y position offset, so in this case add 5° for stimulus 2 to
+whatever value the Y axis position is of stimulus 1.</li>
+</ol>
 <h1 id="block-and-trial-level-independent-factors">Block and Trial level
 independent factors</h1>
 <p>You can set [Block Values] and [Trial Values] in the UI and assign
@@ -293,5 +324,19 @@ experiment table of 5 blocks that may look like thislike this:</p>
 </tr>
 </tbody>
 </table>
+<h2 id="log-or-linear-interpolation-buttons">Log or Linear interpolation
+buttons</h2>
+<p>You can enter 3 values, <code>start | end | steps</code>, and press
+the <kbd>log</kbd> or the <kbd>lin</kbd> buttons to interpolate a log or
+linear range, for example <code>1 2 5</code> would get converted to
+<code>1 1.1892 1.4142 1.6818 2</code> when pressing the <kbd>log</kbd>
+button.</p>
+<h2 id="equidistant-points-button">Equidistant Points button</h2>
+<p>This small tool allows you to specify the number of points, distance
+from center and additional rotation to calculate the correct X and Y
+positions. For example if you specified 8 points with 12° from the
+center the tool would calculate
+<code>{[12 0], [8.49 8.49], [0 12], [-8.49 8.49], [-12 0], [-8.49 -8.49], [0 -12], [8.49 -8.49]}</code>
+for the <code>xyPosition</code> values.</p>
 </body>
 </html>

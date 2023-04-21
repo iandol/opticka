@@ -49,7 +49,7 @@ classdef timeLogger < optickaCore
 			if ~exist('GetSecs','file')
 				me.timer = @now;
 			end
-			me.screenLog.construct = me.timer;
+			me.screenLog.construct = me.timer();
 		end
 		
 		% ===================================================================
@@ -262,9 +262,9 @@ classdef timeLogger < optickaCore
 				msgs{i,1} = me.messages(i).tick;
 				msgs{i,2} = me.messages(i).message;
 				msgs{i,3} = me.messages(i).vbl - me.startTime;
-				msgs{i,4} = me.messages(i).stimTime;
+				if isfield(me.messages,'stimeTime');msgs{i,4} = me.messages(i).stimTime;end
 			end
-			msgs = cell2table(msgs,'VariableNames',{'Tick','Message','Time','Stimulus ON?'});
+			msgs = cell2table(msgs,'VariableNames',{'Tick','Message','Time','Stimulus State'});
 
 			h = build_gui();
 			

@@ -1296,7 +1296,6 @@ classdef opticka < optickaCore
 					warning('Couldn''t find userFunctions file! Revert to default userFunctions.m');
 					me.r.userFunctionsFile = [me.paths.root filesep 'userFunctions.m'];
 				end
-				me.getStateInfo();
 				
 				if optickaCore.hasKey(tmp.r,'drawFixation');me.r.drawFixation=tmp.r.drawFixation;end
 				if optickaCore.hasKey(tmp.r,'dPPMode'); me.r.dPPMode = tmp.r.dPPMode; end
@@ -1476,6 +1475,8 @@ classdef opticka < optickaCore
 				me.editStimulus;
 			end
 			
+			me.ui.TabGroup.SelectedTab = me.ui.TabGroup.Children(1);
+
 			me.getScreenVals;
 			me.getTaskVals;
 			me.refreshStimulusList;

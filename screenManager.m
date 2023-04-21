@@ -535,7 +535,7 @@ classdef screenManager < optickaCore
 				if me.verbose; fprintf('===>>>Made win: %i kind: %i\n',me.win,Screen(me.win,'WindowKind')); end
 				
 				tL.screenLog.postOpenWindow=GetSecs;
-				tL.screenLog.deltaOpenWindow=(tL.screenLog.postOpenWindow-tL.screenLog.preOpenWindow)*1000;
+				tL.screenLog.deltaOpenWindow=(tL.screenLog.postOpenWindow-tL.screenLog.preOpenWindow);
 				
 				% check we have GLSL
 				try
