@@ -96,11 +96,11 @@ myStims{2}		= fixationCrossStimulus('size', 0.8);
 myTask					= taskSequence(); %new taskSequence object instance
 
 %%
-% Our variable is xPosition, applied to stimulus 1 only. 3 different
+% Our variable is xyPosition, applied to stimulus 1 only. 3 different
 % position values so 3 trials per block...
-myTask.nVar(1).name		= 'xPosition';
+myTask.nVar(1).name		= 'xyPosition';
 myTask.nVar(1).stimulus	= 1;
-myTask.nVar(1).values	= [-10 0 10];
+myTask.nVar(1).values	= {[-10 -10], [0 0], [10 10]};
 
 %%
 % We call the method to randomise the trials into a block (3 blocks, 3
@@ -144,11 +144,11 @@ myExp = runExperiment('stimuli', myStims,... %stimulus objects
 	'task', myTask,... % task randomised stimulus sequence
 	'stateInfoFile', 'DefaultStateInfo.m', ... % use the default state info file
 	'debug', false,... % debug mode for testing?
-	'useEyeLink', true, ... % use the eyelink manager
-	'dummyMode', true, ... % use dummy mode so the mouse replaces eye movements for testing
 	'logStateTimers',true,...
 	'subjectName', 'Simulcra', ...
-	'researcherName', 'Joanna Doe');
+	'researcherName', 'Automated Test');
+myExp.eyetracker.device = 'eyelink';
+myExp.eyetracker.dummy = true;
 
 %% Run the full behavioural task
 % 

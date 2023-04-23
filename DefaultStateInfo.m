@@ -76,7 +76,7 @@ tS.enableTrainingKeys		= false;	%==enable keys useful during task training, but 
 tS.recordEyePosition		= false;	%==record local copy of eye position, **in addition** to the eyetracker?
 tS.askForComments			= false;	%==UI requestor asks for comments before/after run
 tS.saveData					= false;	%==save behavioural and eye movement data?
-tS.showBehaviourPlot		= false;	%==open the behaviourPlot figure? Can cause more memory use…
+tS.showBehaviourPlot		= true;		%==open the behaviourPlot figure? Can cause more memory use…
 tS.includeErrors			= false;	%==do we update the trial number even for incorrect saccade/fixate, if true then we call updateTask for both correct and incorrect, otherwise we only call updateTask() for correct responses
 tS.name						= 'default protocol'; %==name of this protocol
 tS.nStims					= stims.n;	%==number of stimuli, taken from metaStimulus object
@@ -121,7 +121,7 @@ tS.fixY						= 0;
 tS.firstFixInit				= 3;
 % time to maintain initial fixation within window, can be single value or a
 % range to randomise between
-tS.firstFixTime				= [0.5 0.9];
+tS.firstFixTime				= [0.5 1.0];
 % fixation window radius in degrees; if you enter [x y] the window will be
 % rectangular.
 tS.firstFixRadius			= 2;
@@ -422,11 +422,11 @@ breakExitFcn = incExitFcn; % we copy the incorrect exit functions
 % resetRun = randomise current trial within the block
 % checkTaskEnded = see if taskSequence has finished
 if tS.includeErrors % we want to update our task even if there were errors
-	incExitFcn = [ {@()updatePlot(bR, me); @()updateTask(me,tS.INCORRECT)} incExitFcn ]; %update our taskSequence 
-	breakExitFcn = [ {@()updatePlot(bR, me); @()updateTask(me,tS.BREAKFIX)} breakExitFcn ]; %update our taskSequence 
+	incExitFcn = [ {@()updatePlot(bR, me); @()updateTask(me,tS.INCORRECT)}; incExitFcn ]; %update our taskSequence 
+	breakExitFcn = [ {@()updatePlot(bR, me); @()updateTask(me,tS.BREAKFIX)}; breakExitFcn ]; %update our taskSequence 
 else
-	incExitFcn = [ {@()updatePlot(bR, me)} incExitFcn ]; 
-	breakExitFcn = [ {@()updatePlot(bR, me)} breakExitFcn ];
+	incExitFcn = [ {@()updatePlot(bR, me)}; incExitFcn ]; 
+	breakExitFcn = [ {@()updatePlot(bR, me)}; breakExitFcn ];
 end
 if tS.useTask %we are using task
 	correctExitFcn = [ correctExitFcn; {@()checkTaskEnded(me)} ];

@@ -1006,17 +1006,10 @@ classdef runExperiment < optickaCore
 					%------run the stateMachine one step forward
 					update(sM);
 					if me.doFlip && s.visualDebug; s.drawGrid; me.infoTextScreen; end
-					if me.doFlip; s.finishDrawing(); end % potential optimisation...
+					%if me.doFlip; s.finishDrawing(); end % potential optimisation...
 					
-					%------check eye position manually. Also potentially log
-					% this retrieved value, but REMEMBER eyetracker will save
-					% the properly sampled eye data in the EDF; this is
-					% just a backup sampled at the GPU FPS wrapped in the
-					% PTB loop.
+					%------check eye position manually. 
 					if me.needSample; getSample(eT); end
-					if tS.recordEyePosition
-						saveEyeInfo(me, sM, eT, tS);
-					end
 					
 					%------Check keyboard for commands (remember we can turn
 					% this off using either tS.keyExclusionPattern

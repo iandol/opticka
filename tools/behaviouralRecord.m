@@ -49,6 +49,8 @@ classdef behaviouralRecord < optickaCore
 		plotOnly			= false
 		%> allowed properties passed to object upon construction
 		allowedProperties = 'verbose'
+		lf
+		SansFont
 	end
 	
 	%=======================================================================
@@ -110,7 +112,7 @@ classdef behaviouralRecord < optickaCore
 			tx{end+1} = ' ';
 			tx{end+1} = ['INIT TIME = ' num2str(eL.fixation.initTime)];
 			
-			lf = listfonts;
+			lf = listfonts; %#ok<*PROPLC>
 			if ismac
 				SansFont = 'Avenir Next'; %get(0,'defaultAxesFontName');
 				MonoFont = 'Menlo';
@@ -127,7 +129,9 @@ classdef behaviouralRecord < optickaCore
 			if any(matches(lf,'Fira Code'))
 				MonoFont = 'Fira Code';
 			end
-			set(groot,'DefaultFontName',SansFont);
+			me.lf = lf;
+			me.SansFont = SansFont;
+			
 			me.h.root = uifigure('Name',me.fullName);
 			me.h.root.Units = 'normalized';
 			me.h.root.Position = [0.6 0 0.4 1];
@@ -148,8 +152,6 @@ classdef behaviouralRecord < optickaCore
 
 			figure(me.h.root);
 			colormap(me.h.root, 'turbo');
-			set([me.h.axis1 me.h.axis2 me.h.axis3 me.h.axis4 me.h.axis5], ...
-				{'Box','XGrid','YGrid'},{'on','on','on'});
 			
 			xlabel(me.h.axis1, 'Run Number');
 			xlabel(me.h.axis2, 'Time');
@@ -166,6 +168,9 @@ classdef behaviouralRecord < optickaCore
 			title(me.h.axis3,'Hit (blue) / Miss (red)');
 			title(me.h.axis4,'Average (n=10) Hit / Miss %');
 			title(me.h.axis5,'Last Eye Position');
+			set([me.h.axis1 me.h.axis2 me.h.axis3 me.h.axis4 me.h.axis5], ...
+				{'Box','XGrid','YGrid','FontName'},{'on','on','on',SansFont});
+			drawnow;
 			me.isOpen = true;
 		end
 		
@@ -325,7 +330,7 @@ classdef behaviouralRecord < optickaCore
 			ylim(me.h.axis5,[-15 15]);
 			
 			set([me.h.axis1 me.h.axis2 me.h.axis3 me.h.axis4 me.h.axis5], ...
-				'Box','on','XGrid','on','YGrid','on');
+				{'Box','XGrid','YGrid','FontName'},{'on','on','on',me.SansFont});
 			
 			xlabel(me.h.axis1, 'Trial Number')
 			xlabel(me.h.axis2, 'Averaged Point')
