@@ -173,6 +173,8 @@ classdef screenManager < optickaCore
 		overlayWin							= -1
 		%> e.g. kPsychGUIWindow
 		specialFlags						= []
+		%> try to enable vulkan?
+		useVulkan							= false
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -412,6 +414,7 @@ classdef screenManager < optickaCore
 				% start to set up PTB screen
 				PsychImaging('PrepareConfiguration');
 				PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
+				if me.useVulkan; PsychImaging('AddTask', 'General', 'UseVulkanDisplay'); end
 				me.isPlusPlus = screenManager.bitsCheckOpen();
 				fprintf('---> screenManager: Probing for a Display++...');
 				bD = me.bitDepth;

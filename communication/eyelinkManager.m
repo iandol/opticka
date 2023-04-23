@@ -145,6 +145,8 @@ classdef eyelinkManager < eyetrackerCore
 					me.defaults.(fn{i}) = me.calibration.(fn{i});
 				end
 			end
+
+			if me.defaults.targetbeep==1; me.defaults.feedbackbeep=1; end
 			
 			me.defaults.verbose = me.verbose;
 			me.defaults.debugPrint = me.verbose;

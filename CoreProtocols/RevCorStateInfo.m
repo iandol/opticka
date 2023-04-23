@@ -1,20 +1,19 @@
 %> REVERSE CORRELATION PROTOCOL
-%> The following class objects
-%> are already loaded by runTask() and available to use; each object has
-%> methods (functions) useful for running the task:
-%>
-%> me		= runExperiment object ('self' in OOP terminology) 
-%> s		= screenManager object
-%> aM		= audioManager object
-%> stims	= our list of stimuli (metaStimulus class)
-%> sM		= State Machine (stateMachine class)
-%> task		= task sequence (taskSequence class)
-%> eT		= eyetracker manager
-%> io		= digital I/O to recording system
-%> rM		= Reward Manager (LabJack or Arduino TTL trigger to reward system/Magstim)
-%> bR		= behavioural record plot (on-screen GUI during a task run)
-%> uF       = user functions - add your own functions to this class
-%> tS		= structure to hold general variables, will be saved as part of the data
+% The following class objects are already loaded by runTask() and available
+% to use; each object has methods (functions) useful for running the task:
+%
+% me		= runExperiment object ('self' in OOP terminology) 
+% s		= screenManager object
+% aM		= audioManager object
+% stims	= our list of stimuli (metaStimulus class)
+% sM		= State Machine (stateMachine class)
+% task		= task sequence (taskSequence class)
+% eT		= eyetracker manager
+% io		= digital I/O to recording system
+% rM		= Reward Manager (LabJack or Arduino TTL trigger to reward system/Magstim)
+% bR		= behavioural record plot (on-screen GUI during a task run)
+% uF       = user functions - add your own functions to this class
+% tS		= structure to hold general variables, will be saved as part of the data
 
 %==================================================================
 %------------------------General Settings--------------------------
