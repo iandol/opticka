@@ -138,17 +138,18 @@ classdef behaviouralRecord < optickaCore
 			me.h.grid = uigridlayout(me.h.root,[2 1]);
 			me.h.grid.RowHeight = {'4x' '1x'};
 			me.h.grid.RowSpacing = 2;
-			me.h.grid.Padding = [3 3 3 3];
+			me.h.grid.Padding = [1 1 1 1];
 			me.h.panel = uipanel(me.h.grid);
 			me.h.info = uitextarea(me.h.grid, 'HorizontalAlignment', 'center',...
 				'FontName', MonoFont, 'Editable', 'off', 'WordWrap', 'off');
 			me.h.box = tiledlayout(me.h.panel,3,3);
 			me.h.box.Padding='compact';
-			me.h.axis1 = nexttile(me.h.box, [2 2]);
-			me.h.axis2 = nexttile(me.h.box, [1 2]);
-			me.h.axis3 = nexttile(me.h.box);
-			me.h.axis4 = nexttile(me.h.box);
-			me.h.axis5 = nexttile(me.h.box);
+			me.h.axis1 = nexttile(me.h.box, [2 2]); me.h.axis1.FontName = SansFont;
+			me.h.axis2 = nexttile(me.h.box, [1 2]); me.h.axis2.FontName = SansFont;
+			me.h.axis3 = nexttile(me.h.box); me.h.axis3.FontName = SansFont;
+			me.h.axis4 = nexttile(me.h.box); me.h.axis4.FontName = SansFont;
+			me.h.axis5 = nexttile(me.h.box); me.h.axis5.FontName = SansFont;
+			
 
 			figure(me.h.root);
 			colormap(me.h.root, 'turbo');

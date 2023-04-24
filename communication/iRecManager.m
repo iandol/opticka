@@ -56,8 +56,8 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		%> WIP we can optionally drive physical LEDs for calibration, each LED
 		%> is triggered by the me.calibration.calPositions order
 		useLEDs			= false
-		startPin		= 2
-		arduino
+		startPin		= 3
+		arduino			= []
 	end
 	
 	%--------------------PROTECTED PROPERTIES----------%
@@ -180,23 +180,21 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 					me.isConnected = false;
 					me.isDummy = true;
 				end
-
-				if me.useLEDs
-					if isa(me.arduino,'arduinoManager')
-						me.arduino.open;
-						for i = 1:9
-							me.turnOnLED(i);
-							WaitSecs(0.1);
-						end
-						for i = 1:9
-							me.turnOffLED(i);
-							WaitSecs(0.1);
-						end
-					else
-						me.useLEDs = false;
+			end
+			if me.useLEDs
+				if isa(me.arduino,'arduinoManager')
+					me.arduino.open;
+					for i = 1:length(me.calibration.calPositions)
+						me.turnOnLED(i);
+						WaitSecs(0.05);
 					end
+					for i = 1:length(me.calibration.calPositions)
+						me.turnOffLED(i);
+						WaitSecs(0.05);
+					end
+				else
+					me.useLEDs = false;
 				end
-
 			end
 			success = true;
 		end
@@ -961,12 +959,12 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		
 		function turnOnLED(me, val)
 			if me.useLEDs
-				me.arduino.digitalWrite(val+me.startPin,1);
+				me.arduino.digitalWrite(val-1 + me.startPin,1);
 			end
 		end
 		function turnOffLED(me, val)
 			if me.useLEDs
-				me.arduino.digitalWrite(val+me.startPin,0);
+				me.arduino.digitalWrite(val-1 + me.startPin,0);
 			end
 		end
 		
