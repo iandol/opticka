@@ -1702,7 +1702,7 @@ classdef runExperiment < optickaCore
 				override = true;
 			end
 			if ~isempty(me.strobe.device)
-				if me.isTask
+				if me.isTask && ~isempty(me.task.outIndex)
 					setStrobeValue(me, me.task.outIndex(index));
 				else
 					setStrobeValue(me, index);

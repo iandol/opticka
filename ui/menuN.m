@@ -144,18 +144,35 @@ function choice = menuN(mtitle, options, Opt)
 %     -Added support for a message under the title to mimic the behaviour of
 %     menu(). Set mtitle [string] -> mtitle {cell 1x2} where {'title','message'}
 
+lf = listfonts; %#ok<*PROPLC>
+if ismac
+	SansFont = 'Avenir Next'; 
+	MonoFont = 'Menlo';
+elseif ispc
+	SansFont = 'Calibri';
+	MonoFont = 'Consolas';
+else %linux
+	SansFont = 'Ubuntu'; 
+	MonoFont = 'Ubuntu Mono';
+end
+if any(matches(lf,'Source Sans 3'))
+	SansFont = 'Source Sans 3';
+end
+if any(matches(lf,'Fira Code'))
+	MonoFont = 'Fira Code';
+end
 
 %% Set up default Opt struct:
 defOpt = struct();
-defOpt.fontName               = 'Ubuntu Mono';
-defOpt.subtitleFontSize       = 14;
-defOpt.pushbuttonFontSize     = 14;
-defOpt.popupmenuFontSize      = 12;
-defOpt.radiobuttonFontSize    = 13;
-defOpt.checkboxFontSize       = 13;
-defOpt.listboxFontSize        = 12;
-defOpt.checkboxFontSize       = 13;
-defOpt.sliderFontSize         = 12;
+defOpt.fontName               = SansFont;
+defOpt.subtitleFontSize       = 13;
+defOpt.pushbuttonFontSize     = 11;
+defOpt.popupmenuFontSize      = 11;
+defOpt.radiobuttonFontSize    = 11;
+defOpt.checkboxFontSize       = 11;
+defOpt.listboxFontSize        = 11;
+defOpt.checkboxFontSize       = 11;
+defOpt.sliderFontSize         = 11;
 defOpt.sliderStepsFraction    = [0.01,0.1];
 defOpt.okButtonLabel          = 'OK';
 defOpt.pixelHeigthUIcontrol   = 25;
