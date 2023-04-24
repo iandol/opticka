@@ -36,6 +36,8 @@ tS.tOut						= 5;		%==if wrong response, how long to time out before next trial
 tS.CORRECT 					= 1;		%==the code to send eyetracker for correct trials
 tS.BREAKFIX 				= -1;		%==the code to send eyetracker for break fix trials
 tS.INCORRECT 				= -5;		%==the code to send eyetracker for incorrect trials
+tS.correctSound				= [2000, 0.1, 0.1]; %==freq,length,volume
+tS.errorSound				= [300, 1, 1];		%==freq,length,volume
 
 %==================================================================
 %----------------Debug logging to command window------------------

@@ -58,6 +58,8 @@ tS.tOut						= 5;		%==if wrong response, how long to time out before next trial
 tS.CORRECT					= 1;		%==the code to send eyetracker for correct trials
 tS.BREAKFIX					= -1;		%==the code to send eyetracker for break fix trials
 tS.INCORRECT				= -5;		%==the code to send eyetracker for incorrect trials
+tS.correctSound				= [2000, 0.1, 0.1]; %==freq,length,volume
+tS.errorSound				= [300, 1, 1];		%==freq,length,volume
 
 %=========================================================================
 %----------------Debug logging to command window------------------
@@ -102,11 +104,7 @@ ts.catchTrialTime			= 1;
 tS.targetFixInit			= 0.75; % time to find the target
 tS.targetFixTime			= 0.75; % to to maintain fixation on target 
 tS.targetRadius				= [8 15]; %radius widthxheight to fix within.
-% initial values for historical log of X / Y position and exclusion zone
-me.lastXPosition			= tS.fixX;
-me.lastYPosition			= tS.fixY;
-me.lastXExclusion			= [];
-me.lastYExclusion			= [];
+
 
 %=========================================================================
 %---------------------------Eyetracker setup-----------------------

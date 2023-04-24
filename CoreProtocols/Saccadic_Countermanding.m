@@ -208,7 +208,7 @@ prefixExitFcn = {
 %========================================================NOSTOP
 %========================================================
 
-nsEntryFcn = { 
+nsEntryFcn = {
 	@()trackerDrawStatus(eT,'NOSTOP', stims.stimulusPositions);
 	@()logRun(me,'NOSTOP-FIXATE');
 };
@@ -229,7 +229,7 @@ nsFixFcn = {
 	% otherwise 'breakfix' is returned and the state machine will jump to the
 	% breakfix state. If neither condition matches, then the state table below
 	% defines that after 5 seconds we will switch to the incorrect state.
-	@()testSearchHoldFixation(eT,'nostop','breakfix')
+	@()testSearchHoldFixation(eT, 'nostop', 'breakfix')
 };
 
 %--------------------exit fixation phase
@@ -257,7 +257,7 @@ ns2FixFcn = {
 	% otherwise 'breakfix' is returned and the state machine will jump to the
 	% breakfix state. If neither condition matches, then the state table below
 	% defines that after 5 seconds we will switch to the incorrect state.
-	@()testSearchHoldFixation(eT,'correct','incorrect')
+	@()testSearchHoldFixation(eT, 'correct', 'incorrect')
 };
 
 %--------------------exit fixation phase
@@ -284,7 +284,7 @@ sfFcn =  {
 sfFixFcn = {
 	% this command performs the logic to search and then maintain fixation
 	% inside the fixation window. 
-	@()testSearchHoldFixation(eT,'stop','breakfix'); 
+	@()testSearchHoldFixation(eT, 'stop', 'breakfix'); 
 };
 
 %as we exit stim presentation state
@@ -307,7 +307,7 @@ sFcn =  {
 sFixFcn = {
 	% this command performs the logic to maintain fixation
 	% inside the fixation window. 
-	@()testHoldFixation(eT,'correct','incorrect'); 
+	@()testHoldFixation(eT, 'correct', 'incorrect'); 
 };
 
 %as we exit stim presentation state
