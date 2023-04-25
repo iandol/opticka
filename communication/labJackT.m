@@ -358,7 +358,7 @@ classdef labJackT < handle
 			if me.silentMode || isempty(me.handle); return; end
 			if ~exist('value','var'); value = me.sendValue; end
 			calllib(me.libName, 'LJM_eWriteAddress', me.handle, me.RAMAddress, me.LJM_FLOAT32, value);
-			if me.verbose; fprintf('--->>> LabjackT:sendStrobe Sending strobe: %i\n',value); end
+			%if me.verbose; fprintf('--->>> LabjackT:sendStrobe Sending strobe: %i\n',value); end
 		end
 
 		% ===================================================================
@@ -514,8 +514,8 @@ classdef labJackT < handle
 				if mod(plotLoop,updateN) == 0
 					plot(ax,time,data);
 					ax.HitTest = 'off';
-					title(sprintf('Dev Backlog: %s | Lib Backlog: %s | Err: %i', ...
-						sprintf('%i ',dBList), sprintf('%i ',lBList), err));
+					title(sprintf('%i -- Dev Backlog: %s | Lib Backlog: %s | Err: %i', ...
+						plotLoop, sprintf('%i ',dBList), sprintf('%i ',lBList), err));
 					drawnow;
 					fprintf('\b\b\b\b\b\b\b\b\b\b\bLoop: %5i',plotLoop)
 				end

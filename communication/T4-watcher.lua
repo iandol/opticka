@@ -16,20 +16,20 @@ while true do
 		mbWrite(2501,0,cmd) -- EIO_STATE set to cmd
 		mbWrite(61590,1,2000) -- WAIT_US_BLOCKING 2000us = 2ms
 		mbWrite(2501,0,0) -- EIO_STATE all LOW
-		print("HIGH: ", cmd)
+		--print("HIGH: ", cmd)
 	elseif (cmd >= 256 and cmd <= 271) then
 		mbWrite(2502,0,(cmd-256))
 		mbWrite(61590,1,100000) -- WAIT_US_BLOCKING max is 100ms, so repeat 3 times for 300ms
 		mbWrite(61590,1,100000)
 		mbWrite(61590,1,100000)
 		mbWrite(2502,0,0)
-		print("CIO: ", cmd)
+		--print("CIO: ", cmd)
 	elseif (cmd == 0) then
 		mbWrite(2501,0,0)
-		print("LOW: ", cmd)
+		--print("LOW: ", cmd)
 	end
 	if (cmd > -1) then
 		mbWrite(46000, 3, -1) --reset cmd
-		print("RESET")
+		--print("RESET")
 	end
 end
