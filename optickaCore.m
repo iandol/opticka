@@ -330,7 +330,7 @@ classdef optickaCore < handle
 		
 		% ===================================================================
 		function setProp(me, property, value)
-		%> @fn set
+		%> @fn setProp(me, property, value)
 		%> @brief method to fast change a particular value. This is
 		%> useful for use in anonymous functions, like in the state machine.
 		%>
@@ -339,6 +339,43 @@ classdef optickaCore < handle
 		% ===================================================================
 			if isprop(me,property)
 				me.(property) = value;
+			end
+		end
+
+		% ===================================================================
+		function [rM, aM] = initialiseGlobals(me, doReset, doOpen)
+		%> @fn [rM, aM] = initialiseGlobals(me)
+		%> @brief we try no to use globals but for reward and audio, due to
+		%> e.g. eyelink we can't help it, set them up here
+		%>
+		%> @param doReset - try to close and reopen them?
+		% ===================================================================
+			global rM aM
+				
+			if ~exist('doReset','var'); doReset = false; end
+			if ~exist('doOpen','var'); doOpen = false; end
+
+			%------initialise the rewardManager global object
+			if ~isa(rM,'arduinoManager'); rM = arduinoManager(); end
+			if rM.isOpen && doReset
+				try rM.close; rM.reset; end
+			end
+			if doOpen; open(rM); end
+			
+			%------initialise an audioManager for beeps,playing sounds etc.
+			if ~isa(aM,'audioManager'); aM = audioManager; end
+			if doReset
+				try
+				aM.silentMode = false;
+				reset(aM);
+				catch
+					warning('Could not reset audio manager!');
+					aM.silentMode = true;
+				end
+			end
+			if doOpen
+				setup(aM);
+				aM.beep(2000,0.1,0.1);
 			end
 		end
 		

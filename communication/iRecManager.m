@@ -50,14 +50,13 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 						'valPositions', [-12 0; 0 -12; 0 0; 0 12; 12 0],...
 						'size', 2,... % size of calibration cross in degrees
 						'manual', false)
-	end
-
-	properties (Hidden = true)
 		%> WIP we can optionally drive physical LEDs for calibration, each LED
 		%> is triggered by the me.calibration.calPositions order
 		useLEDs			= false
+	end
+
+	properties (Hidden = true)
 		startPin		= 3
-		arduino			= []
 	end
 	
 	%--------------------PROTECTED PROPERTIES----------%
@@ -112,6 +111,9 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		%> @param sM2 - a second screenManager used during calibration, if
 		%> none is provided a default will be made.
 		% ===================================================================
+			
+			[rM, aM] = initialiseGlobals(me);
+
 			if ~exist('sM','var') || isempty(sM)
 				if isempty(me.screen) || ~isa(me.screen,'screenManager')
 					me.screen		= screenManager;
@@ -182,18 +184,16 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 				end
 			end
 			if me.useLEDs
-				if isa(me.arduino,'arduinoManager')
-					me.arduino.open;
+				if ~rM.isOpen; open(rM); end
+				try
 					for i = 1:length(me.calibration.calPositions)
-						me.turnOnLED(i);
-						WaitSecs(0.05);
+						me.turnOnLED(i, rM);
+						WaitSecs(0.02);
 					end
 					for i = 1:length(me.calibration.calPositions)
-						me.turnOffLED(i);
-						WaitSecs(0.05);
+						me.turnOffLED(i, rM);
+						WaitSecs(0.02);
 					end
-				else
-					me.useLEDs = false;
 				end
 			end
 			success = true;
@@ -205,11 +205,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		%> @brief calibration + validation
 		%>
 		% ===================================================================
-            global rM %#ok<*GVMIS> %global reward manager we can share with eyetracker 
-			if ~isa(rM,'arduinoManager') 
-				rM=arduinoManager();
-			end
-			if ~rM.silentMode && ~rM.isOpen; rM.close; rM.open; end
+            [rM, aM] = initialiseGlobals(me);
 
 			cal = [];
 			if ~me.isConnected && ~me.isDummy
@@ -356,17 +352,17 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 									k = str2double(name(1));
 									if k == 0 
 										hide(f);
-										for ii=1:9;me.turnOffLED(ii);end
+										for ii=1:length(cpos);me.turnOffLED(ii,rM);end
 										trackerFlip(me,0,true);
 									elseif k > 0 && k <= nPositions
 										thisPos = k;
 										if k == lastK && f.isVisible
 											f.isVisible = false;
-											me.turnOffLED(k);
+											me.turnOffLED(k,rM);
 											thisPos = 0;
 										elseif ~f.isVisible
 											f.isVisible = true;
-											me.turnOnLED(k);
+											me.turnOnLED(k,rM);
 										end
 										lastK = k;
 										if thisPos > 0
@@ -380,6 +376,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 									end
 								elseif keys(sample)
 									hide(f);
+									for ii=1:length(cpos);me.turnOffLED(ii,rM);end
 									trackerFlip(me,0,true);
 									rM.timedTTL;
 								elseif keys(menu)
@@ -434,17 +431,17 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 										resetFixationHistory(me);
 										thisPos = 0;
 										hide(f);
-										for ii=1:9;me.turnOffLED(ii);end
+										for ii=1:length(cpos);me.turnOffLED(ii,rM);end
 										trackerFlip(me,0,true);
 									elseif k > 0 && k <= nPositions
 										thisPos = k;
 										if k == lastK && f.isVisible
 											f.isVisible = false;
-											me.turnOffLED(k);
+											me.turnOffLED(k,rM);
 											thisPos = 0;
 										elseif ~f.isVisible
 											f.isVisible = true;
-											me.turnOnLED(k);
+											me.turnOnLED(k,rM);
 										end
 										lastK = k;
 										if thisPos > 0
@@ -464,6 +461,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 									end
 									rM.timedTTL;
 									f.isVisible = false;
+									for ii=1:length(cpos);me.turnOffLED(ii,rM);end
 									thisPos = 0;
 									resetFixationHistory(me);
 									trackerFlip(me,0,true);
@@ -957,14 +955,14 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 	methods (Access = private) %------------------PRIVATE METHODS
 	%=======================================================================
 		
-		function turnOnLED(me, val)
+		function turnOnLED(me, val, rM)
 			if me.useLEDs
-				me.arduino.digitalWrite(val-1 + me.startPin,1);
+				rM.digitalWrite(val-1 + me.startPin,1);
 			end
 		end
-		function turnOffLED(me, val)
+		function turnOffLED(me, val, rM)
 			if me.useLEDs
-				me.arduino.digitalWrite(val-1 + me.startPin,0);
+				rM.digitalWrite(val-1 + me.startPin,0);
 			end
 		end
 		

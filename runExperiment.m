@@ -622,11 +622,7 @@ classdef runExperiment < optickaCore
 		%> method manages the display loop.
 		%>
 		% ===================================================================
-			% we try not to use global variables, however the external
-			% eyelink API does not easily allow us to pass objects and so
-			% we use global variables in this specific case...
-			global rM %#ok<*GVMIS> %global reward manager we can share with eyetracker 
-			global aM %global audio manager we can share with eyetracker
+			[rM, aM] = initialiseGlobals(me,true,true);
 
 			if exist(me.stateInfoFile,'file') && contains(me.stateInfoFile, 'DefaultStateInfo') && me.stimuli.n == 0
 				warning('You are trying to start a Default behavioural task without stimuli!');
