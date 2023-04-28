@@ -24,6 +24,29 @@ classdef imageStimulus < baseStimulus
 		%> auto mip-map generation, 32 = stop Screen('Close')
 		%> clearing texture
 		specialFlags				= []
+		% filterMode' How to compute the pixel color values when the
+		% texture is drawn magnified, minified or drawn shifted, e.g., if
+		% sourceRect and destinationRect do not have the same size or if
+		% sourceRect specifies fractional pixel values. 0 = Nearest
+		% neighbour filtering, 1 = Bilinear filtering - this is the
+		% default. Values 2 or 3 select use of OpenGL mip-mapping for
+		% improved quality: 2 = Bilinear filtering for nearest mipmap
+		% level, 3 = Trilinear filtering across mipmap levels, 4 = Nearest
+		% neighbour filtering for nearest mipmap level, 5 = nearest
+		% neighbour filtering with linear interpolation between mipmap
+		% levels. Mipmap filtering is only supported for GL_TEXTURE_2D
+		% textures (see description of 'specialFlags' flag 1 below). A
+		% negative filterMode value will also use mip-mapping for fast
+		% drawing of blurred textures if the GL_TEXTURE_2D format is used:
+		% Mip-maps are essentially image resolution pyramids, the
+		% filterMode value selects a specific layer in that pyramid. A
+		% value of -1 draws the highest resolution layer, a value of -2
+		% draws a half-resolution layer, a value of -3 draws a quarter
+		% resolution layer and so on. Each layer has half the resolution of
+		% the preceeding layer. This allows for very fast drawing of
+		% blurred or low-pass filtered images, e.g., for gaze-contingent
+		% displays.
+		filter						= 1
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -198,9 +221,9 @@ classdef imageStimulus < baseStimulus
 			end
 			
 			if isempty(me.specialFlags) && isinteger(me.matrix(1))
-				me.specialFlags = 4; %4 is optimization for uint8 textures. 0 is default
+				sFlags = 4; %4 is optimization for uint8 textures. 0 is default
 			end
-			me.texture = Screen('MakeTexture', me.sM.win, me.matrix, 1, me.specialFlags, me.precision);
+			me.texture = Screen('MakeTexture', me.sM.win, me.matrix, 1, sFlags, me.precision);
 			me.salutation('loadImage',['Load: ' regexprep(me.currentImage,'\\','/')]);
 		end
 
@@ -235,7 +258,7 @@ classdef imageStimulus < baseStimulus
 				% [, filterMode] [, globalAlpha] [, modulateColor] 
 				% [, textureShader] [, specialFlags] [, auxParameters]);
 				Screen('DrawTexture', win, me.texture, [], me.mvRect, me.angleOut,...
-					[], me.alpha, me.colourOut);
+					me.filter, me.alpha, me.colourOut);
 			end
 			me.tick = me.tick + 1;
 		end

@@ -1,7 +1,7 @@
 % ========================================================================
-classdef iRecManager < eyetrackerCore & eyetrackerSmooth
-%> @class iRecManager
-%> @brief Manages the iRec eyetrackers https://staff.aist.go.jp/k.matsuda/iRecHS2/index_e.html
+classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
+%> @class pupilLabsManager
+%> @brief Manages the Pupil Labs Core
 %>
 %> The eyetrackerCore methods enable the user to test for common behavioural
 %> eye tracking tasks with single commands.
@@ -24,17 +24,15 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 %> happened. Other methods include isFixated(), testFixationTime(),
 %> testHoldFixation().
 %>
-%> Copyright ©2014-2023 Ian Max Andolina — released: LGPL3, see LIv12345c12345CENCE.md
+%> Copyright ©2014-2023 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 	
 %-----------------CONTROLLED PROPERTIES-------------%
 	properties (SetAccess = protected, GetAccess = public)
 		%> type of eyetracker
-		type			= 'iRec'
-		%> TCP interface objec (dataConnection class)
-		tcp				= dataConnection
-		%> udp interface object (dataConnection class)
-		udp				= dataConnection
+		type			= 'pupil'
+		%> zeromq interface object 
+		socket
 	end
 
 	%---------------PUBLIC PROPERTIES---------------%
@@ -42,14 +40,14 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		%> initial setup and calibration values
 		calibration		= struct(...
 						'ip', '127.0.0.1',...
-						'udpport', 35000,... % used to send messages
-						'tcpport', 35001,... % used to send commands
+						'port', 50020,... % used to send messages
 						'stimulus','animated',... % calibration stimulus can be animated, movie
 						'movie', [],... % if movie pass a movieStimulus 
 						'calPositions', [-12 0; 0 -12; 0 0; 0 12; 12 0],...
 						'valPositions', [-12 0; 0 -12; 0 0; 0 12; 12 0],...
 						'size', 2,... % size of calibration cross in degrees
-						'manual', false)
+						'manual', false,...
+						'timeout', 1000)
 		%> WIP we can optionally drive physical LEDs for calibration, each LED
 		%> is triggered by the me.calibration.calPositions order
 		useLEDs			= false
@@ -61,6 +59,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 	
 	%--------------------PROTECTED PROPERTIES----------%
 	properties (SetAccess = protected, GetAccess = protected)
+		ctx
 		% screen values taken from screenManager
 		sv				= []
 		%> tracker time stamp
@@ -76,28 +75,23 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 	%=======================================================================
 	
 		% ===================================================================
-		function me = iRecManager(varargin)
-		%> @fn iRecManager(varargin)
+		function me = pupilLabsManager(varargin)
+		%> @fn pupilLabsManager(varargin)
 		%>
-		%> iRecManager CONSTRUCTOR
+		%> pupilLabsManager CONSTRUCTOR
 		%>
 		%> @param varargin can be passed as a structure, or name+arg pairs
 		%> @return instance of the class.
 		% ===================================================================
-			args = optickaCore.addDefaults(varargin,struct('name','Pupil Core',...
+			args = optickaCore.addDefaults(varargin,struct('name','PupilLabs',...
 				'useOperatorScreen',true,'sampleRate',200));
 			me=me@eyetrackerCore(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
 			me.smoothing.sampleRate = me.sampleRate;
 
-			me.udp.protocol = 'udp';
-			me.udp.rAddress = me.calibration.ip;
-			me.udp.rPort = me.calibration.udpport;
-
-			me.tcp.protocol = 'tcp';
-			me.tcp.rAddress = me.calibration.ip;
-			me.tcp.rPort = me.calibration.tcpport;
-
+			if ~exist('zmq.Context','class')
+				warning('Please install matlab-zmq package!!!')
+			end
 		end
 		
 		% ===================================================================
@@ -130,11 +124,11 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 			if exist('sM2','var')
 				me.operatorScreen = sM2;
 			elseif isempty(me.operatorScreen)
-				me.useOperatorScreen	= screenManager('pixelsPerCm',20,...
+				me.operatorScreen = screenManager('pixelsPerCm',20,...
 					'disableSyncTests',true,'backgroundColour',me.screen.backgroundColour,...
 					'screen', oscreen, 'specialFlags', kPsychGUIWindow);
-				[w,h]					= Screen('WindowSize',me.operatorScreen.screen);
-				me.operatorScreen.windowed	= [20 20 round(w/1.8) round(h/1.8)];
+				[w,h]			= Screen('WindowSize',me.operatorScreen.screen);
+				me.operatorScreen.windowed	= [20 20 round(w/1.6) round(h/1.8)];
 			end
 			me.secondScreen		= true;
 			if ismac; me.operatorScreen.useRetina = true; end
@@ -142,45 +136,19 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 			me.smoothing.sampleRate = me.sampleRate;
 			
 			if me.isDummy
-				me.salutation('Initialise', 'Running Pupil Core in Dummy Mode', true);
+				me.salutation('Initialise', 'Running Pupil Labs in Dummy Mode', true);
 				me.isConnected = false;
 			else
-				if isempty(me.tcp) || ~isa(me.tcp,'dataConnection')
-					me.tcp = dataConnection('rAddress', me.calibration.ip,'rPort',...
-					me.calibration.tcpport,'protocol','tcp');
-				else
-					me.tcp.close();
-					me.tcp.protocol = 'tcp';
-					me.tcp.rAddress = me.calibration.ip;
-					me.tcp.rPort = me.calibration.tcpport;
-				end
-				if isempty(me.udp) || ~isa(me.udp,'dataConnection')
-					me.udp = dataConnection('rAddress', me.calibration.ip,'rPort',...
-					me.calibration.udpport,'protocol','udp');
-				else 
-					me.udp.close();
-					me.udp.protocol = 'udp';
-					me.udp.rAddress = me.calibration.ip;
-					me.udp.rPort = me.calibration.udpport;
-				end
-				try 
-					open(me.tcp);
-					if ~me.tcp.isOpen; warning('Cannot Connect to TCP');error('Cannot connect to TCP'); end
-					open(me.udp);
-					me.udp.write(intmin('int32'));
-					me.isConnected = true;
-					me.salutation('Initialise', ...
-						sprintf('Running on a iRecH2 | Screen %i %i x %i @ %iHz', ...
-						me.screen.screen,...
-						me.screen.winRect(3),...
-						me.screen.winRect(4),...
-						me.screen.screenVals.fps),true);
-				catch
-					me.salutation('Initialise', 'Cannot connect, running in Dummy Mode', true);
-					me.isConnected = false;
-					me.isDummy = true;
-				end
+				endpoint = ['tcp://' me.calibration.ip ':' me.calibration.port];
+				me.ctx = zmq.core.ctx_new();
+				me.socket = zmq.core.socket(me.ctx, 'ZMQ_REQ');
+				zmq.core.setsockopt(me.socket, 'ZMQ_RCVTIMEO', me.calibration.timeout);
+				fprintf('--->>> pupilLabsManager: Connecting to %s\n', endpoint);
+				zmq.core.connect(me.socket, endpoint);
+				checkRoundTrip(me);
+				SetPupilTime(me);
 			end
+
 			if me.useLEDs
 				if ~rM.isOpen; open(rM); end
 				try
@@ -215,6 +183,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 			if me.useOperatorScreen && isa(me.operatorScreen,'screenManager'); open(me.operatorScreen); end
 			s = me.screen;
 			if me.useOperatorScreen; s2 = me.operatorScreen; end
+			me.fInc = round(s.screenVals.fps/6);
 			me.win = me.screen.win;
 			me.ppd_ = me.screen.ppd;
 
@@ -488,8 +457,12 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		%>
 		% ===================================================================
 			if me.isDummy; return; end
-			if me.tcp.isOpen; me.tcp.write(int8('start')); end
-			me.isRecording = true;
+			if me.isConnected 
+				zmq.core.send(me.socket, uint8('R'));
+				result = zmq.core.recv(me.socket);
+				fprintf('Recording should start: %s\n', char(result));
+				me.isRecording = true;
+			end
 		end
 		
 		% ===================================================================
@@ -500,8 +473,12 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		%>
 		% ===================================================================
 			if me.isDummy; return; end
-			if me.tcp.isOpen; me.tcp.write(int8('stop')); end
-			me.isRecording = false;
+			if me.isConnected 
+				zmq.core.send(me.socket, uint8('R'));
+				result = zmq.core.recv(me.socket);
+				fprintf('Recording stopped: %s\n', char(result));
+				me.isRecording = false;
+			end
 		end
 		
 		% ===================================================================
@@ -607,11 +584,16 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		%> @brief close the iRec and cleanup, call after experiment finishes
 		%>
 		% ===================================================================
-			try
-				try me.udp.write(int32(intmin('int32'))); end
+			try 
 				try stopRecording(me); end
-				try me.tcp.close; end
-				try me.udp.close; end
+				try zmq.core.disconnect(me.socket, endpoint); end
+				try zmq.core.close(me.socket); end
+				try zmq.core.ctx_shutdown(me.ctx); end
+				try zmq.core.ctx_term(me.ctx); end
+
+				me.socket = [];
+				me.ctx = [];
+
 				me.isConnected = false;
 				me.isRecording = false;
 				resetAll(me);
@@ -622,8 +604,11 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 				me.salutation('Close Method','Couldn''t stop recording, forcing shutdown...',true)
 				me.isConnected = false;
 				me.isRecording = false;
-				try me.tcp.close; end
-				try me.udp.close; end
+				try stopRecording(me); end
+				try zmq.core.disconnect(me.socket, endpoint); end
+				try zmq.core.close(me.socket); end
+				try zmq.core.ctx_shutdown(me.ctx); end
+				try zmq.core.ctx_term(me.ctx); end
 				try resetAll(me); end
 				if me.secondScreen && ~isempty(me.operatorScreen) && isa(me.operatorScreen,'screenManager')
 					try me.operatorScreen.close; end
@@ -952,11 +937,30 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 	methods (Access = private) %------------------PRIVATE METHODS
 	%=======================================================================
 		
+		function checkRoundtrip(me)
+			if me.isConnected
+				tt=tic; % Measure round trip delay
+				zmq.core.send(mesocket, uint8('t'));
+				result = zmq.core.recv(mesocket);
+				fprintf('--->>> Returned: %s\n', char(result));
+				fprintf('--->>> Round trip command delay: %.2f\n', str2num(toc(tt)*1000));
+			end
+		end
+
+		function SetPupilTime(me)
+			if me.isConnected
+				zmq.core.send(me.socket, uint8('T 0.0'));
+				result = zmq.core.recv(me.socket);
+				fprintf('--->>> setPupilTime: %s\n', char(result));
+			end
+		end
+
 		function turnOnLED(me, val, rM)
 			if me.useLEDs
 				rM.digitalWrite(val-1 + me.startPin,1);
 			end
 		end
+
 		function turnOffLED(me, val, rM)
 			if me.useLEDs
 				rM.digitalWrite(val-1 + me.startPin,0);
