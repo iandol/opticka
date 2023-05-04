@@ -247,14 +247,11 @@ classdef eyelinkManager < eyetrackerCore
 		%> @brief runs the calibration and validation
 		%>
 		% ===================================================================
-			%global aM 
-			%if isempty(aM) || ~isa(aM,'audioManager')
-			%	aM=audioManager;
-			%end
-			%aM.silentMode = false;
-			%if ~aM.isOpen;	aM.open; end
-			%aM.beep(1000,0.1,0.1);
-			%Snd('Open', aM.aHandle, 1);
+			[rM, aM] = initialiseGlobals(me);
+			if me.calibration.enableCallbacks && contains(me.calibration.callback, 'eyelinkCustomCallback')
+				try open(aM); end
+				%Snd('Open', aM.aHandle, 1);
+			end
 
 			if isa(me.screen,'screenManager') && ~me.screen.isOpen; open(me.screen); end
 

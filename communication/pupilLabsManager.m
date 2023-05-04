@@ -46,6 +46,7 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 						'calPositions', [-12 0; 0 -12; 0 0; 0 12; 12 0],...
 						'valPositions', [-12 0; 0 -12; 0 0; 0 12; 12 0],...
 						'size', 2,... % size of calibration cross in degrees
+						'doBeep',true,... % beep for calibration reward
 						'manual', false,...
 						'timeout', 1000)
 		%> WIP we can optionally drive physical LEDs for calibration, each LED
@@ -54,11 +55,13 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 	end
 
 	properties (Hidden = true)
+		% for led calibration, which arduino pin to start from
 		startPin		= 3
 	end
 	
 	%--------------------PROTECTED PROPERTIES----------%
 	properties (SetAccess = protected, GetAccess = protected)
+		% zmq context
 		ctx
 		% screen values taken from screenManager
 		sv				= []
@@ -67,7 +70,7 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 		% stimulus used for calibration
 		calStim			= []
 		%> allowed properties passed to object upon construction
-		allowedProperties	= {'calibration', 'smoothing'}
+		allowedProperties	= {'calibration', 'useLEDs', 'smoothing'}
 	end
 	
 	%=======================================================================
@@ -90,21 +93,21 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 			me.smoothing.sampleRate = me.sampleRate;
 
 			if ~exist('zmq.Context','class')
-				warning('Please install matlab-zmq package!!!')
+				warning('Please install matlab-zmq package via https://github.com/iandol/matlab-zmq!!!')
 			end
 		end
 		
 		% ===================================================================
-		function success = initialise(me,sM,sM2)
+		function success = initialise(me, sM, sM2)
 		%> @fn initialise(me, sM, sM2)
 		%> @brief initialise 
 		%>
-		%> @param sM - screenManager object we will use
-		%> @param sM2 - a second screenManager used during calibration, if
+		%> @param sM - screenManager for the subjectg
+		%> @param sM2 - a second screenManager used for operator, if
 		%> none is provided a default will be made.
 		% ===================================================================
 			
-			[rM, aM] = initialiseGlobals(me);
+			[rM, aM] = initialiseGlobals(me, false, true);
 
 			if ~exist('sM','var') || isempty(sM)
 				if isempty(me.screen) || ~isa(me.screen,'screenManager')

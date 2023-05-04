@@ -1,11 +1,12 @@
 function tittaCalCallback(titta_instance,currentPoint,posNorm,posPix,stage,calState)
-global rM %our reward manager object
+global rM aM %our reward manager object
 if strcmpi(stage,'cal')
     % this demo function is no-op for validation mode
     if calState.status==0
         status = 'ok';
 		  if isa(rM,'arduinoManager') && rM.isOpen
-			  timedTTL(rM);
+			  giveReward(rM);
+			  try beep(aM,2000,0.1,0.1); end
 			  fprintf('---!!!Calibration reward!\n');
 		  end
     else
@@ -16,6 +17,7 @@ if strcmpi(stage,'cal')
 elseif strcmpi(stage,'val')
 	if isa(rM,'arduinoManager')  && rM.isOpen
 		timedTTL(rM);
+		try beep(aM,2000,0.1,0.1); end
 		fprintf('---!!!Validation reward!\n');
 	else
 		fprintf('---!!!NO Validation reward!\n');

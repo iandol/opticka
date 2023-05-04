@@ -17,15 +17,14 @@ classdef arduinoManager < optickaCore
 		port					= ''
 		%> board type; uno [default] is a generic arduino, xiao is the seeduino xiao
 		%> pico is RaspberryPi Pico
-		board					= 'Uno' 
+		board					= 'Uno'
 		%> run with no arduino attached, useful for debugging
 		silentMode				= false
 		%> output logging info
 		verbose					= false
-		%> which pin to trigger the reward TTL by default?
-		rewardPin				= 2
-		%> time of the TTL sent by default?
-		rewardTime				= 300
+		%> parameters for use when giving rewards via fluid or food
+		%> actuator, type = TTL / fluid / food
+		reward					= struct('type', 'TTL', 'pin', 2, 'time', 300)
 		%> specify the available pins to use; 2-13 is the default for an Uno
 		%> 0-10 for the xiao (though xiao pins 11-14 can control LEDS)
 		availablePins			= {}
@@ -51,17 +50,17 @@ classdef arduinoManager < optickaCore
 		%> a screen object to bind to
 		screen			= []
 	end
-	
+
 	properties (SetAccess = private, GetAccess = private)
 		allowedProperties = {'availablePins','rewardPin','rewardTime','openGUI','board'...
 			'port','silentMode','verbose','delayLength','shield','linePWM'}
 	end
-	
+
 	methods%------------------PUBLIC METHODS--------------%
-		
+
 		%==============CONSTRUCTOR============%
 		function me = arduinoManager(varargin)
-		% arduinoManager Construct an instance of this class
+			% arduinoManager Construct an instance of this class
 			args = optickaCore.addDefaults(varargin,struct('name','arduino manager'));
 			me=me@optickaCore(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
@@ -82,7 +81,7 @@ classdef arduinoManager < optickaCore
 				me.silentMode = true;
 			end
 		end
-		
+
 		%===============OPEN DEVICE================%
 		function open(me)
 			if me.isOpen || ~isempty(me.device);disp('-->arduinoManager: Already open!');return;end
@@ -107,14 +106,14 @@ classdef arduinoManager < optickaCore
 				switch me.board
 					case {'Xiao','xiao'}
 						if isempty(me.availablePins);me.availablePins = arrayfun(f,0:14);end
-					case {'Pico'}
+					case {'Pico','pico'}
 						if isempty(me.availablePins);me.availablePins = arrayfun(f,[0:22 26 27 28]);end
 					otherwise
 						if isempty(me.availablePins);me.availablePins = arrayfun(f,2:13);end
 				end
 				endPin = max(cell2mat(me.availablePins));
 				startPin = min(cell2mat(me.availablePins));
-				
+
 				try
 					me.device = arduinoIOPort(me.port,endPin,startPin);
 					failToOpen = false;
@@ -123,7 +122,7 @@ classdef arduinoManager < optickaCore
 					failToOpen = true;
 					getReport(ME);
 				end
-				
+
 				if failToOpen
 					me.isOpen = false; me.silentMode = true;
 					uiwait(warndlg('--->arduinoManager: IOport couldn''t open the port, going into silent mode!','arduinoManager','modal'));
@@ -146,7 +145,7 @@ classdef arduinoManager < optickaCore
 
 		%===============CLOSE DEVICE================%
 		function close(me)
-			try me.device = []; end %#ok<*TRYNC> 
+			try me.device = []; end %#ok<*TRYNC>
 			try close(me.handles.parent); me.handles=[];end
 			try me.deviceID = ''; end
 			try me.availablePins = ''; end
@@ -154,7 +153,7 @@ classdef arduinoManager < optickaCore
 			me.silentMode = false;
 			checkPorts(me);
 		end
-		
+
 		%===============RESET================%
 		function reset(me)
 			try close(me); end
@@ -171,7 +170,7 @@ classdef arduinoManager < optickaCore
 				me.port = me.ports{end};
 			end
 		end
-		
+
 		%===============PIN MODE================%
 		function pinMode(me, line, mode)
 			if ~me.isOpen || me.silentMode; return; end
@@ -183,7 +182,7 @@ classdef arduinoManager < optickaCore
 				pinMode(me.device)
 			end
 		end
-		
+
 		%===============ANALOG READ================%
 		function value = analogRead(me, line)
 			if ~me.isOpen || me.silentMode; return; end
@@ -208,7 +207,7 @@ classdef arduinoManager < optickaCore
 			value = digitalRead(me.device, line);
 			if me.verbose;fprintf('-DIGREAD: pin %i = %i ',line,value);end
 		end
-		
+
 		%===============DIGITAL WRITE================%
 		function digitalWrite(me, line, value)
 			if ~me.isOpen || me.silentMode; return; end
@@ -217,25 +216,38 @@ classdef arduinoManager < optickaCore
 			digitalWrite(me.device, line, value);
 			if me.verbose;fprintf('-DIGWRITE: pin %i = %i ',line,value);end
 		end
-		
+
+		%===============REWARD SELECTION================%
+		function giveReward(me, type, varargin)
+			if ~exist('type','var'); type = 'simple'; end
+			switch type
+				case 'simple'
+					timedTTL(me, me.reward.pin, me.reward.time);
+				case 'fluid'
+					rwdByDCmotor(me, me.reward.time);
+				otherwise
+					stepper(me, varargin);
+			end
+		end
+
 		%===============SEND TTL (legacy)================%
 		function sendTTL(me, line, time)
 			timedTTL(me, line, time)
 		end
-		
+
 		%===============TIMED TTL================%
 		function timedTTL(me, line, time)
 			if ~me.isOpen; return; end
 			if ~me.silentMode
-				if ~exist('line','var') || isempty(line); line = me.rewardPin; end
-				if ~exist('time','var') || isempty(time); time = me.rewardTime; end
+				if ~exist('line','var') || isempty(line); line = me.reward.pin; end
+				if ~exist('time','var') || isempty(time); time = me.reward.time; end
 				timedTTL(me.device, line, time);
 				if me.verbose;fprintf('===>>> timedTTL: TTL pin %i for %i ms\n',line,time);end
 			else
 				if me.verbose;fprintf('===>>> timedTTL: Silent Mode\n');end
 			end
 		end
-		
+
 		%===============STROBED WORD================%
 		function strobeWord(me, value)
 			if ~me.isOpen; return; end
@@ -244,146 +256,85 @@ classdef arduinoManager < optickaCore
 				if me.verbose;fprintf('===>>> STROBED WORD: %i sent to pins 2-8\n',value);end
 			end
 		end
-		
-		%===============TIMED DOUBLE TTL================%
-		function timedDoubleTTL(me, line, time)
-			if ~me.silentMode
-				if ~exist('line','var') || isempty(line); line = me.rewardPin; end
-				if ~exist('time','var') || isempty(time); time = me.rewardTime; end
-				if time < 0; time = 0;end
-				timedTTL(me.device, line, 10);
-				WaitSecs('Yieldsecs',time/1e3);
-				timedTTL(me.device, line, 10);
-				if me.verbose;fprintf('===>>> timedTTL: double TTL pin %i for %i ms\n',line,time);end
-			else
-				if me.verbose;fprintf('===>>> timedTTL: Silent Mode\n');end
-			end
-		end
-		
-		%===============TEST TTL================%
-		function test(me,line)
-			if me.silentMode || isempty(me.device); return; end
-			if ~exist('line','var') || isempty(line); line = 2; end
-			if me.verbose;fprintf('===>>> TEST: pin %i LOW/HIGH 20 times\n',line);end
-			digitalWrite(me.device, line, 0);
-			for ii = 1:20
-				digitalWrite(me.device, line, mod(ii,2));
-			end
-		end
+
 		%==================DRIVE STEPPER MOTOR============%
-		function stepper(me,ndegree)
-				 ncycle      = floor(ndegree/(1.8*4));
-                 nstep       = round((rem(ndegree,(1.8*4))/7.2)*4);
-			 switch me.shield
-				 case 'new'
-					 me.linePWM = [10 11];
-				 otherwise
-					 me.linePWM = [3 11];
-			 end
-			 if me.verbose;fprintf('===>>> STEPPER on %s shield: steps =  %i \n',me.shield,nstep);end
-		     for i=1:ncycle
-			     cycleStepper(me)
-			 end
-			 switch nstep 
-				 case 1
-					me.digitalWrite(9, 0);    %//ENABLE CH A 
-  					me.digitalWrite(8, 1);    %//DISABLE CH B
-  					me.digitalWrite(12,1);   %//Sets direction of CH A
-  					me.digitalWrite(me.linePWM(1), 1);    %//Moves CH A
-  					WaitSecs(me.delayLength);
-				 case 2
-					me.digitalWrite(9, 0);    %//ENABLE CH A 
-  					me.digitalWrite(8, 1);    %//DISABLE CH B
-  					me.digitalWrite(12,1);   %//Sets direction of CH A
-  					me.digitalWrite(me.linePWM(1), 1);    %//Moves CH A
-  					WaitSecs(me.delayLength);
-  				
-  					me.digitalWrite(9, 1);    %//DISABLE CH A
-  					me.digitalWrite(8, 0);    %//ENABLE CH B
-  					me.digitalWrite(13,0);   %//Sets direction of CH B
-  					me.digitalWrite(11,1);   %//Moves CH B
-  					WaitSecs(me.delayLength);
-				 case 3
-			    	me.digitalWrite(9, 0);    %//ENABLE CH A 
-  					me.digitalWrite(8, 1);    %//DISABLE CH B
-  					me.digitalWrite(12,1);   %//Sets direction of CH A
-  					me.digitalWrite(me.linePWM(1), 1);    %//Moves CH A
-  					WaitSecs(me.delayLength);
-  				
-  					me.digitalWrite(9, 1);    %//DISABLE CH A
-  					me.digitalWrite(8, 0);    %//ENABLE CH B
-  					me.digitalWrite(13,0);   %//Sets direction of CH B
-  					me.digitalWrite(11,1);   %//Moves CH B
-  					WaitSecs(me.delayLength);
-  				
-  					me.digitalWrite(9, 0);     %//ENABLE CH A-
-  					me.digitalWrite(8, 1);     %//DISABLE CH B
-  					me.digitalWrite(12,0);    %//Sets direction of CH A
-  					me.digitalWrite(me.linePWM(1), 1);     %//Moves CH A
-  					WaitSecs(me.delayLength);
-				 case 4
+		function stepper(me, ndegree)
+			ncycle      = floor(ndegree/(1.8*4));
+			nstep       = round((rem(ndegree,(1.8*4))/7.2)*4);
+			switch me.shield
+				case 'new'
+					me.linePWM = [10 11];
+				otherwise
+					me.linePWM = [3 11];
+			end
+			if me.verbose;fprintf('===>>> STEPPER on %s shield: steps =  %i \n',me.shield,nstep);end
+			for i=1:ncycle
+				cycleStepper(me)
+			end
+			switch nstep
+				case 1
+					me.digitalWrite(9, 0);    %//ENABLE CH A
+					me.digitalWrite(8, 1);    %//DISABLE CH B
+					me.digitalWrite(12,1);   %//Sets direction of CH A
+					me.digitalWrite(me.linePWM(1), 1);    %//Moves CH A
+					WaitSecs(me.delayLength);
+				case 2
+					me.digitalWrite(9, 0);    %//ENABLE CH A
+					me.digitalWrite(8, 1);    %//DISABLE CH B
+					me.digitalWrite(12,1);   %//Sets direction of CH A
+					me.digitalWrite(me.linePWM(1), 1);    %//Moves CH A
+					WaitSecs(me.delayLength);
+
+					me.digitalWrite(9, 1);    %//DISABLE CH A
+					me.digitalWrite(8, 0);    %//ENABLE CH B
+					me.digitalWrite(13,0);   %//Sets direction of CH B
+					me.digitalWrite(11,1);   %//Moves CH B
+					WaitSecs(me.delayLength);
+				case 3
+					me.digitalWrite(9, 0);    %//ENABLE CH A
+					me.digitalWrite(8, 1);    %//DISABLE CH B
+					me.digitalWrite(12,1);   %//Sets direction of CH A
+					me.digitalWrite(me.linePWM(1), 1);    %//Moves CH A
+					WaitSecs(me.delayLength);
+
+					me.digitalWrite(9, 1);    %//DISABLE CH A
+					me.digitalWrite(8, 0);    %//ENABLE CH B
+					me.digitalWrite(13,0);   %//Sets direction of CH B
+					me.digitalWrite(11,1);   %//Moves CH B
+					WaitSecs(me.delayLength);
+
+					me.digitalWrite(9, 0);     %//ENABLE CH A-
+					me.digitalWrite(8, 1);     %//DISABLE CH B
+					me.digitalWrite(12,0);    %//Sets direction of CH A
+					me.digitalWrite(me.linePWM(1), 1);     %//Moves CH A
+					WaitSecs(me.delayLength);
+				case 4
 					cycleStepper(me)
-			 end
+			end
 			stopStepper(me)
 		end
-			
-	    %================STEPPER CYCLR==========
-		function  cycleStepper(me)
-			    me.digitalWrite(9, 0);    %//ENABLE CH A 
-  				me.digitalWrite(8, 1);    %//DISABLE CH B
-  				me.digitalWrite(12,1);   %//Sets direction of CH A
-  				me.digitalWrite(me.linePWM(1), 1);    %//Moves CH A
-  				WaitSecs(me.delayLength);
-  				
-  				me.digitalWrite(9, 1);    %//DISABLE CH A
-  				me.digitalWrite(8, 0);    %//ENABLE CH B
-  				me.digitalWrite(13,0);   %//Sets direction of CH B
-  				me.digitalWrite(11,1);   %//Moves CH B
-  				WaitSecs(me.delayLength);
-  				
-  				me.digitalWrite(9, 0);     %//ENABLE CH A-
-  				me.digitalWrite(8, 1);     %//DISABLE CH B
-  				me.digitalWrite(12,0);    %//Sets direction of CH A
-  				me.digitalWrite(me.linePWM(1), 1);     %//Moves CH A
-  				WaitSecs(me.delayLength);
- 				
-  				me.digitalWrite(9, 1);   %//DISABLE CH A
-  				me.digitalWrite(8, 0);   %//ENABLE CH B-
-                me.digitalWrite(13,1);  %//Sets direction of CH B
-                me.digitalWrite(11,1);  %//Moves CH B
-                WaitSecs(me.delayLength);
-        end
-    	
-             
-        %================STOP STEPPER================
-        function stopStepper(me)
-            me.digitalWrite(9,1);        %//DISABLE CH A
-            me.digitalWrite(me.linePWM(1), 0);       %//stop Move CH A
-            me.digitalWrite(8,1);        %//DISABLE CH B
-            me.digitalWrite(11,0);      %//stop Move CH B
-            WaitSecs(me.delayLength);
-        end
-        %===========DRIVE DC MOTOR for SMALL PUMP=========%
-        % A DC motor need 3 digital pin to work,2 general digital to control 
-        % the direction and a pmw channel to control the speed. A L298 drive
-        % board or a motorshield + a arduino uno/pico ,which need a 12v DC 
-        % input, can cooperate to drive a DC motor,in clockwise or the otherway.
-        function rwdByDCmotor(me,time) % this function is running on picko
-            %             seraildevice='arduino UNO';
-            %             seraildevice='pico';
-            % need to wire the pico/arduino channel 3/4/5 to the L298N EN/IN1/IN2
-            IN1=5;   IN2=4;       EN=3;
-            me.pinMode(IN1,'o');me.pinMode(IN2,'o');
-            me.digitalWrite(IN1, 0);  me.digitalWrite(IN2, 0); % stop the motor
-            % here must be the analogWrite,1024/255 is the max for pico/uno
-            me.analogWrite(EN, 1000);
-            me.digitalWrite(IN1, 1); me.digitalWrite(IN2, 0);%run in one direction
-            WaitSecs(time);
-            me.digitalWrite(IN1, 0); me.digitalWrite(IN2, 0);% stop the motor
-        end
 
-        %===========Check Ports==========%
-        function checkPorts(me)
+		%===========DRIVE DC MOTOR for SMALL PUMP=========%
+		% A DC motor need 3 digital pin to work, 2 general digital to control
+		% the direction and a pmw channel to control the speed. A L298 drive
+		% board or a motorshield + a arduino uno/pico ,which need a 12v DC
+		% input, can cooperate to drive a DC motor,in clockwise or the otherway.
+		function rwdByDCmotor(me, time) % this function is running on Pico
+			% seraildevice='arduino UNO';
+			% seraildevice='pico';
+			% need to wire the pico/arduino channel 3/4/5 to the L298N EN/IN1/IN2
+			IN1=5;		IN2=4;		EN=3;
+			me.pinMode(IN1,'o'); me.pinMode(IN2,'o');
+			me.digitalWrite(IN1, 0);  me.digitalWrite(IN2, 0); % stop the motor
+			% here must be the analogWrite,1024/255 is the max for pico/uno
+			me.analogWrite(EN, 1000);
+			me.digitalWrite(IN1, 1); me.digitalWrite(IN2, 0);%run in one direction
+			WaitSecs('YieldSecs', time);
+			me.digitalWrite(IN1, 0); me.digitalWrite(IN2, 0);% stop the motor
+		end
+
+		%===========Check Ports==========%
+		function checkPorts(me)
 			if IsOctave
 				if ~exist('serialportlist','file'); try pkg load instrument-control; end; end
 				if ~verLessThan('instrument-control','0.7')
@@ -395,20 +346,57 @@ classdef arduinoManager < optickaCore
 				if ~verLessThan('matlab','9.7')	% use the nice serialport list command
 					me.ports = serialportlist('available');
 				else
-					me.ports = seriallist; %#ok<SERLL> 
+					me.ports = seriallist; %#ok<SERLL>
 				end
 			end
 		end
-			
+
 		%===========Delete Method==========%
 		function delete(me)
 			fprintf('arduinoManager: closing connection if open...\n');
-			try me.close; end
+			try close(me); end
 		end
+
 	end
-	
+
 	methods ( Access = private ) %----------PRIVATE METHODS---------%
-		
+
+		%================STEPPER CYCLR==========
+		function  cycleStepper(me)
+			me.digitalWrite(9, 0);    %//ENABLE CH A
+			me.digitalWrite(8, 1);    %//DISABLE CH B
+			me.digitalWrite(12,1);   %//Sets direction of CH A
+			me.digitalWrite(me.linePWM(1), 1);    %//Moves CH A
+			WaitSecs(me.delayLength);
+
+			me.digitalWrite(9, 1);    %//DISABLE CH A
+			me.digitalWrite(8, 0);    %//ENABLE CH B
+			me.digitalWrite(13,0);   %//Sets direction of CH B
+			me.digitalWrite(11,1);   %//Moves CH B
+			WaitSecs(me.delayLength);
+
+			me.digitalWrite(9, 0);     %//ENABLE CH A-
+			me.digitalWrite(8, 1);     %//DISABLE CH B
+			me.digitalWrite(12,0);    %//Sets direction of CH A
+			me.digitalWrite(me.linePWM(1), 1);     %//Moves CH A
+			WaitSecs(me.delayLength);
+
+			me.digitalWrite(9, 1);   %//DISABLE CH A
+			me.digitalWrite(8, 0);   %//ENABLE CH B-
+			me.digitalWrite(13,1);  %//Sets direction of CH B
+			me.digitalWrite(11,1);  %//Moves CH B
+			WaitSecs(me.delayLength);
+		end
+
+		%================STOP STEPPER================
+		function stopStepper(me)
+			me.digitalWrite(9,1);        %//DISABLE CH A
+			me.digitalWrite(me.linePWM(1), 0);       %//stop Move CH A
+			me.digitalWrite(8,1);        %//DISABLE CH B
+			me.digitalWrite(11,0);      %//stop Move CH B
+			WaitSecs(me.delayLength);
+		end
+
 		%===========setLow Method==========%
 		function setLow(me)
 			if me.silentMode || ~me.isOpen; return; end
@@ -426,7 +414,7 @@ classdef arduinoManager < optickaCore
 				me.device.digitalWrite(i,0);
 			end
 		end
-		
+
 	end
-	
+
 end

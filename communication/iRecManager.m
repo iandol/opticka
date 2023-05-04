@@ -84,7 +84,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		%> @param varargin can be passed as a structure, or name+arg pairs
 		%> @return instance of the class.
 		% ===================================================================
-			args = optickaCore.addDefaults(varargin,struct('name','Pupil Core',...
+			args = optickaCore.addDefaults(varargin,struct('name','iRec',...
 				'useOperatorScreen',true,'sampleRate',200));
 			me=me@eyetrackerCore(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
@@ -110,7 +110,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		%> none is provided a default will be made.
 		% ===================================================================
 			
-			[rM, aM] = initialiseGlobals(me);
+			[rM, aM] = initialiseGlobals(me, false, true);
 
 			if ~exist('sM','var') || isempty(sM)
 				if isempty(me.screen) || ~isa(me.screen,'screenManager')
@@ -142,7 +142,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 			me.smoothing.sampleRate = me.sampleRate;
 			
 			if me.isDummy
-				me.salutation('Initialise', 'Running Pupil Core in Dummy Mode', true);
+				me.salutation('Initialise', 'Running iRec in Dummy Mode', true);
 				me.isConnected = false;
 			else
 				if isempty(me.tcp) || ~isa(me.tcp,'dataConnection')
@@ -170,7 +170,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 					me.udp.write(intmin('int32'));
 					me.isConnected = true;
 					me.salutation('Initialise', ...
-						sprintf('Running on a iRecH2 | Screen %i %i x %i @ %iHz', ...
+						sprintf('Running on a iRec | Screen %i %i x %i @ %iHz', ...
 						me.screen.screen,...
 						me.screen.winRect(3),...
 						me.screen.winRect(4),...

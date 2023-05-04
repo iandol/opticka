@@ -185,7 +185,7 @@ switch eyecmd
     case 2  % EyeLink Keyboard Query
         [rc, el] = EyelinkGetKey(el);
 		if rc == 32 && exist('rM','var') && isa(rM,'arduinoManager') && rM.isOpen
-			timedTTL(rM);
+			giveReward(rM);
 		end
         
     case 3  % Alert message
@@ -571,7 +571,7 @@ return;
                 d=1.5;
         end
         
-        if doBeep==1
+        if doBeep==1 && isa(aM,'audioManager') && aM.isOpen
 		   beep(aM, f, d, v);
         end
     end

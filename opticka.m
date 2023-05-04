@@ -304,7 +304,9 @@ classdef opticka < optickaCore
 		%>
 		%> Gets the settings from the UI and updates our runExperiment
 		%> object.
-		% ===================================================================	
+		% ===================================================================
+			rM = initialiseGlobals(me);
+
 			if isempty(me.r)
 				if ~isdeployed || ~ismcc
 					olds = me.ui.OKOptickaVersion.Text;
@@ -325,6 +327,14 @@ classdef opticka < optickaCore
 					me.ui.OKOptickaVersion.Text = olds; 
 				end
 			end
+
+			rM.board = me.gv(me.ui.OKarduinoType);
+			if ~isempty(me.gv(me.ui.OKarduinoPort))
+				rM.port = me.gv(me.ui.OKarduinoPort);
+			end
+			rM.reward.type = me.gv(me.ui.OKrewardType);
+			rM.reward.pin = me.gv(me.ui.OKTTLPin);
+			rM.reward.time = me.gv(me.ui.OKTTLTime);
 			
 			me.r.subjectName = me.gv(me.ui.OKSubject);
 			me.r.researcherName = me.gv(me.ui.OKResearcher);
@@ -400,7 +410,8 @@ classdef opticka < optickaCore
 			end
 
 			me.r.reward.port = me.gv(me.ui.OKarduinoPort);
-			me.r.reward.board = me.gv(me.ui.OKArduinoType);
+			me.r.reward.board = me.gv(me.ui.OKarduinoType);
+			
 			if me.ui.OKuseArduino.Checked == true
 				me.r.reward.device = 'arduino';
 			elseif me.ui.OKuseLabJackReward.Checked == true

@@ -139,6 +139,8 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 			me.secondScreen		= true;
 			if ismac; me.operatorScreen.useRetina = true; end
 
+			initialiseGlobals(me, false, true);
+
 			me.smoothing.sampleRate = me.sampleRate;
 			
 			if contains(me.calibration.model,{'Tobii 4C','IS4_Large_Peripheral'})

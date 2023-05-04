@@ -272,6 +272,7 @@ classdef optickaCore < handle
 		
 		% ===================================================================
 		function obj_out = clone(me)
+		%> @fn obj_out = clone(me)
 		%> @brief Use this syntax to make a deep copy of the object, i.e.
 		%> OBJ_OUT has the same field values, but will not behave as a
 		%> handle-copy of me anymore.
@@ -348,7 +349,8 @@ classdef optickaCore < handle
 		%> @brief we try no to use globals but for reward and audio, due to
 		%> e.g. eyelink we can't help it, set them up here
 		%>
-		%> @param doReset - try to close and reopen them?
+		%> @param doReset - try to reset the object?
+		%> @param doOpen  - try to open the object?
 		% ===================================================================
 			global rM aM
 				
@@ -360,21 +362,21 @@ classdef optickaCore < handle
 			if rM.isOpen && doReset
 				try rM.close; rM.reset; end
 			end
-			if doOpen; open(rM); end
+			if doOpen && ~rM.isOpen; open(rM); end
 			
 			%------initialise an audioManager for beeps,playing sounds etc.
-			if ~isa(aM,'audioManager'); aM = audioManager; end
+			if ~isa(aM,'audioManager'); aM = audioManager(); end
 			if doReset
 				try
-				aM.silentMode = false;
-				reset(aM);
+					aM.silentMode = false;
+					reset(aM);
 				catch
 					warning('Could not reset audio manager!');
 					aM.silentMode = true;
 				end
 			end
-			if doOpen
-				setup(aM);
+			if doOpen && ~aM.isOpen && ~aM.silentMode
+				open(aM);
 				aM.beep(2000,0.1,0.1);
 			end
 		end
@@ -456,6 +458,7 @@ classdef optickaCore < handle
 	
 		% ===================================================================
 		function args = makeArgs(args)
+		%> @fn makeArgs
 		%> @brief Converts cell args to structure array
 		%> 
 		%>
@@ -482,6 +485,7 @@ classdef optickaCore < handle
 		
 		% ===================================================================
 		function args = addDefaults(args, defs)
+		%> @fn addDefaults
 		%> @brief add default options to arg input
 		%> 
 		%>
@@ -505,7 +509,7 @@ classdef optickaCore < handle
 
 		% ===================================================================
 		function result = hasKey(in, key)
-		%> @fn isMap
+		%> @fn hasKey
 		%> @brief check if a struct / object has a propery / field
 		%>
 		%> @param value name
@@ -518,7 +522,8 @@ classdef optickaCore < handle
 
 		% ===================================================================
 		function [pressed, name, keys] = getKeys(device)
-		%> @brief Get Key
+		%> @fn getKeys
+		%> @brief PTB Get key presses, stops key bouncing
 		% ===================================================================
 			persistent oldKeys
 			if ~exist('device','var'); device = []; end
@@ -546,6 +551,7 @@ classdef optickaCore < handle
 		
 		% ===================================================================
 		function parseArgs(me, args, allowedProperties)
+		%> @fn parseArgs
 		%> @brief Sets properties from a structure or normal arguments pairs,
 		%> ignores invalid or non-allowed properties
 		%>

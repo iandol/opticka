@@ -2443,7 +2443,7 @@ classdef runExperiment < optickaCore
 
 				case 'r'
 
-					if isa(me.arduino,'arduinoManager');timedTTL(me.arduino);end
+					if isa(me.arduino,'arduinoManager');giveReward(me.arduino);end
 
 				case '=+'
 	
