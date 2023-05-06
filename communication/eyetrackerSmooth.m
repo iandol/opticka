@@ -9,8 +9,8 @@ classdef eyetrackerSmooth < handle
 	properties
 		%> options for online smoothing of peeked data
 		% %> method = {'median','heuristic','heuristic2', 'savitsky-golay'}
-		smoothing		= struct('nSamples',8,'method','median','window',3,...
-						'eyes','both','sampleRate', 500)
+		smoothing		= struct('nSamples', 8, 'method', 'median', 'window', 3,...
+						'eyes', 'both', 'sampleRate', 500)
 	end
 
 	properties (SetAccess = protected, GetAccess = public, Dependent = true)
@@ -43,7 +43,7 @@ classdef eyetrackerSmooth < handle
 	end%-------------------------END PUBLIC METHODS--------------------------------%
 
 	%============================================================================
-	methods (Hidden = true) %--STATIC METHODS 
+	methods (Hidden = true) %--HIDDEN METHODS 
 	%============================================================================
 
 		% ===================================================================

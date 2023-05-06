@@ -1280,7 +1280,7 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		function drawTextWrapped(me, text, wrapat, x, y)
 		%> @fn drawTextWrapped
-		%> @brief draw text and flip immediately
+		%> @brief draw text with wrapping
 		%>
 		%> @param text text to draw
 		%> @param wrapat character to wrap at

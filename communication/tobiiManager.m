@@ -488,6 +488,8 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 					end
 				end
 				if ~isempty(xy)
+					me.xAllRaw	= [me.xAllRaw xy(1,:)];
+					me.yAllRaw	= [me.yAllRaw xy(2,:)];
 					sample.valid = true;
 					xy			= doSmoothing(me,xy);
 					xy			= toPixels(me, xy,'','relative');

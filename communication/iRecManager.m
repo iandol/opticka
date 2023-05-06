@@ -61,6 +61,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 	
 	%--------------------PROTECTED PROPERTIES----------%
 	properties (SetAccess = protected, GetAccess = protected)
+		rawSamples		= []
 		% screen values taken from screenManager
 		sv				= []
 		%> tracker time stamp
@@ -122,6 +123,8 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 			me.ppd_					= me.screen.ppd;
 			if me.screen.isOpen; me.win	= me.screen.win; end
 
+			me.rawSamples = round(0.2 / (1/me.sampleRate));
+
 			if me.screen.screen > 0
 				oscreen = me.screen.screen - 1;
 			else
@@ -130,10 +133,10 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 			if exist('sM2','var')
 				me.operatorScreen = sM2;
 			elseif isempty(me.operatorScreen)
-				me.useOperatorScreen	= screenManager('pixelsPerCm',20,...
+				me.operatorScreen	= screenManager('pixelsPerCm',20,...
 					'disableSyncTests',true,'backgroundColour',me.screen.backgroundColour,...
 					'screen', oscreen, 'specialFlags', kPsychGUIWindow);
-				[w,h]					= Screen('WindowSize',me.operatorScreen.screen);
+				[w,h]					= Screen('WindowSize', me.operatorScreen.screen);
 				me.operatorScreen.windowed	= [20 20 round(w/1.8) round(h/1.8)];
 			end
 			me.secondScreen		= true;
@@ -255,8 +258,14 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 
 			cpos = me.calibration.calPositions;
 			vpos = me.calibration.valPositions;
-			vdata = cell(size(vpos,1),1);
-
+			
+			me.validationData = struct();
+			me.validationData(1).collected = false;
+			me.validationData(1).vpos = vpos;
+			me.validationData(1).time = datetime('now');
+			me.validationData(1).data = cell(size(vpos,1),1);
+			me.validationData(1).dataS = me.validationData(1).data;
+			
 			loop = true;
 			ref = s.screenVals.fps;
 			a = -1;
@@ -275,14 +284,9 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 							s.drawText('MENU: esc = exit | c = calibrate | v = validate | d = drift offset');
 							s.flip();
 							if me.useOperatorScreen
-								s2.drawText ('MENU: esc = exit | c = calibrate | v = validate | d = drift offset');
+								s2.drawText('MENU: esc = exit | c = calibrate | v = validate | d = drift offset');
 								if ~isempty(me.x);s2.drawSpot(0.75,[0 1 0.25 0.2],me.x,me.y);end
-								for j = 1:length(vdata)
-									s2.drawCross(1,[],vpos(j,1),vpos(j,2));
-									if ~isempty(vdata{j}) && size(vdata{j},1)==2
-										try drawDotsDegs(s2,vdata{j},0.3,[1 0.5 0 0.25]); end
-									end
-								end
+								drawValidationResults(me);
 								if mod(a,ref) == 0
 									trackerFlip(me,0,true);
 								else
@@ -309,7 +313,6 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 						oldrr = RestrictKeysForKbCheck([]);
 						driftOffset(me);
 						RestrictKeysForKbCheck(oldrr);
-						vdata = cell(size(vpos,1),1);
 						mode = 'menu';
 						WaitSecs(0.5);
 
@@ -393,7 +396,18 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 						f.xPositionOut = thisX;
 						f.yPositionOut = thisY;
 						update(f);
-						vdata = cell(size(vpos,1),1);
+
+						if me.validationData(end).collected == false
+							me.validationData(end).collected = true;
+							me.validationData(end).time = datetime('now');
+							me.validationData(end).data = cell(size(vpos,1),1);
+						else
+							me.validationData(end+1).collected = true;
+							me.validationData(end).vpos = vpos;
+							me.validationData(end).time = datetime('now');
+							me.validationData(end).data = cell(size(vpos,1),1);
+						end
+
 						resetFixationHistory(me);
 						nPositions = size(vpos,1);
 						while cloop
@@ -406,12 +420,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 							if me.useOperatorScreen
 								s2.drawText('VALIDATE: lshift = exit | rshift = sample | # = point');
 								if ~isempty(me.x); s2.drawSpot(0.75,[0 1 0.25 0.25],me.x,me.y); end
-								for j = 1:nPositions
-									s2.drawCross(1,[],vpos(j,1),vpos(j,2));
-									if ~isempty(vdata{j}) && size(vdata{j},1)==2
-										try drawDotsDegs(s2,vdata{j},0.3,[1 0.5 0 0.25]); end
-									end
-								end
+								drawValidationResults(me);
 								if mod(a,ref) == 0
 									trackerFlip(me,0,true);
 								else
@@ -451,12 +460,14 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 										trackerFlip(me,0,true);
 									end
 								elseif keys(sample)
-									if length(me.xAll) > 20 && lastK > 0 && lastK <= length(vdata)
-										 vdata{lastK} = [me.xAll(end-19:end); me.yAll(end-19:end)];
-									elseif ~isempty(me.xAll) && lastK > 0 && lastK <= length(vdata)
-										vdata{lastK} = [me.xAll; me.yAll];
+									if ~isempty(me.xAllRaw)
+										ld = length(me.xAllRaw);
+										sd = ld - me.rawSamples;
+										if sd < 1; sd = 1; end
+										me.validationData(end).data{lastK} = [me.xAllRaw(sd:ld); me.yAllRaw(sd:ld)];
+										me.validationData(end).dataS{lastK} = [me.xAll(end); me.yAll(end)];
 									end
-									rM.timedTTL;
+									rM.giveReward;
 									f.isVisible = false;
 									for ii=1:length(cpos);me.turnOffLED(ii,rM);end
 									thisPos = 0;
@@ -527,7 +538,9 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 				me.x			= me.toDegrees(sample.gx,'x');
 				me.y			= me.toDegrees(sample.gy,'y');
 				me.xAll			= [me.xAll me.x];
+				me.xAllRaw		= me.xAll;
 				me.yAll			= [me.yAll me.y];
+				me.yAllRaw		= me.yAll;
 				me.pupilAll		= [me.pupilAll me.pupil];
 				%if me.verbose;fprintf('>>X: %.2f | Y: %.2f | P: %.2f\n',me.x,me.y,me.pupil);end
 			elseif me.isConnected && me.isRecording
@@ -541,6 +554,8 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 				xy(1,:)			=  td(:,2)';
 				xy(2,:)			= -td(:,3)';
 				if ~isempty(xy)
+					me.xAllRaw	= [me.xAllRaw xy(1,:)];
+					me.yAllRaw	= [me.yAllRaw xy(2,:)];
 					sample.valid = true;
 					xy			= doSmoothing(me,xy);
 					sample.gx	= xy(1);
@@ -742,7 +757,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 
 						trialtick=trialtick+1;
 					end
-					if endExp == 0
+					if endExp == false
 						drawPhotoDiodeSquare(s,[0 0 0 1]);
 						vbl = flip(s);
 						trackerMessage(me,-1);

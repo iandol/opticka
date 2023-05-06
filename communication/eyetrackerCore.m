@@ -107,7 +107,7 @@ classdef eyetrackerCore < optickaCore
 	end
 
 	properties (Abstract)
-		%> info for calibration
+		%> info for setup / calibration
 		calibration
 	end
 	
@@ -177,9 +177,14 @@ classdef eyetrackerCore < optickaCore
 		pupilAll				= []
 		%> data streamed out from the Tobii
 		data					= struct()
+		%> validation data
+		validationData			= struct()
 	end
 	
 	properties (SetAccess = protected, GetAccess = ?optickaCore)
+		% samples before any smoothing
+		xAllRaw
+		yAllRaw
 		%> flipTick
 		flipTick				= 0
 		%> currentSample template
@@ -294,6 +299,8 @@ classdef eyetrackerCore < optickaCore
 			me.xAll				= [];
 			me.yAll				= [];
 			me.pupilAll			= [];
+			me.xAllRaw			= [];
+			me.yAllRaw			= [];
 		end
 		
 		% ===================================================================
@@ -947,8 +954,28 @@ classdef eyetrackerCore < optickaCore
 	
 	
 	%=======================================================================
-	methods (Access = protected) %------------------PRIVATE METHODS
+	methods (Access = protected) %------------------PROTECTED METHODS
 	%=======================================================================
+
+		function drawValidationResults(me)
+			if isempty(me.validationData); return; end
+			vd = me.validationData(end);
+			s = me.operatorScreen;
+			for j = 1:length(vd.vpos)
+				drawCross(s, 1,[],vd.vpos(j,1),vd.vpos(j,2));
+				if ~isempty(vd.data{j}) && size(vd.data{j},1)==2
+					x = vd.data{j}(1,:); y = vd.data{j}(2,:);
+					xd = vd.vpos(j,1) - median(x);
+					yd = vd.vpos(j,2) - median(y);
+					xv = rmse( x - median(x), 0);
+					yv = rmse( y - median(y), 0);
+					txt = sprintf('P: %.2f / %.2f A: %.2f / %.2f', xd, yd, xv, yv);
+					drawText(s,txt,vd.vpos(j,1)+0.5,vd.vpos(j,2)+0.5);
+					try drawDotsDegs(s,vd.data{j},0.2,[1 0.5 0 0.15]); end
+					try drawDotsDegs(s,vd.dataS{j},0.5,[1 1 0 0.35]); end
+				end
+			end
+		end
 		
 		% ===================================================================
 		%> @brief to visual degrees from pixels
