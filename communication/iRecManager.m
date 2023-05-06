@@ -465,7 +465,9 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 										sd = ld - me.rawSamples;
 										if sd < 1; sd = 1; end
 										me.validationData(end).data{lastK} = [me.xAllRaw(sd:ld); me.yAllRaw(sd:ld)];
-										me.validationData(end).dataS{lastK} = [me.xAll(end); me.yAll(end)];
+										l=length(me.xAll);
+										if l > 5; l = 5; end
+										me.validationData(end).dataS{lastK} = [me.xAll(end-l:end); me.yAll(end-l:end)];
 									end
 									rM.giveReward;
 									f.isVisible = false;
