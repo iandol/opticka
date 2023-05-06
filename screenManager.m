@@ -1979,24 +1979,28 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		function updateFontValues(me)
 			if me.isOpen
+				Screen('Preference', 'DefaultFontName', me.font.FontName);
+				Screen('Preference', 'TextRenderer', me.font.TextRenderer);
 				if me.useRetina
 					Screen('TextSize', me.win, me.font.TextSize*2);
 				else
-					Screen('TextSize', me.win, me.font.TextSize);
+					if IsWin
+						Screen('TextSize', me.win, ceil(me.font.TextSize/1.75));
+					else
+						Screen('TextSize', me.win, me.font.TextSize);
+					end
 				end
-				o = Screen('TextBackgroundColor', me.win, me.font.TextBackgroundColor);
-				o = Screen('TextColor', me.win, me.font.TextColor);
-				o = Screen('TextFont', me.win, me.font.FontName);
-				o = Screen('Preference', 'DefaultFontName', me.font.FontName);
-				o = Screen('Preference', 'TextRenderer', me.font.TextRenderer);
+				Screen('TextColor', me.win, me.font.TextColor);
+				Screen('TextBackgroundColor', me.win, me.font.TextBackgroundColor);
+				Screen('TextFont', me.win, me.font.FontName);
 			else
 				if me.useRetina
-					o = Screen('Preference', 'DefaultFontSize', me.font.TextSize*2);
+					Screen('Preference', 'DefaultFontSize', me.font.TextSize*2);
 				else
-					o = Screen('Preference', 'DefaultFontSize', me.font.TextSize);
+					Screen('Preference', 'DefaultFontSize', me.font.TextSize);
 				end
-				o = Screen('Preference', 'DefaultFontName', me.font.FontName);
-				o = Screen('Preference', 'TextRenderer', me.font.TextRenderer);
+				Screen('Preference', 'DefaultFontName', me.font.FontName);
+				Screen('Preference', 'TextRenderer', me.font.TextRenderer);
 			end
 		end
 		

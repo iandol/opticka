@@ -79,8 +79,8 @@ classdef audioManager < optickaCore
 				warning('NO valid file/dir name');
 			end
 
-			PsychPortAudio('Close');
 			InitializePsychSound(me.lowLatency);
+			try PsychPortAudio('Close'); end
 			me.devices = PsychPortAudio('GetDevices');
 
 			if me.device > length(me.devices)
