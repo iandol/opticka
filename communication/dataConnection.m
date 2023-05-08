@@ -1067,10 +1067,10 @@ classdef dataConnection < handle
 		% ===================================================================
 		function delete(me)
 			if me.cleanup == true
-				me.salutation('dataConnection delete Method','Cleaning up now...')
+				me.salutation('dataConnection delete Method','Cleaning up now...');
 				me.close;
 			else
-				me.salutation('dataConnection delete Method','Closing (no cleanup)...')
+				me.salutation('dataConnection delete Method','Closing (no cleanup)...');
 			end
 		end
 		

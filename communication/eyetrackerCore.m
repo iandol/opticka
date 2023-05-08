@@ -969,9 +969,9 @@ classdef eyetrackerCore < optickaCore
 					yd = abs(vd.vpos(j,2) - median(y));
 					xv = rmse( x - median(x), 0);
 					yv = rmse( y - median(y), 0);
-					txt = sprintf('P:%.1g %.1g A:%.2g %.2g', xd, yd, xv, yv);
-					drawText(s,txt,vd.vpos(j,1)+0.3,vd.vpos(j,2)+0.3);
+					txt = sprintf('A:%.1g %.1g P:%.2g %.2g', xd, yd, xv, yv);
 					try drawDotsDegs(s,vd.data{j},0.3,[1 0.5 0 0.15]); end
+					drawText(s,txt,vd.vpos(j,1)+0.3,vd.vpos(j,2)+0.3);
 					try drawDotsDegs(s,vd.dataS{j},0.5,[1 1 0 0.35]); end
 				end
 			end
