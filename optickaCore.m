@@ -53,6 +53,10 @@ classdef optickaCore < handle
 	properties (SetAccess = protected, GetAccess = protected, Transient = true)
 		%> Matlab version number, this is transient so it is not saved
 		mversion double = 0
+		%> sans font
+		sansFont
+		%> monoFont
+		monoFont
 	end
 	
 	%--------------------PROTECTED PROPERTIES----------%
@@ -94,7 +98,8 @@ classdef optickaCore < handle
 			me.uuid = num2str(dec2hex(floor((now - floor(now))*1e10))); %me.uuid = char(java.util.UUID.randomUUID)%128bit uuid
 			me.fullName_ = me.fullName; %cache fullName
 			me.mversion = str2double(regexp(version,'(?<ver>^\d\.\d[\d]?)','match','once'));
-			setPaths(me)
+			setPaths(me);
+			getFonts(me);
 		end
 		
 		% ===================================================================
@@ -650,9 +655,41 @@ classdef optickaCore < handle
 				me.paths.deploypath = ctfroot;
 			end
 		end
+
+		% ===================================================================
+		function getFonts(me)
+		%> @fn getFonts(me)
+		%> @brief Checks OS and assigns a sans and mono font
+			lf = listfonts;
+			if ismac
+				me.sansFont = 'Avenir Next';
+				me.monoFont = 'Menlo';
+			elseif ispc
+				me.sansFont = 'Calibri';
+				me.monoFont = 'Consolas';
+			else %linux
+				me.sansFont = 'Ubuntu'; 
+				me.monoFont = 'Ubuntu Mono';
+			end
+			if matches('Graublau Sans', lf)
+				me.sansFont = 'Graublau Sans';
+			elseif matches('Source Sans 3', lf)
+				me.sansFont = 'Source Sans 3';
+			elseif matches('Source Sans Pro', lf)
+				me.sansFont = 'Source Sans Pro';
+			end
+			if matches('Fira Code', lf)
+				me.monoFont = 'Fira Code';
+			elseif matches('Cascadia Code', lf)
+				me.monoFont = 'Cascadia Code';
+			elseif matches('JetBrains Mono', lf)
+				me.monoFont = 'JetBrains Mono';
+			end
+		end
 		
 		% ===================================================================
 		function out=toStructure(me)
+		%> @fn out=toStructure(me)
 		%> @brief Converts properties to a structure
 		%>
 		%>

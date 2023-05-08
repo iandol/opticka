@@ -25,11 +25,11 @@
 %> and responds to commands, allowing you to send data and EVAL commands on a
 %> remote machine...
 %>
-%> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2023 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef dataConnection < handle
-	%dataConnection Allows send/recieve over Ethernet
-	%   This uses the TCP/UDP library to manage connections between servers
+	% dataConnection Allows send/recieve over Ethernet
+	%   This uses the PNET library to manage connections between servers
 	%   and clients in Matlab
 	properties
 		%> Whether this object is a 'client' or 'server' (TCP). Normally UDP
@@ -51,8 +51,8 @@ classdef dataConnection < handle
 		dataOut			= []
 		%> the format the data is required
 		dataType		= 'string'
-		%> verbosity
-		verbosity		= 1
+		%> do we log to the command window?
+		verbosity		= 0
 		%> this is a mode where the object sits in a loop and can be
 		%> controlled by a remote matlab instance, which passes commands the
 		%> server can 'put' or 'eval'
@@ -92,7 +92,7 @@ classdef dataConnection < handle
 	properties (SetAccess = private, GetAccess = private)
 		allowedProperties = {'type','protocol','lPort','rPort','lAddress',...
 			'rAddress','autoOpen','dataType','verbosity','autoServer',...
-			'readTimeOut','writeTimeOut','cleanup'}
+			'readTimeOut','writeTimeOut','readSize','cleanup'}
 		remoteCmd = '--remote--'
 		breakCmd = '--break--'
 		busyCmd = '--busy--'

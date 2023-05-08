@@ -129,7 +129,7 @@ classdef screenManager < optickaCore
 											'TextColor',[0.95 0.95 0.95 1],...
 											'TextBackgroundColor',[0.2 0.3 0.4 1],...
 											'TextRenderer', 1,...
-											'FontName', 'Source Sans 3');
+											'FontName', 'Helvetica');
 	end
 
 	properties (SetAccess = private, GetAccess = public, Dependent = true)
@@ -235,9 +235,10 @@ classdef screenManager < optickaCore
 		%> @param varargin can be simple name value pairs, a structure or cell array
 		%> @return instance of the class.	
 		% ===================================================================
-			args = optickaCore.addDefaults(varargin,struct('name','screenManager'));
+			
+			args = optickaCore.addDefaults(varargin,struct('name','screenManager')); % parse varargin
 			me=me@optickaCore(args); %superclass constructor
-			me.parseArgs(args,me.allowedProperties);
+			me.parseArgs(args,me.allowedProperties); %check remaining properties from varargin
 			
 			try
 				AssertOpenGL
@@ -247,7 +248,11 @@ classdef screenManager < optickaCore
 				me.isPTB = false;
 				salutation(me,'CONSTRUCTOR','OpenGL support needed for PTB!!!',true)
 			end
+
+			me.font.FontName = me.monoFont;
+
 			prepareScreen(me);
+
 		end
 		
 		% ===================================================================
@@ -1980,13 +1985,18 @@ classdef screenManager < optickaCore
 		function updateFontValues(me)
 			if me.isOpen
 				Screen('Preference', 'DefaultFontName', me.font.FontName);
+				
 				Screen('Preference', 'TextRenderer', me.font.TextRenderer);
 				if me.useRetina
+					Screen('Preference', 'DefaultFontSize', me.font.TextSize*2);
 					Screen('TextSize', me.win, me.font.TextSize*2);
 				else
+
 					if IsWin
+						Screen('Preference', 'DefaultFontSize', ceil(me.font.TextSize/1.75));
 						Screen('TextSize', me.win, ceil(me.font.TextSize/1.75));
 					else
+						Screen('Preference', 'DefaultFontSize', me.font.TextSize);
 						Screen('TextSize', me.win, me.font.TextSize);
 					end
 				end

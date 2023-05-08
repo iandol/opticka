@@ -27,7 +27,7 @@ classdef dotsStimulus < baseStimulus
 		%> anti-aliasing)
 		dotType				= 3
 		%> whether to use a circular mask or not
-		mask				= false
+		mask				= true
 		%> whether to use a procedural (true) or texture (false) mask
 		maskIsProcedural	= true
 		%> colour of the mask, empty sets mask colour to = background of screen

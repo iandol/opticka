@@ -322,6 +322,10 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 						thisY = 0;
 						lastK = 0;
 						thisPos = 1;
+
+						me.validationData = struct();
+						me.validationData(1).collected = false;
+
 						f.xPositionOut = cpos(thisPos,1);
 						f.yPositionOut = cpos(thisPos,2);
 						update(f);
@@ -399,14 +403,13 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 
 						if me.validationData(end).collected == false
 							me.validationData(end).collected = true;
-							me.validationData(end).time = datetime('now');
-							me.validationData(end).data = cell(size(vpos,1),1);
 						else
 							me.validationData(end+1).collected = true;
-							me.validationData(end).vpos = vpos;
-							me.validationData(end).time = datetime('now');
-							me.validationData(end).data = cell(size(vpos,1),1);
 						end
+						me.validationData(end).vpos = vpos;
+						me.validationData(end).time = datetime('now');
+						me.validationData(end).data = cell(size(vpos,1),1);
+						me.validationData(end).dataS = cell(size(vpos,1),1);
 
 						resetFixationHistory(me);
 						nPositions = size(vpos,1);
@@ -671,6 +674,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 			try
 				if ~me.isConnected; initialise(me);end
 				s = me.screen; s2 = me.operatorScreen;
+				s.font.FontName = me.monoFont;
 				if exist('forcescreen','var'); close(s); s.screen = forcescreen; end
 				s.disableSyncTests = true; s2.disableSyncTests = true;
 				if ~s.isOpen; open(s); end
