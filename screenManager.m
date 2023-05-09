@@ -125,9 +125,9 @@ classdef screenManager < optickaCore
 		hideFlash logical					= false
 		%> Details for drawing fonts, either sets defaults if window is closed or
 		%> or updates values if window open...
-		font struct							= struct('TextSize',20,...
+		font struct							= struct('TextSize',16,...
 											'TextColor',[0.95 0.95 0.95 1],...
-											'TextBackgroundColor',[0.2 0.3 0.4 1],...
+											'TextBackgroundColor',[0.2 0.3 0.3 0.8],...
 											'TextRenderer', 1,...
 											'FontName', 'Helvetica');
 	end
@@ -1991,10 +1991,9 @@ classdef screenManager < optickaCore
 					Screen('Preference', 'DefaultFontSize', me.font.TextSize*2);
 					Screen('TextSize', me.win, me.font.TextSize*2);
 				else
-
 					if IsWin
-						Screen('Preference', 'DefaultFontSize', ceil(me.font.TextSize/1.75));
-						Screen('TextSize', me.win, ceil(me.font.TextSize/1.75));
+						Screen('Preference', 'DefaultFontSize', ceil(me.font.TextSize/1.6));
+						Screen('TextSize', me.win, ceil(me.font.TextSize/1.6));
 					else
 						Screen('Preference', 'DefaultFontSize', me.font.TextSize);
 						Screen('TextSize', me.win, me.font.TextSize);

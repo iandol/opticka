@@ -252,9 +252,9 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 			seven = KbName('7&'); eight = KbName('8*'); nine = KbName('9(');
 			zero = KbName('0)'); esc = KbName('escape'); cal = KbName('c');
 			val = KbName('v'); dr = KbName('d'); menu = KbName('LeftShift');
-			sample = KbName('RightShift');
+			sample = KbName('RightShift'); shot = KbName('F1');
 			oldr = RestrictKeysForKbCheck([one two three four five six seven ...
-				eight nine zero esc cal val dr menu sample]);
+				eight nine zero esc cal val dr menu sample shot]);
 
 			cpos = me.calibration.calPositions;
 			vpos = me.calibration.valPositions;
@@ -281,10 +281,10 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 						while cloop
 							a = a + 1;
 							me.getSample();
-							s.drawText('MENU: esc = exit | c = calibrate | v = validate | d = drift offset');
+							s.drawText('MENU: esc = exit | c = calibrate | v = validate | d = drift offset | F1 = screenshot');
 							s.flip();
 							if me.useOperatorScreen
-								s2.drawText('MENU: esc = exit | c = calibrate | v = validate | d = drift offset');
+								s2.drawText('MENU: esc = exit | c = calibrate | v = validate | d = drift offset | F1 = screenshot');
 								if ~isempty(me.x);s2.drawSpot(0.75,[0 1 0.25 0.2],me.x,me.y);end
 								drawValidationResults(me);
 								if mod(a,ref) == 0
@@ -304,6 +304,9 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 									mode = 'validate'; cloop = false;
 								elseif keys(dr)
 									mode = 'driftoffset'; cloop = false;
+								elseif keys(shot)
+									filename=[me.paths.parent filesep me.name '_' datestr(now,'YYYY-mm-DD-HH-MM-SS') '.png'];
+									captureScreen(s2, filename);
 								end
 							end
 						end
@@ -671,6 +674,8 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 			osmoothing			= me.smoothing;
 			oldexc				= me.exclusionZone;
 			oldfixinit			= me.fixInit;
+			oldname				= me.name;
+			me.name				= 'iRecManager-runDemo';
 			try
 				if ~me.isConnected; initialise(me);end
 				s = me.screen; s2 = me.operatorScreen;
@@ -806,6 +811,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 				me.smoothing = osmoothing;
 				me.exclusionZone = oldexc;
 				me.fixInit = oldfixinit;
+				me.name = oldname;
 				clear s s2 o
 			catch ME
 				stopRecording(me);
@@ -813,6 +819,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 				me.smoothing = osmoothing;
 				me.exclusionZone = oldexc;
 				me.fixInit = oldfixinit;
+				me.name = oldname;
 				ListenChar(0);Priority(0);ShowCursor;
 				getReport(ME)
 				try close(s); end
