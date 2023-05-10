@@ -56,6 +56,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 	end
 
 	properties (Hidden = true)
+		% for led calibration, which arduino pin to start from
 		startPin		= 3
 	end
 	
@@ -69,7 +70,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		% stimulus used for calibration
 		calStim			= []
 		%> allowed properties passed to object upon construction
-		allowedProperties	= {'calibration', 'smoothing'}
+		allowedProperties	= {'calibration', 'useLEDs', 'smoothing'}
 	end
 	
 	%=======================================================================
@@ -102,13 +103,13 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		end
 		
 		% ===================================================================
-		function success = initialise(me,sM,sM2)
+		function success = initialise(me, sM, sM2)
 		%> @fn initialise(me, sM, sM2)
 		%> @brief initialise 
 		%>
-		%> @param sM - screenManager object we will use
-		%> @param sM2 - a second screenManager used during calibration, if
-		%> none is provided a default will be made.
+		%> @param sM - screenManager for the subject
+		%> @param sM2 - a second screenManager used for operator, if
+		%>  none is provided a default will be made.
 		% ===================================================================
 			
 			[rM, aM] = initialiseGlobals(me, false, true);
@@ -133,11 +134,11 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 			if exist('sM2','var')
 				me.operatorScreen = sM2;
 			elseif isempty(me.operatorScreen)
-				me.operatorScreen	= screenManager('pixelsPerCm',20,...
+				me.operatorScreen = screenManager('pixelsPerCm',24,...
 					'disableSyncTests',true,'backgroundColour',me.screen.backgroundColour,...
 					'screen', oscreen, 'specialFlags', kPsychGUIWindow);
-				[w,h]					= Screen('WindowSize', me.operatorScreen.screen);
-				me.operatorScreen.windowed	= [20 20 round(w/1.8) round(h/1.8)];
+				[w,h]			= Screen('WindowSize',me.operatorScreen.screen);
+				me.operatorScreen.windowed	= [20 20 round(w/1.6) round(h/1.8)];
 			end
 			me.secondScreen		= true;
 			if ismac; me.operatorScreen.useRetina = true; end

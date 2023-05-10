@@ -208,20 +208,20 @@ prefixExitFcn = {
 %========================================================NOSTOP
 %========================================================
 
-nsEntryFcn = {
+nsfEntryFcn = {
 	@()trackerDrawStatus(eT,'NOSTOP', stims.stimulusPositions);
 	@()logRun(me,'NOSTOP-FIXATE');
 };
 
 %--------------------fix within
-nsFcn = {
+nsfFcn = {
 	@()draw(stims{2}); %draw stimuli
 	@()trackerDrawEyePosition(eT);
 	@()drawPhotoDiode(s,[0 0 0]);
 };
 
 %--------------------test we are fixated for a certain length of time
-nsFixFcn = {
+nsfFixFcn = {
 	% this command performs the logic to search and then maintain fixation
 	% inside the fixation window. The eyetracker parameters are defined above.
 	% If the subject does initiate and then maintain fixation, then 'correct'
@@ -233,23 +233,23 @@ nsFixFcn = {
 };
 
 %--------------------exit fixation phase
-nsExitFcn = {
+nsfExitFcn = {
 	@()updateFixationTarget(me, true, tS.targetFixInit, tS.targetFixTime, tS.targetFixRadius, tS.strict);
 	@()hide(stims{2});
 	@()show(stims{1});
 }; 
 
-ns2EntryFcn = { @()doStrobe(me,true); };
+nsEntryFcn = { @()doStrobe(me,true); };
 
 %--------------------fix within
-ns2Fcn = {
+nsFcn = {
 	@()draw(stims{1}); %draw stimuli
 	@()trackerDrawEyePosition(eT);
 	@()drawPhotoDiode(s,[1 1 1]);
 };
 
 %--------------------test we are fixated for a certain length of time
-ns2FixFcn = {
+nsFixFcn = {
 	% this command performs the logic to search and then maintain fixation
 	% inside the fixation window. The eyetracker parameters are defined above.
 	% If the subject does initiate and then maintain fixation, then 'correct'
@@ -261,7 +261,7 @@ ns2FixFcn = {
 };
 
 %--------------------exit fixation phase
-ns2ExitFcn = { 
+nsExitFcn = { 
 	@()setStrobeValue(me,255); 
 	@()doStrobe(me,true);
 }; 
@@ -465,15 +465,15 @@ stateInfoTmp = {
 %---------------------------------------------------------------------------------------------
 'prefix'	'nostop'	1		prefixEntryFcn	prefixFcn		{}				prefixExitFcn;
 %---------------------------------------------------------------------------------------------
-'nostopfix'	'breakfix'	8		nsEntryFcn		nsFcn			nsFixFcn		nsExitFcn;
-'nostop'	'breakfix'	8		ns2EntryFcn		ns2Fcn			ns2FixFcn		ns2ExitFcn;
-'stopfix'	'breakfix'	8		sEntryFcn		sFcn			sFixFcn			sExitFcn;
-'stop'		'breakfix'	8		s2EntryFcn		s2Fcn			s2FixFcn		s2ExitFcn;
+'nostopfix'	'breakfix'	8		nsfEntryFcn		nsfFcn			nsfFixFcn		nsfExitFcn;
+'nostop'	'breakfix'	8		nsEntryFcn		nsFcn			nsFixFcn		nsExitFcn;
+'stopfix'	'breakfix'	8		sfEntryFcn		sfFcn			sfFixFcn		sfExitFcn;
+'stop'		'breakfix'	8		sEntryFcn		sFcn			sFixFcn			sExitFcn;
 %---------------------------------------------------------------------------------------------
 'breakfix'	'timeout'	0.5		breakEntryFcn	incFcn			{}				breakExitFcn;
 'incorrect'	'timeout'	0.5		incEntryFcn		incFcn			{}				incExitFcn;
 'correct'	'prefix'	0.5		correctEntryFcn	correctFcn		{}				correctExitFcn;
-'timeout'	'prefix'	tS.timeOut	{}				incFcn			{}				{};
+'timeout'	'prefix'	tS.tOut	{}				incFcn			{}				{};
 %---------------------------------------------------------------------------------------------
 'calibrate'	'pause'		0.5		calibrateFcn	{}				{}				{};
 'drift'		'pause'		0.5		driftFcn		{}				{}				{};

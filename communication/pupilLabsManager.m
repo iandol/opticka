@@ -31,8 +31,12 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 	properties (SetAccess = protected, GetAccess = public)
 		%> type of eyetracker
 		type			= 'pupil'
-		%> zeromq interface object 
+		%> communication socket 
 		socket
+		%> subscription socket
+		sub
+		%> publishing socket
+		pub
 	end
 
 	%---------------PUBLIC PROPERTIES---------------%
@@ -50,7 +54,7 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 						'manual', false,...
 						'timeout', 1000)
 		%> WIP we can optionally drive physical LEDs for calibration, each LED
-		%> is triggered by the me.calibration.calPositions order
+		%> is triggered by the me.calibration.calPositions order.
 		useLEDs			= false
 	end
 
@@ -63,6 +67,12 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 	properties (SetAccess = protected, GetAccess = protected)
 		% zmq context
 		ctx
+		%> endpoint
+		endpoint
+		%> subscribe endpoint
+		subEndpoint
+		%> subscribe endpoint
+		pubEndpoint
 		% screen values taken from screenManager
 		sv				= []
 		%> tracker time stamp
@@ -87,7 +97,7 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 		%> @return instance of the class.
 		% ===================================================================
 			args = optickaCore.addDefaults(varargin,struct('name','PupilLabs',...
-				'useOperatorScreen',true,'sampleRate',200));
+				'useOperatorScreen',true,'sampleRate',120));
 			me=me@eyetrackerCore(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
 			me.smoothing.sampleRate = me.sampleRate;
@@ -102,9 +112,9 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 		%> @fn initialise(me, sM, sM2)
 		%> @brief initialise 
 		%>
-		%> @param sM - screenManager for the subjectg
+		%> @param sM - screenManager for the subject
 		%> @param sM2 - a second screenManager used for operator, if
-		%> none is provided a default will be made.
+		%>  none is provided a default will be made.
 		% ===================================================================
 			
 			[rM, aM] = initialiseGlobals(me, false, true);
@@ -119,6 +129,8 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 			me.ppd_					= me.screen.ppd;
 			if me.screen.isOpen; me.win	= me.screen.win; end
 
+			me.rawSamples = round( 0.2 / ( 1 / me.sampleRate ) );
+
 			if me.screen.screen > 0
 				oscreen = me.screen.screen - 1;
 			else
@@ -127,7 +139,7 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 			if exist('sM2','var')
 				me.operatorScreen = sM2;
 			elseif isempty(me.operatorScreen)
-				me.operatorScreen = screenManager('pixelsPerCm',20,...
+				me.operatorScreen = screenManager('pixelsPerCm',24,...
 					'disableSyncTests',true,'backgroundColour',me.screen.backgroundColour,...
 					'screen', oscreen, 'specialFlags', kPsychGUIWindow);
 				[w,h]			= Screen('WindowSize',me.operatorScreen.screen);
@@ -142,14 +154,22 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 				me.salutation('Initialise', 'Running Pupil Labs in Dummy Mode', true);
 				me.isConnected = false;
 			else
-				endpoint = ['tcp://' me.calibration.ip ':' me.calibration.port];
+				me.endpoint = ['tcp://' me.calibration.ip ':' str2num(me.calibration.port)];
 				me.ctx = zmq.core.ctx_new();
 				me.socket = zmq.core.socket(me.ctx, 'ZMQ_REQ');
 				zmq.core.setsockopt(me.socket, 'ZMQ_RCVTIMEO', me.calibration.timeout);
-				fprintf('--->>> pupilLabsManager: Connecting to %s\n', endpoint);
-				zmq.core.connect(me.socket, endpoint);
-				checkRoundTrip(me);
-				SetPupilTime(me);
+				fprintf('--->>> pupilLabsManager: Connecting to %s\n', me.endpoint);
+				err = zmq.core.connect(me.socket, me.endpoint);
+				if err == -1
+					warning('Cannot Connect to Pupil Core!!!');
+					me.isDummy = true;
+					me.isConnected = false;
+				else
+					subscribe(me);
+					checkRoundTrip(me);
+					SetPupilTime(me);
+					me.isConnected = true;
+				end
 			end
 
 			if me.useLEDs
@@ -186,14 +206,13 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 			if me.useOperatorScreen && isa(me.operatorScreen,'screenManager'); open(me.operatorScreen); end
 			s = me.screen;
 			if me.useOperatorScreen; s2 = me.operatorScreen; end
-			me.fInc = round(s.screenVals.fps/6);
 			me.win = me.screen.win;
 			me.ppd_ = me.screen.ppd;
 
 			if ischar(me.calibration.calPositions); me.calibration.calPositions = str2num(me.calibration.calPositions); end
 			if ischar(me.calibration.valPositions); me.calibration.valPositions = str2num(me.calibration.valPositions); end
 
-			fprintf('\n===>>> CALIBRATING IREC... <<<===\n');
+			fprintf('\n===>>> CALIBRATING PUPIL CORE... <<<===\n');
 			
 			if strcmp(me.calibration.stimulus,'movie')
 				if isempty(me.stimulus.movie) || ~isa(me.stimulus.movie,'movieStimulus')
@@ -210,6 +229,8 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 
 			f = me.calStim;
 
+			if true; return; end
+
 			hide(f);
 			setup(f, me.screen);
 
@@ -221,14 +242,20 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 			seven = KbName('7&'); eight = KbName('8*'); nine = KbName('9(');
 			zero = KbName('0)'); esc = KbName('escape'); cal = KbName('c');
 			val = KbName('v'); dr = KbName('d'); menu = KbName('LeftShift');
-			sample = KbName('RightShift');
+			sample = KbName('RightShift'); shot = KbName('F1');
 			oldr = RestrictKeysForKbCheck([one two three four five six seven ...
-				eight nine zero esc cal val dr menu sample]);
+				eight nine zero esc cal val dr menu sample shot]);
 
 			cpos = me.calibration.calPositions;
 			vpos = me.calibration.valPositions;
-			vdata = cell(size(vpos,1),1);
-
+			
+			me.validationData = struct();
+			me.validationData(1).collected = false;
+			me.validationData(1).vpos = vpos;
+			me.validationData(1).time = datetime('now');
+			me.validationData(1).data = cell(size(vpos,1),1);
+			me.validationData(1).dataS = me.validationData(1).data;
+			
 			loop = true;
 			ref = s.screenVals.fps;
 			a = -1;
@@ -244,17 +271,12 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 						while cloop
 							a = a + 1;
 							me.getSample();
-							s.drawText('MENU: esc = exit | c = calibrate | v = validate | d = drift offset');
+							s.drawText('MENU: esc = exit | c = calibrate | v = validate | d = drift offset | F1 = screenshot');
 							s.flip();
 							if me.useOperatorScreen
-								s2.drawText ('MENU: esc = exit | c = calibrate | v = validate | d = drift offset');
+								s2.drawText('MENU: esc = exit | c = calibrate | v = validate | d = drift offset | F1 = screenshot');
 								if ~isempty(me.x);s2.drawSpot(0.75,[0 1 0.25 0.2],me.x,me.y);end
-								for j = 1:length(vdata)
-									s2.drawCross(1,[],vpos(j,1),vpos(j,2));
-									if ~isempty(vdata{j}) && size(vdata{j},1)==2
-										try drawDotsDegs(s2,vdata{j},0.3,[1 0.5 0 0.25]); end
-									end
-								end
+								drawValidationResults(me);
 								if mod(a,ref) == 0
 									trackerFlip(me,0,true);
 								else
@@ -272,6 +294,9 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 									mode = 'validate'; cloop = false;
 								elseif keys(dr)
 									mode = 'driftoffset'; cloop = false;
+								elseif keys(shot)
+									filename=[me.paths.parent filesep me.name '_' datestr(now,'YYYY-mm-DD-HH-MM-SS') '.png'];
+									captureScreen(s2, filename);
 								end
 							end
 						end
@@ -281,7 +306,6 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 						oldrr = RestrictKeysForKbCheck([]);
 						driftOffset(me);
 						RestrictKeysForKbCheck(oldrr);
-						vdata = cell(size(vpos,1),1);
 						mode = 'menu';
 						WaitSecs(0.5);
 
@@ -291,6 +315,10 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 						thisY = 0;
 						lastK = 0;
 						thisPos = 1;
+
+						me.validationData = struct();
+						me.validationData(1).collected = false;
+
 						f.xPositionOut = cpos(thisPos,1);
 						f.yPositionOut = cpos(thisPos,2);
 						update(f);
@@ -365,7 +393,17 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 						f.xPositionOut = thisX;
 						f.yPositionOut = thisY;
 						update(f);
-						vdata = cell(size(vpos,1),1);
+
+						if me.validationData(end).collected == false
+							me.validationData(end).collected = true;
+						else
+							me.validationData(end+1).collected = true;
+						end
+						me.validationData(end).vpos = vpos;
+						me.validationData(end).time = datetime('now');
+						me.validationData(end).data = cell(size(vpos,1),1);
+						me.validationData(end).dataS = cell(size(vpos,1),1);
+
 						resetFixationHistory(me);
 						nPositions = size(vpos,1);
 						while cloop
@@ -378,12 +416,7 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 							if me.useOperatorScreen
 								s2.drawText('VALIDATE: lshift = exit | rshift = sample | # = point');
 								if ~isempty(me.x); s2.drawSpot(0.75,[0 1 0.25 0.25],me.x,me.y); end
-								for j = 1:nPositions
-									s2.drawCross(1,[],vpos(j,1),vpos(j,2));
-									if ~isempty(vdata{j}) && size(vdata{j},1)==2
-										try drawDotsDegs(s2,vdata{j},0.3,[1 0.5 0 0.25]); end
-									end
-								end
+								drawValidationResults(me);
 								if mod(a,ref) == 0
 									trackerFlip(me,0,true);
 								else
@@ -423,12 +456,16 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 										trackerFlip(me,0,true);
 									end
 								elseif keys(sample)
-									if length(me.xAll) > 20 && lastK > 0 && lastK <= length(vdata)
-										 vdata{lastK} = [me.xAll(end-19:end); me.yAll(end-19:end)];
-									elseif ~isempty(me.xAll) && lastK > 0 && lastK <= length(vdata)
-										vdata{lastK} = [me.xAll; me.yAll];
+									if ~isempty(me.xAllRaw)
+										ld = length(me.xAllRaw);
+										sd = ld - me.rawSamples;
+										if sd < 1; sd = 1; end
+										me.validationData(end).data{lastK} = [me.xAllRaw(sd:ld); me.yAllRaw(sd:ld)];
+										l=length(me.xAll);
+										if l > 5; l = 5; end
+										me.validationData(end).dataS{lastK} = [me.xAll(end-l:end); me.yAll(end-l:end)];
 									end
-									rM.timedTTL;
+									rM.giveReward;
 									f.isVisible = false;
 									for ii=1:length(cpos);me.turnOffLED(ii,rM);end
 									thisPos = 0;
@@ -507,7 +544,9 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 				me.x			= me.toDegrees(sample.gx,'x');
 				me.y			= me.toDegrees(sample.gy,'y');
 				me.xAll			= [me.xAll me.x];
+				me.xAllRaw		= me.xAll;
 				me.yAll			= [me.yAll me.y];
+				me.yAllRaw		= me.yAll;
 				me.pupilAll		= [me.pupilAll me.pupil];
 				%if me.verbose;fprintf('>>X: %.2f | Y: %.2f | P: %.2f\n',me.x,me.y,me.pupil);end
 			elseif me.isConnected && me.isRecording
@@ -521,6 +560,8 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 				xy(1,:)			=  td(:,2)';
 				xy(2,:)			= -td(:,3)';
 				if ~isempty(xy)
+					me.xAllRaw	= [me.xAllRaw xy(1,:)];
+					me.yAllRaw	= [me.yAllRaw xy(2,:)];
 					sample.valid = true;
 					xy			= doSmoothing(me,xy);
 					sample.gx	= xy(1);
@@ -589,12 +630,15 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 		% ===================================================================
 			try 
 				try stopRecording(me); end
-				try zmq.core.disconnect(me.socket, endpoint); end
+				try unsubscribe(me); end
+				try zmq.core.disconnect(me.socket, me.endpoint); end
 				try zmq.core.close(me.socket); end
 				try zmq.core.ctx_shutdown(me.ctx); end
 				try zmq.core.ctx_term(me.ctx); end
 
 				me.socket = [];
+				me.sub = []; me.pub = [];
+				me.subEndpoint = []; me.pubEndpoint = [];
 				me.ctx = [];
 
 				me.isConnected = false;
@@ -608,7 +652,8 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 				me.isConnected = false;
 				me.isRecording = false;
 				try stopRecording(me); end
-				try zmq.core.disconnect(me.socket, endpoint); end
+				try unsubscribe(me); end
+				try zmq.core.disconnect(me.socket, me.endpoint); end
 				try zmq.core.close(me.socket); end
 				try zmq.core.ctx_shutdown(me.ctx); end
 				try zmq.core.ctx_term(me.ctx); end
@@ -639,9 +684,12 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 			osmoothing			= me.smoothing;
 			oldexc				= me.exclusionZone;
 			oldfixinit			= me.fixInit;
+			oldname				= me.name;
+			me.name				= 'pupilLabs-runDemo';
 			try
 				if ~me.isConnected; initialise(me);end
 				s = me.screen; s2 = me.operatorScreen;
+				s.font.FontName = me.monoFont;
 				if exist('forcescreen','var'); close(s); s.screen = forcescreen; end
 				s.disableSyncTests = true; s2.disableSyncTests = true;
 				if ~s.isOpen; open(s); end
@@ -730,7 +778,7 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 
 						trialtick=trialtick+1;
 					end
-					if endExp == 0
+					if endExp == false
 						drawPhotoDiodeSquare(s,[0 0 0 1]);
 						vbl = flip(s);
 						trackerMessage(me,-1);
@@ -773,6 +821,7 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 				me.smoothing = osmoothing;
 				me.exclusionZone = oldexc;
 				me.fixInit = oldfixinit;
+				me.name = oldname;
 				clear s s2 o
 			catch ME
 				stopRecording(me);
@@ -780,6 +829,7 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 				me.smoothing = osmoothing;
 				me.exclusionZone = oldexc;
 				me.fixInit = oldfixinit;
+				me.name = oldname;
 				ListenChar(0);Priority(0);ShowCursor;
 				getReport(ME)
 				try close(s); end
@@ -940,22 +990,61 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 	methods (Access = private) %------------------PRIVATE METHODS
 	%=======================================================================
 		
-		function checkRoundtrip(me)
-			if me.isConnected
-				tt=tic; % Measure round trip delay
-				zmq.core.send(mesocket, uint8('t'));
-				result = zmq.core.recv(mesocket);
-				fprintf('--->>> Returned: %s\n', char(result));
-				fprintf('--->>> Round trip command delay: %.2f\n', str2num(toc(tt)*1000));
+		function subscribe(me)
+			if ~me.isConnected; return; end
+			zmq.core.send(me.socket, uint8('SUB_PORT'));
+			subPort = char(zmq.core.recv(me.socket));
+			zmq.core.send(me.socket, uint8('PUB_PORT'));
+			pubPort = char(zmq.core.recv(me.socket));
+			me.subEndpoint = ['tcp://' me.calibration.ip ':' subPort];
+			me.pubEndpoint = ['tcp://' me.calibration.ip ':' pubPort];
+			fprintf('--->>> Received sub/pub port: %s/s\n', subPort, pubPort);
+			me.sub = zmq.core.socket(me.ctx, 'ZMQ_SUB');
+			me.pub = zmq.core.socket(me.ctx, 'ZMQ_PUB');
+			zmq.core.setsockopt(me.sub, 'ZMQ_RCVTIMEO', me.calibration.timeout);
+			zmq.core.setsockopt(me.pub, 'ZMQ_RCVTIMEO', me.calibration.timeout);
+			
+			err = zmq.core.connect(me.sub, me.subEndpoint);
+			assert(err==0,'--->>> PupilLabs: Cannot subscribe to data stream!');
+
+			zmq.core.setsockopt(me.sub, 'ZMQ_SUBSCRIBE', 'pupil.');
+			zmq.core.setsockopt(me.sub, 'ZMQ_SUBSCRIBE', 'gaze.');
+			zmq.core.setsockopt(me.sub, 'ZMQ_SUBSCRIBE', 'notify.');
+
+			err = zmq.core.connect(me.pub, me.pubEndpoint);
+			assert(err==0,'--->>> PupilLabs: Cannot subscribe to Publish stream!');
+		end
+
+		function unsubscribe(me)
+
+			try
+				zmq.core.disconnect(me.sub, me.subEndpoint);
+				zmq.core.close(me.sub);
+				fprintf('--->>> PupilLabs: Disconnected from SUB: %s\n', me.subEndpoint);
 			end
+
+			try
+				zmq.core.disconnect(me.pub, me.pubEndpoint);
+				zmq.core.close(me.psub);
+				fprintf('--->>> PupilLabs: Disconnected from PUB: %s\n', me.pubEndpoint);
+			end
+
+		end
+
+		function checkRoundTrip(me)
+			if ~me.isConnected; return; end
+			tt=tic; % Measure round trip delay
+			zmq.core.send(me.socket, uint8('t'));
+			result = zmq.core.recv(me.socket);
+			fprintf('--->>> Round trip command delay: %.2f\n', str2num(toc(tt)*1000));
+			fprintf('--->>> Returned: %s\n', char(result));
 		end
 
 		function SetPupilTime(me)
-			if me.isConnected
-				zmq.core.send(me.socket, uint8('T 0.0'));
-				result = zmq.core.recv(me.socket);
-				fprintf('--->>> setPupilTime: %s\n', char(result));
-			end
+			if ~me.isConnected; return; end
+			zmq.core.send(me.socket, uint8('T 0.0'));
+			result = zmq.core.recv(me.socket);
+			fprintf('--->>> setPupilTime: %s\n', char(result));
 		end
 
 		function turnOnLED(me, val, rM)

@@ -340,12 +340,13 @@ stimExitFcn = {
 %--------------------if the subject is correct (small reward)
 correctEntryFcn = {
 	@()giveReward(rM); % send a reward
-	@()beep(aM, tS.correctSound); % correct beep
 	@()trackerMessage(eT,'END_RT'); %send END_RT message to tracker
 	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.CORRECT)); %send TRIAL_RESULT message to tracker
 	@()trackerDrawStatus(eT, 'CORRECT! :-)');
+	@()needFlipTracker(me, 0); %for operator screen stop flip
 	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
+	@()beep(aM, tS.correctSound); % correct beep
 	@()needEyeSample(me,false); % no need to collect eye data until we start the next trial
 	@()hide(stims); % hide all stims
 	@()logRun(me,'CORRECT'); % print current trial info
@@ -376,6 +377,7 @@ incEntryFcn = {
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.INCORRECT));
 	@()trackerDrawStatus(eT,'INCORRECT! :-(', stims.stimulusPositions, 0);
+	@()needFlipTracker(me, 0); %for operator screen stop flip
 	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()needEyeSample(me,false);
