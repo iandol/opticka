@@ -65,6 +65,7 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 	
 	%--------------------PROTECTED PROPERTIES----------%
 	properties (SetAccess = protected, GetAccess = protected)
+		rawSamples		= []
 		% zmq context
 		ctx
 		%> endpoint
@@ -162,6 +163,7 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 				err = zmq.core.connect(me.socket, me.endpoint);
 				if err == -1
 					warning('Cannot Connect to Pupil Core!!!');
+					close(me);
 					me.isDummy = true;
 					me.isConnected = false;
 				else
@@ -1015,20 +1017,39 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 			assert(err==0,'--->>> PupilLabs: Cannot subscribe to Publish stream!');
 		end
 
-		function unsubscribe(me)
 
+		function unsubscribe(me)
 			try
 				zmq.core.disconnect(me.sub, me.subEndpoint);
 				zmq.core.close(me.sub);
 				fprintf('--->>> PupilLabs: Disconnected from SUB: %s\n', me.subEndpoint);
 			end
-
 			try
 				zmq.core.disconnect(me.pub, me.pubEndpoint);
 				zmq.core.close(me.psub);
 				fprintf('--->>> PupilLabs: Disconnected from PUB: %s\n', me.pubEndpoint);
 			end
+		end
 
+		function [topic, payload] = receiveMessage(me)
+			% Use socket to receive topics and their messages
+			% Messages are 2-frame zmq messages that include the topic
+			% and the message payload as a msgpack encoded string.
+			topic = []; payload = [];
+			topic = char(zmq.core.recv(me.sub), 255, 'ZMQ_DONTWAIT');
+			lastwarn('');  % reset last warning
+			payload = zmq.core.recv(me.sub, 1024, 'ZMQ_DONTWAIT');  % receive payload
+			[~, warnId] = lastwarn;  % fetch possible buffer length warning
+			if isequal(warnId, 'zmq:core:recv:bufferTooSmall')
+    			payload = false;  % set payload to false since it is incomplete
+				disp('Buffer too small');
+			else
+    			payload = parsemsgpack(payload);  % parse payload
+			end
+		end
+
+		function msgs = flushBuffer(me)
+			topic
 		end
 
 		function checkRoundTrip(me)

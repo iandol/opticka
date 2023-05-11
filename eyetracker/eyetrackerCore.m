@@ -88,7 +88,7 @@ classdef eyetrackerCore < optickaCore
 		sampleRate			= 500
 		%> start eyetracker in dummy mode?
 		isDummy				= false
-		%> do we record and retrieve eyetracker EDF file?
+		%> do we record and/or retrieve eyetracker data with remote interface?
 		recordData			= true
 		%> use an operator screen for online display etc.
 		useOperatorScreen	= false
@@ -981,7 +981,7 @@ classdef eyetrackerCore < optickaCore
 						end
 						drawLines(s,xyl,0.1,[0.95 0.65 0 0.1]); 
 						drawDotsDegs(s,vd.dataS{j},0.5,[1 1 0 0.35]);
-						drawText(s,txt,vd.vpos(j,1)+0.3,vd.vpos(j,2)+0.3);
+						drawText(s,txt,vd.vpos(j,1)-2.5,vd.vpos(j,2)+0.75);
 					end
 				end
 			end
