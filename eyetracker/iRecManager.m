@@ -87,7 +87,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		%> @return instance of the class.
 		% ===================================================================
 			args = optickaCore.addDefaults(varargin,struct('name','iRec',...
-				'useOperatorScreen',true,'sampleRate',200));
+				'useOperatorScreen',true,'sampleRate',500,'saveFile',''));
 			me=me@eyetrackerCore(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
 			me.smoothing.sampleRate = me.sampleRate;

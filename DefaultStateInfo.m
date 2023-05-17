@@ -339,17 +339,12 @@ stimExitFcn = {
 %========================================================CORRECT
 %--------------------if the subject is correct (small reward)
 correctEntryFcn = {
-	@()giveReward(rM); % send a reward
 	@()trackerMessage(eT,'END_RT'); %send END_RT message to tracker
 	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.CORRECT)); %send TRIAL_RESULT message to tracker
-	@()trackerDrawStatus(eT, 'CORRECT! :-)');
-	@()needFlipTracker(me, 0); %for operator screen stop flip
 	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
-	@()beep(aM, tS.correctSound); % correct beep
 	@()needEyeSample(me,false); % no need to collect eye data until we start the next trial
 	@()hide(stims); % hide all stims
-	@()logRun(me,'CORRECT'); % print current trial info
 };
 
 %--------------------correct stimulus
@@ -359,30 +354,39 @@ correctFcn = {
 
 %--------------------when we exit the correct state
 correctExitFcn = {
-	@()updatePlot(bR, me); % update our behavioural record, MUST be done before we update variables
+	@()giveReward(rM); % send a reward
+	@()beep(aM, tS.correctSound); % correct beep
+	@()logRun(me,'CORRECT'); % print current trial info
+	@()trackerDrawStatus(eT, 'CORRECT! :-)');
+	@()needFlipTracker(me, 0); %for operator screen stop flip
+	@()updatePlot(bR, me); % must run before updateTask
 	@()updateTask(me,tS.CORRECT); % make sure our taskSequence is moved to the next trial
 	@()updateVariables(me); % randomise our stimuli, and set strobe value too
 	@()update(stims); % update our stimuli ready for display
 	@()getStimulusPositions(stims); % make a struct the eT can use for drawing stim positions
-	@()trackerClearScreen(eT); 
 	@()resetAll(eT); % resets the fixation state timers	
 	@()checkTaskEnded(me); % check if task is finished
 	@()plot(bR, 1); % actually do our behaviour record drawing
 };
 
-%========================================================INCORRECT
+%========================================================INCORRECT/BREAKFIX
 %--------------------incorrect entry
 incEntryFcn = {
-	@()beep(aM, tS.errorSound);
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.INCORRECT));
-	@()trackerDrawStatus(eT,'INCORRECT! :-(', stims.stimulusPositions, 0);
-	@()needFlipTracker(me, 0); %for operator screen stop flip
 	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()needEyeSample(me,false);
 	@()hide(stims);
-	@()logRun(me,'INCORRECT'); %fprintf current trial info
+};
+%--------------------break entry
+breakEntryFcn = {
+	@()trackerMessage(eT,'END_RT');
+	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.BREAKFIX));
+	@()stopRecording(eT);
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
+	@()needEyeSample(me,false);
+	@()hide(stims);
 };
 
 %--------------------our incorrect/breakfix stimulus
@@ -392,6 +396,10 @@ incFcn = {
 
 %--------------------incorrect exit
 incExitFcn = {
+	@()beep(aM, tS.errorSound);
+	@()logRun(me,'INCORRECT'); %fprintf current trial info
+	@()trackerDrawStatus(eT,'INCORRECT! :-(', stims.stimulusPositions, 0);
+	@()needFlipTracker(me, 0); %for operator screen stop flip
 	@()updateVariables(me); % randomise our stimuli, set strobe value too
 	@()update(stims); % update our stimuli ready for display
 	@()getStimulusPositions(stims); % make a struct the eT can use for drawing stim positions
@@ -399,22 +407,19 @@ incExitFcn = {
 	@()resetAll(eT); % resets the fixation state timers
 	@()plot(bR, 1); % actually do our drawing
 };
-
-%--------------------break entry
-breakEntryFcn = {
-	@()beep(aM, tS.errorSound);
-	@()trackerMessage(eT,'END_RT');
-	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.BREAKFIX));
-	@()trackerDrawStatus(eT,'BREAKFIX! :-(', stims.stimulusPositions, 0);
-	@()stopRecording(eT);
-	@()setOffline(eT); % set eyelink offline [tobii ignores this]
-	@()needEyeSample(me,false);
-	@()hide(stims);
-	@()logRun(me,'BREAKFIX'); %fprintf current trial info
-};
-
 %--------------------break exit
-breakExitFcn = incExitFcn; % we copy the incorrect exit functions
+breakExitFcn = {
+	@()beep(aM, tS.errorSound);
+	@()logRun(me,'BREAK_FIX'); %fprintf current trial info
+	@()trackerDrawStatus(eT,'BREAK_FIX! :-(', stims.stimulusPositions, 0);
+	@()needFlipTracker(me, 0); %for operator screen stop flip
+	@()updateVariables(me); % randomise our stimuli, set strobe value too
+	@()update(stims); % update our stimuli ready for display
+	@()getStimulusPositions(stims); % make a struct the eT can use for drawing stim positions
+	@()trackerClearScreen(eT); 
+	@()resetAll(eT); % resets the fixation state timers
+	@()plot(bR, 1); % actually do our drawing
+};
 
 %--------------------change functions based on tS settings
 % this shows an example of how to use tS options to change the function
@@ -427,17 +432,13 @@ if tS.includeErrors % we want to update our task even if there were errors
 	incExitFcn = [ {@()updatePlot(bR, me); @()updateTask(me,tS.INCORRECT)}; incExitFcn ]; %update our taskSequence 
 	breakExitFcn = [ {@()updatePlot(bR, me); @()updateTask(me,tS.BREAKFIX)}; breakExitFcn ]; %update our taskSequence 
 else
-	incExitFcn = [ {@()updatePlot(bR, me)}; incExitFcn ]; 
-	breakExitFcn = [ {@()updatePlot(bR, me)}; breakExitFcn ];
+	incExitFcn = [ {@()updatePlot(bR, me); @()resetRun(task)}; incExitFcn ]; 
+	breakExitFcn = [ {@()updatePlot(bR, me); @()resetRun(task)}; breakExitFcn ];
 end
 if tS.useTask %we are using task
 	correctExitFcn = [ correctExitFcn; {@()checkTaskEnded(me)} ];
 	incExitFcn = [ incExitFcn; {@()checkTaskEnded(me)} ];
 	breakExitFcn = [ breakExitFcn; {@()checkTaskEnded(me)} ];
-	if ~tS.includeErrors % using task but don't include errors 
-		incExitFcn = [ {@()resetRun(task)}; incExitFcn ]; %we randomise the run within this block to make it harder to guess next trial
-		breakExitFcn = [ {@()resetRun(task)}; breakExitFcn ]; %we randomise the run within this block to make it harder to guess next trial
-	end
 end
 %========================================================
 %========================================================EYETRACKER
@@ -490,12 +491,12 @@ stateInfoTmp = {
 %---------------------------------------------------------------------------------------------
 'pause'		'prefix'	inf		pauseEntryFcn	{}				{}				pauseExitFcn;
 %---------------------------------------------------------------------------------------------
-'prefix'	'fixate'	0.5		prefixEntryFcn	prefixFcn		{}				{};
+'prefix'	'fixate'	0.75	prefixEntryFcn	prefixFcn		{}				{};
 'fixate'	'incorrect'	10		fixEntryFcn		fixFcn			inFixFcn		fixExitFcn;
 'stimulus'	'incorrect'	10		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn;
-'incorrect'	'timeout'	0.5		incEntryFcn		incFcn			{}				incExitFcn;
-'breakfix'	'timeout'	0.5		breakEntryFcn	incFcn			{}				breakExitFcn;
-'correct'	'prefix'	0.5		correctEntryFcn	correctFcn		{}				correctExitFcn;
+'correct'	'prefix'	0.1		correctEntryFcn	correctFcn		{}				correctExitFcn;
+'incorrect'	'timeout'	0.1		incEntryFcn		incFcn			{}				incExitFcn;
+'breakfix'	'timeout'	0.1		breakEntryFcn	incFcn			{}				breakExitFcn;
 'timeout'	'prefix'	tS.tOut	{}				incFcn			{}				{};
 %---------------------------------------------------------------------------------------------
 'calibrate'	'pause'		0.5		calibrateFcn	{}				{}				{};

@@ -186,8 +186,8 @@ function [out, idx] = parsearray(len, bytes, idx)
 end
 
 function [out, idx] = parsemap(len, bytes, idx)
-    out = containers.Map();
-    for n=1:len
+    out = dictionary();
+    for n = 1 : len
         [key, idx] = parse(bytes, idx);
         [out(key), idx] = parse(bytes, idx);
     end

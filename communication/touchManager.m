@@ -62,10 +62,10 @@ classdef touchManager < optickaCore
 		end
 
 		% ===================================================================SETUP
-		function  setup(me, sM)
-		%> @fn setup
+		function setup(me, sM)
+		%> @fn setup(me, sM)
 		%>
-		%> @param
+		%> @param sM screenManager to use
 		%> @return 
 		% ===================================================================
 			me.isOpen = false; me.isQueue = false;
@@ -95,9 +95,9 @@ classdef touchManager < optickaCore
 
 		% ===================================================================
 		function createQueue(me, choice)
-		%> @fn setup
+		%> @fn createQueue(me, choice)
 		%>
-		%> @param
+		%> @param choice which touch device to use, default uses me.device
 		%> @return 
 		% ===================================================================
 			if me.isDummy; me.isQueue = true; return; end
@@ -115,9 +115,9 @@ classdef touchManager < optickaCore
 
 		% ===================================================================
 		function start(me, choice)
-		%> @fn setup
+		%> @fn start(me, choice)
 		%>
-		%> @param
+		%> @param choice which touch device to use, default uses me.device
 		%> @return 
 		% ===================================================================
 			if me.isDummy; me.isOpen = true; return; end
@@ -132,9 +132,9 @@ classdef touchManager < optickaCore
 		
 		% ===================================================================
 		function stop(me, choice)
-		%> @fn stop
+		%> @fn stop(me, choice)
 		%>
-		%> @param
+		%> @param choice which touch device to use, default uses me.device
 		%> @return 
 		% ===================================================================
 			if me.isDummy; me.isOpen = false; return; end
@@ -148,9 +148,9 @@ classdef touchManager < optickaCore
 
 		% ===================================================================
 		function close(me, choice)
-		%> @fn close
+		%> @fn close(me, choice)
 		%>
-		%> @param
+		%> @param choice which touch device to use, default uses me.device
 		%> @return 
 		% ===================================================================
 			me.isOpen = false;
@@ -165,9 +165,9 @@ classdef touchManager < optickaCore
 
 		% ===================================================================
 		function flush(me, choice)
-		%> @fn flush
+		%> @fn flush(me, choice)
 		%>
-		%> @param
+		%> @param choice which touch device to use, default uses me.device
 		%> @return 
 		% ===================================================================
 			if me.isDummy; return; end
@@ -179,10 +179,10 @@ classdef touchManager < optickaCore
 
 		% ===================================================================
 		function navail = eventAvail(me, choice)
-		%> @fn eventAvail
+		%> @fn eventAvail(me, choice)
 		%>
-		%> @param
-		%> @return 
+		%> @param choice which touch device to use, default uses me.device
+		%> @return nAvail number of available events
 		% ===================================================================
 			navail = [];
 			if me.isDummy
@@ -200,8 +200,8 @@ classdef touchManager < optickaCore
 		function event = getEvent(me, choice)
 		%> @fn getEvent
 		%>
-		%> @param
-		%> @return 
+		%> @param choice which touch device to use, default uses me.device
+		%> @return event structure
 		% ===================================================================
 			event = {};
 			if me.isDummy
@@ -221,17 +221,20 @@ classdef touchManager < optickaCore
 		end
 		
 		% ===================================================================
-		function [result, x, y] = checkTouchWindow(me, window)
+		function [result, x, y] = checkTouchWindow(me, window, panelType)
 		%> @fn checkTouchWindow
 		%>
-		%> @param
-		%> @return 
+		%> @param window - a touch rect to test
+		%> @param panelType 1 = front panel, 2 = back panel (need to reverse X)
+		%> @return result - true / false
 		% ===================================================================
 			if ~exist('window','var'); window = []; end
+			if ~exist('panelType','var') || isempty(panelType); panelType = 1; end
 			result = false; x = []; y = [];
 			event = getEvent(me);
 			while ~isempty(event) && iscell(event); event = event{1}; end
 			if isempty(event) || ~isfield(event,'MappedX'); return; end
+			if panelType == 2; event.MappedX = me.screenVals.width - event.MappedX; end
 			xy = me.screen.toDegrees([event.MappedX event.MappedY]);
 			result = calculateWindow(me, xy(1), xy(2), window);
 			x = xy(1); y = xy(2);
@@ -239,18 +242,21 @@ classdef touchManager < optickaCore
 		end
 
 		% ===================================================================
-		function [result, x, y] = checkTouchWindows(me, windows)
-		%> @fn checkTouchWindow
+		function [result, x, y] = checkTouchWindows(me, windows, panelType)
+		%> @fn [result, x, y] = checkTouchWindows(me, windows)
 		%>
-		%> @param
-		%> @return 
+		%> @param windows a set of touch rects to test
+		%> @param panelType 1 = front panel, 2 = back panel (need to reverse X)
+		%> @return result - true / false
 		% ===================================================================
 			if ~exist('windows','var') || isempty(windows); return; end
+			if ~exist('panelType','var') || isempty(panelType); panelType = 1; end
 			nWindows = size(windows,1);
 			result = logical(zeros(nWindows,1)); x = zeros(nWindows,1); y = zeros(nWindows,1);
 			event = getEvent(me);
 			while ~isempty(event) && iscell(event); event = event{1}; end
 			if isempty(event) || ~isfield(event,'MappedX'); return; end
+			if panelType == 2; event.MappedX = me.screenVals.width - event.MappedX; end
 			xy = me.screen.toDegrees([event.MappedX event.MappedY]);
 			for i = 1 : nWindows
 				result(i,1) = calculateWindow(me, xy(1), xy(2), windows(i,:));

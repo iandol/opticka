@@ -70,6 +70,8 @@ function msgpack = dump(data)
         msgpack = dumpcell(data);
     elseif isa(data, 'containers.Map')
         msgpack = dumpmap(data);
+	elseif isa(data, 'dictionary')
+        msgpack = dumpmapd(data);
     else
         error('transplant:dumpmsgpack:unknowntype', ...
               ['Unknown type "' class(data) '"']);
@@ -218,6 +220,46 @@ function msgpack = dumpmap(value)
     % write key-value pairs
     keys = value.keys();
     values = value.values();
+    for n=1:len
+        keystuff = dump(keys{n});
+        valuestuff = dump(values{n});
+        msgpack = [msgpack, keystuff{:}, valuestuff{:}];
+    end
+end
+
+function msgpack = dumpmapd(value)
+    b10000000 = 128;
+
+    % write header
+    len = value.numEntries;
+    if len < 16 % encode as fixmap
+        % first four bits are 1000, last 4 are length
+        msgpack = {uint8(bitor(len, b10000000))};
+    elseif len < 2^16 % encode as map16
+        msgpack = {uint8(222), scalar2bytes(uint16(len))};
+    elseif len < 2^32 % encode as map32
+        msgpack = {uint8(223), scalar2bytes(uint32(len))};
+    else
+        error('transplant:dumpmsgpack:maptoolong', ...
+              sprintf('Map is too long (%d elements)', len));
+    end
+
+    % write key-value pairs
+    k = value.keys();
+	for n=1:len
+		if isstring(k(n))
+			keys{n} = char(k(n));
+		else
+			keys{n} = k(n);
+		end
+		v = value(k(n));
+		if iscell(v); v = v{:}; end
+		if isstring(v)
+			values{n} = char(v);
+		else
+			values{n} = v;
+		end
+	end
     for n=1:len
         keystuff = dump(keys{n});
         valuestuff = dump(values{n});

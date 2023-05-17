@@ -60,6 +60,7 @@ classdef logGaborStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		fileNames
 		reversePhase
 		%> how many frames between phase reverses
 		phaseCounter double = 0

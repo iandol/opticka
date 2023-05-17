@@ -284,7 +284,7 @@ classdef behaviouralRecord < optickaCore
 				plot(me.h.axis1, 1:length(me.time), me.time,'bo','MarkerSize',8);
 				hold(me.h.axis1, 'off');
 			end
-			ylim(me.h.axis1,[min([min(me.radius) min(me.inittime) min(me.time)])-1 max([max(me.radius) max(me.inittime) max(me.time)])+1]);
+			try ylim(me.h.axis1,[min([min(me.radius) min(me.inittime) min(me.time)])-1 max([max(me.radius) max(me.inittime) max(me.time)])+1]); end
 			legend(me.h.axis1,{'response','radius','inittime','time'})
 			ylabel(me.h.axis1, 'Fixation Parameters (secs or degs)');
 
@@ -348,7 +348,7 @@ classdef behaviouralRecord < optickaCore
 			title(me.h.axis5,'Last Eye Position');
 
 			t = {['START @ ' char(me.date)]};
-			d = me.trials(end).now - me.startTime;
+			try d = me.trials(end).now - me.startTime; catch; d = 0; end
 			t{end+1} = ['RUN time = ' char(d)];
 			t{end+1} = ['RUN:' me.comment];
 			t{end+1} = ['INFO:' me.info];
