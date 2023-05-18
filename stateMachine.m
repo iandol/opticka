@@ -55,17 +55,18 @@
 classdef stateMachine < optickaCore
 	
 	properties
-		%> our main state list, stored as a structure
+		%> our state list, stored as a structure
 		stateList struct			= struct([])
-		%> timedelta for time > ticks calculation, assume 1e-3 by default
-		%> can set to IFI of display.
-		timeDelta double			= 1e-3
-		%> use real time (true) or ticks (false) to mark state time. Real time is more
-		%> accurate, and robust against unexpected delays. Ticks uses timeDelta per tick and a
-		%> tick timer (each loop is 1 tick) for time measurement. This is simpler, can be
+		%> use real time (true, using @clockFcn) or ticks (false) to mark state time. Real time is more
+		%> accurate / robust against unexpected delays. Ticks uses timeDelta per tick and a
+		%> tick timer (each update loop is 1 tick) for time measurement. This is simpler, can be
 		%> controlled by an external driver that deals with timing, and without supervision
-		%> but delays may accumulate vs real timer.
+		%> but delays in the external update may cause drift.
 		realTime logical			= false
+		%> timedelta for time > ticks calculation, assume 1ms (1e-3) by default
+		%> can set to IFI of display. This sets the "resolution" when
+		%> realTime == false
+		timeDelta double			= 1e-3
 		%> clock function to use (GetSecs from PTB is optimal…)
 		clockFcn function_handle	= @GetSecs
 		%> N x 2 cell array of strings to compare, list to skip the current -> next state's exit functions; for example
@@ -504,21 +505,22 @@ classdef stateMachine < optickaCore
 			me.verbose = true;
 			me.fnTimers = true;
 			beginFcn = {@()disp('begin state: Hello there!');};
-			middleFcn = {@()disp('middle state: Still here?');};
-			endFcn = {@()disp('end state: See you soon!');};
+
+			transitFcn = {@()disp('transit state: Wait for it!');};
+			endFcn = {@()disp('end state: See you!');};
 			surpriseFcn = {@()disp('surprise state: SURPRISE!!!');};
 			withinFcn = {}; %don't run anything within the state
 			transitionFcn = {@()sprintf('surprise');}; %returns a valid state name and thus triggers a transition
 			exitFcn = { @()fprintf('<<---exit state--->>'); @()fprintf('\n') };
 			statesInfo = {
 				'name'		'next'		'time'	'entryFcn'	'withinFcn'	'transitionFcn'	'exitFcn';
-				'begin'		'middle'	[2 4]	beginFcn	withinFcn	{}				exitFcn;
-				'middle'	'end'		2		middleFcn	withinFcn	transitionFcn	exitFcn;
-				'end'		'endb'		2		endFcn		withinFcn	{}				exitFcn;
+				'begin'		'next1'		[2 4]	beginFcn	withinFcn	{}				exitFcn;
+				'next1'		'next2'		0.05	{}			withinFcn	{}				exitFcn;
+				'next2'		'next3'		0.1		{}			withinFcn	{}				exitFcn;
+				'next3'		'transit'	0.2		{}			withinFcn	{}				exitFcn;
+				'transit'	'end'		2		transitFcn	withinFcn	transitionFcn	exitFcn;
+				'end'		''			2		endFcn		withinFcn	{}				exitFcn;
 				'surprise'	'end'		2		surpriseFcn	withinFcn	{}				exitFcn;
-				'endb'		'endc'		0.1		endFcn		withinFcn	{}				exitFcn;
-				'endc'		'endd'		0.05	endFcn		withinFcn	{}				exitFcn;
-				'endd'		''			0.2		endFcn		withinFcn	{}				exitFcn;
 				};
 			addStates(me,statesInfo);
 			disp('>--------------------------------------------------')

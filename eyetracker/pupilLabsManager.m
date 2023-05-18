@@ -27,16 +27,10 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 %> Copyright ©2014-2023 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 	
-%-----------------CONTROLLED PROPERTIES-------------%
+	%-----------------CONTROLLED PROPERTIES-------------%
 	properties (SetAccess = protected, GetAccess = public)
 		%> type of eyetracker
 		type			= 'pupil'
-		%> communication socket 
-		socket
-		%> subscription socket
-		sub
-		%> publishing socket
-		pub
 	end
 
 	%---------------PUBLIC PROPERTIES---------------%
@@ -56,6 +50,16 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 		%> WIP we can optionally drive physical LEDs for calibration, each LED
 		%> is triggered by the me.calibration.calPositions order.
 		useLEDs			= false
+	end
+
+	%-----------------CONTROLLED PROPERTIES-------------%
+	properties (SetAccess = protected, GetAccess = public)
+		%> communication socket 
+		socket
+		%> subscription socket
+		sub
+		%> publishing socket
+		pub
 	end
 
 	properties (Hidden = true)
@@ -105,6 +109,8 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 
 			if ~exist('zmq.Context','class')
 				warning('Please install matlab-zmq package via https://github.com/iandol/matlab-zmq!!!')
+			else
+				fprintf('--->>> Pupil Labs core using %s', zmq.core.version);
 			end
 		end
 		
