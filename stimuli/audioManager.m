@@ -63,7 +63,7 @@ classdef audioManager < optickaCore
 		%>  
 		% ===================================================================
 		function open(me)
-			if me.silentMode; return; end
+			if me.silentMode || me.isOpen; return; end
 			setup(me);
 		end
 		
@@ -73,7 +73,7 @@ classdef audioManager < optickaCore
 		% ===================================================================
 		function setup(me)
 			if ~isempty(me.device) && me.device < 0; me.silentMode = true; end
-			if me.silentMode; return; end
+			if me.silentMode || me.isOpen; return; end
 			isValid = checkFiles(me);
 			if ~isValid
 				warning('NO valid file/dir name');
