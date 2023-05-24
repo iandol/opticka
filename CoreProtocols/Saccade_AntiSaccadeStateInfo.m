@@ -124,12 +124,12 @@ tS.fixAndStimTime			= 0;
 % correct
 tS.targetFixInit			= 3; % time to find the target
 tS.targetFixTime			= 0.5; % to to maintain fixation on target 
-tS.targetRadius				= [5 10]; %radius to fix within.
+tS.targetRadius				= [8]; %radius width x height to fix within.
 % this task will establish an exclusion zone against the anti-saccade
 % target for the pro and anti-saccade task. We can change the size of the
 % exclusion zone, here set to 5° around the X and Y position of the
 % anti-saccade target.
-tS.exclusionRadius			= [5 10]; 
+tS.exclusionRadius			= [7 20]; %radius width x height to fix within.
 % Initialise the eyeTracker object with X, Y, FixInitTime, FixTime, Radius, StrictFix
 updateFixationValues(eT, tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
 
