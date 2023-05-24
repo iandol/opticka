@@ -404,7 +404,7 @@ classdef colourGratingStimulus < baseStimulus
 					me.driftPhase = me.driftPhase + me.phaseOfReverse;
 				end
                 me.visibleTick = me.visibleTick + 1;
-                if me.visibleTick > me.visibleFlip
+                if me.visibleTick == me.visibleFlip
                     me.isVisible = ~me.isVisible;
                     me.visibleTick = 0;
                 end

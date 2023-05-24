@@ -261,7 +261,7 @@ classdef barStimulus < baseStimulus
                     end
                 end
                 me.visibleTick = me.visibleTick + 1;
-                if me.visibleTick > me.visibleFlip
+                if me.visibleTick == me.visibleFlip
                     me.isVisible = ~me.isVisible;
                     me.visibleTick = 0;
                 end
