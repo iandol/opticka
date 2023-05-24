@@ -67,7 +67,7 @@ disp(['\n===>>> Task ' tS.name ' Type:' tS.type ' <<<===\n'])
 tS.useTask					= true;		%==use taskSequence (randomises stimulus variables)
 tS.rewardTime				= 250;		%==TTL time in milliseconds
 tS.rewardPin				= 2;		%==Output pin, 2 by default with Arduino.
-tS.keyExclusionPattern		= ["fixate","fixstim","stimulus"];		%==which states to skip keyboard checking
+tS.keyExclusionPattern		= ["fixstim","stimulus"];		%==which states to skip keyboard checking
 tS.recordEyePosition		= false;	%==record local copy of eye position, **in addition** to the eyetracker?
 tS.askForComments			= false;	%==UI requestor asks for comments before/after run
 tS.saveData					= true;		%==save behavioural and eye movement data?
@@ -117,21 +117,19 @@ tS.firstFixTime				= [0.5 0.9];
 tS.firstFixRadius			= 2;
 % do we forbid eye to enter-exit-reenter fixation window?
 tS.strict					= true;
-% do we add an exclusion zone where subject cannot saccade to...
-tS.exclusionZone			= [];
-% time to show both fix and stim
+% time to show BOTH fixation cross and [anti]saccade target
 tS.fixAndStimTime			= 0;
 % in this task the subject must saccade to the pro-saccade target location.
 % These settings define the rules to "accept" the target fixation as
 % correct
 tS.targetFixInit			= 3; % time to find the target
-tS.targetFixTime			= 1; % to to maintain fixation on target 
-tS.targetRadius				= 5; %radius to fix within.
+tS.targetFixTime			= 0.5; % to to maintain fixation on target 
+tS.targetRadius				= [5 10]; %radius to fix within.
 % this task will establish an exclusion zone against the anti-saccade
 % target for the pro and anti-saccade task. We can change the size of the
 % exclusion zone, here set to 5° around the X and Y position of the
 % anti-saccade target.
-tS.exclusionRadius			= 5; 
+tS.exclusionRadius			= [5 10]; 
 % Initialise the eyeTracker object with X, Y, FixInitTime, FixTime, Radius, StrictFix
 updateFixationValues(eT, tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
 
@@ -248,7 +246,7 @@ initFixFn = {
 	% otherwise 'incorrect' is returned and the state machine will jump there. 
 	% If neither condition matches, then the state table below
 	% defines that after 5 seconds we will switch to the incorrect state.
-	@()testSearchHoldFixation(eT,'fixstim','incorrect')
+	@()testSearchHoldFixation(eT,'fixstim','breakfix')
 };
 
 %--------------------exit fixation phase
@@ -314,7 +312,7 @@ stimWithinFn = {
 
 % test we are finding the new target (stimulus 1, the saccade target)
 targetFixFn = {
-	@()testSearchHoldFixation(eT,'correct','breakfix'); % tests finding and maintaining fixation
+	@()testSearchHoldFixation(eT,'correct','incorrect'); % tests finding and maintaining fixation
 };
 
 %as we exit stim presentation state
@@ -327,7 +325,6 @@ stimExitFn = {
 
 %if the subject is correct (small reward)
 correctEntryFn = { 
-	@()timedTTL(rM, tS.rewardPin, tS.rewardTime); % send a reward TTL
 	@()trackerMessage(eT,'END_RT'); %send END_RT message to tracker
 	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.CORRECT)); %send TRIAL_RESULT message to tracker
 	@()trackerDrawStatus(eT,'Correct! :-)', stims.stimulusPositions);
@@ -336,7 +333,6 @@ correctEntryFn = {
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()needEyeSample(me,false); % no need to collect eye data until we start the next trial
 	@()hide(stims); % hide all stims
-	@()beep(aM, 2000, 0.1, 0.1); % correct beep
 	@()logRun(me,'CORRECT'); % print current trial info
 };
 
@@ -347,6 +343,8 @@ correctWithinFn = {
 
 %when we exit the correct state
 correctExitFn = {
+	@()beep(aM, tS.correctSound); % correct beep
+	@()giveReward(rM); % send a reward TTL
 	@()updatePlot(bR, me); %update our behavioural plot, must come before updateTask() / updateVariables()
 	@()updateTask(me,tS.CORRECT); %make sure our taskSequence is moved to the next trial
 	@()updateVariables(me); %randomise our stimuli, and set strobe value too
@@ -367,7 +365,6 @@ incEntryFn = {
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()needEyeSample(me,false); % no need to collect eye data until we start the next trial
 	@()hide(stims); % hide all stims
-	@()beep(aM,400,0.5,1);
 	@()logRun(me,'INCORRECT'); %fprintf current trial info
 };
 
@@ -378,6 +375,7 @@ incWithinFn = {
 
 %incorrect / break exit
 incExitFn = {
+	@()beep(aM,tS.errorSound);
 	@()updatePlot(bR, me); %update our behavioural plot, must come before updateTask() / updateVariables()
 	@()updateVariables(me); %randomise our stimuli, set strobe value too
 	@()update(stims); %update our stimuli ready for display
@@ -401,7 +399,7 @@ breakEntryFn = {
 	@()setOffline(eT); % set eyelink offline [tobii/irec ignores this]
 	@()needEyeSample(me,false); % no need to collect eye data until we start the next trial
 	@()hide(stims); % hide all stims
-	@()beep(aM, 400, 0.5, 1);
+	@()beep(aM,tS.errorSound);
 	@()logRun(me,'BREAKFIX'); %fprintf current trial info
 };
 
@@ -453,6 +451,10 @@ flashFn = { @()flashScreen(s, 0.2) }; % fullscreen flash mode for visual backgro
 %--------------------show 1deg size grid
 gridFn = { @()drawGrid(s) };
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%------------------------------------------------------------------------%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 %==========================================================================
 %==========================================================================
 %==========================================================================
@@ -464,13 +466,13 @@ stateInfoTmp = {
 'pause'		'prefix'	inf		pauseEntryFn	{}				{}				pauseExitFn;
 %---------------------------------------------------------------------------------------------
 'prefix'	'fixate'	0.5		pfEntryFn		pfWithinFn		{}				pfExitFn;
-'fixate'	'incorrect'	5		fixEntryFn		fixWithinFn		initFixFn		fixExitFn;
-'fixstim'	'incorrect'	5		fsEntryFn		fsWithinFn		fsFixFn			fsExitFn
-'stimulus'	'incorrect'	5		stimEntryFn		stimWithinFn	targetFixFn		stimExitFn;
-'correct'	'prefix'	0.25	correctEntryFn	correctWithinFn	{}				correctExitFn;
-'incorrect'	'timeout'	0.25	incEntryFn		incWithinFn		{}				incExitFn;
-'breakfix'	'timeout'	0.25	breakEntryFn	incWithinFn		{}				incExitFn;
-'exclusion'	'timeout'	0.25	exclEntryFn		incWithinFn		{}				incExitFn;
+'fixate'	'breakfix'	10		fixEntryFn		fixWithinFn		initFixFn		fixExitFn;
+'fixstim'	'breakfix'	10		fsEntryFn		fsWithinFn		fsFixFn			fsExitFn
+'stimulus'	'incorrect'	10		stimEntryFn		stimWithinFn	targetFixFn		stimExitFn;
+'correct'	'prefix'	0.1		correctEntryFn	correctWithinFn	{}				correctExitFn;
+'breakfix'	'timeout'	0.1		breakEntryFn	incWithinFn		{}				incExitFn;
+'incorrect'	'timeout'	0.1		incEntryFn		incWithinFn		{}				incExitFn;
+'exclusion'	'timeout'	0.1		exclEntryFn		incWithinFn		{}				incExitFn;
 'timeout'	'prefix'	tS.tOut	{}				{}				{}				{};
 %---------------------------------------------------------------------------------------------
 'calibrate'	'pause'		0.5		calibrateFn		{}				{}				{};

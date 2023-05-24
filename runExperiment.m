@@ -622,8 +622,7 @@ classdef runExperiment < optickaCore
 		%> method manages the display loop.
 		%>
 		% ===================================================================
-			[rM, aM] = initialiseGlobals(me,true,true);
-
+			
 			if exist(me.stateInfoFile,'file') && contains(me.stateInfoFile, 'DefaultStateInfo') && me.stimuli.n == 0
 				warning('You are trying to start a Default behavioural task without stimuli!');
 				return
@@ -653,10 +652,9 @@ classdef runExperiment < optickaCore
 			me.stateInfo = {};
 			if isa(me.stateMachine,'stateMachine'); me.stateMachine.reset; me.stateMachine = []; end
 			
+
 			%------initialise the rewardManager global object
-			if ~isa(rM,'arduinoManager') 
-				rM=arduinoManager();
-			end
+			[rM, aM] = initialiseGlobals(me);
 			if rM.isOpen
 				try rM.close; rM.reset; end
 			end
@@ -666,9 +664,6 @@ classdef runExperiment < optickaCore
 			end
 			
 			%------initialise an audioManager for beeps,playing sounds etc.
-			if ~exist('aM','var') || isempty(aM) || ~isa(aM,'audioManager')
-				aM=audioManager;
-			end
 			aM.device = me.audioDevice;
 			if isempty(me.audioDevice) || me.audioDevice >= 0
 				aM.silentMode = false;
@@ -676,6 +671,7 @@ classdef runExperiment < optickaCore
 				if ~aM.isSetup;	try setup(aM); end; end
 				aM.beep(2000,0.1,0.1);
 			else
+				reset(aM);
 				aM.silentMode = true;
 			end
 			
@@ -1746,7 +1742,7 @@ classdef runExperiment < optickaCore
 										% what is the index of this variable?
 										thisVarIndex = me.task.outMap(index, i);
 										thisVarMax   = max(me.task.outMap(:, i));
-										if isnan(num) || isempty(num)
+										if any(isnan(num)) || isempty(num)
 											newIdx = thisVarIndex + 1;
 											if newIdx > thisVarMax; newIdx = 1; end
 										else
@@ -1758,13 +1754,13 @@ classdef runExperiment < optickaCore
 										f = find(me.task.outMap(:, i)==newIdx);
 										val = me.task.outValues{f(1), i};
 									case {'invert'}
-										if isnan(num) || isempty(num)
+										if any(isnan(num)) || isempty(num)
 											val = -value;
 										else
 											val(num) = -value(num);
 										end
 									case {'yvar'}
-										if doXY && ~isnan(num) && ~isempty(num) && length(value)==2
+										if doXY && ~any(isnan(num)) && ~isempty(num) && length(value)==2
 											if length(num)==1; var = 0.5; else; var = num(2); end
 											if rand < var
 												val = [value(1) value(2)-num(1)];
@@ -1773,7 +1769,7 @@ classdef runExperiment < optickaCore
 											end
 										end
 									case {'xvar'}
-										if doXY && ~isnan(num) && ~isempty(num) && length(value)==2
+										if doXY && ~any(isnan(num)) && ~isempty(num) && length(value)==2
 											if length(num)==1; var = 0.5; else; var = num(2); end
 											if rand < var
 												val = [value(1)-num(1) value(2)];
@@ -1782,11 +1778,11 @@ classdef runExperiment < optickaCore
 											end
 										end
 									case {'yoffset'}
-										if doXY && ~isnan(num) && ~isempty(num) && length(value)==2
+										if doXY && ~any(isnan(num)) && ~isempty(num) && length(value)==2
 											val = [value(1) value(2)+num];
 										end
 									case {'xoffset'}
-										if doXY && ~isnan(num) && ~isempty(num) && length(value)==2
+										if doXY && ~any(isnan(num)) && ~isempty(num) && length(value)==2
 											val = [value(1)+num value(2)];
 										end
 									otherwise

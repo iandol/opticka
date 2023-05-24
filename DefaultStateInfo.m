@@ -328,7 +328,7 @@ maintainFixFcn = {
 
 %as we exit stim presentation state
 stimExitFcn = {
-	@()prepareStrobe(io, 255); % 255 indicates stimulus OFF
+	@()setStrobeValue(me, 255); % 255 indicates stimulus OFF
 	@()doStrobe(me, true);
 };
 

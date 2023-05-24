@@ -458,18 +458,23 @@ classdef eyetrackerCore < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief Sinlge method to update the exclusion zones
+		%> @brief Sinlge method to update the exclusion zones, can pass multiple
+		%> x & y values for multiple exclusion zones, sharing the same radius
 		%>
-		%> @param x x position in degrees
-		%> @param y y position in degrees
-		%> @param radius the radius of the exclusion zone
+		%> @param x x position[s] in degrees
+		%> @param y y position[s] in degrees
+		%> @param radius the radius of the exclusion zone, if length=2 becomes WxH
 		% ===================================================================
 		function updateExclusionZones(me,x,y,radius)
 			resetExclusionZones(me);
 			if exist('x','var') && exist('y','var') && ~isempty(x) && ~isempty(y)
 				if ~exist('radius','var'); radius = 5; end
 				for i = 1:length(x)
-					me.exclusionZone(i,:) = [x(i)-radius x(i)+radius y(i)-radius y(i)+radius];
+					if length(radius) == 2
+						me.exclusionZone(i,:) = [x(i)-radius(1) x(i)+radius(1) y(i)-radius(2) y(i)+radius(2)];
+					else
+						me.exclusionZone(i,:) = [x(i)-radius x(i)+radius y(i)-radius y(i)+radius];
+					end
 				end
 			end
 		end
@@ -861,7 +866,7 @@ classdef eyetrackerCore < optickaCore
 			for i = 1:size(me.exclusionZone,1)
 				drawRect(me.operatorScreen, [me.exclusionZone(1), ...
 					me.exclusionZone(3), me.exclusionZone(2), ...
-					me.exclusionZone(4)],[0.7 0.6 0.6 0.7]);
+					me.exclusionZone(4)],[0.7 0.6 0.6 0.5]);
 			end
 		end
 		
