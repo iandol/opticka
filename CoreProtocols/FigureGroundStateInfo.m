@@ -357,7 +357,7 @@ incEntryFcn = {
 	% send END_RT message to eyetracker
 	@()trackerMessage(eT,'END_RT'); 
 	@()trackerDrawText(eT,'Incorrect! :-(');
-	@()beep(aM,400,0.5,1);
+	@()beep(aM,tS.errorSound);
 	% hide fixation spot
 	@()hide(stims{4});
 	@()needEyeSample(me,false);
@@ -386,7 +386,7 @@ incExitFcn = {
 breakEntryFcn = { 
 	@()trackerMessage(eT,'END_RT');
 	@()trackerDrawText(eT,'Broke Fixation!');
-	@()beep(aM,400,0.5,1);
+	@()beep(aM,tS.errorSound);
 	@()hide(stims{4});
 	@()needEyeSample(me,false);
 	@()logRun(me,'BREAKFIX'); %fprintf current trial info

@@ -992,6 +992,10 @@ classdef eyetrackerCore < optickaCore
 							drawText(s,txt,xm-2.5,ym+0.75);
 						end
 					else
+						vpos = me.calibration.valPositions;
+						for kk = 1:length(vpos)
+							drawCross(s, 1,[],vpos(kk,1),vpos(kk,2));
+						end
 						if ~isempty(vd.data{jj}) && size(vd.data{jj},1)==2
 							x = vd.data{jj}(1,:); y = vd.data{jj}(2,:);
 							xm = median(x); ym = median(y);

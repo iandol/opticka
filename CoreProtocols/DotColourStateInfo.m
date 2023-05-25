@@ -230,7 +230,7 @@ stimExitFcn = {
 
 %if the subject is correct (small reward)
 correctEntryFcn = {
-	@()timedTTL(rM, tS.rewardPin, tS.rewardTime); % send a reward TTL
+	@()giveReward(rM); % send a reward TTL
 	@()beep(aM,2000); % correct beep
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.CORRECT));
@@ -262,7 +262,7 @@ correctExitFcn = {
 
 %incorrect entry
 incEntryFcn = { 
-	@()beep(aM,400,0.5,1);
+	@()beep(aM,tS.errorSound);
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.INCORRECT));
 	@()trackerClearScreen(eT);
@@ -292,7 +292,7 @@ incExitFcn = {
 
 %break entry
 breakEntryFcn = {
-	@()beep(aM,400,0.5,1);
+	@()beep(aM,tS.errorSound);
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.BREAKFIX));
 	@()trackerClearScreen(eT);

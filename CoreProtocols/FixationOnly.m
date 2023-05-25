@@ -219,8 +219,8 @@ stimExitFcn = {
 
 %if the subject is correct (small reward)
 correctEntryFcn = {
-	@()timedTTL(rM, tS.rewardPin, tS.rewardTime); % send a reward TTL
-	@()beep(aM,2000,0.1,0.1); % correct beep
+	@()giveReward(rM); % send a reward TTL
+	@()beep(aM, tS.correctSound); % correct beep
 	@()trackerDrawStatus(eT,'CORRECT! :-)', stims.stimulusPositions);
 	@()needFlipTracker(me, 0); %for operator screen stop flip
 	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
@@ -237,7 +237,7 @@ correctFcn = {
 
 %break entry
 breakEntryFcn = {
-	@()beep(aM,400,0.5,1);
+	@()beep(aM,tS.errorSound);
 	@()trackerDrawStatus(eT,'BREAK! :-(', stims.stimulusPositions);
 	@()needFlipTracker(me, 0); %for tobii stop flip
 	@()logRun(me,'BREAK'); %fprintf current trial info
@@ -245,7 +245,7 @@ breakEntryFcn = {
 
 %incorrect entry
 inEntryFcn = {
-	@()beep(aM,400,0.5,1);
+	@()beep(aM,tS.errorSound);
 	@()trackerDrawStatus(eT,'INCORRECT! :-(', stims.stimulusPositions, 0);
 	@()needFlipTracker(me, 0); %for tobii stop flip
 	@()logRun(me,'INCORRECT'); %fprintf current trial info

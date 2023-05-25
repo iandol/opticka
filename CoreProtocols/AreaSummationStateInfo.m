@@ -263,14 +263,12 @@ maintainFixFcn = {
 
 %--------------------as we exit stim presentation state
 stimExitFcn = {
-	@()prepareStrobe(io, 255);
+	@()setStrobeValue(me, 255); % 255 indicates stimulus OFF
 	@()doStrobe(me, true);
 };
 
 %--------------------if the subject is correct (small reward)
 correctEntryFcn = {
-	@()timedTTL(rM, tS.rewardPin, tS.rewardTime); % send a reward TTL
-	@()beep(aM, 2000, 0.1, 0.1); % correct beep
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.CORRECT));
 	@()trackerClearScreen(eT);
@@ -289,6 +287,8 @@ correctFcn = {
 
 %--------------------when we exit the correct state
 correctExitFcn = {
+	@()giveReward(rM); % send a reward TTL
+	@()beep(aM, tS.correctSound); % correct beep
 	@()sendStrobe(io,250);
 	@()updatePlot(bR, me); %update our behavioural plot
 	@()updateTask(me,tS.CORRECT); %make sure our taskSequence is moved to the next trial
@@ -297,12 +297,11 @@ correctExitFcn = {
 	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions
 	@()trackerClearScreen(eT); 
 	@()checkTaskEnded(me); %check if task is finished
-	@()drawnow;
+	@()plot(bR, 1); % actually do our behaviour record drawing
 };
 
 %--------------------incorrect entry
 incEntryFcn = { 
-	@()beep(aM,400,0.5,1);
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.INCORRECT));
 	@()trackerClearScreen(eT);
@@ -316,7 +315,6 @@ incEntryFcn = {
 
 %--------------------break entry
 breakEntryFcn = {
-	@()beep(aM,400,0.5,1);
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.BREAKFIX));
 	@()trackerClearScreen(eT);
@@ -335,6 +333,7 @@ incFcn = {
 
 %--------------------incorrect / break exit
 incExitFcn = { 
+	@()beep(aM,tS.errorSound);
 	@()sendStrobe(io,251);
 	@()updatePlot(bR, me); %update our behavioural plot, must come before updateTask() / updateVariables()
 	@()resetRun(task); %we randomise the run within this block to make it harder to guess next trial
@@ -342,15 +341,17 @@ incExitFcn = {
 	@()update(stims); %update our stimuli ready for display
 	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions
 	@()checkTaskEnded(me); %check if task is finished
-	@()drawnow;
+	@()plot(bR, 1); % actually do our behaviour record drawing
 };
 
+%========================================================
+%========================================================EYETRACKER
+%========================================================
 %--------------------calibration function
 calibrateFcn = {
 	@()drawBackground(s); %blank the display
 	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
-	@()rstop(io); 
 	@()trackerSetup(eT);  %enter tracker calibrate/validate setup mode
 };
 
@@ -383,16 +384,19 @@ gridFcn = {@()drawGrid(s)};
 % specify our cell array that is read by the stateMachine
 stateInfoTmp = {
 'name'		'next'		'time'	'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn';
+%---------------------------------------------------------------------------------------------
 'pause'		'prefix'	inf		pauseEntryFcn	[]				[]				pauseExitFcn;
 'prefix'	'fixate'	0.5		prefixEntryFcn	prefixFcn		[]				prefixExitFcn;
 'fixate'	'incorrect'	5		fixEntryFcn		fixFcn			inFixFcn		fixExitFcn;
 'stimulus'	'incorrect'	5		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn;
-'incorrect'	'timeout'	0.5		incEntryFcn		incFcn			[]				incExitFcn;
-'breakfix'	'timeout'	0.5		breakEntryFcn	incFcn			[]				incExitFcn;
-'correct'	'prefix'	0.5		correctEntryFcn	correctFcn		[]				correctExitFcn;
+'incorrect'	'timeout'	0.1		incEntryFcn		incFcn			[]				incExitFcn;
+'breakfix'	'timeout'	0.1		breakEntryFcn	incFcn			[]				incExitFcn;
+'correct'	'prefix'	0.1		correctEntryFcn	correctFcn		[]				correctExitFcn;
 'timeout'	'prefix'	tS.tOut	{}				{}				{}				{};
+%---------------------------------------------------------------------------------------------
 'calibrate' 'pause'		0.5		calibrateFcn	[]				[]				[];
 'drift'		'pause'		0.5		driftFcn		[]				[]				[];
+%---------------------------------------------------------------------------------------------
 'override'	'pause'		0.5		overrideFcn		[]				[]				[];
 'flash'		'pause'		0.5		flashFcn		[]				[]				[];
 'showgrid'	'pause'		10		[]				gridFcn			[]				[];

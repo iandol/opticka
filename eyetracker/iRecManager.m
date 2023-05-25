@@ -272,9 +272,12 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 			ref = s.screenVals.fps;
 			a = -1;
 			mode = 'menu';
+			vn = 1;
 			
 			while loop
 				
+				vn = length(me.validationData);
+
 				switch mode
 
 					case 'menu'
@@ -283,12 +286,12 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 						while cloop
 							a = a + 1;
 							me.getSample();
-							s.drawText('MENU: esc = exit | c = calibrate | v = validate | d = drift offset | sample = s | F1 = screenshot');
+							s.drawText('MENU: esc = exit | c = calibrate | v = validate | d = drift offset | s = sample | F1 = screenshot');
 							s.flip();
 							if me.useOperatorScreen
-								s2.drawText('MENU: esc = exit | c = calibrate | v = validate | d = drift offset | sample = s | F1 = screenshot');
+								s2.drawText('MENU: esc = exit | c = calibrate | v = validate | d = drift offset | s = sample | F1 = screenshot');
 								if ~isempty(me.x);s2.drawSpot(0.75,[0 1 0.25 0.2],me.x,me.y);end
-								drawValidationResults(me);
+								drawValidationResults(me, vn);
 								if mod(a,ref) == 0
 									trackerFlip(me,0,true);
 								else
@@ -308,6 +311,9 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 									mode = 'driftoffset'; cloop = false;
 								elseif keys(smpl)
 									mode = 'sample'; cloop = false;
+								elseif keys(menu)
+									vn = vn - 1;
+									if vn < 1; vn = length(me.validationData); end
 								elseif keys(shot)
 									filename=[me.paths.parent filesep me.name '_' datestr(now,'YYYY-mm-DD-HH-MM-SS') '.png'];
 									captureScreen(s2, filename);
@@ -332,6 +338,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 
 						me.validationData = struct();
 						me.validationData(1).collected = false;
+						me.validationData(1).type = 'unknown';
 
 						f.xPositionOut = cpos(thisPos,1);
 						f.yPositionOut = cpos(thisPos,2);
@@ -419,6 +426,8 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 						me.validationData(end).data = cell(size(vpos,1),1);
 						me.validationData(end).dataS = cell(size(vpos,1),1);
 
+						vn = length(me.validationData);
+
 						resetFixationHistory(me);
 						nPositions = size(vpos,1);
 						while cloop
@@ -431,7 +440,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 							if me.useOperatorScreen
 								s2.drawText('VALIDATE: lshift = exit | rshift = sample | # = point');
 								if ~isempty(me.x); s2.drawSpot(0.75,[0 1 0.25 0.25],me.x,me.y); end
-								drawValidationResults(me);
+								drawValidationResults(me, vn);
 								if mod(a,ref) == 0
 									trackerFlip(me,0,true);
 								else
@@ -503,6 +512,8 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 						me.validationData(end).data = cell(9,1);
 						me.validationData(end).dataS = cell(9,1);
 
+						vn = length(me.validationData);
+
 						resetFixationHistory(me);
 						nPositions = 9;
 						while cloop
@@ -515,7 +526,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 							if me.useOperatorScreen
 								s2.drawText(sprintf('SAMPLE %i: lshift = exit | rshift = sample | # = point',thisPos));
 								if ~isempty(me.x); s2.drawSpot(0.75,[0 1 0.25 0.25],me.x,me.y); end
-								drawValidationResults(me);
+								drawValidationResults(me, vn);
 								if mod(a,ref) == 0
 									trackerFlip(me,0,true);
 								else

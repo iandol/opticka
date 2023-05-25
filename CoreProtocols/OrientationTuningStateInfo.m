@@ -327,15 +327,15 @@ maintainFixFcn = {
 
 %--------------------as we exit stim presentation state
 stimExitFcn = {
-	@()prepareStrobe(io, 255);
+	@()setStrobeValue(me, 255);
 	@()doStrobe(me, true);
 };
 
 %====================================================CORRECT
 %--------------------if the subject is correct (small reward)
 correctEntryFcn = {
-	@()timedTTL(rM, tS.rewardPin, tS.rewardTime); % send a reward TTL
-	@()beep(aM, 2000, 0.1, 0.1); % correct beep
+	@()giveReward(rM); % send a reward TTL
+	@()beep(aM, tS.correctSound); % correct beep
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.CORRECT));
 	@()trackerClearScreen(eT);
@@ -369,7 +369,7 @@ correctExitFcn = {
 
 %--------------------incorrect entry
 incEntryFcn = { 
-	@()beep(aM,400,0.5,1);
+	@()beep(aM,tS.errorSound);
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.INCORRECT));
 	@()trackerClearScreen(eT);
@@ -399,7 +399,7 @@ incExitFcn = {
 
 %--------------------break entry
 breakEntryFcn = {
-	@()beep(aM,400,0.5,1);
+	@()beep(aM,tS.errorSound);
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.BREAKFIX));
 	@()trackerClearScreen(eT);

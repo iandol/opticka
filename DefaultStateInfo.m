@@ -440,6 +440,7 @@ if tS.useTask %we are using task
 	incExitFcn = [ incExitFcn; {@()checkTaskEnded(me)} ];
 	breakExitFcn = [ breakExitFcn; {@()checkTaskEnded(me)} ];
 end
+
 %========================================================
 %========================================================EYETRACKER
 %========================================================

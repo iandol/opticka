@@ -355,8 +355,8 @@ stimExit = {
 %====================================================CORRECT
 %if the subject is correct (small reward)
 correctEntry = { 
-	@()timedTTL(rM, tS.rewardPin, tS.rewardTime); % send a reward TTL
-	@()beep(aM, 2000, 0.1, 0.1); % correct beep
+	@()giveReward(rM); % send a reward TTL
+	@()beep(aM, tS.correctSound); % correct beep
 	@()trackerMessage(eT,'END_RT'); %send END_RT message to tracker
 	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.CORRECT)); %send TRIAL_RESULT message to tracker
 	@()trackerDrawStatus(eT,'Correct! :-)',[]);
@@ -387,7 +387,7 @@ correctExit = {
 %========================================================INCORRECT
 %--------------------incorrect entry
 incEntry = {
-	@()beep(aM,400,0.5,1);
+	@()beep(aM,tS.errorSound);
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.INCORRECT));
 	@()trackerDrawStatus(eT,'INCORRECT! :-(');

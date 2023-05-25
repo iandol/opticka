@@ -330,12 +330,13 @@ maintainFixFn = {
 	% otherwise 'breakfix' is returned and the state machine will jump to the
 	% breakfix state. If neither condition matches, then the state table below
 	% defines that after 5 seconds we will switch to the incorrect state.
-	@()testSearchHoldFixation(eT,'correct','breakfix'); 
+	@()testSearchHoldFixation(eT,'correct','incorrect'); 
 };
 
 %as we exit stim presentation state
 stimExitFn = {
-	@()sendStrobe(io,255);
+	@()setStrobeValue(me, 255); % 255 indicates stimulus OFF
+	@()doStrobe(me, true);
 };
 
 %========================================================
@@ -345,8 +346,6 @@ stimExitFn = {
 %========================================================CORRECT
 %--------------------if the subject is correct (small reward)
 correctEntryFn = {
-	@()timedTTL(rM, tS.rewardPin, tS.rewardTime); % send a reward TTL
-	@()beep(aM, 2000, 0.1, 0.1); % correct beep
 	@()trackerMessage(eT,'END_RT'); %send END_RT message to tracker
 	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.CORRECT)); %send TRIAL_RESULT message to tracker
 	@()trackerClearScreen(eT);
@@ -365,7 +364,8 @@ correctFn = {
 
 %--------------------when we exit the correct state
 correctExitFn = {
-	@()updatePlot(bR, me); %update our behavioural record, MUST be done before we update variables
+	@()giveReward(rM); % send a reward TTL
+	@()beep(aM, tS.correctSound); % correct beep
 	@()updateTask(me,tS.CORRECT); %make sure our taskSequence is moved to the next trial
 	@()updateVariables(me); %randomise our stimuli, and set strobe value too
 	@()update(stims); %update our stimuli ready for display
@@ -381,10 +381,8 @@ correctExitFn = {
 %========================================================INCORRECT
 %--------------------incorrect entry
 incEntryFn = { 
-	@()beep(aM,400,0.5,1);
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.INCORRECT));
-	@()trackerDrawStatus(eT,'INCORRECT! :-(', stims.stimulusPositions, 0);
 	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()needEyeSample(me,false);
@@ -399,22 +397,20 @@ incFn = {
 
 %--------------------incorrect exit
 incExitFn = {
-	@()updatePlot(bR, me); %update our behavioural plot, must come before updateTask() / updateVariables()
+	@()beep(aM,tS.errorSound);
+	@()trackerDrawStatus(eT,'INCORRECT! :-(', stims.stimulusPositions, 0);
+	@()needFlipTracker(me, 0); %for operator screen stop flip
 	@()updateVariables(me); %randomise our stimuli, set strobe value too
 	@()update(stims); %update our stimuli ready for display
 	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions
-	@()trackerClearScreen(eT); 
-	@()resetFixation(eT); %resets the fixation state timers
-	@()resetFixationHistory(eT); %reset the stored X and Y values
+	@()resetAll(eT); %resets the fixation state timers
 	@()plot(bR, 1); % actually do our drawing
 };
 
 %--------------------break entry
 breakEntryFn = {
-	@()beep(aM,400,0.5,1);
 	@()edfMessage(eT,'END_RT');
 	@()edfMessage(eT,['TRIAL_RESULT ' num2str(tS.BREAKFIX)]);
-	@()trackerDrawStatus(eT,'BREAKFIX! :-(', stims.stimulusPositions, 0);
 	@()stopRecording(eT);
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()needEyeSample(me,false);
@@ -424,7 +420,16 @@ breakEntryFn = {
 };
 
 %--------------------break exit
-breakExitFn = incExitFn; % we copy the incorrect exit functions
+breakExitFn = {
+	@()beep(aM,tS.errorSound);
+	@()trackerDrawStatus(eT,'BREAKFIX! :-(', stims.stimulusPositions, 0);
+	@()needFlipTracker(me, 0); %for operator screen stop flip
+	@()updateVariables(me); %randomise our stimuli, set strobe value too
+	@()update(stims); %update our stimuli ready for display
+	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions
+	@()resetAll(eT); %resets the fixation state timers
+	@()plot(bR, 1); % actually do our drawing
+};
 
 %--------------------change functions based on tS settings
 % this shows an example of how to use tS options to change the function
@@ -434,18 +439,18 @@ breakExitFn = incExitFn; % we copy the incorrect exit functions
 % resetRun = randomise current trial within the block
 % checkTaskEnded = see if taskSequence has finished
 if tS.includeErrors % we want to update our task even if there were errors
-	incExitFn = [ {@()updateTask(me,tS.INCORRECT)}; incExitFn ]; %update our taskSequence 
-	breakExitFn = [ {@()updateTask(me,tS.BREAKFIX)}; breakExitFn ]; %update our taskSequence 
+	incExitFn = [ {@()updatePlot(bR, me); @()updateTask(me,tS.INCORRECT)}; incExitFn ]; %update our taskSequence 
+	breakExitFn = [ {@()updatePlot(bR, me); @()updateTask(me,tS.BREAKFIX)}; breakExitFn ]; %update our taskSequence 
+else
+	incExitFn = [ {@()updatePlot(bR, me); @()resetRun(task)}; incExitFn ]; 
+	breakExitFn = [ {@()updatePlot(bR, me); @()resetRun(task)}; breakExitFn ];
 end
 if tS.useTask %we are using task
 	correctExitFn = [ correctExitFn; {@()checkTaskEnded(me)} ];
 	incExitFn = [ incExitFn; {@()checkTaskEnded(me)} ];
 	breakExitFn = [ breakExitFn; {@()checkTaskEnded(me)} ];
-	if ~tS.includeErrors % using task but don't include errors 
-		incExitFn = [ {@()resetRun(task)}; incExitFn ]; %we randomise the run within this block to make it harder to guess next trial
-		breakExitFn = [ {@()resetRun(task)}; breakExitFn ]; %we randomise the run within this block to make it harder to guess next trial
-	end
 end
+
 %========================================================
 %========================================================EYETRACKER
 %========================================================
@@ -497,9 +502,9 @@ stateInfoTmp = {
 'prefix'	'fixate'	0.5		prefixEntryFn	{}				{}				{};
 'fixate'	'incorrect'	10		fixEntryFn		fixFn			inFixFn			fixExitFn;
 'stimulus'	'incorrect'	10		stimEntryFn		stimFn			maintainFixFn	stimExitFn;
-'incorrect'	'timeout'	0.5		incEntryFn		incFn			{}				incExitFn;
-'breakfix'	'timeout'	0.5		breakEntryFn	incFn			{}				breakExitFn;
-'correct'	'prefix'	0.5		correctEntryFn	correctFn		{}				correctExitFn;
+'correct'	'prefix'	0.1		correctEntryFn	correctFn		{}				correctExitFn;
+'incorrect'	'timeout'	0.1		incEntryFn		incFn			{}				incExitFn;
+'breakfix'	'timeout'	0.1		breakEntryFn	incFn			{}				breakExitFn;
 'timeout'	'prefix'	tS.tOut	{}				incFn			{}				{};
 %---------------------------------------------------------------------------------------------
 'calibrate'	'pause'		0.5		calibrateFn		{}				{}				{};

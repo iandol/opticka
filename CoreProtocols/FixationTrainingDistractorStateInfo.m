@@ -243,8 +243,8 @@ stimExitFcn = {
 
 %-----------------------if the subject is correct (small reward)
 correctEntryFcn = {
-	@()timedTTL(rM, tS.rewardPin, tS.rewardTime); % send a reward TTL
-	@()beep(aM,2000,0.1,0.1); % correct beep
+	@()giveReward(rM); % send a reward TTL
+	@()beep(aM, tS.correctSound); % correct beep
 	@()trackerMessage(eT,['TRIAL_RESULT ' num2str(tS.CORRECT)]); % tell EDF trial was a correct
 	@()trackerDrawStatus(eT,'CORRECT! :-)');
 	@()needFlipTracker(me, 0); %for operator screen stop flip
@@ -270,7 +270,7 @@ correctExitFcn = {
 
 %----------------------break entry
 breakEntryFcn = {
-	@()beep(aM,400,0.5,1);
+	@()beep(aM,tS.errorSound);
 	@()trackerMessage(eT,['TRIAL_RESULT ' num2str(tS.BREAKFIX)]); %trial incorrect message
 	@()trackerDrawStatus(eT,'BROKE FIX! :-(');
 	@()needFlipTracker(me, 0); %for operator screen stop flip
@@ -283,7 +283,7 @@ breakEntryFcn = {
 
 %----------------------inc entry
 incEntryFcn = { 
-	@()beep(aM,400,0.5,1);
+	@()beep(aM,tS.errorSound);
 	@()trackerMessage(eT,['TRIAL_RESULT ' num2str(tS.INCORRECT)]); %trial incorrect message
 	@()trackerDrawStatus(eT,'INCORRECT! :-(', stims.stimulusPositions);
 	@()needFlipTracker(me, 0); %for operator screen stop flip

@@ -345,8 +345,8 @@ stimExitFn = {
 %========================================================CORRECT
 %--------------------if the subject is correct (small reward)
 correctEntryFn = {
-	@()timedTTL(rM, tS.rewardPin, tS.rewardTime); % send a reward TTL
-	@()beep(aM, 2000, 0.1, 0.1); % correct beep
+	@()giveReward(rM); % send a reward TTL
+	@()beep(aM, tS.correctSound); % correct beep
 	@()trackerMessage(eT,'END_RT'); %send END_RT message to tracker
 	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.CORRECT)); %send TRIAL_RESULT message to tracker
 	@()trackerClearScreen(eT);
@@ -411,7 +411,7 @@ incExitFn = {
 
 %--------------------break entry
 breakEntryFn = {
-	@()beep(aM,400,0.5,1);
+	@()beep(aM,tS.errorSound);
 	@()edfMessage(eT,'END_RT');
 	@()edfMessage(eT,['TRIAL_RESULT ' num2str(tS.BREAKFIX)]);
 	@()trackerDrawStatus(eT,'BREAKFIX! :-(', stims.stimulusPositions, 0);

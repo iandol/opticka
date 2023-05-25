@@ -1842,9 +1842,9 @@ classdef screenManager < optickaCore
 		%>
 		% ===================================================================
 		function validateDisplayPlusPlus()
-			screenManager.bitsCheckOpen([],false);
-			BitsPlusImagingPipelineTest;
-			BitsPlusIdentityClutTest;
+			screenManager.bitsCheckOpen([], false);
+			BitsPlusImagingPipelineTest(me.screen);
+			BitsPlusIdentityClutTest(me.screen);
 		end
 		
 		% ===================================================================

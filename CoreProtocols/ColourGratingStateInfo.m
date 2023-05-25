@@ -225,7 +225,7 @@ maintainFixFcn = {
 
 %as we exit stim presentation state
 stimExitFcn = {
-	@()prepareStrobe(io, 255); % 255 indicates stimulus OFF
+	@()setStrobeValue(me, 255); % 255 indicates stimulus OFF
 	@()doStrobe(me, true);
 };
 
@@ -236,7 +236,7 @@ stimExitFcn = {
 %====================================================CORRECT
 %--------------------if the subject is correct (small reward)
 correctEntryFcn = {
-	@()timedTTL(rM, tS.rewardPin, tS.rewardTime); % send a reward TTL
+	@()giveReward(rM); % send a reward TTL
 	@()beep(aM, tS.correctSound); % correct beep
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.CORRECT));
