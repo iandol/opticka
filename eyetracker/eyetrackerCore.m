@@ -962,31 +962,45 @@ classdef eyetrackerCore < optickaCore
 	methods (Access = protected) %------------------PROTECTED METHODS
 	%=======================================================================
 
-		function drawValidationResults(me)
+	function drawValidationResults(me, n)
 			if isempty(me.validationData); return; end
 			try %#ok<*TRYNC>
-				vd = me.validationData(end);
+				if ~exist('n','var') || n > length(me.validationData); n = length(me.validationData); end
+				vd = me.validationData(n);
 				s = me.operatorScreen;
-				for j = 1:length(vd.vpos)
-					thisPos = [vd.vpos(j,1),vd.vpos(j,2)];
-					drawCross(s, 1,[],thisPos(1),thisPos(2));
-					if ~isempty(vd.data{j}) && size(vd.data{j},1)==2
-						x = vd.data{j}(1,:); y = vd.data{j}(2,:);
-						xd = abs(vd.vpos(j,1) - median(x));
-						yd = abs(vd.vpos(j,2) - median(y));
-						xv = rmse( x - median(x), 0);
-						yv = rmse( y - median(y), 0);
-						txt = sprintf('A:%.1g %.1g P:%.2g %.2g', xd, yd, xv, yv);
-						a = 1;
-						xyl = zeros(2,length(vd.data{j})*2);
-						for i = 1:length(vd.data{j})
-							xyl(:,a) = vd.data{j}(:,i);
-							xyl(:,a+1) = thisPos;
-							a = a + 2;
+				for jj = 1:length(vd.vpos)
+					if ~strcmpi(vd.type,'sample')
+						thisPos = [vd.vpos(jj,1),vd.vpos(jj,2)];
+						drawCross(s, 1,[],thisPos(1),thisPos(2));
+						if ~isempty(vd.data{jj}) && size(vd.data{jj},1)==2
+							x = vd.data{jj}(1,:); y = vd.data{jj}(2,:);
+							xm = median(x); ym = median(y);
+							xd = abs(vd.vpos(jj,1) - xm);
+							yd = abs(vd.vpos(jj,2) - ym);
+							xv = rmse( x - xm, 0);
+							yv = rmse( y - ym, 0);
+							txt = sprintf('A:%.1g %.1g P:%.2g %.2g', xd, yd, xv, yv);
+							a = 1;
+							xyl = zeros(2,length(vd.data{jj})*2);
+							for i = 1:length(vd.data{jj})
+								xyl(:,a) = vd.data{jj}(:,i);
+								xyl(:,a+1) = thisPos;
+								a = a + 2;
+							end
+							drawLines(s,xyl,0.1,[0.95 0.65 0 0.1]); 
+							drawDotsDegs(s,vd.dataS{jj},0.5,[1 1 0 0.35]);
+							drawText(s,txt,xm-2.5,ym+0.75);
 						end
-						drawLines(s,xyl,0.1,[0.95 0.65 0 0.1]); 
-						drawDotsDegs(s,vd.dataS{j},0.5,[1 1 0 0.35]);
-						drawText(s,txt,vd.vpos(j,1)-2.5,vd.vpos(j,2)+0.75);
+					else
+						if ~isempty(vd.data{jj}) && size(vd.data{jj},1)==2
+							x = vd.data{jj}(1,:); y = vd.data{jj}(2,:);
+							xm = median(x); ym = median(y);
+							drawDotsDegs(s,vd.data{jj},0.5,[1 0.6 0 0.25]);
+							t = sprintf('#%i %.2gx %.2gy',jj,xm,ym);
+							try 
+								drawText(s,t,xm-2.5,ym+0.75); 
+							end
+						end
 					end
 				end
 			end

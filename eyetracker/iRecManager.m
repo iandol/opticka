@@ -252,15 +252,16 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 			four = KbName('4$'); five = KbName('5%'); six = KbName('6^');
 			seven = KbName('7&'); eight = KbName('8*'); nine = KbName('9(');
 			zero = KbName('0)'); esc = KbName('escape'); cal = KbName('c');
-			val = KbName('v'); dr = KbName('d'); menu = KbName('LeftShift');
+			val = KbName('v'); dr = KbName('d'); smpl = KbName('s'); menu = KbName('LeftShift');
 			sample = KbName('RightShift'); shot = KbName('F1');
 			oldr = RestrictKeysForKbCheck([one two three four five six seven ...
-				eight nine zero esc cal val dr menu sample shot]);
+				eight nine zero esc cal val dr smpl menu sample shot]);
 
 			cpos = me.calibration.calPositions;
 			vpos = me.calibration.valPositions;
 			
 			me.validationData = struct();
+			me.validationData(1).type = 'validation';
 			me.validationData(1).collected = false;
 			me.validationData(1).vpos = vpos;
 			me.validationData(1).time = datetime('now');
@@ -282,10 +283,10 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 						while cloop
 							a = a + 1;
 							me.getSample();
-							s.drawText('MENU: esc = exit | c = calibrate | v = validate | d = drift offset | F1 = screenshot');
+							s.drawText('MENU: esc = exit | c = calibrate | v = validate | d = drift offset | sample = s | F1 = screenshot');
 							s.flip();
 							if me.useOperatorScreen
-								s2.drawText('MENU: esc = exit | c = calibrate | v = validate | d = drift offset | F1 = screenshot');
+								s2.drawText('MENU: esc = exit | c = calibrate | v = validate | d = drift offset | sample = s | F1 = screenshot');
 								if ~isempty(me.x);s2.drawSpot(0.75,[0 1 0.25 0.2],me.x,me.y);end
 								drawValidationResults(me);
 								if mod(a,ref) == 0
@@ -305,6 +306,8 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 									mode = 'validate'; cloop = false;
 								elseif keys(dr)
 									mode = 'driftoffset'; cloop = false;
+								elseif keys(smpl)
+									mode = 'sample'; cloop = false;
 								elseif keys(shot)
 									filename=[me.paths.parent filesep me.name '_' datestr(now,'YYYY-mm-DD-HH-MM-SS') '.png'];
 									captureScreen(s2, filename);
@@ -410,6 +413,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 						else
 							me.validationData(end+1).collected = true;
 						end
+						me.validationData(end).type	= 'validation';
 						me.validationData(end).vpos = vpos;
 						me.validationData(end).time = datetime('now');
 						me.validationData(end).data = cell(size(vpos,1),1);
@@ -487,7 +491,65 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 								end
 							end
 						end
-				end
+
+					case 'sample'
+						cloop = true;
+						thisPos = 1; lastK = thisPos;
+
+						me.validationData(end+1).collected = true;
+						me.validationData(end).type = 'sample';
+						me.validationData(end).vpos = cell(9,1);
+						me.validationData(end).time = datetime('now');
+						me.validationData(end).data = cell(9,1);
+						me.validationData(end).dataS = cell(9,1);
+
+						resetFixationHistory(me);
+						nPositions = 9;
+						while cloop
+							a = a + 1;
+							me.getSample();
+							drawGrid(s);
+							draw(f);
+							animate(f);
+							flip(s);
+							if me.useOperatorScreen
+								s2.drawText(sprintf('SAMPLE %i: lshift = exit | rshift = sample | # = point',thisPos));
+								if ~isempty(me.x); s2.drawSpot(0.75,[0 1 0.25 0.25],me.x,me.y); end
+								drawValidationResults(me);
+								if mod(a,ref) == 0
+									trackerFlip(me,0,true);
+								else
+									trackerFlip(me,1);
+								end
+							end
+
+							[pressed,name,keys] = optickaCore.getKeys();
+							if pressed
+								fprintf('key: %s\n',name);
+								if length(name)==2 % assume a number
+									k = str2double(name(1));
+									if k > 0 && k <= 9
+										thisPos = k; lastK = k;
+									end
+								elseif keys(sample)
+									if ~isempty(me.xAllRaw)
+										ld = length(me.xAllRaw);
+										sd = ld - me.rawSamples;
+										if sd < 1; sd = 1; end
+										me.validationData(end).data{lastK} = [me.xAllRaw(sd:ld); me.yAllRaw(sd:ld)];
+										l=length(me.xAll);
+										if l > 5; l = 5; end
+										me.validationData(end).dataS{lastK} = [me.xAll(end-l:end); me.yAll(end-l:end)];
+									end
+									rM.giveReward;
+									resetFixationHistory(me);
+									trackerFlip(me,0,true);
+								elseif keys(menu)
+									mode = 'menu'; cloop = false;
+								end
+							end
+						end
+				end % switch mode
 			end
 			s.drawText('Calibration finished...');
 			s2.drawText('Calibration finished...')
@@ -671,6 +733,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 			rightKey			= KbName('rightarrow');
 			calibkey			= KbName('c');
 			driftkey			= KbName('d');
+			RestrictKeysForKbCheck([stopkey upKey downKey leftKey rightKey calibkey driftkey]);
 			ofixation			= me.fixation; 
 			osmoothing			= me.smoothing;
 			oldexc				= me.exclusionZone;
@@ -806,6 +869,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 				WaitSecs(0.5);
 				stopRecording(me);
 				ListenChar(0); Priority(0); ShowCursor;
+				RestrictKeysForKbCheck([]);
 				try close(s); close(s2); reset(o); reset(f); end %#ok<*TRYNC>
 				close(me);
 				me.fixation = ofixation;

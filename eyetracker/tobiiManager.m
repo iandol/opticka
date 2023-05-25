@@ -139,7 +139,7 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 			me.secondScreen		= true;
 			if ismac; me.operatorScreen.useRetina = true; end
 
-			initialiseGlobals(me, false, true);
+			[rM, aM] = initialiseGlobals(me, false, true);
 
 			me.smoothing.sampleRate = me.sampleRate;
 			
