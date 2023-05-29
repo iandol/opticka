@@ -260,11 +260,11 @@ classdef timeLogger < optickaCore
 			msgs = cell(length(me.messages),4);
 			for i = 1:length(me.messages)
 				msgs{i,1} = me.messages(i).tick;
-				msgs{i,2} = me.messages(i).message;
-				msgs{i,3} = me.messages(i).vbl - me.startTime;
-				if isfield(me.messages,'stimeTime');msgs{i,4} = me.messages(i).stimTime;end
+				msgs{i,2} = me.messages(i).vbl - me.startTime;
+				if isfield(me.messages,'stimeTime');msgs{i,3} = me.messages(i).stimTime;end
+				msgs{i,4} = me.messages(i).message;
 			end
-			msgs = cell2table(msgs,'VariableNames',{'Tick','Message','Time','Stimulus State'});
+			msgs = cell2table(msgs,'VariableNames',{'Tick','Time','Stimulus State','Message'});
 
 			h = build_gui();
 			
@@ -299,7 +299,7 @@ classdef timeLogger < optickaCore
 					'BackgroundColor', [1 1 1;0.95 0.95 0.95], ...
 					'RowStriping','on', ...
 					'ColumnEditable', [], ...
-					'ColumnWidth', {'auto'});
+					'ColumnWidth', {'fit','fit','fit','4x'});
 			end
 		end
 		

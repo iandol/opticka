@@ -534,6 +534,7 @@ classdef eyetrackerCore < optickaCore
 					return;
 				end
 			end
+			
 			% now test if we are still searching or in fixation window, if
 			% radius is single value, assume circular, otherwise assume
 			% rectangular
@@ -695,17 +696,18 @@ classdef eyetrackerCore < optickaCore
 					else
 						out = 'fixing';
 					end
+					return;
 				else
 					out = noString;
 					if me.verbose;fprintf('-+-+-> Eyelink:testHoldFixation FIX FAIL: %s time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
 							out, me.fixTotal, me.fixInitLength, me.fixLength, fix, fixtime, searching, exclusion, initfail);end
+					return;
 				end
-				return
 			else
 				out = noString;
 				if me.verbose; fprintf('-+-+-> Eyelink:testHoldFixation FIX FAIL: %s time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
 							out, me.fixTotal, me.fixInitLength, me.fixLength, fix, fixtime, searching, exclusion, initfail);end
-				return
+				return;
 			end
 		end
 
