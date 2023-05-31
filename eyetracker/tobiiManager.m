@@ -457,6 +457,7 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 				sample.gy		= my;
 				sample.pa		= me.pupil;
 				sample.time		= GetSecs;
+				sample.timeD	= sample.time;
 				xy				= me.toDegrees([sample.gx sample.gy]);
 				me.x = xy(1); me.y = xy(2);
 				me.xAll			= [me.xAll me.x];
@@ -470,6 +471,7 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 				sample.raw		= td;
 				sample.time		= double(td.systemTimeStamp(end)) / 1e6; %remember these are in microseconds
 				sample.timeD	= double(td.deviceTimeStamp(end)) / 1e6;
+				sample.timeD2	= GetSecs;
 				if any(td.left.gazePoint.valid) || any(td.right.gazePoint.valid)
 					switch me.smoothing.eyes
 						case 'left'

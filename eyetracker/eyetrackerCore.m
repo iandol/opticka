@@ -498,12 +498,14 @@ classdef eyetrackerCore < optickaCore
 				return; % we previously matched either rule, now cannot pass fixation until a reset.
 			end
 
-			if isempty(me.currentSample) || me.currentSample.valid == false; return; end
+			if isempty(me.currentSample) || ~me.currentSample.valid; return; end
 
 			if me.fixInitStartTime == 0
 				me.fixInitStartTime = me.currentSample.time;
 				me.fixTotal = 0;
 				me.fixInitLength = 0;
+			else
+				me.fixTotal = me.currentSample.time - me.fixInitStartTime;
 			end
 			
 			% ---- add any offsets for following calculations
@@ -551,7 +553,6 @@ classdef eyetrackerCore < optickaCore
 				end
 			end
 			me.fixWindow = window;
-			me.fixTotal = (me.currentSample.time - me.fixInitStartTime);
 			if any(window) % inside fixation window
 				if me.fixN == 0
 					me.fixN = 1;
