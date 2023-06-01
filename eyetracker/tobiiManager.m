@@ -68,6 +68,7 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 		systemTime		= 0
 		calibData
 		calStim
+		isCollectedData = false
 		%> allowed properties passed to object upon construction
 		allowedProperties = {'calibration', 'settings'}
 	end
@@ -100,7 +101,7 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 			end
 			p = fileparts(me.saveFile);
 			if isempty(p)
-				me.saveFile = [me.paths.savedData filesep me.saveFile];
+				me.saveFile = [me.paths.savedData filesep me.name '-' me.saveFile];
 			end
 			me.smoothing.sampleRate = me.sampleRate;
 		end
@@ -434,8 +435,9 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 				else
 					warning('Can''t STOP buffer() GAZE recording!!!')
 				end
+				
+				me.isRecording = me.tobii.buffer.isRecording('gaze'); 
 			end
-			me.isRecording = me.tobii.buffer.isRecording('gaze');
 		end
 
 		% ===================================================================
@@ -561,15 +563,16 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 			if ~exist('tofile','var') || isempty(tofile); tofile = true; end
 			ts = tic;
 			me.data = [];
-			if me.isConnected
+			if me.isConnected && ~me.isCollectedData
 				me.data = me.tobii.collectSessionData();
+				me.isCollectedData = true;
 			end
 			me.initialiseSaveFile();
 			if ~isempty(me.data) && tofile
 				tobii = me;
 				if exist(me.saveFile,'file')
 					[p,f,e] = fileparts(me.saveFile);
-					me.saveFile = [p filesep f me.savePrefix e];
+					me.saveFile = [p filesep me.savePrefix '-' f '.mat'];
 				end
 				save(me.saveFile,'tobii')
 				disp('===========================')
@@ -606,14 +609,16 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 		% ===================================================================
 		function close(me)
 			try
-				stopRecording(me,true);
-				if me.recordData;  saveData(me); end
+				try stopRecording(me,true); end
+				if me.recordData && ~me.isCollectedData
+					saveData(me,false);
+				end
 				out = me.tobii.deInit();
 				me.isConnected = false;
 				me.isRecording = false;
 				resetFixation(me);
 				if me.secondScreen && ~isempty(me.operatorScreen) && isa(me.operatorScreen,'screenManager')
-					me.operatorScreen.close;
+					try me.operatorScreen.close; end
 				end
 			catch ME
 				me.salutation('Close Method','Couldn''t stop recording, forcing shutdown...',true)
@@ -938,7 +943,7 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 				me.fixInit = oldfixinit;
 				clear s s2 o
 			catch ME
-				stopRecording(me,true);
+				try stopRecording(me,true); end
 				me.fixation = ofixation;
 				me.saveFile = ofilename;
 				me.smoothing = osmoothing;
