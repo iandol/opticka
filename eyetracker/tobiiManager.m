@@ -69,7 +69,7 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 		calibData
 		calStim
 		%> allowed properties passed to object upon construction
-		allowedProperties = {'calibration', 'settings','useOperatorScreen','smoothing'}
+		allowedProperties = {'calibration', 'settings'}
 	end
 	
 	%=======================================================================
@@ -354,7 +354,7 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 		%> will just return.
 		% ===================================================================
 		function startRecording(me, override)
-			if ~exist('override','var') || isempty(override) || override~=true; return; end
+			if ~exist('override','var') || isempty(override) || override==false; return; end
 			if me.isConnected
 				success = me.tobii.buffer.start('gaze');
 				if success
@@ -607,6 +607,7 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 		function close(me)
 			try
 				stopRecording(me,true);
+				if me.recordData;  saveData(me); end
 				out = me.tobii.deInit();
 				me.isConnected = false;
 				me.isRecording = false;

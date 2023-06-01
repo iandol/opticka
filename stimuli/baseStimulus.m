@@ -989,25 +989,27 @@ classdef baseStimulus < optickaCore & dynamicprops
 				me.doAnimator = true; 
 			end
 		end
-			
-		% ===================================================================
-		%> @brief setRect
-		%> setRect makes the PsychRect based on the texture and screen
-		%> values, you should call computePosition() first to get xFinal and
-		%> yFinal. 
-		% ===================================================================
-		function setRect(me)
-			if ~isempty(me.texture)
-				me.dstRect=Screen('Rect',me.texture(1));
-				if me.mouseOverride && me.mouseValid
-					me.dstRect = CenterRectOnPointd(me.dstRect, me.mouseX, me.mouseY);
-				else
-					me.dstRect=CenterRectOnPointd(me.dstRect, me.xFinal, me.yFinal);
-				end
-				me.mvRect=me.dstRect;
-			end
-		end
 		
+		% ===================================================================
+		%> @brief compute xFinal and yFinal
+		%>
+		% ===================================================================
+		function computePosition(me)
+			if me.mouseOverride && me.mouseValid
+				me.xFinal = me.mouseX; me.yFinal = me.mouseY;
+			else
+				if isprop(me,'direction')
+					[dx, dy]=pol2cart(me.d2r(getP(me,'direction')),me.startPosition);
+				else
+					[dx, dy]=pol2cart(me.d2r(getP(me,'angle')),me.startPositionOut);
+				end
+				me.xFinal = me.xPositionOut + (dx * me.ppd) + me.sM.xCenter;
+				me.yFinal = me.yPositionOut + (dy * me.ppd) + me.sM.yCenter;
+				if me.verbose; fprintf('---> computePosition: %s X = %gpx / %gpx / %gdeg | Y = %gpx / %gpx / %gdeg\n',me.fullName, me.xFinal, me.xPositionOut, dx, me.yFinal, me.yPositionOut, dy); end
+			end
+			setAnimationDelta(me);
+		end
+
 		% ===================================================================
 		%> @brief setAnimationDelta
 		%> setAnimationDelta for performance better not to use get methods for dX dY and
@@ -1021,25 +1023,27 @@ classdef baseStimulus < optickaCore & dynamicprops
 			me.dX_ = me.dX;
 			me.dY_ = me.dY;
 		end
-		
+
 		% ===================================================================
-		%> @brief compute xFinal and yFinal
-		%>
+		%> @brief setRect
+		%> setRect makes the PsychRect based on the texture and screen
+		%> values, you should call computePosition() first to get xFinal and
+		%> yFinal. 
 		% ===================================================================
-		function computePosition(me)
-			if me.mouseOverride && me.mouseValid
-				me.xFinal = me.mouseX; me.yFinal = me.mouseY;
-			else
-				if isempty(me.findprop('angleOut'))
-					[dx, dy]=pol2cart(me.d2r(me.angle),me.startPosition);
+		function setRect(me)
+			if ~isempty(me.texture)
+				if isprop(me,'scale')
+					me.dstRect = ScaleRect(Screen('Rect',me.texture(1)), me.scale, me.scale);
 				else
-					[dx, dy]=pol2cart(me.d2r(me.angleOut),me.startPositionOut);
+					me.dstRect=Screen('Rect',me.texture(1));
 				end
-				me.xFinal = me.xPositionOut + (dx * me.ppd) + me.sM.xCenter;
-				me.yFinal = me.yPositionOut + (dy * me.ppd) + me.sM.yCenter;
-				if me.verbose; fprintf('---> computePosition: %s X = %gpx / %gpx / %gdeg | Y = %gpx / %gpx / %gdeg\n',me.fullName, me.xFinal, me.xPositionOut, dx, me.yFinal, me.yPositionOut, dy); end
+				if me.mouseOverride && me.mouseValid
+					me.dstRect = CenterRectOnPointd(me.dstRect, me.mouseX, me.mouseY);
+				else
+					me.dstRect=CenterRectOnPointd(me.dstRect, me.xFinal, me.yFinal);
+				end
+				me.mvRect=me.dstRect;
 			end
-			setAnimationDelta(me);
 		end
 		
 		% ===================================================================

@@ -175,7 +175,7 @@ pauseExitFcn = {
 %--------------------prefixate entry
 prefixEntryFcn = { 
 	@()setOffline(eT); % set eyelink offline [tobii/irec ignores this]
-	@()needFlip(me, true, 2); % enable the screen and trackerscreen flip
+	@()needFlip(me, true, 4); % enable the screen and trackerscreen flip
 	@()needEyeSample(me, true); % make sure we start measuring eye position
 	@()hide(stims); % hide all stimuli
 	@()resetAll(eT); % reset the recent eye position history

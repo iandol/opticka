@@ -261,6 +261,7 @@ classdef optickaCore < handle
 			list = cl_array(1:ii);
 		end
 
+		% TODO 
 		function value = findPropertyDefault(me,propName)
 			value = [];
 			if ischar(me) % Determine if first input is object or class name

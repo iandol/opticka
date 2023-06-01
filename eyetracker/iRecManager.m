@@ -70,7 +70,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		% stimulus used for calibration
 		calStim			= []
 		%> allowed properties passed to object upon construction
-		allowedProperties	= {'calibration', 'useLEDs', 'smoothing'}
+		allowedProperties	= {'calibration', 'useLEDs'}
 	end
 	
 	%=======================================================================

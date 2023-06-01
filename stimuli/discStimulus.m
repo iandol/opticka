@@ -377,22 +377,11 @@ classdef discStimulus < baseStimulus
 		%> requirements.
 		% ===================================================================
 		function setRect(me)
-			
 			me.dstRect = ScaleRect(Screen('Rect',me.texture), me.scale, me.scale);
 			if me.mouseOverride && me.mouseValid
-					me.dstRect = CenterRectOnPointd(me.dstRect, me.mouseX, me.mouseY);
+				me.dstRect = CenterRectOnPointd(me.dstRect, me.mouseX, me.mouseY);
 			else
-				if isempty(me.findprop('angleOut'))
-					[sx, sy]=pol2cart(me.d2r(me.angle),me.startPosition);
-				else
-					[sx, sy]=pol2cart(me.d2r(me.angleOut),me.startPosition);
-				end
-				me.dstRect=CenterRectOnPointd(me.dstRect,me.sM.xCenter,me.sM.yCenter);
-				if isempty(me.findprop('xPositionOut'))
-					me.dstRect=OffsetRect(me.dstRect,(me.xPosition)*me.ppd,(me.yPosition)*me.ppd);
-				else
-					me.dstRect=OffsetRect(me.dstRect,me.xPositionOut+(sx*me.ppd),me.yPositionOut+(sy*me.ppd));
-				end
+				me.dstRect = CenterRectOnPointd(me.dstRect, me.xFinal, me.yFinal);
 			end
 			me.mvRect=me.dstRect;
 			me.setAnimationDelta();
