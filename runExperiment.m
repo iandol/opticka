@@ -997,8 +997,8 @@ classdef runExperiment < optickaCore
 					
 					%------run the stateMachine one step forward
 					update(sM);
-					if me.doFlip && s.visualDebug; s.drawGrid; me.infoTextScreen; end
-					%if me.doFlip; s.finishDrawing(); end % potential optimisation...
+					%if me.doFlip && s.visualDebug; s.drawGrid; me.infoTextScreen; end
+					if me.doFlip; s.finishDrawing(); end % potential optimisation...
 					
 					%------check eye position manually. 
 					if me.needSample; getSample(eT); end
@@ -1018,7 +1018,7 @@ classdef runExperiment < optickaCore
 						% delayed by one flip
 						if me.sendStrobe && strcmp(me.strobe.device,'display++')
 							sendStrobe(io); me.sendStrobe = false;
-						elseif me.sendStrobe && strcmp(me.strobe.device,'datapixx')
+						elseif me.sendStrobe && strcmpi(me.strobe.device,'datapixx')
 							triggerStrobe(io); me.sendStrobe = false;
 						end
 						%------Do the actual Screen flip, save times if
@@ -1041,7 +1041,7 @@ classdef runExperiment < optickaCore
 						end
 
 						%----- LabJack: I/O needs to send strobe immediately after screen flip -----%
-						if me.sendStrobe && matches(me.strobe.device,'labjackt')
+						if me.sendStrobe && strcmpi(me.strobe.device,'labjackt')
 							sendStrobe(io); me.sendStrobe = false;
 						end
 
@@ -1065,7 +1065,7 @@ classdef runExperiment < optickaCore
 						tS.totalTicks = tS.totalTicks + 1; tL.tick = tS.totalTicks;
 					else % me.doFlip == FALSE
 						% still wait for IFI time
-						WaitSecs(s.screenVals.ifi);
+						WaitSecs('YieldSecs',s.screenVals.ifi);
 					end  % END me.doFlip
 
 					%----- For operator display, do we flip? -----%

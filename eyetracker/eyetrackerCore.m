@@ -502,6 +502,7 @@ classdef eyetrackerCore < optickaCore
 
 			if me.fixInitStartTime == 0
 				me.fixInitStartTime = me.currentSample.time;
+				me.fixStartTime = 0;
 				me.fixTotal = 0;
 				me.fixInitLength = 0;
 			else
@@ -525,8 +526,7 @@ classdef eyetrackerCore < optickaCore
 			end
 			
 			% ---- test for fix initiation start window
-			ft = (me.currentSample.time - me.fixInitStartTime);
-			if ~isempty(me.fixInit.X) && ft <= me.fixInit.time
+			if ~isempty(me.fixInit.X) && me.fixTotal <= me.fixInit.time
 				r = sqrt((x - me.fixInit.X).^2 + (y - me.fixInit.Y).^2);
 				window = find(r < me.fixInit.radius);
 				if ~any(window)
@@ -540,28 +540,30 @@ classdef eyetrackerCore < optickaCore
 			% now test if we are still searching or in fixation window, if
 			% radius is single value, assume circular, otherwise assume
 			% rectangular
-			window = 0;
+			w = 0;
 			if length(me.fixation.radius) == 1 % circular test
 				r = sqrt((x - me.fixation.X).^2 + (y - me.fixation.Y).^2); %fprintf('x: %g-%g y: %g-%g r: %g-%g\n',x, me.fixation.X, me.y, me.fixation.Y,r,me.fixation.radius);
-				window = find(r < me.fixation.radius);
+				w = find(r < me.fixation.radius);
 			else % x y rectangular window test
 				for i = 1:length(me.fixation.X)
 					if (x >= (me.fixation.X - me.fixation.radius(1))) && (x <= (me.fixation.X + me.fixation.radius(1))) ...
 							&& (me.y >= (me.fixation.Y - me.fixation.radius(2))) && (me.y <= (me.fixation.Y + me.fixation.radius(2)))
-						window = i;break;
+						w = i; break;
 					end
 				end
 			end
-			me.fixWindow = window;
-			if any(window) % inside fixation window
+			if ~isempty(w) && w > 0; me.fixWindow = w; else; me.fixWindow = 0; end
+
+			% logic if we are in or not in a fixation window
+			if me.fixWindow > 0 % inside fixation window
+				if me.fixStartTime == 0
+					me.fixStartTime = me.currentSample.time;
+				end
 				if me.fixN == 0
 					me.fixN = 1;
-					me.fixSelection = window(1);
+					me.fixSelection = me.fixWindow;
 				end
-				if me.fixSelection == window(1)
-					if me.fixStartTime == 0
-						me.fixStartTime = me.currentSample.time;
-					end
+				if me.fixSelection == me.fixWindow
 					fixated = true; searching = false;
 					me.fixLength = (me.currentSample.time - me.fixStartTime);
 					if me.fixLength >= me.fixation.time

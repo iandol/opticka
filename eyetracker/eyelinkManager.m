@@ -435,13 +435,13 @@ classdef eyelinkManager < eyetrackerCore
 					w = [];
 				end
 				[x, y] = GetMouse(w);
+				sample.time = GetSecs;
 				xy = toDegrees(me, [x y]);
 				me.x = xy(1); me.y = xy(2);
 				me.pupil = 800 + randi(20);
 				sample.gx = me.x;
 				sample.gy = me.y;
 				sample.pa = me.pupil;
-				sample.time = GetSecs;
 				sample.valid = true;
 				me.xAll = [me.xAll me.x];
 				me.yAll = [me.yAll me.y];
