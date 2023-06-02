@@ -209,7 +209,8 @@ classdef screenManager < optickaCore
 			'disableSyncTests','displayPPRefresh','screenToHead','gammaTable',...
 			'useRetina','bitDepth','pixelsPerCm','distance','screen','windowed','backgroundColour',...
 			'screenXOffset','screenYOffset','blend','srcMode','dstMode','antiAlias',...
-			'debug','photoDiode','verbose','hideFlash'}
+			'debug','photoDiode','verbose','hideFlash',...
+			'stereoMode','anaglyphLeft','anaglyphRight'}
 		%> the photoDiode rectangle in pixel values
 		photoDiodeRect(1,4) double			= [0, 0, 45, 45]
 		%> the values computed to draw the 1deg dotted grid in visualDebug mode
@@ -551,7 +552,7 @@ classdef screenManager < optickaCore
 				end
 
 				%===ANAGLYPH VALUES
-				if ~isempty(me.anaglyphLeft) && ~isempty(me.anaglyphRight)
+				if stereo > 0 && ~isempty(me.anaglyphLeft) && ~isempty(me.anaglyphRight)
 					SetAnaglyphStereoParameters('LeftGains', me.win,  me.anaglyphLeft);
     				SetAnaglyphStereoParameters('RightGains', me.win, me.anaglyphRight);
 				else
@@ -731,22 +732,34 @@ classdef screenManager < optickaCore
 		%>
 		% ===================================================================
 			if ~me.isOpen
-				stim = dotsStimulus('mask',true,'size',10,'speed',4);
+				stim = dotsStimulus('mask',true,'size',10,'speed',2,...
+					'density',3,'dotSize',0.3);
 				open(me);
 				disp('--->>> screenManager running a quick demo...')
+				if me.stereoMode > 0
+					stim.mask = false;
+					stim.type='simple';
+					drawBackground(me,[0 0 0]);
+					flip(me);
+					WaitSecs(0.5);
+				end
 				disp(me.screenVals);
 				setup(stim, me);
+				x = stim.xFinal;
+				td = me.screenVals.topInDegrees;
+				bd = me.screenVals.bottomInDegrees;
+				ld = me.screenVals.leftInDegrees;
 				vbl = flip(me);
-				for i = 1:me.screenVals.fps*2
+				for i = 1:me.screenVals.fps*6
 					if me.stereoMode > 0
-						stim.xFinal = stim.xFinal - 10;
+						drawBackground(me,[0 0 0]);
+						stim.xFinal = x - 3;
 						switchChannel(me,0);
-						drawText(me,'Demo screenManager Left...',10,10);
+						drawText(me,'Demo screenManager Left Channel...',ld+1,td+1);
 						draw(stim);
-						stim.xPositionOut
 						switchChannel(me,1);
-						stim.xFinal = stim.xFinal + 10;
-						drawText(me,'Demo screenManager Right...',10,me.screenVals.height-60);
+						stim.xFinal = x + 3;
+						drawText(me,'Demo screenManager Right...',ld+1,td+2);
 						draw(stim);
 					else
 						drawText(me,'Running a quick demo of screenManager...');
@@ -755,6 +768,7 @@ classdef screenManager < optickaCore
 					finishDrawing(me);
 					animate(stim);
 					vbl = flip(me, vbl);
+					if i == 1;KbWait;end
 				end
 				WaitSecs(1);
 				clear stim;

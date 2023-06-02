@@ -101,7 +101,7 @@ classdef checkerboardStimulus < baseStimulus
 		% ===================================================================
 		function me = checkerboardStimulus(varargin)
 			args = optickaCore.addDefaults(varargin,...
-				struct('name','checkerboard','colour',[1 1 1 1],'colour2',[0 0 0 1]));
+				struct('name','checkerboard','colour',[1 1 0 1],'colour2',[0 0 1 1]));
 			me=me@baseStimulus(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
 			
@@ -296,7 +296,7 @@ classdef checkerboardStimulus < baseStimulus
 				end
 				if me.doDrift
 					me.driftPhase = me.driftPhase + me.phaseIncrement;
-					fprintf('Drift Phase: %.2f\n',me.driftPhase);
+					%fprintf('Drift Phase: %.2f\n',me.driftPhase);
 				end
 				if mod(me.tick,me.phaseCounter) == 0
 					tmp = me.colourOut;
