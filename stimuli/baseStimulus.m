@@ -13,7 +13,19 @@
 % ========================================================================
 classdef baseStimulus < optickaCore & dynamicprops
 	
+	properties (Abstract = true)
+		%> stimulus type
+		type char
+	end
+	
+	properties (Abstract = true, SetAccess = protected)
+		%> the stimulus family (grating, dots etc.)
+		family char
+	end
+
 	properties
+		%> true or false, whether to draw() this object
+		isVisible logical = true
 		%> X Position ± degrees relative to screen center (0,0)
 		xPosition double = 0
 		%> Y Position ± degrees relative to screen center (0,0)
@@ -44,35 +56,26 @@ classdef baseStimulus < optickaCore & dynamicprops
 		animator = []
 		%> override X and Y position with mouse input? Useful for RF mapping
 		mouseOverride logical = false
-		%> true or false, whether to draw() this object
-		isVisible logical = true
 		%> show the position on the Eyetracker display?
 		showOnTracker logical = true
 		%> Do we print details to the commandline?
 		verbose = false
 	end
 
-	properties (Abstract = true)
-		%> stimulus type
-		type char
-	end
-	
-	properties (Abstract = true, SetAccess = protected)
-		%> the stimulus family (grating, dots etc.)
-		family char
-	end
-	
-	properties (SetAccess = protected, GetAccess = public)
+	properties (Transient = true)
 		%> final centered X position in pixel coordinates PTB uses: 0,0 top-left
 		%> see computePosition();
 		xFinal double = []
 		%> final centerd Y position in pixel coordinates PTB uses: 0,0 top-left
 		%> see computePosition();
 		yFinal double = []
-		%> initial screen rectangle position [LEFT TOP RIGHT BOTTOM]
-		dstRect double = []
 		%> current screen rectangle position [LEFT TOP RIGHT BOTTOM]
 		mvRect double = []
+	end
+	
+	properties (SetAccess = protected, GetAccess = public)
+		%> initial screen rectangle position [LEFT TOP RIGHT BOTTOM]
+		dstRect double = []
 		%> tick updates +1 on each call of draw (even if delay or off is true and no stimulus is drawn, resets on each update
 		tick double = 0
 		%> draw tick only updates when a draw command is called, resets on each update
@@ -128,12 +131,6 @@ classdef baseStimulus < optickaCore & dynamicprops
 		dY_
 		% deal with interaction of colour and alpha
 		isInSetColour logical = false
-		% workaround set method bug for dynamic properties. In theory a set
-		% method should not trigger the same set method, but there is a
-		% hard to trigger bug where indeed we get a recursion error. Here
-		% we use a loop limit so only the fisrt loop will set the value.
-		% See commit #a8bdb368928a9c5ebdb40cc66ec02be0534ce0d5
-		setLoop = 0;
 		%> Which properties to ignore to clone when making transient copies in
 		%> the setup method
 		ignorePropertiesBase = {'handles','ppd','sM','name','comment','fullName'...
@@ -883,7 +880,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		end
 
 		% ===================================================================
-		%> @brief gets a property copy or original property
+		%> @brief sets a property copy or original property
 		%>
 		%> When stimuli are run, their properties are copied, so e.g. angle
 		%> is copied to angleOut and this is used during the task. This

@@ -332,8 +332,7 @@ classdef discStimulus < baseStimulus
 		% ===================================================================
 		function reset(me)
 			resetTicks(me);
-			me.stopLoop = false; me.setLoop = 0;
-			me.inSetup = false; me.isSetup = false;
+			me.stopLoop = false; me.inSetup = false; me.isSetup = false;
 			me.colourOutTemp = [];
 			me.flashColourOutTemp = [];
 			me.flashFG = [];

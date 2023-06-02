@@ -151,7 +151,6 @@ classdef fixationCrossStimulus < baseStimulus
 			function set_xPositionOut(me, value)
 				me.setLoop = me.setLoop + 1;
 				if me.setLoop == 1;me.xPositionOut = value * me.ppd;else;warning('Recursion: xPositionOut');end
-				me.setLoop = 0;
 				if ~me.inSetup; me.setRect; end
 			end
 			function set_yPositionOut(me,value)
@@ -164,7 +163,6 @@ classdef fixationCrossStimulus < baseStimulus
 				if me.isInSetColour; return; end
 				me.setLoop = me.setLoop + 1;
 				if me.setLoop == 1; me.alphaOut = value; else; warning('Recursion: alphaOut'); end
-				me.setLoop = 0;
 				[~,name] = getP(me,'colour');
 				me.(name) = [me.(name)(1:3) value];
 				[val,name] = getP(me,'flashColour');
@@ -176,7 +174,6 @@ classdef fixationCrossStimulus < baseStimulus
 				if me.isInSetColour; return; end
 				me.setLoop = me.setLoop + 1;
 				if me.setLoop == 1; me.alpha2Out = value; else; warning('Recursion: alpha2Out'); end
-				me.setLoop = 0;
 				[~,name] = getP(me,'colour2');
 				me.(name) = [me.(name)(1:3) value];
 			end
@@ -206,10 +203,7 @@ classdef fixationCrossStimulus < baseStimulus
 						value = [value value value alpha];
 				end
 				if isempty(me.colourOutTemp);me.colourOutTemp = value;end
-				me.setLoop = me.setLoop + 1;
-				if me.setLoop == 1; me.colourOut = value; else; warning('Recursion: colourOut'); end
-				me.setLoop = 0;
-				me.isInSetColour = false;
+				me.colourOut = value; me.isInSetColour = false;
 			end
 			function set_colour2Out(me, value)
 				me.isInSetColour = true;
@@ -228,10 +222,7 @@ classdef fixationCrossStimulus < baseStimulus
 						value = [value value value alpha];
 				end
 				if isempty(me.colour2OutTemp);me.colour2OutTemp = value;end
-				me.setLoop = me.setLoop + 1;
-				if me.setLoop == 1; me.colour2Out = value; else; warning('Recursion: colour2Out'); end
-				me.setLoop = 0;
-				me.isInSetColour = false;
+				me.colour2Out = value; me.isInSetColour = false;
 			end
 		end
 		

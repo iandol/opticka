@@ -419,7 +419,6 @@ classdef colourGratingStimulus < baseStimulus
 		% ===================================================================
 		function reset(me)
 			resetTicks(me);
-			me.setLoop = 0;
 			me.inSetup = false; me.isSetup = false;
 			if ~isempty(me.texture) && Screen(me.texture,'WindowKind') == -1
 				try Screen('Close',me.texture); end %#ok<*TRYNC>

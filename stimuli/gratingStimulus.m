@@ -277,7 +277,6 @@ classdef gratingStimulus < baseStimulus
 			function set_xPositionOut(me, value)
 				me.setLoop = me.setLoop + 1;
 				if me.setLoop == 1; me.xPositionOut = value * me.ppd; else; warning('Recursion: xPositionOut'); end
-				me.setLoop = 0;
 			end
 			function set_yPositionOut(me,value)
 				me.setLoop = me.setLoop + 1;
@@ -352,7 +351,6 @@ classdef gratingStimulus < baseStimulus
 		% ===================================================================
 		function reset(me)
 			resetTicks(me);
-			me.setLoop = 0;
 			me.inSetup = false; me.isSetup = false;
 			if isprop(me,'texture')
 				if ~isempty(me.texture) && me.texture > 0 && Screen(me.texture,'WindowKind') == -1

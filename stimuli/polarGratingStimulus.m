@@ -279,7 +279,7 @@ classdef polarGratingStimulus < baseStimulus
 			setRect(me);
 
 			if me.centerMask > 0
-				sz = me.centerMask * me.ppd;
+				sz = round(me.centerMask * me.ppd);
 				[me.cMaskTex, me.cMaskRect] = CreateProceduralSmoothedDisc(me.sM.win,...
 					sz, sz, [], round(sz/2), round(sz/10), true, 1);
 				me.cMaskRect = CenterRectOnPointd(me.cMaskRect, me.xFinal, me.yFinal);
@@ -400,8 +400,10 @@ classdef polarGratingStimulus < baseStimulus
 					me.angleOut, [], [], me.baseColourOut, [], me.rotateMode,...
 					[me.driftPhase, me.sf1, me.contrastOut, me.sigmaOut, me.sf2, 0, 0, 0]);
 				if me.arcValueOut(2) > 0
-					Screen('FillArc', me.sM.win, me.baseColourOut, me.mvRect, 90+me.arcValueOut(1), 360- ...
-						me.arcValueOut(2));
+					Screen('FillArc', me.sM.win, me.baseColourOut, ...
+						[me.mvRect(1)-2 me.mvRect(2)-2 me.mvRect(3)+2 me.mvRect(4)+2], ...
+						90+me.arcValueOut(1), ...
+						360-me.arcValueOut(2));
 				end
 				if me.centerMask > 0
 					Screen('DrawTexture', me.sM.win, me.cMaskTex, [], me.cMaskRect, [], [], 1, me.baseColourOut, [], []);
@@ -447,7 +449,6 @@ classdef polarGratingStimulus < baseStimulus
 		% ===================================================================
 		function reset(me)
 			resetTicks(me);
-			me.setLoop = 0;
 			me.inSetup = false; me.isSetup = false;
 			if ~isempty(me.texture) && Screen(me.texture,'WindowKind') == -1
 				try Screen('Close',me.texture); end %#ok<*TRYNC>
