@@ -242,7 +242,7 @@ pfEntry = {
 };
 
 pfWithin = {
-	@()drawPhotoDiode(s,[0 0 0]);
+	@()drawPhotoDiodeSquare(s,[0 0 0]);
 };
 
 pfExit = {
@@ -265,7 +265,7 @@ fixEntry = {
 %--------------------fix within
 fixWithin = {
 	@()draw(stims); %draw stimulus
-	@()drawPhotoDiode(s,[0 0 0]);
+	@()drawPhotoDiodeSquare(s,[0 0 0]);
 };
 
 %--------------------test we are fixated for a certain length of time
@@ -298,7 +298,7 @@ catchEntry = {
 % what to run when we are showing stimuli
 catchWithin = { 
 	@()draw(stims);
-	@()drawPhotoDiode(s, [1 1 1]);
+	@()drawPhotoDiodeSquare(s, [1 1 1]);
 };
 
 % test we are finding the new target (stimulus 1, the saccade target)
@@ -334,7 +334,7 @@ end
 % what to run when we are showing stimuli
 stimWithin = { 
 	@()draw(stims);
-	@()drawPhotoDiode(s,[1 1 1]);
+	@()drawPhotoDiodeSquare(s,[1 1 1]);
 };
 
 % test we are finding the new target (stimulus 1, the saccade target)

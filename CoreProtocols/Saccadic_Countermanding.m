@@ -148,7 +148,7 @@ stims.fixationChoice		= 1;
 %--------------------pause entry
 pauseEntryFcn = {
 	@()hide(stims);
-	@()drawPhotoDiode(s,[0 0 0]); %draw black photodiode
+	@()drawPhotoDiodeSquare(s,[0 0 0]); %draw black photodiode
 	@()drawTextNow(s,'PAUSED, press [p] to resume...');
 	@()disp('PAUSED, press [p] to resume...');
 	@()trackerDrawStatus(eT,'PAUSED, press [p] to resume');
@@ -195,7 +195,7 @@ prefixEntryFcn = {
 
 %--------------------prefixate within
 prefixFcn = {
-	@()drawPhotoDiode(s,[0 0 0]);
+	@()drawPhotoDiodeSquare(s,[0 0 0]);
 };
 
 %--------------------prefixate exit
@@ -217,7 +217,7 @@ nsfEntryFcn = {
 nsfFcn = {
 	@()draw(stims{2}); %draw stimuli
 	@()trackerDrawEyePosition(eT);
-	@()drawPhotoDiode(s,[0 0 0]);
+	@()drawPhotoDiodeSquare(s,[0 0 0]);
 };
 
 %--------------------test we are fixated for a certain length of time
@@ -245,7 +245,7 @@ nsEntryFcn = { @()doStrobe(me,true); };
 nsFcn = {
 	@()draw(stims{1}); %draw stimuli
 	@()trackerDrawEyePosition(eT);
-	@()drawPhotoDiode(s,[1 1 1]);
+	@()drawPhotoDiodeSquare(s,[1 1 1]);
 };
 
 %--------------------test we are fixated for a certain length of time
@@ -278,7 +278,7 @@ sfEntryFcn = {
 sfFcn =  {
 	@()draw(stims{2});
 	@()trackerDrawEyePosition(eT);
-	@()drawPhotoDiode(s,[0 0 0]);
+	@()drawPhotoDiodeSquare(s,[0 0 0]);
 };
 
 sfFixFcn = {
@@ -301,7 +301,7 @@ sEntryFcn = {
 sFcn =  {
 	@()draw(stims);
 	@()trackerDrawEyePosition(eT);
-	@()drawPhotoDiode(s,[1 1 1]);
+	@()drawPhotoDiodeSquare(s,[1 1 1]);
 };
 
 sFixFcn = {
@@ -335,7 +335,7 @@ correctEntryFcn = {
 
 %--------------------correct stimulus
 correctFcn = {
-	@()drawPhotoDiode(s,[0 0 0]);
+	@()drawPhotoDiodeSquare(s,[0 0 0]);
 };
 
 %--------------------when we exit the correct state
@@ -367,7 +367,7 @@ incEntryFcn = {
 
 %--------------------our incorrect/breakfix stimulus
 incFcn = {
-	@()drawPhotoDiode(s,[0 0 0]);
+	@()drawPhotoDiodeSquare(s,[0 0 0]);
 };
 
 %--------------------incorrect exit

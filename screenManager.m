@@ -353,7 +353,7 @@ classdef screenManager < optickaCore
 		% ===================================================================
 			if me.isOpen; fprintf('===>>> screenManager.open(): Screen already open!');return; end
 			if me.isPTB == false
-				warning('No PTB found!')
+				warning('No PTB found!');
 				sv = me.screenVals;
 				return;
 			end
@@ -1524,23 +1524,13 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief draw a square in top-left of screen to trigger photodiode
+		%> @brief draw a square in top-right of screen to trigger photodiode
 		%>
 		%> @param colour colour of square
 		%> @return
 		% ===================================================================
 		function drawPhotoDiodeSquare(me,colour)
 			% drawPhotoDiodeSquare(me,colour)
-			Screen('FillRect',me.win,colour,me.photoDiodeRect);
-		end
-		% ===================================================================
-		%> @brief conditionally draw a white square to trigger photodiode
-		%>
-		%> @param colour colour of square
-		%> @return
-		% ===================================================================
-		function drawPhotoDiode(me,colour)
-			% drawPhotoDiode(me,colour) % conditionally draw a white square to trigger photodiode
 			Screen('FillRect',me.win,colour,me.photoDiodeRect);
 		end
 

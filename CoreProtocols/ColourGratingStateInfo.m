@@ -111,7 +111,7 @@ sM.skipExitStates			= {'fixate','incorrect|breakfix'};
 pauseEntryFcn = {
 	@()hide(stims); % hide all stimuli
 	@()drawBackground(s); % blank the subject display
-	@()drawPhotoDiode(s,[0 0 0]); % draw black photodiode
+	@()drawPhotoDiodeSquare(s,[0 0 0]); % draw black photodiode
 	@()drawTextNow(s,'PAUSED, press [p] to resume...');
 	@()disp('PAUSED, press [p] to resume...');
 	@()trackerDrawStatus(eT,'PAUSED, press [p] to resume', stims.stimulusPositions);
@@ -151,7 +151,7 @@ prefixEntryFcn = {
 
 %--------------------prefixate within
 prefixFcn = {
-	@()drawPhotoDiode(s,[0 0 0]);
+	@()drawPhotoDiodeSquare(s,[0 0 0]);
 };
 
 %--------------------prefixate exit
@@ -171,7 +171,7 @@ fixEntryFcn = {
 %--------------------fix within
 fixFcn = {
 	@()draw(stims); %draw stimuli
-	@()drawPhotoDiode(s,[0 0 0]);
+	@()drawPhotoDiodeSquare(s,[0 0 0]);
 };
 
 %--------------------test we are fixated for a certain length of time
@@ -207,7 +207,7 @@ stimEntryFcn = {
 %--------------------what to run when we are showing stimuli
 stimFcn =  {
 	@()draw(stims);
-	@()drawPhotoDiode(s,[1 1 1]);
+	@()drawPhotoDiodeSquare(s,[1 1 1]);
 	@()animate(stims); % animate stimuli for subsequent draw
 };
 
@@ -250,7 +250,7 @@ correctEntryFcn = {
 
 %--------------------correct stimulus
 correctFcn = {
-	@()drawPhotoDiode(s,[0 0 0]);
+	@()drawPhotoDiodeSquare(s,[0 0 0]);
 };
 
 %--------------------when we exit the correct state
@@ -296,7 +296,7 @@ breakEntryFcn = {
 
 %--------------------our incorrect stimulus
 incFcn = {
-	@()drawPhotoDiode(s,[0 0 0]);
+	@()drawPhotoDiodeSquare(s,[0 0 0]);
 };
 
 %--------------------incorrect / break exit

@@ -138,7 +138,7 @@ bR.breakStateName				= ["breakfix","incorrect"];
 %--------------------pause entry
 pauseEntryFcn = {
 	@()hide(stims);
-	@()drawPhotoDiode(s,[0 0 0]); %draw black photodiode
+	@()drawPhotoDiodeSquare(s,[0 0 0]); %draw black photodiode
 	@()drawTextNow(s,'PAUSED, press [p] to resume...');
 	@()disp('PAUSED, press [p] to resume...');
 	@()trackerDrawStatus(eT,'PAUSED, press [p] to resume');
@@ -188,7 +188,7 @@ prefixEntryFcn = {
 
 prefixFcn = {
 	@()trackerDrawFixation(eT);
-	@()drawPhotoDiode(s,[0 0 0]);
+	@()drawPhotoDiodeSquare(s,[0 0 0]);
 };
 
 prefixExitFcn = {
