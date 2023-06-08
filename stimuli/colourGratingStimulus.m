@@ -69,8 +69,8 @@ classdef colourGratingStimulus < baseStimulus
 		sigma(1,1) double			= -1
 		%> aspect ratio of the grating
 		aspectRatio(1,1) double		= 1;
-        %> turn stimulus on/off at X hz, [] diables this
-        visibleRate             = []
+		%> turn stimulus on/off at X hz, [] diables this
+		visibleRate             = []
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -113,7 +113,7 @@ classdef colourGratingStimulus < baseStimulus
 		%to regenerate the shader
 		colourCache
 		colour2Cache
-        visibleTick				= 0
+		visibleTick				= 0
 		visibleFlip				= Inf
 	end
 	
@@ -265,8 +265,8 @@ classdef colourGratingStimulus < baseStimulus
 			me.colourCache = me.colourOut; me.colour2Cache = me.colour2Out;
 
 			if ~isempty(me.visibleRateOut) && isnumeric(me.visibleRateOut)
-                me.visibleTick = 0;
-                me.visibleFlip = round((me.screenVals.fps/2) / me.visibleRateOut);
+				me.visibleTick = 0;
+				me.visibleFlip = round((me.screenVals.fps/2) / me.visibleRateOut);
 			else
 				me.visibleFlip = Inf; me.visibleTick = 0;
 			end
@@ -334,8 +334,6 @@ classdef colourGratingStimulus < baseStimulus
 		% ===================================================================
 		function update(me)
 			resetTicks(me);
-            me.isVisible = true;
-            me.visibleTick = 0;
 			if me.correctPhase
 				ps=me.calculatePhase;
 				me.driftPhase=me.phaseOut-ps;
@@ -359,8 +357,9 @@ classdef colourGratingStimulus < baseStimulus
 				me.colourCache = me.colourOut; me.colour2Cache = me.colour2Out;
 			end
 			if ~isempty(me.visibleRateOut) && isnumeric(me.visibleRateOut)
-                me.visibleTick = 0;
-                me.visibleFlip = round((me.screenVals.fps/2) / me.visibleRateOut);
+				me.isVisible = true;
+				me.visibleTick = 0;
+				me.visibleFlip = round((me.screenVals.fps/2) / me.visibleRateOut);
 			else
 				me.visibleFlip = Inf; me.visibleTick = 0;
 			end
@@ -403,11 +402,11 @@ classdef colourGratingStimulus < baseStimulus
 				if mod(me.tick,me.phaseCounter) == 0
 					me.driftPhase = me.driftPhase + me.phaseOfReverse;
 				end
-                me.visibleTick = me.visibleTick + 1;
-                if me.visibleTick == me.visibleFlip
-                    me.isVisible = ~me.isVisible;
-                    me.visibleTick = 0;
-                end
+				me.visibleTick = me.visibleTick + 1;
+				if me.visibleTick == me.visibleFlip
+					me.isVisible = ~me.isVisible;
+					me.visibleTick = 0;
+				end
 			end
 		end
 		

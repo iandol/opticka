@@ -139,7 +139,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 			'dstRect','mvRect','sM','screenVals','isSetup','isGUI','showOnTracker'...
 			'doDots','doMotion','doDrift','doFlash','doAnimator'}
 		%> Which properties to not draw in the UI panel
-		ignorePropertiesUIBase = {'animator','fullName'}
+		ignorePropertiesUIBase = {'animator','fullName','mvRect','xFinal','yFinal'}
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -335,8 +335,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 			else
 				me.offTicks = Inf;
 			end
-			mouseTick = 0; mouseGlobalX = 0; mouseGlobalY = 0; mouseValid = false;
-			me.mouseX = 0; me.mouseY = 0;
+			mouseTick = 0; 
 			me.tick = 0; 
 			me.drawTick = 0;
 		end
@@ -353,14 +352,14 @@ classdef baseStimulus < optickaCore & dynamicprops
 			global mouseTick mouseGlobalX mouseGlobalY mouseValid
 			if me.tick > mouseTick
 				if ~isempty(me.sM) && isa(me.sM,'screenManager') && me.sM.isOpen
-					[me.mouseX,me.mouseY] = GetMouse(me.sM.win);
-					if me.mouseX > -1 && me.mouseY > -1
-						me.mouseValid = true;
-					else
-						me.mouseValid = false;
-					end
+					[me.mouseX, me.mouseY] = GetMouse(me.sM.win);
 				else
-					[me.mouseX,me.mouseY] = GetMouse;
+					[me.mouseX, me.mouseY] = GetMouse;
+				end
+				if me.mouseX > -1 && me.mouseY > -1
+					me.mouseValid = true;
+				else
+					me.mouseValid = false;
 				end
 				mouseTick = me.tick; %set global so no other object with same tick number can call this again
 				mouseValid = me.mouseValid;
@@ -562,9 +561,9 @@ classdef baseStimulus < optickaCore & dynamicprops
 			elseif isprop(me,'ignorePropertiesUI')
 				igA = me.ignorePropertiesUI;
 			end
-			if isprop(me,'ignorePropertiesUIBase'); igB = me.ignorePropertiesUIBase; end
+			if isprop(me,'ignorePropertiesUIBase'); igB = findPropertyDefault(me,'ignorePropertiesUIBase'); end
 			if ischar(igA);igA = strsplit(igA,'|');end
-			if ischar(igB); igB = {'animator','fullName'}; end
+			if ischar(igB); igB = {'animator','fullName','mvREct','xFinal','yFinal'}; end
 			excl = [igA igB];	
 			eidx = [];
 			for i = 1:length(pr)
@@ -939,12 +938,12 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> @brief updatePosition returns dX and dY given an angle and delta
 		%>
 		% ===================================================================
-		function [dX, dY] = updatePosition(delta,angle)
+		function [dX, dY] = updatePosition(delta, angle)
 		% updatePosition(delta, angle)
 			dX = delta .* cos(baseStimulus.d2r(angle));
-			if abs(dX) < 1e-3; dX = 0; end
+			if length(dX)== 1 && abs(dX) < 1e-3; dX = 0; end
 			dY = delta .* sin(baseStimulus.d2r(angle));
-			if abs(dY) < 1e-3; dY = 0; end
+			if length(dY)==1 && abs(dY) < 1e-3; dY = 0; end
 		end
 		
 	end%---END STATIC METHODS---%

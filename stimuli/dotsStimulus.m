@@ -100,6 +100,7 @@ classdef dotsStimulus < baseStimulus
 		ignoreProperties={'name', 'family', 'xy', 'dxdy', 'colours', 'mask', ...
 			'maskTexture', 'maskIsProcedural', 'maskColour', 'colourType', ...
 			'msrcMode', 'mdstMode'}
+		ignorePropertiesUI = {'msrcMode', 'mdstMode'}
 	end
 	
 	%=======================================================================
@@ -242,6 +243,9 @@ classdef dotsStimulus < baseStimulus
 					if me.mouseValid
 						me.xFinal = me.mouseX;
 						me.yFinal = me.mouseY;
+						if me.mask
+							me.maskRect = CenterRectOnPointd(me.maskRect,me.xFinal,me.yFinal);
+						end
 					end
 				end
 % 				if me.doMotion == true

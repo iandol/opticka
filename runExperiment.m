@@ -997,7 +997,7 @@ classdef runExperiment < optickaCore
 					
 					%------run the stateMachine one step forward
 					update(sM);
-					%if me.doFlip && s.visualDebug; s.drawGrid; me.infoTextScreen; end
+					if me.doFlip && s.visualDebug; s.drawGrid; me.infoTextScreen; end
 					if me.doFlip; s.finishDrawing(); end % potential optimisation...
 					
 					%------check eye position manually. 
@@ -2293,6 +2293,7 @@ classdef runExperiment < optickaCore
 		%>
 		%> @param args input structure
 		% ===================================================================
+			persistent curtoggle
 			if ~exist('trainingSet','var'); trainingSet = true; end
 			[pressed, name, ~] = optickaCore.getKeys(me.keyboardDevice);
 			if ~pressed; return; end
@@ -2422,8 +2423,10 @@ classdef runExperiment < optickaCore
 					if trainingSet
 						if me.stimuli.setChoice > 1
 							me.stimuli.setChoice = round(me.stimuli.setChoice - 1);
-							me.stimuli.showSet();
+						else
+							me.stimuli.setChoice = length(me.stimuli.stimulusSets);
 						end
+						me.stimuli.showSet(me.stimuli.setChoice);
 						fprintf('======>>> Stimulus Set: #%g | Stimuli: %s\n',me.stimuli.setChoice, num2str(me.stimuli.stimulusSets{me.stimuli.setChoice}))
 					end
 
@@ -2432,8 +2435,10 @@ classdef runExperiment < optickaCore
 					if trainingSet
 						if me.stimuli.setChoice < length(me.stimuli.stimulusSets)
 							me.stimuli.setChoice = me.stimuli.setChoice + 1;
-							me.stimuli.showSet();
+						else
+							me.stimuli.setChoice = 1;
 						end
+						me.stimuli.showSet(me.stimuli.setChoice);
 						fprintf('======>>> Stimulus Set: #%g | Stimuli: %s\n',me.stimuli.setChoice, num2str(me.stimuli.stimulusSets{me.stimuli.setChoice}))
 					end
 
@@ -2598,14 +2603,19 @@ classdef runExperiment < optickaCore
 					end
 
 				case 's'
-
-					fprintf('======>>> Show Cursor!\n');
-					ShowCursor('CrossHair',me.screen.win);
+					if isempty(curtoggle);curtoggle=true;end
+					curtoggle = ~curtoggle;
+					if curtoggle
+						fprintf('======>>> Show Cursor!\n');
+						ShowCursor('CrossHair',me.screen.win);
+					else
+						fprintf('======>>> Hide Cursor!\n');
+						HideCursor(me.screen.win);
+					end
 					
 				case 'd'
 					
-					fprintf('======>>> Hide Cursor!\n');
-					HideCursor(me.screen.win);
+					
 	
 				case '1!'
 					%   if isfield(tS,'eO') && eO.isOpen == true
@@ -2637,7 +2647,7 @@ classdef runExperiment < optickaCore
 					
 				case '0)'
 					
-					if me.debug; me.screen.captureScreen(); end
+					if trainingSet; me.screen.captureScreen(); end
 					
 			end
 		end

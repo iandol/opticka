@@ -154,8 +154,7 @@ classdef metaStimulus < optickaCore
 		% ===================================================================
 		function update(me, choice)
 			%tic
-			if ~exist('choice','var'); choice = me.choice; end
-			if ~isempty(choice) && isnumeric(choice) %user forces specific stimuli
+			if exist('choice','var') && ~isempty(choice) && isnumeric(choice) %user forces specific stimuli
 				for i = choice
 					update(me.stimuli{i});
 				end

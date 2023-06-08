@@ -272,16 +272,13 @@ classdef gratingStimulus < baseStimulus
 				me.reverseDirectionOut = value;
 			end
 			function set_sizeOut(me,value)
-				me.sizeOut = value*me.ppd;
+				me.sizeOut = value * me.ppd;
 			end
 			function set_xPositionOut(me, value)
-				me.setLoop = me.setLoop + 1;
-				if me.setLoop == 1; me.xPositionOut = value * me.ppd; else; warning('Recursion: xPositionOut'); end
+				me.xPositionOut = value * me.ppd;
 			end
 			function set_yPositionOut(me,value)
-				me.setLoop = me.setLoop + 1;
-				if me.setLoop == 1; me.yPositionOut = value*me.ppd; else; warning('Recursion: yPositionOut'); end
-				me.setLoop = 0;	
+				me.yPositionOut = value * me.ppd; 
 			end
 
 		end
