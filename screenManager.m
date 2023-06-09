@@ -599,12 +599,14 @@ classdef screenManager < optickaCore
 				end
 				
 				%===Linux can give us some more information
-				if IsLinux && ~isHDR
-					d			= Screen('ConfigureDisplay','Scanout',me.screen,0);
-					sv.name		= d.name;
-					sv.widthMM	= d.displayWidthMM;
-					sv.heightMM = d.displayHeightMM;
-					sv.display	= d;
+				if IsLinux && ~isHDR && ~me.useVulkan
+					try
+						d			= Screen('ConfigureDisplay','Scanout',me.screen,0);
+						sv.name		= d.name;
+						sv.widthMM	= d.displayWidthMM;
+						sv.heightMM = d.displayHeightMM;
+						sv.display	= d;
+					end
 				end
 				
 				%===get timing info
