@@ -51,9 +51,9 @@ tS.errorSound			= [300, 1, 1];		%==freq,length,volume
 % components; you can also set verbose in the opticka GUI to enable all of
 % these…
 %sM.verbose					= true;		%==print out stateMachine info for debugging
-stims.verbose				= true;		%==print out metaStimulus info for debugging
+%stims.verbose				= true;		%==print out metaStimulus info for debugging
 %io.verbose					= true;		%==print out io commands for debugging
-%eT.verbose					= true;		%==print out eyelink commands for debugging
+eT.verbose					= true;		%==print out eyetracker commands for debugging
 %rM.verbose					= true;		%==print out reward commands for debugging
 %task.verbose				= true;		%==print out task info for debugging
 
@@ -149,9 +149,9 @@ stims.controlTable(n).stimuli = [10];
 stims.controlTable(n).limits = [0.02 0.5];
 
 %------this allows us to enable subsets from our stimulus list
-stims.stimulusSets = {11, [1 11], [2 11], [3 11], [4 11], [5 11],...
-	[6 11], [7 11], [8 11], [9 11], [10 11]};
-stims.setChoice = 3;
+stims.stimulusSets = {[1 11], [2 11], [3 11], [4 11], [5 11],...
+	[6 11], [7 11], [8 11], [9 11], [10 11], 11};
+stims.setChoice = 7;
 
 %----------------------State Machine States-------------------------
 % each cell {array} holds a set of anonymous function handles which are executed by the
@@ -169,7 +169,6 @@ pauseEntryFcn = {
 	@()drawBackground(s); %blank the subject display
 	@()drawTextNow(s,'PAUSED, press [p] to resume...');
 	@()disp('PAUSED, press [p] to resume...');
-	@()trackerClearScreen(eT); % blank the eyelink screen
 	@()trackerDrawStatus(eT,'PAUSED, press [p] to resume');
 	@()trackerMessage(eT,'TRIAL_RESULT -100'); %store message in EDF
 	@()resetAll(eT); % reset all fixation markers to initial state
@@ -205,12 +204,11 @@ prefixExitFcn = {
 	@()trackerMessage(eT,'V_RT MESSAGE END_FIX END_RT'); % Eyelink commands
 	@()trackerMessage(eT,sprintf('TRIALID %i',getTaskIndex(me))); %Eyelink start trial marker
 	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
-	@()trackerDrawStatus(eT,'Init Fix...', stims.stimulusPositions);
 };
 
 %====================fixate entry
 fixEntryFcn = {
-	
+	@()trackerDrawStatus(eT,'Fixate', stims.stimulusPositions);
 };
 
 %--------------------fix within
@@ -227,7 +225,9 @@ inFixFcn = {
 
 %--------------------exit fixation phase
 fixExitFcn = {
+	@()needFlip(me, true, 1); % enable the screen and trackerscreen flip
 	@()updateFixationValues(eT,[],[],[],tS.stimulusFixTime); %reset fixation time for stimulus = tS.stimulusFixTime
+	@()trackerDrawStatus(eT,'Stimulus', stims.stimulusPositions);
 	@()trackerMessage(eT,'END_FIX');
 }; 
 
@@ -245,14 +245,13 @@ stimFcn = {
 
 %--------------------test we are maintaining fixation
 maintainFixFcn = {
-	@()testHoldFixation(eT,'correct','breakfix');
+	@()testHoldFixation(eT,'correct','incorrect');
 };
 
 %--------------------as we exit stim presentation state
 stimExitFcn = {
 	@()setStrobeValue(me,255);
 	@()doStrobe(me,true);
-	@()mousePosition(s,true); %this just prints the current mouse position to the command window
 };
 
 %====================if the subject is correct (small reward)
@@ -263,21 +262,21 @@ correctEntryFcn = {
 	@()stopRecording(eT);
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()needEyeSample(me,false); % no need to collect eye data until we start the next trial
+	@()needFlip(me, true, 0); % enable the screen but not trackerscreen flip
 	@()logRun(me,'CORRECT'); % log start to command window
 };
 
 %--------------------correct stimulus
 correctFcn = { 
 	@()drawBackground(s);
-	@()mousePosition(s,true); %this just prints the current mouse position to the command window
 };
 
 correctExitFcn = { 
 	@()giveReward(rM); % send a reward TTL
 	@()beep(aM, tS.correctSound); % correct beep
+	@()mousePosition(s,true); %this just prints the current mouse position to the command window
 	@()updatePlot(bR, me);
 	@()update(stims);
-	@()needFlipTracker(me, 0); %for operator screen stop flip
 	@()plot(bR, 1); % actually do our behaviour record drawing
 };
 
@@ -290,6 +289,7 @@ breakEntryFcn = {
 	@()stopRecording(eT);
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()needEyeSample(me,false);
+	@()needFlip(me, true, 0); % enable the screen but not trackerscreen flip
 	@()logRun(me,'BREAK'); % log start to command window
 };
 
@@ -302,6 +302,7 @@ incorrEntryFcn = {
 	@()stopRecording(eT);
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()needEyeSample(me,false);
+	@()needFlip(me, true, 0); % enable the screen but not trackerscreen flip
 	@()logRun(me,'INCORRECT'); % log start to command window
 };
 
@@ -320,6 +321,7 @@ tOutFcn =  {
 
 %--------------------when we exit the incorrect/breakfix state
 ExitFcn = {
+	@()mousePosition(s,true); %this just prints the current mouse position to the command window
 	@()updatePlot(bR, me);
 	@()update(stims);
 	@()plot(bR, 1); % actually do our behaviour record drawing
@@ -380,8 +382,8 @@ stateInfoTmp = {
 'pause'		'prefix'	inf		pauseEntryFcn	{}				{}				pauseExitFcn;
 %---------------------------------------------------------------------------------------------
 'prefix'	'fixate'	0.5		prefixEntryFcn	prefixFcn		{}				prefixExitFcn;
-'fixate'	'incorrect'	5		fixEntryFcn		fixFcn			inFixFcn		fixExitFcn;
-'stimulus'	'incorrect'	5		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn;
+'fixate'	'incorrect'	10		fixEntryFcn		fixFcn			inFixFcn		fixExitFcn;
+'stimulus'	'incorrect'	10		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn;
 'incorrect'	'timeout'	0.1		incorrEntryFcn	breakFcn		{}				ExitFcn;
 'breakfix'	'timeout'	0.1		breakEntryFcn	breakFcn		{}				ExitFcn;
 'correct'	'prefix'	0.1		correctEntryFcn	correctFcn		{}				correctExitFcn;

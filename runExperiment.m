@@ -1070,7 +1070,7 @@ classdef runExperiment < optickaCore
 
 					%----- For operator display, do we flip? -----%
 					if me.doTrackerFlip > 0 && me.doTrackerFlip < 3 
-						trackerFlip(eT, 1);
+						trackerFlip(eT, me.doTrackerFlip, false);
 					elseif me.doTrackerFlip == 3 
 						trackerFlip(eT, 0, true);
 					elseif me.doTrackerFlip == 4

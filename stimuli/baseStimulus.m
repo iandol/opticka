@@ -607,7 +607,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 										handles.([pr{cur} '_char']).Enable = false; 
 									end
 								else
-									txt=me.([pr{cur} 'List']);
+									txt=findPropertyDefault(me,[pr{cur} 'List']);
 									if contains(val,txt)
 										handles.([pr{cur} '_list']) = uidropdown(...
 										'Parent',eval(idx{i}),...
