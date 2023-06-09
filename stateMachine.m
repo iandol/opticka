@@ -495,14 +495,13 @@ classdef stateMachine < optickaCore
 			fprintf('===>>> StateMachine Demo: time delta = %.3g | Real time mode = %i\n\n',me.timeDelta,me.realTime);
 			me.verbose = true;
 			me.fnTimers = true;
-			beginFcn = {@()disp('begin state: Hello there!');};
-
-			transitFcn = {@()disp('transit state: Wait for it!');};
-			endFcn = {@()disp('end state: See you!');};
-			surpriseFcn = {@()disp('surprise state: SURPRISE!!!');};
+			beginFcn = { @()fprintf('\t\t\t\tbegin state: Hello there!\n'); };
+			transitFcn = { @()fprintf('\t\t\t\ttransit state: Wait for it!\n'); };
+			endFcn = { @()fprintf('\t\t\t\tend state: See you!\n'); };
+			surpriseFcn = { @()fprintf('\t\t\t\tsurprise state: SURPRISE!!!\n'); };
 			withinFcn = {}; %don't run anything within the state
-			transitionFcn = {@()sprintf('surprise');}; %returns a valid state name and thus triggers a transition
-			exitFcn = { @()fprintf('<<---exit state--->>'); @()fprintf('\n') };
+			transitionFcn = { @()sprintf('surprise'); }; %returns a valid state name and thus triggers a transition
+			exitFcn = { @()fprintf('\t\t\t\t<<---exit state--->>\n'); };
 			statesInfo = {
 				'name'		'next'		'time'	'entryFcn'	'withinFcn'	'transitionFcn'	'exitFcn';
 				'begin'		'next1'		[2 4]	beginFcn	withinFcn	{}				exitFcn;

@@ -214,6 +214,7 @@ if ismac; myScreen.useRetina = true; end
 myExp = runExperiment('stimuli', myStims,... %stimulus objects
 	'task', myTask,... %task design object
 	'screen', myScreen,... %screen manager object
+	'photoDiode', true,... %show a black/white square for a photodiode to use
 	'debug', false,... %use debug mode?
 	'verbose', false); %minimal verbosity
 

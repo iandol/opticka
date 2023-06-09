@@ -217,7 +217,7 @@ classdef discStimulus < baseStimulus
 				end
 			end
 			function set_flashColourOut(me, value)
-				if isempty(value);me.flashColourOut=value;me.setLoop = 0;return;end
+				if isempty(value);me.flashColourOut=value;return;end
 				me.isInSetColour = true;
 				[aold,name] = getP(me,'alpha');
 				if length(value)==4 && value(4) ~= aold
