@@ -386,7 +386,7 @@ classdef opticka < optickaCore
 			me.r.diaryMode = logical(me.gv(me.ui.OKDiaryMode));
 			me.r.screen.visualDebug = me.r.screen.debug;
 			me.r.screen.backgroundColour = me.gn(me.ui.OKbackgroundColour);
-			%deprecated me.r.screen.nativeBeamPosition = logical(me.gv(me.h.OKNativeBeamPosition));
+			try me.r.screen.useVulkan = logical(me.gv(me.h.OKuseVulkan)); end
 			
 			me.r.control.port = me.ui.OKINTANPort.Value;
 			if me.ui.OKControlIntan.Checked == true

@@ -1,4 +1,5 @@
 % ========================================================================
+classdef metaStimulus < optickaCore
 %> @class metaStimulus
 %> @brief Manager for multiple opticka stimuli.
 %> 
@@ -22,7 +23,6 @@
 %>
 %> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
-classdef metaStimulus < optickaCore
 	
 	%--------------------PUBLIC PROPERTIES----------%
 	properties 
