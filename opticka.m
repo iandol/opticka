@@ -368,25 +368,25 @@ classdef opticka < optickaCore
 				me.r.screen.windowed = s;
 			end
 			
-			me.r.logFrames = logical(me.gv(me.ui.OKlogFrames));
-			me.r.logStateTimers = logical(me.gv(me.ui.OKlogStateTimers));
-			me.r.benchmark = logical(me.gv(me.ui.OKbenchmark));
-			me.r.screen.hideFlash = logical(me.gv(me.ui.OKHideFlash));
-			me.r.screen.useRetina = logical(me.gv(me.ui.OKUseRetina));
+			me.r.logFrames = me.gl(me.ui.OKlogFrames);
+			me.r.logStateTimers = me.gl(me.ui.OKlogStateTimers);
+			me.r.benchmark = me.gl(me.ui.OKbenchmark);
+			me.r.screen.hideFlash = me.gl(me.ui.OKHideFlash);
+			me.r.screen.useRetina = me.gl(me.ui.OKUseRetina);
 			if strcmpi(me.r.screen.bitDepth,'8bit')
 				me.ui.OKAntiAliasing.Value = '0';
 			end
 			me.r.screen.antiAlias = me.gd(me.ui.OKAntiAliasing);
-			me.r.photoDiode = logical(me.gv(me.ui.OKUsePhotoDiode));
-			me.r.screen.movieSettings.record = logical(me.gv(me.ui.OKrecordMovie));
-			me.r.verbose = logical(me.gv(me.ui.OKVerbose)); %set method
+			me.r.photoDiode = me.gl(me.ui.OKUsePhotoDiode);
+			me.r.screen.movieSettings.record = me.gl(me.ui.OKrecordMovie);
+			me.r.verbose = me.gl(me.ui.OKVerbose); %set method
 			me.verbose = me.r.verbose;
-			me.r.screen.debug = logical(me.gv(me.ui.OKDebug));
+			me.r.screen.debug = me.gl(me.ui.OKDebug);
 			me.r.debug = me.r.screen.debug;
-			me.r.diaryMode = logical(me.gv(me.ui.OKDiaryMode));
+			me.r.diaryMode = me.gl(me.ui.OKDiaryMode);
 			me.r.screen.visualDebug = me.r.screen.debug;
 			me.r.screen.backgroundColour = me.gn(me.ui.OKbackgroundColour);
-			try me.r.screen.useVulkan = logical(me.gv(me.h.OKuseVulkan)); end
+			try me.r.screen.useVulkan = me.gl(me.ui.OKuseVulkan); end
 			
 			me.r.control.port = me.ui.OKINTANPort.Value;
 			if me.ui.OKControlIntan.Checked == true
@@ -458,10 +458,10 @@ classdef opticka < optickaCore
 			me.r.task.randomSeed = me.gn(me.ui.OKRandomSeed);
 			me.r.task.randomGenerator = me.gs(me.ui.OKrandomGenerator);
 			me.r.task.ibTime = me.gn(me.ui.OKibTime);
-			me.r.task.randomise = logical(me.gv(me.ui.OKRandomise));
+			me.r.task.randomise = me.gl(me.ui.OKRandomise);
 			me.r.task.isTime = me.gn(me.ui.OKisTime);
 			me.r.task.nBlocks = me.gd(me.ui.OKnBlocks);
-			me.r.task.realTime = logical(me.gv(me.ui.OKrealTime));
+			me.r.task.realTime = me.gl(me.ui.OKrealTime);
 			if ~isempty(me.r.task.blockVar)
 				me.r.task.blockVar.values = me.ge(me.ui.OKBlockValues);
 				me.r.task.blockVar.probability = me.gn(me.ui.OKBlockProbability);
@@ -1949,6 +1949,20 @@ classdef opticka < optickaCore
 		%quick alias to get ui value
 			if isprop(inhandle,'Value')
 				outv = inhandle.Value;
+			else
+				outv = [];
+			end
+		end
+
+		% ===================================================================
+		%> @brief gl (getlogical)
+		%> 
+		%> @param inhandle handle to UI element
+		% ===================================================================
+		function outv = gl(inhandle)
+		%quick alias to get ui value
+			if isprop(inhandle,'Value')
+				outv = logical(inhandle.Value);
 			else
 				outv = [];
 			end

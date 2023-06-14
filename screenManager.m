@@ -326,8 +326,11 @@ classdef screenManager < optickaCore
 			sv.white			= WhiteIndex(me.screen);
 			sv.black			= BlackIndex(me.screen);
 			sv.gray				= GrayIndex(me.screen);
-			
+
+			try sv.isVulkan			= PsychVulkan('Supported'); end
+
 			if IsLinux
+				
 				try
 					sv.display	= Screen('ConfigureDisplay','Scanout',me.screen,0);
 					sv.name		= sv.display.name;
@@ -435,7 +438,15 @@ classdef screenManager < optickaCore
 				%=== start to set up PTB screen
 				PsychImaging('PrepareConfiguration');
 				PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
-				if me.useVulkan; PsychImaging('AddTask', 'General', 'UseVulkanDisplay'); end
+				if me.useVulkan
+					if ~me.screenVals.isVulkan; fprintf('---> screenManager: Probing for Vulkan failed...\n'); end
+					try 
+						PsychImaging('AddTask', 'General', 'UseVulkanDisplay');
+						fprintf('---> screenManager: Vulkan appears to be activated...\n');
+					catch
+						warning('Vulkan failed to be initialised...')
+					end
+				end
 				me.isPlusPlus = screenManager.bitsCheckOpen();
 				fprintf('---> screenManager: Probing for a Display++...');
 				bD = me.bitDepth;
