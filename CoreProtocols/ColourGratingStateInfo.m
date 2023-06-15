@@ -70,11 +70,11 @@ tS.errorSound				= [300, 1, 1];		%==freq,length,volume
 % then the state will finish before the fixation time was completed!
 tS.fixX						= 0;		% X position in degrees
 tS.fixY						= 0;		% X position in degrees
-tS.firstFixInit				= 1;		% time to search and enter fixation window
+tS.firstFixInit				= 3;		% time to search and enter fixation window
 tS.firstFixTime				= 0.25;		% time to maintain fixation within windo
 tS.firstFixRadius			= 2;		% radius in degrees
 tS.strict					= true;		% do we forbid eye to enter-exit-reenter fixation window?
-tS.stimulusFixTime			= 2;		% time to maintain fixation within windo
+tS.stimulusFixTime			= 1;		% time to maintain fixation within windo
 %Initialise the eyeTracker object with X, Y, FixInitTime, FixTime, Radius, StrictFix
 eT.updateFixationValues(tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
 
@@ -119,7 +119,7 @@ pauseEntryFcn = {
 	@()resetAll(eT); % reset all fixation markers to initial state
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()stopRecording(eT, true); %stop recording eye position data, true=both eyelink & tobii
-	@()needFlip(me, false); % no need to flip the PTB screen
+	@()needFlip(me, false, 0); % no need to flip the PTB screen
 	@()needEyeSample(me, false); % no need to check eye position
 };
 
@@ -310,7 +310,7 @@ incExitFcn = {
 	@()trackerClearScreen(eT); 
 	@()resetAll(eT); % resets the fixation state timers	
 	@()checkTaskEnded(me); % check if task is finished
-	@()needFlip(me, false);
+	@()needFlip(me, false, 0);
 	@()plot(bR, 1); % actually do our behaviour record drawing
 };
 

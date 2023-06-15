@@ -839,16 +839,18 @@ classdef runExperiment < optickaCore
 				% covered by a blank. This primes the GPU, eyetracker, IO
 				% and other components with the same stimuli/task code used later...
 				fprintf('\n===>>> Warming up the GPU, Eyetracker and I/O systems... <<<===\n')
+				t = GetSecs();
+				WaitSecs('UntilTime',t+0.01);
 				tSM = stateMachine();
 				tSM.warmUp(); clear tSM;
 				show(stims); % allows all child stimuli to be drawn
 				getStimulusPositions(stims);
-				if ~isempty(me.eyetracker.device); resetAll(eT);trackerClearScreen(eT); end % blank eyelink screen
+				if ~isempty(me.eyetracker.device); resetAll(eT); end % blank eyelink screen
 				for i = 1:s.screenVals.fps*1
 					draw(stims); % draw all child stimuli
 					drawBackground(s); % draw our blank background
 					drawPhotoDiodeSquare(s, [mod(i,2) mod(i,2) mod(i,2) 1]); % set our photodiode square white
-					drawText(s,'Warming up the GPU, Eyetracker and I/O systems...');
+					drawText(s,'Warming up GPU, Eyetracker and I/O systems...');
 					finishDrawing(s);
 					animate(stims); % run our stimulus animation routines to the next frame
 					if ~mod(i,10); sendStrobe(io, 255); end % send a strobed word
@@ -860,8 +862,8 @@ classdef runExperiment < optickaCore
 						end
 						trackerDrawEyePosition(eT);
 					end
+					[pressed, name, ~] = optickaCore.getKeys(me.keyboardDevice);
 					flip(s);
-					optickaCore.getKeys(me.keyboardDevice);
 					if eT.secondScreen; trackerFlip(eT, 1, false); end
 				end
 				update(stims); %make sure all stimuli are set back to their start state
@@ -873,7 +875,7 @@ classdef runExperiment < optickaCore
 				end
 				resetStrobe(io); flip(s); flip(s); % reset the strobe system
 
-				%=============================Premptive save in case of crash or error: SAVES IN /TMP
+				%=============================Preemptive save in case of crash or error: SAVES IN /TMP
 				rE = me;
 				tS.tmpFile = [tempdir filesep me.name '.mat'];
 				fprintf('\n===>>> Save initial state: %s ...\n',tS.tmpFile);
@@ -928,8 +930,6 @@ classdef runExperiment < optickaCore
 					updateVariables(me, 1, false, false); % set to first variable
 					update(stims); %update our stimuli ready for display
 				end
-				keyTicks				= 0; %tick counter for reducing sensitivity of keyboard
-				keyHold					= 1; %a small loop to stop overeager key presses
 				tS.totalTicks			= 1; % a tick counter
 				me.pauseToggle			= 1; %toggle pause/unpause
 				tS.eyePos				= []; %locally record eye position
@@ -941,7 +941,7 @@ classdef runExperiment < optickaCore
 				if isa(io,'labJackT') && ~io.isHandleValid
 					io.close;
 					io.open;
-					warning('We had to reopen the labJackT to ensure a stable connection...')
+					disp('===>>> We had to reopen the labJackT to ensure a stable connection...')
 				end
 				
 				%===========================set up our behavioural plot
@@ -995,33 +995,37 @@ classdef runExperiment < optickaCore
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				while me.stopTask == false
 					
-					%------run the stateMachine one step forward
+					%------ Run stateMachine one step forward -----%
 					update(sM);
-					if me.doFlip && s.visualDebug; s.drawGrid; me.infoTextScreen; end
-					if me.doFlip; s.finishDrawing(); end % potential optimisation...
+
+					%------ Extra bits if we will flip -----%
+					if me.doFlip
+						if s.visualDebug; drawGrid(s); infoTextScreen(me); end
+						finishDrawing(s); 
+					end
 					
-					%------check eye position manually. 
+					%------ Check eye position manually. -----%
 					if me.needSample; getSample(eT); end
 					
-					%------Check keyboard for commands (remember we can turn
+					%------ Check keyboard for commands (remember we can turn
 					% this off using either tS.keyExclusionPattern
 					% [per-state toggle] or tS.checkKeysDuringStimulus).
 					if isempty(tS.keyExclusionPattern) || ~matches(sM.currentName,tS.keyExclusionPattern)
 						checkKeys(me);
 					end
 					
-					%-----FLIP: Show it at correct retrace: -----%
+					%----- FLIP: Show it at correct retrace: -----%
 					if me.doFlip
-						%------Display++ or DataPixx: I/O send strobe
+						%------ Display++ or DataPixx: I/O send strobe
 						% command for this screen flip needs to be sent
 						% PRIOR to the flip! Also remember DPP will be
-						% delayed by one flip
-						if me.sendStrobe && strcmp(me.strobe.device,'display++')
+						% delayed by one flip.
+						if me.sendStrobe && strcmpi(me.strobe.device,'display++')
 							sendStrobe(io); me.sendStrobe = false;
 						elseif me.sendStrobe && strcmpi(me.strobe.device,'datapixx')
 							triggerStrobe(io); me.sendStrobe = false;
 						end
-						%------Do the actual Screen flip, save times if
+						%------ Do the actual Screen flip, save times if
 						% enabled.
 						nextvbl = tL.lastvbl + me.screenVals.halfisi;
 						if me.logFrames == true
@@ -1030,14 +1034,10 @@ classdef runExperiment < optickaCore
 							= Screen('Flip', s.win, nextvbl);
 							tL.lastvbl = tL.vbl(tS.totalTicks);
 							thisN = tS.totalTicks;
-						elseif ~me.benchmark
+						else
 							[tL.vbl, tL.show, tL.flip, tL.miss] = Screen('Flip', s.win, nextvbl);
 							tL.lastvbl = tL.vbl;
 							thisN = 1;
-						else
-							tL.vbl = Screen('Flip', s.win, 0, 2, 2);
-							tL.lastvbl = tL.vbl;
-							thisN = 0;
 						end
 
 						%----- LabJack: I/O needs to send strobe immediately after screen flip -----%
@@ -1051,31 +1051,36 @@ classdef runExperiment < optickaCore
 							me.sendSyncTime = false;
 						end
 
-						%------Log stim / no stim + missed frame -----%
-						if thisN > 0
+						%------ Log stim / no stim + missed frame -----%
+						if thisN > 0 && me.logFrames
 							logStim(tL,sM.currentName,thisN);
 						end
 
-						%-------If we missed a frame record it somewhere -----%
+						%------ Debug: if we missed a frame record it somewhere -----%
 						if me.debug && thisN > 0 && tL.miss(thisN) > 0 && tL.stimTime(thisN) > 0
 							addMessage(tL,[],[],'We missed a frame during stimulus'); 
 						end
 						
-						%----- increment our global tick counter -----%
+						%----- Increment our global tick counter -----%
 						tS.totalTicks = tS.totalTicks + 1; tL.tick = tS.totalTicks;
+					
 					else % me.doFlip == FALSE
-						% still wait for IFI time
-						WaitSecs('YieldSecs',s.screenVals.ifi);
-					end  % END me.doFlip
+						
+						%----- still wait for IFI time -----%
+						tL.lastvbl = WaitSecs('UntilTime', tL.lastvbl + me.screenVals.ifi);
+
+					end %%%%%%%%%% END me.doFlip
 
 					%----- For operator display, do we flip? -----%
-					if me.doTrackerFlip > 0 && me.doTrackerFlip < 3 
-						trackerFlip(eT, me.doTrackerFlip, false);
+					if me.doTrackerFlip == 1
+						trackerFlip(eT, 1, false);
+					elseif me.doTrackerFlip == 2
+						trackerFlip(eT, 0, false);
 					elseif me.doTrackerFlip == 3 
 						trackerFlip(eT, 0, true);
 					elseif me.doTrackerFlip == 4
 						trackerFlip(eT, 0, true);
-						me.doTrackerFlip = 2;
+						me.doTrackerFlip = 1;
 					end
 					
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1553,11 +1558,13 @@ classdef runExperiment < optickaCore
 		function needFlip(me, value, trackervalue)
 		%> @fn enableFlip
 		%>
-		%> Enable screen flip
+		%> Enable screen flip for main and tracker screen
+		%> 
 		%> @param value - true/false for subject screen
-		%> @param trackervalue - 0: disable flip, 1 enable + clear, 2 enable + don't clear, 3 force
+		%> @param trackervalue - 0=disable flip, 1=enable + don't clear, 2=
+		%> enable + clear, 3=force, 4=force first frame then switch to 1
 		% ===================================================================
-			if exist('value','var'); me.doFlip = value; end
+			if exist('value','var'); me.doFlip = logical(value); end
 			if exist('trackervalue','var'); me.doTrackerFlip = trackervalue; end
 		end
 
@@ -1565,8 +1572,10 @@ classdef runExperiment < optickaCore
 		function needFlipTracker(me, value)
 		%> @fn needFlipTracker
 		%>
-		%> enables/disable the flip for the tracker display window
-		%> @param 0: disable flip, 1 enable + clear, 2 enable + don't clear, 3 force
+		%> Enables/disable the flip for the tracker display window
+		%> 
+		%> @param trackervalue - 0=disable flip, 1=enable + don't clear, 2=
+		%> enable + clear, 3=force, 4=force first frame then switch to 1
 		% ===================================================================
 			if exist('value','var'); me.doTrackerFlip = value; end
 		end

@@ -1916,11 +1916,12 @@ classdef screenManager < optickaCore
 		%> @brief Run validation for Display++
 		%>
 		% ===================================================================
-		function validateDisplayPlusPlus(screen)
-			if ~exist('screen','var'); screen=max(Screen('Screens')); end
+		function validateDisplayPlusPlus(screen, vulkan)
+			if ~exist('screen','var'); screen = max(Screen('Screens')); end
+			if ~exist('vulkan','var'); vulkan = 0; end
 			screenManager.bitsCheckOpen([], false);
 			BitsPlusImagingPipelineTest(screen);
-			BitsPlusIdentityClutTest(screen);
+			BitsPlusIdentityClutTest(screen, [], [], [], vulkan);
 		end
 		
 		% ===================================================================
