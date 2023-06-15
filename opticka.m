@@ -1081,7 +1081,7 @@ classdef opticka < optickaCore
 						disp('Didn''t save protocol...'); return
 					end
 				end
-				try me.r.stimuli.reset; end
+				try reset(me.r.stimuli); end
 				cd(p);
 				tmp = clone(me);
 				tmp.name = f;
