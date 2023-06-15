@@ -70,11 +70,11 @@ tS.errorSound				= [300, 1, 1];		%==freq,length,volume
 % then the state will finish before the fixation time was completed!
 tS.fixX						= 0;		% X position in degrees
 tS.fixY						= 0;		% X position in degrees
-tS.firstFixInit				= 1;		% time to search and enter fixation window
+tS.firstFixInit				= 3;		% time to search and enter fixation window
 tS.firstFixTime				= 0.25;		% time to maintain fixation within windo
 tS.firstFixRadius			= 2;		% radius in degrees
 tS.strict					= true;		% do we forbid eye to enter-exit-reenter fixation window?
-tS.stimulusFixTime			= 2;		% time to maintain fixation within windo
+tS.stimulusFixTime			= 1;		% time to maintain fixation within windo
 %Initialise the eyeTracker object with X, Y, FixInitTime, FixTime, Radius, StrictFix
 eT.updateFixationValues(tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
 
@@ -111,7 +111,7 @@ sM.skipExitStates			= {'fixate','incorrect|breakfix'};
 pauseEntryFcn = {
 	@()hide(stims); % hide all stimuli
 	@()drawBackground(s); % blank the subject display
-	@()drawPhotoDiode(s,[0 0 0]); % draw black photodiode
+	@()drawPhotoDiodeSquare(s,[0 0 0]); % draw black photodiode
 	@()drawTextNow(s,'PAUSED, press [p] to resume...');
 	@()disp('PAUSED, press [p] to resume...');
 	@()trackerDrawStatus(eT,'PAUSED, press [p] to resume', stims.stimulusPositions);
@@ -119,7 +119,7 @@ pauseEntryFcn = {
 	@()resetAll(eT); % reset all fixation markers to initial state
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()stopRecording(eT, true); %stop recording eye position data, true=both eyelink & tobii
-	@()needFlip(me, false); % no need to flip the PTB screen
+	@()needFlip(me, false, 0); % no need to flip the PTB screen
 	@()needEyeSample(me, false); % no need to check eye position
 };
 
@@ -136,11 +136,12 @@ pauseExitFcn = {
 %====================================================PRE-FIXATION
 %==============================================================
 %--------------------prefixate entry
-prefixEntryFcn = { 
-	@()needFlip(me, true, 1); % enable the screen and trackerscreen flip
+prefixEntryFcn = {
+	@()needFlip(me, true); % enable the screen and trackerscreen flip
 	@()needEyeSample(me, true); % make sure we start measuring eye position
 	@()hide(stims); % hide all stimuli
 	% update the fixation window to initial values
+	@()resetFixationHistory(eT);
 	@()updateFixationValues(eT,tS.fixX,tS.fixY,[],tS.firstFixTime); %reset fixation window
 	@()startRecording(eT); % start eyelink recording for this trial (tobii ignores this)
 	% tracker messages that define a trial start
@@ -151,12 +152,12 @@ prefixEntryFcn = {
 
 %--------------------prefixate within
 prefixFcn = {
-	@()drawPhotoDiode(s,[0 0 0]);
+	@()drawPhotoDiodeSquare(s,[0 0 0]);
 };
 
 %--------------------prefixate exit
 prefixExitFcn = {
-	@()trackerDrawStatus(eT,'Init Fix...', stims.stimulusPositions);
+	@()trackerDrawStatus(eT,'Start...', stims.stimulusPositions);
 };
 
 %==============================================================
@@ -171,7 +172,7 @@ fixEntryFcn = {
 %--------------------fix within
 fixFcn = {
 	@()draw(stims); %draw stimuli
-	@()drawPhotoDiode(s,[0 0 0]);
+	@()drawPhotoDiodeSquare(s,[0 0 0]);
 };
 
 %--------------------test we are fixated for a certain length of time
@@ -182,8 +183,8 @@ inFixFcn = {
 	% is returned and the state machine will jump to the correct state,
 	% otherwise 'breakfix' is returned and the state machine will jump to the
 	% breakfix state. If neither condition matches, then the state table below
-	% defines that after 5 seconds we will switch to the incorrect state.
-	@()testSearchHoldFixation(eT,'stimulus','incorrect')
+	% defines that after 15 seconds we will switch to the breakfix state.
+	@()testSearchHoldFixation(eT,'stimulus','breakfix')
 };
 
 %--------------------exit fixation phase
@@ -207,7 +208,7 @@ stimEntryFcn = {
 %--------------------what to run when we are showing stimuli
 stimFcn =  {
 	@()draw(stims);
-	@()drawPhotoDiode(s,[1 1 1]);
+	@()drawPhotoDiodeSquare(s,[1 1 1]);
 	@()animate(stims); % animate stimuli for subsequent draw
 };
 
@@ -220,7 +221,7 @@ maintainFixFcn = {
 	% otherwise 'breakfix' is returned and the state machine will jump to the
 	% breakfix state. If neither condition matches, then the state table below
 	% defines that after 5 seconds we will switch to the incorrect state.
-	@()testHoldFixation(eT,'correct','breakfix'); 
+	@()testHoldFixation(eT,'correct','incorrect'); 
 };
 
 %as we exit stim presentation state
@@ -250,7 +251,7 @@ correctEntryFcn = {
 
 %--------------------correct stimulus
 correctFcn = {
-	@()drawPhotoDiode(s,[0 0 0]);
+	@()drawPhotoDiodeSquare(s,[0 0 0]);
 };
 
 %--------------------when we exit the correct state
@@ -270,7 +271,6 @@ correctExitFcn = {
 %====================================================INCORRECT/BREAKFIX
 %--------------------incorrect entry
 incEntryFcn = { 
-	@()beep(aM, tS.errorSound);
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.INCORRECT));
 	@()trackerDrawStatus(eT,'Incorrect! :-(',stims.stimulusPositions);
@@ -283,7 +283,6 @@ incEntryFcn = {
 
 %--------------------break entry
 breakEntryFcn = {
-	@()beep(aM, tS.errorSound);
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.BREAKFIX));
 	@()trackerDrawStatus(eT,'Broke Fixation! :-(',stims.stimulusPositions);
@@ -296,11 +295,12 @@ breakEntryFcn = {
 
 %--------------------our incorrect stimulus
 incFcn = {
-	@()drawPhotoDiode(s,[0 0 0]);
+	@()drawPhotoDiodeSquare(s,[0 0 0]);
 };
 
 %--------------------incorrect / break exit
 incExitFcn = { 
+	@()beep(aM, tS.errorSound);
 	@()sendStrobe(io,251);
 	@()updatePlot(bR, me); % update our behavioural plot;
 	@()resetRun(task); % we randomise the run within this block to make it harder to guess next trial
@@ -310,7 +310,7 @@ incExitFcn = {
 	@()trackerClearScreen(eT); 
 	@()resetAll(eT); % resets the fixation state timers	
 	@()checkTaskEnded(me); % check if task is finished
-	@()needFlip(me, false);
+	@()needFlip(me, false, 0);
 	@()plot(bR, 1); % actually do our behaviour record drawing
 };
 
@@ -360,11 +360,11 @@ stateInfoTmp = {
 'pause'		'prefix'	inf		pauseEntryFcn	[]				[]				pauseExitFcn;
 %---------------------------------------------------------------------------------------------
 'prefix'	'fixate'	1		prefixEntryFcn	prefixFcn		[]				prefixExitFcn;
-'fixate'	'incorrect'	5		fixEntryFcn		fixFcn			inFixFcn		fixExitFcn;
-'stimulus'	'incorrect'	5		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn;
-'incorrect'	'timeout'	0.5		incEntryFcn		incFcn			[]				incExitFcn;
-'breakfix'	'timeout'	0.5		breakEntryFcn	incFcn			[]				incExitFcn;
-'correct'	'prefix'	0.5		correctEntryFcn	correctFcn		[]				correctExitFcn;
+'fixate'	'breakfix'	15		fixEntryFcn		fixFcn			inFixFcn		fixExitFcn;
+'stimulus'	'incorrect'	15		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn;
+'incorrect'	'timeout'	0.1		incEntryFcn		incFcn			[]				incExitFcn;
+'breakfix'	'timeout'	0.1		breakEntryFcn	incFcn			[]				incExitFcn;
+'correct'	'prefix'	0.1		correctEntryFcn	correctFcn		[]				correctExitFcn;
 'timeout'	'prefix'	tS.tOut	[]				[]				[]				[];
 %---------------------------------------------------------------------------------------------
 'calibrate' 'pause'		0.5		calibrateFcn	[]				[]				[];

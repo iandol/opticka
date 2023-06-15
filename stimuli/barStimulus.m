@@ -29,8 +29,8 @@ classdef barStimulus < baseStimulus
 		colour2 double          = [0 0 0 1];
 		%> modulate the colour
 		modulateColour double   = []
-        %> turn stimulus on/off at X hz, [] diables this
-        visibleRate             = []
+		%> turn stimulus on/off at X hz, [] diables this
+		visibleRate             = []
 	end
 
 	properties (Hidden = true)
@@ -51,8 +51,8 @@ classdef barStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = protected, GetAccess = protected)
-        visibleTick				= 0
-        visibleFlip				= Inf
+		visibleTick				= 0
+		visibleFlip				= Inf
 		baseColour
 		screenWidth
 		screenHeight
@@ -146,12 +146,12 @@ classdef barStimulus < baseStimulus
 				me.texture2 = Screen('MakeTexture', me.sM.win, me.matrix2, 0, [], me.floatPrecision);
 				if me.verbose; fprintf('===>>>Made texture: %i kind: %i\n',me.texture2,Screen(me.texture2,'WindowKind')); end
 				me.phaseCounter = round( me.phaseReverseTime / me.sM.screenVals.ifi );
-            end
+			end
 
-            if ~isempty(me.visibleRateOut) && isnumeric(me.visibleRateOut)
-                me.visibleTick = 0;
-                me.visibleFlip = round((me.screenVals.fps/2) / me.visibleRateOut);
-            else
+			if ~isempty(me.visibleRateOut) && isnumeric(me.visibleRateOut)
+				me.visibleTick = 0;
+				me.visibleFlip = round((me.screenVals.fps/2) / me.visibleRateOut);
+			else
 				me.visibleFlip = Inf; me.visibleTick = 0;
 			end
 			
@@ -228,15 +228,14 @@ classdef barStimulus < baseStimulus
 		% ===================================================================
 		function update(me)
 			resetTicks(me);
-            me.isVisible = true;
-            me.visibleTick = 0;
 			if me.sizeOut > 0; me.barHeightOut = me.sizeOut; me.barWidthOut = me.sizeOut; end
 			if me.phaseReverseTime > 0 
 				me.phaseCounter = round( me.phaseReverseTime / me.sM.screenVals.ifi );
 			end
 			if ~isempty(me.visibleRateOut) && isnumeric(me.visibleRateOut)
-                me.visibleTick = 0;
-                me.visibleFlip = round((me.screenVals.fps/2) / me.visibleRateOut);
+				show(me);
+				me.visibleTick = 0;
+				me.visibleFlip = round((me.screenVals.fps/2) / me.visibleRateOut);
 			else
 				me.visibleFlip = Inf; me.visibleTick = 0;
 			end
@@ -258,13 +257,13 @@ classdef barStimulus < baseStimulus
 					getMousePosition(me);
 					if me.mouseValid
 						me.mvRect = CenterRectOnPointd(me.mvRect, me.mouseX, me.mouseY);
-                    end
-                end
-                me.visibleTick = me.visibleTick + 1;
-                if me.visibleTick == me.visibleFlip
-                    me.isVisible = ~me.isVisible;
-                    me.visibleTick = 0;
-                end
+					end
+				end
+				me.visibleTick = me.visibleTick + 1;
+				if me.visibleTick == me.visibleFlip
+					me.isVisible = ~me.isVisible;
+					me.visibleTick = 0;
+				end
 				if me.doMotion == 1
 					me.mvRect=OffsetRect(me.mvRect,me.dX_,me.dY_);
 				end
@@ -291,8 +290,10 @@ classdef barStimulus < baseStimulus
 				if me.verbose; fprintf('!!!>>>Closing texture: %i kind: %i\n',me.texture,Screen(me.texture2,'WindowKind')); end
 				try Screen('Close',me.texture2); end %#ok<*TRYNC>
 			end
-			me.texture=[]; me.texture2 = [];
+			me.texture			= []; 
+			me.texture2			= [];
 			me.matrix			= [];
+			me.matrix2			= [];
 			me.mvRect			= [];
 			me.dstRect			= [];
 			me.screenWidth		= [];
@@ -388,6 +389,7 @@ classdef barStimulus < baseStimulus
 		% ===================================================================
 		function constructMatrix(me)
 			me.matrix=[]; %reset the matrix
+			me.matrix2=[]; %reset the matrix
 			try
 				colour = me.getP('colour');
 				alpha = me.getP('alpha');

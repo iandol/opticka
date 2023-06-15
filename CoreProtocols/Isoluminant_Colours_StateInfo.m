@@ -287,7 +287,7 @@ fixEntryFcn = {
 %--------------------fix within
 fixFcn = {
 	@()draw(stims); %draw stimuli
-	@()drawPhotoDiode(s,[0 0 0]);
+	@()drawPhotoDiodeSquare(s,[0 0 0]);
 	@()animate(stims); % animate stimuli for subsequent draw
 };
 
@@ -313,7 +313,7 @@ stimEntryFcn = {
 %--------------------what to run when we are showing stimuli
 stimFcn =  { 
 	@()draw(stims);
-	@()drawPhotoDiode(s,[1 1 1]);
+	@()drawPhotoDiodeSquare(s,[1 1 1]);
 	@()animate(stims); % animate stimuli for subsequent draw
 };
 

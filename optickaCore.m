@@ -8,7 +8,7 @@ classdef optickaCore < handle
 %> optickaCore is itself derived from handle. It provides methods to find
 %> attributes with specific parameters (used in autogenerating UI panels),
 %> clone the object, parse arguments safely on construction and add default
-%> properties such as datestamp, UUID and name/comment management.
+%> properties such as paths, dateStamp, uuid and name/comment management.
 %>
 %> Copyright ©2014-2023 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
@@ -261,6 +261,7 @@ classdef optickaCore < handle
 			list = cl_array(1:ii);
 		end
 
+		% TODO 
 		function value = findPropertyDefault(me,propName)
 			value = [];
 			if ischar(me) % Determine if first input is object or class name

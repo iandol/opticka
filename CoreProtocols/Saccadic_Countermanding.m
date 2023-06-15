@@ -148,7 +148,7 @@ stims.fixationChoice		= 1;
 %--------------------pause entry
 pauseEntryFcn = {
 	@()hide(stims);
-	@()drawPhotoDiode(s,[0 0 0]); %draw black photodiode
+	@()drawPhotoDiodeSquare(s,[0 0 0]); %draw black photodiode
 	@()drawTextNow(s,'PAUSED, press [p] to resume...');
 	@()disp('PAUSED, press [p] to resume...');
 	@()trackerDrawStatus(eT,'PAUSED, press [p] to resume');
@@ -175,12 +175,12 @@ pauseExitFcn = {
 %--------------------prefixate entry
 prefixEntryFcn = { 
 	@()setOffline(eT); % set eyelink offline [tobii/irec ignores this]
-	@()needFlip(me, true, 2); % enable the screen and trackerscreen flip
+	@()needFlip(me, true, 1); % enable the screen and trackerscreen flip
 	@()needEyeSample(me, true); % make sure we start measuring eye position
 	@()hide(stims); % hide all stimuli
 	@()resetAll(eT); % reset the recent eye position history
 	@()updateFixationValues(eT,tS.fixX,tS.fixY,tS.firstFixInit,tS.firstFixTime,tS.firstFixRadius,tS.strict); %reset fixation window
-	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions
+	@()getStimulusPositions(stims, true); %make a struct the eT can use for drawing stim positions
 	% tracker messages that define a trial start
 	@()trackerMessage(eT,'V_RT MESSAGE END_FIX END_RT'); % Eyelink commands
 	@()trackerMessage(eT,sprintf('TRIALID %i',getTaskIndex(me))); %Eyelink start trial marker
@@ -195,7 +195,7 @@ prefixEntryFcn = {
 
 %--------------------prefixate within
 prefixFcn = {
-	@()drawPhotoDiode(s,[0 0 0]);
+	@()drawPhotoDiodeSquare(s,[0 0 0]);
 };
 
 %--------------------prefixate exit
@@ -217,7 +217,7 @@ nsfEntryFcn = {
 nsfFcn = {
 	@()draw(stims{2}); %draw stimuli
 	@()trackerDrawEyePosition(eT);
-	@()drawPhotoDiode(s,[0 0 0]);
+	@()drawPhotoDiodeSquare(s,[0 0 0]);
 };
 
 %--------------------test we are fixated for a certain length of time
@@ -245,7 +245,7 @@ nsEntryFcn = { @()doStrobe(me,true); };
 nsFcn = {
 	@()draw(stims{1}); %draw stimuli
 	@()trackerDrawEyePosition(eT);
-	@()drawPhotoDiode(s,[1 1 1]);
+	@()drawPhotoDiodeSquare(s,[1 1 1]);
 };
 
 %--------------------test we are fixated for a certain length of time
@@ -278,7 +278,7 @@ sfEntryFcn = {
 sfFcn =  {
 	@()draw(stims{2});
 	@()trackerDrawEyePosition(eT);
-	@()drawPhotoDiode(s,[0 0 0]);
+	@()drawPhotoDiodeSquare(s,[0 0 0]);
 };
 
 sfFixFcn = {
@@ -301,7 +301,7 @@ sEntryFcn = {
 sFcn =  {
 	@()draw(stims);
 	@()trackerDrawEyePosition(eT);
-	@()drawPhotoDiode(s,[1 1 1]);
+	@()drawPhotoDiodeSquare(s,[1 1 1]);
 };
 
 sFixFcn = {
@@ -335,7 +335,7 @@ correctEntryFcn = {
 
 %--------------------correct stimulus
 correctFcn = {
-	@()drawPhotoDiode(s,[0 0 0]);
+	@()drawPhotoDiodeSquare(s,[0 0 0]);
 };
 
 %--------------------when we exit the correct state
@@ -367,7 +367,7 @@ incEntryFcn = {
 
 %--------------------our incorrect/breakfix stimulus
 incFcn = {
-	@()drawPhotoDiode(s,[0 0 0]);
+	@()drawPhotoDiodeSquare(s,[0 0 0]);
 };
 
 %--------------------incorrect exit

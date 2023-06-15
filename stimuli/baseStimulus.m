@@ -13,7 +13,19 @@
 % ========================================================================
 classdef baseStimulus < optickaCore & dynamicprops
 	
+	properties (Abstract = true)
+		%> stimulus type
+		type char
+	end
+	
+	properties (Abstract = true, SetAccess = protected)
+		%> the stimulus family (grating, dots etc.)
+		family char
+	end
+
 	properties
+		%> true or false, whether to draw() this object
+		isVisible logical = true
 		%> X Position ± degrees relative to screen center (0,0)
 		xPosition double = 0
 		%> Y Position ± degrees relative to screen center (0,0)
@@ -44,35 +56,26 @@ classdef baseStimulus < optickaCore & dynamicprops
 		animator = []
 		%> override X and Y position with mouse input? Useful for RF mapping
 		mouseOverride logical = false
-		%> true or false, whether to draw() this object
-		isVisible logical = true
 		%> show the position on the Eyetracker display?
 		showOnTracker logical = true
 		%> Do we print details to the commandline?
 		verbose = false
 	end
 
-	properties (Abstract = true)
-		%> stimulus type
-		type char
-	end
-	
-	properties (Abstract = true, SetAccess = protected)
-		%> the stimulus family (grating, dots etc.)
-		family char
-	end
-	
-	properties (SetAccess = protected, GetAccess = public)
+	properties (Transient = true)
 		%> final centered X position in pixel coordinates PTB uses: 0,0 top-left
 		%> see computePosition();
 		xFinal double = []
 		%> final centerd Y position in pixel coordinates PTB uses: 0,0 top-left
 		%> see computePosition();
 		yFinal double = []
-		%> initial screen rectangle position [LEFT TOP RIGHT BOTTOM]
-		dstRect double = []
 		%> current screen rectangle position [LEFT TOP RIGHT BOTTOM]
 		mvRect double = []
+	end
+	
+	properties (SetAccess = protected, GetAccess = public)
+		%> initial screen rectangle position [LEFT TOP RIGHT BOTTOM]
+		dstRect double = []
 		%> tick updates +1 on each call of draw (even if delay or off is true and no stimulus is drawn, resets on each update
 		tick double = 0
 		%> draw tick only updates when a draw command is called, resets on each update
@@ -128,12 +131,6 @@ classdef baseStimulus < optickaCore & dynamicprops
 		dY_
 		% deal with interaction of colour and alpha
 		isInSetColour logical = false
-		% workaround set method bug for dynamic properties. In theory a set
-		% method should not trigger the same set method, but there is a
-		% hard to trigger bug where indeed we get a recursion error. Here
-		% we use a loop limit so only the fisrt loop will set the value.
-		% See commit #a8bdb368928a9c5ebdb40cc66ec02be0534ce0d5
-		setLoop = 0;
 		%> Which properties to ignore to clone when making transient copies in
 		%> the setup method
 		ignorePropertiesBase = {'handles','ppd','sM','name','comment','fullName'...
@@ -142,7 +139,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 			'dstRect','mvRect','sM','screenVals','isSetup','isGUI','showOnTracker'...
 			'doDots','doMotion','doDrift','doFlash','doAnimator'}
 		%> Which properties to not draw in the UI panel
-		ignorePropertiesUIBase = {'animator','fullName'}
+		ignorePropertiesUIBase = {'animator','fullName','mvRect','xFinal','yFinal'}
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -338,8 +335,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 			else
 				me.offTicks = Inf;
 			end
-			mouseTick = 0; mouseGlobalX = 0; mouseGlobalY = 0; mouseValid = false;
-			me.mouseX = 0; me.mouseY = 0;
+			mouseTick = 0; 
 			me.tick = 0; 
 			me.drawTick = 0;
 		end
@@ -356,14 +352,14 @@ classdef baseStimulus < optickaCore & dynamicprops
 			global mouseTick mouseGlobalX mouseGlobalY mouseValid
 			if me.tick > mouseTick
 				if ~isempty(me.sM) && isa(me.sM,'screenManager') && me.sM.isOpen
-					[me.mouseX,me.mouseY] = GetMouse(me.sM.win);
-					if me.mouseX > -1 && me.mouseY > -1
-						me.mouseValid = true;
-					else
-						me.mouseValid = false;
-					end
+					[me.mouseX, me.mouseY] = GetMouse(me.sM.win);
 				else
-					[me.mouseX,me.mouseY] = GetMouse;
+					[me.mouseX, me.mouseY] = GetMouse;
+				end
+				if me.mouseX > -1 && me.mouseY > -1
+					me.mouseValid = true;
+				else
+					me.mouseValid = false;
 				end
 				mouseTick = me.tick; %set global so no other object with same tick number can call this again
 				mouseValid = me.mouseValid;
@@ -555,6 +551,10 @@ classdef baseStimulus < optickaCore & dynamicprops
 			idx = {'handles.grid1','handles.grid2','handles.grid3'};
 			
 			disableList = 'fullName';
+
+			mc = metaclass(me);
+			pl = string({mc.PropertyList.Name});
+			dl = string({mc.PropertyList.Description});
 			
 			pr = findAttributesandType(me,'SetAccess','public','notlogical');
 			pr = sort(pr);
@@ -565,9 +565,9 @@ classdef baseStimulus < optickaCore & dynamicprops
 			elseif isprop(me,'ignorePropertiesUI')
 				igA = me.ignorePropertiesUI;
 			end
-			if isprop(me,'ignorePropertiesUIBase'); igB = me.ignorePropertiesUIBase; end
+			if isprop(me,'ignorePropertiesUIBase'); igB = findPropertyDefault(me,'ignorePropertiesUIBase'); end
 			if ischar(igA);igA = strsplit(igA,'|');end
-			if ischar(igB); igB = {'animator','fullName'}; end
+			if ischar(igB); igB = {'animator','fullName','mvRect','xFinal','yFinal'}; end
 			excl = [igA igB];	
 			eidx = [];
 			for i = 1:length(pr)
@@ -594,82 +594,96 @@ classdef baseStimulus < optickaCore & dynamicprops
 				for j = 1:lp
 					cur = lp*(i-1)+j;
 					if cur <= length(pr)
-						val = me.(pr{cur});
+						nm = pr{cur};
+						val = me.(nm);
+						% this gets descriptions
+						ix = find(pl == nm);
+						if ~isempty(ix)
+							desc = regexprep(dl(ix),'^>\s+','');
+						else
+							desc = nm;
+						end
 						if ischar(val)
-							if isprop(me,[pr{cur} 'List'])
-								if strcmp(me.([pr{cur} 'List']),'filerequestor')
+							if isprop(me,[nm 'List'])
+								if strcmp(me.([nm 'List']),'filerequestor')
 									val = regexprep(val,'\s+','  ');
-									handles.([pr{cur} '_char']) = uieditfield(...
+									handles.([nm '_char']) = uieditfield(...
 										'Parent',eval(idx{i}),...
-										'Tag',[pr{cur} '_char'],...
+										'Tag',[nm '_char'],...
 										'HorizontalAlignment','center',...
 										'ValueChangedFcn',@me.readPanel,...
 										'Value',val,...
 										'FontName',me.monoFont,...
+										'Tooltip', desc, ...
 										'BackgroundColor',bgcoloredit);
-									if ~isempty(regexpi(pr{cur},disableList,'once')) 
-										handles.([pr{cur} '_char']).Enable = false; 
+									if ~isempty(regexpi(nm,disableList,'once')) 
+										handles.([nm '_char']).Enable = false; 
 									end
 								else
-									txt=me.([pr{cur} 'List']);
+									txt=findPropertyDefault(me,[nm 'List']);
 									if contains(val,txt)
-										handles.([pr{cur} '_list']) = uidropdown(...
+										handles.([nm '_list']) = uidropdown(...
 										'Parent',eval(idx{i}),...
-										'Tag',[pr{cur} '_list'],...
+										'Tag',[nm '_list'],...
 										'Items',txt,...
 										'ValueChangedFcn',@me.readPanel,...
 										'Value',val,...
+										'Tooltip', desc, ...
 										'BackgroundColor',bgcolor);
-										if ~isempty(regexpi(pr{cur},disableList,'once')) 
-											handles.([pr{cur} '_list']).Enable = false; 
+										if ~isempty(regexpi(nm,disableList,'once')) 
+											handles.([nm '_list']).Enable = false; 
 										end
 									else
-										handles.([pr{cur} '_list']) = uidropdown(...
+										handles.([nm '_list']) = uidropdown(...
 										'Parent',eval(idx{i}),...
-										'Tag',[pr{cur} '_list'],...
+										'Tag',[nm '_list'],...
 										'Items',txt,...
+										'Tooltip', desc, ...
 										'ValueChangedFcn',@me.readPanel,...
 										'BackgroundColor',bgcolor);
 									end
 								end
 							else
 								val = regexprep(val,'\s+','  ');
-								handles.([pr{cur} '_char']) = uieditfield(...
+								handles.([nm '_char']) = uieditfield(...
 									'Parent',eval(idx{i}),...
-									'Tag',[pr{cur} '_char'],...
+									'Tag',[nm '_char'],...
 									'HorizontalAlignment','center',...
 									'ValueChangedFcn',@me.readPanel,...
 									'Value',val,...
+									'Tooltip', desc, ...
 									'BackgroundColor',bgcoloredit);
-								if ~isempty(regexpi(pr{cur},disableList,'once')) 
-									handles.([pr{cur} '_char']).Enable = false; 
+								if ~isempty(regexpi(nm,disableList,'once')) 
+									handles.([nm '_char']).Enable = false; 
 								end
 							end
 						elseif isnumeric(val)
 							val = num2str(val);
 							val = regexprep(val,'\s+','  ');
-							handles.([pr{cur} '_num']) = uieditfield('text',...
+							handles.([nm '_num']) = uieditfield('text',...
 								'Parent',eval(idx{i}),...
-								'Tag',[pr{cur} '_num'],...
+								'Tag',[nm '_num'],...
 								'HorizontalAlignment','center',...
 								'Value',val,...
+								'Tooltip', desc, ...
 								'ValueChangedFcn',@me.readPanel,...
 								'FontName',me.monoFont,...
 								'BackgroundColor',bgcoloredit);
-							if ~isempty(regexpi(pr{cur},disableList,'once')) 
-								handles.([pr{cur} '_num']).Enable = false; 
+							if ~isempty(regexpi(nm,disableList,'once')) 
+								handles.([nm '_num']).Enable = false; 
 							end
 						else
 							uilabel('Parent',eval(idx{i}),'Text','','BackgroundColor',bgcolor,'Enable','off');
 						end
-						if isprop(me,[pr{cur} 'List'])
-							if strcmp(me.([pr{cur} 'List']),'filerequestor')
-								handles.([pr{cur} '_button']) = uibutton(...
+						if isprop(me,[nm 'List'])
+							if strcmp(me.([nm 'List']),'filerequestor')
+								handles.([nm '_button']) = uibutton(...
 								'Parent',eval(idx{i}),...
 								'HorizontalAlignment','left',...
 								'Text','Select file...',...
 								'FontName',me.sansFont,...
-								'Tag',[pr{cur} '_button'],...
+								'Tag',[nm '_button'],...
+								'Tooltip', desc, ...
 								'Icon', [me.paths.root '/ui/images/edit.svg'],...
 								'ButtonPushedFcn', @me.selectFilePanel,...
 								'FontSize', 8);
@@ -677,7 +691,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 								uilabel(...
 								'Parent',eval(idx{i}),...
 								'HorizontalAlignment','left',...
-								'Text',pr{cur},...
+								'Text',nm,...
 								'FontName',me.sansFont,...
 								'FontSize', fsmall,...
 								'BackgroundColor',bgcolor);
@@ -686,7 +700,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 							uilabel(...
 							'Parent',eval(idx{i}),...
 							'HorizontalAlignment','left',...
-							'Text',pr{cur},...
+							'Text',nm,...
 							'FontName',me.sansFont,...
 							'FontSize', fsmall,...
 							'BackgroundColor',bgcolor);
@@ -697,12 +711,21 @@ classdef baseStimulus < optickaCore & dynamicprops
 				end
 			end
 			for j = 1:lp2
-				val = me.(pr2{j});
+				nm = pr2{j};
+				val = me.(nm);
+				% this gets descriptions
+				ix = find(pl == nm);
+				if ~isempty(ix)
+					desc = regexprep(dl(ix),'^>\s+','');
+				else
+					desc = nm;
+				end
 				if j <= length(pr2)
-					handles.([pr2{j} '_bool']) = uicheckbox(...
+					handles.([nm '_bool']) = uicheckbox(...
 						'Parent',eval(idx{end}),...
-						'Tag',[pr2{j} '_bool'],...
-						'Text',pr2{j},...
+						'Tag',[nm '_bool'],...
+						'Text',nm,...
+						'Tooltip', desc, ...
 						'FontName',me.sansFont,...
 						'FontSize', fsmall,...
 						'ValueChangedFcn',@me.readPanel,...
@@ -883,7 +906,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		end
 
 		% ===================================================================
-		%> @brief gets a property copy or original property
+		%> @brief sets a property copy or original property
 		%>
 		%> When stimuli are run, their properties are copied, so e.g. angle
 		%> is copied to angleOut and this is used during the task. This
@@ -942,12 +965,12 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> @brief updatePosition returns dX and dY given an angle and delta
 		%>
 		% ===================================================================
-		function [dX, dY] = updatePosition(delta,angle)
+		function [dX, dY] = updatePosition(delta, angle)
 		% updatePosition(delta, angle)
 			dX = delta .* cos(baseStimulus.d2r(angle));
-			if abs(dX) < 1e-3; dX = 0; end
+			if length(dX)== 1 && abs(dX) < 1e-3; dX = 0; end
 			dY = delta .* sin(baseStimulus.d2r(angle));
-			if abs(dY) < 1e-3; dY = 0; end
+			if length(dY)==1 && abs(dY) < 1e-3; dY = 0; end
 		end
 		
 	end%---END STATIC METHODS---%
@@ -989,25 +1012,27 @@ classdef baseStimulus < optickaCore & dynamicprops
 				me.doAnimator = true; 
 			end
 		end
-			
-		% ===================================================================
-		%> @brief setRect
-		%> setRect makes the PsychRect based on the texture and screen
-		%> values, you should call computePosition() first to get xFinal and
-		%> yFinal. 
-		% ===================================================================
-		function setRect(me)
-			if ~isempty(me.texture)
-				me.dstRect=Screen('Rect',me.texture(1));
-				if me.mouseOverride && me.mouseValid
-					me.dstRect = CenterRectOnPointd(me.dstRect, me.mouseX, me.mouseY);
-				else
-					me.dstRect=CenterRectOnPointd(me.dstRect, me.xFinal, me.yFinal);
-				end
-				me.mvRect=me.dstRect;
-			end
-		end
 		
+		% ===================================================================
+		%> @brief compute xFinal and yFinal
+		%>
+		% ===================================================================
+		function computePosition(me)
+			if me.mouseOverride && me.mouseValid
+				me.xFinal = me.mouseX; me.yFinal = me.mouseY;
+			else
+				if isprop(me,'direction')
+					[dx, dy]=pol2cart(me.d2r(getP(me,'direction')),me.startPosition);
+				else
+					[dx, dy]=pol2cart(me.d2r(getP(me,'angle')),me.startPositionOut);
+				end
+				me.xFinal = me.xPositionOut + (dx * me.ppd) + me.sM.xCenter;
+				me.yFinal = me.yPositionOut + (dy * me.ppd) + me.sM.yCenter;
+				if me.verbose; fprintf('---> computePosition: %s X = %gpx / %gpx / %gdeg | Y = %gpx / %gpx / %gdeg\n',me.fullName, me.xFinal, me.xPositionOut, dx, me.yFinal, me.yPositionOut, dy); end
+			end
+			setAnimationDelta(me);
+		end
+
 		% ===================================================================
 		%> @brief setAnimationDelta
 		%> setAnimationDelta for performance better not to use get methods for dX dY and
@@ -1021,25 +1046,27 @@ classdef baseStimulus < optickaCore & dynamicprops
 			me.dX_ = me.dX;
 			me.dY_ = me.dY;
 		end
-		
+
 		% ===================================================================
-		%> @brief compute xFinal and yFinal
-		%>
+		%> @brief setRect
+		%> setRect makes the PsychRect based on the texture and screen
+		%> values, you should call computePosition() first to get xFinal and
+		%> yFinal. 
 		% ===================================================================
-		function computePosition(me)
-			if me.mouseOverride && me.mouseValid
-				me.xFinal = me.mouseX; me.yFinal = me.mouseY;
-			else
-				if isempty(me.findprop('angleOut'))
-					[dx, dy]=pol2cart(me.d2r(me.angle),me.startPosition);
+		function setRect(me)
+			if ~isempty(me.texture)
+				if isprop(me,'scale')
+					me.dstRect = ScaleRect(Screen('Rect',me.texture(1)), me.scale, me.scale);
 				else
-					[dx, dy]=pol2cart(me.d2r(me.angleOut),me.startPositionOut);
+					me.dstRect=Screen('Rect',me.texture(1));
 				end
-				me.xFinal = me.xPositionOut + (dx * me.ppd) + me.sM.xCenter;
-				me.yFinal = me.yPositionOut + (dy * me.ppd) + me.sM.yCenter;
-				if me.verbose; fprintf('---> computePosition: %s X = %gpx / %gpx / %gdeg | Y = %gpx / %gpx / %gdeg\n',me.fullName, me.xFinal, me.xPositionOut, dx, me.yFinal, me.yPositionOut, dy); end
+				if me.mouseOverride && me.mouseValid
+					me.dstRect = CenterRectOnPointd(me.dstRect, me.mouseX, me.mouseY);
+				else
+					me.dstRect=CenterRectOnPointd(me.dstRect, me.xFinal, me.yFinal);
+				end
+				me.mvRect=me.dstRect;
 			end
-			setAnimationDelta(me);
 		end
 		
 		% ===================================================================

@@ -38,6 +38,8 @@ classdef screenManager < optickaCore
 		%> windowed presentation should *never* be used for real
 		%> experimental presentation due to poor timing…
 		windowed							= false
+		%> stereo mode
+		stereoMode(1,1) double				= 0
 		%> enable debug for poorer temporal fidelity but no sync testing
 		%> etc.
 		debug(1,1) logical					= false
@@ -157,6 +159,9 @@ classdef screenManager < optickaCore
 	end
 	
 	properties (Hidden = true)
+		%> anaglyph channel gains
+		anaglyphLeft						= [];
+		anaglyphRight						= [];
 		%> The mode to use for color++ mode
 		colorMode							= 2
 		%> for some development macOS and windows machines we have to disable
@@ -204,7 +209,8 @@ classdef screenManager < optickaCore
 			'disableSyncTests','displayPPRefresh','screenToHead','gammaTable',...
 			'useRetina','bitDepth','pixelsPerCm','distance','screen','windowed','backgroundColour',...
 			'screenXOffset','screenYOffset','blend','srcMode','dstMode','antiAlias',...
-			'debug','photoDiode','verbose','hideFlash'}
+			'debug','photoDiode','verbose','hideFlash',...
+			'stereoMode','anaglyphLeft','anaglyphRight'}
 		%> the photoDiode rectangle in pixel values
 		photoDiodeRect(1,4) double			= [0, 0, 45, 45]
 		%> the values computed to draw the 1deg dotted grid in visualDebug mode
@@ -320,8 +326,11 @@ classdef screenManager < optickaCore
 			sv.white			= WhiteIndex(me.screen);
 			sv.black			= BlackIndex(me.screen);
 			sv.gray				= GrayIndex(me.screen);
-			
+
+			try sv.isVulkan			= PsychVulkan('Supported'); end
+
 			if IsLinux
+				
 				try
 					sv.display	= Screen('ConfigureDisplay','Scanout',me.screen,0);
 					sv.name		= sv.display.name;
@@ -347,7 +356,7 @@ classdef screenManager < optickaCore
 		% ===================================================================
 			if me.isOpen; fprintf('===>>> screenManager.open(): Screen already open!');return; end
 			if me.isPTB == false
-				warning('No PTB found!')
+				warning('No PTB found!');
 				sv = me.screenVals;
 				return;
 			end
@@ -409,17 +418,35 @@ classdef screenManager < optickaCore
 				
 				tL.screenLog.preOpenWindow=GetSecs;
 				
-				%check if system supports HDR mode
+				%=== check if system supports HDR mode
 				isHDR = logical(PsychHDR('Supported'));
 				if strcmp(me.bitDepth,'HDR') && ~isHDR
 					me.bitDepth = 'Native10Bit';
 					error('---> screenManager: tried to use HDR but it is not supported!\n');
 				end
+
+				%=== check stereomode is anaglyph
+				if ismember(me.stereoMode, 6:9)
+					stereo = me.stereoMode;
+				elseif me.stereoMode > 0
+					warning('Only Anaglyph stereo supported at present...')
+					stereo = 0;
+				else
+					stereo = 0;
+				end
 				
-				% start to set up PTB screen
+				%=== start to set up PTB screen
 				PsychImaging('PrepareConfiguration');
 				PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
-				if me.useVulkan; PsychImaging('AddTask', 'General', 'UseVulkanDisplay'); end
+				if me.useVulkan
+					if ~me.screenVals.isVulkan; fprintf('---> screenManager: Probing for Vulkan failed...\n'); end
+					try 
+						PsychImaging('AddTask', 'General', 'UseVulkanDisplay');
+						fprintf('---> screenManager: Vulkan appears to be activated...\n');
+					catch
+						warning('Vulkan failed to be initialised...')
+					end
+				end
 				me.isPlusPlus = screenManager.bitsCheckOpen();
 				fprintf('---> screenManager: Probing for a Display++...');
 				bD = me.bitDepth;
@@ -489,7 +516,7 @@ classdef screenManager < optickaCore
 					end
 				end
 				
-				% deal with windowed or full-screen
+				%===deal with windowed or full-screen
 				if isempty(me.windowed); me.windowed = false; end
 				if ~isempty(forceScreen)
 					thisScreen = forceScreen;
@@ -521,7 +548,7 @@ classdef screenManager < optickaCore
 				
 				% ==============================================================
 				[me.win, me.winRect] = PsychImaging('OpenWindow', thisScreen, ...
-					me.backgroundColour, winSize, [], me.doubleBuffer+1,[], ...
+					me.backgroundColour, winSize, [], me.doubleBuffer+1, stereo, ...
 					me.antiAlias, [], sf);
 				me.isOpen = true;
 				% ==============================================================
@@ -534,6 +561,27 @@ classdef screenManager < optickaCore
 					sv.mirror = false;
 					sv.overlayWin= [];
 				end
+
+				%===ANAGLYPH VALUES
+				if stereo > 0 && ~isempty(me.anaglyphLeft) && ~isempty(me.anaglyphRight)
+					SetAnaglyphStereoParameters('LeftGains', me.win,  me.anaglyphLeft);
+    				SetAnaglyphStereoParameters('RightGains', me.win, me.anaglyphRight);
+				else
+					switch stereo
+						case 6
+    						SetAnaglyphStereoParameters('LeftGains', me.win,  [1.0 0.0 0.0]);
+    						SetAnaglyphStereoParameters('RightGains', me.win, [0.0 0.6 0.0]);
+						case 7
+    						SetAnaglyphStereoParameters('LeftGains', me.win,  [0.0 0.6 0.0]);
+    						SetAnaglyphStereoParameters('RightGains', me.win, [1.0 0.0 0.0]);
+						case 8
+    						SetAnaglyphStereoParameters('LeftGains', me.win, [0.4 0.0 0.0]);
+    						SetAnaglyphStereoParameters('RightGains', me.win, [0.0 0.2 0.7]);
+						case 9
+    						SetAnaglyphStereoParameters('LeftGains', me.win, [0.0 0.2 0.7]);
+    						SetAnaglyphStereoParameters('RightGains', me.win, [0.4 0.0 0.0]);
+					end
+				end
 				
 				sv.win			= me.win; % make a copy
 				sv.winRect		= me.winRect;
@@ -545,7 +593,7 @@ classdef screenManager < optickaCore
 				tL.screenLog.postOpenWindow=GetSecs;
 				tL.screenLog.deltaOpenWindow=(tL.screenLog.postOpenWindow-tL.screenLog.preOpenWindow);
 				
-				% check we have GLSL
+				%===check we have GLSL
 				try
 					AssertGLSL;
 				catch
@@ -561,16 +609,18 @@ classdef screenManager < optickaCore
 					sv.hdrProperties = [];
 				end
 				
-				% Linux can give us some more information
-				if IsLinux && ~isHDR
-					d			= Screen('ConfigureDisplay','Scanout',me.screen,0);
-					sv.name		= d.name;
-					sv.widthMM	= d.displayWidthMM;
-					sv.heightMM = d.displayHeightMM;
-					sv.display	= d;
+				%===Linux can give us some more information
+				if IsLinux && ~isHDR && ~me.useVulkan
+					try
+						d			= Screen('ConfigureDisplay','Scanout',me.screen,0);
+						sv.name		= d.name;
+						sv.widthMM	= d.displayWidthMM;
+						sv.heightMM = d.displayHeightMM;
+						sv.display	= d;
+					end
 				end
 				
-				% get timing info
+				%===get timing info
 				sv.ifi			= Screen('GetFlipInterval', me.win);
 				sv.fps			= Screen('NominalFramerate', me.win);
 				% find our fps if not defined above
@@ -593,7 +643,7 @@ classdef screenManager < optickaCore
 					sv.halfifi = 0; sv.halfisi = 0;
 				end
                 
-				%configure photodiode to top right
+				%===configure photodiode to top right
 				if me.useRetina
 					me.photoDiodeRect = [me.winRect(3)-90 0 me.winRect(3) 90];
 				else
@@ -601,7 +651,7 @@ classdef screenManager < optickaCore
 				end
 				sv.photoDiodeRect = me.photoDiodeRect;
 				
-				% get gamma table and info
+				%===get gamma table and info
 				try
 					[sv.originalGamma, sv.dacBits, sv.lutSize]=Screen('ReadNormalizedGammaTable', me.win);
 				catch
@@ -678,6 +728,16 @@ classdef screenManager < optickaCore
 			
 		end
 		
+		function switchChannel(me, channel)
+			persistent thisChannel
+			if me.isOpen
+				if ~exist('channel','var'); channel = ~thisChannel;end
+				thisChannel = channel;
+				Screen('SelectStereoDrawBuffer', me.win, thisChannel);
+			end
+		end
+
+		
 		% ===================================================================
 		function demo(me)
 		%> @fn demo
@@ -685,18 +745,43 @@ classdef screenManager < optickaCore
 		%>
 		% ===================================================================
 			if ~me.isOpen
-				stim = dotsStimulus('mask',true,'size',10,'speed',4);
+				stim = dotsStimulus('mask',true,'size',10,'speed',2,...
+					'density',3,'dotSize',0.3);
 				open(me);
 				disp('--->>> screenManager running a quick demo...')
+				if me.stereoMode > 0
+					stim.mask = false;
+					stim.type='simple';
+					drawBackground(me,[0 0 0]);
+					flip(me);
+					WaitSecs(0.5);
+				end
 				disp(me.screenVals);
 				setup(stim, me);
+				x = stim.xFinal;
+				td = me.screenVals.topInDegrees;
+				bd = me.screenVals.bottomInDegrees;
+				ld = me.screenVals.leftInDegrees;
 				vbl = flip(me);
-				for i = 1:me.screenVals.fps*2
-					drawText(me,'Running a quick demo of screenManager...');
-					draw(stim);
+				for i = 1:me.screenVals.fps*6
+					if me.stereoMode > 0
+						drawBackground(me,[0 0 0]);
+						stim.xFinal = x - 3;
+						switchChannel(me,0);
+						drawText(me,'Demo screenManager Left Channel...',ld+1,td+1);
+						draw(stim);
+						switchChannel(me,1);
+						stim.xFinal = x + 3;
+						drawText(me,'Demo screenManager Right...',ld+1,td+2);
+						draw(stim);
+					else
+						drawText(me,'Running a quick demo of screenManager...');
+						draw(stim);
+					end
 					finishDrawing(me);
 					animate(stim);
 					vbl = flip(me, vbl);
+					if i == 1;KbWait;end
 				end
 				WaitSecs(1);
 				clear stim;
@@ -709,7 +794,7 @@ classdef screenManager < optickaCore
 		%> @fn flip
 		%> @brief Flip the screen
 		%>
-		%> [VBLTimestamp StimulusOnsetTime FlipTimestamp Missed Beampos] = Screen('Flip', windowPtr [, when] [, dontclear] [, dontsync] [, multiflip]);
+		%> [VBLTimestamp StimulusOnsetTime FlipTimestamp Missed Beampos] = Screen('Flip', me.win [, when] [, dontclear] [, dontsync] [, multiflip]);
 		%>
 		%> @param varargin - pass other options to screen flip
 		%> @return vbl - a vbl from this flip
@@ -1452,23 +1537,13 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief draw a square in top-left of screen to trigger photodiode
+		%> @brief draw a square in top-right of screen to trigger photodiode
 		%>
 		%> @param colour colour of square
 		%> @return
 		% ===================================================================
 		function drawPhotoDiodeSquare(me,colour)
 			% drawPhotoDiodeSquare(me,colour)
-			Screen('FillRect',me.win,colour,me.photoDiodeRect);
-		end
-		% ===================================================================
-		%> @brief conditionally draw a white square to trigger photodiode
-		%>
-		%> @param colour colour of square
-		%> @return
-		% ===================================================================
-		function drawPhotoDiode(me,colour)
-			% drawPhotoDiode(me,colour) % conditionally draw a white square to trigger photodiode
 			Screen('FillRect',me.win,colour,me.photoDiodeRect);
 		end
 
@@ -1841,10 +1916,12 @@ classdef screenManager < optickaCore
 		%> @brief Run validation for Display++
 		%>
 		% ===================================================================
-		function validateDisplayPlusPlus()
+		function validateDisplayPlusPlus(screen, vulkan)
+			if ~exist('screen','var'); screen = max(Screen('Screens')); end
+			if ~exist('vulkan','var'); vulkan = 0; end
 			screenManager.bitsCheckOpen([], false);
-			BitsPlusImagingPipelineTest(me.screen);
-			BitsPlusIdentityClutTest(me.screen);
+			BitsPlusImagingPipelineTest(screen);
+			BitsPlusIdentityClutTest(screen, [], [], [], vulkan);
 		end
 		
 		% ===================================================================

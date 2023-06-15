@@ -162,7 +162,7 @@ prefixEntryFcn = {
 
 prefixFcn = {
 	@()drawBackground(s);
-	@()drawPhotoDiode(s,[0 0 0]);
+	@()drawPhotoDiodeSquare(s,[0 0 0]);
 };
 
 prefixExitFcn = {
@@ -188,7 +188,7 @@ fixEntryFcn = {
 %fix within
 fixFcn = {
 	@()draw(stims); %draw stimulus
-	@()drawPhotoDiode(s,[0 0 0]);
+	@()drawPhotoDiodeSquare(s,[0 0 0]);
 };
 
 %test we are fixated for a certain length of time
@@ -213,7 +213,7 @@ stimEntryFcn = {
 %what to run when we are showing stimuli
 stimFcn =  {
 	@()draw(stims);
-	@()drawPhotoDiode(s,[1 1 1]);
+	@()drawPhotoDiodeSquare(s,[1 1 1]);
 	@()animate(stims); % animate stimuli for subsequent draw
 };
 
@@ -245,7 +245,7 @@ correctEntryFcn = {
 
 %correct stimulus
 correctFcn = {
-	@()drawPhotoDiode(s,[0 0 0]);
+	@()drawPhotoDiodeSquare(s,[0 0 0]);
 };
 
 %when we exit the correct state
@@ -277,7 +277,7 @@ incEntryFcn = {
 
 %our incorrect stimulus
 incFcn = {
-	@()drawPhotoDiode(s,[0 0 0]);
+	@()drawPhotoDiodeSquare(s,[0 0 0]);
 };
 
 %incorrect / break exit

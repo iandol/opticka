@@ -1,10 +1,8 @@
 % ========================================================================
-%> @brief colour grating stimulus, inherits from baseStimulus
-%> COLOURGRATINGSTIMULUS colour grating stimulus, inherits from baseStimulus
+%> @brief polar grating stimulus, inherits from baseStimulus
+%> POLARGRATINGSTIMULUS inherits from baseStimulus
 %>   The basic properties are:
-%>   type = 'sinusoid' or 'square', if square you should set sigma which
-%>		smoothes the interface and stops pixel motion artifacts that normally
-%>		inflict square wave gratings, set sigma to 0 to remove smoothing.
+%>   type = 'radial' or 'circular' or 'spiral'
 %>	 colour = first grating colour
 %>   colour2 = second grating colour
 %>   baseColour = the midpoint between the two from where contrast works,
@@ -25,33 +23,41 @@
 %>
 %> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
-classdef colourGratingStimulus < baseStimulus
+classdef polarGratingStimulus < baseStimulus
 	
 	properties %--------------------PUBLIC PROPERTIES----------%
-		%> family type, can be 'sinusoid' or 'square'
-		type char 				= 'sinusoid'
-		%> spatial frequency of the grating
-		sf(1,1) double			= 1
-		%> temporal frequency of the grating
-		tf(1,1) double			= 1
+		%> family type, can be 'radial', 'circular', 'spiral'
+		type char 				= 'radial'
 		%> second colour of a colour grating stimulus
 		colour2(1,:) double		= [0 1 0 1]
 		%> base colour from which colour and colour2 are blended via contrast value
 		%> if empty [default], uses the background colour from screenManager
 		baseColour(1,:) double		= []
+		%> spiral, how much to multiply the sf for the radial part
+		spiralFactor double		= 1
+		%> arc start angle and width in degrees (0 disable)
+		arcValue(1,2) double	= [0 0]
+		%> do we mask (size in degrees) the centre part?
+		centerMask(1,1) double	= 0
+		%> spatial frequency of the grating
+		sf(1,1) double			= 1
+		%> temporal frequency of the grating
+		tf(1,1) double			= 1
+		%> sigma of square wave smoothing, use -1 for sinusoidal gratings
+		sigma(1,1) double		= -1
 		%> rotate the grating patch (false) or the grating texture within the patch (default = true)?
 		rotateTexture logical	= true
 		%> phase of grating
-		phase(1,1) double			= 0
+		phase(1,1) double		= 0
 		%> contrast of grating (technically the contrast from the baseColour)
-		contrast(1,1) double			= 0.5
+		contrast(1,1) double	= 0.5
 		%> use a circular mask for the grating (default = true).
 		mask logical			= true
 		%> direction of the drift; default = false means drift left>right when angle is 0deg.
 		%This switch can be accomplished simply setting angle, but this control enables
 		%simple reverse direction protocols.
 		reverseDirection logical = false
-		%> the direction of the grating object if moving.
+		%> the direction of the grating object if speed > 0.
 		direction double		= 0
 		%> Do we need to correct the phase to be relative to center not edge? This enables
 		%> centre surround stimuli are phase matched, and if we enlarge a grating object its
@@ -65,12 +71,10 @@ classdef colourGratingStimulus < baseStimulus
 		phaseReverseTime(1,1) double = 0
 		%> What phase to use for reverse?
 		phaseOfReverse(1,1) double	= 180
-		%> sigma of square wave smoothing, use -1 for sinusoidal gratings
-		sigma(1,1) double			= -1
 		%> aspect ratio of the grating
 		aspectRatio(1,1) double		= 1;
-		%> turn stimulus on/off at X hz, [] diables this
-		visibleRate             = []
+        %> turn stimulus on/off at X hz, [] diables this
+        visibleRate             = []
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -83,7 +87,7 @@ classdef colourGratingStimulus < baseStimulus
 	end
 	
 	properties (Constant)
-		typeList cell			= {'sinusoid';'square'}
+		typeList cell			= {'radial';'circular';'spiral'}
 	end
 
 	properties (SetAccess = protected, GetAccess = {?baseStimulus})
@@ -98,7 +102,7 @@ classdef colourGratingStimulus < baseStimulus
 		%>to stop a loop between set method and an event
 		sfRecurse				= false
 		%> allowed properties passed to object upon construction
-		allowedProperties = {'colour2', 'sf', 'tf', 'angle', 'direction', 'phase', 'rotateTexture' ... 
+		allowedProperties = {'type','colour2', 'sf', 'tf', 'angle', 'direction', 'phase', 'rotateTexture' ... 
 			'contrast', 'mask', 'reverseDirection', 'speed', 'startPosition', 'aspectRatio' ... 
 			'sigma', 'correctPhase', 'phaseReverseTime', 'phaseOfReverse','visibleRate'}
 		%> properties to not create transient copies of during setup phase
@@ -113,8 +117,12 @@ classdef colourGratingStimulus < baseStimulus
 		%to regenerate the shader
 		colourCache
 		colour2Cache
-		visibleTick				= 0
+        visibleTick				= 0
 		visibleFlip				= Inf
+		sf1
+		sf2
+		cMaskTex
+		cMaskRect
 	end
 	
 	%=======================================================================
@@ -130,9 +138,9 @@ classdef colourGratingStimulus < baseStimulus
 		%> parsed.
 		%> @return instance of class.
 		% ===================================================================
-		function me = colourGratingStimulus(varargin)
+		function me = polarGratingStimulus(varargin)
 			args = optickaCore.addDefaults(varargin,...
-				struct('name','colour-grating','colour',[1 0 0 1],'colour2',[0 1 0 1]));
+				struct('name','polar-grating','colour',[1 1 1 1],'colour2',[0 0 0 1]));
 			me=me@baseStimulus(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
 			
@@ -228,7 +236,7 @@ classdef colourGratingStimulus < baseStimulus
 				case 2
 					me.res = round([me.gratingSize*me.aspectRatio(1) me.gratingSize*me.aspectRatio(2)]);
 			end
-			if max(me.res) > me.sM.screenVals.width %scale to be no larger than screen width
+			if max(me.res) > me.sM.screenVals.width*1.5 %scale to be no larger than screen width
 				me.res = floor( me.res / (max(me.res) / me.sM.screenVals.width));
 			end
 			
@@ -252,28 +260,30 @@ classdef colourGratingStimulus < baseStimulus
 				end
 			end
 			
-			if strcmpi(me.type,'square')
-				if me.sigma < 0; me.sigma = 0.05; me.sigmaOut = me.sigma; end
-			else
-				me.salutation('SETUP', 'Reset sigma to -1 as type=squarewave', true)
-				me.sigmaOut = -1; %just make sure type overrides sigma if conflict
-			end
-				
 			% this is a two color grating, passing in colorA and colorB.
-			[me.texture, ~, me.shader] = CreateProceduralColorGrating(me.sM.win, me.res(1),...
+			[me.texture, ~, me.shader] = CreateProceduralPolarGrating(me.sM.win, me.res(1),...
 				me.res(2), me.colourOut, me.colour2Out, me.maskValue);
 			me.colourCache = me.colourOut; me.colour2Cache = me.colour2Out;
 
 			if ~isempty(me.visibleRateOut) && isnumeric(me.visibleRateOut)
-				me.visibleTick = 0;
-				me.visibleFlip = round((me.screenVals.fps/2) / me.visibleRateOut);
+                me.visibleTick = 0;
+                me.visibleFlip = round((me.screenVals.fps/2) / me.visibleRateOut);
 			else
 				me.visibleFlip = Inf; me.visibleTick = 0;
 			end
+
+			updateSFs(me);
 			
 			me.inSetup = false; me.isSetup = true;
 			computePosition(me);
 			setRect(me);
+
+			if me.centerMask > 0
+				sz = round(me.centerMask * me.ppd);
+				[me.cMaskTex, me.cMaskRect] = CreateProceduralSmoothedDisc(me.sM.win,...
+					sz, sz, [], round(sz/2), round(sz/10), true, 1);
+				me.cMaskRect = CenterRectOnPointd(me.cMaskRect, me.xFinal, me.yFinal);
+			end
 
 			function set_cOut(me, value)
 				len=length(value);
@@ -333,13 +343,20 @@ classdef colourGratingStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function update(me)
+
 			resetTicks(me);
+            me.isVisible = true;
+            me.visibleTick = 0;
+
 			if me.correctPhase
 				ps=me.calculatePhase;
 				me.driftPhase=me.phaseOut-ps;
 			else
 				me.driftPhase=me.phaseOut;
 			end
+
+			updateSFs(me);
+
 			if ~all(me.colourCache(1:3) == me.colourOut(1:3)) || ...
 				~all(me.colour2Cache(1:3) == me.colour2Out(1:3))
 				glUseProgram(me.shader);
@@ -356,15 +373,20 @@ classdef colourGratingStimulus < baseStimulus
 				glUseProgram(0);
 				me.colourCache = me.colourOut; me.colour2Cache = me.colour2Out;
 			end
+
 			if ~isempty(me.visibleRateOut) && isnumeric(me.visibleRateOut)
-				me.isVisible = true;
-				me.visibleTick = 0;
-				me.visibleFlip = round((me.screenVals.fps/2) / me.visibleRateOut);
+                me.visibleTick = 0;
+                me.visibleFlip = round((me.screenVals.fps/2) / me.visibleRateOut);
 			else
 				me.visibleFlip = Inf; me.visibleTick = 0;
 			end
+
 			computePosition(me);
 			setRect(me);
+
+			if me.centerMask > 0
+				me.cMaskRect = CenterRectOnPointd(me.cMaskRect, me.xFinal, me.yFinal);
+			end
 		end
 		
 		% ===================================================================
@@ -376,7 +398,16 @@ classdef colourGratingStimulus < baseStimulus
 			if me.isVisible && me.tick >= me.delayTicks && me.tick < me.offTicks
 				Screen('DrawTexture', me.sM.win, me.texture, [], me.mvRect,...
 					me.angleOut, [], [], me.baseColourOut, [], me.rotateMode,...
-					[me.driftPhase, me.sfOut, me.contrastOut, me.sigmaOut]);
+					[me.driftPhase, me.sf1, me.contrastOut, me.sigmaOut, me.sf2, 0, 0, 0]);
+				if me.arcValueOut(2) > 0
+					Screen('FillArc', me.sM.win, me.baseColourOut, ...
+						[me.mvRect(1)-2 me.mvRect(2)-2 me.mvRect(3)+2 me.mvRect(4)+2], ...
+						90+me.arcValueOut(1), ...
+						360-me.arcValueOut(2));
+				end
+				if me.centerMask > 0
+					Screen('DrawTexture', me.sM.win, me.cMaskTex, [], me.cMaskRect, [], [], 1, me.baseColourOut, [], []);
+				end
 			end
 			me.tick = me.tick + 1;
 		end
@@ -402,11 +433,11 @@ classdef colourGratingStimulus < baseStimulus
 				if mod(me.tick,me.phaseCounter) == 0
 					me.driftPhase = me.driftPhase + me.phaseOfReverse;
 				end
-				me.visibleTick = me.visibleTick + 1;
-				if me.visibleTick == me.visibleFlip
-					me.isVisible = ~me.isVisible;
-					me.visibleTick = 0;
-				end
+                me.visibleTick = me.visibleTick + 1;
+                if me.visibleTick == me.visibleFlip
+                    me.isVisible = ~me.isVisible;
+                    me.visibleTick = 0;
+                end
 			end
 		end
 		
@@ -536,19 +567,9 @@ classdef colourGratingStimulus < baseStimulus
 			%me.dstRect=Screen('Rect',me.texture);
 			me.dstRect=ScaleRect([0 0 me.res(1) me.res(2)],me.scale,me.scale);
 			if me.mouseOverride && me.mouseValid
-					me.dstRect = CenterRectOnPointd(me.dstRect, me.mouseX, me.mouseY);
+				me.dstRect = CenterRectOnPointd(me.dstRect, me.mouseX, me.mouseY);
 			else
-				if isprop(me, 'directionOut')
-					[sx, sy]=pol2cart(me.d2r(me.directionOut),me.startPosition);
-				else
-					[sx, sy]=pol2cart(me.d2r(me.direction),me.startPosition);
-				end
-				me.dstRect=CenterRectOnPointd(me.dstRect,me.sM.xCenter,me.sM.yCenter);
-				if isprop(me, 'xPositionOut')
-					me.dstRect=OffsetRect(me.dstRect,me.xPositionOut+(sx*me.ppd),me.yPositionOut+(sy*me.ppd));
-				else
-					me.dstRect=OffsetRect(me.dstRect,(me.xPosition)*me.ppd,(me.yPosition)*me.ppd);
-				end
+				me.dstRect = CenterRectOnPointd(me.dstRect, me.xFinal, me.yFinal);
 			end
 			me.mvRect=me.dstRect;
 			setAnimationDelta(me);
@@ -594,6 +615,29 @@ classdef colourGratingStimulus < baseStimulus
 				else
 					me.baseColour = (me.getP('colour',[1:3]) + me.getP('colour2',[1:3])) / 2;
 				end
+			end
+		end
+
+		function updateSFs(me)
+			switch me.type
+				case 'radial'
+					middleRadius = me.gratingSize/2;
+					middlePerimeter = 2*pi*middleRadius; % pixels
+					me.sf1 = me.sfOut*middlePerimeter / (2*pi); % cycles/degree, must be integral to avoid clip effect, corrected in the frag file
+					me.sf2 = 0;
+				case 'circular'
+					me.sf1 = 0;
+					me.sf2 = me.sfOut;
+				otherwise
+					if me.spiralFactorOut > 0
+						sf = me.sfOut / me.spiralFactorOut;
+					else
+						sf = me.sfOut;
+					end
+					middleRadius = me.gratingSize/2;
+					middlePerimeter = 2*pi*middleRadius; % pixels
+					me.sf1 = sf * middlePerimeter / (2*pi); % cycles/degree, must be integral to avoid clip effect, corrected in the frag file
+					me.sf2 = sf * me.spiralFactorOut;
 			end
 		end
 		

@@ -1,6 +1,11 @@
+% ========================================================================
 classdef touchManager < optickaCore
-	%UNTITLED Summary of this class goes here
-	%   Detailed explanation goes here
+%> @class touchManager
+%> @brief Manages touch screens (wraps the PTB TouchQueue* functions)
+%> 
+%> TOUCHMANAGER -- call this and setup with screen manager, then run your
+%> task. This class can handles touch windows, exclusion zones and more for
+%> multiple touch screens.
 
 	%--------------------PUBLIC PROPERTIES----------%
 	properties
@@ -110,7 +115,7 @@ classdef touchManager < optickaCore
 				end
 			end
 			me.isQueue = true;
-			if me.verbose;me.salutation('createQueue','Opened');end
+			if me.verbose; me.salutation('createQueue','Opened'); end
 		end
 
 		% ===================================================================
@@ -127,7 +132,7 @@ classdef touchManager < optickaCore
 				TouchQueueStart(me.devices(choice(i)));
 			end
 			me.isOpen = true;
-			if me.verbose;salutation(me,'start','Started queue...');end
+			if me.verbose; salutation(me,'start','Started queue...'); end
 		end
 		
 		% ===================================================================
@@ -143,7 +148,7 @@ classdef touchManager < optickaCore
 				TouchQueueStop(me.devices(choice(i)));
 			end
 			me.isOpen = false;
-			salutation(me,'stop','Stopped queue...');
+			if me.verbose; salutation(me,'stop','Stopped queue...'); end
 		end
 
 		% ===================================================================
@@ -160,7 +165,7 @@ classdef touchManager < optickaCore
 			for i = 1:length(choice)
 				TouchQueueRelease(me.devices(choice(i)));
 			end
-			salutation(me,'close','Closing...');
+			if me.verbose; salutation(me,'close','Closing...'); end
 		end
 
 		% ===================================================================

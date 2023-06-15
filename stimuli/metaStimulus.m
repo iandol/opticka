@@ -1,4 +1,5 @@
 % ========================================================================
+classdef metaStimulus < optickaCore
 %> @class metaStimulus
 %> @brief Manager for multiple opticka stimuli.
 %> 
@@ -22,7 +23,6 @@
 %>
 %> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
-classdef metaStimulus < optickaCore
 	
 	%--------------------PUBLIC PROPERTIES----------%
 	properties 
@@ -154,8 +154,7 @@ classdef metaStimulus < optickaCore
 		% ===================================================================
 		function update(me, choice)
 			%tic
-			if ~exist('choice','var'); choice = me.choice; end
-			if ~isempty(choice) && isnumeric(choice) %user forces specific stimuli
+			if exist('choice','var') && ~isempty(choice) && isnumeric(choice) %user forces specific stimuli
 				for i = choice
 					update(me.stimuli{i});
 				end
@@ -489,26 +488,26 @@ classdef metaStimulus < optickaCore
 			for i = 1:me.n_
 				if ignoreVisible; check = true; else; check = me.stimuli{i}.isVisible; end
 				if check && me.stimuli{i}.showOnTracker == true
-					if isprop(me.stimuli{i},'sizeOut')
-						if ~isempty(me.stimuli{i}.xFinal)
-							out(a).x = me.stimuli{i}.xFinal;
-							out(a).y = me.stimuli{i}.yFinal;
-						elseif ~isempty(me.stimuli{i}.mvRect)
-							r = me.stimuli{i}.mvRect;
-							out(a).x = r(3)-r(1);
-							out(a).y = r(4)-r(2);
-						else
-							out(a).x = me.stimuli{i}.xPositionOut;
-							out(a).y = me.stimuli{i}.yPositionOut;
-						end
-						out(a).size = me.stimuli{i}.sizeOut;
-						if any(me.fixationChoice == i) 
-							out(a).selected = true;
-						else
-							out(a).selected = false;
-						end
-						a = a + 1;
+					if ~isempty(me.stimuli{i}.xFinal)
+						out(a).x = me.stimuli{i}.xFinal;
+						out(a).y = me.stimuli{i}.yFinal;
+					elseif ~isempty(me.stimuli{i}.mvRect)
+						r = me.stimuli{i}.mvRect;
+						out(a).x = r(3)-r(1);
+						out(a).y = r(4)-r(2);
+					else
+						out(a).x = me.stimuli{i}.xPositionOut;
+						out(a).y = me.stimuli{i}.yPositionOut;
 					end
+					out(a).size = me.stimuli{i}.sizeOut;
+					if any(me.fixationChoice == i) 
+						out(a).selected = true;
+					else
+						out(a).selected = false;
+					end
+					out(a).w = me.screen.screenVals.width;
+					out(a).h = me.screen.screenVals.height;
+					a = a + 1;
 				end
 			end
 			me.stimulusPositions = out;

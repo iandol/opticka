@@ -69,8 +69,8 @@
 % includeErrors are referenced in this state machine file to change with
 % functions are added to the state machine states…
 tS.useTask					= true;		%==use taskSequence (randomises stimulus variables)
-tS.rewardTime				= 250;		%==TTL time in milliseconds
-tS.rewardPin				= 2;		%==Output pin, 2 by default with Arduino.
+rM.reward.time				= 250;		%==TTL time in milliseconds
+rM.reward.pin				= 2;		%==Output pin, 2 by default with Arduino.
 tS.keyExclusionPattern		= ["fixate","stimulus"]; %==which states to skip keyboard checking
 tS.enableTrainingKeys		= false;	%==enable keys useful during task training, but not for data recording
 tS.recordEyePosition		= false;	%==record local copy of eye position, **in addition** to the eyetracker?
@@ -86,6 +86,7 @@ tS.BREAKFIX					= -1;		%==the code to send eyetracker for break fix trials
 tS.INCORRECT				= -5;		%==the code to send eyetracker for incorrect trials
 tS.correctSound				= [2000, 0.1, 0.1]; %==freq,length,volume
 tS.errorSound				= [300, 1, 1];		%==freq,length,volume
+
 
 %=========================================================================
 %----------------Debug logging to command window------------------
@@ -211,7 +212,7 @@ stims.fixationChoice		= 1;
 pauseEntryFcn = {
 	@()hide(stims); % hide all stimuli
 	@()drawBackground(s); % blank the subject display
-	@()drawPhotoDiode(s,[0 0 0]); % draw black photodiode
+	@()drawPhotoDiodeSquare(s,[0 0 0]); % draw black photodiode
 	@()drawTextNow(s,'PAUSED, press [p] to resume...');
 	@()disp('PAUSED, press [p] to resume...');
 	@()trackerDrawStatus(eT,'PAUSED, press [p] to resume', stims.stimulusPositions);
@@ -254,7 +255,7 @@ prefixEntryFcn = {
 
 %--------------------prefixate within
 prefixFcn = {
-	@()drawPhotoDiode(s,[0 0 0]);
+	@()drawPhotoDiodeSquare(s,[0 0 0]);
 };
 
 %--------------------prefixate exit
@@ -274,7 +275,7 @@ fixEntryFcn = {
 %--------------------fix within
 fixFcn = {
 	@()draw(stims); %draw stimuli
-	@()drawPhotoDiode(s,[0 0 0]);
+	@()drawPhotoDiodeSquare(s,[0 0 0]);
 };
 
 %--------------------test we are fixated for a certain length of time
@@ -310,7 +311,7 @@ stimEntryFcn = {
 %--------------------what to run when we are showing stimuli
 stimFcn =  {
 	@()draw(stims);
-	@()drawPhotoDiode(s,[1 1 1]);
+	@()drawPhotoDiodeSquare(s,[1 1 1]);
 	@()animate(stims); % animate stimuli for subsequent draw
 };
 
@@ -349,7 +350,7 @@ correctEntryFcn = {
 
 %--------------------correct stimulus
 correctFcn = {
-	@()drawPhotoDiode(s,[0 0 0]);
+	@()drawPhotoDiodeSquare(s,[0 0 0]);
 };
 
 %--------------------when we exit the correct state
@@ -391,7 +392,7 @@ breakEntryFcn = {
 
 %--------------------our incorrect/breakfix stimulus
 incFcn = {
-	@()drawPhotoDiode(s,[0 0 0]);
+	@()drawPhotoDiodeSquare(s,[0 0 0]);
 };
 
 %--------------------incorrect exit

@@ -173,7 +173,7 @@ sM.skipExitStates			= {'fixate','incorrect|breakfix'};
 pauseEntryFcn = {
 	@()hide(stims);
 	@()drawBackground(s); %blank the subject display
-	@()drawPhotoDiode(s,[0 0 0]);
+	@()drawPhotoDiodeSquare(s,[0 0 0]);
 	@()drawTextNow(s,'PAUSED, press [p] to resume...');
 	@()disp('PAUSED, press [p] to resume...');
 	@()trackerClearScreen(eT); % blank the eyelink screen
@@ -200,7 +200,7 @@ prefixEntryFcn = {
 };
 
 prefixFcn = {
-	@()drawPhotoDiode(s,[0 0 0]);
+	@()drawPhotoDiodeSquare(s,[0 0 0]);
 };
 
 prefixExitFcn = {
@@ -226,7 +226,7 @@ fixEntryFcn = {
 
 %--------------------fix within
 fixFcn = {
-	@()drawPhotoDiode(s,[0 0 0]);
+	@()drawPhotoDiodeSquare(s,[0 0 0]);
 	@()draw(stims); %draw stimulus
 };
 
@@ -252,7 +252,7 @@ stimEntryFcn = {
 %--------------------what to run when we are showing stimuli
 stimFcn =  {
 	@()draw(stims);
-	@()drawPhotoDiode(s,[1 1 1]);
+	@()drawPhotoDiodeSquare(s,[1 1 1]);
 	@()animate(stims); % animate stimuli for subsequent draw
 };
 
@@ -282,7 +282,7 @@ correctEntryFcn = {
 
 %--------------------correct stimulus
 correctFcn = {
-	@()drawPhotoDiode(s,[0 0 0]);
+	@()drawPhotoDiodeSquare(s,[0 0 0]);
 };
 
 %--------------------when we exit the correct state
@@ -328,7 +328,7 @@ breakEntryFcn = {
 
 %--------------------our incorrect stimulus
 incFcn = {
-	@()drawPhotoDiode(s,[0 0 0]);
+	@()drawPhotoDiodeSquare(s,[0 0 0]);
 };
 
 %--------------------incorrect / break exit
