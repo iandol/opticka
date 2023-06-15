@@ -225,7 +225,6 @@ inFixFcn = {
 
 %--------------------exit fixation phase
 fixExitFcn = {
-	@()needFlip(me, true, 1); % enable the screen and trackerscreen flip
 	@()updateFixationValues(eT,[],[],[],tS.stimulusFixTime); %reset fixation time for stimulus = tS.stimulusFixTime
 	@()trackerDrawStatus(eT,'Stimulus', stims.stimulusPositions);
 	@()trackerMessage(eT,'END_FIX');
@@ -381,7 +380,7 @@ stateInfoTmp = {
 %---------------------------------------------------------------------------------------------
 'pause'		'prefix'	inf		pauseEntryFcn	{}				{}				pauseExitFcn;
 %---------------------------------------------------------------------------------------------
-'prefix'	'fixate'	0.5		prefixEntryFcn	prefixFcn		{}				prefixExitFcn;
+'prefix'	'fixate'	1		prefixEntryFcn	prefixFcn		{}				prefixExitFcn;
 'fixate'	'incorrect'	10		fixEntryFcn		fixFcn			inFixFcn		fixExitFcn;
 'stimulus'	'incorrect'	10		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn;
 'incorrect'	'timeout'	0.1		incorrEntryFcn	breakFcn		{}				ExitFcn;

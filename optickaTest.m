@@ -55,22 +55,22 @@ myStims = metaStimulus();
 % [5] RESET() - returns the object back to its pre-setup state.
 %
 %The first few stimuli are gratings / gabors of varying kinds.
-myStims{1}=gratingStimulus('sf', 1, 'tf', 0, 'phase', 90, 'contrast', 0.7, ...
-	'size', 2, 'angle', -45, 'mask', false, ...
-	'name', 'Standard grating');
+myStims{1}=polarGratingStimulus('sf', 1, 'tf', 2, 'contrast', 0.7, ...
+	'size', 4, 'type', 'spiral', 'name', 'Spiral grating');
 
 myStims{2}=gaborStimulus('sf', 1, 'contrast', 0.75, 'tf', 3, 'size', 3, 'angle', -70,...
 	'aspectRatio', 0.5, 'xPosition', 5, 'yPosition', -5,...
 	'name', 'Gabor');
 
 myStims{3}=gratingStimulus('sf', 2, 'tf', 4, 'contrast', 0.7, 'size', 3, 'angle', 45,...
-	'xPosition', 0, 'yPosition', -10, 'mask', true, 'sigma', 30,...
+	'xPosition', 0, 'yPosition', -11, 'mask', true, 'sigma', 30,...
 	'name', 'Edge-smoothed grating');
 
-myStims{4}=gratingStimulus('type', 'square', 'sf', 1, 'contrast', 1, ...
+myStims{4}=gratingStimulus('type', 'square', 'sf', 2, 'contrast', 1, ...
 	'colour', [0.5 0.5 0.5], 'tf', 0,...
 	'size', 3, 'xPosition', 6, 'yPosition', 0, ...
 	'phaseReverseTime',0.33, ...
+	'mask', true, 'sigma', 10,...
 	'name', 'Squarewave grating');
 
 %%
@@ -78,9 +78,9 @@ myStims{4}=gratingStimulus('type', 'square', 'sf', 1, 'contrast', 1, ...
 % You can control the orientation / SF filtering, and pass an image
 % through it, or let it create a random texture. It can phase reverse using
 % an invert GLSL shader on the texture.
-myStims{5}=logGaborStimulus('size', 3, 'xPosition', 0,'yPosition', -5,...
+myStims{5}=logGaborStimulus('size', 3, 'xPosition', 0,'yPosition', -6,...
 	'sfPeak', 3, 'sfSigma', 0.05, 'angleSigma', 20, 'seed', 5,...
-	'phaseReverseTime',0.33, ...
+	'phaseReverseTime',0.25, ...
 	'name', 'Log Gabor Filtered Noise');
 
 %%
@@ -112,7 +112,7 @@ myStims{8}=barStimulus('type','checkerboard','sf',2,'barWidth',1,'barHeight',4,.
 %%
 % an edge-smoothed spot; spots can also flash if needed
 myStims{9}=discStimulus('type','flash','speed',2,'xPosition',4,'sigma',40,...
-	'yPosition',4,'colour',[1 1 0],'flashColour',[0 0 1],'size',3,'flashTime',[0.2 0.15],...
+	'yPosition',4,'colour',[1 1 0],'flashColour',[0 0 1],'size',3,'flashTime',[0.2 0.2],...
 	'name','Flashing disc');
 
 %%
@@ -123,9 +123,7 @@ myStims{10}=imageStimulus('speed',2,'xPosition',-10,'yPosition',10,'size',4,...
 	'name','Image');
 
 %%
-% a picture stimulus, by default this loads a picture from the opticka
-% stimulus directory; you can rotate it, scale it etc and drift it across screen as
-% in this case. Size is in degrees, scaling the whole picture
+% a picture stimulus, loading a simple star. Size is in degrees, scaling the whole picture
 myStims{11}=imageStimulus('speed',0,'xPosition',0,'yPosition',5,'size',5,...
 	'fileName',[myStims.paths.root '/stimuli/star.png'],...
 	'modulateColour',[0.7 0.7 0.2], 'name', 'Image');
@@ -147,45 +145,45 @@ myStims{12}=movieStimulus('speed', 1, 'xPosition', -7, 'yPosition', -10,...
 % NOTE: for more complex behavioural tasks, Opticka uses a finite state machine to generate flexible
 % experimental protocols, see stateMachine() for more details.
 myTask = taskSequence(); %new taskSequence object instance
-myTask.nBlocks = 2; %number of blocks
-myTask.trialTime = 2; %time of stimulus display: 2 seconds
-myTask.isTime = 0.25; %inter-trial time: 0.25 seconds
-myTask.ibTime=0.5; %inter-block time: 1 second
-myTask.realTime = true; %we use real time for switching trials, false uses a tick timer updated every flip
+myTask.nBlocks		= 2; %number of blocks
+myTask.trialTime	= 2; %time of stimulus display: 2 seconds
+myTask.isTime		= 0.25; %inter-trial time: 0.25 seconds
+myTask.ibTime		= 0.5; %inter-block time: 1 second
+myTask.realTime		= true; %we use real time for switching trials, false uses a tick timer updated every flip
 
 %% Variable 1
 % Our first variable is angle, applied to 4 stimuli, randomly
 % selected from values of 0 45 and 90 degrees
-myTask.nVar(1).name = 'angle';
-myTask.nVar(1).stimulus = [1 3 8 10 11 12];
-myTask.nVar(1).values = [0 45 90];
+myTask.nVar(1).name		= 'angle';
+myTask.nVar(1).stimulus	= [1 3 8 10 11 12];
+myTask.nVar(1).values	= [0 45 90];
 % the next two parameters allow us to link a stimulus with
 % an offset; for example you could set stimulus 1 to values [1 2 3]
 % and if offsetvalue was 2 and offsetstimulus was 2 then the second
 % stimulus would change through [3 4 5]; 
-myTask.nVar(1).offsetstimulus = [5 6];
-myTask.nVar(1).offsetvalue = 90;
+myTask.nVar(1).offsetstimulus	= [5 6];
+myTask.nVar(1).offsetvalue		= 90;
 
 %% Variable 2
 % Our second variable is contrast, applied to stimuli 2 / 3 / 5, randomly
 % selected from values of 0.025 and 0.1
-myTask.nVar(2).name = 'contrast';
-myTask.nVar(2).stimulus = [2 3 5];
-myTask.nVar(2).values = [0.15 0.55];
+myTask.nVar(2).name		= 'contrast';
+myTask.nVar(2).stimulus	= [2 3 5];
+myTask.nVar(2).values	= [0.15 0.55];
 
 %% Variable 3
 % Our third variable is X position, applied to stimulus 2 and 7, randomly
 % selected from values of -3 and 3 degrees from visual center of screen
-myTask.nVar(3).name = 'xPosition';
-myTask.nVar(3).stimulus = [2 7];
-myTask.nVar(3).values = [-6 6];
+myTask.nVar(3).name		= 'xPosition';
+myTask.nVar(3).stimulus	= [2 7];
+myTask.nVar(3).values	= [-6 6];
 % the next two parameters allow us to link a stimulus with
 % an offset; for example you could set stimulus 1 to values [1 2 3]
 % and if offsetvalue was 2 and offsetstimulus was 2 then the second
 % stimulus would change through [3 4 5]; in this case we offset stimulus 10
 % to +2 the values above i.e. [-4 8]
-myTask.nVar(3).offsetstimulus = [10];
-myTask.nVar(3).offsetvalue = 2;
+myTask.nVar(3).offsetstimulus	= [10];
+myTask.nVar(3).offsetvalue		= 2;
 
 %% Randomisation
 % We call the method to randomise the trials in a block structure

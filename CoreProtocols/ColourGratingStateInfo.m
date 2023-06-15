@@ -136,11 +136,12 @@ pauseExitFcn = {
 %====================================================PRE-FIXATION
 %==============================================================
 %--------------------prefixate entry
-prefixEntryFcn = { 
-	@()needFlip(me, true, 1); % enable the screen and trackerscreen flip
+prefixEntryFcn = {
+	@()needFlip(me, true); % enable the screen and trackerscreen flip
 	@()needEyeSample(me, true); % make sure we start measuring eye position
 	@()hide(stims); % hide all stimuli
 	% update the fixation window to initial values
+	@()resetFixationHistory(eT);
 	@()updateFixationValues(eT,tS.fixX,tS.fixY,[],tS.firstFixTime); %reset fixation window
 	@()startRecording(eT); % start eyelink recording for this trial (tobii ignores this)
 	% tracker messages that define a trial start
@@ -156,7 +157,7 @@ prefixFcn = {
 
 %--------------------prefixate exit
 prefixExitFcn = {
-	@()trackerDrawStatus(eT,'Init Fix...', stims.stimulusPositions);
+	@()trackerDrawStatus(eT,'Start...', stims.stimulusPositions);
 };
 
 %==============================================================
@@ -182,8 +183,8 @@ inFixFcn = {
 	% is returned and the state machine will jump to the correct state,
 	% otherwise 'breakfix' is returned and the state machine will jump to the
 	% breakfix state. If neither condition matches, then the state table below
-	% defines that after 5 seconds we will switch to the incorrect state.
-	@()testSearchHoldFixation(eT,'stimulus','incorrect')
+	% defines that after 15 seconds we will switch to the breakfix state.
+	@()testSearchHoldFixation(eT,'stimulus','breakfix')
 };
 
 %--------------------exit fixation phase
@@ -220,7 +221,7 @@ maintainFixFcn = {
 	% otherwise 'breakfix' is returned and the state machine will jump to the
 	% breakfix state. If neither condition matches, then the state table below
 	% defines that after 5 seconds we will switch to the incorrect state.
-	@()testHoldFixation(eT,'correct','breakfix'); 
+	@()testHoldFixation(eT,'correct','incorrect'); 
 };
 
 %as we exit stim presentation state
@@ -270,7 +271,6 @@ correctExitFcn = {
 %====================================================INCORRECT/BREAKFIX
 %--------------------incorrect entry
 incEntryFcn = { 
-	@()beep(aM, tS.errorSound);
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.INCORRECT));
 	@()trackerDrawStatus(eT,'Incorrect! :-(',stims.stimulusPositions);
@@ -283,7 +283,6 @@ incEntryFcn = {
 
 %--------------------break entry
 breakEntryFcn = {
-	@()beep(aM, tS.errorSound);
 	@()trackerMessage(eT,'END_RT');
 	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.BREAKFIX));
 	@()trackerDrawStatus(eT,'Broke Fixation! :-(',stims.stimulusPositions);
@@ -301,6 +300,7 @@ incFcn = {
 
 %--------------------incorrect / break exit
 incExitFcn = { 
+	@()beep(aM, tS.errorSound);
 	@()sendStrobe(io,251);
 	@()updatePlot(bR, me); % update our behavioural plot;
 	@()resetRun(task); % we randomise the run within this block to make it harder to guess next trial
@@ -360,11 +360,11 @@ stateInfoTmp = {
 'pause'		'prefix'	inf		pauseEntryFcn	[]				[]				pauseExitFcn;
 %---------------------------------------------------------------------------------------------
 'prefix'	'fixate'	1		prefixEntryFcn	prefixFcn		[]				prefixExitFcn;
-'fixate'	'incorrect'	5		fixEntryFcn		fixFcn			inFixFcn		fixExitFcn;
-'stimulus'	'incorrect'	5		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn;
-'incorrect'	'timeout'	0.5		incEntryFcn		incFcn			[]				incExitFcn;
-'breakfix'	'timeout'	0.5		breakEntryFcn	incFcn			[]				incExitFcn;
-'correct'	'prefix'	0.5		correctEntryFcn	correctFcn		[]				correctExitFcn;
+'fixate'	'breakfix'	15		fixEntryFcn		fixFcn			inFixFcn		fixExitFcn;
+'stimulus'	'incorrect'	15		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn;
+'incorrect'	'timeout'	0.1		incEntryFcn		incFcn			[]				incExitFcn;
+'breakfix'	'timeout'	0.1		breakEntryFcn	incFcn			[]				incExitFcn;
+'correct'	'prefix'	0.1		correctEntryFcn	correctFcn		[]				correctExitFcn;
 'timeout'	'prefix'	tS.tOut	[]				[]				[]				[];
 %---------------------------------------------------------------------------------------------
 'calibrate' 'pause'		0.5		calibrateFcn	[]				[]				[];

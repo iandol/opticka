@@ -242,7 +242,7 @@ classdef eyetrackerCore < optickaCore
 			resetExclusionZones(me);
 			resetFixInit(me);
 			resetOffset(me);
-			resetFixation(me,true);
+			resetFixation(me, true);
 			me.flipTick = 0;
 		end
 		
@@ -251,8 +251,8 @@ classdef eyetrackerCore < optickaCore
 		%>
 		%> @param removeHistory remove the history of recent eye position?
 		% ===================================================================
-		function resetFixation(me,removeHistory)
-			if ~exist('removeHistory','var');removeHistory=false;end
+		function resetFixation(me, removeHistory)
+			if ~exist('removeHistory','var'); removeHistory = false; end
 			me.fixStartTime			= 0;
 			me.fixLength			= 0;
 			me.fixInitStartTime		= 0;
@@ -411,7 +411,7 @@ classdef eyetrackerCore < optickaCore
 		%> @paran radius radius of fixation window
 		%> @param strict allow or disallow re-entering the fixation window
 		% ===================================================================
-			resetFixation(me, true);
+			resetFixation(me);
 			if nargin > 1 && ~isempty(x)
 				if isinf(x)
 					me.fixation.X = me.screen.screenXOffset;
@@ -809,7 +809,7 @@ classdef eyetrackerCore < optickaCore
 			if ~exist('stimPos','var'); stimPos = []; end
 			if ~exist('dontClear','var'); dontClear = 0; end
 			
-			if dontClear==0; trackerClearScreen(me); end
+			if dontClear==0; trackerFlip(me, 0, true); trackerClearScreen(me); end
 			trackerDrawFixation(me);
 			drawGrid(me.operatorScreen);
 			if ~isempty(me.exclusionZone);trackerDrawExclusion(me);end
@@ -817,10 +817,7 @@ classdef eyetrackerCore < optickaCore
 			if ~isempty(comment);trackerDrawText(me, comment);end
 			if ~isempty(me.xAll);trackerDrawEyePositions(me);end
 			
-			me.flipTick = 0;
-			if me.verbose;fprintf('-+-+-> trackerDrawStatus\n');end
-			trackerFlip(me, dontClear, true);
-			me.flipTick = 1;
+			trackerFlip(me, 1, true);
 		end
 
 		% ===================================================================
@@ -835,8 +832,10 @@ classdef eyetrackerCore < optickaCore
 			if ~exist('dontClear','var');dontClear = true;end
 			if dontClear==false; trackerClearScreen(me); end
 			for i = 1:length(me.stimulusPositions)
-				x = me.stimulusPositions(i).x;
-				y = me.stimulusPositions(i).y;
+				rx = me.stimulusPositions(i).x / me.stimulusPositions(i).w;
+				ry = me.stimulusPositions(i).y / me.stimulusPositions(i).h;
+				x = round(rx * me.operatorScreen.screenVals.width);
+				y = round(ry * me.operatorScreen.screenVals.height);
 				size = me.stimulusPositions(i).size;
 				if isempty(size); size = 1 * me.ppd_; end
 				if me.stimulusPositions(i).selected == true
@@ -917,6 +916,7 @@ classdef eyetrackerCore < optickaCore
 		% ===================================================================
 		%> @brief flip the tracker display
 		%>
+		%> remember: dontclear affects the NEXT flip, not this one!
 		% ===================================================================
 		function trackerFlip(me, dontclear, force)
 			if ~exist('dontclear','var'); dontclear = 1; end
