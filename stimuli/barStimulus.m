@@ -290,8 +290,10 @@ classdef barStimulus < baseStimulus
 				if me.verbose; fprintf('!!!>>>Closing texture: %i kind: %i\n',me.texture,Screen(me.texture2,'WindowKind')); end
 				try Screen('Close',me.texture2); end %#ok<*TRYNC>
 			end
-			me.texture=[]; me.texture2 = [];
+			me.texture			= []; 
+			me.texture2			= [];
 			me.matrix			= [];
+			me.matrix2			= [];
 			me.mvRect			= [];
 			me.dstRect			= [];
 			me.screenWidth		= [];
@@ -387,6 +389,7 @@ classdef barStimulus < baseStimulus
 		% ===================================================================
 		function constructMatrix(me)
 			me.matrix=[]; %reset the matrix
+			me.matrix2=[]; %reset the matrix
 			try
 				colour = me.getP('colour');
 				alpha = me.getP('alpha');
