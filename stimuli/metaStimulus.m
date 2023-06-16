@@ -481,25 +481,22 @@ classdef metaStimulus < optickaCore
 		%> @param ignoreVisible [false] ignore the visibility status of stims
 		%> @return out copy of the stimulusPositions structure
 		% ===================================================================
-		function out = getStimulusPositions(me, ignoreVisible)
+		function out = getStimulusPositions(me, ignoreVisible, toDegrees)
 			if ~exist('ignoreVisible','var'); ignoreVisible=false; end
+			if ~exist('toDegrees','var'); toDegrees = true; end
 			a=1;
 			out = [];
 			for i = 1:me.n_
 				if ignoreVisible; check = true; else; check = me.stimuli{i}.isVisible; end
 				if check && me.stimuli{i}.showOnTracker == true
-					if ~isempty(me.stimuli{i}.xFinal)
-						out(a).x = me.stimuli{i}.xFinal;
-						out(a).y = me.stimuli{i}.yFinal;
-					elseif ~isempty(me.stimuli{i}.mvRect)
-						r = me.stimuli{i}.mvRect;
-						out(a).x = r(3)-r(1);
-						out(a).y = r(4)-r(2);
+					if me.stimuli{i}.isRect
+						xy = [me.stimuli{i}.xFinal me.stimuli{i}.yFinal];
 					else
-						out(a).x = me.stimuli{i}.xPositionOut;
-						out(a).y = me.stimuli{i}.yPositionOut;
+						xy = [me.stimuli{i}.xPositionOut me.stimuli{i}.yPositionOut];
 					end
-					out(a).size = me.stimuli{i}.sizeOut;
+					if toDegrees; xy = me.screen.toDegrees(xy,'xy'); end
+					out(a).x = xy(1); out(a).y = xy(2);
+					out(a).size = me.stimuli{i}.sizeOut / me.ppd_;
 					if any(me.fixationChoice == i) 
 						out(a).selected = true;
 					else
@@ -507,6 +504,7 @@ classdef metaStimulus < optickaCore
 					end
 					out(a).w = me.screen.screenVals.width;
 					out(a).h = me.screen.screenVals.height;
+					out(a).ppd = me.ppd_;
 					a = a + 1;
 				end
 			end

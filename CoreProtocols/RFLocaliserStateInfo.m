@@ -53,7 +53,7 @@ tS.errorSound			= [300, 1, 1];		%==freq,length,volume
 %sM.verbose					= true;		%==print out stateMachine info for debugging
 %stims.verbose				= true;		%==print out metaStimulus info for debugging
 %io.verbose					= true;		%==print out io commands for debugging
-eT.verbose					= true;		%==print out eyetracker commands for debugging
+%eT.verbose					= true;		%==print out eyetracker commands for debugging
 %rM.verbose					= true;		%==print out reward commands for debugging
 %task.verbose				= true;		%==print out task info for debugging
 
@@ -188,6 +188,7 @@ pauseExitFcn = {
 
 %====================prefix entry state
 prefixEntryFcn = {
+	@()resetAll(eT); % reset all fixation markers to initial state
 	@()needFlip(me, true, 1); % enable the screen and trackerscreen flip
 	@()needEyeSample(me, true); % make sure we start measuring eye position
 	@()startRecording(eT); %start recording eye position data again

@@ -181,7 +181,7 @@ pauseExitFn = {
 %====================================================PRESTIMULUS
 %---------------------prestim entry
 psEntryFn = {
-	@()needFlip(me, true, 1); % start PTB screen flips, and tracker screen flip
+	@()needFlip(me, true, 1); % ensure PTB screen flips, and tracker screen flip
 	@()needEyeSample(me, true); % make sure we start measuring eye position
 	@()startRecording(eT); % start eyelink recording for this trial (ignored by tobii/irec as they always records)
 	@()updateFixationTarget(me, true);
@@ -190,13 +190,12 @@ psEntryFn = {
 	@()trackerMessage(eT,'V_RT MESSAGE END_FIX END_RT'); % Eyelink-specific commands, ignored by other eyetrackers
 	@()trackerMessage(eT,sprintf('TRIALID %i',getTaskIndex(me))); %Eyetracker start trial marker
 	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
-	@()trackerClearScreen(eT); %draw status to eyetracker display
+	@()trackerDrawStatus(eT,'Start...', stims.stimulusPositions);
 	@()logRun(me,'PREFIX'); % log current trial info to command window AND timeLogger
 };
 
 %---------------------prestimulus blank
 prestimulusFn = {
-	@()trackerDrawFixation(eT); % draw fixation window on eyetracker display
 	@()trackerDrawEyePosition(eT); % draw the fixation position on the eyetracker
 };
 
@@ -272,7 +271,7 @@ breakEntryFn = {
 	@()beep(aM,tS.errorSound);
 	@()trackerMessage(eT,['TRIAL_RESULT ' num2str(tS.BREAKFIX)]); %trial incorrect message
 	@()trackerDrawStatus(eT,'BREAK! :-(', stims.stimulusPositions);
-	@()needFlipTracker(me, 0); %for tobii stop flip
+	@()needFlipTracker(me, 0); %for operator screen stop flip
 	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()needEyeSample(me,false);
@@ -281,11 +280,11 @@ breakEntryFn = {
 };
 
 %----------------------inc entry
-incEntryFn = { 
+incEntryFn = {
 	@()beep(aM,tS.errorSound);
 	@()trackerMessage(eT,['TRIAL_RESULT ' num2str(tS.INCORRECT)]); %trial incorrect message
 	@()trackerDrawStatus(eT,'INCORRECT! :-(', stims.stimulusPositions);
-	@()needFlipTracker(me, 0); %for tobii stop flip
+	@()needFlipTracker(me, 0); %for operator screen stop flip
 	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()needEyeSample(me,false);

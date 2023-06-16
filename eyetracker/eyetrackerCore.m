@@ -832,16 +832,14 @@ classdef eyetrackerCore < optickaCore
 			if ~exist('dontClear','var');dontClear = true;end
 			if dontClear==false; trackerClearScreen(me); end
 			for i = 1:length(me.stimulusPositions)
-				rx = me.stimulusPositions(i).x / me.stimulusPositions(i).w;
-				ry = me.stimulusPositions(i).y / me.stimulusPositions(i).h;
-				x = round(rx * me.operatorScreen.screenVals.width);
-				y = round(ry * me.operatorScreen.screenVals.height);
+				x = me.stimulusPositions(i).x;
+				y = me.stimulusPositions(i).y;
 				size = me.stimulusPositions(i).size;
-				if isempty(size); size = 1 * me.ppd_; end
+				if isempty(size); size = 1; end
 				if me.stimulusPositions(i).selected == true
-					drawBoxPx(me.operatorScreen,[x; y],size,[0.5 1 0 0.5]);
+					drawBox(me.operatorScreen,[x; y],size,[0.5 1 0 0.5]);
 				else
-					drawBoxPx(me.operatorScreen,[x; y],size,[0.6 0.6 0.3 0.5]);
+					drawBox(me.operatorScreen,[x; y],size,[0.6 0.6 0.3 0.5]);
 				end
 			end			
 		end
@@ -929,10 +927,6 @@ classdef eyetrackerCore < optickaCore
 			if dontclear ~= 1; dontclear = 0; end
 			% Screen('Flip', windowPtr [, when] [, dontclear] [, dontsync] [, multiflip]);
 			me.operatorScreen.flip([], dontclear, 2);
-			if me.verbose
-				fprintf('-+-+-> trackerFLIP clear:%i force:%i fliptick:%i\n',dontclear,force,me.flipTick);
-			end
-				
 		end
 		
 	end%-------------------------END PUBLIC METHODS--------------------------------%
