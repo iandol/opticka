@@ -825,10 +825,11 @@ classdef eyetrackerCore < optickaCore
 		%>
 		% ===================================================================
 		function trackerDrawStimuli(me, ts, dontClear)
-			if exist('ts','var') && isstruct(ts)
+			if exist('ts','var') && isstruct(ts) && isfield(ts,'x')
 				me.stimulusPositions = ts;
+			else
+				return
 			end
-			if isempty(me.stimulusPositions) || isempty(fieldnames(me.stimulusPositions));return;end
 			if ~exist('dontClear','var');dontClear = true;end
 			if dontClear==false; trackerClearScreen(me); end
 			for i = 1:length(me.stimulusPositions)

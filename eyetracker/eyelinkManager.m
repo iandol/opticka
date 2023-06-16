@@ -577,17 +577,13 @@ classdef eyelinkManager < eyetrackerCore
 		%>
 		% ===================================================================
 			if ~me.isConnected; return; end
-			if exist('ts','var') && isstruct(ts) && ~isempty(fields(ts))
+			if exist('ts','var') && isstruct(ts) && isfield(ts,'x')
 				me.stimulusPositions = ts;
 			else
 				return
 			end
-			if ~exist('dontClear','var')
-				dontClear = true;
-			end
-			if ~exist('convertToPixels','var')
-				convertToPixels = false;
-			end
+			if ~exist('dontClear','var'); dontClear = true; end
+			if ~exist('convertToPixels','var'); convertToPixels = true; end
 			if dontClear==false; Eyelink('Command', 'clear_screen 0'); end
 			for i = 1:length(me.stimulusPositions)
 				x = me.stimulusPositions(i).x; 
@@ -596,8 +592,7 @@ classdef eyelinkManager < eyetrackerCore
 				if isempty(size); size = 1; end
 				rect = [0 0 size size];
 				rect = CenterRectOnPoint(rect, x, y); 
-				if convertToPixels; rect = toPixels(me, rect,'rect'); end
-				rect = round(rect);
+				if convertToPixels; rect = round(toPixels(me, rect,'rect')); end
 				if me.stimulusPositions(i).selected == true
 					Eyelink('Command', 'draw_box %d %d %d %d 15', rect(1), rect(2), rect(3), rect(4));
 				else
