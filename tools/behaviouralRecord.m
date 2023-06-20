@@ -352,9 +352,11 @@ classdef behaviouralRecord < optickaCore
 			t{end+1} = ['RUN time = ' char(d)];
 			t{end+1} = ['RUN:' me.comment];
 			t{end+1} = ['INFO:' me.info];
-			t{end+1} = ['RADIUS (red) b|n = ' num2str(me.radius(end)) 'deg'];
-			t{end+1} = ['INITIATE FIXATION TIME (green) z|x = ' num2str(me.inittime(end)) ' secs'];
-			t{end+1} = ['MAINTAIN FIXATION TIME (blue) c|v = ' num2str(me.time(end)) ' secs'];
+			if ~isempty(me.radius) && ~isempty(me.inittime) && ~isempty(me.time)
+				t{end+1} = ['RADIUS (red) b|n = ' num2str(me.radius(end)) 'deg'];
+				t{end+1} = ['INITIATE FIXATION TIME (green) z|x = ' num2str(me.inittime(end)) ' secs'];
+				t{end+1} = ['MAINTAIN FIXATION TIME (blue) c|v = ' num2str(me.time(end)) ' secs'];
+			end
 			t{end+1} = ' ';
 			if ~isempty(me.rt1)
 				t{end+1} = ['Last/Mean Init Time = ' num2str(me.rt2(end)) ' / ' num2str(mean(me.rt2)) 'secs | Last/Mean Init+Fix = ' num2str(me.rt1(end)) ' / ' num2str(mean(me.rt1)) 'secs'];

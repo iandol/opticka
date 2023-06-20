@@ -285,11 +285,15 @@ classdef optickaCore < handle
 		%>
 		%> @return obj_out  cloned object
 		% ===================================================================
+			if isempty(me); obj_out = me; return; end
 			meta = metaclass(me);
 			obj_out = feval(class(me),'cloning',true);
 			for i = 1:length(meta.Properties)
 				prop = meta.Properties{i};
-				if strcmpi(prop.SetAccess,'Public') && ~(prop.Dependent || prop.Constant) && ~(isempty(me.(prop.Name)) && isempty(obj_out.(prop.Name)))
+				if strcmpi(prop.SetAccess,'Public') && ~(prop.Dependent || prop.Constant) ...
+				&& isprop(obj_out, prop.Name) ...
+				&& ~(isempty(me.(prop.Name)) ...
+				&& isempty(obj_out.(prop.Name)))
 					if isobject(me.(prop.Name)) && isa(me.(prop.Name),'optickaCore')
 						obj_out.(prop.Name) = me.(prop.Name).clone;
 					else

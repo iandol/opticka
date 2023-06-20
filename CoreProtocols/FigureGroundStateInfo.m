@@ -41,6 +41,8 @@ tS.CORRECT 					= 1;		%==the code to send eyetracker for correct trials
 tS.BREAKFIX 				= -1;		%==the code to send eyetracker for break fix trials
 tS.INCORRECT 				= -5;		%==the code to send eyetracker for incorrect trials
 tS.luminancePedestal 		= [0.5 0.5 0.5]; %used during training, it sets the clip behind the figure to a different luminance which makes the figure more salient and thus easier to train to.
+tS.correctSound				= [2000, 0.1, 0.1]; %==freq,length,volume
+tS.errorSound				= [300, 1, 1];		%==freq,length,volume
 
 %==================================================================
 %----------------Debug logging to command window------------------
@@ -54,15 +56,6 @@ tS.luminancePedestal 		= [0.5 0.5 0.5]; %used during training, it sets the clip 
 %rM.verbose					= true;		%==print out reward commands for debugging
 %task.verbose				= true;		%==print out task info for debugging
 
-%==================================================================
-%-----enable the magstimManager which uses FOI2 of the LabJack
-if tS.useMagStim
-	mS = magstimManager('lJ',rM,'defaultTTL',2);
-	mS.stimulateTime	= 240;
-	mS.frequency		= 0.7;
-	mS.rewardTime		= 25;
-	open(mS);
-end
 
 %==================================================================
 %-----------------INITIAL Eyetracker Settings----------------------
@@ -71,6 +64,8 @@ end
 % fixation window towards a target, enabling an exclusion window to stop
 % the subject entering a specific set of display areas etc.)
 %
+eT.name 					= tS.name;
+if tS.saveData == true;		eT.recordData = true; end %===save ET data?	
 % initial fixation X position in degrees (0° is screen centre)
 tS.fixX						= 0;	
 % initial fixation Y position in degrees
@@ -97,61 +92,10 @@ tS.targetFixInit = 1;
 tS.targetFixTime = [0.5 0.7];
 tS.targetRadius = 5;
 
-%=========================================================================
-%-------------------------------Eyetracker setup--------------------------
-% NOTE: the opticka GUI can set eyetracker options too; me.eyetracker.esettings
-% and me.eyetracker.tsettings contain the GUI settings. We test if they are
-% empty or not and set general values based on that...
-
-eT.name 					= tS.name;
-if tS.saveData == true;		eT.recordData = true; end %===save ET data?					
-switch me.eyetracker.device
-	case 'eyelink'
-	eT.name 						= tS.name;
-	if me.eyetracker.dummy == true;				eT.isDummy = true; end %===use dummy or real eyetracker? 
-	if tS.saveData == true;			eT.recordData = true; end %===save EDF file?
-	if isempty(me.eyetracker.esettings)		%==check if GUI settings are empty
-		eT.sampleRate				= 250;		%==sampling rate
-		eT.calibrationStyle			= 'HV5';	%==calibration style
-		eT.calibrationProportion	= [0.4 0.4]; %==the proportion of the screen occupied by the calibration stimuli
-		%-----------------------
-		% remote calibration enables manual control and selection of each
-		% fixation this is useful for a baby or monkey who has not been trained
-		% for fixation use 1-9 to show each dot, space to select fix as valid,
-		% INS key ON EYELINK KEYBOARD to accept calibration!
-		eT.remoteCalibration		= false; 
-		%-----------------------
-		eT.modify.calibrationtargetcolour = [1 1 1]; %==calibration target colour
-		eT.modify.calibrationtargetsize = 2;		%==size of calibration target as percentage of screen
-		eT.modify.calibrationtargetwidth = 0.15;	%==width of calibration target's border as percentage of screen
-		eT.modify.waitformodereadytime	= 500;
-		eT.modify.devicenumber 			= -1;		%==-1 = use any attachedkeyboard
-		eT.modify.targetbeep 			= 1;		%==beep during calibration
-	end
-case 'tobii'
-	eT.name 						= tS.name;
-	if me.eyetracker.dummy == true;				eT.isDummy = true; end %===use dummy or real eyetracker? 
-	if isempty(me.eyetracker.tsettings) 	%==check if GUI settings are empty
-		eT.model					= 'Tobii Pro Spectrum';
-		eT.sampleRate				= 300;
-		eT.trackingMode				= 'human';
-		eT.calibrationStimulus		= 'animated';
-		eT.autoPace					= true;
-		%-----------------------
-		% remote calibration enables manual control and selection of each
-		% fixation this is useful for a baby or monkey who has not been trained
-		% for fixation
-		eT.manualCalibration		= false;
-		%-----------------------
-		eT.calPositions				= [ .2 .5; .5 .5; .8 .5];
-		eT.valPositions				= [ .5 .5 ];
-	end
-end
-
 %Initialise the eyeTracker object with X, Y, FixInitTime, FixTime, Radius, StrictFix
 eT.updateFixationValues(tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
 %Ensure we don't start with any exclusion zones set up
-eT.resetExclusionZones();
+resetAll(eT);
 
 %==================================================================
 %----WHICH states assigned as correct or break for online plot?----

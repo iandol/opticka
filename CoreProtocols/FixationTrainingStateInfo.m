@@ -26,11 +26,11 @@
 
 %==================================================================
 %----------------------General Settings----------------------------
-tS.useTask					= true;		%==use taskSequence (randomises stimulus variables)
+tS.useTask					= false;		%==use taskSequence (randomises stimulus variables)
 tS.rewardTime				= 300;		%==TTL time in milliseconds
 tS.rewardPin				= 2;		%==Output pin, 2 by default with Arduino.
 tS.keyExclusionPattern		= [];		%==which states to skip keyboard checking
-tS.enableTrainingKeys		= false;	%==enable keys useful during task training, but not for data recording
+tS.enableTrainingKeys		= true;	%==enable keys useful during task training, but not for data recording
 tS.recordEyePosition		= false;	%==record local copy of eye position, **in addition** to the eyetracker?
 tS.askForComments			= false;	%==UI requestor asks for comments before/after run
 tS.saveData					= true;		%==save behavioural and eye movement data?
@@ -233,13 +233,13 @@ stimExitFn = {
 
 %-----------------------if the subject is correct (small reward)
 correctEntryFn = {
-	@()giveReward(rM); % send a reward
 	@()trackerMessage(eT,['TRIAL_RESULT ' num2str(tS.CORRECT)]); % tell EDF trial was a correct
 	@()trackerDrawStatus(eT,'CORRECT! :-)');
 	@()needFlipTracker(me, 0); %for operator screen stop flip
 	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()needEyeSample(me,false); % no need to collect eye data until we start the next trial
+	@()giveReward(rM); % send a reward
 	@()beep(aM, tS.correctSound); % correct beep
 	@()logRun(me,'CORRECT'); %fprintf current trial info
 };
@@ -254,7 +254,6 @@ correctExitFn = {
 	@()updatePlot(bR, me); % update the behavioural report plot
 	@()updateVariables(me,[],[],true); ... %update the task variables
 	@()update(stims); ... %update our stimuli ready for display
-	@()checkTaskEnded(me);
 	@()plot(bR, 1); % actually do our behaviour record drawing
 };
 
@@ -294,7 +293,6 @@ breakExitFn = {
 	@()updatePlot(bR, me);
 	@()updateVariables(me,[],[],false); ... %update the task variables
 	@()update(stims); %update our stimuli ready for display
-	@()checkTaskEnded(me);
 	@()plot(bR, 1); % actually do our behaviour record drawing
 };
 
@@ -354,11 +352,11 @@ stateInfoTmp = {
 %---------------------------------------------------------------------------------------------
 'pause'		'blank'		inf		pauseEntryFn	{}				{}				pauseExitFn;
 %---------------------------------------------------------------------------------------------
-'blank'		'stimulus'	0.5		psEntryFn		prestimulusFn	{}				psExitFn;
+'blank'		'stimulus'	1		psEntryFn		prestimulusFn	{}				psExitFn;
 'stimulus'	'incorrect'	5		stimEntryFn		stimFn			maintainFixFn	stimExitFn;
-'incorrect'	'timeout'	2		incEntryFn		breakFn			{}				breakExitFn;
-'breakfix'	'timeout'	2		breakEntryFn	breakFn			{}				breakExitFn;
-'correct'	'blank'		0.5		correctEntryFn	correctFn		{}				correctExitFn;
+'incorrect'	'timeout'	0.1		incEntryFn		breakFn			{}				breakExitFn;
+'breakfix'	'timeout'	0.1		breakEntryFn	breakFn			{}				breakExitFn;
+'correct'	'blank'		0.1		correctEntryFn	correctFn		{}				correctExitFn;
 'timeout'	'blank'		tS.tOut	{}				{}				{}				{};
 %---------------------------------------------------------------------------------------------
 'calibrate' 'pause'		0.5		calibrateFn		{}				{}				{};

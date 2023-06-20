@@ -35,12 +35,14 @@ tS.askForComments			= true;		%==UI requestor asks for comments before/after run
 tS.saveData					= true;		%==save behavioural and eye movement data?
 tS.showBehaviourPlot		= true;		%==open the behaviourPlot figure? Can cause more memory use…
 tS.includeErrors			= false;	%==do we update the trial number even for incorrect saccade/fixate, if true then we call updateTask for both correct and incorrect, otherwise we only call updateTask() for correct responses
-tS.name						= 'back-propaagation'; %==name of this protocol
+tS.name						= 'back-propagation'; %==name of this protocol
 tS.nStims					= stims.n;	%==number of stimuli, taken from metaStimulus object
 tS.tOut						= 4;		%==if wrong response, how long to time out before next trial
 tS.CORRECT					= 1;		%==the code to send eyetracker for correct trials
 tS.BREAKFIX					= -1;		%==the code to send eyetracker for break fix trials
 tS.INCORRECT				= -5;		%==the code to send eyetracker for incorrect trials
+tS.correctSound				= [2000, 0.1, 0.1]; %==freq,length,volume
+tS.errorSound				= [300, 1, 1];		%==freq,length,volume
 
 %=================================================================
 %----------------Debug logging to command window------------------
@@ -83,59 +85,6 @@ tS.strict					= true;
 tS.exclusionZone			= [];
 % time to fix on the stimulus
 tS.stimulusFixTime			= 4;
-% log of recent X and Y position, and exclusion zone, here set ti initial
-% values
-me.lastXPosition			= tS.fixX;
-me.lastYPosition			= tS.fixY;
-me.lastXExclusion			= [];
-me.lastYExclusion			= [];
-
-%=========================================================================
-%-------------------------------Eyetracker setup--------------------------
-% NOTE: the opticka GUI can set eyetracker options too; me.eyetracker.esettings
-% and me.eyetracker.tsettings contain the GUI settings. We test if they are
-% empty or not and set general values based on that...
-
-eT.name				= tS.name;
-if me.eyetracker.dummy == true;	eT.isDummy = true; end %===use dummy or real eyetracker? 
-if tS.saveData;		eT.recordData = true; end %===save ET data?					
-switch me.eyetracker.device
-	case 'eyelink'
-	if isempty(me.eyetracker.esettings)		%==check if GUI settings are empty
-		eT.sampleRate				= 250;		%==sampling rate
-		eT.calibrationStyle			= 'HV5';	%==calibration style
-		eT.calibrationProportion	= [0.4 0.4]; %==the proportion of the screen occupied by the calibration stimuli
-		%-----------------------
-		% remote calibration enables manual control and selection of each
-		% fixation this is useful for a baby or monkey who has not been trained
-		% for fixation use 1-9 to show each dot, space to select fix as valid,
-		% INS key ON EYELINK KEYBOARD to accept calibration!
-		eT.remoteCalibration				= false; 
-		%-----------------------
-		eT.modify.calibrationtargetcolour	= [1 1 1]; %==calibration target colour
-		eT.modify.calibrationtargetsize		= 2;		%==size of calibration target as percentage of screen
-		eT.modify.calibrationtargetwidth	= 0.15;	%==width of calibration target's border as percentage of screen
-		eT.modify.waitformodereadytime		= 500;
-		eT.modify.devicenumber				= -1;		%==-1 = use any attachedkeyboard
-		eT.modify.targetbeep				= 1;		%==beep during calibration
-	end
-case 'tobii'
-	if isempty(me.eyetracker.tsettings)	%==check if GUI settings are empty
-		eT.model					= 'Tobii Pro Spectrum';
-		eT.sampleRate				= 300;
-		eT.trackingMode				= 'human';
-		eT.calibrationStimulus		= 'animated';
-		eT.autoPace					= true;
-		%-----------------------
-		% remote calibration enables manual control and selection of each
-		% fixation this is useful for a baby or monkey who has not been trained
-		% for fixation
-		eT.manualCalibration		= false;
-		%-----------------------
-		eT.calPositions				= [ .2 .5; .5 .5; .8 .5];
-		eT.valPositions				= [ .5 .5 ];
-	end
-end
 %Initialise the eyeTracker object with X, Y, FixInitTime, FixTime, Radius, StrictFix
 updateFixationValues(eT, tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
 %Ensure we don't start with any exclusion zones set up
@@ -243,7 +192,7 @@ pauseExitFn = {
 %========================================================
 %--------------------prefixate entry
 prefixEntryFn = { 
-	@()needFlip(me, true); 
+	@()needFlip(me, true, 1); 
 	@()needEyeSample(me, true); % make sure we start measuring eye position
 	@()hide(stims); % hide all stimuli
 	% update the fixation window to initial values
@@ -291,7 +240,7 @@ inFixFn = {
 	% otherwise 'breakfix' is returned and the state machine will jump to the
 	% breakfix state. If neither condition matches, then the state table below
 	% defines that after 5 seconds we will switch to the incorrect state.
-	@()testSearchHoldFixation(eT,'stimulus','incorrect')
+	@()testSearchHoldFixation(eT,'stimulus','breakfix')
 };
 
 %--------------------exit fixation phase
@@ -348,8 +297,6 @@ stimExitFn = {
 correctEntryFn = {
 	@()trackerMessage(eT,'END_RT'); %send END_RT message to tracker
 	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.CORRECT)); %send TRIAL_RESULT message to tracker
-	@()trackerClearScreen(eT);
-	@()trackerDrawText(eT,'Correct! :-)');
 	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()needEyeSample(me,false); % no need to collect eye data until we start the next trial
@@ -366,15 +313,13 @@ correctFn = {
 correctExitFn = {
 	@()giveReward(rM); % send a reward TTL
 	@()beep(aM, tS.correctSound); % correct beep
+	@()trackerDrawStatus(eT, 'CORRECT! :-)');
+	@()updatePlot(bR, me);
 	@()updateTask(me,tS.CORRECT); %make sure our taskSequence is moved to the next trial
 	@()updateVariables(me); %randomise our stimuli, and set strobe value too
 	@()update(stims); %update our stimuli ready for display
 	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions
-	@()trackerClearScreen(eT); 
-	@()resetFixation(eT); %resets the fixation state timers	
-	@()resetFixationHistory(eT); % reset the recent eye position history
-	@()resetExclusionZones(eT); % reset the exclusion zones on eyetracker
-	@()checkTaskEnded(me); %check if task is finished
+	@()resetAll(eT); %resets the fixation state timers	
 	@()plot(bR, 1); % actually do our behaviour record drawing
 };
 
