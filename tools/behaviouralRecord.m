@@ -195,7 +195,7 @@ classdef behaviouralRecord < optickaCore
 			if exist('sM','var')
 				if matches(sM.currentName, me.correctStateName)
 					me.response(me.tick) = me.correctStateValue;
-					me.rt1(me.tick) = sM.log(end).stateTimeToNow * 1e3;
+					me.rt1(me.tick) = sM.log.stateTimeToNow(end) * 1e3;
 				elseif matches(sM.currentName, me.breakStateName)
 					me.response(me.tick) = me.breakStateValue;
 					me.rt1(me.tick) = 0;

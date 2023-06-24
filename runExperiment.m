@@ -995,6 +995,9 @@ classdef runExperiment < optickaCore
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				while me.stopTask == false
 					
+					%------ Check eye position manually. -----%
+					if me.needSample; getSample(eT); end
+
 					%------ Run stateMachine one step forward -----%
 					update(sM);
 
@@ -1003,9 +1006,6 @@ classdef runExperiment < optickaCore
 						if s.visualDebug; drawGrid(s); infoTextScreen(me); end
 						finishDrawing(s); 
 					end
-					
-					%------ Check eye position manually. -----%
-					if me.needSample; getSample(eT); end
 					
 					%------ Check keyboard for commands (remember we can turn
 					% this off using either tS.keyExclusionPattern
@@ -1020,13 +1020,14 @@ classdef runExperiment < optickaCore
 						% command for this screen flip needs to be sent
 						% PRIOR to the flip! Also remember DPP will be
 						% delayed by one flip.
-						if me.sendStrobe && strcmpi(me.strobe.device,'display++')
-							sendStrobe(io); me.sendStrobe = false;
-						elseif me.sendStrobe && strcmpi(me.strobe.device,'datapixx')
-							triggerStrobe(io); me.sendStrobe = false;
+						if me.sendStrobe 
+							if strcmpi(me.strobe.device,'display++')
+								sendStrobe(io); me.sendStrobe = false;
+							elseif strcmpi(me.strobe.device,'datapixx')
+								triggerStrobe(io); me.sendStrobe = false;
+							end
 						end
-						%------ Do the actual Screen flip, save times if
-						% enabled.
+						%------ Do the actual Screen flip, save times if enabled.
 						nextvbl = tL.lastvbl + me.screenVals.halfisi;
 						if me.logFrames == true
 							[tL.vbl(tS.totalTicks),tL.show(tS.totalTicks),...
@@ -1045,18 +1046,18 @@ classdef runExperiment < optickaCore
 							sendStrobe(io); me.sendStrobe = false;
 						end
 
-						%----- Send Eyetracker messages -----%
+						% %----- Send Eyetracker messages -----%
 						if me.sendSyncTime % sends SYNCTIME message to eyetracker
 							syncTime(eT);
 							me.sendSyncTime = false;
 						end
-
-						%------ Log stim / no stim + missed frame -----%
+						 
+						% %------ Log stim / no stim + missed frame -----%
 						if thisN > 0 && me.logFrames
 							logStim(tL,sM.currentName,thisN);
 						end
 
-						%------ Debug: if we missed a frame record it somewhere -----%
+						% %------ Debug: if we missed a frame record it somewhere -----%
 						if me.debug && thisN > 0 && tL.miss(thisN) > 0 && tL.stimTime(thisN) > 0
 							addMessage(tL,[],[],'We missed a frame during stimulus'); 
 						end
@@ -1096,6 +1097,7 @@ classdef runExperiment < optickaCore
 				tL.screenLog.trackerEndOffset = getTimeOffset(eT);
 				tL.screenLog.totalTime = tL.screenLog.afterDisplay - tL.screenLog.beforeDisplay;
 				me.isRunning = false;
+				finish(sM, true);
 				
 				try %#ok<*TRYNC> 
 					drawBackground(s);
@@ -1650,7 +1652,7 @@ classdef runExperiment < optickaCore
 		%>
 		%> @param result an integer result, e.g. 1 = correct or -1 = breakfix
 		% ===================================================================
-			if matches(me.stateMachine.log(end).name, state)
+			if matches(me.stateMachine.log.name(end), state)
 				me.task.updateStaircase(result);
 			end
 		end
