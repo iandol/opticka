@@ -152,12 +152,10 @@ classdef stateMachine < optickaCore
 		%> properties allowed during construction
 		allowedProperties = {'name','realTime','verbose','clockFcn','waitFcn'...
 			'timeDelta','skipExitStates','tempNextState'}
-		logFields = ["n","index","tnow","name","uuid","tick","time",...
-			"startTime","entryTime","nextTimeOut", "nextTickOut",...
-			"stateTimeToNow","totalTime","timeError","tickError",...
+		logFields = ["n","startTime","index","tnow","name","uuid",...
+			"tick","entryTime","nextTimeOut", "nextTickOut",...
 			"tempNextState","fevalEnter","fevalExit","fevalStore"]
-		logValues = {[],[],[],"","",[],[],...
-			[],[],[],[],...
+		logValues = {[],[],[],[],"","",...
 			[],[],[],[],...
 			"",[],[],[]}
 	end
@@ -655,7 +653,11 @@ classdef stateMachine < optickaCore
 			storeCurrentStateInfo(me, me.currentTime);
 			me.tempNextState = '';
 			
-			if me.verbose; me.salutation(['EXIT: ' me.currentState.name ' @ ' num2str(me.log.tnow(end)-me.startTime, '%.2f') 's | ' num2str(me.log.stateTimeToNow(end), '%.2f') 's | ' num2str(me.log.tick(end)) '/' num2str(me.totalTicks) 'ticks'],'',false); end
+			if me.verbose; me.salutation(['EXIT: ' me.currentName ...
+					' @ ' num2str(me.log.tnow(me.log.n)-me.log.startTime,'%.2f') ...
+					's | state time: ' num2str(me.log.tnow(me.log.n)-me.log.entryTime(me.log.n),'%.2f'), ...
+					's | ' num2str(me.log.tick(me.log.n)) '/' num2str(me.totalTicks) ...
+					' ticks'],''); end
 		end
 		
 		% ===================================================================
@@ -693,8 +695,9 @@ classdef stateMachine < optickaCore
 				end
 				if me.fnTimers; me.fevalTime.enter = toc(tt)*1000; end
 				
-				if me.verbose; me.salutation(['ENTER: ' me.currentName ' @ ' num2str(me.currentEntryTime-me.startTime, '%.2f') 'secs / ' num2str(me.totalTicks) 'ticks'],'',false); end
-
+				if me.verbose; me.salutation(['ENTER: ' me.currentName ...
+						' @ ' num2str(me.currentEntryTime-me.startTime, ...
+						'%.2f') 's - ' num2str(me.totalTicks) ' ticks'],''); end
 			else
 				if me.verbose; me.salutation('enterStateAtIndex method', 'newIndex is greater than stateList length'); end
 				me.isFinishing = true;
@@ -708,25 +711,19 @@ classdef stateMachine < optickaCore
 		%> @return
 		% ===================================================================
 		function storeCurrentStateInfo(me, tnow)
-			if me.fnTimers; tt=tic; end
 			n							= me.thisN;
+			if me.fnTimers;				tt=tic; end
 			me.log.n					= n;
+			if n == 1; me.log.startTime	= me.startTime; end
 			me.log.index(n)				= me.currentIndex;
 			me.log.tnow(n)				= tnow;
 			me.log.name{n}				= me.currentName;
 			me.log.uuid{n}				= me.currentUUID;
 			me.log.tick(n)				= me.currentTick;
-			me.log.time(n)				= me.currentTime;
-			me.log.startTime(n)			= me.startTime;
 			me.log.entryTime(n)			= me.currentEntryTime;
 			me.log.nextTimeOut(n)		= me.nextTimeOut;
 			me.log.nextTickOut(n)		= me.nextTickOut;
-			me.log.stateTimeToNow(n)	= tnow - me.currentEntryTime;
-			me.log.totalTime(n)			= tnow - me.startTime;
-			me.log.timeError(n)			= tnow - me.nextTimeOut;
-			me.log.tickError(n)			= me.currentTick - me.nextTickOut;
-			me.log.tempNextState{n}		= me.tempNextState;
-			if ~isempty(me.fevalTime.enter)
+			if me.fnTimers
 				me.log.fevalEnter(n)	= me.fevalTime.enter;
 				me.log.fevalExit(n)		= me.fevalTime.exit;
 				me.log.fevalStore(n)	= toc(tt)*1e3;
@@ -741,7 +738,7 @@ classdef stateMachine < optickaCore
 		function initialiseLog(me, n)
 			if ~exist('n','var'); n = 10000; end
 			me.log.(me.logFields(1)) = 0;
-			for i = 2:length(me.logFields)
+			for i = 3:length(me.logFields)
 				if isnumeric(me.logValues{i})
 					me.log.(me.logFields(i)) = NaN(1,n);
 				else
@@ -756,8 +753,8 @@ classdef stateMachine < optickaCore
 		%> @return
 		% ===================================================================
 		function finaliseLog(me)
-			if ~isempty(me.log.n) && me.log.n > 0
-				for i = 2:length(me.logFields)
+			if ~isempty(me.log.n) && me.log.n > 0 && length(me.log.tnow) > me.log.n
+				for i = 3:length(me.logFields)
 					me.log.(me.logFields(i)) = me.log.(me.logFields(i))(1:me.log.n);
 				end
 			end
@@ -794,16 +791,18 @@ classdef stateMachine < optickaCore
 				tl.Title.String = tout;
 				tl.Title.FontWeight = 'bold';
 				ax1 = nexttile;
-				s = plot([log.entryTime]-[log.startTime],'ko','MarkerSize',12, 'MarkerFaceColor', [1 1 1]);
+				s = plot([log.entryTime]-[log.startTime],'ko','MarkerSize',10, 'MarkerFaceColor', [1 1 1]);
 				s.DataTipTemplate.DataTipRows(1).Label='State';
 				s.DataTipTemplate.DataTipRows(2).Label='Time (s)';
 				r = dataTipTextRow('Name',log.name);
 				s.DataTipTemplate.DataTipRows(end+1)=r;
 				hold on
-				s = plot([log.tnow]-[log.startTime],'ro','MarkerSize',12, 'MarkerFaceColor', [1 1 1]);
+				s = plot([log.tnow]-[log.startTime],'ro','MarkerSize',10, 'MarkerFaceColor', [1 1 1]);
 				s.DataTipTemplate.DataTipRows(1).Label='State';
 				s.DataTipTemplate.DataTipRows(2).Label='Time (s)';
 				r = dataTipTextRow('Name',log.name);
+				s.DataTipTemplate.DataTipRows(end+1)=r;
+				r = dataTipTextRow('InTime',log.tnow-log.entryTime);
 				s.DataTipTemplate.DataTipRows(end+1)=r;
 				legend('Enter time','Exit time','Location','southeast');
 				%axis([-inf inf 0.97 1.02]);
@@ -815,17 +814,20 @@ classdef stateMachine < optickaCore
 				box on; grid on; axis tight;
 				if isfield(log,'fevalEnter') && ~isempty(log.fevalEnter)
 					ax2 = nexttile;
-					s = plot(log.fevalEnter,'ko','MarkerSize',12, 'MarkerFaceColor', [1 1 1]);
+					s = plot(log.fevalEnter,'ko','MarkerSize',10, 'MarkerFaceColor', [1 1 1]);
 					s.DataTipTemplate.DataTipRows(1).Label='State';
 					s.DataTipTemplate.DataTipRows(2).Label='Time (ms)';
 					r = dataTipTextRow('Name',log.name);
 					s.DataTipTemplate.DataTipRows(end+1)=r;
 					hold on;
-					s = plot(log.fevalExit,'ro','MarkerSize',12, 'MarkerFaceColor', [1 1 1]);
+					s = plot(log.fevalExit,'ro','MarkerSize',10, 'MarkerFaceColor', [1 1 1]);
 					s.DataTipTemplate.DataTipRows(1).Label='State';
 					s.DataTipTemplate.DataTipRows(2).Label='Time (ms)';
 					r = dataTipTextRow('Name',log.name);
 					s.DataTipTemplate.DataTipRows(end+1)=r;
+					if isfield(log,'fevalStore')
+						plot(log.fevalStore,'go','MarkerSize',10, 'MarkerFaceColor', [1 1 1]);
+					end
 					set(gca,'YScale','log');
 					set(gca,'XTick',1:length(log.name));
 					set(gca,'XTickLabel',log.name);

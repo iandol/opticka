@@ -1317,7 +1317,7 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
-		function showTimingLog(me)
+		function showTimingLog(me,h)
 		%> @fn showTimingLog 
 		%>
 		%> Prints out the frame time plots from a run
@@ -1328,7 +1328,12 @@ classdef runExperiment < optickaCore
 			elseif isa(me.runLog,'timeLogger') && me.runLog.vbl(1) ~= 0
 				me.runLog.plot;
 			else
-				warndlg('No log available yet...');
+				if exist('h','var')
+					uialert(h,'No timing log available yet...','Opticka','Icon','info');
+				else
+					helpdlg('No log available yet...');
+				end
+				
 			end
 		end
 		
