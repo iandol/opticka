@@ -704,6 +704,7 @@ classdef runExperiment < optickaCore
 	
 			%------initialise time logs for this run
 			me.previousInfo.taskLog		= me.taskLog;
+			me.taskLog = []; clear timeLogger;
 			me.taskLog					= timeLogger();
 			tL							= me.taskLog; %short handle to log
 			tL.name						= me.name;
@@ -730,6 +731,7 @@ classdef runExperiment < optickaCore
 				me.isRunTask			= true;
 				
 				%================================open the eyetracker interface
+				clear tobiiManager eyelinkManager iRecManager pupilLabsManager
 				if ~isfield(me.eyetracker,'isettings'); me.eyetracker.isettings = []; end
 				switch lower(me.eyetracker.device)
 					case 'tobii'
@@ -788,10 +790,12 @@ classdef runExperiment < optickaCore
 				uF.stims = stims; uF.io = io; uF.rM = rM; uF.verbose = me.verbose;
 
 				%================================initialise the state machine
-				sM						= stateMachine('verbose', me.verbose,...
+				me.stateMachine		= [];
+				clear stateMachine; % this seems to improve performance with logging!!!
+				sM					= stateMachine('verbose', me.verbose,...
 										'realTime', task.realTime, 'name', me.name);
+				me.stateMachine		= sM;
 				if task.realTime; sM.timeDelta = 0; else; sM.timeDelta=s.screenVals.ifi;end
-				me.stateMachine			= sM;
 				sM.fnTimers				= me.logStateTimers; %record fn evaluations?
 				if isempty(me.stateInfoFile) || ~exist(me.stateInfoFile,'file') || contains(me.stateInfoFile, 'DefaultStateInfo')
 					me.stateInfoFile		= [me.paths.root filesep 'DefaultStateInfo.m'];
