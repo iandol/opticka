@@ -794,9 +794,17 @@ classdef stateMachine < optickaCore
 				tl.Title.String = tout;
 				tl.Title.FontWeight = 'bold';
 				ax1 = nexttile;
-				plot([log.entryTime]-[log.startTime],'ko','MarkerSize',12, 'MarkerFaceColor', [1 1 1])
+				s = plot([log.entryTime]-[log.startTime],'ko','MarkerSize',12, 'MarkerFaceColor', [1 1 1]);
+				s.DataTipTemplate.DataTipRows(1).Label='State';
+				s.DataTipTemplate.DataTipRows(2).Label='Time (s)';
+				r = dataTipTextRow('Name',log.name);
+				s.DataTipTemplate.DataTipRows(end+1)=r;
 				hold on
-				plot([log.tnow]-[log.startTime],'ro','MarkerSize',12, 'MarkerFaceColor', [1 1 1])
+				s = plot([log.tnow]-[log.startTime],'ro','MarkerSize',12, 'MarkerFaceColor', [1 1 1]);
+				s.DataTipTemplate.DataTipRows(1).Label='State';
+				s.DataTipTemplate.DataTipRows(2).Label='Time (s)';
+				r = dataTipTextRow('Name',log.name);
+				s.DataTipTemplate.DataTipRows(end+1)=r;
 				legend('Enter time','Exit time','Location','southeast');
 				%axis([-inf inf 0.97 1.02]);
 				title('State Enter/Exit Times from State Machine Start');
@@ -807,17 +815,24 @@ classdef stateMachine < optickaCore
 				box on; grid on; axis tight;
 				if isfield(log,'fevalEnter') && ~isempty(log.fevalEnter)
 					ax2 = nexttile;
-					plot(log.fevalEnter,'ko','MarkerSize',12, 'MarkerFaceColor', [1 1 1]);
+					s = plot(log.fevalEnter,'ko','MarkerSize',12, 'MarkerFaceColor', [1 1 1]);
+					s.DataTipTemplate.DataTipRows(1).Label='State';
+					s.DataTipTemplate.DataTipRows(2).Label='Time (ms)';
+					r = dataTipTextRow('Name',log.name);
+					s.DataTipTemplate.DataTipRows(end+1)=r;
 					hold on;
-					plot(log.fevalExit,'ro','MarkerSize',12, 'MarkerFaceColor', [1 1 1]);
-					plot(log.fevalStore,'go','MarkerSize',12, 'MarkerFaceColor', [1 1 1]);
+					s = plot(log.fevalExit,'ro','MarkerSize',12, 'MarkerFaceColor', [1 1 1]);
+					s.DataTipTemplate.DataTipRows(1).Label='State';
+					s.DataTipTemplate.DataTipRows(2).Label='Time (ms)';
+					r = dataTipTextRow('Name',log.name);
+					s.DataTipTemplate.DataTipRows(end+1)=r;
 					set(gca,'YScale','log');
 					set(gca,'XTick',1:length(log.name));
 					set(gca,'XTickLabel',log.name);
 					try set(gca,'XTickLabelRotation',30); end
-					legend('Enter feval','Exit feval')
-					title('Time the enter and exit state function evals ran')
-					ylabel('Time (milliseconds)')
+					legend('Enter feval','Exit feval');
+					title('Time the enter and exit state function evals ran');
+					ylabel('Time (milliseconds)');
 					box on; grid on; axis tight;
 					linkaxes([ax1 ax2],'x');
 				end
