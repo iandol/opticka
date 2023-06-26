@@ -139,7 +139,9 @@ classdef barStimulus < baseStimulus
 			if me.barHeightOut > me.screenHeight; me.barHeightOut=me.screenHeight; end
 			
 			constructMatrix(me); %make our matrix
-			%tx=Screen('MakeTexture', win, matrix [, optimizeForDrawAngle=0] [, specialFlags=0] [, floatprecision] [, textureOrientation=0] [, textureShader=0]);
+			%Screen('MakeTexture', win, matrix [, optimizeForDrawAngle=0]
+			% [, specialFlags=0] [, floatprecision] [, textureOrientation=0] 
+			% [, textureShader=0]);
 			me.texture = Screen('MakeTexture', me.sM.win, me.matrix, 0, [], me.floatPrecision);
 			if me.verbose; fprintf('===>>>Made texture: %i kind: %i\n',me.texture,Screen(me.texture,'WindowKind')); end
 			if me.phaseReverseTime > 0

@@ -316,10 +316,13 @@ classdef movieStimulus < baseStimulus
 			me.dstRect = [];
 			me.removeTmpProperties;
 			ndrop=-1;
-			if ~isempty(me.texture) && me.texture>0 
+			if ~isempty(me.texture) && me.texture>0 ...
+					&& Screen(me.texture,'WindowKind')==-1
 				try Screen('Close',me.texture); end
 			end
-			if ~isempty(me.buffertex) && me.buffertex>0 && me.texture ~= me.buffertex
+			if ~isempty(me.buffertex) && me.buffertex>0 ...
+					&& (isempty(me.texture) || me.texture ~= me.buffertex) ...
+					&& Screen(me.buffertex,'WindowKind')==-1
 				try Screen('Close',me.buffertex); end
 			end
 			me.buffertex = []; me.texture = [];

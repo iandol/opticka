@@ -739,6 +739,7 @@ classdef stateMachine < optickaCore
 			if ~exist('n','var'); n = 10000; end
 			me.log.(me.logFields(1)) = 0;
 			for i = 3:length(me.logFields)
+				if ~me.fnTimers && contains(me.logFields(i),'feval');continue;end
 				if isnumeric(me.logValues{i})
 					me.log.(me.logFields(i)) = NaN(1,n);
 				else
@@ -755,7 +756,9 @@ classdef stateMachine < optickaCore
 		function finaliseLog(me)
 			if ~isempty(me.log.n) && me.log.n > 0 && length(me.log.tnow) > me.log.n
 				for i = 3:length(me.logFields)
-					me.log.(me.logFields(i)) = me.log.(me.logFields(i))(1:me.log.n);
+					if length(me.log.(me.logFields(i))) > 1
+						me.log.(me.logFields(i)) = me.log.(me.logFields(i))(1:me.log.n);
+					end
 				end
 			end
 		end
@@ -804,6 +807,8 @@ classdef stateMachine < optickaCore
 				s.DataTipTemplate.DataTipRows(end+1)=r;
 				r = dataTipTextRow('InTime',log.tnow-log.entryTime);
 				s.DataTipTemplate.DataTipRows(end+1)=r;
+				r = dataTipTextRow('Tick',log.tick);
+				s.DataTipTemplate.DataTipRows(end+1)=r;
 				legend('Enter time','Exit time','Location','southeast');
 				%axis([-inf inf 0.97 1.02]);
 				title('State Enter/Exit Times from State Machine Start');
@@ -812,7 +817,7 @@ classdef stateMachine < optickaCore
 				set(gca,'XTickLabel',log.name);
 				try set(gca,'XTickLabelRotation',30); end
 				box on; grid on; axis tight;
-				if isfield(log,'fevalEnter') && ~isempty(log.fevalEnter)
+				if isfield(log,'fevalEnter') && ~isnan(log.fevalEnter(1))
 					ax2 = nexttile;
 					s = plot(log.fevalEnter,'ko','MarkerSize',10, 'MarkerFaceColor', [1 1 1]);
 					s.DataTipTemplate.DataTipRows(1).Label='State';
