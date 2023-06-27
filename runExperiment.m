@@ -711,6 +711,7 @@ classdef runExperiment < optickaCore
 			if me.logFrames;tL.preAllocate(me.screenVals.fps*60*15);end
 			
 			%-----behavioural record
+			me.behaviouralRecord = []; clear behaviouralRecord;
 			me.behaviouralRecord		= behaviouralRecord('name',me.name); %#ok<*CPROP>
 			bR							= me.behaviouralRecord; %short handle
 		
@@ -842,11 +843,10 @@ classdef runExperiment < optickaCore
 				% lets draw ~1 seconds worth of the stimuli we will be using
 				% covered by a blank. This primes the GPU, eyetracker, IO
 				% and other components with the same stimuli/task code used later...
-				fprintf('\n===>>> Warming up the GPU, Eyetracker and I/O systems... <<<===\n')
-				t = GetSecs();
-				WaitSecs('UntilTime',t+0.01);
-				tSM = stateMachine();
-				tSM.warmUp(); clear tSM;
+				fprintf('\n===>>> Warming up the GPU, Eyetracker, I/O systems etc... <<<===\n')
+				t = flip(s);
+				if eT.secondScreen; trackerFlip(eT, 0, true); end
+				WaitSecs('UntilTime',t+0.05);
 				show(stims); % allows all child stimuli to be drawn
 				getStimulusPositions(stims);
 				if ~isempty(me.eyetracker.device); resetAll(eT); end % blank eyelink screen
@@ -860,6 +860,7 @@ classdef runExperiment < optickaCore
 					if ~mod(i,10); sendStrobe(io, 255); end % send a strobed word
 					if ~isempty(me.eyetracker.device)
 						getSample(eT); % get an eyetracker sample
+						trackerDrawEyePosition(eT);
 						if i == 1
 							trackerMessage(eT,sprintf('WARMUP_TEST %i',getTaskIndex(me)));
 							trackerDrawStatus(eT,'Warming Up System',stims.stimulusPositions); 
@@ -952,7 +953,7 @@ classdef runExperiment < optickaCore
 				if tS.showBehaviourPlot
 					fprintf('===>>> Creating Behavioural Record Plot Window...\n');
 					createPlot(bR, eT); 
-					drawnow;
+					WaitSecs(0.01); drawnow;
 				end
 
 				%===========================take over the keyboard + max priority

@@ -407,7 +407,7 @@ classdef barStimulus < baseStimulus
 					if rem(blpixels,2);blpixels=blpixels+1;end
 					% some scales cause rounding errors so find the next
 					% best scale
-					while rem(bwpixels,scale)>0 && rem(bwpixels,scale)>0
+					while rem(bwpixels,scale)>0
 						scale = scale - 1;
 					end
 					bwscale = round(bwpixels/scale)+1;
