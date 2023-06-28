@@ -141,8 +141,8 @@ classdef stateMachine < optickaCore
 		nStates
 		%> current state number
 		thisN
-		%> feval logging
-		fevalTime
+		%> log size
+		logSize = 1
 		%> should we run the finish function
 		isFinishing logical = false
 		%> field names of allStates struct array, defining state behaviors
@@ -359,8 +359,7 @@ classdef stateMachine < optickaCore
 		% ===================================================================
 		function start(me)
 			if me.isRunning == false
-				me.fevalTime = struct('store',[],'enter',[],'exit',[]);
-				initialiseLog(me, 8000);
+				initialiseLog(me);
 				if me.timeDelta == 0; me.realTime = true; end %stops a divide by zero infinite loop
 				me.isRunning = true;
 				me.isFinishing = false;
@@ -493,7 +492,6 @@ classdef stateMachine < optickaCore
 			me.finalTick = [];
 			me.nextTickOut = [];
 			me.nextTimeOut = [];
-			me.fevalTime = struct('store',[],'enter',[],'exit',[]);
 		end
 		
 		% ===================================================================
@@ -643,14 +641,30 @@ classdef stateMachine < optickaCore
 		%> @return
 		% ===================================================================
 		function exitCurrentState(me)
-			if me.fnTimers; tt=tic; end
+			if me.fnTimers; tx=tic; end
 			if ~me.currentState.skipExitFcn 
 				for i = 1:length(me.currentState.exitFcn) %nested class
 					me.currentState.exitFcn{i}();
 				end
 			end
-			if me.fnTimers; me.fevalTime.exit = toc(tt)*1000; end
-			storeCurrentStateInfo(me, me.currentTime);
+			if me.fnTimers 
+				me.log.fevalExit(me.thisN) = toc(tx)*1000;
+				tx = tic;
+			end
+			
+			me.log.n					= me.thisN;
+			me.log.index(me.thisN)		= me.currentIndex;
+			me.log.tnow(me.thisN)		= me.currentTime;
+			me.log.name{me.thisN}		= me.currentName;
+			me.log.uuid{me.thisN}		= me.currentUUID;
+			me.log.tick(me.thisN)		= me.currentTick;
+			me.log.entryTime(me.thisN)	= me.currentEntryTime;
+			me.log.nextTimeOut(me.thisN)= me.nextTimeOut;
+			me.log.nextTickOut(me.thisN)= me.nextTickOut;
+			if me.fnTimers
+				me.log.fevalStore(me.thisN)	= toc(tx)*1000;
+			end
+			
 			me.tempNextState = '';
 			
 			if me.verbose; me.salutation(['EXIT: ' me.currentName ...
@@ -668,8 +682,9 @@ classdef stateMachine < optickaCore
 		function enterStateAtIndex(me, thisIndex)
 			me.currentIndex = thisIndex;
 			me.thisN = me.thisN + 1;
+			if me.thisN == 1; me.log.startTime = me.startTime; end
 			if me.nStates >= thisIndex
-				if me.fnTimers; tt=tic; end	%run our enter state functions
+				if me.fnTimers; tt = tic; end	%run our enter state functions
 				me.currentState = me.stateList(me.currentIndex);
 				me.currentEntryTime = feval(me.clockFcn);
 				me.currentTick = 0;
@@ -693,7 +708,7 @@ classdef stateMachine < optickaCore
 				for i = 1:length(me.currentWithinFcn) %nested class
 					me.currentWithinFcn{i}();
 				end
-				if me.fnTimers; me.fevalTime.enter = toc(tt)*1000; end
+				if me.fnTimers; me.log.fevalEnter(me.thisN) = toc(tt)*1000; end
 				
 				if me.verbose; me.salutation(['ENTER: ' me.currentName ...
 						' @ ' num2str(me.currentEntryTime-me.startTime, ...
@@ -706,37 +721,12 @@ classdef stateMachine < optickaCore
 		end
 
 		% ===================================================================
-		%> @brief store current state info to log
-		%> @param tnow current time
-		%> @return
-		% ===================================================================
-		function storeCurrentStateInfo(me, tnow)
-			n							= me.thisN;
-			if me.fnTimers;				tt=tic; end
-			me.log.n					= n;
-			if n == 1; me.log.startTime	= me.startTime; end
-			me.log.index(n)				= me.currentIndex;
-			me.log.tnow(n)				= tnow;
-			me.log.name{n}				= me.currentName;
-			me.log.uuid{n}				= me.currentUUID;
-			me.log.tick(n)				= me.currentTick;
-			me.log.entryTime(n)			= me.currentEntryTime;
-			me.log.nextTimeOut(n)		= me.nextTimeOut;
-			me.log.nextTickOut(n)		= me.nextTickOut;
-			if me.fnTimers
-				me.log.fevalEnter(n)	= me.fevalTime.enter;
-				me.log.fevalExit(n)		= me.fevalTime.exit;
-				me.log.fevalStore(n)	= toc(tt)*1e3;
-			end
-		end
-
-		% ===================================================================
 		%> @brief initialise the log arrays to improve performance
 		%> @param n number of entries 
 		%> @return
 		% ===================================================================
 		function initialiseLog(me, n)
-			if ~exist('n','var'); n = 10000; end
+			if ~exist('n','var'); n = me.logSize; end
 			if n == 1; me.log = cell2struct(me.logValues, me.logFields, 2); return; end
 			me.log.(me.logFields(1)) = 0;
 			for i = 3:length(me.logFields)
