@@ -1,4 +1,6 @@
 % ========================================================================
+classdef baseStimulus < optickaCore & dynamicprops
+%> @class baseStimulus
 %> @brief baseStimulus is the superclass for all opticka stimulus objects
 %>
 %> Superclass providing basic structure for all stimulus classes. This is a dynamic properties
@@ -11,18 +13,20 @@
 %>
 %> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
-classdef baseStimulus < optickaCore & dynamicprops
 	
+	%--------------------ABSTRACT PROPERTIES----------%
 	properties (Abstract = true)
 		%> stimulus type
 		type char
 	end
 	
+	%--------------------ABSTRACT PROPERTIES----------%
 	properties (Abstract = true, SetAccess = protected)
 		%> the stimulus family (grating, dots etc.)
 		family char
 	end
 
+	%--------------------PUBLIC PROPERTIES----------%
 	properties
 		%> true or false, whether to draw() this object
 		isVisible logical = true
@@ -62,6 +66,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		verbose = false
 	end
 
+	%--------------------TRANSIENT PROPERTIES-----------%
 	properties (Transient = true)
 		%> final centered X position in pixel coordinates PTB uses: 0,0 top-left
 		%> see computePosition();
@@ -73,6 +78,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		mvRect double = []
 	end
 	
+	%--------------------VISIBLE PROPERTIES-----------%
 	properties (SetAccess = protected, GetAccess = public)
 		%> initial screen rectangle position [LEFT TOP RIGHT BOTTOM]
 		dstRect double = []
@@ -86,6 +92,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		isRect logical = true
 	end
 	
+	%--------------------DEPENDENT PROPERTIES----------%
 	properties (Dependent = true, SetAccess = protected, GetAccess = public)
 		%> What our per-frame motion delta is
 		delta double
@@ -95,6 +102,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		dY double
 	end
 	
+	%--------------------TRANSIENT PROPERTIES----------%
 	properties (SetAccess = protected, Transient = true)
 		%> Our texture pointer for texture-based stimuli
 		texture double
@@ -110,6 +118,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		isGUI logical = false
 	end
 	
+	%--------------------PROTECTED PROPERTIES----------%
 	properties (SetAccess = protected, GetAccess = protected)
 		%> is mouse position within screen co-ordinates?
 		mouseValid logical = false
@@ -142,6 +151,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		ignorePropertiesUIBase = {'animator','fullName','mvRect','xFinal','yFinal'}
 	end
 	
+	%--------------------PRIVATE PROPERTIES----------%
 	properties (SetAccess = private, GetAccess = private)
 		%> properties allowed to be passed on construction
 		allowedProperties = {'xPosition','yPosition','size','colour','verbose',...

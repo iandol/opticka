@@ -133,7 +133,7 @@ classdef stateMachine < optickaCore
 		%> Index with name and index number for each state
 		stateListIndex
 		%> run state information
-		log = struct([])
+		log
 	end
 	
 	properties (SetAccess = protected, GetAccess = protected)
@@ -181,7 +181,7 @@ classdef stateMachine < optickaCore
 			
 			%initialise the statelist index
 			reset(me);
-			me.log = cell2struct(me.logValues, me.logFields, 2);
+			initialiseLog(me,1);
 		end
 		
 		% ===================================================================
@@ -707,7 +707,7 @@ classdef stateMachine < optickaCore
 
 		% ===================================================================
 		%> @brief store current state info to log
-		%> @param
+		%> @param tnow current time
 		%> @return
 		% ===================================================================
 		function storeCurrentStateInfo(me, tnow)
@@ -731,12 +731,13 @@ classdef stateMachine < optickaCore
 		end
 
 		% ===================================================================
-		%> @brief 
-		%> @param
+		%> @brief initialise the log arrays to improve performance
+		%> @param n number of entries 
 		%> @return
 		% ===================================================================
 		function initialiseLog(me, n)
 			if ~exist('n','var'); n = 10000; end
+			if n == 1; me.log = cell2struct(me.logValues, me.logFields, 2); return; end
 			me.log.(me.logFields(1)) = 0;
 			for i = 3:length(me.logFields)
 				if ~me.fnTimers && contains(me.logFields(i),'feval');continue;end
@@ -749,7 +750,7 @@ classdef stateMachine < optickaCore
 		end
 
 		% ===================================================================
-		%> @brief 
+		%> @brief clear up log arrays
 		%> @param
 		%> @return
 		% ===================================================================
