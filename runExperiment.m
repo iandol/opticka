@@ -792,14 +792,14 @@ classdef runExperiment < optickaCore
 				%================================initialise the state machine
 				me.stateMachine		= [];
 				clear stateMachine; % this seems to improve performance with logging!!!
-				sM					= stateMachine('verbose', me.verbose,...
+				me.stateMachine		= stateMachine('verbose', me.verbose,...
 										'realTime', task.realTime, 'name', me.name);
-				me.stateMachine		= sM;
+				sM		= me.stateMachine;
 				if task.realTime; sM.timeDelta = 0; else; sM.timeDelta=s.screenVals.ifi;end
 				sM.fnTimers				= me.logStateTimers; %record fn evaluations?
-				if isempty(me.stateInfoFile) || ~exist(me.stateInfoFile,'file') || contains(me.stateInfoFile, 'DefaultStateInfo')
+				if isempty(me.stateInfoFile) || ~exist(me.stateInfoFile,'file') || contains(me.stateInfoFile, ['opticka' filesep 'DefaultStateInfo.m'])
 					me.stateInfoFile		= [me.paths.root filesep 'DefaultStateInfo.m'];
-					me.paths.stateInfoFil	= me.stateInfoFile; 
+					me.paths.stateInfoFile	= me.stateInfoFile; 
 				end
 				if ~exist(me.stateInfoFile,'file')
 					errordlg('runExperiment.runTask(): Please specify a valid State Machine file!!!')
@@ -815,6 +815,7 @@ classdef runExperiment < optickaCore
 					me.stateInfo		= stateInfoTmp;
 					addStates(sM, me.stateInfo);
 					me.paths.stateInfoFile = me.stateInfoFile;
+					clear stateInfoTmp
 				end
 				uF.sM = sM;
 				me.lastXPosition		= tS.fixX;

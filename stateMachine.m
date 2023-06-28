@@ -814,13 +814,13 @@ classdef stateMachine < optickaCore
 					s.DataTipTemplate.DataTipRows(1).Label='State';
 					s.DataTipTemplate.DataTipRows(2).Label='Time (ms)';
 					r = dataTipTextRow('Name',log.name);
-					s.DataTipTemplate.DataTipRows(end+1)=r;
+					try s.DataTipTemplate.DataTipRows(end+1)=r; end
 					hold on;
 					s = plot(log.fevalExit,'ro','MarkerSize',10, 'MarkerFaceColor', [1 1 1]);
 					s.DataTipTemplate.DataTipRows(1).Label='State';
 					s.DataTipTemplate.DataTipRows(2).Label='Time (ms)';
 					r = dataTipTextRow('Name',log.name);
-					s.DataTipTemplate.DataTipRows(end+1)=r;
+					try s.DataTipTemplate.DataTipRows(end+1)=r; end
 					if isfield(log,'fevalStore')
 						plot(log.fevalStore,'go','MarkerSize',10, 'MarkerFaceColor', [1 1 1]);
 					end
@@ -828,7 +828,7 @@ classdef stateMachine < optickaCore
 					set(gca,'XTick',1:length(log.name));
 					set(gca,'XTickLabel',log.name);
 					try set(gca,'XTickLabelRotation',30); end
-					legend('Enter feval','Exit feval');
+					legend('Enter feval','Exit feval', 'Store');
 					title('Time the enter and exit state function evals ran');
 					ylabel('Time (milliseconds)');
 					box on; grid on; axis tight;

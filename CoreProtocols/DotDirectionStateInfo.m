@@ -46,32 +46,7 @@ tS.firstFixTime				= 0.5;		% time to maintain fixation within windo
 tS.firstFixRadius			= 2;		% radius in degrees
 tS.strict					= true;		% do we forbid eye to enter-exit-reenter fixation window?
 tS.exclusionZone			= [];		% do we add an exclusion zone where subject cannot saccade to...
-tS.stimulusFixTime			= 2;		% time to fix on the stimulus
-me.lastXPosition			= tS.fixX;
-me.lastYPosition			= tS.fixY;
-
-%==================================================================
-%---------------------------Eyelink setup--------------------------
-eT.name 					= tS.name;
-eT.sampleRate 				= 250;		% sampling rate
-eT.calibrationStyle 		= 'HV5';	% calibration style
-eT.calibrationProportion	= [0.25 0.25]; %the proportion of the screen occupied by the calibration stimuli
-if tS.saveData == true;		eT.recordData = true; end %===save EDF file?
-if me.eyetracker.dummy == true;			eT.isDummy = true; end %===use dummy or real eyetracker? 
-%-----------------------
-% remote calibration enables manual control and selection of each fixation
-% this is useful for a baby or monkey who has not been trained for fixation
-% use 1-9 to show each dot, space to select fix as valid, INS key ON EYELINK KEYBOARD to
-% accept calibration!
-eT.remoteCalibration		= false; 
-%-----------------------
-eT.modify.calibrationtargetcolour = [1 1 1]; % calibration target colour
-eT.modify.calibrationtargetsize = 2;		% size of calibration target as percentage of screen
-eT.modify.calibrationtargetwidth = 0.15;	% width of calibration target's border as percentage of screen
-eT.modify.waitformodereadytime	= 500;
-eT.modify.devicenumber 			= -1;		% -1 = use any attachedkeyboard
-eT.modify.targetbeep 			= 1;		% beep during calibration
-%Initialise the eyeLink object with X, Y, FixInitTime, FixTime, Radius, StrictFix
+tS.stimulusFixTime			= 1;		% time to fix on the stimulus
 eT.updateFixationValues(tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
 
 %==================================================================
