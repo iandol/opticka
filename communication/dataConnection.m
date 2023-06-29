@@ -1130,14 +1130,21 @@ classdef dataConnection < handle
 		%> dataConnection is open with the same numbered connection. cleanup
 		%> property is used to stop the delete method from calling close methods.
 		% ===================================================================
-		function lobj=loadobj(in)
-			fprintf('Loading dataConnection object...\n');
-			in.cleanup=0;
-			in.conn=-1;
-			in.rconn=-1;
-			in.connList=[];
-			in.rconnList=[];
-			lobj=in;
+		function me=loadobj(in)
+			if isstruct(in)
+				me = dataConnection;
+				me.rPort = in.rPort;
+				me.rAddress = in.rAddress;
+				me.lPort = in.lPort;
+				me.lAddress = in.lAddress;
+			else
+				me = in;
+			end
+			me.cleanup=0;
+			me.conn=-1;
+			me.rconn=-1;
+			me.connList=[];
+			me.rconnList=[];
 		end
 	end
 end

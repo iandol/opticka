@@ -7,6 +7,8 @@ classdef timeLogger < optickaCore
 		timer			= @GetSecs
 		verbose			= true
 		stimStateNames	= {'stimulus','onestep','twostep'}
+		t				= struct('vbl',[],'show',[],'flip',[],...
+							'miss',[],'stimTime',[])
 		screenLog		= struct()
 		vbl				= 0
 		show			= 0
@@ -29,7 +31,7 @@ classdef timeLogger < optickaCore
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> allowed properties passed to object upon construction
-		allowedProperties = 'stimStateNames|timer|verbose'
+		allowedProperties = {'stimStateNames','timer','verbose'}
 	end
 	
 	%=======================================================================
@@ -59,11 +61,19 @@ classdef timeLogger < optickaCore
 		%> @return
 		% ===================================================================
 		function preAllocate(me,n)
-			me.vbl = zeros(1,n);
-			me.show = me.vbl;
-			me.flip = me.vbl;
-			me.miss = me.vbl;
-			me.stimTime = me.vbl;
+			if isprop(me,'t')
+				me.t.vbl = zeros(1,n);
+				me.t.show = me.vbl;
+				me.t.flip = me.vbl;
+				me.t.miss = me.vbl;
+				me.t.stimTime = me.vbl;
+			else
+				me.vbl = zeros(1,n);
+				me.show = me.vbl;
+				me.flip = me.vbl;
+				me.miss = me.vbl;
+				me.stimTime = me.vbl;
+			end
 		end
 		
 		% ===================================================================
@@ -73,19 +83,37 @@ classdef timeLogger < optickaCore
 		%> @return
 		% ===================================================================
 		function removeEmptyValues(me)
-			idx = find(me.vbl == 0);
-			me.vbl(idx) = [];
-			me.show(idx) = [];
-			me.flip(idx) = [];
-			me.miss(idx) = [];
-			me.stimTime(idx) = [];
-			index=min([length(me.vbl) length(me.flip) length(me.show) length(me.stimTime)]);
-			try %#ok<*TRYNC> 
-				me.vbl=me.vbl(1:index);
-				me.show=me.show(1:index);
-				me.flip=me.flip(1:index);
-				me.miss=me.miss(1:index);
-				me.stimTime=me.stimTime(1:index);
+			if isprop(me,'t')
+				idx = find(me.t.vbl == 0);
+				me.t.vbl(idx) = [];
+				me.t.show(idx) = [];
+				me.t.flip(idx) = [];
+				me.t.miss(idx) = [];
+				me.t.stimTime(idx) = [];
+				index=min([length(me.t.vbl) length(me.t.flip) length(me.t.show) length(me.t.stimTime)]);
+				try %#ok<*TRYNC> 
+					me.t.vbl=me.t.vbl(1:index);
+					me.t.show=me.t.show(1:index);
+					me.t.flip=me.t.flip(1:index);
+					me.t.miss=me.t.miss(1:index);
+					me.t.stimTime=me.t.stimTime(1:index);
+				end
+			else
+				vbl = me.vbl;
+				idx = find(vbl == 0);
+				me.vbl(idx) = [];
+				me.show(idx) = [];
+				me.flip(idx) = [];
+				me.miss(idx) = [];
+				me.stimTime(idx) = [];
+				index=min([length(me.vbl) length(me.flip) length(me.show) length(me.stimTime)]);
+				try %#ok<*TRYNC> 
+					me.vbl=me.vbl(1:index);
+					me.show=me.show(1:index);
+					me.flip=me.flip(1:index);
+					me.miss=me.miss(1:index);
+					me.stimTime=me.stimTime(1:index);
+				end
 			end
 		end
 		
@@ -102,9 +130,9 @@ classdef timeLogger < optickaCore
 		% ===================================================================
 		function logStim(me, name, tick)
 			if matches(name, me.stimStateNames)
-				me.stimTime(tick) = 1;
+				me.t.stimTime(tick) = 1;
 			else
-				me.stimTime(tick) = 0;
+				me.t.stimTime(tick) = 0;
 			end
 		end
 		
@@ -141,18 +169,26 @@ classdef timeLogger < optickaCore
 		%> @return
 		% ===================================================================
 		function printRunLog(me)
-			if length(me.vbl) <= 5
+			if length(me.t.vbl) <= 5
 				disp('No timing data available...')
 				return
 			end
 			
 			removeEmptyValues(me)
 			
-			vbl=me.vbl.*1e3; %#ok<*PROP>
-			show=me.show.*1e3;
-			flip=me.flip.*1e3; 
-			miss=me.miss;
-			stimTime=me.stimTime;
+			if isprop(me,'t')
+				vbl=me.t.vbl.*1e3; %#ok<*PROP>
+				show=me.t.show.*1e3;
+				flip=me.t.flip.*1e3; 
+				miss=me.t.miss;
+				stimTime=me.t.stimTime;
+			else
+				vbl=me.vbl.*1e3; %#ok<*PROP>
+				show=me.show.*1e3;
+				flip=me.flip.*1e3; 
+				miss=me.miss;
+				stimTime=me.stimTime;
+			end
 			l = length(vbl);
 			vbl = vbl(1:l);
 			show=show(1:l);
@@ -244,7 +280,6 @@ classdef timeLogger < optickaCore
 
 			linkaxes([ax1 ax2 ax3 ax4],'x');
 			
-			linkaxes([ax1 ax2 ax3 ax4],'x');
 			clear vbl show flip index miss stimTime
 		end
 
@@ -272,15 +307,8 @@ classdef timeLogger < optickaCore
 
 			function h = build_gui()
 				fsmall = 12;
-				if ismac
-					mfont = 'menlo';
-				elseif ispc
-					mfont = 'consolas';
-				else %linux
-					mfont = 'Ubuntu Mono';
-				end
 				h.figure1 = uifigure( ...
-					'Tag', 'sSLog', ...
+					'Tag', 'msglog', ...
 					'Units', 'normalized', ...
 					'Position', [0.6 0 0.4 0.5], ...
 					'Name', ['Log: ' me.fullName], ...
@@ -290,10 +318,10 @@ classdef timeLogger < optickaCore
 					'Resize', 'on');
 				h.uitable1 = uitable( ...
 					'Parent', h.figure1, ...
-					'Tag', 'uitable1', ...
+					'Tag', 'msglogtable', ...
 					'Units', 'normalized', ...
 					'Position', [0 0 1 1], ...
-					'FontName', mfont, ...
+					'FontName', me.monoFont, ...
 					'FontSize', fsmall, ...
 					'RowName', 'numbered',...
 					'BackgroundColor', [1 1 1;0.95 0.95 0.95], ...
@@ -337,6 +365,50 @@ classdef timeLogger < optickaCore
 			err=sqrt(err.^2/length(data));
 		end
 		
+	end
+
+	%=======================================================================
+	methods ( Static ) %-------STATIC METHODS-----%
+	%=======================================================================
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+
+		function me = loadobj(s)
+			if isstruct(s)
+				newObj = timeLogger;
+				newObj.name = s.name;
+				if isfield(s,'vbl')
+					newObj.t.vbl = s.vbl;
+				end
+				if isfield(s,'show')
+					newObj.t.show = s.show;
+				end
+				if isfield(s,'flip')
+					newObj.t.flip = s.flip;
+				end
+				if isfield(s,'miss')
+					newObj.t.miss = s.miss;
+				end
+				if isfield(s,'stimTime')
+					newObj.t.stimTime = s.stimTime;
+				end
+				me = newObj;
+			else
+				me = s;
+				if ~isempty(me.vbl) && isempty(me.t.vbl)
+					me.t.vbl = me.vbl; me.vbl = [];
+					me.t.show = me.show; me.show = [];
+					me.t.flip = me.flip; me.flip = [];
+					me.t.miss = me.miss; me.miss = [];
+					me.t.stimTime = me.stimTime; me.stimTime = [];
+				end
+			end
+		end
 	end
 	
 end

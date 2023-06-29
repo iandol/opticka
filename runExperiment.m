@@ -280,8 +280,9 @@ classdef runExperiment < optickaCore
 			end
 			
 			%===============================initialise runLog for this run
-			me.previousInfo.runLog	= me.runLog;
-			me.taskLog				= [];
+			me.previousInfo.runLog	= [];
+			me.runLog = [];
+			me.taskLog = []; clear timeLogger;
 			me.runLog				= timeLogger();
 			tL						= me.runLog;
 			tL.name					= me.name;
@@ -416,9 +417,9 @@ classdef runExperiment < optickaCore
 				task.tick					= 1;
 				task.switched				= 1;
 				task.totalRuns				= 1;
-				tL.miss(1)					= 0;
-				tL.stimTime(1)				= 0;
-				tL.vbl(1)					= Screen('Flip', s.win);
+				tL.t.miss(1)				= 0;
+				tL.t.stimTime(1)			= 0;
+				tL.t.vbl(1)					= Screen('Flip', s.win);
 				tL.lastvbl					= tL.vbl(1);
 				tL.startTime				= tL.lastvbl;
 				tL.screenLog.beforeDisplay	= tL.lastvbl;
@@ -462,12 +463,12 @@ classdef runExperiment < optickaCore
 					%======= FLIP: Show it at correct retrace: ========%
 					nextvbl = tL.lastvbl + me.screenVals.halfisi;
 					if me.logFrames == true
-						[tL.vbl(task.tick),tL.show(task.tick), ...
-						tL.flip(task.tick),tL.miss(task.tick)] ...
+						[tL.t.vbl(task.tick),tL.t.show(task.tick), ...
+						tL.t.flip(task.tick),tL.t.miss(task.tick)] ...
 							= Screen('Flip', s.win, nextvbl);
 						tL.lastvbl = tL.vbl(task.tick);
 					elseif ~me.benchmark
-						[tL.vbl, tL.show, tL.flip, tL.miss] ...
+						[tL.t.vbl, tL.t.show, tL.t.flip, tL.t.miss] ...
 							= Screen('Flip', s.win, nextvbl);
 						tL.lastvbl = tL.vbl;
 					else
@@ -486,9 +487,9 @@ classdef runExperiment < optickaCore
 					end
 					if me.logFrames
 						if ~task.isBlank
-							tL.stimTime(task.tick)=1+task.switched;
+							tL.t.stimTime(task.tick)=1+task.switched;
 						else
-							tL.stimTime(task.tick)=0-task.switched;
+							tL.t.stimTime(task.tick)=0-task.switched;
 						end
 					end
 					if s.movieSettings.record ...
@@ -703,12 +704,13 @@ classdef runExperiment < optickaCore
 			tS.errorSound				= [300, 1, 1]; %==freq,length,volume
 	
 			%------initialise time logs for this run
-			me.previousInfo.taskLog		= me.taskLog;
 			me.taskLog = []; clear timeLogger;
 			me.taskLog					= timeLogger();
 			tL							= me.taskLog; %short handle to log
 			tL.name						= me.name;
-			if me.logFrames;tL.preAllocate(me.screenVals.fps*60*15);end
+			if me.logFrames
+				tL.preAllocate(me.screenVals.fps*60*15);
+			end
 			
 			%-----behavioural record
 			me.behaviouralRecord		= behaviouralRecord('name',me.name); %#ok<*CPROP>
@@ -978,10 +980,10 @@ classdef runExperiment < optickaCore
 				me.doFlip					= false;
 				me.doTrackerFlip			= false;
 				me.sendStrobe				= false;
-				tL.vbl(1)					= Screen('Flip', s.win);
+				tL.t.vbl(1)					= Screen('Flip', s.win);
 				tL.lastvbl					= tL.vbl(1);
-				tL.miss(1)					= 0;
-				tL.stimTime(1)				= 0;
+				tL.t.miss(1)				= 0;
+				tL.t.stimTime(1)			= 0;
 				tL.startTime				= tL.lastvbl;
 				tL.screenLog.beforeDisplay	= tL.lastvbl;
 				tL.screenLog.trackerStartTime = getTrackerTime(eT);
@@ -1035,13 +1037,13 @@ classdef runExperiment < optickaCore
 						%------ Do the actual Screen flip, save times if enabled.
 						nextvbl = tL.lastvbl + me.screenVals.halfisi;
 						if me.logFrames == true
-							[tL.vbl(tS.totalTicks),tL.show(tS.totalTicks),...
-							tL.flip(tS.totalTicks),tL.miss(tS.totalTicks)] ...
+							[tL.t.vbl(tS.totalTicks),tL.t.show(tS.totalTicks),...
+							tL.t.flip(tS.totalTicks),tL.t.miss(tS.totalTicks)] ...
 							= Screen('Flip', s.win, nextvbl);
-							tL.lastvbl = tL.vbl(tS.totalTicks);
+							tL.lastvbl = tL.t.vbl(tS.totalTicks);
 							thisN = tS.totalTicks;
 						else
-							[tL.vbl, tL.show, tL.flip, tL.miss] = Screen('Flip', s.win, nextvbl);
+							[tL.t.vbl, tL.t.show, tL.t.flip, tL.t.miss] = Screen('Flip', s.win, nextvbl);
 							tL.lastvbl = tL.vbl;
 							thisN = 1;
 						end
@@ -1322,15 +1324,15 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
-		function showTimingLog(me,h)
+		function showTimingLog(me, h)
 		%> @fn showTimingLog 
 		%>
 		%> Prints out the frame time plots from a run
 		%>
 		% ===================================================================
-			if isa(me.taskLog,'timeLogger') && me.taskLog.vbl(1) ~= 0
+			if isa(me.taskLog,'timeLogger') && me.taskLog.t.vbl(1) ~= 0
 				me.taskLog.plot;
-			elseif isa(me.runLog,'timeLogger') && me.runLog.vbl(1) ~= 0
+			elseif isa(me.runLog,'timeLogger') && me.runLog.t.vbl(1) ~= 0
 				me.runLog.plot;
 			else
 				if exist('h','var')
@@ -1849,6 +1851,8 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 			me.runLog = [];
 			me.taskLog = [];
+			me.previousInfo.runLog = [];
+			me.previousInfo.taskLog = [];
 		end
 		
 		% ===================================================================

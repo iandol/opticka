@@ -89,6 +89,11 @@ classdef stateMachine < optickaCore
 		%> do we run timers for function evaluations?
 		fnTimers logical			= false
 	end
+
+	properties (Hidden = true)
+		%> size of the log arrays to preallocate
+		logSize = 1
+	end
 	
 	properties (SetAccess = protected, GetAccess = public, Transient = true)
 		%> true or false, whether this object is currently busy running
@@ -141,8 +146,6 @@ classdef stateMachine < optickaCore
 		nStates
 		%> current state number
 		thisN
-		%> log size
-		logSize = 1
 		%> should we run the finish function
 		isFinishing logical = false
 		%> field names of allStates struct array, defining state behaviors

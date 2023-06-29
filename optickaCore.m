@@ -54,9 +54,9 @@ classdef optickaCore < handle
 		%> Matlab version number, this is transient so it is not saved
 		mversion double = 0
 		%> sans font
-		sansFont
+		sansFont		= 'Ubuntu'
 		%> monoFont
-		monoFont
+		monoFont		= 'Ubunto Mono'
 	end
 	
 	%--------------------PROTECTED PROPERTIES----------%
