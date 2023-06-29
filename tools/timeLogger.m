@@ -10,17 +10,20 @@ classdef timeLogger < optickaCore
 		t				= struct('vbl',[],'show',[],'flip',[],...
 							'miss',[],'stimTime',[])
 		screenLog		= struct()
-		vbl				= 0
-		show			= 0
-		flip			= 0
-		miss			= 0
-		stimTime		= 0
 		missvbls		= 0
 		tick			= 0
 		lastvbl			= 0
 		tickInfo		= 0
 		startTime		= 0
 		startRun		= 0
+	end
+
+	properties (Hidden)
+		vbl				= 0
+		show			= 0
+		flip			= 0
+		miss			= 0
+		stimTime		= 0
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -84,19 +87,20 @@ classdef timeLogger < optickaCore
 		% ===================================================================
 		function removeEmptyValues(me)
 			if isprop(me,'t')
-				idx = find(me.t.vbl == 0);
-				me.t.vbl(idx) = [];
-				me.t.show(idx) = [];
-				me.t.flip(idx) = [];
-				me.t.miss(idx) = [];
-				me.t.stimTime(idx) = [];
-				index=min([length(me.t.vbl) length(me.t.flip) length(me.t.show) length(me.t.stimTime)]);
+				if me.tick > 1
+					me.t.vbl = me.t.vbl(1:me.tick-1);
+					me.t.show = me.t.show(1:me.tick-1);
+					me.t.flip = me.t.flip(1:me.tick-1);
+					me.t.miss = me.t.miss(1:me.tick-1);
+					me.t.stimTime = me.t.stimTime(1:me.tick-1);
+				end
+				idx=min([length(me.t.vbl) length(me.t.flip) length(me.t.show) length(me.t.stimTime)]);
 				try %#ok<*TRYNC> 
-					me.t.vbl=me.t.vbl(1:index);
-					me.t.show=me.t.show(1:index);
-					me.t.flip=me.t.flip(1:index);
-					me.t.miss=me.t.miss(1:index);
-					me.t.stimTime=me.t.stimTime(1:index);
+					me.t.vbl=me.t.vbl(1:idx);
+					me.t.show=me.t.show(1:idx);
+					me.t.flip=me.t.flip(1:idx);
+					me.t.miss=me.t.miss(1:idx);
+					me.t.stimTime=me.t.stimTime(1:idx);
 				end
 			else
 				vbl = me.vbl;
@@ -106,13 +110,13 @@ classdef timeLogger < optickaCore
 				me.flip(idx) = [];
 				me.miss(idx) = [];
 				me.stimTime(idx) = [];
-				index=min([length(me.vbl) length(me.flip) length(me.show) length(me.stimTime)]);
+				idx=min([length(me.vbl) length(me.flip) length(me.show) length(me.stimTime)]);
 				try %#ok<*TRYNC> 
-					me.vbl=me.vbl(1:index);
-					me.show=me.show(1:index);
-					me.flip=me.flip(1:index);
-					me.miss=me.miss(1:index);
-					me.stimTime=me.stimTime(1:index);
+					me.vbl=me.vbl(1:idx);
+					me.show=me.show(1:idx);
+					me.flip=me.flip(1:idx);
+					me.miss=me.miss(1:idx);
+					me.stimTime=me.stimTime(1:idx);
 				end
 			end
 		end
@@ -280,7 +284,7 @@ classdef timeLogger < optickaCore
 
 			linkaxes([ax1 ax2 ax3 ax4],'x');
 			
-			clear vbl show flip index miss stimTime
+			clear vbl show flip idx miss stimTime
 		end
 
 		% ===================================================================
@@ -339,8 +343,8 @@ classdef timeLogger < optickaCore
 		% ===================================================================
 		function calculateMisses(me,miss,stimTime)
 			removeEmptyValues(me)
-			if nargin < 3; stimTime = me.stimTime;end
-			if nargin < 2; miss = me.miss;end
+			if nargin < 3; stimTime = me.t.stimTime;end
+			if nargin < 2; miss = me.t.miss;end
 			me.missImportant = miss;
 			me.missImportant(me.missImportant <= 0) = -inf;
 			me.missImportant(stimTime < 1) = -inf;
