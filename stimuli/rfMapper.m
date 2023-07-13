@@ -88,37 +88,34 @@ classdef rfMapper < barStimulus
 		%> @brief
 		%>
 		% ===================================================================
-		function run(me,rE)
-			global rM %global reward manager we can share with eyetracker
-			global aM %global audio manager we can share with eyetracker
-			%------initialise the rM global
-			if ~isa(rM,'arduinoManager'); rM=arduinoManager(); end
-			if rM.isOpen; rM.close; rM.reset; end
+		function run(me, rE)
+			if ~exist('rE','var') || ~isa(rE,'runExperiment'); rE = runExperiment; end
+			%------initialise the rewardManager global object
+			[rM, aM] = initialiseGlobals(me);
+			if rM.isOpen
+				try rM.close; rM.reset; end
+			end
+			try
+				if isfield(rE.reward,'port') && ~isempty(rE.reward.port); rM.port = rE.reward.port; end
+				if isfield(rE.reward,'board') && ~isempty(rE.reward.board); rM.board = rE.reward.board; end	
+			end
 			
 			%------initialise an audioManager for beeps,playing sounds etc.
-			if ~exist('aM','var') || isempty(aM) || ~isa(aM,'audioManager')
-				aM=audioManager;
+			aM.device = rE.audioDevice;
+			if isempty(aM.device) || aM.device >= 0
+				aM.silentMode = false;
+				reset(aM);
+				if ~aM.isSetup;	try setup(aM); end; end
+				aM.beep(2000,0.1,0.1);
+			else
+				reset(aM);
+				aM.silentMode = true;
 			end
-			aM.silentMode = false;
-			if ~aM.isSetup;	aM.setup; end
-			aM.beep(2000,0.1,0.25);
-			
-			if exist('rE','var') && isa(rE,'runExperiment')
-				me.sM = rE.screen;
-				el = [];
-				me.eyetracker.dummy = rE.dummyMode;
-				if rE.useEyeLink
-					me.useEyetracker = true;
-					el = rE.elsettings;
-				else
-					me.useEyetracker = false;
-				end
-			elseif exist('rE','var') && isa(rE,'screenManager')
-				me.sM = rE;
-			elseif isempty(me.sM) || ~isa(me.sM,'screenManager')
-				me.sM = screenManager();
-			end
-			if me.useEyetracker; rM.open; end
+					
+			if isempty(rE.screen); rE.initialise; end
+			me.useEyetracker = false;
+			me.sM = rE.screen;
+			if ~isempty(rE.eyetracker.device); me.useEyetracker = true; end
 			
 			try
 				sM = me.sM;
@@ -128,35 +125,11 @@ classdef rfMapper < barStimulus
 				oldbg = sM.backgroundColour;
 				sM.backgroundColour = me.colourList{me.bgcolourIndex};
 				open(sM);
-				me.setup(sM);
-				stimtime = me.stimTime;
+				setup(me, sM);
 				if me.useEyetracker
-					eT						= eyelinkManager();
-					eT.verbose				= me.verbose;
-					fprintf('--->>> rfMapper eyetracker setup starting: %s\n', eT.fullName);
-					eT.isDummy				= me.eyetracker.dummy; %use dummy or real eyelink?
-					eT.recordData			= false; %save EDF file
-					if ~isempty(el)
-						eT.editProperties(el);
-						fixtime = el.fixation.time;
-					else
-						eT.sampleRate			= 250;
-						eT.remoteCalibration	= false; % manual calibration?
-						eT.calibrationStyle		= 'HV5';
-						eT.calibrationProportion = [0.3 0.3];
-						fixtime = 0.5;
-						updateFixationValues(eT, 0, 0, 2, fixtime, 2, true);
-					end
-					eT.verbose = true;
-					eT.modify.calibrationtargetcolour = [1 1 1];
-					eT.modify.calibrationtargetsize = 1.75;
-					eT.modify.calibrationtargetwidth = 0.1;
-					eT.modify.waitformodereadytime = 500;
-					eT.modify.devicenumber	= -1; % -1 = use any keyboard
-					initialise(eT, sM); %use sM to pass screen values to eyelink
-					fprintf('--->>> rfMapper eyetracker setup complete: %s\n', eT.fullName);
-					WaitSecs('YieldSecs',0.1);
-					getSample(eT); %make sure everything is in memory etc.
+					try rM.open; end
+					rE.configureEyetracker;
+					eT = rE.eyeTracker;
 				end
 				secondaryFigure(me);
 				if ~isdeployed; commandwindow; end
@@ -167,7 +140,7 @@ classdef rfMapper < barStimulus
 				yOut = 0;
 				me.rchar='';
 				Priority(MaxPriority(sM.win)); %bump our priority to maximum allowed
-				Screen('TextFont',sM.win,'Liberation Mono');
+				Screen('TextFont', sM.win, me.monoFont);
 				FlushEvents;
 				HideCursor;
 				if ~sM.debug; ListenChar(-1); end
@@ -179,14 +152,14 @@ classdef rfMapper < barStimulus
 				while ~me.stopTask
 					%================================================================
 					if me.useEyetracker % intitate fixation
+						resetAll(eT);
 						isFix = '';
-						updateFixationValues(eT, [], [], [], fixtime);
-						trackerClearScreen(eT);
-						trackerDrawFixation(eT);
+						updateFixationValues(eT, [], [], [], eT.fixation.time);
+						trackerDrawStatus(eT,'Initiate Fixation');
 						statusMessage(eT,'Initiate Fixation...');
 						while ~strcmpi(isFix,'fix') && ~strcmpi(isFix,'break')
 							drawBackground(sM,me.backgroundColour);
-							drawGrid(sM);
+							if me.showGrid; drawGrid(sM); end
 							drawCross(sM, 0.75, [1 1 1 1], 0, 0, 0.1, true, 0.2);
 							flip(sM);
 							getSample(eT);
@@ -196,12 +169,12 @@ classdef rfMapper < barStimulus
 						end
 						if strcmpi(isFix,'break')
 							fprintf('--->>> Broke initiate fixation...\n');
-							trackerClearScreen(eT);
+							trackerDrawStatus(eT,'Broke Initiate Fixation');
 							statusMessage(eT,'Subject Broke Initial Fixation!');
 							vbl = flip(sM); tNow = vbl + 0.75;
 							while vbl <= tNow
 								drawBackground(sM, me.backgroundColour);
-								drawGrid(sM);
+								if me.showGrid; drawGrid(sM); end
 								[mX, mY, me.buttons] = GetMouse(sM.screen);
 								checkKeys(me, mX, mY); FlushEvents('keyDown');
 								vbl = flip(sM);
@@ -209,7 +182,8 @@ classdef rfMapper < barStimulus
 							end
 							continue;
 						end
-						updateFixationValues(eT, [], [], [], stimtime);
+						updateFixationValues(eT, [], [], [], me.stimTime);
+						trackerDrawStatus(eT,'Show Stimulus');
 						statusMessage(eT,'Show Stimulus...');
 					end
 					%================================================================
@@ -267,7 +241,7 @@ classdef rfMapper < barStimulus
 						checkKeys(me, mX, mY); FlushEvents('keyDown');
 						if me.useEyetracker
 							getSample(eT);
-							isFix=testHoldFixation(eT, 'fix', 'break');
+							isFix = testHoldFixation(eT, 'fix', 'break');
 							if ~strcmpi(isFix, 'fixing'); isBreak = true; end
 						else
 							if me.tick >= switchTick; isBreak = true; end
@@ -278,11 +252,11 @@ classdef rfMapper < barStimulus
 					end
 					if me.useEyetracker
 						statusMessage(eT,'Stimulus turned off...');
-						trackerClearScreen(eT);
+						trackerDrawStatus(eT,'End trial...');
 						fprintf('--->>> Fixation result: %s\n',isFix);
 						if strcmpi(isFix,'fix')
 							aM.beep(2000, 0.1, 0.1);
-							rM.timedTTL;
+							rM.giveReward();
 							nRewards = nRewards + 1;
 							tOut = 0.5;
 						else
@@ -301,7 +275,8 @@ classdef rfMapper < barStimulus
 					end
 				end
 				
-				close(sM);
+				try close(eT); end
+				try close(sM); end
 				sM.bitDepth = oldbd;
 				sM.backgroundColour = oldbg;
 				Priority(0);ListenChar(0); ShowCursor;
@@ -312,6 +287,7 @@ classdef rfMapper < barStimulus
 				me.ax = [];
 				
 			catch ME
+				try close(eT); end
 				try close(me.sM); end
 				try reset(me); end
 				Priority(0); ListenChar(0); ShowCursor;
@@ -513,15 +489,6 @@ classdef rfMapper < barStimulus
 							me.dstRect=CenterRectOnPointd(me.dstRect,mX,mY);
 						end
 						
-					case 's'
-
-						switch me.stimulus
-							case 'bar'
-								%me.stimulus = 'grating';
-							case 'grating'
-								%me.stimulus = 'bar';
-						end
-						
 					case 'x'
 
 						if me.isVisible == true
@@ -531,9 +498,9 @@ classdef rfMapper < barStimulus
 						end
 						
 					case {'LeftArrow','left'}
-						me.angleOut = me.angleOut - 3;
+						me.angleOut = me.angleOut - 10;
 					case {'RightArrow','right'}
-						me.angleOut = me.angleOut + 3;
+						me.angleOut = me.angleOut + 10;
 					case {'UpArrow','up'}
 						me.alphaOut = me.alphaOut + 0.05;
 						if me.alphaOut > 1;me.alphaOut = 1;end
@@ -667,7 +634,7 @@ classdef rfMapper < barStimulus
 								me.textureIndex = me.textureIndex + 1;
 								%me.barWidth = me.dstRect(3)/me.ppd;
 								%me.barHeight = me.dstRect(4)/me.ppd;
-								me.type = me.textureList{me.textureIndex};
+								% me.type = me.textureList{me.textureIndex};
 								me.regenerate;
 							case 'grating'
 						end

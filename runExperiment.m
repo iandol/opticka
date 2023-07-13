@@ -623,12 +623,10 @@ classdef runExperiment < optickaCore
 		%> method manages the display loop.
 		%>
 		% ===================================================================
-			
 			if exist(me.stateInfoFile,'file') && contains(me.stateInfoFile, 'DefaultStateInfo') && me.stimuli.n == 0
 				warning('You are trying to start a Default behavioural task without stimuli!');
 				return
 			end
-
 			refreshScreen(me);
 			initialiseSaveFile(me); %generate a savePrefix for this run
 			me.comment = [me.comment ' ' me.name];
@@ -732,38 +730,6 @@ classdef runExperiment < optickaCore
 				me.isRunning			= true;
 				me.isRunTask			= true;
 				
-				%================================open the eyetracker interface
-				clear tobiiManager eyelinkManager iRecManager pupilLabsManager
-				if ~isfield(me.eyetracker,'isettings'); me.eyetracker.isettings = []; end
-				switch lower(me.eyetracker.device)
-					case 'tobii'
-						me.eyeTracker		= tobiiManager();
-						if ~isempty(me.eyetracker.tsettings); me.eyeTracker.addArgs(me.eyetracker.tsettings); end
-					case 'eyelink'
-						me.eyeTracker		= eyelinkManager();
-						if ~isempty(me.eyetracker.esettings); me.eyeTracker.addArgs(me.eyetracker.esettings); end
-					case 'irec'
-						me.eyeTracker		= iRecManager();
-						if ~isempty(me.eyetracker.isettings); me.eyeTracker.addArgs(me.eyetracker.isettings); end
-					otherwise
-						me.eyetracker.device = 'irec';
-						me.eyeTracker		= iRecManager();
-						if ~isempty(me.eyetracker.isettings); me.eyeTracker.addArgs(me.eyetracker.isettings); end
-						me.eyeTracker.isDummy = true;
-				end
-				eT						= me.eyeTracker;
-				eT.verbose				= me.verbose;
-				eT.saveFile				= [me.paths.savedData filesep me.name '.edf'];
-				if isempty(me.eyetracker.device)
-					eT.isDummy			= true;
-				else
-					eT.isDummy			= me.eyetracker.dummy;
-				end
-				
-				if isfield(tS,'rewardTime')
-					bR.rewardTime		= tS.rewardTime;
-				end
-				
 				%================================open the PTB screen and setup stimuli
 				me.screenVals			= s.open(me.debug,tL);
 				stims.verbose			= me.verbose;
@@ -773,6 +739,10 @@ classdef runExperiment < optickaCore
 				%================================initialise and set up I/O
 				io						= configureIO(me);
 				dC						= me.dC;
+
+				%================================set up the eyetracker interface
+				configureEyetracker(me, s);
+				eT						= me.eyeTracker;
 
 				%================================initialise the user functions object
 				if ~exist(me.userFunctionsFile,'file')
@@ -796,9 +766,9 @@ classdef runExperiment < optickaCore
 				clear stateMachine; % this seems to improve performance with logging!!!
 				me.stateMachine		= stateMachine('verbose', me.verbose,...
 										'realTime', task.realTime, 'name', me.name);
-				sM		= me.stateMachine;
-				if task.realTime; sM.timeDelta = 0; else; sM.timeDelta=s.screenVals.ifi;end
-				sM.fnTimers				= me.logStateTimers; %record fn evaluations?
+				sM					= me.stateMachine;
+				if task.realTime;	sM.timeDelta = 0; else; sM.timeDelta=s.screenVals.ifi;end
+				sM.fnTimers			= me.logStateTimers; %record fn evaluations?
 				if isempty(me.stateInfoFile) || ~exist(me.stateInfoFile,'file') || contains(me.stateInfoFile, ['opticka' filesep 'DefaultStateInfo.m'])
 					me.stateInfoFile		= [me.paths.root filesep 'DefaultStateInfo.m'];
 					me.paths.stateInfoFile	= me.stateInfoFile; 
@@ -827,9 +797,7 @@ classdef runExperiment < optickaCore
 				me.eyetracker.name		= tS.name;
 				if me.eyetracker.dummy;	eT.isDummy = true; end %===use dummy or real eyetracker? 
 				if tS.saveData;			eT.recordData = true; end %===save Eyetracker data?			
-				
-				%================================set up the eyetracker interface
-				configureEyetracker(me, eT, s);
+				if isfield(tS,'rewardTime'); bR.rewardTime = tS.rewardTime;end
 
 				%================================get pre-run comments for this data collection
 				if tS.askForComments
@@ -840,6 +808,12 @@ classdef runExperiment < optickaCore
 						bR.comment = me.comment; eT.comment = me.comment; sM.comment = me.comment; io.comment = me.comment; tL.comment = me.comment; tS.comment = me.comment;
 					end
 				end
+
+				%================================raise priority
+				fprintf('===>>> Increasing Priority...\n');
+				op = Screen('Preference', 'Verbosity',4);
+				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
+				Screen('Preference', 'Verbosity',op);
 
 				%============================================================WARMUP
 				% lets draw ~1 seconds worth of the stimuli we will be using
@@ -966,10 +940,6 @@ classdef runExperiment < optickaCore
 				if ~isdeployed
 					try commandwindow; end
 				end
-				fprintf('===>>> Increasing Priority...\n');
-				op = Screen('Preference', 'Verbosity',4);
-				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
-				Screen('Preference', 'Verbosity',op);
 				
 				%=============================profiling starts here if uncommented
 				%profile clear; profile on;
@@ -1572,7 +1542,7 @@ classdef runExperiment < optickaCore
 		function needFlip(me, value, trackervalue)
 		%> @fn enableFlip
 		%>
-		%> Enable screen flip for main and tracker screen
+		%> Enable screen flipping for main [and optionally tracker screen]
 		%> 
 		%> @param value - true/false for subject screen
 		%> @param trackervalue - 0=disable flip, 1=enable + don't clear, 2=
@@ -1580,18 +1550,6 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 			if exist('value','var'); me.doFlip = logical(value); end
 			if exist('trackervalue','var'); me.doTrackerFlip = trackervalue; end
-		end
-
-		% ===================================================================
-		function needFlipTracker(me, value)
-		%> @fn needFlipTracker
-		%>
-		%> Enables/disable the flip for the tracker display window
-		%> 
-		%> @param trackervalue - 0=disable flip, 1=enable + don't clear, 2=
-		%> enable + clear, 3=force, 4=force first frame then switch to 1
-		% ===================================================================
-			if exist('value','var'); me.doTrackerFlip = value; end
 		end
 		
 		% ===================================================================
@@ -1616,7 +1574,7 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
-		function logRun(me,tag)
+		function logRun(me, tag)
 		%> @fn logRun
 		%> @brief print run info to command window
 		%>
@@ -1636,7 +1594,7 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
-		function updateTask(me,result)
+		function updateTask(me, result)
 		%> @fn updateTask 
 		%> Updates taskSequence with current info and the result for that trial
 		%> running the taskSequence.updateTask function
@@ -1866,20 +1824,24 @@ classdef runExperiment < optickaCore
 			me.fInc = round(0.3 / (1 / me.screenVals.ifi)); %roughly <0.3s key press
 		end
 
-		% ===================================================================
-		function noop(me) %#ok<MANU> 
-		%> @fn noop
-		%> no operation, tests method call overhead
-		%>
-		% ===================================================================
-			
-		end
 
 	end%-------------------------END PUBLIC METHODS--------------------------------%
 
 	%=======================================================================
 	methods (Hidden = true) %------------------HIDDEN METHODS
 	%=======================================================================
+
+		% ===================================================================
+		function needFlipTracker(me, value)
+		%> @fn needFlipTracker
+		%>
+		%> Enables/disable the flip for the tracker display window
+		%> 
+		%> @param trackervalue - 0=disable flip, 1=enable + don't clear, 2=
+		%> enable + clear, 3=force, 4=force first frame then switch to 1
+		% ===================================================================
+			if exist('value','var'); me.doTrackerFlip = value; end
+		end
 
 		% ===================================================================
 		function enableFlip(me)
@@ -1901,6 +1863,66 @@ classdef runExperiment < optickaCore
 			me.doFlip = false;
 		end
 
+		% ===================================================================
+		function noop(me) %#ok<MANU> 
+		%> @fn noop
+		%> no operation, tests method call overhead
+		%>
+		% ===================================================================
+			
+		end
+
+		% ===================================================================
+		function configureEyetracker(me, s)
+		%> @fn configureEyetracker
+		%> Configures (calibration etc.) the eyetracker.
+		%> @param s screen object
+		% ===================================================================
+			if ~exist('s','var'); s = me.screen; end
+			
+			clear tobiiManager eyelinkManager iRecManager pupilLabsManager
+			
+			if ~isfield(me.eyetracker,'isettings'); me.eyetracker.isettings = []; end
+			if ~isfield(me.eyetracker,'psettings'); me.eyetracker.psettings = []; end
+			
+			switch lower(me.eyetracker.device)
+				case 'tobii'
+					eT		= tobiiManager();
+					if ~isempty(me.eyetracker.tsettings); eT.addArgs(me.eyetracker.tsettings); end
+				case 'eyelink'
+					eT		= eyelinkManager();
+					if ~isempty(me.eyetracker.esettings); eT.addArgs(me.eyetracker.esettings); end
+				case 'irec'
+					eT		= iRecManager();
+					if ~isempty(me.eyetracker.isettings); eT.addArgs(me.eyetracker.isettings); end
+				otherwise
+					me.eyetracker.device = 'irec';
+					eT		= iRecManager();
+					if ~isempty(me.eyetracker.isettings); eT.addArgs(me.eyetracker.isettings); end
+					eT.isDummy = true;
+			end
+			me.eyeTracker			= eT;
+			eT.verbose				= me.verbose;
+			eT.saveFile				= [me.paths.savedData filesep me.name '.edf'];
+			if isempty(me.eyetracker.device)
+				eT.isDummy			= true;
+			else
+				eT.isDummy			= me.eyetracker.dummy;
+			end
+			if strcmp(me.eyetracker.device, 'irec') || strcmp(me.eyetracker.device, 'tobii')
+				eT.useOperatorScreen = true;
+				initialise(eT, s);
+				trackerSetup(eT);
+			elseif strcmp(me.eyetracker.device, 'eyelink') || me.eyetracker.dummy
+				initialise(eT, s);
+				trackerSetup(eT);
+			end
+			ShowCursor();
+			if ~eT.isConnected && ~eT.isDummy
+				warning('Eyetracker is not connected and not in dummy mode, potential connection issue...')
+			end
+		end
+
 				
 % 		% ===================================================================
 % 		function out = saveobj(me)
@@ -1917,36 +1939,14 @@ classdef runExperiment < optickaCore
 	%=======================================================================
 	methods (Access = private) %------------------PRIVATE METHODS
 	%=======================================================================
-		
-		% ===================================================================
-		function configureEyetracker(me, eT, s)
-		%> @fn configureEyetracker
-		%> Configures (calibration etc.) the eyetracker.
-		%> @param eT eyetracker object
-		%> @param s screen object
-		% ===================================================================
-			if ~exist('eT','var');error('You need to pass the eyetracker manager object!');end
-			if ~exist('s','var');error('You need to pass the screen manager object!');end
-			if strcmp(me.eyetracker.device, 'irec')|| strcmp(me.eyetracker.device, 'tobii')
-				eT.useOperatorScreen = true;
-				initialise(eT, s);
-				trackerSetup(eT);
-			elseif strcmp(me.eyetracker.device, 'eyelink') || me.eyetracker.dummy
-				initialise(eT, s);
-				trackerSetup(eT);
-			end
-			ShowCursor();
-			if ~eT.isConnected && ~eT.isDummy
-				warning('Eyetracker is not connected and not in dummy mode, potential connection issue...')
-			end
-		end
+
 		% ===================================================================
 		function io = configureIO(me)
 		%> @fn configureIO
 		%> Configures the IO devices.
 		%> @param
 		% ===================================================================
-			global rM
+			[rM, ~] = initialiseGlobals(me);
 			%-------Set up Digital I/O (dPixx and labjack) for this task run...
 			if strcmp(me.strobe.device,'display++')
 				if ~isa(me.dPP,'plusplusManager')
