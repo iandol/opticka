@@ -286,7 +286,7 @@ classdef runExperiment < optickaCore
 			me.runLog				= timeLogger();
 			tL						= me.runLog;
 			tL.name					= me.name;
-			if me.logFrames;tL.preAllocate(me.screenVals.fps*60*180);end
+			if me.logFrames;tL.preAllocate(me.screenVals.fps*60*180); end
 			%===============================make a short handle to the screenManager and metaStimulus objects
 			me.stimuli.screen		= me.screen;
 			s						= me.screen; 
@@ -431,10 +431,10 @@ classdef runExperiment < optickaCore
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				while ~task.taskFinished
 					if task.isBlank
-						if me.photoDiode;s.drawPhotoDiodeSquare([0 0 0 1]);end
+						if me.photoDiode;s.drawPhotoDiodeSquare([0 0 0 1]); end
 					else
 						draw(stims);
-						if me.photoDiode;s.drawPhotoDiodeSquare([1 1 1 1]);end
+						if me.photoDiode;s.drawPhotoDiodeSquare([1 1 1 1]); end
 					end
 					if s.visualDebug; s.drawGrid; me.infoTextScreen; end
 					
@@ -442,7 +442,7 @@ classdef runExperiment < optickaCore
 					
 					%========= check for keyboard if in blank ========%
 					if task.isBlank
-						if strcmpi(me.uiCommand,'stop');break;end
+						if strcmpi(me.uiCommand,'stop');break; end
 						[~,name,~] = optickaCore.getKeys(me.keyboardDevice);
 						if strcmpi(name,'q'); break; end
 					end
@@ -767,7 +767,7 @@ classdef runExperiment < optickaCore
 				me.stateMachine		= stateMachine('verbose', me.verbose,...
 										'realTime', task.realTime, 'name', me.name);
 				sM					= me.stateMachine;
-				if task.realTime;	sM.timeDelta = 0; else; sM.timeDelta=s.screenVals.ifi;end
+				if task.realTime;	sM.timeDelta = 0; else; sM.timeDelta=s.screenVals.ifi; end
 				sM.fnTimers			= me.logStateTimers; %record fn evaluations?
 				if isempty(me.stateInfoFile) || ~exist(me.stateInfoFile,'file') || contains(me.stateInfoFile, ['opticka' filesep 'DefaultStateInfo.m'])
 					me.stateInfoFile		= [me.paths.root filesep 'DefaultStateInfo.m'];
@@ -797,7 +797,7 @@ classdef runExperiment < optickaCore
 				me.eyetracker.name		= tS.name;
 				if me.eyetracker.dummy;	eT.isDummy = true; end %===use dummy or real eyetracker? 
 				if tS.saveData;			eT.recordData = true; end %===save Eyetracker data?			
-				if isfield(tS,'rewardTime'); bR.rewardTime = tS.rewardTime;end
+				if isfield(tS,'rewardTime'); bR.rewardTime = tS.rewardTime; end
 
 				%================================get pre-run comments for this data collection
 				if tS.askForComments
@@ -2091,7 +2091,7 @@ classdef runExperiment < optickaCore
 				else
 					a = 1;
 					for j = ix %loop through our stimuli references for this variable
-						if me.verbose==true;tic;end
+						if me.verbose==true;tic; end
 						me.stimuli{j}.(name)=valueList{a};
 						if thisBlock == 1 && thisRun == 1 %make sure we update if this is the first run, otherwise the variables may not update properly
 							update(me.stimuli, j);
@@ -2144,13 +2144,13 @@ classdef runExperiment < optickaCore
 						me.sendStrobe = true;
 						me.stimShown = true;
 					end
-					%if me.verbose==true;tt=tic;end
+					%if me.verbose==true;tt=tic; end
 					%stims = me.stimuli;
  					%parfor i = 1:me.stimuli.n %parfor appears faster here for 6 stimuli at least
  					%	stims{i}.animate;
  					%end
 					me.stimuli.animate;
-					%if me.verbose==true;fprintf('=-> updateMOCTask() Stimuli animation: %g ms\n',toc(tt)*1e3);end
+					%if me.verbose==true;fprintf('=-> updateMOCTask() Stimuli animation: %g ms\n',toc(tt)*1e3); end
 				else %this is a blank stimulus
 					me.task.blankTick = me.task.blankTick + 1;
 					%this causes the update of the stimuli, which may take more than one refresh, to
@@ -2181,9 +2181,9 @@ classdef runExperiment < optickaCore
 					%this dispatches each stimulus update on a new blank frame to
 					%reduce overhead.
 					if me.task.blankTick > 2 && me.task.blankTick <= me.stimuli.n + 2
-						%if me.verbose==true;tic;end
+						%if me.verbose==true;tic; end
 						update(me.stimuli, me.task.blankTick-2);
-						%if me.verbose==true;fprintf('=-> updateMOCTask() Blank-frame %i: stimulus %i update = %g ms\n',me.task.blankTick,me.task.blankTick-2,toc*1000);end
+						%if me.verbose==true;fprintf('=-> updateMOCTask() Blank-frame %i: stimulus %i update = %g ms\n',me.task.blankTick,me.task.blankTick-2,toc*1000); end
 					end
 					
 				end
@@ -2322,7 +2322,7 @@ classdef runExperiment < optickaCore
 			if ~exist('trainingSet','var'); trainingSet = true; end
 			[pressed, name, ~] = optickaCore.getKeys(me.keyboardDevice);
 			if ~pressed; return; end
-			if iscell(name); name = name{end};end
+			if iscell(name); name = name{end}; end
 			switch name
 				case 'q' %quit
 
@@ -2469,7 +2469,7 @@ classdef runExperiment < optickaCore
 
 				case 'r'
 
-					if isa(me.arduino,'arduinoManager');giveReward(me.arduino);end
+					if isa(me.arduino,'arduinoManager');giveReward(me.arduino); end
 
 				case '=+'
 	
@@ -2628,7 +2628,7 @@ classdef runExperiment < optickaCore
 					end
 
 				case 's'
-					if isempty(curtoggle);curtoggle=true;end
+					if isempty(curtoggle);curtoggle=true; end
 					curtoggle = ~curtoggle;
 					if curtoggle
 						fprintf('======>>> Show Cursor!\n');
@@ -2938,19 +2938,19 @@ classdef runExperiment < optickaCore
 				try
 					if ~isa(in.screen,'screenManager') %this is an old object, pre screenManager
 						lobj.screen = screenManager();
-						lobj.screen.distance = in.distance;
-						lobj.screen.pixelsPerCm = in.pixelsPerCm;
-						lobj.screen.screenXOffset = in.screenXOffset;
-						lobj.screen.screenYOffset = in.screenYOffset;
-						lobj.screen.antiAlias = in.antiAlias;
-						lobj.screen.srcMode = in.srcMode;
-						lobj.screen.windowed = in.windowed;
-						lobj.screen.dstMode = in.dstMode;
-						lobj.screen.blend = in.blend;
-						lobj.screen.hideFlash = in.hideFlash;
-						lobj.screen.movieSettings = in.movieSettings;
+						try lobj.screen.distance = in.distance; end
+						try lobj.screen.pixelsPerCm = in.pixelsPerCm; end
+						try lobj.screen.screenXOffset = in.screenXOffset; end
+						try lobj.screen.screenYOffset = in.screenYOffset; end
+						try lobj.screen.antiAlias = in.antiAlias; end
+						try lobj.screen.srcMode = in.srcMode; end
+						try lobj.screen.windowed = in.windowed; end
+						try lobj.screen.dstMode = in.dstMode; end
+						try lobj.screen.blend = in.blend; end
+						try lobj.screen.hideFlash = in.hideFlash; end
+						try lobj.screen.movieSettings = in.movieSettings; end
 						fprintf('   > regenerated screenManager');
-					elseif ~strcmpi(in.screen.uuid,lobj.screen.uuid)
+					elseif isempty(lobj.screen) || ~strcmpi(in.screen.uuid,lobj.screen.uuid)
 						lobj.screen = in.screen;
 						in.screen.verbose = false; %no printout
 						%in.screen = []; %force close any old screenManager instance;
@@ -2961,9 +2961,7 @@ classdef runExperiment < optickaCore
 					fprintf('\n');
 				end
 				if ~isObjectLoaded
-					try
-						lobj.previousInfo.all = in;
-					end
+					try lobj.previousInfo.all	= in; end
 					try lobj.stateMachine		= in.stateMachine; end
 					try lobj.eyeTracker			= in.eyeTracker; end
 					try lobj.behaviouralRecord	= in.behaviouralRecord; end
