@@ -243,10 +243,15 @@ classdef runExperiment < optickaCore
 		%> @param me required class object
 		%> @param tS structure with some options to pass
 		% ===================================================================
-			% we try not to use global variables, however the external eyetracker
-			% API does not easily allow us to pass objects and so we use global
-			% variables in this specific case...
-			global rM %eyetracker calibration needs access to reward manager
+			%------initialise the rewardManager global object
+			[rM] = initialiseGlobals(me);
+			if rM.isOpen
+				try rM.close; rM.reset; end
+			end
+			try
+				if isfield(me.reward,'port') && ~isempty(me.reward.port); rM.port = me.reward.port; end
+				if isfield(me.reward,'board') && ~isempty(me.reward.board); rM.board = me.reward.board; end	
+			end
 					
 			refreshScreen(me);
 			initialiseSaveFile(me); %generate a savePrefix for this run
@@ -265,14 +270,6 @@ classdef runExperiment < optickaCore
 				diary([me.paths.savedData filesep me.name '.log']);
 			end
 
-			%===============================initialise the rewardManager global object
-			if ~isa(rM,'arduinoManager') 
-				rM=arduinoManager();
-			end
-			if rM.isOpen
-				rM.close; rM.reset;
-			end
-
 			%===============================enable diary logging if requested
 			if me.diaryMode
 				diary off
@@ -286,7 +283,9 @@ classdef runExperiment < optickaCore
 			me.runLog				= timeLogger();
 			tL						= me.runLog;
 			tL.name					= me.name;
-			if me.logFrames;tL.preAllocate(me.screenVals.fps*60*180); end
+			if me.logFrames
+				tL.preAllocate(me.screenVals.fps*60*15);
+			end
 			%===============================make a short handle to the screenManager and metaStimulus objects
 			me.stimuli.screen		= me.screen;
 			s						= me.screen; 
@@ -466,14 +465,14 @@ classdef runExperiment < optickaCore
 						[tL.t.vbl(task.tick),tL.t.show(task.tick), ...
 						tL.t.flip(task.tick),tL.t.miss(task.tick)] ...
 							= Screen('Flip', s.win, nextvbl);
-						tL.lastvbl = tL.vbl(task.tick);
+						tL.lastvbl = tL.t.vbl(task.tick);
 					elseif ~me.benchmark
 						[tL.t.vbl, tL.t.show, tL.t.flip, tL.t.miss] ...
 							= Screen('Flip', s.win, nextvbl);
-						tL.lastvbl = tL.vbl;
+						tL.lastvbl = tL.t.vbl;
 					else
-						tL.vbl = Screen('Flip', s.win, 0, 2, 2);
-						tL.lastvbl = tL.vbl;
+						tL.t.vbl = Screen('Flip', s.win, 0, 2, 2);
+						tL.lastvbl = tL.t.vbl;
 					end
 
 					%======LabJack: I/O needs to send strobe immediately after screen flip -----%
