@@ -18,6 +18,7 @@ function [obj, idx] = parsemsgpack(bytes)
 end
 
 function [obj, idx] = parse(bytes, idx)
+
     % masks:
     b10000000 = 128;
     b01111111 = 127;
@@ -186,9 +187,10 @@ function [out, idx] = parsearray(len, bytes, idx)
 end
 
 function [out, idx] = parsemap(len, bytes, idx)
-    out = dictionary();
+    out				= dictionary(string([]),{});
     for n = 1 : len
-        [key, idx] = parse(bytes, idx);
-        [out(key), idx] = parse(bytes, idx);
+        [key, idx]	= parse(bytes, idx);
+        [val, idx]	= parse(bytes, idx);
+		out(key)	= {val};
     end
 end

@@ -32,9 +32,9 @@ function msgpack = dump(data)
         data = num2cell(data);
     end
     % convert character matrices to cell of strings or cell matrices
-    if ischar(data) && ~(isvector(data)||isempty(data)) && ndims(data) == 2
+    if (isstring(data) || ischar(data)) && ~(isvector(data)||isempty(data)) && ndims(data) == 2
         data = cellstr(data);
-    elseif ischar(data) && ~isvector(data)
+    elseif (isstring(data) || ischar(data)) && ~isvector(data)
         data = num2cell(data);
     end
     % convert struct arrays to cell of structs
@@ -64,7 +64,7 @@ function msgpack = dump(data)
         msgpack = {dumpinteger(data)};
     elseif isnumeric(data)
         msgpack = {dumpfloat(data)};
-    elseif ischar(data)
+    elseif ischar(data) || isstring(data)
         msgpack = dumpstring(data);
     elseif iscell(data)
         msgpack = dumpcell(data);
