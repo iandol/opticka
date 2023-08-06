@@ -149,6 +149,13 @@ classdef eyelinkAnalysis < analysisCore
 			'trialStartMessageName', 'variableMessageName', 'trialEndMessage', 'file', 'dir', ...
 			'verbose', 'pixelsPerCm', 'distance', 'xCenter', 'yCenter', 'rtStartMessage', 'minSaccadeDistance', ...
 			'rtEndMessage', 'trialOverride', 'rtDivision', 'rtLimits', 'tS', 'ROI', 'TOI', 'VFAC', 'MINDUR'}
+		trialsTemplate = {'variable','variableMessageName','idx','correctedIndex','time',...
+			'rt','rtoverride','fixations','nfix','saccades','nsacc','saccadeTimes',...
+			'firstSaccade','uuid','result','correct','breakFix','incorrect','unknown',...
+			'messages','sttime','entime','totaltime','startsampletime','endsampletime',...
+			'timeRange','rtstarttime','rtstarttimeOLD','rtendtime','synctime','deltaT',...
+			'rttime','times','gx','gy','hx','hy','pa','msacc','sampleSaccades',...
+			'microSaccades','radius'}
 	end
 
 	methods
@@ -1249,26 +1256,14 @@ classdef eyelinkAnalysis < analysisCore
 			this.pixelspercm = [];
 			this.display = [];
 			
-			trialDef.variable = [];
-			trialDef.variableMessageName = [];
-			trialDef.idx = [];
-			trialDef.correctedIndex = [];
-			trialDef.time = [];
+			trialDef = cell2struct(repmat({[]},length(me.trialsTemplate),1),me.trialsTemplate);
 			trialDef.rt = false;
 			trialDef.rtoverride = false;
-			trialDef.fixations = [];
-			trialDef.nfix = 0;
-			trialDef.saccades = [];
-			trialDef.nsacc = [];
-			trialDef.saccadeTimes = [];
 			trialDef.firstSaccade = NaN;
-			trialDef.uuid = [];
-			trialDef.result = [];
 			trialDef.correct = false;
 			trialDef.breakFix = false;
 			trialDef.incorrect = false;
 			trialDef.unknown = false;
-			trialDef.messages = [];
 			trialDef.sttime = NaN;
 			trialDef.entime = NaN;
 			trialDef.totaltime = 0;
@@ -1281,12 +1276,6 @@ classdef eyelinkAnalysis < analysisCore
 			trialDef.synctime = NaN;
 			trialDef.deltaT = NaN;
 			trialDef.rttime = NaN;
-			trialDef.times = [];
-			trialDef.gx = [];
-			trialDef.gy = [];
-			trialDef.hx = [];
-			trialDef.hy = [];
-			trialDef.pa = [];
 			startSampleTemp = NaN;
 
 			me.ppd; %faster to cache this now (dependant property sets ppd_ too)
