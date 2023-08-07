@@ -81,7 +81,7 @@ classdef iRecAnalysis < analysisCore
 		%> raw data
 		raw table
 		%> markers
-		marker table
+		markers table
 		%> inidividual trials
 		trials struct
 		%> eye data parsed into invdividual variables
@@ -146,7 +146,7 @@ classdef iRecAnalysis < analysisCore
 			if nargin == 0; varargin.name = ''; end
 			me=me@analysisCore(varargin); %superclass constructor
 			if all(me.measureRange == [0.1 0.2]) %use a different default to superclass
-				me.measureRange = [-0.4 0.8];
+				me.measureRange = [-0.5 1.0];
 			end
 			if nargin>0; me.parseArgs(varargin, me.allowedProperties); end
 			if isempty(me.file) || isempty(me.dir)
@@ -165,6 +165,10 @@ classdef iRecAnalysis < analysisCore
 		function load(me, force)
 			if ~exist('force','var'); force = false;end
 			if isempty(me.file)
+				[f,p]=uigetfile('*.csv','Load Main CSV File:');
+				if ischar(f); me.file = f; me.dir = p; end
+			end
+			if isempty(me.file)
 				warning('No CSV file specified...');
 				return
 			end
@@ -173,16 +177,15 @@ classdef iRecAnalysis < analysisCore
 			tmain = tic;
 			oldpath = pwd;
 			cd(me.dir);
-			[f,~,e] = fileparts(me.file);
+			[~,f,e] = fileparts(me.file);
 			me.raw = readtable([f e],'ReadVariableNames',true);
-			me.markers = readtable(me.file,'ReadVariableNames',true);
+			me.markers = readtable([f 'net' e],'ReadVariableNames',true);
 			cd(oldpath)
 			if isempty(me.raw) || isempty(me.markers)
 				fprintf('<strong>:#:</strong> Loading Raw CSV Data failed...\n');
 			else
 				fprintf('<strong>:#:</strong> Loading Raw CSV Data took <strong>%.2f secs</strong>\n',toc(tmain));
 			end
-			
 		end
 
 		% ===================================================================
@@ -334,7 +337,7 @@ classdef iRecAnalysis < analysisCore
 				if isnumeric(select) && length(select) > 1
 					name = [me.file ' | Select: ' num2str(length(select)) ' trials'];
 				else
-					name = [me.file ' | Select: ' select];
+					name = [me.file ' | Select: ' num2str(select)];
 				end
 			end
 			if isnumeric(select) && ~isempty(select)
@@ -433,14 +436,14 @@ classdef iRecAnalysis < analysisCore
 					continue
 				end
 
-				t = thisTrial.times / 1e3; %convert to seconds
+				t = thisTrial.times; %convert to seconds
 				ix = find((t >= me.measureRange(1)) & (t <= me.measureRange(2)));
 				ip = find((t >= me.plotRange(1)) & (t <= me.plotRange(2)));
 				tm = t(ix);
 				tp = t(ip);
-				xa = thisTrial.gx / me.ppd_;
-				ya = thisTrial.gy / me.ppd_;
-				lim = 30; %max degrees in data
+				xa = thisTrial.gx;
+				ya = thisTrial.gy;
+				lim = 60; %max degrees in data
 				xa(xa < -lim) = -lim; xa(xa > lim) = lim; 
 				ya(ya < -lim) = -lim; ya(ya > lim) = lim;
 				pupilAll = thisTrial.pa;
@@ -546,10 +549,10 @@ classdef iRecAnalysis < analysisCore
 
 			end
 
-			display = me.display / me.ppd_;
+			display = [80 80];
 
 			ah = nexttile(1);
-			ah = gca; ah.ButtonDownFcn = @spawnMe;
+			ah.ButtonDownFcn = @spawnMe;
 			ah.DataAspectRatio = [1 1 1];
 			axis equal;
 			axis ij;
@@ -557,11 +560,11 @@ classdef iRecAnalysis < analysisCore
 			box on;
 			axis(round([-display(1)/2 display(1)/2 -display(2)/2 display(2)/2]));
 			title(ah,[thisVarName upper(type) ': X vs. Y Eye Position']);
-			xlabel(ah,'X Deg');
-			ylabel(ah,'Y Deg');
+			xlabel(ah,'X°');
+			ylabel(ah,'Y°');
 
 			ah = nexttile(2);
-			ah = gca; ah.ButtonDownFcn = @spawnMe;
+			ah.ButtonDownFcn = @spawnMe;
 			grid on;
 			box on;
 			axis tight;
@@ -575,10 +578,10 @@ classdef iRecAnalysis < analysisCore
 			h=title(sprintf('X & Y(dot) Position vs. Time\n%s\n%s', ti,ti2));
 			set(h,'BackgroundColor',[1 1 1]);
 			xlabel(ah,'Time (s)');
-			ylabel(ah,'Degrees');
+			ylabel(ah,'°');
 
 			ah = nexttile(5);
-			ah = gca; ah.ButtonDownFcn = @spawnMe;
+			ah.ButtonDownFcn = @spawnMe;
 			grid on;
 			box on;
 			axis([me.plotRange(1) me.plotRange(2) -10 10 -10 10]);
@@ -594,7 +597,7 @@ classdef iRecAnalysis < analysisCore
 			set(h,'BackgroundColor',[1 1 1]);
 			
 			ah = nexttile(6);
-			ah = gca; ah.ButtonDownFcn = @spawnMe;
+			ah.ButtonDownFcn = @spawnMe;
 			axis([me.plotRange(1) me.plotRange(2) -inf inf]);
 			grid on;
 			box on;
@@ -603,30 +606,30 @@ classdef iRecAnalysis < analysisCore
 			ylabel(ah,'Diameter');
 
 			ah = nexttile(3);
-			ah = gca; ah.ButtonDownFcn = @spawnMe;
+			ah.ButtonDownFcn = @spawnMe;
 			axis ij;
 			grid on;
 			box on;
 			axis tight;
 			axis square;
-			axis([-1 1 -1 1])
+			%axis([-5 5 -5 5])
 			h=title(sprintf('X & Y %.2f-%.2fs MD/MN/STD: \nX : %.2f / %.2f / %.2f | Y : %.2f / %.2f / %.2f', ...
 				t1,t2,mean(meanx), median(medx),mean(stdex),mean(meany),median(medy),mean(stdey)));
 			set(h,'BackgroundColor',[1 1 1]);
-			xlabel(ah,'X Degrees');
-			ylabel(ah,'Y Degrees');
+			xlabel(ah,'X°');
+			ylabel(ah,'Y°');
 
 			ah = nexttile(4);
-			ah = gca; ah.ButtonDownFcn = @spawnMe;
+			ah.ButtonDownFcn = @spawnMe;
 			grid on;
 			box on;
 			axis tight;
-			axis([-1 1 -1 1]);
+			%axis([-5 5 -5 5]);
 			%axis square
 			view([50 30]);
 			title(sprintf('%s %s Mean X & Y Pos %.2f-%.2fs over time',thisVarName,upper(type),t1,t2));
-			xlabel(ah,'X Degrees');
-			ylabel(ah,'Y Degrees');
+			xlabel(ah,'X°');
+			ylabel(ah,'Y°');
 			zlabel(ah,'Trial');
 
 			assignin('base','xvals',xvals);
@@ -646,7 +649,6 @@ classdef iRecAnalysis < analysisCore
 				if ~isempty(ud)
 					disp(me.trials(ud(1)));
 					disp(['TRIAL | CORRECTED | VAR | microSaccade time = ' num2str(ud)]);
-					
 				end
 			end
 			function spawnMe(src, ~)
@@ -1052,6 +1054,7 @@ classdef iRecAnalysis < analysisCore
 		function removeRawData(me)
 			
 			me.raw = [];
+			me.markers = [];
 			
 		end
 		
@@ -1168,7 +1171,7 @@ classdef iRecAnalysis < analysisCore
 
 	%=======================================================================
 	methods (Access = protected) %------------------PRIVATE METHODS
-		%=======================================================================
+	%=======================================================================
 
 		% ===================================================================
 		%> @brief
@@ -1220,9 +1223,7 @@ classdef iRecAnalysis < analysisCore
 		% ===================================================================
 		function parseEvents(me)
 			isTrial = false;
-			tri = 1; %current trial that is being parsed
-			tri2 = 1; %trial ignoring incorrects
-			eventN = 0;
+			tri = 0; %current trial that is being parsed
 			me.correct.idx = [];
 			me.correct.saccTimes = [];
 			me.correct.fixations = [];
@@ -1231,48 +1232,104 @@ classdef iRecAnalysis < analysisCore
 			me.incorrect = me.correct;
 			me.unknown = me.correct;
 			me.trialList = [];
-			this.FrameRate = [];
-			this.ppd = [];
-			this.distance = [];
-			this.pixelspercm = [];
-			this.display = [];
+
+			tmain = tic;
 			
-			trialDef = cell2struct(repmat({[]},length(me.trialsTemplate),1),me.trialsTemplate);
-			trialDef.rt = false;
-			trialDef.rtoverride = false;
-			trialDef.firstSaccade = NaN;
-			trialDef.correct = false;
-			trialDef.breakFix = false;
-			trialDef.incorrect = false;
-			trialDef.unknown = false;
-			trialDef.sttime = NaN;
-			trialDef.entime = NaN;
-			trialDef.totaltime = 0;
-			trialDef.startsampletime = NaN;
-			trialDef.endsampletime = NaN;
-			trialDef.timeRange = [NaN NaN];
-			trialDef.rtstarttime = NaN;
-			trialDef.rtstarttimeOLD = NaN;
-			trialDef.rtendtime = NaN;
-			trialDef.synctime = NaN;
-			trialDef.deltaT = NaN;
-			trialDef.rttime = NaN;
-			startSampleTemp = NaN;
+			trialDef = getTrialDef(me);
 
 			me.ppd; %faster to cache this now (dependant property sets ppd_ too)
 
 			if ~isempty(me.markers) && ~isempty(me.raw)
 
-				if contains(variableMessageName,'number')	
-					me.trialStartMessageName = 1;
-				end
-				for ii = 1:length(me.markers)
-					
-	
+				if matches(me.variableMessageName,'number')	
+					me.trialStartMessageName = 0;
 				end
 
-			end
-			
+				FEVENTN = height(me.markers);
+				pb = textprogressbar(FEVENTN, 'startmsg', 'Parsing iRec Events: ',...
+				'showactualnum', true,'updatestep', round(FEVENTN/(FEVENTN/20)));
+
+				for ii = 1:FEVENTN
+					m = me.markers.data(ii);
+					if m == intmin('int32')
+						continue;
+					elseif m > me.trialStartMessageName
+						tri = tri + 1;
+						isTrial = true;
+						trial = trialDef;
+						trial.variable = m;
+						trial.idx = tri;
+						trial.correctedIndex = trial.idx;
+						trial.sttime = me.markers.time_cpu(ii);
+						trial.rtstarttime = trial.sttime;
+						trial.synctime = trial.sttime;
+						trial.startsampletime = trial.sttime + me.measureRange(1);
+					elseif m == -1499 % SYNCTIME
+						if isTrial
+							trial.synctime = me.markers.time_cpu(ii);
+						end
+					elseif m == -1500 % END_FIX
+						if isTrial
+							trial.endfix = me.markers.time_cpu(ii);
+						end
+					elseif m == -1501 % END_RT
+						if isTrial
+							trial.rtendtime = me.markers.time_cpu(ii);
+						end
+					elseif m == -500 %END EXP
+						break;
+					elseif m == me.trialEndMessage
+						trial.entime = me.markers.time_cpu(ii);
+						if isnan(trial.rtendtime);trial.rtendtime = trial.entime;end
+						if me.measureRange(2) <= 0
+							trial.endsampletime = trial.entime;
+						else
+							trial.endsampletime = trial.synctime + me.measureRange(2);
+						end
+						idx = find(me.raw.time >= trial.startsampletime & me.raw.time <= trial.endsampletime);
+						trial.times = me.raw.time(idx) - trial.synctime;
+						trial.timeRange = [min(trial.times) max(trial.times)];
+						trial.gx = me.raw.x(idx);
+						trial.gy = me.raw.y(idx);
+						trial.pa = me.raw.pupil(idx);
+						trial.pratio = me.raw.pratio(idx);
+						trial.blink = me.raw.blink(idx);
+						trial.deltaT = trial.entime - trial.sttime;
+						trial.correct = true;
+						if trial.endsampletime > trial.entime
+							%warning('Sample beyond end marker on trial %i',tri);
+						end
+						if tri == 1
+							me.trials = trial;
+						else
+							me.trials(tri) = trial;
+						end
+						isTrial = false;
+					end
+					pb(ii);
+				end
+				pb(ii);
+
+				if isempty(me.trials)
+					warning('---> iRecAnalysis.parseEvents: No trials could be parsed in this data!')
+					return
+				end
+
+				%prune the end trial if invalid
+				me.correct.idx = find([me.trials.correct] == true);
+				me.breakFix.idx = find([me.trials.breakFix] == true);
+				me.incorrect.idx = find([me.trials.incorrect] == true);
+					
+				% time range for correct trials
+				tr = [me.trials(me.correct.idx).timeRange];
+				tr = reshape(tr,[2,length(me.correct.idx)])';
+				me.correct.timeRange = tr;
+				me.plotRange = [min(tr(:,1)) max(tr(:,2))];
+				me.isParsed = true;
+
+				fprintf('<strong>:#:</strong> Parsing CSV Events into %i Trials took <strong>%.2f secs</strong>\n',length(me.trials),toc(tmain));
+		
+			end	
 		end
 
 		% ===================================================================
@@ -1309,9 +1366,6 @@ classdef iRecAnalysis < analysisCore
 				if trial.incorrect == true
 					continue
 				end
-				if trial.variable == 1010
-					continue
-				end
 				idx = find(uniqueVars==var);
 				me.vars(idx).name = num2str(var);
 				me.vars(idx).var = var;
@@ -1342,7 +1396,7 @@ classdef iRecAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function parseSecondaryEyePos(me)
-			if me.isParsed && isstruct(me.tS)
+			if me.isParsed && isstruct(me.tS) && ~isempty(me.tS)
 				f=fieldnames(me.tS.eyePos); %get fieldnames
 				re = regexp(f,'^CC','once'); %regexp over the cell
 				idx = cellfun(@(c)~isempty(c),re); %check which regexp returned true
@@ -1770,6 +1824,29 @@ classdef iRecAnalysis < analysisCore
 				end
 			end
 
+		end
+
+		function trialDef = getTrialDef(me)
+			trialDef = cell2struct(repmat({[]},length(me.trialsTemplate),1),me.trialsTemplate);
+			trialDef.rt = false;
+			trialDef.rtoverride = false;
+			trialDef.firstSaccade = NaN;
+			trialDef.correct = false;
+			trialDef.breakFix = false;
+			trialDef.incorrect = false;
+			trialDef.unknown = false;
+			trialDef.sttime = NaN;
+			trialDef.entime = NaN;
+			trialDef.totaltime = 0;
+			trialDef.startsampletime = NaN;
+			trialDef.endsampletime = NaN;
+			trialDef.timeRange = [NaN NaN];
+			trialDef.rtstarttime = NaN;
+			trialDef.rtstarttimeOLD = NaN;
+			trialDef.rtendtime = NaN;
+			trialDef.synctime = NaN;
+			trialDef.deltaT = NaN;
+			trialDef.rttime = NaN;
 		end
 
 	end
