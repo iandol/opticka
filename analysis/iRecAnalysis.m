@@ -77,7 +77,7 @@ classdef iRecAnalysis < analysisCore
 		%> have we parsed the CSV yet?
 		isParsed logical							= false
 		%> sample rate
-		sampleRate double							= 250
+		sampleRate double							= 500
 		%> raw data
 		raw table
 		%> markers
@@ -121,6 +121,7 @@ classdef iRecAnalysis < analysisCore
 	end
 
 	properties (SetAccess = private, GetAccess = private)
+		ETparams
 		%> pixels per degree calculated from pixelsPerCm and distance (cache)
 		ppd_
 		%> allowed properties passed to object upon construction
@@ -130,7 +131,7 @@ classdef iRecAnalysis < analysisCore
 			'rtEndMessage', 'trialOverride', 'rtDivision', 'rtLimits', 'tS', 'ROI', 'TOI', 'VFAC', 'MINDUR'}
 		trialsTemplate = {'variable','variableMessageName','idx','correctedIndex','time',...
 			'rt','rtoverride','fixations','nfix','saccades','nsacc','saccadeTimes',...
-			'firstSaccade','uuid','result','correct','breakFix','incorrect','unknown',...
+			'firstSaccade','uuid','result','invalid','correct','breakFix','incorrect','unknown',...
 			'messages','sttime','entime','totaltime','startsampletime','endsampletime',...
 			'timeRange','rtstarttime','rtstarttimeOLD','rtendtime','synctime','deltaT',...
 			'rttime','times','gx','gy','hx','hy','pa','msacc','sampleSaccades',...
@@ -180,11 +181,14 @@ classdef iRecAnalysis < analysisCore
 			[~,f,e] = fileparts(me.file);
 			me.raw = readtable([f e],'ReadVariableNames',true);
 			me.markers = readtable([f 'net' e],'ReadVariableNames',true);
+			
+			me.sampleRate = 1/mean(diff(me.raw.time));
+
 			cd(oldpath)
 			if isempty(me.raw) || isempty(me.markers)
 				fprintf('<strong>:#:</strong> Loading Raw CSV Data failed...\n');
 			else
-				fprintf('<strong>:#:</strong> Loading Raw CSV Data took <strong>%.2f secs</strong>\n',toc(tmain));
+				fprintf('<strong>:#:</strong> Loading Raw CSV Data @ %.2fHz took <strong>%.2f secs</strong>\n',me.sampleRate,toc(tmain));
 			end
 		end
 
@@ -195,9 +199,9 @@ classdef iRecAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function parseSimple(me)
+			tmain = tic;
 			if isempty(me.raw); me.load(); end
 			me.isParsed = false;
-			tmain = tic;
 			parseEvents(me);
 			parseAsVars(me);
 			if isempty(me.trials)
@@ -216,9 +220,9 @@ classdef iRecAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function parse(me)
+			tmain = tic;
 			if isempty(me.raw); me.load(); end
 			me.isParsed = false;
-			tmain = tic;
 			parseEvents(me);
 			if ~isempty(me.trialsToPrune)
 				me.pruneTrials(me.trialsToPrune);
@@ -228,7 +232,7 @@ classdef iRecAnalysis < analysisCore
 			parseFixationPositions(me);
 			parseSaccades(me);
 			me.isParsed = true;
-			fprintf('\tOverall Parsing of CSV Trials took <strong>%.2f secs</strong>\n',toc(tmain));
+			fprintf('\tOverall Parsing of CSV Data took <strong>%.2f secs</strong>\n',toc(tmain));
 		end
 
 		% ===================================================================
@@ -241,6 +245,7 @@ classdef iRecAnalysis < analysisCore
 			parseROI(me);
 			parseTOI(me);
 			computeMicrosaccades(me);
+			computeFullSaccades(me);
 		end
 
 		% ===================================================================
@@ -328,7 +333,7 @@ classdef iRecAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function handle = plot(me,select,type,seperateVars,name)
+		function handle = plot(me,select,type,seperateVars,name,handle)
 			% plot(me,select,type,seperateVars,name)
 			if ~exist('select','var') || ~isnumeric(select); select = []; end
 			if ~exist('type','var') || isempty(type); type = 'correct'; end
@@ -340,6 +345,7 @@ classdef iRecAnalysis < analysisCore
 					name = [me.file ' | Select: ' num2str(select)];
 				end
 			end
+			if ~exist('handle','var'); handle = []; end
 			if isnumeric(select) && ~isempty(select)
 				idx = select;
 				type = '';
@@ -370,11 +376,6 @@ classdef iRecAnalysis < analysisCore
 				end
 				return
 			end
-			handle=figure('Name',name,'Color',[1 1 1],'NumberTitle','off',...
-				'Papertype','a4','PaperUnits','centimeters',...
-				'PaperOrientation','landscape','Renderer','painters');
-			figpos(1,[0.6 0.9],1,'%');
-			p = tiledlayout(3,2,'TileSpacing','compact','Padding','compact');
 			
 			a = 1;
 			stdex = [];
@@ -412,6 +413,7 @@ classdef iRecAnalysis < analysisCore
 			end
 
 			for i = idx
+				if ~exist('didplot','var'); didplot = false; end
 				if idxInternal == true %we're using the eyelink index which includes incorrects
 					f = i;
 				elseif me.excludeIncorrect %we're using an external index which excludes incorrects
@@ -422,6 +424,11 @@ classdef iRecAnalysis < analysisCore
 				if isempty(f); continue; end
 
 				thisTrial = me.trials(f(1));
+				
+				if thisTrial.invalid 
+					continue; 
+				end
+
 				tidx = find(varidx==thisTrial.variable);
 
 				if thisTrial.variable == 1010 || isempty(me.vars) %early CSV files were broken, 1010 signifies this
@@ -443,6 +450,7 @@ classdef iRecAnalysis < analysisCore
 				tp = t(ip);
 				xa = thisTrial.gx;
 				ya = thisTrial.gy;
+				if all(isnan(xa)) && all(isnan(ya)); continue; end
 				lim = 60; %max degrees in data
 				xa(xa < -lim) = -lim; xa(xa > lim) = lim; 
 				ya(ya < -lim) = -lim; ya(ya > lim) = lim;
@@ -454,6 +462,8 @@ classdef iRecAnalysis < analysisCore
 				
 				xp = xa(ip);
 				yp = ya(ip);
+				xmin = min(xp); xmax = max(xp);
+				ymin = min(yp); ymax = max(yp);
 				pupilPlot = pupilAll(ip);
 				
 				if me.downSample && me.sampleRate > 500
@@ -465,18 +475,37 @@ classdef iRecAnalysis < analysisCore
 					pupilPlot(idx) = [];
 				end
 
+				if isempty(handle)
+					handle=figure('Name',name,'Color',[1 1 1],'NumberTitle','off',...
+						'Papertype','a4','PaperUnits','centimeters',...
+						'PaperOrientation','landscape','Renderer','painters');
+					figpos(1,[0.6 0.9],1,'%');
+					p = tiledlayout(3,2,'TileSpacing','compact','Padding','compact');
+				end
+				figure(handle);
+				
+				sz = 100;
 				ax = nexttile(1);
 				hold on;
-				plot(xp, yp,'k-','Color',c,'LineWidth',1,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
+				if isfield(thisTrial,'sampleSaccades') & ~isnan(thisTrial.sampleSaccades) & ~isempty(thisTrial.sampleSaccades)
+					for jj = 1: length(thisTrial.sampleSaccades)
+						if thisTrial.sampleSaccades(jj) >= me.plotRange(1) && thisTrial.sampleSaccades(jj) <= me.plotRange(2)
+							midx = me.findNearest(tp,thisTrial.sampleSaccades(jj));
+							scatter(xp(midx),yp(midx),sz,'^','filled','MarkerEdgeColor',[1 1 1],'MarkerFaceAlpha',0.5,...
+								'MarkerFaceColor',[0 0 0],'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable thisTrial.sampleSaccades(jj)],'ButtonDownFcn', @clickMe);
+						end
+					end
+				end
 				if isfield(thisTrial,'microSaccades') & ~isnan(thisTrial.microSaccades) & ~isempty(thisTrial.microSaccades)
 					for jj = 1: length(thisTrial.microSaccades)
 						if thisTrial.microSaccades(jj) >= me.plotRange(1) && thisTrial.microSaccades(jj) <= me.plotRange(2)
 							midx = me.findNearest(tp,thisTrial.microSaccades(jj));
-							plot(xp(midx),yp(midx),'ko','Color',c,'MarkerSize',6,'MarkerEdgeColor',[0 0 0],...
+							scatter(xp(midx),yp(midx),sz,'o','filled','MarkerEdgeColor',[0 0 0],...
 								'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable thisTrial.microSaccades(jj)],'ButtonDownFcn', @clickMe);
 						end
 					end
 				end
+				plot(xp, yp,'k-','Color',c,'LineWidth',1,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
 				
 				ax = nexttile(2);
 				hold on;
@@ -485,9 +514,15 @@ classdef iRecAnalysis < analysisCore
 				plot(tp,abs(yp),'k.-','Color',c,'MarkerSize',3,'MarkerEdgeColor',c,...
 					'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
 				maxv = max([maxv, max(abs(xp)), max(abs(yp))]) + 0.1;
+				if isfield(thisTrial,'sampleSaccades') & ~isnan(thisTrial.sampleSaccades) & ~isempty(thisTrial.sampleSaccades)
+					if any(thisTrial.sampleSaccades >= me.plotRange(1) & thisTrial.sampleSaccades <= me.plotRange(2))
+						scatter(thisTrial.sampleSaccades,-0.1,sz,'^','filled','MarkerEdgeColor',[1 1 1],'MarkerFaceAlpha',0.5,...
+							'MarkerFaceColor',[0 0 0],'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
+					end
+				end
 				if isfield(thisTrial,'microSaccades') & ~isnan(thisTrial.microSaccades) & ~isempty(thisTrial.microSaccades)
 					if any(thisTrial.microSaccades >= me.plotRange(1) & thisTrial.microSaccades <= me.plotRange(2))
-						plot(thisTrial.microSaccades,-0.1,'ko','Color',c,'MarkerSize',4,'MarkerEdgeColor',[0 0 0],...
+						scatter(thisTrial.microSaccades,-0.1,sz,'o','filled','MarkerEdgeColor',[0 0 0],...
 							'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
 					end
 				end
@@ -496,7 +531,7 @@ classdef iRecAnalysis < analysisCore
 				hold on;
 				for fix=1:length(thisTrial.fixations)
 					f=thisTrial.fixations(fix);
-					ti = double(f.time)/1e3; le = double(f.length)/1e3;
+					ti = double(f.time); le = double(f.length);
 					if ti >= me.plotRange(1)-0.1 && ti+le <= me.plotRange(2)+0.1
 						plot3([ti ti+le],[f.gstx f.genx],[f.gsty f.geny],'k-o',...
 						'LineWidth',1,'MarkerSize',5,'MarkerEdgeColor',[0 0 0],...
@@ -504,14 +539,27 @@ classdef iRecAnalysis < analysisCore
 						'ButtonDownFcn', @clickMe)
 					end
 				end
-				for sac=1:length(thisTrial.saccades)
-					s=thisTrial.saccades(sac);
-					ti = double(s.time)/1e3; le = double(s.length)/1e3;
-					if ti >= me.plotRange(1)-0.1 && ti+le <= me.plotRange(2)+0.1
-						plot3([ti ti+le],[s.gstx s.genx],[s.gsty s.geny],'r-o',...
-						'LineWidth',1.5,'MarkerSize',5,'MarkerEdgeColor',[1 0 0],...
-						'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],...
-						'ButtonDownFcn', @clickMe)
+				if ~isempty(thisTrial.saccades)
+					for sac=1:length(thisTrial.saccades)
+						s=thisTrial.saccades(sac);
+						ti = double(s.time); le = double(s.length);
+						if ti >= me.plotRange(1)-0.1 && ti+le <= me.plotRange(2)+0.1
+							plot3([ti ti+le],[s.gstx s.genx],[s.gsty s.geny],'r-o',...
+							'LineWidth',1.5,'MarkerSize',5,'MarkerEdgeColor',[1 0 0],...
+							'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],...
+							'ButtonDownFcn', @clickMe)
+						end
+					end
+				elseif ~isempty(thisTrial.msacc)
+					for sac=1:length(thisTrial.msacc)
+						s=thisTrial.msacc(sac);
+						ti = s.time; le = s.endtime;
+						if ti >= me.plotRange(1)-0.1 && le <= me.plotRange(2)+0.1
+							plot3([ti le],[s.dx s.dX],[s.dy s.dY],'r-o',...
+							'LineWidth',1.5,'MarkerSize',5,'MarkerEdgeColor',[1 0 0],...
+							'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],...
+							'ButtonDownFcn', @clickMe)
+						end
 					end
 				end
 				
@@ -546,8 +594,16 @@ classdef iRecAnalysis < analysisCore
 				plot3(meanx(end), meany(end),a,'ko','Color',c,'MarkerSize',6,'MarkerEdgeColor',[0 0 0],...
 					'MarkerFaceColor',c,'UserData', udt,'ButtonDownFcn', @clickMe);
 				a = a + 1;
+				didplot = true;
 
 			end
+
+			if ~didplot 
+				close(handle); 
+				return; 
+			end
+
+			colormap(map);
 
 			display = [80 80];
 
@@ -558,7 +614,7 @@ classdef iRecAnalysis < analysisCore
 			axis ij;
 			grid on;
 			box on;
-			axis(round([-display(1)/2 display(1)/2 -display(2)/2 display(2)/2]));
+			xlim([xmin xmax]); ylim([ymin ymax]);
 			title(ah,[thisVarName upper(type) ': X vs. Y Eye Position']);
 			xlabel(ah,'X°');
 			ylabel(ah,'Y°');
@@ -568,8 +624,7 @@ classdef iRecAnalysis < analysisCore
 			grid on;
 			box on;
 			axis tight;
-			if maxv > 10; maxv = 10; end
-			axis([me.plotRange(1) me.plotRange(2) -0.2 maxv*2])
+			axis([me.plotRange(1) me.plotRange(2) -0.2 maxv+1])
 			ti=sprintf('ABS Mean/SD %.2f - %.2f s: X=%.2f / %.2f | Y=%.2f / %.2f', t1,t2,...
 				mean(abs(meanx)), mean(abs(stdex)), ...
 				mean(abs(meany)), mean(abs(stdey)));
@@ -640,10 +695,10 @@ classdef iRecAnalysis < analysisCore
 					return
 				end
 				l=get(src,'LineWidth');
-				if l > 1
-					set(src,'Linewidth', 1, 'LineStyle', '-');
-				else
-					set(src,'LineWidth',2, 'LineStyle', ':');
+				if l > 1;src.LineWidth=1;else;src.LineWidth=3;end
+				if isprop(src,'LineStyle')
+					l=get(src,'LineStyle');
+					if matches(l,'-');src.LineStyle=':';else;src.LineStyle='-';end
 				end
 				ud = get(src,'UserData');
 				if ~isempty(ud)
@@ -681,9 +736,9 @@ classdef iRecAnalysis < analysisCore
 				me.ROIInfo(i).fixationX = fixationX;
 				me.ROIInfo(i).fixationY = fixationY;
 				me.ROIInfo(i).fixationRadius = fixationRadius;
-				x = me.trials(i).gx / me.ppd_;
-				y = me.trials(i).gy  / me.ppd_;
-				times = me.trials(i).times / 1e3;
+				x = me.trials(i).gx;
+				y = me.trials(i).gy;
+				times = me.trials(i).times;
 				idx = find(times > 0); % we only check ROI post 0 time
 				times = times(idx);
 				x = x(idx);
@@ -721,15 +776,16 @@ classdef iRecAnalysis < analysisCore
 			end
 			tTOI = tic;
 			me.ppd;
+			if length(me.TOI)==2 && ~isempty(me.ROI); me.TOI = [me.TOI me.ROI]; end
 			t1 = me.TOI(1);
 			t2 = me.TOI(2);
 			fixationX = me.TOI(3);
 			fixationY = me.TOI(4);
 			fixationRadius = me.TOI(5);
 			for i = 1:length(me.trials)
-				times = me.trials(i).times / 1e3;
-				x = me.trials(i).gx / me.ppd_;
-				y = me.trials(i).gy  / me.ppd_;
+				times = me.trials(i).times;
+				x = me.trials(i).gx;
+				y = me.trials(i).gy;
 
 				idx = intersect(find(times>=t1), find(times<=t2));
 				times = times(idx);
@@ -816,10 +872,10 @@ classdef iRecAnalysis < analysisCore
 					if ~isempty(x)
 						p(1,1).select();
 						h = plot(x,y,l,'color',c,'MarkerFaceColor',c,'LineWidth',1);
-						set(h,'UserData',[noROI(i).idx noROI(i).correctedIndex noROI(i).variable noROI(i).correct noROI(i).breakFix noROI(i).incorrect],'ButtonDownFcn', @clickMe);
+						set(h,'UserData',[noROI(i).idx noROI(i).correctedIndex noROI(i).variable noROI(i).correct noROI(i).breakFix noROI(i).incorrect],'ButtonDownFcn', @clickMeROI);
 						p(1,2).select();
 						h = plot(t,abs(x),l,t,abs(y),l,'color',c,'MarkerFaceColor',c);
-						set(h,'UserData',[noROI(i).idx noROI(i).correctedIndex noROI(i).variable noROI(i).correct noROI(i).breakFix noROI(i).incorrect],'ButtonDownFcn', @clickMe);
+						set(h,'UserData',[noROI(i).idx noROI(i).correctedIndex noROI(i).variable noROI(i).correct noROI(i).breakFix noROI(i).incorrect],'ButtonDownFcn', @clickMeROI);
 					end
 				end
 				for i = 1:length(yesROI)
@@ -835,10 +891,10 @@ classdef iRecAnalysis < analysisCore
 					if ~isempty(x)
 						p(1,1).select();
 						h = plot(x,y,l,'color',c,'MarkerFaceColor',c);
-						set(h,'UserData',[yesROI(i).idx yesROI(i).correctedIndex yesROI(i).variable yesROI(i).correct yesROI(i).breakFix yesROI(i).incorrect],'ButtonDownFcn', @clickMe);
+						set(h,'UserData',[yesROI(i).idx yesROI(i).correctedIndex yesROI(i).variable yesROI(i).correct yesROI(i).breakFix yesROI(i).incorrect],'ButtonDownFcn', @clickMeROI);
 						p(1,2).select();
 						h = plot(t,abs(x),l,t,abs(y),l,'color',c,'MarkerFaceColor',c);
-						set(h,'UserData',[yesROI(i).idx yesROI(i).correctedIndex yesROI(i).variable yesROI(i).correct yesROI(i).breakFix yesROI(i).incorrect],'ButtonDownFcn', @clickMe);
+						set(h,'UserData',[yesROI(i).idx yesROI(i).correctedIndex yesROI(i).variable yesROI(i).correct yesROI(i).breakFix yesROI(i).incorrect],'ButtonDownFcn', @clickMeROI);
 					end
 				end
 				hold off
@@ -850,7 +906,7 @@ classdef iRecAnalysis < analysisCore
 				p(1,1).xlabel('X Position (degs)')
 				p(1,1).ylabel('Y Position (degs)')
 				axis square
-				axis([-10 10 -10 10]);
+				%axis([-10 10 -10 10]);
 				p(1,2).select();
 				p(1,2).hold('off');
 				box on
@@ -859,9 +915,9 @@ classdef iRecAnalysis < analysisCore
 				p(1,2).xlabel('Time(s)')
 				p(1,2).ylabel('Absolute X/Y Position (degs)')
 				axis square
-				axis([0 0.5 0 10]);
+				%axis([0 0.5 0 10]);
 			end
-			function clickMe(src, ~)
+			function clickMeROI(src, ~)
 				if ~exist('src','var')
 					return
 				end
@@ -934,10 +990,10 @@ classdef iRecAnalysis < analysisCore
 				if ~isempty(x)
 					p(1,1).select();
 					h = plot(x,y,l,'color',c,'MarkerFaceColor',c,'LineWidth',1);
-					set(h,'UserData',[noTOI(i).idx noTOI(i).correctedIndex noTOI(i).variable noTOI(i).correct noTOI(i).breakFix noTOI(i).incorrect],'ButtonDownFcn', @clickMe);
+					set(h,'UserData',[noTOI(i).idx noTOI(i).correctedIndex noTOI(i).variable noTOI(i).correct noTOI(i).breakFix noTOI(i).incorrect],'ButtonDownFcn', @clickMeTOI);
 					p(1,2).select();
 					h = plot(t,abs(x),l,t,abs(y),l,'color',c,'MarkerFaceColor',c);
-					set(h,'UserData',[noTOI(i).idx noTOI(i).correctedIndex noTOI(i).variable noTOI(i).correct noTOI(i).breakFix noTOI(i).incorrect],'ButtonDownFcn', @clickMe);
+					set(h,'UserData',[noTOI(i).idx noTOI(i).correctedIndex noTOI(i).variable noTOI(i).correct noTOI(i).breakFix noTOI(i).incorrect],'ButtonDownFcn', @clickMeTOI);
 				end
 			end
 			for i = 1:length(yesTOI)
@@ -954,10 +1010,10 @@ classdef iRecAnalysis < analysisCore
 				if ~isempty(x)
 					p(1,1).select();
 					h = plot(x,y,l,'color',c,'MarkerFaceColor',c);
-					set(h,'UserData',[yesTOI(i).idx yesTOI(i).correctedIndex yesTOI(i).variable yesTOI(i).correct yesTOI(i).breakFix yesTOI(i).incorrect],'ButtonDownFcn', @clickMe);
+					set(h,'UserData',[yesTOI(i).idx yesTOI(i).correctedIndex yesTOI(i).variable yesTOI(i).correct yesTOI(i).breakFix yesTOI(i).incorrect],'ButtonDownFcn', @clickMeTOI);
 					p(1,2).select();
 					h = plot(t,abs(x),l,t,abs(y),l,'color',c,'MarkerFaceColor',c);
-					set(h,'UserData',[yesTOI(i).idx yesTOI(i).correctedIndex yesTOI(i).variable yesTOI(i).correct yesTOI(i).breakFix yesTOI(i).incorrect],'ButtonDownFcn', @clickMe);
+					set(h,'UserData',[yesTOI(i).idx yesTOI(i).correctedIndex yesTOI(i).variable yesTOI(i).correct yesTOI(i).breakFix yesTOI(i).incorrect],'ButtonDownFcn', @clickMeTOI);
 				end
 			end
 			hold off
@@ -968,7 +1024,7 @@ classdef iRecAnalysis < analysisCore
 			p(1,1).title(['TOI PLOT for ' num2str(me.TOI) ' (yes = ' num2str(sum(yes)) ' || no = ' num2str(sum(no)) ')']);
 			p(1,1).xlabel('X Position (degs)')
 			p(1,1).ylabel('Y Position (degs)')
-			axis([-4 4 -4 4]);
+			%axis([-4 4 -4 4]);
 			axis square
 			p(1,2).select();
 			p(1,2).hold('off');
@@ -977,10 +1033,10 @@ classdef iRecAnalysis < analysisCore
 			p(1,2).title(['TOI PLOT for ' num2str(me.TOI) ' (yes = ' num2str(sum(yes)) ' || no = ' num2str(sum(no)) ')']);
 			p(1,2).xlabel('Time(s)')
 			p(1,2).ylabel('Absolute X/Y Position (degs)')
-			axis([t1 t2 0 4]);
+			%axis([t1 t2 0 4]);
 			axis square
 
-			function clickMe(src, ~)
+			function clickMeTOI(src, ~)
 				if ~exist('src','var')
 					return
 				end
@@ -1051,6 +1107,12 @@ classdef iRecAnalysis < analysisCore
 			end
 		end
 		
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
 		function removeRawData(me)
 			
 			me.raw = [];
@@ -1058,120 +1120,103 @@ classdef iRecAnalysis < analysisCore
 			
 		end
 		
-		function reparseVars(me)
-			me.parseAsVars;
-		end
-
-	end%-------------------------END PUBLIC METHODS--------------------------------%
-
-	%=======================================================================
-	methods (Static = true) %------------------STATIC METHODS
-	%=======================================================================
-		
 		% ===================================================================
-		%> @brief we also collect eye position within the main PTB loop (sampled at every
-		%> screen refresh) and this is a lower resolution backup of the eye position data if we
-		%> need.
+		%> @brief
 		%>
 		%> @param
 		%> @return
 		% ===================================================================
-		function plotSecondaryEyeLogs(tS)
-
-			ifi = 0.013;
-			tS = tS.eyePos;
-			fn = fieldnames(tS);
-			h=figure;
-			set(gcf,'Color',[1 1 1]);
-			figpos(1,[1200 1200]);
-			p = panel(h);
-			p.pack(2,2);
-			a = 1;
-			stdex = [];
-			stdey = [];
-			early = [];
-			maxv = [];
-			for i = 1:length(fn)-1
-				if ~isempty(regexpi(fn{i},'^E')) && ~isempty(regexpi(fn{i+1},'^CC'))
-					x = tS.(fn{i}).x;
-					y = tS.(fn{i}).y;
-					%if a < Inf%(max(x) < 16 && min(x) > -16) && (max(y) < 16 && min(y) > -16) && mean(abs(x(1:10))) < 1 && mean(abs(y(1:10))) < 1
-					c = rand(1,3);
-					p(1,1).select();
-					p(1,1).hold('on')
-					plot(x, y,'k-o','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
-
-					p(1,2).select();
-					p(1,2).hold('on');
-					t = 0:ifi:(ifi*length(x));
-					t = t(1:length(x));
-					plot(t,abs(x),'k-o','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
-					plot(t,abs(y),'k-o','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
-					maxv = max([maxv, max(abs(x)), max(abs(y))]);
-
-					p(2,1).select();
-					p(2,1).hold('on');
-					plot(mean(x(1:10)), mean(y(1:10)),'ko','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
-					stdex = [stdex std(x(1:10))];
-					stdey = [stdey std(y(1:10))];
-
-					p(2,2).select();
-					p(2,2).hold('on');
-					plot3(mean(x(1:10)), mean(y(1:10)),a,'ko','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
-
-					if mean(x(14:16)) > 5 || mean(y(14:16)) > 5
-						early(a) = 1;
-					else
-						early(a) = 0;
-					end
-
-					a = a + 1;
-
-					%end
-				end
-			end
-
-			p(1,1).select();
-			grid on
-			box on
-			axis square; axis ij
-			xlim([-10 10]); ylim([-10 10]);
-			title('X vs. Y Eye Position in Degrees')
-			xlabel('X Degrees')
-			ylabel('Y Degrees')
-
-			p(1,2).select();
-			grid on
-			box on
-			if maxv > 10; maxv = 10; end
-			axis([-0.01 0.4 0 maxv+0.1])
-			title(sprintf('X and Y Position vs. time | Early = %g / %g', sum(early),length(early)))
-			xlabel('Time (s)')
-			ylabel('Degrees')
-
-			p(2,1).select();
-			grid on
-			box on
-			axis square; axis ij
-			title(sprintf('Average X vs. Y Position for first 150ms STDX: %g | STDY: %g',mean(stdex),mean(stdey)))
-			xlabel('X Degrees')
-			ylabel('Y Degrees')
-
-			p(2,2).select();
-			grid on
-			box on
-			axis square; axis ij
-			title('Average X vs. Y Position for first 150ms Over Time')
-			xlabel('X Degrees')
-			ylabel('Y Degrees')
-			zlabel('Trial')
+		function reparseVars(me)
+			me.parseAsVars;
 		end
 
-	end
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function plotNH(me, trial, handle)
+			if ~me.isParsed;return;end
+			if ~exist('handle','var'); handle=[]; end
+			try
+				if isempty(handle)
+					handle=figure('Name','Saccade Plots','Color',[1 1 1],'NumberTitle','off',...
+						'Papertype','a4','PaperUnits','centimeters',...
+						'PaperOrientation','landscape');
+					figpos(1,[0.5 0.9],1,'%');
+				end
+				figure(handle);
+				data = me.trials(trial).data;
+				plotClassification(data,'deg','vel',me.ETparams.samplingFreq,...
+					me.ETparams.glissade.searchWindow,me.ETparams.screen.rect,...
+					'title','Test','showSacInScan',true); 
+			catch ME
+				getReport(ME)
+			end
+		end
 
-	%=======================================================================
-	methods (Access = protected) %------------------PRIVATE METHODS
-	%=======================================================================
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function explore(me, close)
+			persistent ww hh fig figA figB N
+
+			if exist('close','var') && close == true
+				try delete(figB); end
+				try delete(figA); end
+				try delete(fig.f); end
+				fig = []; figA = []; figB = [];
+				return;
+			end
+			if isempty(N); N = 1; end
+			if isempty(fig); fig.f = figure('Units','Normalized','Position',[0 0.8 0.05 0.2],'CloseRequestFcn',@exploreClose); end
+			if isempty(figA); figA = figure('Units','Normalized','Position',[0.05 0 0.45 1],'CloseRequestFcn',@exploreClose); end
+			if isempty(figB); figB = figure('Units','Normalized','Position',[0.5 0 0.5 1],'CloseRequestFcn',@exploreClose); end
+
+			if isempty(fig.f.Children)|| ~ishandle(fig.f)
+				fig.b0 = uicontrol('Parent',fig.f,'Units','Normalized',...
+					'Style','text','String',['TRIAL: ' num2str(N)],'Position',[0.1 0.8 0.8 0.1]);
+				fig.b1 = uicontrol('Parent',fig.f,'Units','Normalized',...
+					'String','Next','Position',[0.1 0.1 0.8 0.3],...
+					'Callback', @exploreNext);
+				fig.b2 = uicontrol('Parent',fig.f,'Units','Normalized',...
+					'String','Previous','Position',[0.1 0.5 0.8 0.3],...
+					'Callback', @explorePrevious);
+			end
+
+			if isempty(figA.Children) ; N = 0; exploreNext(); end
+
+			function exploreNext(src, ~)
+				N = N + 1;
+				if N > length(me.trials); N = 1; end
+				clf(figA); clf(figB);
+				plotNH(me,N,figB);
+				plot(me,N,[],[],[],figA);
+				fig.b0.String = ['TRIAL: ' num2str(N)];
+			end
+			function explorePrevious(src, ~)
+				N = N - 1;
+				if N < 1; N = length(me.trials); end
+				clf(figA); clf(figB);
+				plotNH(me,N,figB);
+				plot(me,N,[],[],[],figA);
+				fig.b0.String = ['TRIAL: ' num2str(N)];
+			end
+			function exploreClose(src, ~)
+				me.explore(true);
+			end
+
+		end
+
+	end%-------------------------END PUBLIC METHODS--------------------------------%
+
+	%==============================================================================
+	methods (Access = protected) %----------------------------------PRIVATE METHODS
+	%==============================================================================
 
 		% ===================================================================
 		%> @brief
@@ -1295,7 +1340,11 @@ classdef iRecAnalysis < analysisCore
 						trial.pratio = me.raw.pratio(idx);
 						trial.blink = me.raw.blink(idx);
 						trial.deltaT = trial.entime - trial.sttime;
-						trial.correct = true;
+						if isempty(trial.gx)
+							trial.invalid = true;
+						else
+							trial.correct = true;
+						end
 						if trial.endsampletime > trial.entime
 							%warning('Sample beyond end marker on trial %i',tri);
 						end
@@ -1322,7 +1371,7 @@ classdef iRecAnalysis < analysisCore
 					
 				% time range for correct trials
 				tr = [me.trials(me.correct.idx).timeRange];
-				tr = reshape(tr,[2,length(me.correct.idx)])';
+				tr = reshape(tr,[2,length(tr)/2])';
 				me.correct.timeRange = tr;
 				me.plotRange = [min(tr(:,1)) max(tr(:,2))];
 				me.isParsed = true;
@@ -1490,6 +1539,68 @@ classdef iRecAnalysis < analysisCore
 		%> @brief
 		%>
 		% ===================================================================
+		function computeFullSaccades(me)
+			assert(exist('runNH2010Classification.m'),'Please add NystromHolmqvist2010 to path!');
+			% load parameters for event classifier
+			me.distance = 57.3;
+			me.pixelsPerCm = 36.4;
+			ETparams = defaultParameters;
+			ETparams.samplingFreq = me.sampleRate;
+			ETparams.screen.resolution              = [ 1920 1080] ;
+			ETparams.screen.size                    = [ 0.527 0.296 ];
+			ETparams.screen.viewingDist             = me.distance/100;
+			ETparams.screen.dataCenter              = [ 960 540 ];  % center of screen has these coordinates in data
+			ETparams.screen.subjectStraightAhead    = [ 960 540 ];  % Specify the screen coordinate that is straight ahead of the subject. Just specify the middle of the screen unless its important to you to get this very accurate!
+			% change some defaults as needed for this analysis:
+			ETparams.data.alsoStoreComponentDerivs  = true;
+			ETparams.data.detrendWithMedianFilter   = true;
+			ETparams.data.applySaccadeTemplate      = true;
+			ETparams.data.minDur                    = 100;
+			ETparams.fixation.doClassify            = true;
+			ETparams.blink.replaceWithInterp        = true;
+			ETparams.blink.replaceVelWithNan        = true;
+			
+			% settings for code specific to Niehorster, Siu & Li (2015)
+			extraCut    = [0 0];                       % extra ms of data to cut before and after saccade.
+			qInterpMissingPos   = true;                 % interpolate using straight lines to replace missing position signals?
+			
+			% settings for the saccade cutting (see cutSaccades.m for documentation)
+			cutPosTraceMode     = 1;
+			cutVelTraceMode     = 1;
+			cutSaccadeSkipWindow= 1;    % don't cut during first x seconds
+
+			% process params
+			ETparams = prepareParameters(ETparams);
+			me.ETparams = ETparams;
+
+			for ii = 1:length(me.trials)
+
+				x = (me.trials(ii).gx * me.ppd) + ETparams.screen.dataCenter(1);
+				y = (me.trials(ii).gy * me.ppd) + ETparams.screen.dataCenter(2);
+				p = me.trials(ii).pa;
+				t = me.trials(ii).times * 1e3;
+
+				data = runNH2010Classification(x,y,p,ETparams,t);
+				% replace missing data by linearly interpolating position and velocity
+    			% between start and end of each missing interval (so, creating a ramp
+    			% between start and end position/velocity).
+    			data = replaceMissing(data,qInterpMissingPos);
+    			
+    			% desaccade velocity and/or position
+    			%data = cutSaccades(data,ETparams,cutPosTraceMode,cutVelTraceMode,extraCut,cutSaccadeSkipWindow);
+    			% construct saccade only traces
+    			%data = cutPursuit(data,ETparams,1);
+
+				me.trials(ii).data = data;
+
+			end
+
+		end
+
+		% ===================================================================
+		%> @brief
+		%>
+		% ===================================================================
 		function computeMicrosaccades(me)
 			VFAC=me.VFAC;
 			MINDUR=me.MINDUR;
@@ -1497,14 +1608,14 @@ classdef iRecAnalysis < analysisCore
 			pb = textprogressbar(length(me.trials),'startmsg','Loading trials to compute microsaccades: ','showactualnum',true);
 			cms = tic;
 			for jj = 1:length(me.trials)
-				if me.trials(jj).incorrect == true || me.trials(jj).breakFix == true || me.trials(jj).unknown == true;	continue;	end
+				if me.trials(jj).invalid == true || me.trials(jj).unknown == true;	continue;	end
 				samples = []; sac = []; radius = []; monol=[]; monor=[];
 				me.trials(jj).msacc = struct();
 				me.trials(jj).sampleSaccades = [];
 				me.trials(jj).microSaccades = [];
-				samples(:,1) = me.trials(jj).times/1e3;
-				samples(:,2) = me.trials(jj).gx/me.ppd_;
-				samples(:,3) = me.trials(jj).gy/me.ppd_;
+				samples(:,1) = me.trials(jj).times;
+				samples(:,2) = me.trials(jj).gx;
+				samples(:,3) = me.trials(jj).gy;
 				samples(:,4) = nan(size(samples(:,1)));
 				samples(:,5) = samples(:,4);
 				eye_used = 0;
@@ -1528,6 +1639,7 @@ classdef iRecAnalysis < analysisCore
 					end
 					me.trials(jj).radius = radius;
 					for ii = 1:size(sac,1)
+						me.trials(jj).msacc(ii).n = round(sac(ii,1));
 						me.trials(jj).msacc(ii).time = samples(sac(ii,1),1);
 						me.trials(jj).msacc(ii).endtime = samples(sac(ii,2),1);
 						me.trials(jj).msacc(ii).velocity = sac(ii,3);
@@ -1550,7 +1662,7 @@ classdef iRecAnalysis < analysisCore
 					end
 					if isempty(me.trials(jj).microSaccades); me.trials(jj).microSaccades = NaN; end
 				catch ME
-					%getReport(ME)
+					getReport(ME)
 				end
 				pb(jj)
 			end
@@ -1609,16 +1721,16 @@ classdef iRecAnalysis < analysisCore
 
 				% compute threshold
 				% SDS... this is sqrt[median(x^2) - (median x)^2]
-				msdx = sqrt( median(vel(:,1).^2) - (median(vel(:,1)))^2 );
-				msdy = sqrt( median(vel(:,2).^2) - (median(vel(:,2)))^2 );
+				msdx = sqrt( median(vel(:,1).^2,'omitnan') - (median(vel(:,1),'omitnan'))^2 );
+				msdy = sqrt( median(vel(:,2).^2,'omitnan') - (median(vel(:,2),'omitnan'))^2 );
 				if msdx<realmin
-					msdx = sqrt( mean(vel(:,1).^2) - (mean(vel(:,1)))^2 );
+					msdx = sqrt( mean(vel(:,1).^2,'omitnan') - (mean(vel(:,1),'omitnan'))^2 );
 					if msdx<realmin
 						disp(['TRIAL: ' num2str(jj) ' msdx<realmin in eyelinkAnalysis.microsacc']);
 					end
 				end
 				if msdy<realmin
-					msdy = sqrt( mean(vel(:,2).^2) - (mean(vel(:,2)))^2 );
+					msdy = sqrt( mean(vel(:,2).^2,'omitnan') - (mean(vel(:,2),'omitnan'))^2 );
 					if msdy<realmin
 						disp(['TRIAL: ' num2str(jj) ' msdy<realmin in eyelinkAnalysis.microsacc']);
 					end
@@ -1826,11 +1938,16 @@ classdef iRecAnalysis < analysisCore
 
 		end
 
+		% ===================================================================
+		%> @brief
+		%>
+		% ===================================================================
 		function trialDef = getTrialDef(me)
 			trialDef = cell2struct(repmat({[]},length(me.trialsTemplate),1),me.trialsTemplate);
 			trialDef.rt = false;
 			trialDef.rtoverride = false;
 			trialDef.firstSaccade = NaN;
+			trialDef.invalid = false;
 			trialDef.correct = false;
 			trialDef.breakFix = false;
 			trialDef.incorrect = false;
