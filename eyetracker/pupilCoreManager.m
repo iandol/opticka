@@ -1,6 +1,6 @@
 % ========================================================================
-classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
-%> @class pupilLabsManager
+classdef pupilCoreManager < eyetrackerCore & eyetrackerSmooth
+%> @class pupilCoreManager
 %> @brief Manages the Pupil Labs Core
 %>
 %> The eyetrackerCore methods enable the user to test for common behavioural
@@ -47,9 +47,6 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 						'doBeep',true,... % beep for calibration reward
 						'manual', false,...
 						'timeout', 1000)
-		%> WIP we can optionally drive physical LEDs for calibration, each LED
-		%> is triggered by the me.calibration.calPositions order.
-		useLEDs			= false
 	end
 
 	%-----------------CONTROLLED PROPERTIES-------------%
@@ -60,6 +57,12 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 		sub
 		%> publishing socket
 		pub
+		%> endpoint
+		endpoint
+		%> subscribe endpoint
+		subEndpoint
+		%> subscribe endpoint
+		pubEndpoint
 	end
 
 	properties (Hidden = true)
@@ -72,12 +75,6 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 		rawSamples		= []
 		% zmq context
 		ctx
-		%> endpoint
-		endpoint
-		%> subscribe endpoint
-		subEndpoint
-		%> subscribe endpoint
-		pubEndpoint
 		% screen values taken from screenManager
 		sv				= []
 		%> tracker time stamp
@@ -93,10 +90,10 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 	%=======================================================================
 	
 		% ===================================================================
-		function me = pupilLabsManager(varargin)
-		%> @fn pupilLabsManager(varargin)
+		function me = pupilCoreManager(varargin)
+		%> @fn pupilCoreManager(varargin)
 		%>
-		%> pupilLabsManager CONSTRUCTOR
+		%> pupilCoreManager CONSTRUCTOR
 		%>
 		%> @param varargin can be passed as a structure, or name+arg pairs
 		%> @return instance of the class.
@@ -131,7 +128,7 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 					me.screen		= screenManager;
 				end
 			else
-					me.screen			= sM;
+					me.screen		= sM;
 			end
 			me.ppd_					= me.screen.ppd;
 			if me.screen.isOpen; me.win	= me.screen.win; end
@@ -161,40 +158,34 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 				me.salutation('Initialise', 'Running Pupil Labs in Dummy Mode', true);
 				me.isConnected = false;
 			else
-				me.endpoint = ['tcp://' me.calibration.ip ':' str2num(me.calibration.port)];
-				me.ctx = zmq.core.ctx_new();
-				me.socket = zmq.core.socket(me.ctx, 'ZMQ_REQ');
-				zmq.core.setsockopt(me.socket, 'ZMQ_RCVTIMEO', me.calibration.timeout);
-				fprintf('--->>> pupilLabsManager: Connecting to %s\n', me.endpoint);
-				err = zmq.core.connect(me.socket, me.endpoint);
-				if err == -1
-					warning('Cannot Connect to Pupil Core!!!');
+				try
+					me.endpoint = ['tcp://' me.calibration.ip ':' num2str(me.calibration.port)];
+					me.ctx = zmq.core.ctx_new();
+					me.socket = zmq.core.socket(me.ctx, 'ZMQ_REQ');
+					zmq.core.setsockopt(me.socket, 'ZMQ_RCVTIMEO', me.calibration.timeout);
+					zmq.core.setsockopt(me.socket, 'ZMQ_LINGER', 500);
+					fprintf('\n\n--->>> pupilLabsManager: Connecting to %s\n', me.endpoint);
+					err = zmq.core.connect(me.socket, me.endpoint);
+					if err == -1
+						me.isConnected = false;
+						warning('Cannot Connect to Pupil Core!!!');
+						close(me);
+						me.isDummy = true;
+					else
+						me.isConnected = true;
+						subscribe(me);
+						checkRoundTrip(me);
+						setPupilTime(me);
+					end
+				catch ME
 					close(me);
-					me.isDummy = true;
-					me.isConnected = false;
-				else
-					subscribe(me);
-					checkRoundTrip(me);
-					SetPupilTime(me);
-					me.isConnected = true;
+					rethrow ME
 				end
 			end
 
-			if me.useLEDs
-				if ~rM.isOpen; open(rM); end
-				try
-					for i = 1:length(me.calibration.calPositions)
-						me.turnOnLED(i, rM);
-						WaitSecs(0.02);
-					end
-					for i = 1:length(me.calibration.calPositions)
-						me.turnOffLED(i, rM);
-						WaitSecs(0.02);
-					end
-				end
-			end
 			success = true;
 		end
+
 
 		% ===================================================================
 		function cal = trackerSetup(me,varargin)
@@ -494,7 +485,7 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 			RestrictKeysForKbCheck(oldr);
 			stopRecording(me);
 			WaitSecs(0.25);
-			fprintf('===>>> CALIBRATING IREC FINISHED... <<<===\n');
+			fprintf('===>>> CALIBRATING CORE FINISHED... <<<===\n');
 		end
 
 		% ===================================================================
@@ -521,9 +512,10 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 		%>
 		% ===================================================================
 			if me.isDummy; return; end
-			if me.isConnected 
-				zmq.core.send(me.socket, uint8('R'));
-				result = zmq.core.recv(me.socket);
+			if me.isConnected && ~isempty(me.socket)
+				result = [];
+				try zmq.core.send(me.socket, uint8('R')); end
+				try result = zmq.core.recv(me.socket); end
 				fprintf('Recording stopped: %s\n', char(result));
 				me.isRecording = false;
 			end
@@ -592,7 +584,7 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 				me.pupilAll		= [me.pupilAll me.pupil];
 			else
 				me.x = []; me.y = []; me.pupil = []; 
-				if me.verbose;fprintf('-+-+-> tobiiManager.getSample(): are you sure you are recording?\n');end
+				if me.verbose;fprintf('-+-+-> pupilCore.getSample(): are you sure you are recording?\n');end
 			end
 			me.currentSample	= sample;
 		end
@@ -600,34 +592,13 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 		% ===================================================================
 		function trackerMessage(me, message, ~)
 		%> @fn trackerMessage(me, message)
-		%> @brief Send message to store in tracker data, for iRec this can
-		%> only be a single 32bit signed integer.
+		%> @brief Send message to store in tracker data
 		%>
-		%> As we do send strings to eyelink / tobii, we process string messages
-		%> TRIALID and TRIALRESULT we extract the integer value, END_FIX becomes
-		%> -1500 and END_RT becomes -1501
 		% ===================================================================
-			if me.isConnected
-				if isnumeric(message)
-					me.udp.write(int32(message));
-				elseif ischar(message)
-					if contains(message,'TRIAL_RESULT') || contains(message,'TRIALID')
-						message = strsplit(message, ' ');
-						if length(message)==2
-							message = str2double(message{2});
-						else 
-							message = [];
-						end
-					elseif contains(message,'END_FIX')
-						message = -1500;
-					elseif contains(message,'END_RT')
-						message = -1501;
-					end
-				end
-				if isempty(message); return; end
-				me.udp.write(int32(message));
-				if me.verbose; fprintf('-+-+->IREC Message: %i\n', message);end
-			end
+			if me.isDummy || ~me.isConnected; return; end
+			sendAnnotation(me,message);
+			if me.verbose; fprintf('-+-+->pupilCore: %i\n', message);end
+			
 		end
 
 		% ===================================================================
@@ -656,9 +627,13 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 					try close(me.operatorScreen); end
 				end
 			catch ME
+				getReport(ME);
 				me.salutation('Close Method','Couldn''t stop recording, forcing shutdown...',true)
 				me.isConnected = false;
 				me.isRecording = false;
+				if ~isempty(me.operatorScreen) && isa(me.operatorScreen,'screenManager')
+					try close(me.operatorScreen); end
+				end
 				try stopRecording(me); end
 				try unsubscribe(me); end
 				try zmq.core.disconnect(me.socket, me.endpoint); end
@@ -666,10 +641,6 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 				try zmq.core.ctx_shutdown(me.ctx); end
 				try zmq.core.ctx_term(me.ctx); end
 				try resetAll(me); end
-				if me.secondScreen && ~isempty(me.operatorScreen) && isa(me.operatorScreen,'screenManager')
-					try me.operatorScreen.close; end
-				end
-				getReport(ME);
 			end
 		end
 		
@@ -853,9 +824,34 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 	end%-------------------------END PUBLIC METHODS--------------------------------%
 	
 	%============================================================================
-	methods (Hidden = true) %--HIDDEN METHODS (compatibility with eyelinkManager)
+	methods (Hidden = true) %--HIDDEN METHODS
 	%============================================================================
 		
+		function result = remoteCommand(me, cmd)
+			if ~me.isConnected; result = []; return; end
+			zmq.core.send(me.socket, uint8(cmd));
+			result = char(zmq.core.recv(me.socket));
+			if me.verbose; fprintf('--->>> remoteCommand result: %s\n', result); end
+		end
+
+		function checkRoundTrip(me)
+			tx=zeros(100,1);
+			for i = 1:100
+				tt = tic; % Measure round trip delay
+				remoteCommand(me, 't');
+				tx(i) = toc(tt);
+			end
+			tx = tx .* 1e3;
+			[a, e] = analysisCore.stderr(tx,'SE');
+			fprintf('--->>> Round trip command delay: %.2f ms +- %.2f SE\n', a, e);
+		end
+
+		function setPupilTime(me, t)
+			if ~exist('t','var') || isempty(t); t = GetSecs(); end
+			if isnumeric(t); t = num2str(t); end
+			result = remoteCommand(me,['T ' t]);
+			fprintf('--->>> setPupilTime: time %s result %s\n', t, result);
+		end
 
 		% ===================================================================
 		%> @brief Sync time with tracker
@@ -949,9 +945,7 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 		%>
 		% ========================a===========================================
 		function mode = currentMode(me)
-			if me.isConnected
-				mode = 0;
-			end
+			mode = 0;
 		end
 		
 		% ===================================================================
@@ -959,7 +953,7 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 		%>
 		% ===================================================================
 		function syncTime(me)
-			trackerMessage(me,int32(-1000));
+			
 		end
 		
 		
@@ -968,7 +962,8 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 		%>
 		% ===================================================================
 		function offset = getTimeOffset(me)
-			offset = 0;
+			[trackertime, systemtime] = getTrackerTime(me);
+			offset = systemtime - trackertime;
 		end
 		
 		% ===================================================================
@@ -976,8 +971,8 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 		%>
 		% ===================================================================
 		function [trackertime, systemtime] = getTrackerTime(me)
-			trackertime = 0;
-			systemtime = 0;
+			trackertime = str2num(remoteCommand(me,'t'));
+			systemtime = GetSecs;
 		end
 
 		% ===================================================================
@@ -995,41 +990,42 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 	end%-------------------------END HIDDEN METHODS--------------------------------%
 	
 	%=======================================================================
-	methods (Access = private) %------------------PRIVATE METHODS
+	methods (Hidden = true) %------------------PRIVATE METHODS
 	%=======================================================================
 		
 		function subscribe(me)
 			if ~me.isConnected; return; end
-			zmq.core.send(me.socket, uint8('SUB_PORT'));
-			subPort = char(zmq.core.recv(me.socket));
-			zmq.core.send(me.socket, uint8('PUB_PORT'));
-			pubPort = char(zmq.core.recv(me.socket));
+			subPort = remoteCommand(me,'SUB_PORT');
+			if subPort == -1; warning('Cannot SUBscribe!'); return;end
+			pubPort = remoteCommand(me,'PUB_PORT');
 			me.subEndpoint = ['tcp://' me.calibration.ip ':' subPort];
 			me.pubEndpoint = ['tcp://' me.calibration.ip ':' pubPort];
-			fprintf('--->>> Received sub/pub port: %s/s\n', subPort, pubPort);
+			fprintf('--->>> Received sub/pub port: %s \n', subPort, pubPort);
 			me.sub = zmq.core.socket(me.ctx, 'ZMQ_SUB');
 			me.pub = zmq.core.socket(me.ctx, 'ZMQ_PUB');
 			zmq.core.setsockopt(me.sub, 'ZMQ_RCVTIMEO', me.calibration.timeout);
 			zmq.core.setsockopt(me.pub, 'ZMQ_RCVTIMEO', me.calibration.timeout);
 			
 			err = zmq.core.connect(me.sub, me.subEndpoint);
-			assert(err==0,'--->>> PupilLabs: Cannot subscribe to data stream!');
+			assert(err==0, '--->>> PupilLabs: Cannot subscribe to data stream!');
 
 			zmq.core.setsockopt(me.sub, 'ZMQ_SUBSCRIBE', 'pupil.');
 			zmq.core.setsockopt(me.sub, 'ZMQ_SUBSCRIBE', 'gaze.');
 			zmq.core.setsockopt(me.sub, 'ZMQ_SUBSCRIBE', 'notify.');
 
 			err = zmq.core.connect(me.pub, me.pubEndpoint);
-			assert(err==0,'--->>> PupilLabs: Cannot subscribe to Publish stream!');
+			assert(err==0, '--->>> PupilLabs: Cannot subscribe to Publish stream!');
 		end
 
 
 		function unsubscribe(me)
+			if isempty(me.sub) || isempty(me.subEndpoint); return; end
 			try
 				zmq.core.disconnect(me.sub, me.subEndpoint);
 				zmq.core.close(me.sub);
 				fprintf('--->>> PupilLabs: Disconnected from SUB: %s\n', me.subEndpoint);
 			end
+			if isempty(me.pub) || isempty(me.pubEndpoint); return; end
 			try
 				zmq.core.disconnect(me.pub, me.pubEndpoint);
 				zmq.core.close(me.psub);
@@ -1042,6 +1038,7 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 			% Messages are 2-frame zmq messages that include the topic
 			% and the message payload as a msgpack encoded string.
 			topic = []; payload = [];
+			if isempty(me.sub) || isempty(me.subEndpoint); return; end
 			topic = char(zmq.core.recv(me.sub), 255, 'ZMQ_DONTWAIT');
 			lastwarn('');  % reset last warning
 			payload = zmq.core.recv(me.sub, 1024, 'ZMQ_DONTWAIT');  % receive payload
@@ -1054,36 +1051,36 @@ classdef pupilLabsManager < eyetrackerCore & eyetrackerSmooth
 			end
 		end
 
+		function [ ] = sendNotification(me, notification, time)
+			%NOTIFY Use socket to send notification
+			%   Notifications are container.Map objects that contain
+			%   at least the key 'subject'.
+			topic = strcat('notify.', notification('subject'));
+			payload = dumpmsgpack(notification);
+			zmq.core.send(me.pub, uint8(topic), 'ZMQ_SNDMORE');
+			zmq.core.send(me.pub, payload);
+		end
+
+		function [ ] = sendAnnotation(me, annotation, time)
+			%NOTIFY Use socket to send notification
+			%   Notifications are container.Map objects that contain
+			%   at least the key 'subject'.
+			ts = str2num(char(remoteCommand(me,'t')));
+			if ischar(annotation)
+				annot = dictionary(string([]),{});
+				annot{"topic"} = 'annotation.general';
+				annot{"label"} = annotation;
+				annot{"timestamp"} = ts;
+				annot{"duration"} = 0.0;
+			end
+			topic = annot{"topic"};
+			payload = dumpmsgpack(annot);
+			zmq.core.send(me.pub, uint8(topic), 'ZMQ_SNDMORE');
+			zmq.core.send(me.pub, payload);
+		end
+
 		function msgs = flushBuffer(me)
-			topic
-		end
-
-		function checkRoundTrip(me)
-			if ~me.isConnected; return; end
-			tt=tic; % Measure round trip delay
-			zmq.core.send(me.socket, uint8('t'));
-			result = zmq.core.recv(me.socket);
-			fprintf('--->>> Round trip command delay: %.2f\n', str2num(toc(tt)*1000));
-			fprintf('--->>> Returned: %s\n', char(result));
-		end
-
-		function SetPupilTime(me)
-			if ~me.isConnected; return; end
-			zmq.core.send(me.socket, uint8('T 0.0'));
-			result = zmq.core.recv(me.socket);
-			fprintf('--->>> setPupilTime: %s\n', char(result));
-		end
-
-		function turnOnLED(me, val, rM)
-			if me.useLEDs
-				rM.digitalWrite(val-1 + me.startPin,1);
-			end
-		end
-
-		function turnOffLED(me, val, rM)
-			if me.useLEDs
-				rM.digitalWrite(val-1 + me.startPin,0);
-			end
+			msgs = [];
 		end
 		
 	end %------------------END PRIVATE METHODS

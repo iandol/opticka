@@ -122,7 +122,7 @@ tS.fixY						= 0;
 tS.firstFixInit				= 3;
 % time to maintain initial fixation within window, can be single value or a
 % range to randomise between
-tS.firstFixTime				= [0.5 1.0];
+tS.firstFixTime				= [0.25 0.75];
 % fixation window radius in degrees; if you enter [x y] the window will be
 % rectangular.
 tS.firstFixRadius			= 2;
@@ -131,15 +131,15 @@ tS.strict					= true;
 % add an exclusion zone where subject cannot saccade to?
 tS.exclusionZone			= [];
 % time to maintain fixation during stimulus state
-tS.stimulusFixTime			= 1.5;		
+tS.stimulusFixTime			= 1;		
 % Initialise eyetracker with X, Y, FixInitTime, FixTime, Radius, StrictFix values
 updateFixationValues(eT, tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
 
 %=========================================================================
 %-------------------------ONLINE Behaviour Plot---------------------------
 % WHICH states assigned as correct or break for online plot?
-bR.correctStateName				= "correct";
-bR.breakStateName				= ["breakfix","incorrect"];
+bR.correctStateName			= "correct";
+bR.breakStateName			= ["breakfix","incorrect"];
 
 %=========================================================================
 %--------------Randomise stimulus variables every trial?-----------
@@ -148,14 +148,14 @@ bR.breakStateName				= ["breakfix","incorrect"];
 % want to do controlled experiments use taskSequence to define proper randomised
 % and balanced variable sets and triggers to send to recording equipment etc...
 % Good for training tasks, or stimulus variability irrelevant to the task.
-% n								= 1;
-% in(n).name					= 'xyPosition';
-% in(n).values					= [6 6; 6 -6; -6 6; -6 -6; -6 0; 6 0];
-% in(n).stimuli					= 1;
-% in(n).offset					= [];
-% stims.stimulusTable			= in;
-stims.choice					= [];
-stims.stimulusTable				= [];
+% n							= 1;
+% in(n).name				= 'xyPosition';
+% in(n).values				= [6 6; 6 -6; -6 6; -6 -6; -6 0; 6 0];
+% in(n).stimuli				= 1;
+% in(n).offset				= [];
+% stims.stimulusTable		= in;
+stims.choice				= [];
+stims.stimulusTable			= [];
 
 %=========================================================================
 %-------------allows using arrow keys to control variables?-------------
@@ -169,8 +169,8 @@ stims.tableChoice			= 1;
 %======================================================================
 % this allows us to enable subsets from our stimulus list
 % 1 = grating | 2 = fixation cross
-stims.stimulusSets				= {[1,2],[1]};
-stims.setChoice					= 1;
+stims.stimulusSets			= {[1,2],[1]};
+stims.setChoice				= 1;
 
 %=========================================================================
 % N x 2 cell array of regexpi strings, list to skip the current -> next
@@ -245,12 +245,11 @@ prefixEntryFcn = {
 	@()updateFixationValues(eT,tS.fixX,tS.fixY,[],tS.firstFixTime); %reset fixation window
 	@()startRecording(eT); % start eyelink recording for this trial (tobii ignores this)
 	% tracker messages that define a trial start
+	% you can add any other messages, such as stimulus values as needed,
+	% e.g. @()trackerMessage(eT,['MSG:ANGLE' num2str(stims{1}.angleOut)]) etc.
 	@()trackerMessage(eT,'V_RT MESSAGE END_FIX END_RT'); % Eyelink commands
 	@()trackerMessage(eT,sprintf('TRIALID %i',getTaskIndex(me))); %Eyelink start trial marker
 	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
-	% you can add any other messages, such as stimulus values as needed,
-	% e.g. @()trackerMessage(eT,['MSG:ANGLE' num2str(stims{1}.angleOut)])
-	% draw to the eyetracker display
 };
 
 %--------------------prefixate within
@@ -260,7 +259,7 @@ prefixFcn = {
 
 %--------------------prefixate exit
 prefixExitFcn = {
-	@()trackerDrawStatus(eT,'Init Fix...', stims.stimulusPositions);
+	@()trackerDrawStatus(eT,'Start trial...', stims.stimulusPositions);
 };
 
 %==============================================================
@@ -302,8 +301,6 @@ fixExitFcn = {
 %========================================================
 
 stimEntryFcn = {
-	% send an eyeTracker sync message (reset relative time to 0 after first flip of this state)
-	@()doSyncTime(me);
 	% send stimulus value strobe (value set by updateVariables(me) function)
 	@()doStrobe(me,true);
 };
@@ -366,7 +363,6 @@ correctExitFcn = {
 	@()update(stims); % update our stimuli ready for display
 	@()getStimulusPositions(stims); % make a struct the eT can use for drawing stim positions
 	@()resetAll(eT); % resets the fixation state timers	
-	@()checkTaskEnded(me); % check if task is finished
 	@()plot(bR, 1); % actually do our behaviour record drawing
 };
 
@@ -404,7 +400,6 @@ incExitFcn = {
 	@()updateVariables(me); % randomise our stimuli, set strobe value too
 	@()update(stims); % update our stimuli ready for display
 	@()getStimulusPositions(stims); % make a struct the eT can use for drawing stim positions
-	@()trackerClearScreen(eT); 
 	@()resetAll(eT); % resets the fixation state timers
 	@()plot(bR, 1); % actually do our drawing
 };
@@ -417,7 +412,6 @@ breakExitFcn = {
 	@()updateVariables(me); % randomise our stimuli, set strobe value too
 	@()update(stims); % update our stimuli ready for display
 	@()getStimulusPositions(stims); % make a struct the eT can use for drawing stim positions
-	@()trackerClearScreen(eT); 
 	@()resetAll(eT); % resets the fixation state timers
 	@()plot(bR, 1); % actually do our drawing
 };

@@ -686,6 +686,8 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 						else 
 							message = [];
 						end
+					elseif contains(message,'SYNCTIME')
+						message = -1499;
 					elseif contains(message,'END_FIX')
 						message = -1500;
 					elseif contains(message,'END_RT')

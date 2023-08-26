@@ -822,7 +822,7 @@ classdef analysisCore < optickaCore
 		function colors = optimalColours(n_colors,bg,func) %make optimally different colours for plots
 			if nargin < 1; n_colors = 20; end
 			if ~exist('makecform','file') %no im proc toolbox, just return default colours
-				colors = colormap(parula(n_colors));
+				colors = parula(n_colors);
 				colors = [0 0 0; 0.8 0 0; 0 0.8 0; 0 0 0.8; 0.5 0.5 0.5; 1 0.5 0; colors];
 				return;
 			end

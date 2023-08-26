@@ -89,6 +89,11 @@ classdef stateMachine < optickaCore
 		%> do we run timers for function evaluations?
 		fnTimers logical			= false
 	end
+
+	properties (Hidden = true)
+		%> size of the log arrays to preallocate
+		logSize = 1
+	end
 	
 	properties (SetAccess = protected, GetAccess = public, Transient = true)
 		%> true or false, whether this object is currently busy running
@@ -133,14 +138,14 @@ classdef stateMachine < optickaCore
 		%> Index with name and index number for each state
 		stateListIndex
 		%> run state information
-		log = struct([])
+		log
 	end
 	
 	properties (SetAccess = protected, GetAccess = protected)
 		%> number of states
 		nStates
-		%> feval logging
-		fevalTime
+		%> current state number
+		thisN
 		%> should we run the finish function
 		isFinishing logical = false
 		%> field names of allStates struct array, defining state behaviors
@@ -150,6 +155,12 @@ classdef stateMachine < optickaCore
 		%> properties allowed during construction
 		allowedProperties = {'name','realTime','verbose','clockFcn','waitFcn'...
 			'timeDelta','skipExitStates','tempNextState'}
+		logFields = ["n","startTime","index","tnow","name","uuid",...
+			"tick","entryTime","nextTimeOut", "nextTickOut",...
+			"tempNextState","fevalEnter","fevalExit","fevalStore"]
+		logValues = {[],[],[],[],"","",...
+			[],[],[],[],...
+			"",[],[],[]}
 	end
 	
 	%=======================================================================
@@ -173,7 +184,7 @@ classdef stateMachine < optickaCore
 			
 			%initialise the statelist index
 			reset(me);
-			
+			initialiseLog(me,1);
 		end
 		
 		% ===================================================================
@@ -283,9 +294,9 @@ classdef stateMachine < optickaCore
 
 			me.currentTick = me.currentTick + 1;
 			me.totalTicks = me.totalTicks + 1;
+			me.currentTime = feval(me.clockFcn);
 
 			if me.realTime %are we running on time or ticks?
-				me.currentTime = feval(me.clockFcn);
 				trigger = me.currentTime >= me.nextTimeOut;
 			else
 				trigger = me.currentTick >= me.nextTickOut;
@@ -335,7 +346,7 @@ classdef stateMachine < optickaCore
 		function forceTransition(me, stateName)
 			if me.isRunning == true
 				if isStateName(me, stateName)
-					%me.salutation('forceTransition method',['stateMachine forced to: ' stateName],false)
+					me.currentTime = feval(me.clockFcn);
 					transitionToStateWithName(me, stateName)
 					return
 				end
@@ -351,12 +362,13 @@ classdef stateMachine < optickaCore
 		% ===================================================================
 		function start(me)
 			if me.isRunning == false
-				me.log = struct([]); %empty struct
+				initialiseLog(me);
 				if me.timeDelta == 0; me.realTime = true; end %stops a divide by zero infinite loop
 				me.isRunning = true;
 				me.isFinishing = false;
 				me.totalTicks = 0;
 				me.currentTick = 0;
+				me.thisN = 0;
 				me.finalTime = [];
 				me.startTime = feval(me.clockFcn);
 				me.enterStateAtIndex(1);
@@ -370,17 +382,19 @@ classdef stateMachine < optickaCore
 		%>
 		%>
 		% ===================================================================
-		function finish(me)
-			if me.isFinishing == true
+		function finish(me, force)
+			if ~exist('force','var'); force = me.isFinishing; end
+			if force
 				me.finalTime = feval(me.clockFcn) - me.startTime;
 				me.finalTick = me.totalTicks;
 				me.isRunning = false;
 				me.isFinishing = false;
 				fprintf('\n--->>> Total time to do state traversal: %g secs \n', me.finalTime);
-				fprintf('--->>> Loops: %i thus %g ms per loop\n',me.finalTick, (me.finalTime/me.finalTick)*1000);
+				fprintf('--->>> Loops: %i thus ~%g ms per loop\n',me.finalTick, (me.finalTime/me.finalTick)*1e3);
 			else
 				me.salutation('finish method','stateMachine not running...',true)
 			end
+			finaliseLog(me)
 		end
 		
 		% ===================================================================
@@ -463,6 +477,7 @@ classdef stateMachine < optickaCore
 			me.isRunning = false;
 			if me.timeDelta == 0; me.realTime = true; end %stops a divide by zero infinite loop
 			me.isFinishing = false;
+			me.thisN = 0;
 			me.totalTicks = [];
 			me.currentName = '';
 			me.currentUUID = '';
@@ -480,7 +495,6 @@ classdef stateMachine < optickaCore
 			me.finalTick = [];
 			me.nextTickOut = [];
 			me.nextTimeOut = [];
-			me.fevalTime = [];
 		end
 		
 		% ===================================================================
@@ -625,24 +639,42 @@ classdef stateMachine < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief clear current properties but leave currentIndex so it's checkable
+		%> @brief exit current state
 		%> @param
 		%> @return
 		% ===================================================================
 		function exitCurrentState(me)
-			tnow = feval(me.clockFcn);
-			if me.fnTimers; tt=tic; end
+			if me.fnTimers; tx=tic; end
 			if ~me.currentState.skipExitFcn 
 				for i = 1:length(me.currentState.exitFcn) %nested class
 					me.currentState.exitFcn{i}();
 				end
 			end
-			if me.fnTimers; me.fevalTime.exit = toc(tt)*1000; end
+			if me.fnTimers 
+				me.log.fevalExit(me.thisN) = toc(tx)*1000;
+				tx = tic;
+			end
 			
-			storeCurrentStateInfo(me, tnow);
+			me.log.n					= me.thisN;
+			me.log.index(me.thisN)		= me.currentIndex;
+			me.log.tnow(me.thisN)		= me.currentTime;
+			me.log.name{me.thisN}		= me.currentName;
+			me.log.uuid{me.thisN}		= me.currentUUID;
+			me.log.tick(me.thisN)		= me.currentTick;
+			me.log.entryTime(me.thisN)	= me.currentEntryTime;
+			me.log.nextTimeOut(me.thisN)= me.nextTimeOut;
+			me.log.nextTickOut(me.thisN)= me.nextTickOut;
+			if me.fnTimers
+				me.log.fevalStore(me.thisN)	= toc(tx)*1000;
+			end
+			
 			me.tempNextState = '';
 			
-			if me.verbose; me.salutation(['EXIT: ' me.currentState.name ' @ ' num2str(me.log(end).tnow-me.startTime, '%.2f') 's | ' num2str(me.log(end).stateTimeToNow, '%.2f') 's | ' num2str(me.log(end).tick) '/' num2str(me.totalTicks) 'ticks'],'',false); end
+			if me.verbose; me.salutation(['EXIT: ' me.currentName ...
+					' @ ' num2str(me.log.tnow(me.log.n)-me.log.startTime,'%.2f') ...
+					's | state time: ' num2str(me.log.tnow(me.log.n)-me.log.entryTime(me.log.n),'%.2f'), ...
+					's | ' num2str(me.log.tick(me.log.n)) '/' num2str(me.totalTicks) ...
+					' ticks'],''); end
 		end
 		
 		% ===================================================================
@@ -652,64 +684,77 @@ classdef stateMachine < optickaCore
 		% ===================================================================
 		function enterStateAtIndex(me, thisIndex)
 			me.currentIndex = thisIndex;
+			me.thisN = me.thisN + 1;
+			if me.thisN == 1; me.log.startTime = me.startTime; end
 			if me.nStates >= thisIndex
-				
-				thisState = me.stateList(me.currentIndex);
+				if me.fnTimers; tt = tic; end	%run our enter state functions
+				me.currentState = me.stateList(me.currentIndex);
 				me.currentEntryTime = feval(me.clockFcn);
 				me.currentTick = 0;
-				me.currentName = thisState.name;
+				me.currentName = me.currentState.name;
 				me.currentUUID = num2str(dec2hex(floor((now - floor(now))*1e10)));
-				me.currentEntryFcn = thisState.entryFcn;
-				me.currentWithinFcn = thisState.withinFcn;
-				me.currentTransitionFcn = thisState.transitionFcn;
-				me.currentState = thisState;
+				me.currentEntryFcn = me.currentState.entryFcn;
+				me.currentWithinFcn = me.currentState.withinFcn;
+				me.currentTransitionFcn = me.currentState.transitionFcn;
+				me.currentState = me.currentState;
 				
-				if length(thisState.time) == 2
-					thisState.time = randi([thisState.time(1)*1e3, thisState.time(2)*1e3]) / 1e3;
+				if length(me.currentState.time) == 2
+					me.currentState.time = randi([me.currentState.time(1)*1e3, me.currentState.time(2)*1e3]) / 1e3;
 				end
-				me.nextTimeOut = me.currentEntryTime + thisState.time;
-				me.nextTickOut = floor(thisState.time / me.timeDelta);
+				me.nextTimeOut = me.currentEntryTime + me.currentState.time;
+				me.nextTickOut = floor(me.currentState.time / me.timeDelta);
 					
-				if me.fnTimers; tt=tic; end	%run our enter state functions
-				for i = 1:length(thisState.entryFcn)
-					thisState.entryFcn{i}();
+				for i = 1:length(me.currentEntryFcn)
+					me.currentEntryFcn{i}();
 				end
 				%run our within state functions
-				for i = 1:length(thisState.withinFcn) %nested class
-					thisState.withinFcn{i}();
+				for i = 1:length(me.currentWithinFcn) %nested class
+					me.currentWithinFcn{i}();
 				end
-				if me.fnTimers; me.fevalTime.enter = toc(tt)*1000; end
+				if me.fnTimers; me.log.fevalEnter(me.thisN) = toc(tt)*1000; end
 				
-				if me.verbose; me.salutation(['ENTER: ' me.currentName ' @ ' num2str(me.currentEntryTime-me.startTime, '%.2f') 'secs / ' num2str(me.totalTicks) 'ticks'],'',false); end
-
+				if me.verbose; me.salutation(['ENTER: ' me.currentName ...
+						' @ ' num2str(me.currentEntryTime-me.startTime, ...
+						'%.2f') 's - ' num2str(me.totalTicks) ' ticks'],''); end
 			else
 				if me.verbose; me.salutation('enterStateAtIndex method', 'newIndex is greater than stateList length'); end
-				me.finish();
+				me.isFinishing = true;
+				finish(me);
 			end
 		end
 
 		% ===================================================================
-		%> @brief clear current properties but leave currentIndex so it's checkable
+		%> @brief initialise the log arrays to improve performance
+		%> @param n number of entries 
+		%> @return
+		% ===================================================================
+		function initialiseLog(me, n)
+			if ~exist('n','var'); n = me.logSize; end
+			if n == 1; me.log = cell2struct(me.logValues, me.logFields, 2); return; end
+			me.log.(me.logFields(1)) = 0;
+			for i = 3:length(me.logFields)
+				if ~me.fnTimers && contains(me.logFields(i),'feval');continue;end
+				if isnumeric(me.logValues{i})
+					me.log.(me.logFields(i)) = NaN(1,n);
+				else
+					me.log.(me.logFields(i)) = repmat("",1,n);
+				end
+			end
+		end
+
+		% ===================================================================
+		%> @brief clear up log arrays
 		%> @param
 		%> @return
 		% ===================================================================
-		function storeCurrentStateInfo(me, tnow)
-			me.log(end+1).tnow = tnow;
-			me.log(end).name = me.currentName;
-			me.log(end).index = me.currentIndex;
-			me.log(end).uuid = me.currentUUID;
-			me.log(end).tick = me.currentTick;
-			me.log(end).time = me.currentTime;
-			me.log(end).startTime = me.startTime;
-			me.log(end).entryTime = me.currentEntryTime;
-			me.log(end).nextTimeOut = me.nextTimeOut;
-			me.log(end).nextTickOut = me.nextTickOut;
-			me.log(end).stateTimeToNow = me.log(end).tnow - me.currentEntryTime;
-			me.log(end).totalTime = me.log(end).tnow - me.startTime;
-			me.log(end).timeError = me.log(end).tnow - me.log(end).nextTimeOut;
-			me.log(end).tickError = me.currentTick - me.nextTickOut;
-			if ~isempty(me.fevalTime);me.log(end).fevalTime = me.fevalTime;end
-			me.log(end).tempNextState = me.tempNextState;
+		function finaliseLog(me)
+			if ~isempty(me.log.n) && me.log.n > 0 && length(me.log.tnow) > me.log.n
+				for i = 3:length(me.logFields)
+					if length(me.log.(me.logFields(i))) > 1
+						me.log.(me.logFields(i)) = me.log.(me.logFields(i))(1:me.log.n);
+					end
+				end
+			end
 		end
 		
 	end
@@ -731,48 +776,64 @@ classdef stateMachine < optickaCore
 		%>
 		% ===================================================================
 		function plotLogs(log,tin)
-			if ~exist('log','var') || isempty(log); warndlg('No log data yet...');return;end
+			if ~exist('log','var') || isempty(log) || isempty(log.index); warndlg('No log data yet...');return;end
 			if ~exist('tin','var')
 				tout = ['State Machine with ' num2str(length(log)) ' states']; 
 			else
 				tout = [tin ' : ' num2str(length(log)) ' states'];
 			end
 			try
-				for i = 1:length(log)
-					names{i} = log(i).name;
-				end
 				f = figure('Position',[0 0 1500 1000],'Name','State Machine Time Logs');
 				tl = tiledlayout(f,'flow','TileSpacing','tight','Padding','compact');
 				tl.Title.String = tout;
 				tl.Title.FontWeight = 'bold';
 				ax1 = nexttile;
-				plot([log.entryTime]-[log.startTime],'ko','MarkerSize',12, 'MarkerFaceColor', [1 1 1])
+				s = plot([log.entryTime]-[log.startTime],'ko','MarkerSize',10, 'MarkerFaceColor', [1 1 1]);
+				s.DataTipTemplate.DataTipRows(1).Label='State';
+				s.DataTipTemplate.DataTipRows(2).Label='Time (s)';
+				r = dataTipTextRow('Name',log.name);
+				s.DataTipTemplate.DataTipRows(end+1)=r;
 				hold on
-				plot([log.tnow]-[log.startTime],'ro','MarkerSize',12, 'MarkerFaceColor', [1 1 1])
+				s = plot([log.tnow]-[log.startTime],'ro','MarkerSize',10, 'MarkerFaceColor', [1 1 1]);
+				s.DataTipTemplate.DataTipRows(1).Label='State';
+				s.DataTipTemplate.DataTipRows(2).Label='Time (s)';
+				r = dataTipTextRow('Name',log.name);
+				s.DataTipTemplate.DataTipRows(end+1)=r;
+				r = dataTipTextRow('InTime',log.tnow-log.entryTime);
+				s.DataTipTemplate.DataTipRows(end+1)=r;
+				r = dataTipTextRow('Tick',log.tick);
+				s.DataTipTemplate.DataTipRows(end+1)=r;
 				legend('Enter time','Exit time','Location','southeast');
 				%axis([-inf inf 0.97 1.02]);
 				title('State Enter/Exit Times from State Machine Start');
 				ylabel('Time (seconds)');
-				set(gca,'XTick',1:length(log));
-				set(gca,'XTickLabel',names);
+				set(gca,'XTick',1:length(log.name));
+				set(gca,'XTickLabel',log.name);
 				try set(gca,'XTickLabelRotation',30); end
 				box on; grid on; axis tight;
-				if isfield(log(1).fevalTime,'enter')
-					for i = 1:length(log)
-						int(i) = log(i).fevalTime.enter;
-						outt(i) = log(i).fevalTime.exit;
-					end
+				if isfield(log,'fevalEnter') && ~isnan(log.fevalEnter(1))
 					ax2 = nexttile;
-					plot(int,'ko','MarkerSize',12, 'MarkerFaceColor', [1 1 1]);
-					hold on
-					plot(outt,'ro','MarkerSize',12, 'MarkerFaceColor', [1 1 1])
+					s = plot(log.fevalEnter,'ko','MarkerSize',10, 'MarkerFaceColor', [1 1 1]);
+					s.DataTipTemplate.DataTipRows(1).Label='State';
+					s.DataTipTemplate.DataTipRows(2).Label='Time (ms)';
+					r = dataTipTextRow('Name',log.name);
+					try s.DataTipTemplate.DataTipRows(end+1)=r; end
+					hold on;
+					s = plot(log.fevalExit,'ro','MarkerSize',10, 'MarkerFaceColor', [1 1 1]);
+					s.DataTipTemplate.DataTipRows(1).Label='State';
+					s.DataTipTemplate.DataTipRows(2).Label='Time (ms)';
+					r = dataTipTextRow('Name',log.name);
+					try s.DataTipTemplate.DataTipRows(end+1)=r; end
+					if isfield(log,'fevalStore')
+						plot(log.fevalStore,'go','MarkerSize',10, 'MarkerFaceColor', [1 1 1]);
+					end
 					set(gca,'YScale','log');
-					set(gca,'XTick',1:length(log));
-					set(gca,'XTickLabel',names);
+					set(gca,'XTick',1:length(log.name));
+					set(gca,'XTickLabel',log.name);
 					try set(gca,'XTickLabelRotation',30); end
-					legend('Enter feval','Exit feval')
-					title('Time the enter and exit state function evals ran')
-					ylabel('Time (milliseconds)')
+					legend('Enter feval','Exit feval', 'Store');
+					title('Time the enter and exit state function evals ran');
+					ylabel('Time (milliseconds)');
 					box on; grid on; axis tight;
 					linkaxes([ax1 ax2],'x');
 				end

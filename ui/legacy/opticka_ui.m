@@ -153,7 +153,7 @@ function OKMenusMLogs_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
-	if ~isempty(isprop(o.r.stateMachine,'log')) && ~isempty(o.r.stateMachine.log)
+	if ~isempty(isprop(o.r.stateMachine,'log')) && ~isempty(o.r.stateMachine.log.n)
 		o.r.stateMachine.plotLogs(o.r.stateMachine.log);
 	else
 		warndlg('No state machine log available yet...','Opticka')

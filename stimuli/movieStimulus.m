@@ -222,7 +222,8 @@ classdef movieStimulus < baseStimulus
 			Screen('SetMovieTimeIndex', me.movie, 0); %reset movie
 			if ~isempty(me.texture) && me.texture > 0 && Screen(me.texture,'WindowKind') == -1
 				try Screen('Close',me.texture); end %#ok<*TRYNC>
-			elseif ~isempty(me.buffertex) && ~isempty(me.texture) && me.buffertex ~= me.texture && Screen(me.buffertex,'WindowKind') == -1
+			end
+			if ~isempty(me.buffertex) && me.buffertex > 0 && Screen(me.buffertex,'WindowKind') == -1
 				try Screen('Close',me.buffertex); end 
 			end
 			me.texture = []; me.buffertex = [];
@@ -257,26 +258,19 @@ classdef movieStimulus < baseStimulus
 				if me.tick == 0 || (me.delayTicks > 0 && me.tick == me.delayTicks) 
 					Screen('PlayMovie', me.movie, 1, me.loopStrategy); 
 				end
-				if me.mouseOverride && ~me.mouseValid
-					fprintf('II %i\n',me.tick);me.tick = me.tick + 1;return; 
-				elseif me.mouseOverride && me.mouseValid
-					fprintf('XX %i\n',me.tick)
-				end
 				if ~isempty(me.lockAngle); angle = me.directionOut+me.lockAngle; else; angle = me.angleOut; end
 				if me.enforceBlending; Screen('BlendFunction', me.sM.win, me.msrcMode, me.mdstMode); end
 				me.texture = Screen('GetMovieImage', me.sM.win, me.movie, me.blocking);
-				if me.texture > 0
-					if ~isempty(me.buffertex) ...
-							&& me.buffertex > 0 ...
-							&& me.buffertex ~= me.texture ...
-							%&& Screen(me.buffertex,'WindowKind') == -1
-						try Screen('Close', me.buffertex); me.buffertex=[]; end
+				if ~isempty(me.texture) && me.texture > 0
+					if ~isempty(me.buffertex) && me.buffertex > 0 ...
+					&& Screen(me.buffertex,'WindowKind') == -1
+						Screen('Close', me.buffertex);
 					end
 					Screen('DrawTexture', me.sM.win, me.texture, [], me.mvRect,...
 						angle,[],[],[],me.shader);
 					me.buffertex = me.texture; %copy new texture to buffer
 					me.texture = [];
-				elseif me.buffertex > 0
+				elseif ~isempty(me.buffertex) && me.buffertex > 0
 					Screen('DrawTexture', me.sM.win, me.buffertex, [], me.mvRect,...
 						angle,[],[],[],me.shader)
 				end
@@ -316,10 +310,13 @@ classdef movieStimulus < baseStimulus
 			me.dstRect = [];
 			me.removeTmpProperties;
 			ndrop=-1;
-			if ~isempty(me.texture) && me.texture>0 
+			if ~isempty(me.texture) && me.texture>0 ...
+					&& Screen(me.texture,'WindowKind')==-1
 				try Screen('Close',me.texture); end
 			end
-			if ~isempty(me.buffertex) && me.buffertex>0 && me.texture ~= me.buffertex
+			if ~isempty(me.buffertex) && me.buffertex>0 ...
+					&& (isempty(me.texture) || me.texture ~= me.buffertex) ...
+					&& Screen(me.buffertex,'WindowKind')==-1
 				try Screen('Close',me.buffertex); end
 			end
 			me.buffertex = []; me.texture = [];
