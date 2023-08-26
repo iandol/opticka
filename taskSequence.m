@@ -990,7 +990,9 @@ classdef taskSequence < optickaCore & dynamicprops
 		%>
 		%>
 		% ===================================================================
-		if ~me.taskInitialised;return;end
+			if ~me.taskInitialised;return;end
+			me.isTimeNow = me.isTime;
+			me.ibTimeNow = me.ibTime;
 			if length(me.isTime) == 2 %randomise isTime within a range
 				t = me.isTime;
 				me.isTimeNow = (rand * (t(2)-t(1))) + t(1);

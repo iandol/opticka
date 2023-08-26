@@ -2116,10 +2116,11 @@ classdef runExperiment < optickaCore
 			
 			%--------------first run-----------------
 			if me.task.tick == 1 
-				fprintf('START @%s\n\n',infoText(me));
+				fprintf('\n===>>> START @%s\n\n',infoText(me));
 				me.stimShown = false;
 				me.task.isBlank = true;
 				me.task.startTime = me.task.timeNow;
+				me.runLog.startTime = me.task.startTime;
 				me.task.switchTime = me.task.isTime; %first ever time is for the first trial
 				me.task.switchTick = ceil(me.task.isTime*me.screenVals.fps);
 				setStrobeValue(me,me.task.outIndex(me.task.totalRuns));
@@ -2208,7 +2209,11 @@ classdef runExperiment < optickaCore
 					me.task.isBlank = false;
 					updateTask(me.task);
 					if me.task.totalRuns <= me.task.nRuns
-						setStrobeValue(me,me.task.outIndex(me.task.totalRuns)); %get the strobe word ready
+						if me.task.nVars > 0
+							setStrobeValue(me,me.task.outIndex(me.task.totalRuns)); %get the strobe word ready
+						else
+							setStrobeValue(me,me.task.outIndex(1)); %get the strobe word ready
+						end
 					end
 				end
 			end
@@ -2245,9 +2250,14 @@ classdef runExperiment < optickaCore
 				name = sprintf('%s Blank:%i',name,me.task.isBlank);
 			end
 			if isempty(me.task.outValues)
-				t = sprintf('%s | Time: %3.3f (%i) | isFix: %i | isExclusion: %i | isFixInit: %i',...
-					name,(log.lastvbl-log.startTime), log.tick-1,...
-					me.eyeTracker.isFix,me.eyeTracker.isExclusion,me.eyeTracker.isInitFail);
+				if me.isRunTask
+					t = sprintf('%s | Time: %3.3f (%i) | isFix: %i | isExclusion: %i | isFixInit: %i',...
+						name,(log.lastvbl-log.startTime), log.tick-1,...
+						me.eyeTracker.isFix,me.eyeTracker.isExclusion,me.eyeTracker.isInitFail);
+				else
+					t = sprintf('%s | Time: %3.3f (%i)',...
+						name,(log.lastvbl-log.startTime), log.tick-1);
+				end
 				return
 			else
 				var = me.task.outIndex(me.task.totalRuns);
