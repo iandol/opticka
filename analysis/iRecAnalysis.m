@@ -155,6 +155,14 @@ classdef iRecAnalysis < analysisCore
 				if ischar(f); me.file = f; me.dir = p; end
 			end
 			me.ppd; %cache our initial ppd_
+			x = which('defaultParameters.m');
+			if isempty(x)
+				warning('Please add NystromHolmqvist2010 to the path for full functionality!')
+			else
+				p = fileparts(x);
+				addpath(genpath([p filesep 'function_library']));
+				addpath(genpath([p filesep 'post-process']));
+			end
 		end
 
 		% ===================================================================
@@ -1574,7 +1582,7 @@ classdef iRecAnalysis < analysisCore
 			me.ETparams = ETparams;
 
 			for ii = 1:length(me.trials)
-
+				fprintf('--->>> Full saccadic analysis of Trial %i:\n',ii);
 				x = (me.trials(ii).gx * me.ppd) + ETparams.screen.dataCenter(1);
 				y = (me.trials(ii).gy * me.ppd) + ETparams.screen.dataCenter(2);
 				p = me.trials(ii).pa;

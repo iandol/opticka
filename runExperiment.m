@@ -109,10 +109,8 @@ classdef runExperiment < optickaCore
 		%> which port is the arduino on?
 		arduinoPort char			= ''
 		%> show a white square in the top-right corner to trigger a photodiode
-		%> attached to screen. This is only displayed when the stimulus is
-		%> shown, not during the blank and can therefore be used for timing
-		%> validation. For stateMachine tasks you need to pass in the drawing
-		%> command for this to take effect.
+		%> attached to screen for MOC task. For stateMachine tasks you need 
+		%> to pass in the drawing command for this to take effect.
 		photoDiode logical			= false
 		%> turn diary on for runTask, saved to the same folder as the data
 		diaryMode logical			= false
@@ -191,8 +189,6 @@ classdef runExperiment < optickaCore
 		doFlip logical				= true
 		%> do we flip the eyetracker window? 0=no 1=yes 2=yes+clear
 		doTrackerFlip double		= 0;
-		%> fInc for managing keyboard sensitivity
-		fInc						= 6
 		%> is it MOC run (false) or stateMachine runTask (true)?
 		isRunTask logical			= true
 		%> are we using taskSequeence or not?
@@ -309,7 +305,7 @@ classdef runExperiment < optickaCore
 				me.isRunTask		= false;
 
 				%================================get pre-run comments for this data collection
-				if tS.askForComments
+				if tS.askForComments && ~me.debug
 					comment = inputdlg({'CHECK Recording system!!! Initial Comment for this Run?'},['Run Comment for ' me.name]);
 					if ~isempty(comment)
 						comment = comment{1};
@@ -326,7 +322,6 @@ classdef runExperiment < optickaCore
 				
 				%================================open the PTB screen and setup stimuli
 				me.screenVals		= s.open(me.debug,tL);
-				me.fInc				= round(0.4 / (1 / me.screenVals.ifi)); %roughly <0.4s key press
 				stims.verbose		= me.verbose;
 				task.fps			= me.screenVals.fps;
 				setup(stims, s); %run setup() for each stimulus
@@ -447,7 +442,7 @@ classdef runExperiment < optickaCore
 					end
 
 					%================= UPDATE TASK ===================%
-					updateMOCTask(me); %update our task structure
+					updateMOCTask(me,tL.lastvbl); %update our task structure
 					
 					%=======Display++ or DataPixx: I/O send strobe
 					% command for this screen flip needs to be sent
@@ -482,7 +477,8 @@ classdef runExperiment < optickaCore
 					
 					%===================Logging=======================%
 					if task.tick == 1 && ~me.benchmark
-						tL.startTime=tL.vbl(1); %respecify this with actual stimulus vbl
+						tL.startTime	= tL.t.vbl(1); %respecify this with actual stimulus vbl
+						task.startTime	= tL.startTime; %respecify this with actual stimulus vbl
 					end
 					if me.logFrames
 						if ~task.isBlank
@@ -507,7 +503,7 @@ classdef runExperiment < optickaCore
 				%==================================================================%
 				
 				ListenChar(0);
-				s.drawBackground;
+				drawBackground(s);
 				vbl=Screen('Flip', s.win);
 				tL.screenLog.afterDisplay=vbl;
 				
@@ -554,7 +550,7 @@ classdef runExperiment < optickaCore
 				removeEmptyValues(tL);
 				me.tS = tS; %store our tS structure for backup
 
-				if tS.askForComments
+				if tS.askForComments && ~me.debug
 					comment = inputdlg('Final Comment for this Run?','Run Comment');
 					if ~isempty(comment)
 						comment = comment{1};
@@ -1034,7 +1030,7 @@ classdef runExperiment < optickaCore
 						end
 
 						% %------ Debug: if we missed a frame record it somewhere -----%
-						if me.debug && thisN > 0 && tL.miss(thisN) > 0 && tL.stimTime(thisN) > 0
+						if me.debug && thisN > 0 && length(tL.miss)==thisN && length(tL.stimTime)==thisN && tL.miss(thisN) > 0 && tL.stimTime(thisN) > 0
 							addMessage(tL,[],[],'We missed a frame during stimulus'); 
 						end
 						
@@ -1255,8 +1251,6 @@ classdef runExperiment < optickaCore
 			try me.ptb=Screen('version'); end
 		
 			if ~isempty(me.screen); me.screenVals = me.screen.screenVals; end
-
-			try me.fInc = round(0.3 / (1/me.screenVals.ifi)); end
 			
 			me.stopTask = false;
 			
@@ -1820,7 +1814,6 @@ classdef runExperiment < optickaCore
 		%> @param
 		% ===================================================================
 			me.screenVals = me.screen.prepareScreen();
-			me.fInc = round(0.3 / (1 / me.screenVals.ifi)); %roughly <0.3s key press
 		end
 
 
@@ -2105,30 +2098,31 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
-		function updateMOCTask(me)
+		function updateMOCTask(me, thisTime)
 		%> @fn updateMOCTask
 		%> @brief updateMOCTask
 		%> Updates the stimulus run state; update the stimulus values for the
 		%> current trial and increments the switchTime and switchTick timer
 		% ===================================================================
-			me.task.timeNow = GetSecs;
+			if ~exist('time','var'); thisTime = GetSecs; end
+			me.task.timeNow = thisTime;
 			me.sendStrobe = false;
 			
 			%--------------first run-----------------
-			if me.task.tick == 1 
-				fprintf('\n===>>> START @%s\n\n',infoText(me));
-				me.stimShown = false;
-				me.task.isBlank = true;
-				me.task.startTime = me.task.timeNow;
-				me.runLog.startTime = me.task.startTime;
-				me.task.switchTime = me.task.isTime; %first ever time is for the first trial
-				me.task.switchTick = ceil(me.task.isTime*me.screenVals.fps);
-				setStrobeValue(me,me.task.outIndex(me.task.totalRuns));
+			if me.task.tick == 1
+				fprintf('\n===>>> START @%s\n\n', infoText(me));
+				me.stimShown		= false;
+				me.task.isBlank		= true;
+				me.task.startTime	= me.task.timeNow;
+				me.runLog.startTime	= me.task.startTime;
+				me.task.switchTime	= me.task.isTime; %first ever time is for the first trial
+				me.task.switchTick	= ceil(me.task.isTime*me.screenVals.fps);
+				setStrobeValue(me, me.task.outIndex(1));
 			end
 			
 			%-------------------------------------------------------------------
 			if me.task.realTime %we measure real time
-				maintain = me.task.timeNow <= (me.task.startTime+me.task.switchTime);
+				maintain = me.task.timeNow <= (me.task.startTime + me.task.switchTime);
 			else %we measure frames, prone to error build-up
 				maintain = me.task.tick < me.task.switchTick;
 			end
@@ -2141,17 +2135,13 @@ classdef runExperiment < optickaCore
 					% only in the next loop, we have to send the strobe one loop after we set switched
 					% to true
 					if me.task.switched == true
-						me.sendStrobe = true;
-						me.stimShown = true;
+						me.sendStrobe	= true;
+						me.stimShown	= true;
 					end
-					%if me.verbose==true;tt=tic; end
-					%stims = me.stimuli;
- 					%parfor i = 1:me.stimuli.n %parfor appears faster here for 6 stimuli at least
- 					%	stims{i}.animate;
- 					%end
 					me.stimuli.animate;
-					%if me.verbose==true;fprintf('=-> updateMOCTask() Stimuli animation: %g ms\n',toc(tt)*1e3); end
+
 				else %this is a blank stimulus
+
 					me.task.blankTick = me.task.blankTick + 1;
 					%this causes the update of the stimuli, which may take more than one refresh, to
 					%occur during the second blank flip, thus we don't lose any timing.
@@ -2180,10 +2170,10 @@ classdef runExperiment < optickaCore
 					end
 					%this dispatches each stimulus update on a new blank frame to
 					%reduce overhead.
-					if me.task.blankTick > 2 && me.task.blankTick <= me.stimuli.n + 2
-						%if me.verbose==true;tic; end
+					if ~isempty(me.task.outValues) && me.task.blankTick > 2 && me.task.blankTick <= me.stimuli.n + 2
+						%tt=tic;
 						update(me.stimuli, me.task.blankTick-2);
-						%if me.verbose==true;fprintf('=-> updateMOCTask() Blank-frame %i: stimulus %i update = %g ms\n',me.task.blankTick,me.task.blankTick-2,toc*1000); end
+						%fprintf('=-> updateMOCTask() Blank-frame %i: stimulus %i update = %g ms\n',me.task.blankTick,me.task.blankTick-2,toc(tt)*1000);
 					end
 					
 				end
@@ -2196,26 +2186,25 @@ classdef runExperiment < optickaCore
 					me.task.isBlank = true;
 					me.task.blankTick = 0;
 					if me.task.thisRun == me.task.minTrials %are we within a trial block or not? we add the required time to our switch timer
-						me.task.switchTime=me.task.switchTime+me.task.ibTimeNow;
-						me.task.switchTick=me.task.switchTick+(ceil(me.task.ibTimeNow*me.screenVals.fps));
+						me.task.switchTime = me.task.switchTime+me.task.ibTimeNow;
+						me.task.switchTick = me.task.switchTick+(ceil(me.task.ibTimeNow*me.screenVals.fps));
 					else
-						me.task.switchTime=me.task.switchTime+me.task.isTimeNow;
-						me.task.switchTick=me.task.switchTick+(ceil(me.task.isTimeNow*me.screenVals.fps));
+						me.task.switchTime = me.task.switchTime+me.task.isTimeNow;
+						me.task.switchTick = me.task.switchTick+(ceil(me.task.isTimeNow*me.screenVals.fps));
 					end
 					setStrobeValue(me,me.strobe.stimOFFValue);%get the strobe word to signify stimulus OFF ready
 				else %we have to show the new run on the next flip
 					me.task.switchTime=me.task.switchTime+me.task.trialTime; %update our timer
 					me.task.switchTick=me.task.switchTick+(ceil(me.task.trialTime*me.screenVals.fps)); %update our timer
 					me.task.isBlank = false;
-					updateTask(me.task);
-					if me.task.totalRuns <= me.task.nRuns
-						if me.task.nVars > 0
-							setStrobeValue(me,me.task.outIndex(me.task.totalRuns)); %get the strobe word ready
-						else
-							setStrobeValue(me,me.task.outIndex(1)); %get the strobe word ready
-						end
+					updateTask(me.task,NaN,me.task.timeNow,'none');
+					if me.task.nVars > 0 && me.task.totalRuns <= me.task.nRuns
+						setStrobeValue(me,me.task.outIndex(me.task.totalRuns)); %get the strobe word ready
+					else
+						setStrobeValue(me,me.task.outIndex(1)); %get the strobe word ready
 					end
 				end
+				fprintf('!!!===>>> %i@%.2f B:%i T:%.2f TK:%i \n',me.task.tick,me.task.timeNow-me.task.startTime,me.task.isBlank,me.task.switchTime,me.task.switchTick);
 			end
 		end
 		
@@ -2251,11 +2240,11 @@ classdef runExperiment < optickaCore
 			end
 			if isempty(me.task.outValues)
 				if me.isRunTask
-					t = sprintf('%s | Time: %3.3f (%i) | isFix: %i | isExclusion: %i | isFixInit: %i',...
+					t = sprintf('%s | Time: %.3f (%i) | isFix: %i | isExclusion: %i | isFixInit: %i',...
 						name,(log.lastvbl-log.startTime), log.tick-1,...
 						me.eyeTracker.isFix,me.eyeTracker.isExclusion,me.eyeTracker.isInitFail);
 				else
-					t = sprintf('%s | Time: %3.3f (%i)',...
+					t = sprintf('%s | Time: %.3f (%i)',...
 						name,(log.lastvbl-log.startTime), log.tick-1);
 				end
 				return
@@ -2263,13 +2252,13 @@ classdef runExperiment < optickaCore
 				var = me.task.outIndex(me.task.totalRuns);
 			end
 			if me.logFrames == true && log.tick > 1
-				t=sprintf('%s | B:%i R:%i [%i/%i] | V: %i | Time: %3.3f (%i) %s',...
+				t=sprintf('%s | B:%i R:%i [%i/%i] | V: %i | Time: %.3f (%i) %s',...
 					name,me.task.thisBlock, me.task.thisRun, me.task.totalRuns,...
 					me.task.nRuns, var, ...
 					(log.lastvbl-log.startTime), log.tick-1,...
 					etinfo);
 			else
-				t=sprintf('%s | B:%i R:%i [%i/%i] | V: %i | Time: %3.3f (%i) %s',...
+				t=sprintf('%s | B:%i R:%i [%i/%i] | V: %i | Time: %.3f (%i) %s',...
 					name,me.task.thisBlock,me.task.thisRun,me.task.totalRuns,...
 					me.task.nRuns, var, ...
 					(log.lastvbl-log.startTime), log.tick,...
@@ -2280,7 +2269,7 @@ classdef runExperiment < optickaCore
 					t=[t sprintf(' > %s: %s',me.task.nVar(i).name,...
 						num2str(me.task.outVars{me.task.thisBlock,i}{me.task.thisRun},'%.2f '))];
 				else
-					t=[t sprintf(' > %s: %3.3f',me.task.nVar(i).name,...
+					t=[t sprintf(' > %s: %.3f',me.task.nVar(i).name,...
 						me.task.outVars{me.task.thisBlock,i}(me.task.thisRun))];
 				end
 			end
