@@ -707,7 +707,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		%>
 		% ===================================================================
 			try
-				try me.udp.write(int32(intmin('int32'))); end
+				try me.udp.write(int32(intmax('int32'))); end
 				try stopRecording(me); end
 				try me.tcp.close; end
 				try me.udp.close; end
@@ -1019,7 +1019,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		%>
 		% ===================================================================
 		function syncTime(me)
-			trackerMessage(me,int32(-1000));
+			trackerMessage(me,int32(-1499));
 		end
 		
 		
