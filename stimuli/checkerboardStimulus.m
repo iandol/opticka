@@ -106,6 +106,8 @@ classdef checkerboardStimulus < baseStimulus
 			me.parseArgs(args, me.allowedProperties);
 			
 			me.isRect = true; %uses a rect for drawing
+
+			me.sfCache = me.sf;
 			
 			me.ignoreProperties = [me.ignorePropertiesBase me.ignoreProperties];
 			me.salutation('constructor method','Stimulus initialisation complete');
@@ -211,10 +213,12 @@ classdef checkerboardStimulus < baseStimulus
 				me.res(1), me.res(2), me.maskValue);
 			
 			me.inSetup = false; me.isSetup = true;
+			calculateScale(me);
 			computePosition(me);
 			setRect(me);
 
 			function set_sfOut(me,value)
+				if value <= 0; value = 0.05; end
 				me.sfCache = value;
 				me.sfOut = me.sfCache;
 				%fprintf('SET SFOut: %.2f | in: %.2f | scale: %.2f\n', me.sfOut, me.sfCache, me.scale);
@@ -260,6 +264,7 @@ classdef checkerboardStimulus < baseStimulus
 			end
 			glUniform1f(glGetUniformLocation(me.shader, 'radius'), me.maskValue);
 			glUseProgram(0);
+			calculateScale(me);
 			computePosition(me);
 			setRect(me);
 		end
@@ -321,6 +326,7 @@ classdef checkerboardStimulus < baseStimulus
 			if me.mask > 0
 				me.mask = true;
 			end
+			me.sfCache = me.sf;
 			me.maskValue = [];
 			removeTmpProperties(me);
 		end
@@ -330,11 +336,10 @@ classdef checkerboardStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function set.sf(me,value)
-			if value <= 0
-				value = 0.05;
-			end
+			if value <= 0; value = 0.05; end
+			me.sfCache = value;
 			me.sf = value;
-			me.salutation(['set sf: ' num2str(value)],'Custom set method')
+			me.salutation(['set sf: ' num2str(me.sf)],'Custom set method')
 		end
 		
 		% ===================================================================
@@ -433,7 +438,7 @@ classdef checkerboardStimulus < baseStimulus
 		function calculateScale(me,~,~)
 			me.scale = me.sizeOut/(me.size*me.ppd);
 			me.maskValue = me.sizeOut / 2;
-			fprintf('Calculate SFOut: %.2f | in: %.2f | scale: %.2f | size: %.2f\n', me.sfOut, me.sfCache, me.scale, me.sizeOut);
+			if me.verbose;fprintf('Calculate SFOut: %.2f | in: %.2f | scale: %.2f | size: %.2f\n', me.sfOut, me.sfCache, me.scale, me.sizeOut);end
 		end
 		
 		% ===================================================================
