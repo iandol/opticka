@@ -468,7 +468,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 						Screen('Flip',s.win,0,2,2);
 						notFinished = nFrames < benchmarkFrames;
 					else
-						vbl(nFrames) = flip(s, lastvbl + sv.halfisi); %flip the buffer
+						vbl(nFrames) = flip(s, lastvbl + sv.halfifi); %flip the buffer
 						lastvbl = vbl(nFrames);
 						% the calculation needs to take into account the
 						% first and last frame times, so we subtract ifi*2
