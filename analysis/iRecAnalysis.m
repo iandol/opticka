@@ -48,6 +48,10 @@ classdef iRecAnalysis < analysisCore
 		pixelsPerCm double							= 32
 		%> screen distance
 		distance double								= 57.3
+		%> screen resolution
+		resolution									= [ 1920 1080 ]
+		%> For full analysis
+		ETparams
 	end
 
 	properties (Hidden = true)
@@ -121,7 +125,6 @@ classdef iRecAnalysis < analysisCore
 	end
 
 	properties (SetAccess = private, GetAccess = private)
-		ETparams
 		%> pixels per degree calculated from pixelsPerCm and distance (cache)
 		ppd_
 		%> allowed properties passed to object upon construction
@@ -150,10 +153,6 @@ classdef iRecAnalysis < analysisCore
 				me.measureRange = [-0.5 1.0];
 			end
 			if nargin>0; me.parseArgs(varargin, me.allowedProperties); end
-			if isempty(me.file) || isempty(me.dir)
-				[f,p]=uigetfile('*.csv','Load Main CSV File:');
-				if ischar(f); me.file = f; me.dir = p; end
-			end
 			me.ppd; %cache our initial ppd_
 			x = which('defaultParameters.m');
 			if isempty(x)
@@ -162,6 +161,30 @@ classdef iRecAnalysis < analysisCore
 				p = fileparts(x);
 				addpath(genpath([p filesep 'function_library']));
 				addpath(genpath([p filesep 'post-process']));
+			end
+			if isempty(me.ETparams)
+				me.ETparams = defaultParameters;
+				% settings for code specific to Niehorster, Siu & Li (2015)
+				me.ETparams.extraCut    = [0 0];        % extra ms of data to cut before and after saccade.
+				me.ETparams.qInterpMissingPos   = true; % interpolate using straight lines to replace missing position signals?
+				% settings for the saccade cutting (see cutSaccades.m for documentation)
+				me.ETparams.cutPosTraceMode     = 1;
+				me.ETparams.cutVelTraceMode     = 1;
+				me.ETparams.cutSaccadeSkipWindow= 1;  % don't cut during first x seconds
+				me.ETparams.samplingFreq = me.sampleRate;
+				me.ETparams.screen.resolution              = [ me.resolution(1) me.resolution(2) ];
+				me.ETparams.screen.size                    = [ me.resolution(1)/me.pixelsPerCm/100 me.resolution(2)/me.pixelsPerCm/100 ];
+				me.ETparams.screen.viewingDist             = me.distance/100;
+				me.ETparams.screen.dataCenter              = [ me.resolution(1)/2 me.resolution(2)/2 ];  % center of screen has these coordinates in data
+				me.ETparams.screen.subjectStraightAhead    = [ me.resolution(1)/2 me.resolution(2)/2 ];  % Specify the screen coordinate that is straight ahead of the subject. Just specify the middle of the screen unless its important to you to get this very accurate!
+				% change some defaults as needed for this analysis:
+				me.ETparams.data.alsoStoreComponentDerivs  = true;
+				me.ETparams.data.detrendWithMedianFilter   = true;
+				me.ETparams.data.applySaccadeTemplate      = true;
+				me.ETparams.data.minDur                    = 100;
+				me.ETparams.fixation.doClassify            = true;
+				me.ETparams.blink.replaceWithInterp        = true;
+				me.ETparams.blink.replaceVelWithNan        = true;
 			end
 		end
 
@@ -181,12 +204,13 @@ classdef iRecAnalysis < analysisCore
 				warning('No CSV file specified...');
 				return
 			end
-			if ~isempty(me.raw) && force == true; return; end
+			if ~isempty(me.raw) && force == false; disp('Data loaded previously, skipping loading...');return; end
 			me.raw = []; me.markers = [];
 			tmain = tic;
 			oldpath = pwd;
+			[p,f,e] = fileparts(me.file);
+            if ~isempty(p); me.dir = p; end
 			cd(me.dir);
-			[~,f,e] = fileparts(me.file);
 			me.raw = readtable([f e],'ReadVariableNames',true);
 			me.markers = readtable([f 'net' e],'ReadVariableNames',true);
 			
@@ -1550,36 +1574,34 @@ classdef iRecAnalysis < analysisCore
 		function computeFullSaccades(me)
 			assert(exist('runNH2010Classification.m'),'Please add NystromHolmqvist2010 to path!');
 			% load parameters for event classifier
-			me.distance = 57.3;
-			me.pixelsPerCm = 36.4;
-			ETparams = defaultParameters;
-			ETparams.samplingFreq = me.sampleRate;
-			ETparams.screen.resolution              = [ 1920 1080] ;
-			ETparams.screen.size                    = [ 0.527 0.296 ];
-			ETparams.screen.viewingDist             = me.distance/100;
-			ETparams.screen.dataCenter              = [ 960 540 ];  % center of screen has these coordinates in data
-			ETparams.screen.subjectStraightAhead    = [ 960 540 ];  % Specify the screen coordinate that is straight ahead of the subject. Just specify the middle of the screen unless its important to you to get this very accurate!
-			% change some defaults as needed for this analysis:
-			ETparams.data.alsoStoreComponentDerivs  = true;
-			ETparams.data.detrendWithMedianFilter   = true;
-			ETparams.data.applySaccadeTemplate      = true;
-			ETparams.data.minDur                    = 100;
-			ETparams.fixation.doClassify            = true;
-			ETparams.blink.replaceWithInterp        = true;
-			ETparams.blink.replaceVelWithNan        = true;
+			if isempty(me.ETparams)
+				me.ETparams = defaultParameters;
+				% settings for code specific to Niehorster, Siu & Li (2015)
+				me.ETparams.extraCut    = [0 0];                       % extra ms of data to cut before and after saccade.
+				me.ETparams.qInterpMissingPos   = true;                 % interpolate using straight lines to replace missing position signals?
+				
+				% settings for the saccade cutting (see cutSaccades.m for documentation)
+				me.ETparams.cutPosTraceMode     = 1;
+				me.ETparams.cutVelTraceMode     = 1;
+				me.ETparams.cutSaccadeSkipWindow= 1;    % don't cut during first x seconds
+				me.ETparams.screen.resolution              = [ me.resolution(1) me.resolution(2) ];
+				me.ETparams.screen.size                    = [ me.resolution(1)/me.pixelsPerCm/100 me.resolution(2)/me.pixelsPerCm/100 ];
+				me.ETparams.screen.viewingDist             = me.distance/100;
+				me.ETparams.screen.dataCenter              = [ me.resolution(1)/2 me.resolution(2)/2 ];  % center of screen has these coordinates in data
+				me.ETparams.screen.subjectStraightAhead    = [ me.resolution(1)/2 me.resolution(2)/2 ];  % Specify the screen coordinate that is straight ahead of the subject. Just specify the middle of the screen unless its important to you to get this very accurate!
+				% change some defaults as needed for this analysis:
+				me.ETparams.data.alsoStoreComponentDerivs  = true;
+				me.ETparams.data.detrendWithMedianFilter   = true;
+				me.ETparams.data.applySaccadeTemplate      = true;
+				me.ETparams.data.minDur                    = 100;
+				me.ETparams.fixation.doClassify            = true;
+				me.ETparams.blink.replaceWithInterp        = true;
+				me.ETparams.blink.replaceVelWithNan        = true;
+			end
+			me.ETparams.samplingFreq = me.sampleRate;
 			
-			% settings for code specific to Niehorster, Siu & Li (2015)
-			extraCut    = [0 0];                       % extra ms of data to cut before and after saccade.
-			qInterpMissingPos   = true;                 % interpolate using straight lines to replace missing position signals?
-			
-			% settings for the saccade cutting (see cutSaccades.m for documentation)
-			cutPosTraceMode     = 1;
-			cutVelTraceMode     = 1;
-			cutSaccadeSkipWindow= 1;    % don't cut during first x seconds
-
 			% process params
-			ETparams = prepareParameters(ETparams);
-			me.ETparams = ETparams;
+			ETparams = prepareParameters(me.ETparams);
 
 			for ii = 1:length(me.trials)
 				fprintf('--->>> Full saccadic analysis of Trial %i:\n',ii);
@@ -1588,11 +1610,15 @@ classdef iRecAnalysis < analysisCore
 				p = me.trials(ii).pa;
 				t = me.trials(ii).times * 1e3;
 
-				data = runNH2010Classification(x,y,p,ETparams,t);
-				% replace missing data by linearly interpolating position and velocity
-    			% between start and end of each missing interval (so, creating a ramp
-    			% between start and end position/velocity).
-    			data = replaceMissing(data,qInterpMissingPos);
+				if length(x) < me.ETparams.data.minDur
+					data = struct([]);
+				else
+					data = runNH2010Classification(x,y,p,ETparams,t);
+					% replace missing data by linearly interpolating position and velocity
+    				% between start and end of each missing interval (so, creating a ramp
+    				% between start and end position/velocity).
+    				data = replaceMissing(data,ETparams.qInterpMissingPos);
+				end
     			
     			% desaccade velocity and/or position
     			%data = cutSaccades(data,ETparams,cutPosTraceMode,cutVelTraceMode,extraCut,cutSaccadeSkipWindow);
