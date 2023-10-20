@@ -50,9 +50,21 @@ classdef iRecAnalysis < analysisCore
 		distance double								= 57.3
 		%> screen resolution
 		resolution									= [ 1920 1080 ]
-		%> For full analysis
+		%> For Dee's analysis edit these settings
 		ETparams
+		%> Is measure range relative to start and end markers or absolute
+		%> to start marker?
+		relativeMarkers								= false
 	end
+
+	properties
+		SYNCTIME									= -1499
+		END_FIX										= -1500
+		END_RT										= -1501
+		END_EXP										= -500
+	end
+
+	
 
 	properties (Hidden = true)
 		%TRIAL_RESULT message values, optional but tags trials with these identifiers.
@@ -1180,6 +1192,7 @@ classdef iRecAnalysis < analysisCore
 				end
 				figure(handle);
 				data = me.trials(trial).data;
+				me.ETparams.screen.rect = struct('deg', [-5 -5 5 5]);
 				plotClassification(data,'deg','vel',me.ETparams.samplingFreq,...
 					me.ETparams.glissade.searchWindow,me.ETparams.screen.rect,...
 					'title','Test','showSacInScan',true); 
@@ -1331,6 +1344,11 @@ classdef iRecAnalysis < analysisCore
 					if m == intmin('int32')
 						continue;
 					elseif m > me.trialStartMessageName
+						if isTrial == true
+							tri = tri - 1;
+							isTrial = false;
+							continue;
+						end
 						tri = tri + 1;
 						isTrial = true;
 						trial = trialDef;
@@ -1341,27 +1359,31 @@ classdef iRecAnalysis < analysisCore
 						trial.rtstarttime = trial.sttime;
 						trial.synctime = trial.sttime;
 						trial.startsampletime = trial.sttime + me.measureRange(1);
-					elseif m == -1499 % SYNCTIME
+					elseif m == me.SYNCTIME
 						if isTrial
 							trial.synctime = me.markers.time_cpu(ii);
 						end
-					elseif m == -1500 % END_FIX
+					elseif m == me.END_FIX
 						if isTrial
 							trial.endfix = me.markers.time_cpu(ii);
 						end
-					elseif m == -1501 % END_RT
+					elseif m == me.END_RT
 						if isTrial
 							trial.rtendtime = me.markers.time_cpu(ii);
 						end
-					elseif m == -500 %END EXP
+					elseif m == me.END_EXP
 						break;
 					elseif m == me.trialEndMessage
 						trial.entime = me.markers.time_cpu(ii);
 						if isnan(trial.rtendtime);trial.rtendtime = trial.entime;end
-						if me.measureRange(2) <= 0
-							trial.endsampletime = trial.entime;
+						if me.relativeMarkers == true
+							trial.endsampletime = trial.entime + me.measureRange(2);
 						else
-							trial.endsampletime = trial.synctime + me.measureRange(2);
+							if me.measureRange(2) <= 0
+								trial.endsampletime = trial.entime;
+							else
+								trial.endsampletime = trial.synctime + me.measureRange(2);
+							end
 						end
 						idx = find(me.raw.time >= trial.startsampletime & me.raw.time <= trial.endsampletime);
 						trial.times = me.raw.time(idx) - trial.synctime;
