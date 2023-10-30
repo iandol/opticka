@@ -87,12 +87,15 @@ classdef timeLogger < optickaCore
 		% ===================================================================
 		function removeEmptyValues(me)
 			if isprop(me,'t')
+				if isempty(me.t.vbl);return;end
 				if me.tick > 1
-					me.t.vbl = me.t.vbl(1:me.tick-1);
-					me.t.show = me.t.show(1:me.tick-1);
-					me.t.flip = me.t.flip(1:me.tick-1);
-					me.t.miss = me.t.miss(1:me.tick-1);
-					me.t.stimTime = me.t.stimTime(1:me.tick-1);
+					try
+						me.t.vbl = me.t.vbl(1:me.tick-1);
+						me.t.show = me.t.show(1:me.tick-1);
+						me.t.flip = me.t.flip(1:me.tick-1);
+						me.t.miss = me.t.miss(1:me.tick-1);
+						me.t.stimTime = me.t.stimTime(1:me.tick-1);
+					end
 				end
 				idx=min([length(me.t.vbl) length(me.t.flip) length(me.t.show) length(me.t.stimTime)]);
 				try %#ok<*TRYNC> 

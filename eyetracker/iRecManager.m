@@ -45,10 +45,10 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 						'udpport', 35000,... % used to send messages
 						'tcpport', 35001,... % used to send commands
 						'stimulus','animated',... % calibration stimulus can be animated, movie
-						'movie', [],... % if movie pass a movieStimulus 
+						'size', 2,... % size of calibration target in degrees
+						'movie', [],... % if movie optionally pass a filename 
 						'calPositions', [-12 0; 0 -12; 0 0; 0 12; 12 0],...
 						'valPositions', [-12 0; 0 -12; 0 0; 0 12; 12 0],...
-						'size', 2,... % size of calibration cross in degrees
 						'manual', false)
 		%> WIP we can optionally drive physical LEDs for calibration, each LED
 		%> is triggered by the me.calibration.calPositions order
@@ -58,6 +58,8 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 	properties (Hidden = true)
 		% for led calibration, which arduino pin to start from
 		startPin		= 3
+		% stimulus used for calibration
+		calStim			= []
 	end
 	
 	%--------------------PROTECTED PROPERTIES----------%
@@ -67,8 +69,6 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		sv				= []
 		%> tracker time stamp
 		systemTime		= 0
-		% stimulus used for calibration
-		calStim			= []
 		%> allowed properties passed to object upon construction
 		allowedProperties	= {'calibration', 'useLEDs'}
 	end
@@ -144,6 +144,22 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 			if ismac; me.operatorScreen.useRetina = true; end
 
 			me.smoothing.sampleRate = me.sampleRate;
+
+			if strcmp(me.calibration.stimulus,'movie')
+				if isempty(me.calStim) || ~isa(me.calStim,'movieStimulus')
+					me.calStim = movieStimulus('size',me.calibration.size,'fileName',me.calibration.movie);
+				else
+					if ~isempty(me.calStim); try me.calStim.reset; end; end
+					me.calStim = me.calibration.movie;
+					me.calStim.size = me.calibration.size;
+				end
+			elseif strcmp(me.calibration.stimulus,'animated')
+				me.calStim = fixationCrossStimulus('size',me.calibration.size,'lineWidth',me.calibration.size/8,'type','pulse');
+			else
+				if isempty(me.calStim)
+					me.calStim = fixationCrossStimulus('size',me.calibration.size,'lineWidth',me.calibration.size/8);
+				end
+			end
 			
 			if me.isDummy
 				me.salutation('Initialise', 'Running iRec in Dummy Mode', true);
@@ -226,19 +242,6 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 			if ischar(me.calibration.valPositions); me.calibration.valPositions = str2num(me.calibration.valPositions); end
 
 			fprintf('\n===>>> CALIBRATING IREC... <<<===\n');
-			
-			if strcmp(me.calibration.stimulus,'movie')
-				if isempty(me.stimulus.movie) || ~isa(me.stimulus.movie,'movieStimulus')
-					me.calStim = movieStimulus('size',me.calibration.size);
-				else
-					if ~isempty(me.calStim); try me.calStim.reset; end; end
-					me.calStim = me.movie.movie;
-					me.calStim.size = me.calibration.size;
-				end
-			else
-				if ~isempty(me.calStim); try me.calStim.reset; end; end
-				me.calStim = fixationCrossStimulus('size',me.calibration.size,'lineWidth',me.calibration.size/8,'type','pulse');
-			end
 
 			f = me.calStim;
 

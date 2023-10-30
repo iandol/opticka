@@ -382,7 +382,7 @@ classdef movieStimulus < baseStimulus
 				p = mfilename('fullpath');
 				p = fileparts(p);
 				me.fileName = [p filesep 'monkey-dance.avi'];
-				disp('---> movieStimulus: Didn''t find specified file so replacing with default movie!');
+				fprintf('---> movieStimulus: Didn''t find specified file so replacing with default movie %s\n',me.fileName);
 			end
 		end
 		
