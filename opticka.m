@@ -382,8 +382,8 @@ classdef opticka < optickaCore
 			me.r.verbose = me.gl(me.ui.OKVerbose); %set method
 			me.verbose = me.r.verbose;
 			me.r.screen.debug = me.gl(me.ui.OKDebug);
-			me.r.screen.disableSyncTests = me.gl(me.ui.OKSync);
 			me.r.debug = me.r.screen.debug;
+			me.r.screen.disableSyncTests = ~me.gl(me.ui.OKSync);
 			me.r.diaryMode = me.gl(me.ui.OKDiaryMode);
 			me.r.screen.visualDebug = me.r.screen.debug;
 			me.r.screen.backgroundColour = me.gn(me.ui.OKbackgroundColour);

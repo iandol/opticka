@@ -404,7 +404,8 @@ classdef screenManager < optickaCore
 					Screen('Preference', 'SuppressAllWarnings', 0);
 				else
 					if me.disableSyncTests
-						warning('\n---> screenManager: Sync Tests OVERRIDDEN, do not use for real experiments!!!\n');
+						warning('---> screenManager: Sync Tests OVERRIDDEN, do not use for real experiments!!!');
+						fprintf('\n---> screenManager: Sync Tests OVERRIDDEN, do not use for real experiments!!!\n');
 						Screen('Preference', 'SkipSyncTests', 2);
 					else
 						fprintf('\n---> screenManager: Normal Screen Preferences used.\n');
