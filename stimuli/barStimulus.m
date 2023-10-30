@@ -8,9 +8,9 @@ classdef barStimulus < baseStimulus
 	properties %--------------------PUBLIC PROPERTIES----------%
 		%> type of bar: 'solid','checkerboard','random','randomColour','randomN','randomBW'
 		type char               = 'solid'
-		%> width of bar
+		%> width of bar, inf = width of screen, if size is set this is overridden
 		barWidth double         = 1
-		%> length of bar
+		%> length of bar, inf = width of screen, if size is set this is overridden
 		barHeight double        = 4
 		%> contrast multiplier
 		contrast double         = 1
@@ -37,6 +37,11 @@ classdef barStimulus < baseStimulus
 		%> floatprecision defines the precision with which the texture should
 		%> be stored and processed. 0=8bit, 1=16bit, 2=32bit
 		floatPrecision          = 0
+		%> specialflags: 1=GL_TEXTURE_2D, 2=PTB filtering, 4=fast creation, 8=no mipmap,
+		%> 32=no auto-close
+		specialFlags			= 1
+		%> optimizeForDrawAngle
+		optimizeForDrawAngle	= []
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -105,19 +110,16 @@ classdef barStimulus < baseStimulus
 			me.inSetup = true; me.isSetup = false;
 			if isempty(me.isVisible); show(me); end
 			
+			if me.verbose; tt=tic; end
+
 			me.sM = sM;
 			if ~sM.isOpen; error('Screen needs to be Open!'); end
 			me.ppd=sM.ppd;
 			me.screenVals = sM.screenVals;
 			me.texture = []; %we need to reset this
 			me.baseColour = sM.backgroundColour;
-			me.screenWidth = sM.screenVals.screenWidth;
-			me.screenHeight = sM.screenVals.screenHeight;
-			
-			if me.size > 0
-				me.barHeight = me.size;
-				me.barWidth = me.size;
-			end
+			me.screenWidth = ceil(sM.screenVals.screenWidth/me.ppd);
+			me.screenHeight = ceil(sM.screenVals.screenHeight/me.ppd);
 			
 			fn = sort(properties(me));
 			for j=1:length(fn)
@@ -134,18 +136,39 @@ classdef barStimulus < baseStimulus
 			end
 			
 			addRuntimeProperties(me);
+
+			if me.size > 0
+				me.barHeightOut = me.size;
+				me.barWidthOut = me.size;
+			end
+
+			if isinf(me.barHeightOut) || isinf(me.barWidthOut)
+				me.barHeightOut = ceil(me.screenHeight);
+				me.barWidthOut = ceil(me.screenWidth);
+			end
 			
-			if me.barWidthOut > me.screenWidth; me.barWidthOut=me.screenWidth; end
-			if me.barHeightOut > me.screenHeight; me.barHeightOut=me.screenHeight; end
+			sLim = 1.2;
+
+			mx = ceil(sqrt(me.screenWidth^2 + me.screenHeight^2));
+			if me.angle == 0 || me.angle == 180 || me.angle == 360
+				if me.barWidthOut > me.screenWidth*sLim; me.barWidthOut=me.screenWidth; end
+				if me.barHeightOut > me.screenHeight*sLim; me.barWidthOut=me.screenHeight; end
+			elseif me.angle == 90 || me.angle == 270
+				if me.barWidthOut > me.screenHeight*sLim; me.barWidthOut=me.screenHeight; end
+				if me.barHeightOut > me.screenWidth*sLim; me.barWidthOut=me.screenWidth; end
+			else
+				if me.barWidthOut > me.screenWidth*sLim; me.barWidthOut=mx; end
+				if me.barHeightOut > me.screenHeight*sLim; me.barWidthOut=mx; end
+			end
 			
 			constructMatrix(me); %make our matrix
 			%Screen('MakeTexture', win, matrix [, optimizeForDrawAngle=0]
 			% [, specialFlags=0] [, floatprecision] [, textureOrientation=0] 
 			% [, textureShader=0]);
-			me.texture = Screen('MakeTexture', me.sM.win, me.matrix, 0, [], me.floatPrecision);
+			me.texture = Screen('MakeTexture', me.sM.win, me.matrix, 0, me.specialFlags, me.floatPrecision);
 			if me.verbose; fprintf('===>>>Made texture: %i kind: %i\n',me.texture,Screen(me.texture,'WindowKind')); end
 			if me.phaseReverseTime > 0
-				me.texture2 = Screen('MakeTexture', me.sM.win, me.matrix2, 0, [], me.floatPrecision);
+				me.texture2 = Screen('MakeTexture', me.sM.win, me.matrix2, 0, [], me.specialFlags, me.floatPrecision);
 				if me.verbose; fprintf('===>>>Made texture: %i kind: %i\n',me.texture2,Screen(me.texture2,'WindowKind')); end
 				me.phaseCounter = round( me.phaseReverseTime / me.sM.screenVals.ifi );
 			end
@@ -160,6 +183,8 @@ classdef barStimulus < baseStimulus
 			me.inSetup = false; me.isSetup = true;
 			computePosition(me);
 			setRect(me);
+
+			if me.verbose; fprintf('--->>> barStimulus setup took %.3f ms\n',toc(tt)*1e3); end
 
 			function set_xPositionOut(me, value)
 				me.xPositionOut = value * me.ppd;
@@ -397,10 +422,14 @@ classdef barStimulus < baseStimulus
 				alpha = me.getP('alpha');
 				contrast = me.getP('contrast');
 				scale = me.getP('scale');
-				bwpixels = round(me.barWidthOut*me.ppd);
-				blpixels = round(me.barHeightOut*me.ppd);
-				if bwpixels>me.screenWidth*3;bwpixels=me.screenWidth*3;end
-				if blpixels>me.screenHeight*3;blpixels=me.screenHeight*3;end
+				if isinf(me.barWidthOut) || isinf(me.barHeightOut)
+					bwpixels = round(me.screenWidth*me.ppd);
+					blpixels = round(me.screenHeight*me.ppd);
+				else
+					bwpixels = round(me.barWidthOut*me.ppd);
+					blpixels = round(me.barHeightOut*me.ppd);
+				end
+				
 	
 				if ~strcmpi(me.type,'checkerboard')
 					if rem(bwpixels,2);bwpixels=bwpixels+1;end
@@ -446,7 +475,7 @@ classdef barStimulus < baseStimulus
 						tmat(:,:,2)=ones(blscale,bwscale) * (colour(2) * contrast);
 						tmat(:,:,3)=ones(blscale,bwscale) * (colour(3) * contrast);
 				end
-				if ~strcmpi(me.type,'checkerboard')
+				if ~strcmpi(me.type,'checkerboard') || ~strcmpi(me.type,'solid')
 					aw=0:scale:bwpixels;
 					al=0:scale:blpixels;
 					[a,b]=meshgrid(aw,al);
@@ -488,11 +517,12 @@ classdef barStimulus < baseStimulus
 			catch ME %#ok<CTCH>
 				warning('--->>> barStimulus texture generation failed, making plain texture...')
 				%getReport(ME)
-				bwpixels = round(me.barWidthOut*me.ppd);
-				blpixels = round(me.barHeightOut*me.ppd);
-				if bwpixels>me.screenWidth*3;bwpixels=me.screenWidth*3;end
-				if blpixels>me.screenHeight*3;blpixels=me.screenHeight*3;end
-				me.matrix=ones(blpixels,bwpixels,4);
+				bwpixels = ceil(me.barWidthOut*me.ppd);
+				blpixels = ceil(me.barHeightOut*me.ppd);
+				mxp = sqrt(bwpixels^2 + blpixels^2);
+				if bwpixels>mxp;bwpixels=mxp;end
+				if blpixels>mxp;blpixels=mxp;end
+				me.matrix=ones(blpixels,bwpixels,1);
 			end
 		end
 		

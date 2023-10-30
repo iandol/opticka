@@ -9,7 +9,7 @@
 classdef imageStimulus < baseStimulus	
 	properties %--------------------PUBLIC PROPERTIES----------%
 		type char					= 'picture'
-		%> filename to load
+		%> filename to load, if it is a directory use all images within
 		fileName char				= ''
 		%> multipleImages if N > 0, then this is a number of images from 1:N, e.g.
 		%> fileName = base.jpg, multipleImages=5, then base1.jpg - base5.jpg
@@ -50,17 +50,19 @@ classdef imageStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
+		%> list of imagenames if multipleImages > 0
+		fileNames = {};
+		%> current randomly selected image
+		currentImage				= ''
 		%> scale is set by size
 		scale						= 1
 		%>
 		family						= 'texture'
 		%>
 		matrix
-		%> current randomly selected image
-		currentImage				= ''
-		%>
+		%> pixel width
 		width
-		%>
+		%> pixel height
 		height
 	end
 	
@@ -68,8 +70,6 @@ classdef imageStimulus < baseStimulus
 		typeList = {'picture'}
 		fileNameList = 'filerequestor';
 		interpMethodList = {'nearest','linear','spline','cubic'}
-		%> list of imagenames if multipleImages > 0
-		fileNames = {};
 		%> properties to ignore in the UI
 		ignorePropertiesUI={}
 	end
@@ -174,6 +174,29 @@ classdef imageStimulus < baseStimulus
 			end
 			
 		end
+
+		% ===================================================================
+		%> @brief 
+		%>
+		% ===================================================================
+		function checkFileName(me)
+			if isempty(me.fileName) || (me.multipleImages==0 &&	exist(me.fileName,'file') ~= 2 && exist(me.fileName,'file') ~= 7)%use our default
+				p = mfilename('fullpath');
+				p = fileparts(p);
+				me.fileName = [p filesep 'Bosch.jpeg'];
+				me.fileNames{1} = me.fileName;
+			elseif exist(me.fileName,'dir') == 7
+				findFiles(me);	
+			elseif me.multipleImages>1
+				[p,f,e]=fileparts(me.fileName);
+				for i = 1:me.multipleImages
+					me.fileNames{i} = [p filesep f num2str(i) e];
+					if ~exist(me.fileNames{i},'file');warning('Image %s not available!',me.fileNames{i});end
+				end
+			elseif exist(me.fileName,'file') == 2
+				me.fileNames{1} = me.fileName;
+			end
+		end
 		
 		% ===================================================================
 		%> @brief Load an image
@@ -182,15 +205,25 @@ classdef imageStimulus < baseStimulus
 		function loadImage(me,in)
 			ialpha = [];
 			if ~exist('in','var'); in = []; end
-			if ~isempty(in) && ischar(in)
+			if ~isempty(in) && ischar(in) 
+				% assume a file path
 				[me.matrix, ~, ialpha] = imread(in);
 				me.currentImage = in;
-			elseif ~isempty(in) && isnumeric(in)
+			elseif ~isempty(in) && isnumeric(in) && max(size(in))==1 && ~isempty(me.fileNames) && in <= length(me.fileNames)
+				% assume an index to fileNames
+				[me.matrix, ~, ialpha] = imread(me.fileNames{in});
+				me.currentImage = me.fileNames{in};
+			elseif ~isempty(in) && isnumeric(in) && size(in,3)==3
+				% assume a raw matrix
 				me.matrix = in;
 				me.currentImage = '';
-			elseif ~isempty(me.fileNames{1}) && exist(me.fileNames{1},'file')
-				[me.matrix, ~, ialpha] = imread(me.fileNames{1});
-				me.currentImage = me.fileNames{1};
+			elseif ~isempty(me.fileNames)
+				% try to load from fileNames
+				i = randi(length(me.fileNames));
+				if exist(me.fileNames{i},'file')
+					[me.matrix, ~, ialpha] = imread(me.fileNames{i});
+					me.currentImage = me.fileNames{i};
+				end
 			else
 				if isempty(me.sizeOut);sz=2;else;sz=me.sizeOut;end
 				me.matrix = uint8(ones(sz*me.ppd, sz*me.ppd, 3)); %white texture
@@ -223,8 +256,10 @@ classdef imageStimulus < baseStimulus
 			if isempty(me.specialFlags) && isinteger(me.matrix(1))
 				sFlags = 4; %4 is optimization for uint8 textures. 0 is default
 			end
-			me.texture = Screen('MakeTexture', me.sM.win, me.matrix, 1, sFlags, me.precision);
-			me.salutation('loadImage',['Load: ' regexprep(me.currentImage,'\\','/')]);
+			if ~isempty(me.sM) && me.sM.isOpen == true
+				me.texture = Screen('MakeTexture', me.sM.win, me.matrix, 1, sFlags, me.precision);
+				if me.verbose;me.salutation('loadImage',['Load: ' regexprep(me.currentImage,'\\','/')]);end
+			end
 		end
 
 		% ===================================================================
@@ -264,7 +299,7 @@ classdef imageStimulus < baseStimulus
 		end
 		
 		% ===================================================================
-		%> @brief Animate an structure for screenManager
+		%> @brief Animate this stimulus object
 		%>
 		% ===================================================================
 		function animate(me)
@@ -282,7 +317,7 @@ classdef imageStimulus < baseStimulus
 		end
 		
 		% ===================================================================
-		%> @brief Reset an structure for screenManager
+		%> @brief Reset this object
 		%>
 		% ===================================================================
 		function reset(me)
@@ -328,29 +363,6 @@ classdef imageStimulus < baseStimulus
 			end
 		end
 		
-		% ===================================================================
-		%> @brief 
-		%>
-		% ===================================================================
-		function checkFileName(me)
-			if isempty(me.fileName) || (me.multipleImages==0 &&	exist(me.fileName,'file') ~= 2 && exist(me.fileName,'file') ~= 7)%use our default
-				p = mfilename('fullpath');
-				p = fileparts(p);
-				me.fileName = [p filesep 'Bosch.jpeg'];
-				me.fileNames{1} = me.fileName;
-			elseif exist(me.fileName,'dir') == 7
-				findFiles(me);	
-			elseif exist(me.fileName,'file') == 2
-				me.fileNames{1} = me.fileName;
-			elseif exist(me.fileName,'file') ~= 2 && me.multipleImages>1
-				[p,f,e]=fileparts(me.fileName);
-				for i = 1:me.multipleImages
-					me.fileNames{i} = [p filesep f num2str(i) e];
-				end
-			end
-		end
-		
-		
 		
 		% ===================================================================
 		%> @brief findFiles
@@ -368,8 +380,8 @@ classdef imageStimulus < baseStimulus
 						me.fileNames{n} = [me.fileName filesep f e];
 						me.fileNames{n} = regexprep(me.fileNames{n},'\/\/','/');
 					end
-					me.multipleImages = length(me.fileNames);
 				end
+				me.multipleImages = length(me.fileNames);
 			end
 		end
 		

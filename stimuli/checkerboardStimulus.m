@@ -139,7 +139,7 @@ classdef checkerboardStimulus < baseStimulus
 			
 			me.sM = sM;
 			if ~sM.isOpen; error('Screen needs to be Open!'); end
-			me.ppd=sM.ppd;
+			me.ppd = sM.ppd;
 			me.screenVals = sM.screenVals;
 			me.texture = []; %we need to reset this
 
@@ -221,7 +221,7 @@ classdef checkerboardStimulus < baseStimulus
 				if value <= 0; value = 0.05; end
 				me.sfCache = value;
 				me.sfOut = me.sfCache;
-				%fprintf('SET SFOut: %.2f | in: %.2f | scale: %.2f | size: %.2f\n', me.sfOut, me.sfCache, me.scale, me.sizeOut);
+				%fprintf('SET SFOut: %.2f | in: %.2f | scale: %.2f\n', me.sfOut, me.sfCache, me.scale);
 			end
 			function set_tfOut(me,value)
 				me.tfOut = value;
@@ -303,11 +303,9 @@ classdef checkerboardStimulus < baseStimulus
 					me.driftPhase = me.driftPhase + me.phaseIncrement;
 					%fprintf('Drift Phase: %.2f\n',me.driftPhase);
 				end
-				if mod(me.tick,me.phaseCounter) == 0
-					tmp = me.colourOut;
-					me.colourOut = me.colour2Out;
-					me.colour2Out = tmp;
-					%me.driftPhase = me.driftPhase + me.phaseOfReverse;
+				if mod(me.tick, me.phaseCounter) == 0
+					%tmp = me.colourOut;me.colourOut = me.colour2Out;me.colour2Out = tmp;
+					me.driftPhase = me.driftPhase + me.phaseOfReverse;
 				end
 			end
 		end

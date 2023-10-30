@@ -25,7 +25,9 @@ void main() {
     vec2 pos = gl_TexCoord[0].xy;
 
     /* find our distance from center, if distance to center (aka radius of pixel) > Radius, discard this pixel: */
-    if ( distance( pos, center ) > radius ) discard;
+    if ( radius > 0.0 ) {
+    	if ( distance( pos, center ) > radius ) discard;
+    }
 
     pos.x = pos.x + phase;
 
