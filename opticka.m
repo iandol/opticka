@@ -18,7 +18,7 @@ classdef opticka < optickaCore
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> version number
-		optickaVersion char		= '2.15.13'
+		optickaVersion char		= '2.15.15'
 		%> is this a remote instance?
 		remote					= false
 	end
@@ -382,6 +382,7 @@ classdef opticka < optickaCore
 			me.r.verbose = me.gl(me.ui.OKVerbose); %set method
 			me.verbose = me.r.verbose;
 			me.r.screen.debug = me.gl(me.ui.OKDebug);
+			me.r.screen.disableSyncTests = me.gl(me.ui.OKSync);
 			me.r.debug = me.r.screen.debug;
 			me.r.diaryMode = me.gl(me.ui.OKDiaryMode);
 			me.r.screen.visualDebug = me.r.screen.debug;

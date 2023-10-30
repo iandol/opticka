@@ -398,13 +398,13 @@ classdef screenManager < optickaCore
 				if debug == true || (length(me.windowed)==1 && me.windowed ~= 0)
 					fprintf('\n---> screenManager: Skipping Sync Tests etc. - ONLY FOR DEVELOPMENT!\n');
 					Screen('Preference','SyncTestSettings', 0.002); %up to 2ms variability
-					if me.disableSyncTests;Screen('Preference', 'SkipSyncTests', 2);end
+					Screen('Preference', 'SkipSyncTests', 2);
 					Screen('Preference', 'VisualDebugLevel', 0);
 					Screen('Preference', 'Verbosity', me.verbosityLevel);
 					Screen('Preference', 'SuppressAllWarnings', 0);
 				else
 					if me.disableSyncTests
-						fprintf('\n---> screenManager: Sync Tests OVERRIDDEN, do NOT use for real experiments!!!\n');
+						warning('\n---> screenManager: Sync Tests OVERRIDDEN, do not use for real experiments!!!\n');
 						Screen('Preference', 'SkipSyncTests', 2);
 					else
 						fprintf('\n---> screenManager: Normal Screen Preferences used.\n');
