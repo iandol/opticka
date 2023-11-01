@@ -272,11 +272,12 @@ classdef checkerboardStimulus < baseStimulus
 		% ===================================================================
 		%> @brief Draw this stimulus object for display
 		%>
-		%> 
+		%> @param win -- optional [i.e. offscreen] window pointer
 		% ===================================================================
-		function draw(me)
+		function draw(me, win)
+			if ~exist('win','var'); win = me.sM.win; end
 			if me.isVisible && me.tick >= me.delayTicks && me.tick < me.offTicks
-				Screen('DrawTexture', me.sM.win, me.texture, [],me.mvRect,...
+				Screen('DrawTexture', win, me.texture, [],me.mvRect,...
 					me.angleOut, [], [], me.baseColourOut, [], me.rotateMode,...
 					[me.ppd, me.sfOut, me.contrastOut, me.driftPhase, ...
 					me.colourOut,me.colour2Out]);
