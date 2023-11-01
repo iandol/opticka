@@ -30,7 +30,7 @@ void main(void)
     /* Compute distance to center of gaze, normalized to units of gazeRadius: */
     /* We take log2 of it, because lod selects mip-level, which selects for a */
     /* 2^lod decrease in resolution: */
-    float lod = log2(distance(outpos, gazePosition) / gazeRadius);
+    float lod = log2( gazeRadius - (distance(outpos, gazePosition) / 5.0) );
 
     /* Lookup texel color in image pyramid at input texture coordinate and
      * specific mip-map level 'lod': */

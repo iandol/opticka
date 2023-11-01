@@ -32,7 +32,7 @@ end
 Screen('GetWindowInfo', windowPtr);
 
 % Load shader:
-p = [optickaRoot filesep];
+p = [optickaRoot filesep 'stimuli' filesep];
 shader = LoadGLSLProgramFromFiles({[p 'checkerboard.frag'] [p 'checkerboard.vert']}, 1);
 
 % Setup shader:

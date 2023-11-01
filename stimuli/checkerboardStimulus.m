@@ -165,7 +165,8 @@ classdef checkerboardStimulus < baseStimulus
 			else
 				me.rotateMode = [];
 			end
-			
+			me.specialFlags = mor(me.specialFlags, me.rotateMode);
+
 			if isempty(me.findprop('gratingSize'));p=me.addprop('gratingSize');p.Transient=true;end
 			me.gratingSize = round(me.ppd*me.size); %virtual support larger than initial size
 			
@@ -273,12 +274,14 @@ classdef checkerboardStimulus < baseStimulus
 		%> @brief Draw this stimulus object for display
 		%>
 		%> @param win -- optional [i.e. offscreen] window pointer
+		%> @param sf - optional special Flags override
 		% ===================================================================
-		function draw(me, win)
+		function draw(me, win, sf)
 			if ~exist('win','var'); win = me.sM.win; end
+			if ~exist('sf','var'); sf = me.specialFlags; end
 			if me.isVisible && me.tick >= me.delayTicks && me.tick < me.offTicks
 				Screen('DrawTexture', win, me.texture, [],me.mvRect,...
-					me.angleOut, [], [], me.baseColourOut, [], me.rotateMode,...
+					me.angleOut, [], [], me.baseColourOut, [], sf,...
 					[me.ppd, me.sfOut, me.contrastOut, me.driftPhase, ...
 					me.colourOut,me.colour2Out]);
 			end
