@@ -44,6 +44,8 @@ classdef checkerboardStimulus < baseStimulus
 		phaseOfReverse double	= 180
 		%> aspect ratio of the grating
 		aspectRatio double		= 1;
+		%> special flags passed to drawing functions
+		specialFlags			= []
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -219,7 +221,7 @@ classdef checkerboardStimulus < baseStimulus
 			setRect(me);
 
 			function set_sfOut(me,value)
-				if value <= 0; value = 0.05; end
+				if value <= 0; value = 0.01; end
 				me.sfCache = value;
 				me.sfOut = me.sfCache;
 				%fprintf('SET SFOut: %.2f | in: %.2f | scale: %.2f\n', me.sfOut, me.sfCache, me.scale);
@@ -283,7 +285,7 @@ classdef checkerboardStimulus < baseStimulus
 				Screen('DrawTexture', win, me.texture, [],me.mvRect,...
 					me.angleOut, [], [], me.baseColourOut, [], sf,...
 					[me.ppd, me.sfOut, me.contrastOut, me.driftPhase, ...
-					me.colourOut,me.colour2Out]);
+					me.colourOut, me.colour2Out]);
 			end
 			me.tick = me.tick + 1;
 		end

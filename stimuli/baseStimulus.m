@@ -76,8 +76,6 @@ classdef baseStimulus < optickaCore & dynamicprops
 		yFinal double			= []
 		%> current screen rectangle position [LEFT TOP RIGHT BOTTOM]
 		mvRect double			= []
-		%> special flags passed to drawing functions
-		specialFlags			= []
 	end
 	
 	%--------------------VISIBLE PROPERTIES-----------%

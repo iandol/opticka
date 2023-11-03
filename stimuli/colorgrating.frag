@@ -25,8 +25,7 @@ void main() {
 
     /* find our distance from center, if distance to center (aka radius of pixel) > Radius, discard this pixel: */
     if ( radius > 0.0 ) {
-        float dist = distance( pos, center );
-        if ( dist > radius ) discard;
+        if ( distance( pos, center ) ) discard;
     }
 
     //create our sinusoid in -1 to 1 range

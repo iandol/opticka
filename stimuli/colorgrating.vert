@@ -7,14 +7,14 @@
  */
 
 /* Constants that we need 2*pi: */
-const float     twopi = 6.2831853072;
+const float twopi = 6.2831853072;
 
 /* Conversion factor from degrees to radians: */
-const float     deg2rad = 3.141592654 / 180.0;
+const float deg2rad = 3.141592654 / 180.0;
 
 /* Attributes passed from Screen(): See the ProceduralShadingAPI.m file for infos: */
-attribute vec4  modulateColor;
-attribute vec4  auxParameters0;
+attribute vec4 modulateColor;
+attribute vec4 auxParameters0;
 
 /* Information passed to the fragment shader: Attributes and precalculated per patch constants: */
 varying vec3    baseColor;
