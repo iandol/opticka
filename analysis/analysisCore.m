@@ -771,6 +771,17 @@ classdef analysisCore < optickaCore
 			set(gca,'Layer','bottom');
 			if alpha == 1; set(gcf,'Renderer','painters'); end
 		end
+
+		% ===================================================================
+		%> [mm, rs] = pupilConversion(value, calibration, calSize)
+		%> eyelink uses arbitrary area units, convert to mm using this function
+		%> e.g. [mm, r] = pupilConversion(2000, 8890, 8)
+		% ===================================================================
+		function [mm, rs] = pupilConversion(value, cal, calSize)
+			r = (sqrt(cal) / calSize)^2;
+			rs = 1 / sqrt(r);
+			mm = sqrt(value) * rs;
+		end
 		
 		% ===================================================================
 		%> cellArray2Num
