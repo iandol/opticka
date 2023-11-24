@@ -813,7 +813,7 @@ classdef eyetrackerCore < optickaCore
 			trackerDrawFixation(me);
 			drawGrid(me.operatorScreen);
 			if ~isempty(me.exclusionZone);trackerDrawExclusion(me);end
-			if ~isempty(stimPos); trackerDrawStimuli(me, stimPos); end
+			if ~isempty(stimPos); trackerDrawStimuli(me, stimPos, true); end
 			if ~isempty(comment);trackerDrawText(me, comment);end
 			if ~isempty(me.xAll);trackerDrawEyePositions(me);end
 			
@@ -837,6 +837,7 @@ classdef eyetrackerCore < optickaCore
 				y = me.stimulusPositions(i).y;
 				size = me.stimulusPositions(i).size;
 				if isempty(size); size = 1; end
+				fprintf('eT Stim: %.2fx %.2fy %.2fsz\n',x,y,size)
 				if me.stimulusPositions(i).selected == true
 					drawBox(me.operatorScreen,[x; y],size,[0.5 1 0 0.5]);
 				else

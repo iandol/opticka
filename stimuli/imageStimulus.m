@@ -11,10 +11,10 @@ classdef imageStimulus < baseStimulus
 		type char					= 'picture'
 		%> filename to load, if it is a directory use all images within
 		fileName char				= ''
-		%> multipleImages if N > 0, then this is a number of images from 1:N, e.g.
-		%> fileName = base.jpg, multipleImages=5, then base1.jpg - base5.jpg
+		%> selection if N > 0, then this is a number of images from 1:N, e.g.
+		%> fileName = base.jpg, selection=5, then base1.jpg - base5.jpg
 		%> update() will randomly select one from this group.
-		multipleImages double		= 0
+		selection double			= 0
 		%> contrast multiplier
 		contrast double				= 1
 		%> precision, 0 keeps 8bit, 1 16bit, 2 32bit
@@ -50,7 +50,7 @@ classdef imageStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
-		%> list of imagenames if multipleImages > 0
+		%> list of imagenames if selection > 0
 		fileNames = {};
 		%> current randomly selected image
 		currentImage				= ''
@@ -76,10 +76,10 @@ classdef imageStimulus < baseStimulus
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> allowed properties passed to object upon construction
-		allowedProperties = {'type', 'fileName', 'multipleImages', 'contrast', ...
+		allowedProperties = {'type', 'fileName', 'selection', 'contrast', ...
 			'scale'}
 		%>properties to not create transient copies of during setup phase
-		ignoreProperties = {'type', 'scale', 'fileName', 'multipleImages'}
+		ignoreProperties = {'type', 'scale', 'fileName'}
 	end
 	
 	%=======================================================================
@@ -174,29 +174,6 @@ classdef imageStimulus < baseStimulus
 			end
 			
 		end
-
-		% ===================================================================
-		%> @brief 
-		%>
-		% ===================================================================
-		function checkFileName(me)
-			if isempty(me.fileName) || (me.multipleImages==0 &&	exist(me.fileName,'file') ~= 2 && exist(me.fileName,'file') ~= 7)%use our default
-				p = mfilename('fullpath');
-				p = fileparts(p);
-				me.fileName = [p filesep 'Bosch.jpeg'];
-				me.fileNames{1} = me.fileName;
-			elseif exist(me.fileName,'dir') == 7
-				findFiles(me);	
-			elseif me.multipleImages>1
-				[p,f,e]=fileparts(me.fileName);
-				for i = 1:me.multipleImages
-					me.fileNames{i} = [p filesep f num2str(i) e];
-					if ~exist(me.fileNames{i},'file');warning('Image %s not available!',me.fileNames{i});end
-				end
-			elseif exist(me.fileName,'file') == 2
-				me.fileNames{1} = me.fileName;
-			end
-		end
 		
 		% ===================================================================
 		%> @brief Load an image
@@ -267,11 +244,11 @@ classdef imageStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function update(me)
-			if me.multipleImages > 0
+			if me.selection > 0
 				if ~isempty(me.texture) && me.texture > 0 && Screen(me.texture,'WindowKind') == -1
 					try Screen('Close',me.texture); end %#ok<*TRYNC>
 				end
-				me.loadImage(me.fileNames{randi(me.multipleImages)});
+				me.loadImage(me.fileNames{randi(me.selection)});
 			end
 			if me.sizeOut > 0
 				me.scale = me.sizeOut / (me.width / me.ppd);
@@ -331,6 +308,8 @@ classdef imageStimulus < baseStimulus
 			me.dstRect = [];
 			removeTmpProperties(me);
 		end
+
+		
 		
 	end %---END PUBLIC METHODS---%
 	
@@ -338,6 +317,29 @@ classdef imageStimulus < baseStimulus
 	methods ( Access = protected ) %-------PROTECTED METHODS-----%
 	%=======================================================================
 	
+		% ===================================================================
+		%> @brief checkFileName - loads a file or sets up a directory
+		%>
+		% ===================================================================
+		function checkFileName(me)
+			if isempty(me.fileName) || (me.selection==0 &&	exist(me.fileName,'file') ~= 2 && exist(me.fileName,'file') ~= 7)%use our default
+				p = mfilename('fullpath');
+				p = fileparts(p);
+				me.fileName = [p filesep 'Bosch.jpeg'];
+				me.fileNames{1} = me.fileName;
+			elseif exist(me.fileName,'dir') == 7
+				findFiles(me);	
+			elseif me.selection>1
+				[p,f,e]=fileparts(me.fileName);
+				for i = 1:me.selection
+					me.fileNames{i} = [p filesep f num2str(i) e];
+					if ~exist(me.fileNames{i},'file');warning('Image %s not available!',me.fileNames{i});end
+				end
+			elseif exist(me.fileName,'file') == 2
+				me.fileNames{1} = me.fileName;
+			end
+		end
+
 		% ===================================================================
 		%> @brief setRect
 		%>  setRect makes the PsychRect based on the texture and screen values
@@ -359,6 +361,7 @@ classdef imageStimulus < baseStimulus
 						me.dstRect(1), me.dstRect(2),me.dstRect(3),me.dstRect(4),...
 						me.dstRect(3)-me.dstRect(1),me.dstRect(4)-me.dstRect(2));
 				end
+				me.szPx = RectWidth(me.dstRect);
 				me.mvRect = me.dstRect;
 			end
 		end
@@ -381,7 +384,7 @@ classdef imageStimulus < baseStimulus
 						me.fileNames{n} = regexprep(me.fileNames{n},'\/\/','/');
 					end
 				end
-				me.multipleImages = length(me.fileNames);
+				me.selection = length(me.fileNames);
 			end
 		end
 		

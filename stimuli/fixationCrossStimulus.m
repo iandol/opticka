@@ -89,7 +89,8 @@ classdef fixationCrossStimulus < baseStimulus
 		function me = fixationCrossStimulus(varargin)
 			args = optickaCore.addDefaults(varargin,...
 				struct('name','fix','colour',[1 1 1 0.75],'alpha', 0.75, ...
-				'size',0.8,'comment','colour&alpha apply to disk, colour2&alpha2 apply to cross'));
+				'showOnTracker',false,'size',0.8,...
+				'comment','colour&alpha apply to disk, colour2&alpha2 apply to cross'));
 			me=me@baseStimulus(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
 			
@@ -233,6 +234,7 @@ classdef fixationCrossStimulus < baseStimulus
 			me.inSetup = false;
 			computePosition(me);
 			me.currentSize = me.sizeOut;
+			me.szPx = me.currentSize;
 			me.pulseMod = ((me.sizeOut/me.ppd) / 100) * (me.pulseRange/2);
 			me.pulsePosition = 0;
 			if me.doFlash; me.setupFlash; end

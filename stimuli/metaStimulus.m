@@ -489,14 +489,18 @@ classdef metaStimulus < optickaCore
 			for i = 1:me.n_
 				if ignoreVisible; check = true; else; check = me.stimuli{i}.isVisible; end
 				if check && me.stimuli{i}.showOnTracker == true
-					if me.stimuli{i}.isRect
+					if isprop(me.stimuli{i},'xFinal')
 						xy = [me.stimuli{i}.xFinal me.stimuli{i}.yFinal];
+						if toDegrees; xy = me.screen.toDegrees(xy,'xy'); end
 					else
 						xy = [me.stimuli{i}.xPositionOut me.stimuli{i}.yPositionOut];
 					end
-					if toDegrees; xy = me.screen.toDegrees(xy,'xy'); end
 					out(a).x = xy(1); out(a).y = xy(2);
-					out(a).size = me.stimuli{i}.sizeOut / me.ppd_;
+					if ~isempty(me.stimuli{i}.szPx)
+						out(a).size = me.stimuli{i}.szPx / me.ppd_; 
+					else
+						out(a).size = me.stimuli{i}.sizeOut * me.ppd_;
+					end
 					if any(me.fixationChoice == i) 
 						out(a).selected = true;
 					else

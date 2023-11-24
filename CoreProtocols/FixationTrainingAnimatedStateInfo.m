@@ -82,24 +82,8 @@ tS.strict					= false;
 % do we add an exclusion zone where subject cannot saccade to...
 tS.exclusionZone			= [];
 %tS.stimulusFixTime			= 0.5;		%==time to fix on the stimulus
-% historical log of X and Y position, and exclusion zone
-me.lastXPosition			= tS.fixX;
-me.lastYPosition			= tS.fixY;
-me.lastXExclusion			= [];
-me.lastYExclusion			= [];
-
-%==================================================================
-%---------------------------Eyetracker setup-----------------------
-% NOTE: the opticka GUI can set eyetracker options too, if you set options here
-% they will OVERRIDE the GUI ones; if they are commented then the GUI options
-% are used. runExperiment.elsettings and runExperiment.tobiisettings
-% contain the GUI settings; we test if they are empty or not and set
-% defaults based on that...
-eT.name 				= tS.name;
-if me.eyetracker.dummy == true;		eT.isDummy = true; end %===use dummy or real eyetracker? 
-if tS.saveData == true;	eT.recordData = true; end %===save ET data?		
-%Initialise the eyeTracker object with X, Y, FixInitTime, FixTime, Radius, StrictFix
-eT.updateFixationValues(tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
+% Initialise eyetracker with X, Y, FixInitTime, FixTime, Radius, StrictFix values
+updateFixationValues(eT, tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
 
 %==================================================================
 %----WHICH states assigned as correct or break for online plot?----

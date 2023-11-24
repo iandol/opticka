@@ -16,6 +16,10 @@ classdef movieStimulus < baseStimulus
 		lockAngle double = []
 		%> the name and path of the movie file, if empty a default will be used
 		fileName char = ''
+		%> selection if N > 0, then this is a number of images from 1:N, e.g.
+		%> fileName = base.jpg, selection=5, then base1.jpg - base5.jpg
+		%> update() will randomly select one from this group.
+		selection double		= 0
 		%> do we block when getting a frame? This is important, as if it is 1
 		%> then you will drop frames waiting for the the synced video frame.
 		%> Set to 0 this class uses double buffering to keep drawing the previous frame
@@ -64,6 +68,8 @@ classdef movieStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
+		%> list of imagenames if selection > 0
+		fileNames = {};
 		%> scale is dependent on stimulus size and movie width
 		scale = 1
 		family = 'movie'
@@ -378,11 +384,43 @@ classdef movieStimulus < baseStimulus
 		% ===================================================================
 		function checkFileName(me)
 			me.fileName = regexprep(me.fileName, '^~\/', [getenv('HOME') filesep]);
-			if isempty(me.fileName) || exist(me.fileName,'file') ~= 2
+			if isempty(me.fileName) || (me.selection==0 &&	exist(me.fileName,'file') ~= 2 && exist(me.fileName,'file') ~= 7)%use our default
 				p = mfilename('fullpath');
 				p = fileparts(p);
 				me.fileName = [p filesep 'monkey-dance.avi'];
+				me.fileNames{1} = me.fileName;
 				fprintf('---> movieStimulus: Didn''t find specified file so replacing with default movie %s\n',me.fileName);
+			elseif exist(me.fileName,'dir') == 7
+				findFiles(me);	
+			elseif me.selection>1
+				[p,f,e]=fileparts(me.fileName);
+				for i = 1:me.selection
+					me.fileNames{i} = [p filesep f num2str(i) e];
+					if ~exist(me.fileNames{i},'file');warning('Image %s not available!',me.fileNames{i});end
+				end
+			elseif exist(me.fileName,'file') == 2
+				me.fileNames{1} = me.fileName;
+			end
+		end
+
+		% ===================================================================
+		%> @brief findFiles
+		%>  
+		% ===================================================================
+		function findFiles(me)	
+			if exist(me.fileName,'dir') == 7
+				d = dir(me.fileName);
+				n = 0;
+				for i = 1: length(d)
+					if d(i).isdir;continue;end
+					[~,f,e]=fileparts(d(i).name);
+					if regexpi(e,'mp4|avi|mpeg')
+						n = n + 1;
+						me.fileNames{n} = [me.fileName filesep f e];
+						me.fileNames{n} = regexprep(me.fileNames{n},'\/\/','/');
+					end
+				end
+				me.selection = length(me.fileNames);
 			end
 		end
 		

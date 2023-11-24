@@ -77,6 +77,12 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> current screen rectangle position [LEFT TOP RIGHT BOTTOM]
 		mvRect double			= []
 	end
+
+	%--------------------HIDDEN PROPERTIES-----------%
+	properties(SetAccess = protected, Hidden = true)
+		%> size in pixels
+		szPx
+	end
 	
 	%--------------------VISIBLE PROPERTIES-----------%
 	properties (SetAccess = protected, GetAccess = public)

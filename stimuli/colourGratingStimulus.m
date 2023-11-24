@@ -319,6 +319,7 @@ classdef colourGratingStimulus < baseStimulus
 			end
 			function set_sizeOut(me,value)
 				me.sizeOut = value*me.ppd;
+				me.szPx = me.sizeOut;
 			end
 			function set_xPositionOut(me, value)
 				me.xPositionOut = value * me.ppd;
@@ -550,6 +551,7 @@ classdef colourGratingStimulus < baseStimulus
 					me.dstRect=OffsetRect(me.dstRect,(me.xPosition)*me.ppd,(me.yPosition)*me.ppd);
 				end
 			end
+			me.szPx = RectWidth(me.dstRect);
 			me.mvRect=me.dstRect;
 			setAnimationDelta(me);
 		end
