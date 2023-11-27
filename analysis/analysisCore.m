@@ -773,14 +773,14 @@ classdef analysisCore < optickaCore
 		end
 
 		% ===================================================================
-		%> [mm, rs] = pupilConversion(value, calibration, calSize)
+		%> [mm, cf] = pupilConversion(value, calibration, calSize)
 		%> eyelink uses arbitrary area units, convert to mm using this function
-		%> e.g. [mm, r] = pupilConversion(2000, 8890, 8)
+		%> e.g. [mm, rs] = pupilConversion(2000, 8890, 8)
 		% ===================================================================
-		function [mm, rs] = pupilConversion(value, cal, calSize)
+		function [mm, conversionFactor] = pupilConversion(value, cal, calSize)
 			r = (sqrt(cal) / calSize)^2;
-			rs = 1 / sqrt(r);
-			mm = sqrt(value) * rs;
+			conversionFactor = 1 / sqrt(r);
+			mm = sqrt(value) * conversionFactor;
 		end
 		
 		% ===================================================================
