@@ -20,37 +20,37 @@ classdef optickaCore < handle
 		%> comment
 		comment char = ''
 	end
-	
+
 	%--------------------ABSTRACT PROPERTIES----------%
 	properties (Abstract = true)
 		%> verbose logging, subclasses must assign this. This is normally logical true/false
 		verbose
 	end
-	
+
 	%--------------------HIDDEN PROPERTIES------------%
 	properties (SetAccess = protected, Hidden = true)
 		%> are we cloning this from another object
 		cloning logical = false
 	end
-	
+
 	%--------------------VISIBLE PROPERTIES-----------%
 	properties (SetAccess = protected, GetAccess = public)
 		%> clock() dateStamp set on construction
-		dateStamp
+		dateStamp = []
 		%> universal ID
 		uuid char
 		%> storage of various paths
 		paths struct
 	end
-	
+
 	%--------------------DEPENDENT PROPERTIES----------%
 	properties (Dependent = true)
 		%> The fullName is the object name combined with its uuid and class name
 		fullName char
 	end
-	
+
 	%--------------------TRANSIENT PROPERTIES----------%
-	properties (SetAccess = protected, GetAccess = protected, Transient = true)
+	properties (Access = protected, Transient = true)
 		%> Matlab version number, this is transient so it is not saved
 		mversion double = 0
 		%> sans font
@@ -58,27 +58,27 @@ classdef optickaCore < handle
 		%> monoFont
 		monoFont		= 'Ubunto Mono'
 	end
-	
+
 	%--------------------PROTECTED PROPERTIES----------%
-	properties (SetAccess = protected, GetAccess = protected)
+	properties (Access = protected)
 		%> class name
 		className char = ''
 		%> save prefix generated from clock time
-		savePrefix
+		savePrefix = ''
+		%> cached full name
+		fullName_ = ''
 	end
-	
+
 	%--------------------PRIVATE PROPERTIES----------%
-	properties (SetAccess = private, GetAccess = private)
+	properties (Access = private)
 		%> allowed properties passed to object upon construction
 		allowedPropertiesCore = {'name','comment','cloning'}
-		%> cached full name
-		fullName_ char
 	end
-	
+
 	%=======================================================================
 	methods %------------------PUBLIC METHODS
 	%=======================================================================
-		
+
 		% ===================================================================
 		function me = optickaCore(varargin)
 		%> @fn optickaCore
@@ -92,11 +92,11 @@ classdef optickaCore < handle
 		%> @return instance of class.
 		% ===================================================================
 			args = me.addDefaults(varargin);
-			me.parseArgs(args,me.allowedPropertiesCore);
+			me.parseArgs(args, me.allowedPropertiesCore);
 			me.dateStamp = datetime('now');
 			me.className = class(me);
 			me.uuid = num2str(dec2hex(floor((now - floor(now))*1e10))); %me.uuid = char(java.util.UUID.randomUUID)%128bit uuid
-			me.fullName_ = me.fullName; %cache fullName
+			me.fullName; %cache fullName
 			me.mversion = str2double(regexp(version,'(?<ver>^\d\.\d[\d]?)','match','once'));
 			setPaths(me);
 			getFonts(me);
@@ -110,13 +110,13 @@ classdef optickaCore < handle
 		%> @return name the concatenated name
 		% ===================================================================
 			if isempty(me.name)
-				me.fullName_ = [me.className '#' me.uuid];
+				me.fullName_ = sprintf('%s#%s', me.className, me.uuid);
 			else
-				me.fullName_ = [me.name ' <' me.className '#' me.uuid '>'];
+				me.fullName_ = sprintf('%s<%s#%s>', me.name, me.className, me.uuid);
 			end
 			name = me.fullName_;
 		end
-		
+
 		% ===================================================================
 		function c = initialiseSaveFile(me, path)
 		%> @fn initialiseSaveFile(me, path)
@@ -338,7 +338,7 @@ classdef optickaCore < handle
 		% ===================================================================
 			me.addArgs(properties);
 		end
-		
+
 		% ===================================================================
 		function setProp(me, property, value)
 		%> @fn setProp(me, property, value)
@@ -392,10 +392,11 @@ classdef optickaCore < handle
 		end
 		
 	end
-	
+
 	%=======================================================================
 	methods ( Hidden = true ) %-------HIDDEN METHODS-----%
 	%=======================================================================
+
 		% ===================================================================
 		function checkPaths(me)
 		%> @fn checkPaths
@@ -404,19 +405,19 @@ classdef optickaCore < handle
 		% ===================================================================
 			samePath = false;
 			if isprop(me,'dir')
-				
+
 				%if our object wraps a plxReader, try to use its paths
 				if isprop(me,'p') && isa(me.p,'plxReader')
 					checkPaths(me.p);
 					me.dir = me.p.dir; %inherit the path
 				end
-				
+
 				if isprop(me,'matdir') %normally they are the same
 					if ~isempty(me.dir) && strcmpi(me.dir, me.matdir)
-						samePath = true; 
+						samePath = true;
 					end
 				end
-				
+
 				if ~exist(me.dir,'dir')
 					if isprop(me,'file')
 						fn = me.file;
@@ -427,9 +428,9 @@ classdef optickaCore < handle
 					p = uigetdir('',['Please find new directory for: ' fn]);
 					if p ~= 0
 						me.dir = p;
-						
+
 					else
-						warning('Can''t find valid source directory')
+						warning('Can''t find valid source directory');
 					end
 				end
 			end
@@ -449,7 +450,7 @@ classdef optickaCore < handle
 						if p ~= 0
 							me.matdir = p;
 						else
-							warning('Can''t find valid source directory')
+							warning('Can''t find valid source directory');
 						end
 					end
 				end
@@ -461,20 +462,20 @@ classdef optickaCore < handle
 			end
 		end
 	end
-	
+
 	%=======================================================================
 	methods ( Static = true ) %-------STATIC METHODS-----%
 	%=======================================================================
-	
+
 		% ===================================================================
 		function args = makeArgs(args)
 		%> @fn makeArgs
 		%> @brief Converts cell args to structure array
-		%> 
+		%>
 		%>
 		%> @param args input data
 		%> @return args as a structure
-		% ===================================================================	
+		% ===================================================================
 			if isstruct(args); return; end
 			while iscell(args) && length(args) == 1
 				args = args{1};
@@ -489,15 +490,15 @@ classdef optickaCore < handle
 			elseif isstruct(args)
 				return
 			else
-				error('---> makeArgs: You need to pass name:value pairs / structure of name:value fields!')
+				error('---> makeArgs: You need to pass name:value pairs / structure of name:value fields!');
 			end
 		end
-		
+
 		% ===================================================================
 		function args = addDefaults(args, defs)
 		%> @fn addDefaults
 		%> @brief add default options to arg input
-		%> 
+		%>
 		%>
 		%> @param args input structure from varargin
 		%> @param defs extra default settings
@@ -539,7 +540,7 @@ classdef optickaCore < handle
 			if ~exist('device','var'); device = []; end
 			if isempty(oldKeys); oldKeys = zeros(1,256); end
 			pressed = false; name = []; keys = [];
-			
+
 			[press, ~, keyCode] = KbCheck(device);
 
 			if press
@@ -551,14 +552,13 @@ classdef optickaCore < handle
 			end
 			oldKeys = keyCode;
 		end
-			
-		
+
 	end %--------END STATIC METHODS
-	
+
 	%=======================================================================
 	methods ( Access = protected ) %-------PROTECTED METHODS-----%
 	%=======================================================================
-		
+
 		% ===================================================================
 		function parseArgs(me, args, allowedProperties)
 		%> @fn parseArgs
@@ -589,7 +589,7 @@ classdef optickaCore < handle
 			end
 			
 		end
-		
+
 		% ===================================================================
 		function addArgs(me, args)
 		%> @brief Sets properties from a structure or normal arguments pairs,
@@ -618,7 +618,7 @@ classdef optickaCore < handle
 				end
 			end
 		end
-		
+
 		% ===================================================================
 		function setPaths(me)
 		%> @brief set paths for object
@@ -653,7 +653,7 @@ classdef optickaCore < handle
 			end
 			me.paths.calibration = [me.paths.parent filesep 'Calibration'];
 			if ~isfolder(me.paths.calibration)
-				mkdir(me.paths.calibration);
+				status = mkdir(me.paths.calibration);
 				if status == 0; warning('Could not create Calibration folder'); end
 			end
 			if isdeployed
@@ -729,8 +729,8 @@ classdef optickaCore < handle
 			end
 			if ~isempty(thisClass); out = thisClass; end
 		end
-		
-		
+
+
 		% ===================================================================
 		function salutation(me, in, message, override)
 		%> @brief Prints messages dependent on verbosity

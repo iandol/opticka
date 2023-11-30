@@ -125,7 +125,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 	end
 	
 	%--------------------PROTECTED PROPERTIES----------%
-	properties (SetAccess = protected, GetAccess = protected)
+	properties (Access = protected)
 		%> is mouse position within screen co-ordinates?
 		mouseValid logical	= false
 		%> mouse X position
@@ -225,7 +225,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 						c = []; %return no colour to procedural gratings
 					else
 						c = [1 1 1 me.alpha]; %return white for everything else
-					end		
+					end
 			end
 			c(c<0)=0; c(c>1)=1;
 			me.colour = c;
@@ -234,10 +234,10 @@ classdef baseStimulus < optickaCore & dynamicprops
 			end
 			me.isInSetColour = false;
 		end
-		
+
 		% ===================================================================
 		%> @brief alpha set method
-		%> 
+		%>
 		% ===================================================================
 		function set.alpha(me,value)
 			if me.isSetup; warning('You should set alphaOut to affect drawing...'); end
@@ -253,7 +253,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				end
 			end
 		end
-		
+
 		% ===================================================================
 		%> @brief delta Get method
 		%> delta is the normalised number of pixels per frame to move a stimulus
@@ -265,7 +265,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				value = (me.speed * me.ppd) * me.screenVals.ifi;
 			end
 		end
-		
+
 		% ===================================================================
 		%> @brief dX Get method
 		%> X position increment for a given delta and angle
@@ -278,7 +278,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				[value,~]=me.updatePosition(me.delta,me.angleOut);
 			end
 		end
-		
+
 		% ===================================================================
 		%> @brief dY Get method
 		%> Y position increment for a given delta and angle
@@ -291,7 +291,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				[~,value]=me.updatePosition(me.delta,me.angleOut);
 			end
 		end
-		
+
 		% ===================================================================
 		%> @brief Method to set isVisible=true.
 		%>
@@ -299,7 +299,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		function show(me)
 			me.isVisible = true;
 		end
-		
+
 		% ===================================================================
 		%> @brief Method to set isVisible=false.
 		%>
@@ -331,7 +331,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		% ===================================================================
 		function resetTicks(me)
 			global mouseTick mouseGlobalX mouseGlobalY mouseValid %#ok<*GVMIS> %shared across all stimuli
-			if max(me.delayTime) > 0 %delay display a number of frames 
+			if max(me.delayTime) > 0 %delay display a number of frames
 				if length(me.delayTime) == 1
 					me.delayTicks = round(me.delayTime/me.screenVals.ifi);
 				elseif length(me.delayTime) == 2
@@ -341,7 +341,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 			else
 				me.delayTicks = 0;
 			end
-			if min(me.offTime) < Inf %delay display a number of frames 
+			if min(me.offTime) < Inf %delay display a number of frames
 				if length(me.offTime) == 1
 					me.offTicks = round(me.offTime/me.screenVals.ifi);
 				elseif length(me.offTime) == 2
@@ -351,11 +351,11 @@ classdef baseStimulus < optickaCore & dynamicprops
 			else
 				me.offTicks = Inf;
 			end
-			mouseTick = 0; 
-			me.tick = 0; 
+			mouseTick = 0;
+			me.tick = 0;
 			me.drawTick = 0;
 		end
-		
+
 		% ===================================================================
 		%> @brief get mouse position
 		%> we make sure this is only called once per animation tick to
@@ -387,7 +387,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				end
 			end
 		end
-		
+
 		% ===================================================================
 		%> @brief Run Stimulus in a window to preview
 		%>
@@ -423,7 +423,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 					end
 				end
 				prepareScreen(s);
-				
+
 				if benchmark
 					s.windowed = false;
 				elseif forceScreen > -1
@@ -433,13 +433,13 @@ classdef baseStimulus < optickaCore & dynamicprops
 						s.windowed = [0 0 s.screenVals.screenWidth/2 s.screenVals.screenHeight/2]; %half of screen
 					end
 				end
-				
+
 				if ~s.isOpen
-					sv=open(s); 
+					sv=open(s);
 				end
 				sv = s.screenVals;
 				setup(me,s); %setup our stimulus object
-				
+
 				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
 
 				if benchmark
@@ -515,7 +515,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				end
 				clear fps benchmark runtime b bb i; %clear up a bit
 				reset(me); %reset our stimulus ready for use again
-				rethrow(ME)				
+				rethrow(ME)
 			end
 		end
 		
@@ -897,7 +897,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		end
 
 		% ===================================================================
-		%> @brief gets a properyy copy or original property
+		%> @brief gets a property copy or original property
 		%>
 		%> When stimuli are run, their properties are copied, so e.g. angle
 		%> is copied to angleOut and this is used during the task. This
@@ -905,7 +905,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> return the original.
 		%>
 		%> @param name of property
-		%> @param range of property to return 
+		%> @param range of property to return
 		%> @return value of property
 		% ===================================================================
 		function [value, name] = getP(me, name, range)
@@ -930,7 +930,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> return the original.
 		%>
 		%> @param name of property
-		%> @param range of property to return 
+		%> @param range of property to return
 		%> @return value of property
 		% ===================================================================
 		function setP(me, name, value)
@@ -943,13 +943,13 @@ classdef baseStimulus < optickaCore & dynamicprops
 				if me.verbose;fprintf('Property %s doesn''t exist...\n',name);end
 			end
 		end
-		
+
 	end %---END PUBLIC METHODS---%
-	
+
 	%=======================================================================
 	methods ( Static ) %----------STATIC METHODS
 	%=======================================================================
-		
+
 		% ===================================================================
 		%> @brief degrees2radians
 		%>
@@ -958,7 +958,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		% d2r(degrees)
 			r=degrees*(pi/180);
 		end
-		
+
 		% ===================================================================
 		%> @brief radians2degrees
 		%>
@@ -967,7 +967,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		% r2d(radians)
 			degrees=r*(180/pi);
 		end
-		
+
 		% ===================================================================
 		%> @brief findDistance in X and Y coordinates
 		%>
@@ -976,7 +976,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		% findDistance(x1, y1, x2, y2)
 			distance=sqrt((x2 - x1)^2 + (y2 - y1)^2);
 		end
-		
+
 		% ===================================================================
 		%> @brief updatePosition returns dX and dY given an angle and delta
 		%>
@@ -988,9 +988,9 @@ classdef baseStimulus < optickaCore & dynamicprops
 			dY = delta .* sin(baseStimulus.d2r(angle));
 			if length(dY)==1 && abs(dY) < 1e-3; dY = 0; end
 		end
-		
+
 	end%---END STATIC METHODS---%
-	
+
 	%=======================================================================
 	methods ( Access = protected ) %-------PRIVATE (protected) METHODS-----%
 	%=======================================================================
@@ -1025,10 +1025,10 @@ classdef baseStimulus < optickaCore & dynamicprops
 			if strcmpi(me.family,'dots'); me.doDots = true; end
 			if strcmpi(me.type,'flash'); me.doFlash = true; end
 			if ~isempty(me.animator) && isa(me.animator,'animationManager')
-				me.doAnimator = true; 
+				me.doAnimator = true;
 			end
 		end
-		
+
 		% ===================================================================
 		%> @brief compute xFinal and yFinal
 		%>
@@ -1106,7 +1106,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				end
 			end
 		end
-		
+
 		% ===================================================================
 		%> @brief Finds and removes dynamic properties
 		%>
@@ -1116,9 +1116,9 @@ classdef baseStimulus < optickaCore & dynamicprops
 		function removeTmpProperties(me)
 			allprops = properties(me);
 			for i=1:numel(allprops)
-        		m = findprop(me, allprops{i});
+				m = findprop(me, allprops{i});
 				if isa(m,'meta.DynamicProperty')
-            		delete(m)
+					delete(m)
 				end
 			end
 		end

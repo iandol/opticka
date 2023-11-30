@@ -1,12 +1,12 @@
 % ========================================================================
-%> @brief textureStimulus 
+%> @brief textureStimulus
 %>
 %> Superclass providing basic structure for texture stimulus classes
 %>
 %>
 %> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
-% ========================================================================	
-classdef imageStimulus < baseStimulus	
+% ========================================================================
+classdef imageStimulus < baseStimulus
 	properties %--------------------PUBLIC PROPERTIES----------%
 		type char					= 'picture'
 		%> filename to load, if it is a directory use all images within
@@ -48,7 +48,7 @@ classdef imageStimulus < baseStimulus
 		% displays.
 		filter						= 1
 	end
-	
+
 	properties (SetAccess = protected, GetAccess = public)
 		%> list of imagenames if selection > 0
 		fileNames = {};
@@ -65,55 +65,55 @@ classdef imageStimulus < baseStimulus
 		%> pixel height
 		height
 	end
-	
-	properties (SetAccess = private, GetAccess = public, Hidden = true)
-		typeList = {'picture'}
-		fileNameList = 'filerequestor';
-		interpMethodList = {'nearest','linear','spline','cubic'}
+
+	properties (SetAccess = protected, GetAccess = public, Hidden = true)
+		typeList			= {'picture'}
+		fileNameList		= 'filerequestor';
+		interpMethodList	= {'nearest','linear','spline','cubic'}
 		%> properties to ignore in the UI
-		ignorePropertiesUI={}
+		ignorePropertiesUI	= {}
 	end
-	
-	properties (SetAccess = private, GetAccess = private)
+
+	properties (Access = protected)
 		%> allowed properties passed to object upon construction
 		allowedProperties = {'type', 'fileName', 'selection', 'contrast', ...
 			'scale'}
 		%>properties to not create transient copies of during setup phase
 		ignoreProperties = {'type', 'scale', 'fileName'}
 	end
-	
+
 	%=======================================================================
 	methods %------------------PUBLIC METHODS
 	%=======================================================================
-	
+
 		% ===================================================================
 		%> @brief Class constructor
 		%>
 		%> This parses any input values and initialises the object.
 		%>
-		%> @param varargin are passed as a list of parametoer or a structure 
+		%> @param varargin are passed as a list of parametoer or a structure
 		%> of properties which is parsed.
 		%>
-		%> @return instance of opticka class.
+		%> @return instance of class.
 		% ===================================================================
 		function me = imageStimulus(varargin)
 			args = optickaCore.addDefaults(varargin,struct('size',0,...
 				'name','Image'));
 			me=me@baseStimulus(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
-			
+
 			me.isRect = true; %uses a rect for drawing
-			
+
 			checkFileName(me);
-			
+
 			me.ignoreProperties = [me.ignorePropertiesBase me.ignoreProperties];
 			me.salutation('constructor','Image Stimulus initialisation complete');
 		end
-		
+
 		% ===================================================================
 		%> @brief Setup this object in preperation for use
 		%> When displaying a stimulus object, the main properties that are to be
-		%> modified are copied into cache copies of the property, both to convert from 
+		%> modified are copied into cache copies of the property, both to convert from
 		%> visual description (c/d, Hz, degrees) to
 		%> computer metrics; and to be animated and modified as independant
 		%> variables. So xPosition is copied to xPositionOut and converted from
@@ -126,20 +126,16 @@ classdef imageStimulus < baseStimulus
 		%> @param in matrix for conversion to a PTB texture
 		% ===================================================================
 		function setup(me,sM,in)
-			
+			if ~exist('in','var');in = []; end
 			reset(me); %reset object back to its initial state
 			me.inSetup = true; me.isSetup = false;
 			if isempty(me.isVisible); show(me); end
-			
+
 			checkFileName(me);
-			
-			if ~exist('in','var')
-				in = [];
-			end
-			
+
 			me.sM = sM;
 			if ~sM.isOpen; error('Screen needs to be Open!'); end
-			me.ppd=sM.ppd;
+			me.ppd = sM.ppd;
 			me.screenVals = sM.screenVals;
 			me.texture = []; %we need to reset this
 
@@ -156,13 +152,13 @@ classdef imageStimulus < baseStimulus
 			addRuntimeProperties(me);
 
 			loadImage(me, in);
-			
+
 			if me.sizeOut > 0
 				me.scale = me.sizeOut / (me.width / me.ppd);
 			end
-			
+
 			me.inSetup = false; me.isSetup = true;
-			
+
 			computePosition(me);
 			setRect(me);
 
@@ -174,7 +170,7 @@ classdef imageStimulus < baseStimulus
 			end
 			
 		end
-		
+
 		% ===================================================================
 		%> @brief Load an image
 		%>
@@ -182,7 +178,7 @@ classdef imageStimulus < baseStimulus
 		function loadImage(me,in)
 			ialpha = [];
 			if ~exist('in','var'); in = []; end
-			if ~isempty(in) && ischar(in) 
+			if ~isempty(in) && ischar(in)
 				% assume a file path
 				[me.matrix, ~, ialpha] = imread(in);
 				me.currentImage = in;
@@ -202,20 +198,19 @@ classdef imageStimulus < baseStimulus
 					me.currentImage = me.fileNames{i};
 				end
 			else
-				if isempty(me.sizeOut);sz=2;else;sz=me.sizeOut;end
-				me.matrix = uint8(ones(sz*me.ppd, sz*me.ppd, 3)); %white texture
+				if me.sizeOut <= 0; sz = 2; else; sz = me.sizeOut; end
+				me.matrix = uint8(ones(sz*me.ppd,sz*me.ppd,3)*255); %white texture
 				me.currentImage = '';
 			end
-			
+
 			if me.precision > 0
 				me.matrix = double(me.matrix)/255;
 			end
-			
+
 			me.width = size(me.matrix,2);
 			me.height = size(me.matrix,1);
-			
-			me.matrix = me.matrix .* me.contrast;
-			
+			me.matrix = me.matrix .* me.contrastOut;
+
 			if isempty(ialpha)
 				if isfloat(me.matrix)
 					me.matrix(:,:,4) = me.alphaOut;
@@ -229,12 +224,12 @@ classdef imageStimulus < baseStimulus
 					me.matrix(:,:,4) = ialpha;
 				end
 			end
-			
+
 			if isempty(me.specialFlags) && isinteger(me.matrix(1))
-				sFlags = 4; %4 is optimization for uint8 textures. 0 is default
+				me.specialFlags = 4; %4 is optimization for uint8 textures. 0 is default
 			end
 			if ~isempty(me.sM) && me.sM.isOpen == true
-				me.texture = Screen('MakeTexture', me.sM.win, me.matrix, 1, sFlags, me.precision);
+				me.texture = Screen('MakeTexture', me.sM.win, me.matrix, 1, me.specialFlags, me.precision);
 				if me.verbose;me.salutation('loadImage',['Load: ' regexprep(me.currentImage,'\\','/')]);end
 			end
 		end
@@ -257,7 +252,7 @@ classdef imageStimulus < baseStimulus
 			computePosition(me);
 			setRect(me);
 		end
-		
+
 		% ===================================================================
 		%> @brief Draw this stimulus object
 		%>
@@ -265,16 +260,16 @@ classdef imageStimulus < baseStimulus
 		function draw(me,win)
 			if me.isVisible && me.tick >= me.delayTicks && me.tick < me.offTicks
 				if ~exist('win','var');win = me.sM.win; end
-				% Screen('DrawTexture', windowPointer, texturePointer 
-				% [,sourceRect] [,destinationRect] [,rotationAngle] 
-				% [, filterMode] [, globalAlpha] [, modulateColor] 
+				% Screen('DrawTexture', windowPointer, texturePointer
+				% [,sourceRect] [,destinationRect] [,rotationAngle]
+				% [, filterMode] [, globalAlpha] [, modulateColor]
 				% [, textureShader] [, specialFlags] [, auxParameters]);
-				Screen('DrawTexture', win, me.texture, [], me.mvRect, me.angleOut,...
-					me.filter, me.alpha, me.colourOut);
+				Screen('DrawTexture', win, me.texture, [], me.mvRect,...
+					me.angleOut, me.filter, me.alpha, me.colourOut);
 			end
 			me.tick = me.tick + 1;
 		end
-		
+
 		% ===================================================================
 		%> @brief Animate this stimulus object
 		%>
@@ -292,7 +287,7 @@ classdef imageStimulus < baseStimulus
 				end
 			end
 		end
-		
+
 		% ===================================================================
 		%> @brief Reset this object
 		%>
@@ -309,14 +304,35 @@ classdef imageStimulus < baseStimulus
 			removeTmpProperties(me);
 		end
 
-		
-		
+		% ===================================================================
+		%> @brief find a file or directory
+		%>
+		% ===================================================================
+		function findFile(me, dir)
+			if ~isprop(me, 'fileName'); return; end
+			if ~exist('dir','var'); dir = false; end
+			if dir
+				p = uigetdir('Select Files Dir');
+				f = '';
+			else
+				[f,p] = uigetfile({ '*.*',  'All Files (*.*)'},'Select File');
+			end
+			if ischar(f)
+				me.fileName = [p f];
+			end
+			checkFileName(me);
+			fprintf('--->>> Found these images:\n');
+			for i = 1:length(me.fileNames)
+				fprintf('\t %s\n',me.fileNames{i});
+			end
+		end
+
 	end %---END PUBLIC METHODS---%
-	
+
 	%=======================================================================
 	methods ( Access = protected ) %-------PROTECTED METHODS-----%
 	%=======================================================================
-	
+
 		% ===================================================================
 		%> @brief checkFileName - loads a file or sets up a directory
 		%>
@@ -337,6 +353,18 @@ classdef imageStimulus < baseStimulus
 				end
 			elseif exist(me.fileName,'file') == 2
 				me.fileNames{1} = me.fileName;
+			end
+		end
+
+		% ===================================================================
+		%> @brief Update only position info, faster and doesn't reset image
+		%>
+		% ===================================================================
+		function updatePositions(me,x,y)
+			me.xFinal = x;
+			me.yFinal = y;
+			if length(me.mvRect) == 4
+				me.mvRect=CenterRectOnPointd(me.mvRect, me.xFinal, me.yFinal);
 			end
 		end
 
@@ -365,13 +393,12 @@ classdef imageStimulus < baseStimulus
 				me.mvRect = me.dstRect;
 			end
 		end
-		
-		
+
 		% ===================================================================
 		%> @brief findFiles
-		%>  
+		%>
 		% ===================================================================
-		function findFiles(me)	
+		function findFiles(me)
 			if exist(me.fileName,'dir') == 7
 				d = dir(me.fileName);
 				n = 0;
@@ -387,13 +414,7 @@ classdef imageStimulus < baseStimulus
 				me.selection = length(me.fileNames);
 			end
 		end
-		
+
 	end
-	
-	
-	%=======================================================================
-	methods ( Access = private ) %-------PRIVATE METHODS-----%
-	%=======================================================================
-		
-	end
+
 end

@@ -12,9 +12,9 @@ classdef movieStimulus < baseStimulus
 		%> object can move in (different to the angle).
 		direction double  = 0
 		%> do we lock the texture angle to the direction? If so what is the offset
-		%(0 = parallel, 90 = orthogonal etc.)
+		%> (0 = parallel, 90 = orthogonal etc.)
 		lockAngle double = []
-		%> the name and path of the movie file, if empty a default will be used
+		%> the name / path of a file or folder, if empty a default will be used
 		fileName char = ''
 		%> selection if N > 0, then this is a number of images from 1:N, e.g.
 		%> fileName = base.jpg, selection=5, then base1.jpg - base5.jpg
@@ -47,16 +47,16 @@ classdef movieStimulus < baseStimulus
 		%> 512 = marks the movie as encoded in Psychtoolbox's own proprietary 16 bpc high precision format
 		%> 1024 = video frames are encoded as raw Bayer sensor data
 		specialFlagsOpen double = []
-        %> special flags for 'GetMovieImage'
-        %> 1 = use GL_TEXTURE_2D
-        %> 2 = high precision
-        %> 8 = no mipmap with GL_TEXTURE_2D
-        %> 32 = prevent closing the texture by a call to Screen('Close')
-        specialFlagsFrame double = []
-        %> special flags for 'GetMovieImage'
-        %> 1 = don't return any time info (maybe slightly faster?)
-        %> 2 = don't return any textures, for bechmarking.
-        specialFlags2Frame double = 1;
+		%> special flags for 'GetMovieImage'
+		%> 1 = use GL_TEXTURE_2D
+		%> 2 = high precision
+		%> 8 = no mipmap with GL_TEXTURE_2D
+		%> 32 = prevent closing the texture by a call to Screen('Close')
+		specialFlagsFrame double = []
+		%> special flags for 'GetMovieImage'
+		%> 1 = don't return any time info (maybe slightly faster?)
+		%> 2 = don't return any textures, for bechmarking.
+		specialFlags2Frame double = 1;
 		%> how to handle looping (1=PTB default)
 		loopStrategy double = 1
 		%> mask out a colour? e.g. [0 0 0]
@@ -70,6 +70,8 @@ classdef movieStimulus < baseStimulus
 	properties (SetAccess = protected, GetAccess = public)
 		%> list of imagenames if selection > 0
 		fileNames = {};
+		%> current randomly selected image
+		currentMovie				= ''
 		%> scale is dependent on stimulus size and movie width
 		scale = 1
 		family = 'movie'
@@ -82,12 +84,9 @@ classdef movieStimulus < baseStimulus
 		count
 	end
 	
-	properties (SetAccess = protected, GetAccess = public, Hidden = true)
+	properties (SetAccess = protected, GetAccess = public, Transient = true, Hidden = true)
 		typeList = {'movie'}
-		fileNameList = 'filerequestor'
-	end
-	
-	properties (SetAccess = protected, GetAccess = public, Transient = true)
+		fileNameList = 'filerequestor';
 		%> texture buffer for non-blocking movie playback, this is the
 		%> previous frame until a new frame is available
 		buffertex = []
@@ -101,12 +100,13 @@ classdef movieStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = protected, GetAccess = protected)
+		thisMovie			= ''
 		msrcMode			= 'GL_SRC_ALPHA'
 		mdstMode			= 'GL_ONE_MINUS_SRC_ALPHA'
 		%> allowed properties passed to object upon construction
 		allowedProperties = {'fileName', 'blocking', 'pixelFormat', 'preloadSecs', ...
 			'specialFlagsOpen', 'specialFlagsFrame', 'specialFlags2Frame', 'loopStrategy', ...
-			'mask', 'maskTolerance', 'enforceBlending', 'direction'}
+			'mask', 'maskTolerance', 'enforceBlending', 'direction','selection'}
 		%> properties to not create transient copies of during setup phase
 		ignoreProperties = {'buffertex', 'shader', 'screenVals', 'movie', 'duration', ...
 			'fps', 'width', 'height', 'count', 'scale', 'fileName', 'pixelFormat', ...
@@ -190,24 +190,13 @@ classdef movieStimulus < baseStimulus
 			
 			addRuntimeProperties(me);
 			
-			t=tic;
-			[me.movie, me.duration, me.fps, me.width, me.height] = Screen('OpenMovie', ...
-				me.sM.win, me.fileName, [], me.preloadSecs, me.specialFlagsOpen, me.pixelFormat);
-			fprintf('\n--->>> movieStimulus: %s\n\t%.2f seconds duration, %i frames @ %f fps, w x h = %i x %i, in %ims\n', ...
-				me.fileName, me.duration, me.count, me.fps, me.width, me.height, round(toc(t)*1e3));
-			fprintf('\tBlocking: %i | Loop: %i | Preloadsecs: %i | Pixelformat: %i | Flags: %i\n', me.blocking, ...
-				me.loopStrategy, me.preloadSecs, me.pixelFormat, me.specialFlagsOpen);
-			
-			if me.sizeOut > 0
-				me.scale = me.sizeOut / (me.width / me.ppd);
-			end
-			
 			me.shader = [];
 			if ~isempty(me.mask)
 				me.shader = CreateSinglePassImageProcessingShader(me.sM.win, 'BackgroundMaskOut', me.mask, me.maskTolerance);
 			end
 			
 			me.inSetup = false; me.isSetup = true;
+			loadMovie(me);
 			computePosition(me)
 			setRect(me);
 
@@ -237,6 +226,11 @@ classdef movieStimulus < baseStimulus
 				me.scale = me.sizeOut / (me.width / me.ppd);
 			end
 			resetTicks(me);
+			fprintf('selectionOut = %i\n',me.selectionOut);
+			if ~matches(me.currentMovie,me.fileNames{me.selectionOut})
+				me.currentMovie = me.fileNames{me.selectionOut};
+				loadMovie(me);
+			end
 			computePosition(me);
 			setRect(me);
 		end
@@ -339,15 +333,27 @@ classdef movieStimulus < baseStimulus
 			me.height = [];
 			me.inSetup = false; me.isSetup = false;
 		end
-		
+
 		% ===================================================================
-		%> @brief 
+		%> @brief find a file or directory
 		%>
 		% ===================================================================
-		function findFile(me)
-			[f,p] = uigetfile({ '*.*',  'All Files (*.*)'},'Select Movie File');
+		function findFile(me, dir)
+			if ~isprop(me, 'fileName'); return; end
+			if ~exist('dir','var'); dir = false; end
+			if dir
+				p = uigetdir('Select Files Dir');
+				f = '';
+			else
+				[f,p] = uigetfile({ '*.*',  'All Files (*.*)'},'Select File');
+			end
 			if ischar(f)
 				me.fileName = [p f];
+			end
+			checkFileName(me);
+			fprintf('--->>> Found these movies:\n');
+			for i = 1:length(me.fileNames)
+				fprintf('\t %s\n',me.fileNames{i});
 			end
 		end
 		
@@ -358,6 +364,26 @@ classdef movieStimulus < baseStimulus
 	%=======================================================================
 	
 		% ===================================================================
+		%> @brief loadMovie
+		% ===================================================================
+		function loadMovie(me)
+			if ~me.isSetup; return; end
+			if ~isempty(me.movie)
+				try ndrop=Screen('Playmovie', me.movie, 0); end %#ok<*TRYNC>
+				fprintf('---> Number of dropped movie frames: %i\n',ndrop)
+				try Screen('CloseMovie', me.movie); end
+				me.movie = []; me.width = []; me.height = [];
+			end
+			t=tic;
+			[me.movie, me.duration, me.fps, me.width, me.height] = Screen('OpenMovie', ...
+				me.sM.win, me.currentMovie, [], me.preloadSecs, me.specialFlagsOpen, me.pixelFormat);
+			fprintf('\n--->>> movieStimulus: %s\n\t%.2f seconds duration, %i frames @ %f fps, w x h = %i x %i, in %ims\n', ...
+				me.currentMovie, me.duration, me.count, me.fps, me.width, me.height, round(toc(t)*1e3));
+			fprintf('\tBlocking: %i | Loop: %i | Preloadsecs: %i | Pixelformat: %i | Flags: %i\n', me.blocking, ...
+				me.loopStrategy, me.preloadSecs, me.pixelFormat, me.specialFlagsOpen);
+		end
+
+		% ===================================================================
 		%> @brief setRect
 		%>  setRect makes the PsychRect based on the texture and screen values
 		%>  This is overridden from parent class so we can scale texture
@@ -365,6 +391,9 @@ classdef movieStimulus < baseStimulus
 		% ===================================================================
 		function setRect(me)
 			if ~isempty(me.movie)
+				if me.sizeOut > 0
+					me.scale = me.sizeOut / (me.width / me.ppd);
+				end
 				me.dstRect = ScaleRect([0 0 me.width me.height], me.scale, me.scale);
 				if me.mouseOverride && me.mouseValid
 					me.dstRect = CenterRectOnPointd(me.dstRect, me.mouseX, me.mouseY);
@@ -389,18 +418,21 @@ classdef movieStimulus < baseStimulus
 				p = fileparts(p);
 				me.fileName = [p filesep 'monkey-dance.avi'];
 				me.fileNames{1} = me.fileName;
+				me.selection = 1;
 				fprintf('---> movieStimulus: Didn''t find specified file so replacing with default movie %s\n',me.fileName);
 			elseif exist(me.fileName,'dir') == 7
-				findFiles(me);	
+				findFiles(me);
 			elseif me.selection>1
 				[p,f,e]=fileparts(me.fileName);
 				for i = 1:me.selection
 					me.fileNames{i} = [p filesep f num2str(i) e];
-					if ~exist(me.fileNames{i},'file');warning('Image %s not available!',me.fileNames{i});end
+					if ~exist(me.fileNames{i},'file');warning('Movie %s not available!',me.fileNames{i});end
 				end
 			elseif exist(me.fileName,'file') == 2
+				me.selection = 1;
 				me.fileNames{1} = me.fileName;
 			end
+			me.currentMovie = me.fileNames{me.selection};
 		end
 
 		% ===================================================================
@@ -424,6 +456,6 @@ classdef movieStimulus < baseStimulus
 			end
 		end
 		
-    end %-------END PROTECTED METHODS-----%
+	end %-------END PROTECTED METHODS-----%
 
 end %-------END CLASSDEF-----%
