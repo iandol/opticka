@@ -102,6 +102,8 @@ classdef runExperiment < optickaCore
 		thisStim					= []
 		%> tS is the runtime settings structure, saved here as a backup
 		tS struct
+		%> ask for comments?
+		askForComments				= false
 		%> what mode to run the Display++ digital I/O in? Plexon requires
 		%> the use of a strobe trigger line, whereas most other equipment
 		%> just uses simple threshold reading

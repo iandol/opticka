@@ -15,9 +15,9 @@ classdef movieStimulus < baseStimulus
 		%> (0 = parallel, 90 = orthogonal etc.)
 		lockAngle double = []
 		%> the name / path of a file or folder, if empty a default will be used
-		fileName char = ''
+		filePath char = ''
 		%> selection if N > 0, then this is a number of images from 1:N, e.g.
-		%> fileName = base.jpg, selection=5, then base1.jpg - base5.jpg
+		%> filePath = base.jpg, selection=5, then base1.jpg - base5.jpg
 		%> update() will randomly select one from this group.
 		selection double		= 0
 		%> do we block when getting a frame? This is important, as if it is 1
@@ -69,7 +69,9 @@ classdef movieStimulus < baseStimulus
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> list of imagenames if selection > 0
-		fileNames = {};
+		filePaths = {}
+		%> number of videos
+		nVideos	= 0
 		%> current randomly selected image
 		currentMovie				= ''
 		%> scale is dependent on stimulus size and movie width
@@ -86,7 +88,7 @@ classdef movieStimulus < baseStimulus
 	
 	properties (SetAccess = protected, GetAccess = public, Transient = true, Hidden = true)
 		typeList = {'movie'}
-		fileNameList = 'filerequestor';
+		filePathList = 'filerequestor';
 		%> texture buffer for non-blocking movie playback, this is the
 		%> previous frame until a new frame is available
 		buffertex = []
@@ -104,12 +106,12 @@ classdef movieStimulus < baseStimulus
 		msrcMode			= 'GL_SRC_ALPHA'
 		mdstMode			= 'GL_ONE_MINUS_SRC_ALPHA'
 		%> allowed properties passed to object upon construction
-		allowedProperties = {'fileName', 'blocking', 'pixelFormat', 'preloadSecs', ...
+		allowedProperties = {'filePath', 'blocking', 'pixelFormat', 'preloadSecs', ...
 			'specialFlagsOpen', 'specialFlagsFrame', 'specialFlags2Frame', 'loopStrategy', ...
 			'mask', 'maskTolerance', 'enforceBlending', 'direction','selection'}
 		%> properties to not create transient copies of during setup phase
 		ignoreProperties = {'buffertex', 'shader', 'screenVals', 'movie', 'duration', ...
-			'fps', 'width', 'height', 'count', 'scale', 'fileName', 'pixelFormat', ...
+			'fps', 'width', 'height', 'count', 'scale', 'filePath', 'pixelFormat', ...
 			'preloadSecs', 'specialFlagsOpen', 'specialFlagsFrame', 'specialFlags2Frame', ...
 			'loopStrategy'}
 	end
@@ -136,7 +138,7 @@ classdef movieStimulus < baseStimulus
 			
 			me.isRect = true; %uses a rect for drawing
 			
-			checkFileName(me);
+			checkfilePath(me);
 			
 			me.ignoreProperties = [me.ignorePropertiesBase me.ignoreProperties];
 			me.salutation('constructor','Movie Stimulus initialisation complete');
@@ -165,7 +167,7 @@ classdef movieStimulus < baseStimulus
 			me.sM = sM;
 			if ~sM.isOpen; error('Screen needs to be Open!'); end
 			
-			checkFileName(me);
+			checkfilePath(me);
 			
 			% On ARM set the default pixelFormat to 6 for shader based decode.
 			% On a RaspberryPi-4 this makes a world of difference when playing
@@ -227,8 +229,8 @@ classdef movieStimulus < baseStimulus
 			end
 			resetTicks(me);
 			fprintf('selectionOut = %i\n',me.selectionOut);
-			if ~matches(me.currentMovie,me.fileNames{me.selectionOut})
-				me.currentMovie = me.fileNames{me.selectionOut};
+			if ~matches(me.currentMovie,me.filePaths{me.selectionOut})
+				me.currentMovie = me.filePaths{me.selectionOut};
 				loadMovie(me);
 			end
 			computePosition(me);
@@ -339,7 +341,7 @@ classdef movieStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function findFile(me, dir)
-			if ~isprop(me, 'fileName'); return; end
+			if ~isprop(me, 'filePath'); return; end
 			if ~exist('dir','var'); dir = false; end
 			if dir
 				p = uigetdir('Select Files Dir');
@@ -348,12 +350,12 @@ classdef movieStimulus < baseStimulus
 				[f,p] = uigetfile({ '*.*',  'All Files (*.*)'},'Select File');
 			end
 			if ischar(f)
-				me.fileName = [p f];
+				me.filePath = [p f];
 			end
-			checkFileName(me);
+			checkfilePath(me);
 			fprintf('--->>> Found these movies:\n');
-			for i = 1:length(me.fileNames)
-				fprintf('\t %s\n',me.fileNames{i});
+			for i = 1:length(me.filePaths)
+				fprintf('\t %s\n',me.filePaths{i});
 			end
 		end
 		
@@ -411,28 +413,28 @@ classdef movieStimulus < baseStimulus
 		%> @brief 
 		%>
 		% ===================================================================
-		function checkFileName(me)
-			me.fileName = regexprep(me.fileName, '^~\/', [getenv('HOME') filesep]);
-			if isempty(me.fileName) || (me.selection==0 &&	exist(me.fileName,'file') ~= 2 && exist(me.fileName,'file') ~= 7)%use our default
+		function checkfilePath(me)
+			me.filePath = regexprep(me.filePath, '^~\/', [getenv('HOME') filesep]);
+			if isempty(me.filePath) || (me.selection==0 &&	exist(me.filePath,'file') ~= 2 && exist(me.filePath,'file') ~= 7)%use our default
 				p = mfilename('fullpath');
 				p = fileparts(p);
-				me.fileName = [p filesep 'monkey-dance.avi'];
-				me.fileNames{1} = me.fileName;
+				me.filePath = [p filesep 'monkey-dance.avi'];
+				me.filePaths{1} = me.filePath;
 				me.selection = 1;
-				fprintf('---> movieStimulus: Didn''t find specified file so replacing with default movie %s\n',me.fileName);
-			elseif exist(me.fileName,'dir') == 7
+				fprintf('---> movieStimulus: Didn''t find specified file so replacing with default movie %s\n',me.filePath);
+			elseif exist(me.filePath,'dir') == 7
 				findFiles(me);
-			elseif me.selection>1
-				[p,f,e]=fileparts(me.fileName);
+			elseif me.selection > 1
+				[p,f,e]=fileparts(me.filePath);
 				for i = 1:me.selection
-					me.fileNames{i} = [p filesep f num2str(i) e];
-					if ~exist(me.fileNames{i},'file');warning('Movie %s not available!',me.fileNames{i});end
+					me.filePaths{i} = [p filesep f num2str(i) e];
+					if ~exist(me.filePaths{i},'file');warning('Movie %s not available!',me.filePaths{i});end
 				end
-			elseif exist(me.fileName,'file') == 2
+			elseif exist(me.filePath,'file') == 2
 				me.selection = 1;
-				me.fileNames{1} = me.fileName;
+				me.filePaths{1} = me.filePath;
 			end
-			me.currentMovie = me.fileNames{me.selection};
+			me.currentMovie = me.filePaths{me.selection};
 		end
 
 		% ===================================================================
@@ -440,19 +442,20 @@ classdef movieStimulus < baseStimulus
 		%>  
 		% ===================================================================
 		function findFiles(me)	
-			if exist(me.fileName,'dir') == 7
-				d = dir(me.fileName);
+			if exist(me.filePath,'dir') == 7
+				d = dir(me.filePath);
 				n = 0;
 				for i = 1: length(d)
-					if d(i).isdir;continue;end
+					if d(i).isdir; continue; end
 					[~,f,e]=fileparts(d(i).name);
 					if regexpi(e,'mp4|avi|mpeg')
 						n = n + 1;
-						me.fileNames{n} = [me.fileName filesep f e];
-						me.fileNames{n} = regexprep(me.fileNames{n},'\/\/','/');
+						me.filePaths{n} = [me.filePath filesep f e];
+						me.filePaths{n} = regexprep(me.filePaths{n},'\/\/','/');
 					end
 				end
-				me.selection = length(me.fileNames);
+				me.nVideos = length(me.filePaths);
+				if me.selection < 1 || me.selection > me.nVideos; me.selection = 1; end
 			end
 		end
 		

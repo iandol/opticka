@@ -732,7 +732,7 @@ classdef optickaCore < handle
 
 
 		% ===================================================================
-		function salutation(me, in, message, override)
+		function logOutput(me, in, message, override)
 		%> @brief Prints messages dependent on verbosity
 		%>
 		%> Prints messages dependent on verbosity
@@ -750,10 +750,10 @@ classdef optickaCore < handle
 				end
 			end
 		end
-		function LogOutput(me, in, message, override)
+		function salutation(me, in, message, override)
 			if ~exist('override','var');override = false;end
 			if ~exist('message','var'); message = ''; end
-			salutation(me, in, message, override)
+			logOutput(me, in, message, override)
 		end
 		
 	end

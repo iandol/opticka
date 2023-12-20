@@ -9,10 +9,10 @@
 classdef imageStimulus < baseStimulus
 	properties %--------------------PUBLIC PROPERTIES----------%
 		type char					= 'picture'
-		%> filename to load, if it is a directory use all images within
-		fileName char				= ''
+		%> filePath to load, if it is a directory use all images within
+		filePath char				= ''
 		%> selection if N > 0, then this is a number of images from 1:N, e.g.
-		%> fileName = base.jpg, selection=5, then base1.jpg - base5.jpg
+		%> filePath = base.jpg, selection=5, then base1.jpg - base5.jpg
 		%> update() will randomly select one from this group.
 		selection double			= 0
 		%> contrast multiplier
@@ -24,34 +24,38 @@ classdef imageStimulus < baseStimulus
 		%> auto mip-map generation, 32 = stop Screen('Close')
 		%> clearing texture
 		specialFlags				= []
-		% filterMode' How to compute the pixel color values when the
-		% texture is drawn magnified, minified or drawn shifted, e.g., if
-		% sourceRect and destinationRect do not have the same size or if
-		% sourceRect specifies fractional pixel values. 0 = Nearest
-		% neighbour filtering, 1 = Bilinear filtering - this is the
-		% default. Values 2 or 3 select use of OpenGL mip-mapping for
-		% improved quality: 2 = Bilinear filtering for nearest mipmap
-		% level, 3 = Trilinear filtering across mipmap levels, 4 = Nearest
-		% neighbour filtering for nearest mipmap level, 5 = nearest
-		% neighbour filtering with linear interpolation between mipmap
-		% levels. Mipmap filtering is only supported for GL_TEXTURE_2D
-		% textures (see description of 'specialFlags' flag 1 below). A
-		% negative filterMode value will also use mip-mapping for fast
-		% drawing of blurred textures if the GL_TEXTURE_2D format is used:
-		% Mip-maps are essentially image resolution pyramids, the
-		% filterMode value selects a specific layer in that pyramid. A
-		% value of -1 draws the highest resolution layer, a value of -2
-		% draws a half-resolution layer, a value of -3 draws a quarter
-		% resolution layer and so on. Each layer has half the resolution of
-		% the preceeding layer. This allows for very fast drawing of
-		% blurred or low-pass filtered images, e.g., for gaze-contingent
-		% displays.
+		%> filterMode' How to compute the pixel color values when the
+		%> texture is drawn magnified, minified or drawn shifted, e.g., if
+		%> sourceRect and destinationRect do not have the same size or if
+		%> sourceRect specifies fractional pixel values. 0 = Nearest
+		%> neighbour filtering, 1 = Bilinear filtering - this is the
+		%> default. Values 2 or 3 select use of OpenGL mip-mapping for
+		%> improved quality: 2 = Bilinear filtering for nearest mipmap
+		%> level, 3 = Trilinear filtering across mipmap levels, 4 = Nearest
+		%> neighbour filtering for nearest mipmap level, 5 = nearest
+		%> neighbour filtering with linear interpolation between mipmap
+		%> levels. Mipmap filtering is only supported for GL_TEXTURE_2D
+		%> textures (see description of 'specialFlags' flag 1 below). A
+		%> negative filterMode value will also use mip-mapping for fast
+		%> drawing of blurred textures if the GL_TEXTURE_2D format is used:
+		%> Mip-maps are essentially image resolution pyramids, the
+		%> filterMode value selects a specific layer in that pyramid. A
+		%> value of -1 draws the highest resolution layer, a value of -2
+		%> draws a half-resolution layer, a value of -3 draws a quarter
+		%> resolution layer and so on. Each layer has half the resolution of
+		%> the preceeding layer. This allows for very fast drawing of
+		%> blurred or low-pass filtered images, e.g., for gaze-contingent
+		%> displays.
 		filter						= 1
+		%> crop: none or vertical or horizontal
+		crop						= 'none'
 	end
 
 	properties (SetAccess = protected, GetAccess = public)
 		%> list of imagenames if selection > 0
-		fileNames = {};
+		filePaths					= {};
+		%> number of images
+		nImages						= 0;
 		%> current randomly selected image
 		currentImage				= ''
 		%> scale is set by size
@@ -68,7 +72,7 @@ classdef imageStimulus < baseStimulus
 
 	properties (SetAccess = protected, GetAccess = public, Hidden = true)
 		typeList			= {'picture'}
-		fileNameList		= 'filerequestor';
+		filePathList		= 'filerequestor';
 		interpMethodList	= {'nearest','linear','spline','cubic'}
 		%> properties to ignore in the UI
 		ignorePropertiesUI	= {}
@@ -76,10 +80,10 @@ classdef imageStimulus < baseStimulus
 
 	properties (Access = protected)
 		%> allowed properties passed to object upon construction
-		allowedProperties = {'type', 'fileName', 'selection', 'contrast', ...
-			'scale'}
+		allowedProperties = {'type', 'filePath', 'selection', 'contrast', ...
+			'precision','filter','crop'}
 		%>properties to not create transient copies of during setup phase
-		ignoreProperties = {'type', 'scale', 'fileName'}
+		ignoreProperties = {'type', 'scale', 'filePath'}
 	end
 
 	%=======================================================================
@@ -104,10 +108,10 @@ classdef imageStimulus < baseStimulus
 
 			me.isRect = true; %uses a rect for drawing
 
-			checkFileName(me);
+			checkfilePath(me);
 
 			me.ignoreProperties = [me.ignorePropertiesBase me.ignoreProperties];
-			me.salutation('constructor','Image Stimulus initialisation complete');
+			me.logOutput('constructor','Image Stimulus initialisation complete');
 		end
 
 		% ===================================================================
@@ -125,13 +129,14 @@ classdef imageStimulus < baseStimulus
 		%> @param sM screenManager object for reference
 		%> @param in matrix for conversion to a PTB texture
 		% ===================================================================
-		function setup(me,sM,in)
-			if ~exist('in','var');in = []; end
+		function setup(me, sM, in)
+
 			reset(me); %reset object back to its initial state
+			if ~exist('in','var');in = []; end
 			me.inSetup = true; me.isSetup = false;
 			if isempty(me.isVisible); show(me); end
 
-			checkFileName(me);
+			checkfilePath(me);
 
 			me.sM = sM;
 			if ~sM.isOpen; error('Screen needs to be Open!'); end
@@ -151,14 +156,12 @@ classdef imageStimulus < baseStimulus
 
 			addRuntimeProperties(me);
 
-			loadImage(me, in);
+			me.inSetup = false; me.isSetup = true;
 
+			loadImage(me, in);
 			if me.sizeOut > 0
 				me.scale = me.sizeOut / (me.width / me.ppd);
 			end
-
-			me.inSetup = false; me.isSetup = true;
-
 			computePosition(me);
 			setRect(me);
 
@@ -177,25 +180,30 @@ classdef imageStimulus < baseStimulus
 		% ===================================================================
 		function loadImage(me,in)
 			ialpha = [];
+			tt = tic;
 			if ~exist('in','var'); in = []; end
 			if ~isempty(in) && ischar(in)
 				% assume a file path
 				[me.matrix, ~, ialpha] = imread(in);
 				me.currentImage = in;
-			elseif ~isempty(in) && isnumeric(in) && max(size(in))==1 && ~isempty(me.fileNames) && in <= length(me.fileNames)
-				% assume an index to fileNames
-				[me.matrix, ~, ialpha] = imread(me.fileNames{in});
-				me.currentImage = me.fileNames{in};
+			elseif ~isempty(in) && isnumeric(in) && max(size(in))==1 && ~isempty(me.filePaths) && in <= length(me.filePaths)
+				% assume an index to filePaths
+				me.currentImage = me.filePaths{in};
+				[me.matrix, ~, ialpha] = imread(me.currentImage);
 			elseif ~isempty(in) && isnumeric(in) && size(in,3)==3
 				% assume a raw matrix
 				me.matrix = in;
 				me.currentImage = '';
-			elseif ~isempty(me.fileNames)
-				% try to load from fileNames
-				i = randi(length(me.fileNames));
-				if exist(me.fileNames{i},'file')
-					[me.matrix, ~, ialpha] = imread(me.fileNames{i});
-					me.currentImage = me.fileNames{i};
+			elseif ~isempty(me.filePaths)
+				% try to load from filePaths
+				im = me.getP('selection');
+				if im < 1 || im > me.nImages
+					im = randi(length(me.filePaths));
+				end
+				if exist(me.filePaths{im},'file')
+					me.currentImage = me.filePaths{im};
+					fprintf('File %s\n',me.currentImage);
+					[me.matrix, ~, ialpha] = imread(me.currentImage);
 				end
 			else
 				if me.sizeOut <= 0; sz = 2; else; sz = me.sizeOut; end
@@ -207,9 +215,45 @@ classdef imageStimulus < baseStimulus
 				me.matrix = double(me.matrix)/255;
 			end
 
+			me.matrix = me.matrix .* me.contrastOut;
+			w = size(me.matrix,2);
+			h = size(me.matrix,1);
+
+			switch me.crop
+				case 'square'
+					if w < h
+						p = floor((h - w)/2);
+						me.matrix = me.matrix(p+1:w+p, :, :);
+						if ~isempty(ialpha)
+							ialpha = ialpha(p+1:w+p, :);
+						end
+					elseif w > h
+						p = floor((w - h)/2);
+						me.matrix = me.matrix(:, p+1:h+p, :);
+						if ~isempty(ialpha)
+							ialpha = ialpha(:, p+1:h+p);
+						end
+					end
+				case 'vertical'
+					if w < h
+						p = floor((h - w)/2);
+						me.matrix = me.matrix(p+1:w+p, :, :);
+						if ~isempty(ialpha)
+							ialpha = ialpha(p+1:w+p, :);
+						end
+					end
+				case 'horizontal'
+					if w > h
+						p = floor((w - h)/2);
+						me.matrix = me.matrix(:, p+1:h+p, :);
+						if ~isempty(ialpha)
+							ialpha = ialpha(:, p+1:h+p);
+						end
+					end
+			end
+
 			me.width = size(me.matrix,2);
 			me.height = size(me.matrix,1);
-			me.matrix = me.matrix .* me.contrastOut;
 
 			if isempty(ialpha)
 				if isfloat(me.matrix)
@@ -230,8 +274,8 @@ classdef imageStimulus < baseStimulus
 			end
 			if ~isempty(me.sM) && me.sM.isOpen == true
 				me.texture = Screen('MakeTexture', me.sM.win, me.matrix, 1, me.specialFlags, me.precision);
-				if me.verbose;me.salutation('loadImage',['Load: ' regexprep(me.currentImage,'\\','/')]);end
 			end
+			me.logOutput('loadImage',['Load: ' regexprep(me.currentImage,'\\','/') 'in ' num2str(toc(tt)) ' secs']);
 		end
 
 		% ===================================================================
@@ -239,11 +283,12 @@ classdef imageStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function update(me)
-			if me.selection > 0
+			s = me.getP('selection');
+			if s > 0 && ~strcmp(me.currentImage,me.filePaths{s})
 				if ~isempty(me.texture) && me.texture > 0 && Screen(me.texture,'WindowKind') == -1
 					try Screen('Close',me.texture); end %#ok<*TRYNC>
 				end
-				me.loadImage(me.fileNames{randi(me.selection)});
+				loadImage(me);
 			end
 			if me.sizeOut > 0
 				me.scale = me.sizeOut / (me.width / me.ppd);
@@ -257,13 +302,11 @@ classdef imageStimulus < baseStimulus
 		%> @brief Draw this stimulus object
 		%>
 		% ===================================================================
-		function draw(me,win)
+		function draw(me, win)
 			if me.isVisible && me.tick >= me.delayTicks && me.tick < me.offTicks
 				if ~exist('win','var');win = me.sM.win; end
-				% Screen('DrawTexture', windowPointer, texturePointer
-				% [,sourceRect] [,destinationRect] [,rotationAngle]
-				% [, filterMode] [, globalAlpha] [, modulateColor]
-				% [, textureShader] [, specialFlags] [, auxParameters]);
+				% Screen('DrawTexture', windowPointer, texturePointer [,sourceRect] [,destinationRect] [,rotationAngle]
+				% [, filterMode] [, globalAlpha] [, modulateColor] [, textureShader] [, specialFlags] [, auxParameters]);
 				Screen('DrawTexture', win, me.texture, [], me.mvRect,...
 					me.angleOut, me.filter, me.alpha, me.colourOut);
 			end
@@ -304,29 +347,6 @@ classdef imageStimulus < baseStimulus
 			removeTmpProperties(me);
 		end
 
-		% ===================================================================
-		%> @brief find a file or directory
-		%>
-		% ===================================================================
-		function findFile(me, dir)
-			if ~isprop(me, 'fileName'); return; end
-			if ~exist('dir','var'); dir = false; end
-			if dir
-				p = uigetdir('Select Files Dir');
-				f = '';
-			else
-				[f,p] = uigetfile({ '*.*',  'All Files (*.*)'},'Select File');
-			end
-			if ischar(f)
-				me.fileName = [p f];
-			end
-			checkFileName(me);
-			fprintf('--->>> Found these images:\n');
-			for i = 1:length(me.fileNames)
-				fprintf('\t %s\n',me.fileNames{i});
-			end
-		end
-
 	end %---END PUBLIC METHODS---%
 
 	%=======================================================================
@@ -334,26 +354,29 @@ classdef imageStimulus < baseStimulus
 	%=======================================================================
 
 		% ===================================================================
-		%> @brief checkFileName - loads a file or sets up a directory
+		%> @brief checkfilePath - loads a file or sets up a directory
 		%>
 		% ===================================================================
-		function checkFileName(me)
-			if isempty(me.fileName) || (me.selection==0 &&	exist(me.fileName,'file') ~= 2 && exist(me.fileName,'file') ~= 7)%use our default
+		function checkfilePath(me)
+			if isempty(me.filePath) || (me.selection==0 && exist(me.filePath,'file') ~= 2 && exist(me.filePath,'file') ~= 7)%use our default
 				p = mfilename('fullpath');
 				p = fileparts(p);
-				me.fileName = [p filesep 'Bosch.jpeg'];
-				me.fileNames{1} = me.fileName;
-			elseif exist(me.fileName,'dir') == 7
-				findFiles(me);	
-			elseif me.selection>1
-				[p,f,e]=fileparts(me.fileName);
+				me.filePath = [p filesep 'Bosch.jpeg'];
+				me.filePaths{1} = me.filePath;
+				me.selection = 1;
+			elseif exist(me.filePath,'dir') == 7
+				findFiles(me);
+			elseif me.selection > 1
+				[p,f,e]=fileparts(me.filePath);
 				for i = 1:me.selection
-					me.fileNames{i} = [p filesep f num2str(i) e];
-					if ~exist(me.fileNames{i},'file');warning('Image %s not available!',me.fileNames{i});end
+					me.filePaths{i} = [p filesep f num2str(i) e];
+					if ~exist(me.filePaths{i},'file');warning('Image %s not available!',me.filePaths{i});end
 				end
-			elseif exist(me.fileName,'file') == 2
-				me.fileNames{1} = me.fileName;
+			elseif exist(me.filePath,'file') == 2
+				me.selection = 1;
+				me.filePaths{1} = me.filePath;
 			end
+			me.currentImage = me.filePaths{me.selection};
 		end
 
 		% ===================================================================
@@ -399,19 +422,20 @@ classdef imageStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function findFiles(me)
-			if exist(me.fileName,'dir') == 7
-				d = dir(me.fileName);
+			if exist(me.filePath,'dir') == 7
+				d = dir(me.filePath);
 				n = 0;
 				for i = 1: length(d)
-					if d(i).isdir;continue;end
+					if d(i).isdir; continue; end
 					[~,f,e]=fileparts(d(i).name);
-					if regexpi(e,'png|jpeg|jpg|bmp|tif')
+					if regexpi(e,'png|jpeg|jpg|bmp|tif|tiff')
 						n = n + 1;
-						me.fileNames{n} = [me.fileName filesep f e];
-						me.fileNames{n} = regexprep(me.fileNames{n},'\/\/','/');
+						me.filePaths{n} = [me.filePath filesep f e];
+						me.filePaths{n} = regexprep(me.filePaths{n},'\/\/','/');
 					end
 				end
-				me.selection = length(me.fileNames);
+				me.nImages = length(me.filePaths);
+				if me.selection < 1 || me.selection > me.nImages; me.selection = 1; end
 			end
 		end
 

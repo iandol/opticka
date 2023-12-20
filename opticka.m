@@ -339,6 +339,7 @@ classdef opticka < optickaCore
 			
 			me.r.subjectName = me.gv(me.ui.OKSubject);
 			me.r.researcherName = me.gv(me.ui.OKResearcher);
+			me.r.askForComments = me.gl(me.ui.OKComments);
 
 			me.r.audioDevice = me.gn(me.ui.OKaudioDevice);
 
@@ -1636,14 +1637,14 @@ classdef opticka < optickaCore
 						sz=s.size;
 						c=s.contrast;
 						sp=s.speed;
-						p=s.fileName;
+						p=s.filePath;
 						str{i} = [num2str(i) '.' name ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' c=' num2str(c) ' sp=' num2str(sp) ' [' p ']'];
 					case 'movie'
 						x=s.xPosition;
 						y=s.yPosition;
 						sz=s.size;
 						sp=s.speed;
-						p=s.fileName;
+						p=s.filePath;
 						str{i} = [num2str(i) '.' name ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' sp=' num2str(sp) ' [' p ']'];
 					case 'fixationcross'
 						x=s.xPosition;
