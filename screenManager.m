@@ -103,7 +103,11 @@ classdef screenManager < optickaCore
 		%> gamma correction info saved as a calibrateLuminance object
 		gammaTable calibrateLuminance
 		%> settings for movie output
-		movieSettings						= []
+		%> type 1 = video file, 2 = mat array, 3 = single pictures
+		movieSettings						= struct('record',false,'type',1,'loop',inf,...
+											'size',[600 600],'fps',30,'quality',0.7,...
+											'keyframe',5,'nFrames',sv.fps * 2,...
+											'prefix','Movie','codec','x264enc')
 		%> populated on window open; useful screen info, initial gamma tables 
 		%> and the like
 		screenVals struct					= struct('ifi',1/60,'fps',60,...
@@ -307,10 +311,7 @@ classdef screenManager < optickaCore
 			end
 			sv.ifi				= 1/sv.fps;
 
-			% initialise our movie settings
-			me.movieSettings = struct('record',false,'loop',inf,'size',[600 600],...
-				'fps',30,'quality',0.7,'keyframe',5,...
-				'nFrames',sv.fps * 2,'type',1,'codec','x264enc');
+			me.movieSettings.fps = sv.fps;
 
 			if me.debug == true %we yoke these together but they can then be overridden
 				me.visualDebug	= true;
@@ -1657,7 +1658,7 @@ classdef screenManager < optickaCore
 				end
 				me.movieSettings.moviepath = [me.paths.parent filesep 'Movie' filesep];
 				switch me.movieSettings.type
-					case 1
+					case {'movie',1}
 						if isempty(me.movieSettings.codec)
 							settings = sprintf(':CodecSettings= Profile=3 Keyframe=%g Videoquality=%g',...
 								me.movieSettings.keyframe, me.movieSettings.quality);
@@ -1665,15 +1666,17 @@ classdef screenManager < optickaCore
 							settings = sprintf(':CodecType=%s Profile=3 Keyframe=%g Videoquality=%g',...
 								me.movieSettings.codec, me.movieSettings.keyframe, me.movieSettings.quality);
 						end
-						me.movieSettings.movieFile = [me.movieSettings.moviepath 'Movie' datestr(now,'dd-mm-yyyy-HH-MM-SS') '.mov'];
+						me.movieSettings.movieFile = [me.movieSettings.moviepath me.movieSettings.prefix datestr(now,'dd-mm-yyyy-HH-MM-SS') '.mp4'];
 						me.moviePtr = Screen('CreateMovie', me.win,...
 							me.movieSettings.movieFile,...
 							me.movieSettings.size(1), me.movieSettings.size(2),...
 							me.movieSettings.fps, settings);
 						fprintf('\n---> screenManager: Movie [enc:%s] [rect:%s] will be saved to:\n\t%s\n',settings,...
 							num2str(me.movieSettings.outsize),me.movieSettings.movieFile);
-					case 2
+					case {'mat',2}
 						me.movieMat = zeros(me.movieSettings.size(2),me.movieSettings.size(1),3,me.movieSettings.nFrames);
+					case {'image','png','jpg',3}
+						me.movieSettings.movieFile = [me.movieSettings.moviepath me.movieSettings.prefix datestr(now,'dd-mm-yyyy-HH-MM-SS')];
 				end
 			end
 		end
@@ -1688,11 +1691,14 @@ classdef screenManager < optickaCore
 			if me.movieSettings.record == true
 				if me.movieSettings.loop <= me.movieSettings.nFrames
 					switch me.movieSettings.type
-						case 1
+						case {'movie',1}
 							Screen('AddFrameToMovie', me.win, me.movieSettings.outsize, 'frontBuffer', me.moviePtr);
-						case 2
+						case {'mat',2}
 							me.movieMat(:,:,:,me.movieSettings.loop)=Screen('GetImage', me.win,...
 								me.movieSettings.outsize, 'frontBuffer', me.movieSettings.quality, 3);
+						otherwise
+							m = Screen('GetImage', me.win,me.movieSettings.outsize, 'frontBuffer', me.movieSettings.quality, 3);
+							
 					end
 					me.movieSettings.loop=me.movieSettings.loop+1;
 				end
@@ -1713,13 +1719,10 @@ classdef screenManager < optickaCore
 						if ~isempty(me.moviePtr)
 							Screen('FinalizeMovie', me.moviePtr);
 							fprintf(['\n---> screenManager: movie saved to ' me.movieSettings.movieFile '\n']);
+							Screen('CloseMovie', me.moviePtr);
 						end
-					case 2
-% 						if wasError == true
-%
-% 						else
-% 							save([me.movieSettings.moviepath 'Movie' datestr(clock) '.mat'],'mimg');
-% 						end
+					otherwise
+
 				end
 			end
 			me.movieSettings.loop = 1;
