@@ -106,7 +106,7 @@ classdef screenManager < optickaCore
 		%> type 1 = video file, 2 = mat array, 3 = single pictures
 		movieSettings						= struct('record',false,'type',1,'loop',inf,...
 											'size',[600 600],'fps',30,'quality',0.7,...
-											'keyframe',5,'nFrames',sv.fps * 2,...
+											'keyframe',5,'nFrames', inf,...
 											'prefix','Movie','codec','x264enc')
 		%> populated on window open; useful screen info, initial gamma tables 
 		%> and the like
@@ -1676,7 +1676,7 @@ classdef screenManager < optickaCore
 					case {'mat',2}
 						me.movieMat = zeros(me.movieSettings.size(2),me.movieSettings.size(1),3,me.movieSettings.nFrames);
 					case {'image','png','jpg',3}
-						me.movieSettings.movieFile = [me.movieSettings.moviepath me.movieSettings.prefix datestr(now,'dd-mm-yyyy-HH-MM-SS')];
+						me.movieSettings.movieFile = [me.movieSettings.moviepath me.movieSettings.prefix '_' datestr(now,'dd-mm-yyyy-HH-MM-SS')];
 				end
 			end
 		end
@@ -1697,8 +1697,12 @@ classdef screenManager < optickaCore
 							me.movieMat(:,:,:,me.movieSettings.loop)=Screen('GetImage', me.win,...
 								me.movieSettings.outsize, 'frontBuffer', me.movieSettings.quality, 3);
 						otherwise
-							m = Screen('GetImage', me.win,me.movieSettings.outsize, 'frontBuffer', me.movieSettings.quality, 3);
-							
+							try
+								m = Screen('GetImage', me.win, me.movieSettings.outsize);
+								imwrite(m,[me.movieSettings.movieFile '_' num2str(me.movieSettings.loop) '.png']);
+							catch ME
+								getReport(ME)
+							end
 					end
 					me.movieSettings.loop=me.movieSettings.loop+1;
 				end
