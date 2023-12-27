@@ -1644,7 +1644,11 @@ classdef screenManager < optickaCore
 		function prepareMovie(me)
 			% Set up the movie settings
 			if me.movieSettings.record == true
-				me.movieSettings.outsize=CenterRect([0 0 me.movieSettings.size(1) me.movieSettings.size(2)],me.winRect);
+				if length(me.movieSettings.size) == 2
+					me.movieSettings.size=CenterRect([0 0 me.movieSettings.size(1) me.movieSettings.size(2)],me.winRect);
+				elseif isempty(me.movieSettings.size)
+					me.movieSettings.size = me.winRect;
+				end
 				me.movieSettings.loop=1;
 				if ismac || isunix
 					oldp = cd('~');
@@ -1671,13 +1675,15 @@ classdef screenManager < optickaCore
 							me.movieSettings.movieFile,...
 							me.movieSettings.size(1), me.movieSettings.size(2),...
 							me.movieSettings.fps, settings);
-						fprintf('\n---> screenManager: Movie [enc:%s] [rect:%s] will be saved to:\n\t%s\n',settings,...
-							num2str(me.movieSettings.outsize),me.movieSettings.movieFile);
 					case {'mat',2}
+						settings = 'mat';
 						me.movieMat = zeros(me.movieSettings.size(2),me.movieSettings.size(1),3,me.movieSettings.nFrames);
 					case {'image','png','jpg',3}
+						settings = 'png';
 						me.movieSettings.movieFile = [me.movieSettings.moviepath me.movieSettings.prefix '_' datestr(now,'dd-mm-yyyy-HH-MM-SS')];
 				end
+				fprintf('\n---> screenManager: Movie [enc:%s] [rect:%s] will be saved to:\n\t%s\n',settings,...
+				  num2str(me.movieSettings.size),me.movieSettings.movieFile);
 			end
 		end
 
