@@ -1658,7 +1658,7 @@ classdef screenManager < optickaCore
 					homep = 'c:';
 				end
 				if ~exist([me.paths.parent filesep 'Movie' filesep],'dir')
-					mkdir([me.paths.parent filesep 'Movie' filesep])
+					try mkdir([me.paths.parent filesep 'Movie' filesep]); end
 				end
 				me.movieSettings.moviepath = [me.paths.parent filesep 'Movie' filesep];
 				switch me.movieSettings.type
@@ -1677,7 +1677,7 @@ classdef screenManager < optickaCore
 							me.movieSettings.fps, settings);
 					case {'mat',2}
 						settings = 'mat';
-						me.movieMat = zeros(me.movieSettings.size(2),me.movieSettings.size(1),3,me.movieSettings.nFrames);
+						me.movieMat = zeros(RectHeight(me.movieSettings.size),RectWidth(me.movieSettings.size),3,me.movieSettings.nFrames);
 					case {'image','png','jpg',3}
 						settings = 'png';
 						me.movieSettings.movieFile = [me.movieSettings.moviepath me.movieSettings.prefix '_' datestr(now,'dd-mm-yyyy-HH-MM-SS')];
@@ -1698,13 +1698,13 @@ classdef screenManager < optickaCore
 				if me.movieSettings.loop <= me.movieSettings.nFrames
 					switch me.movieSettings.type
 						case {'movie',1}
-							Screen('AddFrameToMovie', me.win, me.movieSettings.outsize, 'frontBuffer', me.moviePtr);
+							Screen('AddFrameToMovie', me.win, me.movieSettings.size, 'frontBuffer', me.moviePtr);
 						case {'mat',2}
 							me.movieMat(:,:,:,me.movieSettings.loop)=Screen('GetImage', me.win,...
-								me.movieSettings.outsize, 'frontBuffer', me.movieSettings.quality, 3);
+								me.movieSettings.size, 'frontBuffer', me.movieSettings.quality, 3);
 						otherwise
 							try
-								m = Screen('GetImage', me.win, me.movieSettings.outsize);
+								m = Screen('GetImage', me.win, me.movieSettings.size);
 								imwrite(m,[me.movieSettings.movieFile '_' num2str(me.movieSettings.loop) '.png']);
 							catch ME
 								getReport(ME)

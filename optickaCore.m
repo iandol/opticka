@@ -403,6 +403,19 @@ classdef optickaCore < handle
 		%> @brief checks the paths are valid
 		%>
 		% ===================================================================
+
+			oldhome = me.paths.home;
+			newhome = getenv('HOME');
+			if ~matches(newhome,oldhome)
+				fn = fieldnames(me.paths);
+				for ii = 1:length(fieldnames(me.paths))
+					if contains(me.paths.(fn{ii}),oldhome)
+						me.paths.(fn{ii}) = regexprep(me.paths.(fn{ii}),oldhome,newhome);
+					end
+				end
+				me.paths.oldhome = oldhome;
+			end
+
 			samePath = false;
 			if isprop(me,'dir')
 
