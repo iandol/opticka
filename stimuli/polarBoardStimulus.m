@@ -26,15 +26,12 @@
 classdef polarBoardStimulus < baseStimulus
 	
 	properties %--------------------PUBLIC PROPERTIES----------%
-		%>
-		type char 				= ''
+		type char 				= 'randdir'
 		%> second colour of a colour grating stimulus
-		colour2(1,:) double		= [0 1 0 1]
+		colour2(1,:) double		= [0 0 0 1]
 		%> base colour from which colour and colour2 are blended via contrast value
 		%> if empty [default], uses the background colour from screenManager
 		baseColour(1,:) double		= []
-		%> spiral, how much to multiply the sf for the radial part
-		spiralFactor double		= 1
 		%> arc start angle and width in degrees (0 disable)
 		arcValue(1,2) double	= [0 0]
 		%> shoud arc be symmetrical
@@ -43,11 +40,8 @@ classdef polarBoardStimulus < baseStimulus
 		centerMask(1,1) double	= 0
 		%> spatial frequency of the grating
 		sf(1,1) double			= 1
-		sf2 = 1
 		%> temporal frequency of the grating
-		tf(1,1) double			= 1
-		%> sigma of square wave smoothing, use -1 for sinusoidal gratings
-		sigma(1,1) double		= -1
+		tf(1,1) double			= 0.5
 		%> rotate the grating patch (false) or the grating texture within the patch (default = true)?
 		rotateTexture logical	= true
 		%> phase of grating
@@ -57,15 +51,11 @@ classdef polarBoardStimulus < baseStimulus
 		%> use a circular mask for the grating (default = true).
 		mask logical			= true
 		%> direction of the drift; default = false means drift left>right when angle is 0deg.
-		%This switch can be accomplished simply setting angle, but this control enables
-		%simple reverse direction protocols.
+		%> This switch can be accomplished simply setting angle, but this control enables
+		%? simple reverse direction protocols.
 		reverseDirection logical = false
 		%> the direction of the grating object if speed > 0.
 		direction double		= 0
-		%> Do we need to correct the phase to be relative to center not edge? This enables
-		%> centre surround stimuli are phase matched, and if we enlarge a grating object its
-		%> phase stays identical at the centre of the object (where we would imagine our RF)
-		correctPhase logical	= false
 		%> In certain cases the base colour should be calculated
 		%> dynamically from colour and colour2, and this enables this to
 		%> occur blend
@@ -74,15 +64,13 @@ classdef polarBoardStimulus < baseStimulus
 		phaseReverseTime(1,1) double = 0
 		%> What phase to use for reverse?
 		phaseOfReverse(1,1) double	= 180
-		%> aspect ratio of the grating
-		aspectRatio(1,1) double		= 1;
         %> turn stimulus on/off at X hz, [] diables this
         visibleRate             = []
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%stimulus family
-		family char				= 'grating'
+		family char				= 'checkerboard'
 		%> scale is used when changing size as an independent variable to keep sf accurate
 		scale double			= 1
 		%> the phase amount we need to add for each frame of animation
@@ -90,7 +78,7 @@ classdef polarBoardStimulus < baseStimulus
 	end
 	
 	properties (Constant)
-		typeList cell			= {'radial';'circular';'spiral'}
+		typeList cell			= {'randdir';'spiraldir'}
 	end
 
 	properties (SetAccess = protected, GetAccess = {?baseStimulus})
@@ -225,21 +213,10 @@ classdef polarBoardStimulus < baseStimulus
 			me.gratingSize = round(me.ppd*me.size); %virtual support larger than initial size
 			
 			if ~isprop(me,'driftPhase'); addprop(me,'driftPhase'); end
-			if me.correctPhase
-				ps = me.calculatePhase;
-				me.driftPhase = me.phaseOut-ps;
-			else
-				me.driftPhase = me.phaseOut;
-			end
+			me.driftPhase = me.phaseOut;
 			
 			if ~isprop(me,'res'); addprop(me,'res'); end
-			
-			switch length(me.aspectRatio)
-				case 1
-					me.res = round([me.gratingSize*me.aspectRatio me.gratingSize]);
-				case 2
-					me.res = round([me.gratingSize*me.aspectRatio(1) me.gratingSize*me.aspectRatio(2)]);
-			end
+			me.res = round([me.gratingSize me.gratingSize]);	
 			if max(me.res) > me.sM.screenVals.width*1.5 %scale to be no larger than screen width
 				me.res = floor( me.res / (max(me.res) / me.sM.screenVals.width));
 			end
@@ -355,12 +332,7 @@ classdef polarBoardStimulus < baseStimulus
             me.isVisible = true;
             me.visibleTick = 0;
 
-			if me.correctPhase
-				ps=me.calculatePhase;
-				me.driftPhase=me.phaseOut-ps;
-			else
-				me.driftPhase=me.phaseOut;
-			end
+			me.driftPhase=me.phaseOut;
 
 			updateSFs(me);
 			if me.mask == true
@@ -410,17 +382,16 @@ classdef polarBoardStimulus < baseStimulus
 			if me.isVisible && me.tick >= me.delayTicks && me.tick < me.offTicks
 				Screen('DrawTexture', me.sM.win, me.texture, [], me.mvRect,...
 					me.angleOut, [], [], me.baseColourOut, [], me.rotateMode,...
-					[me.driftPhase, 10, me.contrastOut, me.sigmaOut, 0.05, 0, 0, 0]);
+					[me.driftPhase, 10, me.contrastOut, 0, me.sfOut, 0, 0, 0]);
 				if me.arcValueOut(2) > 0
 					if me.arcSymmetry
 						a = me.arcValueOut(1) + (me.arcValueOut(2) / 2);
 						b = 180 - me.arcValueOut(2);
-						c = (180+me.arcValueOut(1)) + (me.arcValueOut(2) / 2);
-						d = b;
+						c = a + 180;
 						Screen('FillArc', me.sM.win, me.baseColourOut, ...
 							[me.mvRect(1)-2 me.mvRect(2)-2 me.mvRect(3)+2 me.mvRect(4)+2], a, b);
 						Screen('FillArc', me.sM.win, me.baseColourOut, ...
-							[me.mvRect(1)-2 me.mvRect(2)-2 me.mvRect(3)+2 me.mvRect(4)+2], c, d);
+							[me.mvRect(1)-2 me.mvRect(2)-2 me.mvRect(3)+2 me.mvRect(4)+2], c, b);
 					else
 						a = me.arcValueOut(1) + (me.arcValueOut(2) / 2);
 						b = 360 - me.arcValueOut(2);
@@ -451,9 +422,10 @@ classdef polarBoardStimulus < baseStimulus
 					me.mvRect=OffsetRect(me.mvRect,me.dX_,me.dY_);
 				end
 				if me.doDrift
+					if matches(me.type,'randdir') && rand > 0.975; me.phaseIncrement = -me.phaseIncrement; end
 					me.driftPhase = me.driftPhase + me.phaseIncrement;
 				end
-				if mod(me.tick,me.phaseCounter) == 0
+				if me.phaseReverseTime > 0 && mod(me.tick, me.phaseCounter) == 0
 					me.driftPhase = me.driftPhase + me.phaseOfReverse;
 				end
                 me.visibleTick = me.visibleTick + 1;
@@ -483,6 +455,7 @@ classdef polarBoardStimulus < baseStimulus
 				me.mask = true;
 			end
 			me.maskValue = [];
+			me.phaseCounter = [];
 			me.removeTmpProperties;
 			list = {'res','gratingSize','driftPhase','rotateMode'};
 			for l = list; if isprop(me,l{1});delete(me.findprop(l{1}));end;end
