@@ -434,6 +434,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 					end
 				end
 
+				if me.verbose; s.debug = true; end
+
 				if ~s.isOpen
 					sv=open(s);
 				end
@@ -442,6 +444,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 
 				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
 
+				if ~any(strcmpi(me.family,{'movie','revcor'})); draw(me); resetTicks(me); end
 				if benchmark
 					drawText(s, 'BENCHMARK: screen won''t update properly, see FPS in command window at end.');
 				else
@@ -449,7 +452,6 @@ classdef baseStimulus < optickaCore & dynamicprops
 					drawScreenCenter(s);
 					drawText(s, ['Preview ALL with grid = ±1°; static for 1 seconds, then animate for ' num2str(runtime) ' seconds...'])
 				end
-				if ~any(strcmpi(me.family,{'movie','revcor'})); draw(me); resetTicks(me); end
 				if ismethod(me,'resetLog'); resetLog(me); end
 				flip(s);
 				if ~any(strcmpi(me.family,{'movie','revcor'})); update(me); end
@@ -506,7 +508,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				if ~benchmark;fprintf('\b======>>> First - Last frame time: %.3f\n\n',vbl(end)-startT);end
 				clear s fps benchmark runtime b bb i vbl; %clear up a bit
 				warning on
-			catch ME
+				catch ME
 				warning on
 				try getReport(ME); end
 				try Priority(0); end

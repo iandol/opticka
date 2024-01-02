@@ -1830,6 +1830,14 @@ classdef screenManager < optickaCore
 	end
 
 	%=======================================================================
+	methods (Hidden = true) %------------------HIDDEN METHODS
+	%=======================================================================
+		function drawPhotoDiode(me,colour)
+			Screen('FillRect',me.win,colour,me.photoDiodeRect);
+		end
+	end
+
+	%=======================================================================
 	methods (Static = true) %------------------STATIC METHODS
 	%=======================================================================
 

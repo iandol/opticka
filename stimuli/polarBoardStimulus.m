@@ -23,11 +23,11 @@
 %>
 %> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
-classdef polarGratingStimulus < baseStimulus
+classdef polarBoardStimulus < baseStimulus
 	
 	properties %--------------------PUBLIC PROPERTIES----------%
-		%> family type, can be 'radial', 'circular', 'spiral'
-		type char 				= 'radial'
+		%>
+		type char 				= ''
 		%> second colour of a colour grating stimulus
 		colour2(1,:) double		= [0 1 0 1]
 		%> base colour from which colour and colour2 are blended via contrast value
@@ -43,6 +43,7 @@ classdef polarGratingStimulus < baseStimulus
 		centerMask(1,1) double	= 0
 		%> spatial frequency of the grating
 		sf(1,1) double			= 1
+		sf2 = 1
 		%> temporal frequency of the grating
 		tf(1,1) double			= 1
 		%> sigma of square wave smoothing, use -1 for sinusoidal gratings
@@ -122,8 +123,8 @@ classdef polarGratingStimulus < baseStimulus
 		colour2Cache
         visibleTick				= 0
 		visibleFlip				= Inf
-		sf1
-		sf2
+		sfa
+		sfb
 		cMaskTex
 		cMaskRect
 	end
@@ -141,9 +142,9 @@ classdef polarGratingStimulus < baseStimulus
 		%> parsed.
 		%> @return instance of class.
 		% ===================================================================
-		function me = polarGratingStimulus(varargin)
+		function me = polarBoardStimulus(varargin)
 			args = optickaCore.addDefaults(varargin,...
-				struct('name','polar-grating','colour',[1 1 1 1],'colour2',[0 0 0 1]));
+				struct('name','polar-board','colour',[1 1 1 1],'colour2',[0 0 0 1]));
 			me=me@baseStimulus(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
 			
@@ -264,7 +265,7 @@ classdef polarGratingStimulus < baseStimulus
 			end
 			
 			% this is a two color grating, passing in colorA and colorB.
-			[me.texture, ~, me.shader] = CreateProceduralPolarGrating(me.sM.win, me.res(1),...
+			[me.texture, ~, me.shader] = CreateProceduralPolarBoard(me.sM.win, me.res(1),...
 				me.res(2), me.colourOut, me.colour2Out, me.maskValue);
 			me.colourCache = me.colourOut; me.colour2Cache = me.colour2Out;
 
@@ -409,7 +410,7 @@ classdef polarGratingStimulus < baseStimulus
 			if me.isVisible && me.tick >= me.delayTicks && me.tick < me.offTicks
 				Screen('DrawTexture', me.sM.win, me.texture, [], me.mvRect,...
 					me.angleOut, [], [], me.baseColourOut, [], me.rotateMode,...
-					[me.driftPhase, me.sf1, me.contrastOut, me.sigmaOut, me.sf2, 0, 0, 0]);
+					[me.driftPhase, 10, me.contrastOut, me.sigmaOut, 0.05, 0, 0, 0]);
 				if me.arcValueOut(2) > 0
 					if me.arcSymmetry
 						a = me.arcValueOut(1) + (me.arcValueOut(2) / 2);
@@ -644,27 +645,15 @@ classdef polarGratingStimulus < baseStimulus
 			end
 		end
 
+		% ===================================================================
+		%> @brief updateSFs
+		%> 
+		% ===================================================================
 		function updateSFs(me)
-			switch me.type
-				case 'radial'
-					middleRadius = me.gratingSize/2;
-					middlePerimeter = 2*pi*middleRadius; % pixels
-					me.sf1 = me.sfOut*middlePerimeter / (2*pi); % cycles/degree, must be integral to avoid clip effect, corrected in the frag file
-					me.sf2 = 0;
-				case 'circular'
-					me.sf1 = 0;
-					me.sf2 = me.sfOut;
-				otherwise
-					if me.spiralFactorOut > 0
-						sf = me.sfOut / me.spiralFactorOut;
-					else
-						sf = me.sfOut;
-					end
-					middleRadius = me.gratingSize/2;
-					middlePerimeter = 2*pi*middleRadius; % pixels
-					me.sf1 = sf * middlePerimeter / (2*pi); % cycles/degree, must be integral to avoid clip effect, corrected in the frag file
-					me.sf2 = sf * me.spiralFactorOut;
-			end
+			middleRadius = me.gratingSize/2;
+			middlePerimeter = 2*pi*middleRadius; % pixels
+			me.sfa = me.sfOut * middlePerimeter / (2*pi); % cycles/degree, must be integral to avoid clip effect, corrected in the frag file
+			me.sfb = 1;
 		end
 		
 	end

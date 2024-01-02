@@ -1,9 +1,6 @@
 /*
- * File: PolarGratingShader.vert.txt
- * Shader for drawing of Polar gratings.
- *
- * Copyright 2021, Junxiang Luo, licenced under the MIT Licence
- *
+ * File: PolarBoardShader.vert
+ * Shader for drawing of Polar board.
  */
 
 /* Constants that we need 2*pi: */
