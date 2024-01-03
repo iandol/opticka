@@ -217,6 +217,8 @@ classdef screenManager < optickaCore
 			'stereoMode','anaglyphLeft','anaglyphRight'}
 		%> the photoDiode rectangle in pixel values
 		photoDiodeRect(1,4) double			= [0, 0, 45, 45]
+		%> colour of the grid dots
+		gridColour							= [0 0 0 1]
 		%> the values computed to draw the 1deg dotted grid in visualDebug mode
 		grid
 		%> the movie pointer
@@ -322,6 +324,11 @@ classdef screenManager < optickaCore
 
 			me.ppd; %generate our dependent propertie and caches it to ppd_ for speed
 			me.makeGrid; %our visualDebug size grid
+			if mean(me.backgroundColour) > 0.5
+				me.gridColour = [0.0 0 0.2];
+			else
+				me.gridColour = [0.7 1 0.7];
+			end
 
 			sv.white			= WhiteIndex(me.screen);
 			sv.black			= BlackIndex(me.screen);
@@ -713,6 +720,14 @@ classdef screenManager < optickaCore
 
 				% set up text defaults
 				updateFontValues(me);
+
+				sv.ppd = me.ppd; %generate our dependent propertie and caches it to ppd_ for speed
+				me.makeGrid; %our visualDebug size grid
+				if mean(me.backgroundColour(1:3)) > 0.6
+					me.gridColour = [0 0 0.2];
+				else
+					me.gridColour = [1 1 0.8];
+				end
 
 				sv.white = WhiteIndex(me.screen);
 				sv.black = BlackIndex(me.screen);
@@ -1532,8 +1547,8 @@ classdef screenManager < optickaCore
 		%> @return
 		% ===================================================================
 		function drawGrid(me)
-			if me.useRetina; sz=2; else; sz = 1; end
-			Screen('DrawDots',me.win,me.grid,sz,[1 0.5 0 1],[me.xCenter me.yCenter],1);
+			if me.useRetina; sz=3; else; sz = 2; end
+			Screen('DrawDots',me.win,me.grid,sz,me.gridColour,[me.xCenter me.yCenter],0);
 		end
 
 		% ===================================================================

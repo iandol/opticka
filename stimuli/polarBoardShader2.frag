@@ -12,18 +12,19 @@
 //
 //
 
-uniform vec2    center;
-uniform vec4    color1;
-uniform vec4    color2;
-uniform float   radius;
+uniform vec2	center;
+uniform vec4	color1;
+uniform vec4	color2;
+uniform float	radius;
 
-varying vec3    baseColor;
-varying float   alpha;
-varying float   phase;
-varying float   radialFrequency;
-varying float   circularFrequency;
-varying float   sigma;
-varying float   contrast;
+varying vec3	baseColor;
+varying float	alpha;
+varying float	phase;
+varying float	radialFrequency;
+varying float	circularFrequency;
+varying float	sigma;
+varying float	phase2;
+varying float	contrast;
 
 void main() {
 	//current position
@@ -43,7 +44,7 @@ void main() {
 
 	//create our sinusoid in -1 to 1 range, radialFrequency need to be integer to avoid clipping effect
 	float sv = sin( angleMatrix * radialFrequency + phase );
-	float sv2 = sin( radiusMatrix * circularFrequency + phase );
+	float sv2 = sin( radiusMatrix * circularFrequency + phase2 );
 
 	sv = (sv + sv2) / 2.0;
 
@@ -76,5 +77,5 @@ void main() {
 	//colorOut = pow( colorOut, vec3( 1./2.2 ) );
 
 	// off to the display, byebye little pixel!
-	gl_FragColor = vec4( colorOut, 1.0 ); 
+	gl_FragColor = vec4( colorOut, alpha ); 
 }

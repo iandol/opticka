@@ -13,9 +13,9 @@ uniform float	radius;
 varying vec3	baseColor;
 varying float	alpha;
 varying float	phase;
+varying float	phase2;
 varying float	radialFrequency;
 varying float	circularFrequency;
-varying float	sigma;
 varying float	contrast;
 
 #define PI 3.1415926538
@@ -34,18 +34,26 @@ void main() {
 	
 	float theta = atan(pos.y - center[1], pos.x - center[0]);
 	float len = length(pos - center);
-	int x_index = int(mod((theta * 18.0 / PI) + phase, 2.0));
-	int y_index = int(mod((log(len) * 5.0) + 0.0, 2.0));
+	int x_index = int(mod((theta * radialFrequency / PI) + phase, 2.0));
+	int y_index = int(mod((log(len) * circularFrequency) + phase2, 2.0));
 	
 	// Time varying pixel color
 	//int x_index = int(mod(p.x * 10., 2.));
 	//int y_index = int(mod(p.y * 10., 2.));
 	bool black = x_index != y_index;
 
+	vec3 colorA = color1.rgb;
+	vec3 colorB = color2.rgb;
+	//blend our colours from the base colour if contrast < 1
+	if ( contrast < 1.0 ) { 
+		colorA = mix( baseColor, colorA, contrast );
+		colorB = mix( baseColor, colorB, contrast );
+	}
+
 	// Output to screen
 	if (black) {
-		gl_FragColor = vec4(0., 0., 0., 1.);
+		gl_FragColor = vec4(colorA.rgb, alpha);
 	} else{
-		gl_FragColor = vec4(1., 1., 1., 1.);
+		gl_FragColor = vec4(colorB.rgb, alpha);
 	}
 }

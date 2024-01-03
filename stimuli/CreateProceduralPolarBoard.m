@@ -1,9 +1,9 @@
 function [id, rect, shader] = CreateProceduralPolarBoard(windowPtr, width, height, ...
-	color1, color2, radius)
+	color1, color2, radius, type)
 % [id, rect, shader] = CreateProceduralPolarBoard(windowPtr, width,
 % height [, color1=[1 0 0]]  [, color2=[0 1 0]] [, radius=0])
 %
-% A procedural color grating shader that can generate either sinusoidal or
+% A procedural checkerboard shader that can generate either sinusoidal or
 % square gratings varying between two colors. 
 
 global GL;
@@ -40,8 +40,12 @@ elseif length(color2) ~= 4
 	color2 = [0 1 0 1];
 end
 
-	if nargin < 6 || isempty(radius)
+if nargin < 6 || isempty(radius)
 	radius = 0;
+end
+
+if nargin < 7 || isempty(type)
+	type = '';
 end
 
 % Switch to windowPtr OpenGL context:
@@ -49,7 +53,11 @@ Screen('GetWindowInfo', windowPtr);
 
 % Load shader:
 currentFolder = fileparts(which(mfilename));
-shaderPath = fullfile(currentFolder, 'polarBoardShader1');
+if isempty(type)
+	shaderPath = fullfile(currentFolder, 'polarBoardShader1');
+else
+	shaderPath = fullfile(currentFolder, 'polarBoardShader2');
+end
 shader = LoadGLSLProgramFromFiles(shaderPath, 1);
 
 % Setup shader:

@@ -26,22 +26,30 @@
 classdef polarBoardStimulus < baseStimulus
 	
 	properties %--------------------PUBLIC PROPERTIES----------%
-		type char 				= 'randdir'
+		%> default = '' | random dir changes = 'randdrift'
+		%> tf affects circular and radial = 'spiraldrift'
+		%> sine option = 'sine'
+		type char 				= ''
 		%> second colour of a colour grating stimulus
 		colour2(1,:) double		= [0 0 0 1]
 		%> base colour from which colour and colour2 are blended via contrast value
 		%> if empty [default], uses the background colour from screenManager
 		baseColour(1,:) double		= []
-		%> arc start angle and width in degrees (0 disable)
+		%> arc segment start angle and width in degrees (0 disable)
 		arcValue(1,2) double	= [0 0]
 		%> shoud arc be symmetrical
 		arcSymmetry logical		= false
 		%> do we mask (size in degrees) the centre part?
 		centerMask(1,1) double	= 0
-		%> spatial frequency of the grating
+		%> "spatial frequency" of the circular grating at ~5deg
+		%> sf is pretty relative as it changes from the center
 		sf(1,1) double			= 1
 		%> temporal frequency of the grating
-		tf(1,1) double			= 0.5
+		tf(1,1) double			= 1
+		%> "spatial frequency" of the radial grating (number of spokes)
+		sf2(1,1) double			= 20
+		%>
+		sigma(1,1) double		= -1
 		%> rotate the grating patch (false) or the grating texture within the patch (default = true)?
 		rotateTexture logical	= true
 		%> phase of grating
@@ -78,7 +86,7 @@ classdef polarBoardStimulus < baseStimulus
 	end
 	
 	properties (Constant)
-		typeList cell			= {'randdir';'spiraldir'}
+		typeList cell			= {'';'randdrift';'spiraldrift'}
 	end
 
 	properties (SetAccess = protected, GetAccess = {?baseStimulus})
@@ -87,11 +95,8 @@ classdef polarBoardStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = protected, GetAccess = protected)
-		%> as get methods are slow, we cache sf, then recalculate sf whenever
-		%> changeScale event is called
-		sfCache					= []
-		%>to stop a loop between set method and an event
-		sfRecurse				= false
+		sfCache
+		sf2Cache
 		%> allowed properties passed to object upon construction
 		allowedProperties = {'type','colour2', 'sf', 'tf', 'angle', 'direction', 'phase', 'rotateTexture' ... 
 			'contrast', 'mask', 'reverseDirection', 'speed', 'startPosition', 'aspectRatio' ... 
@@ -111,8 +116,6 @@ classdef polarBoardStimulus < baseStimulus
 		colour2Cache
         visibleTick				= 0
 		visibleFlip				= Inf
-		sfa
-		sfb
 		cMaskTex
 		cMaskRect
 	end
@@ -174,6 +177,7 @@ classdef polarBoardStimulus < baseStimulus
 				if ~matches(fn{j}, me.ignoreProperties)
 					p=me.addprop([fn{j} 'Out']);
 					if strcmp(fn{j}, 'sf'); p.SetMethod = @set_sfOut; end
+					if strcmp(fn{j}, 'sf2'); p.SetMethod = @set_sf2Out; end
 					if strcmp(fn{j}, 'tf')
 						p.SetMethod = @set_tfOut; p.SetObservable = true;
 						addlistener(me, [fn{j} 'Out'], 'PostSet', @me.calculatePhaseIncrement);
@@ -214,6 +218,8 @@ classdef polarBoardStimulus < baseStimulus
 			
 			if ~isprop(me,'driftPhase'); addprop(me,'driftPhase'); end
 			me.driftPhase = me.phaseOut;
+			if ~isprop(me,'driftPhase2'); addprop(me,'driftPhase2'); end
+			me.driftPhase2 = me.phaseOut;
 			
 			if ~isprop(me,'res'); addprop(me,'res'); end
 			me.res = round([me.gratingSize me.gratingSize]);	
@@ -241,9 +247,13 @@ classdef polarBoardStimulus < baseStimulus
 				end
 			end
 			
-			% this is a two color grating, passing in colorA and colorB.
-			[me.texture, ~, me.shader] = CreateProceduralPolarBoard(me.sM.win, me.res(1),...
-				me.res(2), me.colourOut, me.colour2Out, me.maskValue);
+			if matches(me.type,'sine')
+				[me.texture, ~, me.shader] = CreateProceduralPolarBoard(me.sM.win, me.res(1),...
+					me.res(2), me.colourOut, me.colour2Out, me.maskValue,'sine');
+			else
+				[me.texture, ~, me.shader] = CreateProceduralPolarBoard(me.sM.win, me.res(1),...
+					me.res(2), me.colourOut, me.colour2Out, me.maskValue,'');
+			end
 			me.colourCache = me.colourOut; me.colour2Cache = me.colour2Out;
 
 			if ~isempty(me.visibleRateOut) && isnumeric(me.visibleRateOut)
@@ -295,14 +305,12 @@ classdef polarBoardStimulus < baseStimulus
 				me.needUpdate = true;
 			end
 			function set_sfOut(me,value)
-				if me.sfRecurse == false
-					me.sfCache = (value / me.ppd);
-					me.sfOut = me.sfCache * me.scale;
-				else
-					me.sfOut = value;
-					me.sfRecurse = false;
-				end
-				%fprintf('\nSET SFOut: %d | cache: %d | in: %d\n', me.sfOut, me.sfCache, value);
+				me.sfOut = value * (me.ppd*10*(1/me.ppd)) * me.scale;
+				me.sfCache = me.sfOut;
+			end
+			function set_sf2Out(me,value)
+				me.sf2Out = round(value * me.scale);
+				me.sf2Cache = me.sf2Out;
 			end
 			function set_tfOut(me,value)
 				me.tfOut = value;
@@ -333,6 +341,7 @@ classdef polarBoardStimulus < baseStimulus
             me.visibleTick = 0;
 
 			me.driftPhase=me.phaseOut;
+			me.driftPhase2=me.driftPhase;
 
 			updateSFs(me);
 			if me.mask == true
@@ -382,7 +391,8 @@ classdef polarBoardStimulus < baseStimulus
 			if me.isVisible && me.tick >= me.delayTicks && me.tick < me.offTicks
 				Screen('DrawTexture', me.sM.win, me.texture, [], me.mvRect,...
 					me.angleOut, [], [], me.baseColourOut, [], me.rotateMode,...
-					[me.driftPhase, 10, me.contrastOut, 0, me.sfOut, 0, 0, 0]);
+					[me.driftPhase, me.driftPhase2, me.sfOut, me.sf2Out, ...
+					me.contrastOut, me.sigmaOut, 0, 0]);
 				if me.arcValueOut(2) > 0
 					if me.arcSymmetry
 						a = me.arcValueOut(1) + (me.arcValueOut(2) / 2);
@@ -422,8 +432,9 @@ classdef polarBoardStimulus < baseStimulus
 					me.mvRect=OffsetRect(me.mvRect,me.dX_,me.dY_);
 				end
 				if me.doDrift
-					if matches(me.type,'randdir') && rand > 0.975; me.phaseIncrement = -me.phaseIncrement; end
+					if matches(me.type,'randdrift') && rand > 0.975; me.phaseIncrement = -me.phaseIncrement; end
 					me.driftPhase = me.driftPhase + me.phaseIncrement;
+					if matches(me.type,'spiraldrift'); me.driftPhase2=me.driftPhase; end
 				end
 				if me.phaseReverseTime > 0 && mod(me.tick, me.phaseCounter) == 0
 					me.driftPhase = me.driftPhase + me.phaseOfReverse;
@@ -467,17 +478,6 @@ classdef polarBoardStimulus < baseStimulus
 		% ===================================================================
 		function phase = calculatePhase(me)
 			phase = 0;
-			if me.correctPhase > 0
-				ppd		= me.ppd;
-				size	= (me.sizeOut / 2); %divide by 2 to get the 0 point
-				sfTmp	= (me.sfOut / me.scale) * ppd;
-				md		= size / (ppd / sfTmp);
-				md		= md - floor(md);
-				% note for some reason colourgratings are 180° different to
-				% gratings, so we compensate here so they should align if
-				% correctPhase is true
-				phase	= (360 * md) + 180;
-			end
 		end
 		
 		% ===================================================================
@@ -535,18 +535,6 @@ classdef polarBoardStimulus < baseStimulus
 			me.baseColour = c;
 		end
 
-
-		% ===================================================================
-		%> @brief sfOut Pseudo Get method
-		%>
-		% ===================================================================
-		function sf = getsfOut(me)
-			sf = 0;
-			if ~isempty(me.sfCache)
-				sf = me.sfCache * me.ppd;
-			end
-		end
-
 	end %---END PUBLIC METHODS---%
 	
 	%=======================================================================
@@ -582,9 +570,10 @@ classdef polarBoardStimulus < baseStimulus
 				me.maskValue = floor(me.sizeOut/2);
 			else
 				me.maskValue = [];
-			end;
+			end
 			me.sfRecurse = true;
-			me.sfOut = me.sfCache * me.scale;
+			try me.sfOut = me.sfCache * me.scale; end
+			try me.sf2Out = me.sf2Cache * me.scale; end
 			%fprintf('\nCalculate SFOut: %d | in: %d | scale: %d\n', me.sfOut, me.sfCache, me.scale);
 		end
 		
@@ -611,9 +600,9 @@ classdef polarBoardStimulus < baseStimulus
 		function fixBaseColour(me,varargin)
 			if me.correctBaseColour %#ok<*MCSUP> 
 				if isprop(me, 'baseColourOut')
-					me.baseColourOut = (me.getP('colour',[1:3]) + me.getP('colour2',[1:3])) / 2;
+					me.baseColourOut = (me.getP('colour',1:3) + me.getP('colour2',1:3)) / 2;
 				else
-					me.baseColour = (me.getP('colour',[1:3]) + me.getP('colour2',[1:3])) / 2;
+					me.baseColour = (me.getP('colour',1:3) + me.getP('colour2',1:3)) / 2;
 				end
 			end
 		end
@@ -623,10 +612,7 @@ classdef polarBoardStimulus < baseStimulus
 		%> 
 		% ===================================================================
 		function updateSFs(me)
-			middleRadius = me.gratingSize/2;
-			middlePerimeter = 2*pi*middleRadius; % pixels
-			me.sfa = me.sfOut * middlePerimeter / (2*pi); % cycles/degree, must be integral to avoid clip effect, corrected in the frag file
-			me.sfb = 1;
+			fprintf('ppd: %.2f | SFA: %.2f | SFB: %.2f\n',me.ppd, me.sfOut,me.sf2Out);
 		end
 		
 	end

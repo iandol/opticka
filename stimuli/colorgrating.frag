@@ -46,8 +46,8 @@ void main() {
     vec3 colorB = color2.rgb;
     //blend our colours from the base colour if contrast < 1
     if ( contrast < 1.0 ) { 
-        colorA = mix( baseColor, color1.rgb, contrast );
-        colorB = mix( baseColor, color2.rgb, contrast );
+        colorA = mix( baseColor, colorA, contrast );
+        colorB = mix( baseColor, colorB, contrast );
     }
 
     // and then mix the two colors using sv (our position in the grating)
