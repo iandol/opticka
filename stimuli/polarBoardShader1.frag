@@ -34,12 +34,10 @@ void main() {
 	
 	float theta = atan(pos.y - center[1], pos.x - center[0]);
 	float len = length(pos - center);
-	int x_index = int(mod((theta * radialFrequency / PI) + phase, 2.0));
-	int y_index = int(mod((log(len) * circularFrequency) + phase2, 2.0));
-	
-	// Time varying pixel color
 	//int x_index = int(mod(p.x * 10., 2.));
 	//int y_index = int(mod(p.y * 10., 2.));
+	int x_index = int(mod((theta * radialFrequency / PI) + phase, 2.0));
+	int y_index = int(mod((log(len) * circularFrequency) + phase2, 2.0));
 	bool black = x_index != y_index;
 
 	vec3 colorA = color1.rgb;

@@ -432,9 +432,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 
 				if me.verbose; s.debug = true; end
 
-				if ~s.isOpen
-					sv=open(s);
-				end
+				if ~s.isOpen; open(s);end
 				sv = s.screenVals;
 				setup(me,s); %setup our stimulus object
 
@@ -939,6 +937,18 @@ classdef baseStimulus < optickaCore & dynamicprops
 				me.(name) = value;
 			else
 				if me.verbose;fprintf('Property %s doesn''t exist...\n',name);end
+			end
+		end
+
+		% ===================================================================
+		%> @brief Update only position info, faster and doesn't reset image
+		%>
+		% ===================================================================
+		function updateXY(me,x,y)
+			me.xFinal = x;
+			me.yFinal = y;
+			if length(me.mvRect) == 4
+				me.mvRect=CenterRectOnPointd(me.mvRect, me.xFinal, me.yFinal);
 			end
 		end
 

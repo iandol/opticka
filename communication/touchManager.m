@@ -71,6 +71,7 @@ classdef touchManager < optickaCore
 	end
 
 	properties (Access = private)
+		lastPressed			= false
 		pressed				= false
 		ppd					= 36
 		screen				= []
@@ -104,6 +105,13 @@ classdef touchManager < optickaCore
 
 			try [me.devices,me.names,me.allInfo] = GetTouchDeviceIndices([], 1); end %#ok<*TRYNC>
 			me.hold = me.holdTemplate;
+			try
+				if IsLinux
+					[~,r] = system('xinput');
+					disp('Input Device List:');
+					disp(r);
+				end
+			end
 		end
 
 		% ===================================================================SETUP
@@ -152,7 +160,7 @@ classdef touchManager < optickaCore
 				warning('touchManager: Cannot create touch queue!');
 			end
 			me.isQueue = true;
-			if me.verbose; me.salutation('createQueue','Opened'); end
+			if me.verbose; logOutput(me,'createQueue','Created...'); end
 		end
 
 		% ===================================================================
@@ -165,7 +173,7 @@ classdef touchManager < optickaCore
 			if ~me.isQueue; createQueue(me); end
 			TouchQueueStart(me.devices(me.device));
 			me.isOpen = true;
-			if me.verbose; salutation(me,'start','Started queue...'); end
+			if me.verbose; logOutput(me,'start','Started queue...'); end
 		end
 
 		% ===================================================================
@@ -187,7 +195,6 @@ classdef touchManager < optickaCore
 		%> @param choice which touch device to use, default uses me.device
 		%> @return
 		% ===================================================================
-			reset(me);
 			me.isOpen = false;
 			me.isQueue = false;
 			if me.isDummy; return; end
@@ -195,7 +202,7 @@ classdef touchManager < optickaCore
 			for i = 1:length(choice)
 				TouchQueueRelease(me.devices(me.device));
 			end
-			if me.verbose; salutation(me,'close','Closing...'); end
+			if me.verbose; logOutput(me,'close','Closed...'); end
 		end
 
 		% ===================================================================
@@ -232,19 +239,17 @@ classdef touchManager < optickaCore
 		%> @param
 		%> @return event structure
 		% ===================================================================
-			persistent lastPressed
-			if isempty(lastPressed); lastPressed = false; end
 			event = [];
 			if me.isDummy
 				[mx, my, b] = GetMouse(me.swin);
-				if any(b) && ~lastPressed
-					type = 2; motion = false; press = true;  lastPressed = true;
-				elseif any(b) && lastPressed
-					type = 3; motion = true; press = true;  lastPressed = true;
-				elseif lastPressed && ~any(b)
-					type = 4; motion = false; press = false; lastPressed = false;
+				if any(b) && ~me.lastPressed
+					type = 2; motion = false; press = true;  me.lastPressed = true;
+				elseif any(b) && me.lastPressed
+					type = 3; motion = true; press = true;  me.lastPressed = true;
+				elseif me.lastPressed && ~any(b)
+					type = 4; motion = false; press = false; me.lastPressed = false;
 				else
-					type = -1; motion = false; press = 0;  lastPressed = false;
+					type = -1; motion = false; press = 0;  me.lastPressed = false;
 				end
 				if type > 0
 					event = struct('Type',type,'Time',GetSecs,...
@@ -288,6 +293,7 @@ classdef touchManager < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
+			me.lastPressed 	= false;
 			me.hold			= me.holdTemplate;
 			me.x			= [];
 			me.y			= [];
@@ -319,12 +325,12 @@ classdef touchManager < optickaCore
 			result = false; win = 1; wasEvent = false; xy = [];
 
 			event = getEvent(me);
-			
+
 			while ~isempty(event) && iscell(event); event = event{1}; end
 			if isempty(event); return; end
 
-			wasEvent = true; 
-			
+			wasEvent = true;
+
 			if panelType == 2; event.MappedX = me.screenVals.width - event.MappedX; end
 
 			xy = me.screen.toDegrees([event.MappedX event.MappedY]);
@@ -346,7 +352,7 @@ classdef touchManager < optickaCore
 
 		% ===================================================================
 		%> @fn isHold
-		%> 
+		%>
 		%> This is the main function which runs touch timers and calculates
 		%> the logic of whether the touch is in a region and for how long.
 		%>
@@ -523,12 +529,13 @@ classdef touchManager < optickaCore
 		end
 
 		% ===================================================================
-		function demo(me)
+		function demo(me,useaudio)
 		%> @fn demo
 		%>
 		%> @param
 		%> @return
 		% ===================================================================
+			if ~exist('useaudio','var'); useaudio=false; end
 			if isempty(me.screen); me.screen = screenManager(); end
 			sM = me.screen;
 			windowed=[]; sf=[];
@@ -538,6 +545,8 @@ classdef touchManager < optickaCore
 			oldWin = me.window;
 			oldVerbose = me.verbose;
 			me.verbose = true;
+
+			if useaudio;a=audioManager();open(a);beep(a,3000,0.1,0.1);WaitSecs(0.2);beep(a,250,0.3,0.8);end
 
 			if ~sM.isOpen; open(sM); end
 			WaitSecs(2);
@@ -560,6 +569,7 @@ classdef touchManager < optickaCore
 					me.window.Y = ty;
 					me.window.radius = im.size/2;
 					update(im);
+					if useaudio;beep(a,1000,0.1,0.1);end
 					fprintf('\n\nTRIAL %i -- X = %i Y = %i R = %.2f\n',i,me.window.X,me.window.Y,me.window.radius);
 					rect = toDegrees(sM, im.mvRect, 'rect');
 					reset(me);
@@ -584,24 +594,29 @@ classdef touchManager < optickaCore
 						if ~me.wasHeld; draw(im); end
 						vbl = flip(sM);
 						if strcmp(r,'yes')
+							if useaudio;beep(a,3000,0.1,0.1);end
 							result = 'CORRECT!!!'; break;
 						elseif strcmp(r,'no')
+							if useaudio;beep(a,250,0.3,0.8);end
 							result = 'INCORRECT!!!'; break;
 						end
 						[pressed,~,keys] = optickaCore.getKeys([]);
 						if pressed && any(keys(quitKey)); doQuit = true; break; end
 					end
 					drawTextNow(sM, result);
-					fprintf('RESULT: %s - \n',result);
+					tend = vbl - ts;
+					fprintf('RESULT: %s in %.2f \n',result,tend);
 					disp(me.hold);
 					WaitSecs(2);
 				end
 				stop(me); close(me); %===================!!! stop and close
 				me.window = oldWin;
 				me.verbose = oldVerbose;
+				if useaudio; try reset(a); end; end
 				try reset(im); end
 				try close(sM); end
 			catch ME
+				getReport(ME);
 				try reset(im); end
 				try close(sM); end
 				try close(me); end

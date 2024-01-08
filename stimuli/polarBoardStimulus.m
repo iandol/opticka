@@ -1,8 +1,8 @@
 % ========================================================================
-%> @brief polar grating stimulus, inherits from baseStimulus
-%> POLARGRATINGSTIMULUS inherits from baseStimulus
+%> @brief polar checkerboard stimulus, inherits from baseStimulus
+%> POLARBOARDSTIMULUS inherits from baseStimulus
 %>   The basic properties are:
-%>   type = 'radial' or 'circular' or 'spiral'
+%>   type = '', 'randdrift', 'spiraldrift', 'sine'
 %>	 colour = first grating colour
 %>   colour2 = second grating colour
 %>   baseColour = the midpoint between the two from where contrast works,
@@ -19,7 +19,7 @@
 %>
 %> See docs for more property details.
 %>
-%> @todo phase appears different to gratingStimulus, work out why
+%> @todo spatial and temporal frequency is approximated
 %>
 %> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
@@ -28,7 +28,7 @@ classdef polarBoardStimulus < baseStimulus
 	properties %--------------------PUBLIC PROPERTIES----------%
 		%> default = '' | random dir changes = 'randdrift'
 		%> tf affects circular and radial = 'spiraldrift'
-		%> sine option = 'sine'
+		%> sine option with a different shader = 'sine'
 		type char 				= ''
 		%> second colour of a colour grating stimulus
 		colour2(1,:) double		= [0 0 0 1]
@@ -48,7 +48,7 @@ classdef polarBoardStimulus < baseStimulus
 		tf(1,1) double			= 1
 		%> "spatial frequency" of the radial grating (number of spokes)
 		sf2(1,1) double			= 20
-		%>
+		%> only used for type='sine'
 		sigma(1,1) double		= -1
 		%> rotate the grating patch (false) or the grating texture within the patch (default = true)?
 		rotateTexture logical	= true
@@ -86,7 +86,7 @@ classdef polarBoardStimulus < baseStimulus
 	end
 	
 	properties (Constant)
-		typeList cell			= {'';'randdrift';'spiraldrift'}
+		typeList cell			= {'';'randdrift';'spiraldrift';'sine'}
 	end
 
 	properties (SetAccess = protected, GetAccess = {?baseStimulus})
@@ -472,14 +472,6 @@ classdef polarBoardStimulus < baseStimulus
 			for l = list; if isprop(me,l{1});delete(me.findprop(l{1}));end;end
 		end
 
-		% ===================================================================
-		%> @brief calculate phase offset
-		%>
-		% ===================================================================
-		function phase = calculatePhase(me)
-			phase = 0;
-		end
-		
 		% ===================================================================
 		%> @brief sf Set method
 		%>

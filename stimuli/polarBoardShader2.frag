@@ -26,6 +26,8 @@ varying float	sigma;
 varying float	phase2;
 varying float	contrast;
 
+#define PI 3.1415926538
+
 void main() {
 	//current position
 	vec2 pos = gl_TexCoord[0].xy;
@@ -39,15 +41,15 @@ void main() {
 	}
 
 	//Calculate the angle and radius from the center.
-	float angleMatrix = atan(pos.y - radius, pos.x - radius);
-	float radiusMatrix = length(pos - radius);
+	float angleMatrix = atan(pos.y - center[1], pos.x - center[0]);
+	float radiusMatrix = length(pos - center);
 
 	//create our sinusoid in -1 to 1 range, radialFrequency need to be integer to avoid clipping effect
-	float sv = sin( angleMatrix * radialFrequency + phase );
-	float sv2 = sin( radiusMatrix * circularFrequency + phase2 );
+	float sv = sin( (angleMatrix * radialFrequency) + phase );
+	float sv2 = sin( log2(radiusMatrix) * circularFrequency + phase2 );
 
-	sv = (sv + sv2) / 2.0;
-
+	//sv = (sv + sv2) / 2.0;
+	
 	//create our sinusoid in -1 to 1 range
 	//float sv = sin( fragCoord.x * frequency + phase );
 
