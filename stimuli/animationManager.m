@@ -7,67 +7,58 @@
 % ========================================================================	
 classdef animationManager < optickaCore
 	properties
-		%> type of animation path, linear | sinusoidal | brownian | circular
+		%> type of animation path, rigid | linear | sinusoidal | brownian | circular
 		type char ...
-			{mustBeMember(type,{'linear','sinusoidal','brownian','circular'})} = 'linear'
+			{mustBeMember(type,{'rigid','linear','sinusoidal','brownian','circular'})} = 'rigid'
 		%> parameters for each animation type
-		params struct
-		%> for random walks what is the variance in angle?
-		angleVariance double = 0
-		%> what happens at edge of screen [wrap | bounce | none]
+		rigidparams = struct('radius', 2, 'mass', 2, ...
+			'position', [0, 0], 'velocity', [1, 0], ...
+			'airResistanceCoeff', 0.1, 'elasticityCoeff', 0.8, ...
+			'acceleration',[0, -9.8],...
+			'floor',-100)
+		timeDelta		= 0.01
+		%> what happens at edge of screen [bounce | wrap | none]
 		boundsCheck char ...
-			{mustBeMember(boundsCheck,{'wrap','bounce','none'})} = 'wrap'
+			{mustBeMember(boundsCheck,{'bounce','wrap','none'})} = 'bounce'
 		%> verbose?
 		verbose = true
-		%> seed for random walks
-		seed uint32
 		%> length of the animation in seconds
-		length double = inf
+		timeToEnd double = 10
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
-		%> speed in deg/s
-		speed double = 1
-		%> the direction of the whole grating object - i.e. the object can
-		%> move (speed property) as well as the grating texture rotate within the object.
-		direction = 0
-		%> angle in deg, if animation is circular, this is added 
-		angle double = 0
-		%> For moving stimuli do we start "before" our initial position? THis allows you to
-		%> center a stimulus at a screen location, but then drift it across that location, so
-		%> if xyPosition is 0,0 and startPosition is -2 then the stimulus will start at -2 drifing
-		%> towards 0.
-		startPosition double = 0
-		%> do we lock the angle to the direction? If so what is the offset
-		%> (0 = parallel, 90 = orthogonal etc.)
-		lockAngle double = []
 		%> tick updates +1 on each draw, resets on each update
 		tick double = 0
+		%> current time step in simulation
+		timeStep = 0
+		%> angle
+		anglev = 0
+		%> radius of object
+		radius 
+		%>
+		angularVelocity
+		%> moment of inertia
+		momentOfInertia
+		%>
+		kineticEnergy
+		%>
+		potentialEnergy
 		%> computed X position 
-		xOut double = []
+		x double = []
 		%> computed Y position
-		yOut double = []
+		y double = []
 		%> X update 
 		dX double
 		%> Y update 
 		dY double
-		%> source screen rectangle position [LEFT TOP RIGHT BOTTOM]
-		dstRect double = []
-		%> current screen rectangle position [LEFT TOP RIGHT BOTTOM]
-		mvRect double = []
 		%> pixels per degree, inhereted from a screenManager
 		ppd double = 36
-		%> stimulus position defined as rect [true] or point [false]
-		isRect logical = true
-		%> screen manager link
-		screen
-	end
-	
-	properties (SetAccess = private, Dependent = true)
-		
+		%> stimulus
+		stimulus
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		gravity	double		= -9.8
 		%> useful screen info and initial gamma tables and the like
 		screenVals struct
 		%> what properties are allowed to be passed on construction
@@ -94,27 +85,28 @@ classdef animationManager < optickaCore
 		end
 		
 		function setup(me, stimulus)
-			me.xFinal = stimulus.xOut;
-			me.yFinal = stimulus.yFinal;
+			me.stimulus = stimulus;
+			me.ppd = stimulus.ppd;
+			me.rigidparams.x = stimulus.xPositionOut;
+			me.rigidparams.y = stimulus.yPositionOut;
 			me.dstRect = stimulus.dstRect;
 			me.mvRect = stimulus.mvRect;
 			me.tick = 0;
+			me.timeStep = 0;
 			me.speed = stimulus.speed;
 			if ~isempty(me.findprop('direction'))
 				me.angle = stimulus.direction;
 			else
 				me.angle = stimulus.angle;
 			end
-			me.startPosition = stimulus.startPosition;
-			me.isRect = stimulus.isRect;
-			me.screenVals = stimulus.sM.screenVals;
+			me.rigidStep(me.timeStep);
 		end
 		
 		function animate
 			
 		end
-		function pos = update(me)
 
+		function pos = update(me)
 			if me.isRect
 				me.mvRect=OffsetRect(me.mvRect,me.dX,me.dY);
 				pos = me.mvRect;
@@ -188,11 +180,15 @@ classdef animationManager < optickaCore
 			bsxfun(@times,3*(1-t).^1.*t.^2,P(3,:)) + ...
 			bsxfun(@times,t.^3,P(4,:));
 		end
+
+		function rigidStep(me)
+			
+		end
 		
 	end % END STATIC METHODS
 
 	%=======================================================================
-	methods ( Access = private ) % PRIVATE METHODS
+	methods ( Access = protected ) % PRIVATE METHODS
 	%=======================================================================
 		
 		% ===================================================================

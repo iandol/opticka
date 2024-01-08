@@ -49,6 +49,8 @@ classdef imageStimulus < baseStimulus
 		filter						= 1
 		%> crop: none or vertical or horizontal
 		crop						= 'none'
+		%> direction for motion, different to angle
+		direction					= []
 	end
 
 	properties (SetAccess = protected, GetAccess = public)
@@ -144,6 +146,8 @@ classdef imageStimulus < baseStimulus
 			me.screenVals = sM.screenVals;
 			me.texture = []; %we need to reset this
 
+			if isempty(me.direction); me.direction = me.angle; end
+
 			fn = sort(properties(me));
 			for j=1:length(fn)
 				if ~matches(fn{j}, me.ignoreProperties) %create a temporary dynamic property
@@ -163,6 +167,9 @@ classdef imageStimulus < baseStimulus
 				me.scale = me.sizeOut / (me.width / me.ppd);
 			end
 			computePosition(me);
+			if me.doAnimator
+				update(me.animator);
+			end
 			setRect(me);
 
 			function set_xPositionOut(me, value)
@@ -325,7 +332,9 @@ classdef imageStimulus < baseStimulus
 						me.mvRect = CenterRectOnPointd(me.mvRect, me.mouseX, me.mouseY);
 					end
 				end
-				if me.doMotion == 1
+				if me.doAnimator
+					
+				elseif me.doMotion == 1
 					me.mvRect=OffsetRect(me.mvRect,me.dX_,me.dY_);
 				end
 			end
@@ -383,7 +392,7 @@ classdef imageStimulus < baseStimulus
 		%> @brief Update only position info, faster and doesn't reset image
 		%>
 		% ===================================================================
-		function updatePositions(me,x,y)
+		function updateXY(me,x,y)
 			me.xFinal = x;
 			me.yFinal = y;
 			if length(me.mvRect) == 4

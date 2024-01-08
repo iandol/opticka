@@ -259,11 +259,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> delta is the normalised number of pixels per frame to move a stimulus
 		% ===================================================================
 		function value = get.delta(me)
-			if ~isempty(findprop(me,'speedOut'))
-				value = (me.speedOut * me.ppd) * me.screenVals.ifi;
-			else
-				value = (me.speed * me.ppd) * me.screenVals.ifi;
-			end
+			value = (getP(me,'speed') * me.ppd) * me.screenVals.ifi;
 		end
 
 		% ===================================================================
