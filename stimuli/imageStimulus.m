@@ -389,18 +389,6 @@ classdef imageStimulus < baseStimulus
 		end
 
 		% ===================================================================
-		%> @brief Update only position info, faster and doesn't reset image
-		%>
-		% ===================================================================
-		function updateXY(me,x,y)
-			me.xFinal = x;
-			me.yFinal = y;
-			if length(me.mvRect) == 4
-				me.mvRect=CenterRectOnPointd(me.mvRect, me.xFinal, me.yFinal);
-			end
-		end
-
-		% ===================================================================
 		%> @brief setRect
 		%>  setRect makes the PsychRect based on the texture and screen values
 		%>  This is overridden from parent class so we can scale texture

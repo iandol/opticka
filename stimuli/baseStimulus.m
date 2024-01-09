@@ -944,9 +944,16 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> @brief Update only position info, faster and doesn't reset image
 		%>
 		% ===================================================================
-		function updateXY(me,x,y)
-			me.xFinal = x;
-			me.yFinal = y;
+		function updateXY(me,x,y,degrees)
+			if ~exist('degrees','var') || isempty(degrees); degrees = false; end
+			if degrees
+				if ~isempty(x); me.xFinal = me.sM.toPixels(x, 'x'); end
+				if ~isempty(y); me.yFinal = me.sM.toPixels(y, 'y'); end
+			else
+				if ~isempty(x); me.xFinal = x; end
+				if ~isempty(y); me.yFinal = y; end
+			end
+			
 			if length(me.mvRect) == 4
 				me.mvRect=CenterRectOnPointd(me.mvRect, me.xFinal, me.yFinal);
 			end

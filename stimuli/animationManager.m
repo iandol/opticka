@@ -13,9 +13,9 @@ classdef animationManager < optickaCore
 		%> parameters for each animation type
 		rigidparams = struct('radius', 2, 'mass', 2, ...
 			'position', [0, 0], 'velocity', [1, 0], ...
-			'airResistanceCoeff', -0.1, 'elasticityCoeff', 0.8, ...
-			'gravity', -9.8,...
-			'floor', -20, 'leftwall', [], 'rightwall', []);
+			'airResistanceCoeff', 0.2, 'elasticityCoeff', 0.8, ...
+			'gravity', 9.8,...
+			'floor', 10, 'leftwall', [], 'rightwall', []);
 		timeDelta		= 0.01
 		%> what happens at edge of screen [bounce | wrap | none]
 		boundsCheck char ...
@@ -41,6 +41,8 @@ classdef animationManager < optickaCore
 		kineticEnergy
 		%>
 		potentialEnergy
+		%>
+		torque
 		%> computed X position 
 		x double = []
 		%> computed Y position
@@ -82,27 +84,27 @@ classdef animationManager < optickaCore
 		end
 		
 		function setup(me, stimulus)
+			me.reset;
 			me.stimulus = stimulus;
 			me.ppd = stimulus.ppd;
-			me.rigidparams.x = stimulus.xPositionOut;
-			me.rigidparams.y = stimulus.yPositionOut;
-			me.dstRect = stimulus.dstRect;
-			me.mvRect = stimulus.mvRect;
+			me.x = stimulus.sM.toDegrees(stimulus.xPositionOut);
+			me.y = stimulus.sM.toDegrees(stimulus.yPositionOut);
+			me.rigidparams.radius = stimulus.size/2;
 			me.tick = 0;
 			me.timeStep = [];
-			me.speed = stimulus.speed;
 			me.torque = 0;
 			me.angularVelocity = 0;
 			me.momentOfInertia = 0.5 * me.rigidparams.mass * me.rigidparams.radius^2;
 
 			if ~isempty(me.findprop('direction'))
-				me.angle = stimulus.direction;
+				me.angle = deg2rad(stimulus.direction);
 			else
-				me.angle = stimulus.angle;
+				me.angle = deg2rad(stimulus.angle);
 			end
 
-			[me.dX, me.dY] = pol2cart(deg2rad(me.angle, me.speed));
-			me.rigidStep(me.timeStep);
+			[me.dX, me.dY] = pol2cart(me.angle, stimulus.speed);
+			
+			%me.rigidStep();
 
 		end
 		
@@ -113,14 +115,16 @@ classdef animationManager < optickaCore
 			end
 		end
 
-		
 		function reset(me)
 			me.tick = 0;
 			me.timeStep = [];
+			me.torque = 0;
+			me.angularVelocity = 0;
+			me.x = [];
+			me.y = [];
 			me.dX = [];
 			me.dY = [];
-			me.dstRect = [];
-			me.mvRect = [];
+			me.momentOfInertia = 0.5 * me.rigidparams.mass * me.rigidparams.radius^2;
 		end
 
 		function rigidStep(me)
@@ -128,33 +132,37 @@ classdef animationManager < optickaCore
 				me.timeStep = 0;
 				me.tick = 1;
 			else
-				me.timeStep = me.timeStep + me.rigidparams.timeDelta;
+				me.timeStep = me.timeStep + me.timeDelta;
 				me.tick = me.tick + 1;
 			end
 
+			position = [me.x, me.y];
 			velocity = [me.dX, me.dY];
 			acceleration = [0, me.rigidparams.gravity]; 
 
     		% Apply air resistance
-    		airResistance = me.rigidparams.airResistanceCoeff * velocity;
+    		airResistance = -me.rigidparams.airResistanceCoeff * velocity;
     		acceleration = acceleration + airResistance;
     		
     		% Update velocity and position
-    		velocity = velocity + acceleration * me.rigidparams.timeDelta;
-    		position = position + velocity * me.rigidparams.timeDelta;
+    		velocity = velocity + acceleration * me.timeDelta;
+    		position = position + velocity * me.timeDelta;
     		
     		% Calculate angular acceleration
-    		angularAcceleration = torque / me.momentOfInertia;
+    		angularAcceleration = me.torque / me.momentOfInertia;
     		
     		% Update angular velocity and position
-    		me.angularVelocity = me.angularVelocity + angularAcceleration * me.rigidparams.timeDelta;
-    		me.angle = me.angle + me.angularVelocity * me.rigidparams.timeDelta;
+    		me.angularVelocity = me.angularVelocity + angularAcceleration * me.timeDelta;
+    		me.angle = me.angle + me.angularVelocity * me.timeDelta;
+
+			me.x = position(1);
+			me.y = position(2);
 
 			% Collision detection with floor
-			if me.y - me.rigidparams.radius < me.rigidparams.floorY
-    			me.y = me.rigidparams.floorY + me.rigidparams.radius;
+			if me.y + me.rigidparams.radius > me.rigidparams.floor
+    			me.y = me.rigidparams.floor - me.rigidparams.radius - 0.01;
     			velocity(2) = -me.rigidparams.elasticityCoeff * velocity(2); % reverse and dampen the y-velocity
-    			me.angularVelocity = me.rigidparams.elasticityCoeff * me.angularVelocity; % reverse and dampen the angular velocity
+    			me.angularVelocity = -me.rigidparams.elasticityCoeff * me.angularVelocity; % reverse and dampen the angular velocity
 			end
 			
 			% Collision detection with walls
@@ -168,17 +176,18 @@ classdef animationManager < optickaCore
     			velocity(1) = -me.rigidparams.elasticityCoeff * velocity(1); % reverse and dampen the x-velocity
     			me.angularVelocity = -me.rigidparams.elasticityCoeff * me.angularVelocity; % reverse and dampen the angular velocity
 			end
+
 			me.dX = velocity(1);
 			me.dY = velocity(2);
 
 			% Calculate the arc length traveled
-    		arcLength = me.dX * me.rigidparams.timeDelta;
+    		arcLength = me.dX * me.timeDelta;
     		
     		% Update angle based on arc length
     		me.angle = me.angle - arcLength / me.rigidparams.radius;
 
 			me.kineticEnergy = 0.5 * me.rigidparams.mass * norm(velocity)^2 + 0.5 * me.momentOfInertia * me.angularVelocity^2;
-			me.potentialEnergy = me.rigidparams.mass * -me.rigidparams.gravity * (me.y - me.rigidparams.radius - me.rigidparams.floorY);
+			me.potentialEnergy = me.rigidparams.mass * -me.rigidparams.gravity * (me.y - me.rigidparams.radius - me.rigidparams.floor);
 		end
 		
 	end
@@ -187,6 +196,58 @@ classdef animationManager < optickaCore
 	methods ( Static ) % STATIC METHODS
 	%=======================================================================
 		
+		function demo()
+			s =screenManager;
+			i = imageStimulus('size',4);
+			i.filePath = '/home/cog5/Downloads/moon.png';
+			i.xPosition = -5;
+			i.yPosition = 5;
+			i.angle = 45;
+			i.speed = 20;
+			
+			sv = open(s);
+			
+			a = animationManager;
+			a.rigidparams.mass = 5;
+			a.rigidparams.leftwall = sv.leftInDegrees;
+			a.rigidparams.rightwall = sv.rightInDegrees;
+			a.rigidparams.floor = sv.bottomInDegrees;
+			a.timeDelta = sv.ifi;
+			
+			setup(i, s);
+			
+			setup(a, i);
+			
+			for jj = 1:sv.fps*10
+			
+				draw(i);
+				flip(s);
+				i.updateXY(a.x, a.y, true);
+				i.angleOut = -rad2deg(a.angle);
+				animate(a);
+				t(jj)=a.timeStep;
+				x(jj)=a.x;
+				y(jj)=a.y;
+				ke(jj) = a.kineticEnergy;
+				pe(jj) = a.potentialEnergy;
+			
+			end
+			
+			close(s)
+			reset(i);
+			
+			figure
+			tiledlayout(2,1);
+			nexttile
+			plot(t,x);
+			hold on
+			plot(t,y);
+			nexttile
+			plot(t,ke);
+			hold on
+			plot(t,pe);
+		
+		end
 		% ===================================================================
 		%> @brief degrees2radians
 		%>
