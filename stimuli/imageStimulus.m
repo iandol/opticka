@@ -56,8 +56,6 @@ classdef imageStimulus < baseStimulus
 	properties (SetAccess = protected, GetAccess = public)
 		%> list of imagenames if selection > 0
 		filePaths					= {};
-		%> number of images
-		nImages						= 0;
 		%> current randomly selected image
 		currentImage				= ''
 		%> scale is set by size
@@ -70,6 +68,11 @@ classdef imageStimulus < baseStimulus
 		width
 		%> pixel height
 		height
+	end
+
+	properties(Dependent)
+		%> number of images
+		nImages						= 0;
 	end
 
 	properties (SetAccess = protected, GetAccess = public, Hidden = true)
@@ -168,7 +171,7 @@ classdef imageStimulus < baseStimulus
 			end
 			computePosition(me);
 			if me.doAnimator
-				update(me.animator);
+				setup(me.animator, me);
 			end
 			setRect(me);
 
@@ -211,6 +214,9 @@ classdef imageStimulus < baseStimulus
 					me.currentImage = me.filePaths{im};
 					fprintf('File %s\n',me.currentImage);
 					[me.matrix, ~, ialpha] = imread(me.currentImage);
+					if isinteger(me.matrix) && isfloat(ialpha)
+						ialpha = uint8(ialpha .* 255);
+					end
 				end
 			else
 				if me.sizeOut <= 0; sz = 2; else; sz = me.sizeOut; end
@@ -333,7 +339,9 @@ classdef imageStimulus < baseStimulus
 					end
 				end
 				if me.doAnimator
-					
+					animate(me.animator);
+					me.updateXY(me.animator.x, me.animator.y, true);
+					me.angleOut = -rad2deg(me.animator.angle);
 				elseif me.doMotion == 1
 					me.mvRect=OffsetRect(me.mvRect,me.dX_,me.dY_);
 				end
@@ -348,12 +356,21 @@ classdef imageStimulus < baseStimulus
 			if ~isempty(me.texture) && me.texture > 0 && Screen(me.texture,'WindowKind') == -1
 				try Screen('Close',me.texture); end %#ok<*TRYNC>
 			end
+			if isprop(me,'doAnimator') && me.doAnimator; reset(me.animator); end
 			resetTicks(me);
 			me.texture=[];
 			me.scale = 1;
 			me.mvRect = [];
 			me.dstRect = [];
 			removeTmpProperties(me);
+		end
+
+		% ===================================================================
+		%> @brief nImages
+		%>
+		% ===================================================================
+		function out = get.nImages(me)
+			out = length(me.filePaths);
 		end
 
 	end %---END PUBLIC METHODS---%
@@ -382,8 +399,8 @@ classdef imageStimulus < baseStimulus
 					if ~exist(me.filePaths{i},'file');warning('Image %s not available!',me.filePaths{i});end
 				end
 			elseif exist(me.filePath,'file') == 2
+				me.filePaths{1} = which(me.filePath);
 				me.selection = 1;
-				me.filePaths{1} = me.filePath;
 			end
 			me.currentImage = me.filePaths{me.selection};
 		end

@@ -83,6 +83,10 @@ classdef animationManager < optickaCore
 			me.parseArgs(args,me.allowedProperties);
 		end
 		
+		% ===================================================================
+		%> @brief Load an image
+		%>
+		% ===================================================================
 		function setup(me, stimulus)
 			me.reset;
 			me.stimulus = stimulus;
@@ -103,11 +107,14 @@ classdef animationManager < optickaCore
 			end
 
 			[me.dX, me.dY] = pol2cart(me.angle, stimulus.speed);
-			
-			%me.rigidStep();
-
+			me.rigidparams.position = [me.x me.y];
+			me.rigidparams.velocity = [me.dX me.dY];
 		end
 		
+		% ===================================================================
+		%> @brief Load an image
+		%>
+		% ===================================================================
 		function animate(me)
 			switch me.type
 				case 'rigid'
@@ -115,10 +122,17 @@ classdef animationManager < optickaCore
 			end
 		end
 
+		% ===================================================================
+		%> @brief Load an image
+		%>
+		% ===================================================================
 		function reset(me)
 			me.tick = 0;
 			me.timeStep = [];
 			me.torque = 0;
+			me.kineticEnergy=0;
+			me.potentialEnergy=0;
+			me.angle=0;
 			me.angularVelocity = 0;
 			me.x = [];
 			me.y = [];
@@ -127,6 +141,10 @@ classdef animationManager < optickaCore
 			me.momentOfInertia = 0.5 * me.rigidparams.mass * me.rigidparams.radius^2;
 		end
 
+		% ===================================================================
+		%> @brief Load an image
+		%>
+		% ===================================================================
 		function rigidStep(me)
 			if isempty(me.timeStep) 
 				me.timeStep = 0;
@@ -189,6 +207,17 @@ classdef animationManager < optickaCore
 			me.kineticEnergy = 0.5 * me.rigidparams.mass * norm(velocity)^2 + 0.5 * me.momentOfInertia * me.angularVelocity^2;
 			me.potentialEnergy = me.rigidparams.mass * -me.rigidparams.gravity * (me.y - me.rigidparams.radius - me.rigidparams.floor);
 		end
+
+		% ===================================================================
+		%> @brief Load an image
+		%>
+		% ===================================================================
+		function editBody(me,x,y,dx,dy)
+			if exist('x','var') && ~isempty(x); me.x = x; end
+			if exist('y','var') && ~isempty(y); me.y = y; end
+			if exist('dx','var') && ~isempty(dx); me.dX = dx; end
+			if exist('dy','var') && ~isempty(dy); me.dY = dy; end
+		end
 		
 	end
 	
@@ -196,6 +225,10 @@ classdef animationManager < optickaCore
 	methods ( Static ) % STATIC METHODS
 	%=======================================================================
 		
+		% ===================================================================
+		%> @brief Load an image
+		%>
+		% ===================================================================
 		function demo()
 			s =screenManager;
 			i = imageStimulus('size',4);
@@ -248,6 +281,7 @@ classdef animationManager < optickaCore
 			plot(t,pe);
 		
 		end
+
 		% ===================================================================
 		%> @brief degrees2radians
 		%>
@@ -283,8 +317,8 @@ classdef animationManager < optickaCore
 		% ===================================================================
 		function [dX, dY] = updatePosition(delta,angle)
 		% updatePosition(delta, angle)
-			dX = delta .* cos(baseStimulus.d2r(angle));
-			dY = delta .* sin(baseStimulus.d2r(angle));
+			dX = delta .* cos(animationManager.d2r(angle));
+			dY = delta .* sin(animationManager.d2r(angle));
 		end
 		
 		% ===================================================================
