@@ -1780,25 +1780,40 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		%> @brief toDegrees - convert from pixels to degrees
 		%>
+		%> expects col1 = x, col2 = y for 'xy'
 		% ===================================================================
 		function out = toDegrees(me, in, axis)
-			if ~exist('axis','var'); if length(in)==4; axis='rect'; else; axis=''; end; end
+			if ~exist('axis','var') || isempty(axis)
+				if size(in, 2) == 2
+					axis='xy'; 
+				elseif size(in, 2) == 4
+					axis='rect';
+				else
+					axis = 'x';
+				end
+			end
 			switch axis
+				case 'xy'
+					out(:,1) = (in(:,1) - me.xCenter) / me.ppd_;
+					out(:,2) = (in(:,2) - me.yCenter) / me.ppd_;
 				case 'rect'
-					out(1) = (in(1) - me.xCenter) / me.ppd_;
-					out(2) = (in(2) - me.yCenter) / me.ppd_;
-					out(3) = (in(3) - me.xCenter) / me.ppd_;
-					out(4) = (in(4) - me.yCenter) / me.ppd_;
+					out(:,1) = (in(:,1) - me.xCenter) / me.ppd_;
+					out(:,2) = (in(:,2) - me.yCenter) / me.ppd_;
+					out(:,3) = (in(:,3) - me.xCenter) / me.ppd_;
+					out(:,4) = (in(:,4) - me.yCenter) / me.ppd_;
 				case 'x'
 					out = (in - me.xCenter) / me.ppd_;
 				case 'y'
 					out = (in - me.yCenter) / me.ppd_;
 				otherwise
-					if length(in)==2
+					if length(in)==4
+						out(1:2) = (in(1:2) - me.xCenter) / me.ppd_;
+						out(3:4) = (in(3:4) - me.yCenter) / me.ppd_;
+					elseif length(in)==2
 						out(1) = (in(1) - me.xCenter) / me.ppd_;
 						out(2) = (in(2) - me.yCenter) / me.ppd_;
 					else
-						out = 0;
+						out = ones(size(in))+me.xCenter;
 					end
 			end
 		end
@@ -1808,13 +1823,24 @@ classdef screenManager < optickaCore
 		%>
 		% ===================================================================
 		function out = toPixels(me, in, axis)
-			if ~exist('axis','var'); axis=''; end
+			if ~exist('axis','var') || isempty(axis)
+				if size(in, 2) == 2
+					axis='xy'; 
+				elseif size(in, 2) == 4
+					axis='rect';
+				else
+					axis = 'x';
+				end
+			end
 			switch axis
+				case 'xy'
+					out(:,1) = (in(:,1) * me.ppd_) + me.xCenter;
+					out(:,2) = (in(:,2) * me.ppd_) + me.yCenter;
 				case 'rect'
-					out(1) = (in(1) * me.ppd_) + me.xCenter;
-					out(2) = (in(2) * me.ppd_) + me.yCenter;
-					out(3) = (in(3) * me.ppd_) + me.xCenter;
-					out(4) = (in(4) * me.ppd_) + me.yCenter;
+					out(:,1) = (in(:,1) * me.ppd_) + me.xCenter;
+					out(:,2) = (in(:,2) * me.ppd_) + me.yCenter;
+					out(:,3) = (in(:,3) * me.ppd_) + me.xCenter;
+					out(:,4) = (in(:,4) * me.ppd_) + me.yCenter;
 				case 'x'
 					out = (in * me.ppd_) + me.xCenter;
 				case 'y'
@@ -1827,7 +1853,7 @@ classdef screenManager < optickaCore
 						out(1) = (in(1) * me.ppd_) + me.xCenter;
 						out(2) = (in(2) * me.ppd_) + me.yCenter;
 					else
-						out = 0;
+						out = ones(size(in))+me.xCenter;
 					end
 			end
 		end

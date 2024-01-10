@@ -54,6 +54,7 @@ classdef touchManager < optickaCore
 		win					= []
 		hold				= []
 		eventID				= []
+		eventType			= [];
 		eventNew			= false
 		eventMove			= false
 		eventPressed		= false
@@ -244,12 +245,18 @@ classdef touchManager < optickaCore
 				[mx, my, b] = GetMouse(me.swin);
 				if any(b) && ~me.lastPressed
 					type = 2; motion = false; press = true;  me.lastPressed = true;
+					me.eventNew = true;
+					me.eventPressed = true;
 				elseif any(b) && me.lastPressed
 					type = 3; motion = true; press = true;  me.lastPressed = true;
+					me.eventMove = true;
+					me.eventPressed = true;
 				elseif me.lastPressed && ~any(b)
 					type = 4; motion = false; press = false; me.lastPressed = false;
+					me.eventRelease = true;
 				else
 					type = -1; motion = false; press = 0;  me.lastPressed = false;
+					me.eventNew = false; me.eventMove = false; me.eventRelease = false; me.eventPressed = false;
 				end
 				if type > 0
 					event = struct('Type',type,'Time',GetSecs,...
@@ -258,6 +265,10 @@ classdef touchManager < optickaCore
 					'MappedX',mx,'MappedY',my,...
 					'Pressed',press,'Motion',motion,...
 					'Keycode',55);
+					event.xy = me.screen.toDegrees([event.MappedX event.MappedY],'xy');
+					me.event = event;
+					me.eventType	= event.Type;
+					me.x = event.xy(1); me.y = event.xy(2);
 				end
 			else
 				if me.drainEvents
@@ -268,7 +279,8 @@ classdef touchManager < optickaCore
 			end
 			me.eventNew = false; me.eventMove = false; me.eventRelease = false; me.eventPressed = false;
 			if ~isempty(event)
-				me.eventID = event.Keycode;
+				me.eventID		= event.Keycode;
+				me.eventType	= event.Type;
 				switch event.Type
 					case 2 %NEW
 						me.eventNew = true;
@@ -282,7 +294,9 @@ classdef touchManager < optickaCore
 						disp('Event lost!');
 						event = [];
 				end
+				event.xy = me.screen.toDegrees([event.MappedX event.MappedY],'xy');
 				me.event = event;
+				me.x = event.xy(1); me.y = event.xy(2);
 			end
 		end
 
@@ -307,6 +321,7 @@ classdef touchManager < optickaCore
 			me.eventPressed	= false;
 			me.eventRelease	= false;
 			me.eventID 		= [];
+			me.eventType	= [];
 			me.event		= [];
 		end
 
@@ -326,27 +341,23 @@ classdef touchManager < optickaCore
 
 			event = getEvent(me);
 
-			while ~isempty(event) && iscell(event); event = event{1}; end
+			while iscell(event) && ~isempty(event); event = event{1}; end
 			if isempty(event); return; end
 
 			wasEvent = true;
 
 			if panelType == 2; event.MappedX = me.screenVals.width - event.MappedX; end
 
-			xy = me.screen.toDegrees([event.MappedX event.MappedY]);
-			event.xy = xy;
-			if ~isempty(xy);
+			if ~isempty(event.xy)
 				if isempty(windows)
-					result = calculateWindow(me, xy(1), xy(2));
+					result = calculateWindow(me, event.xy(1), event.xy(2));
 				else
 					for i = 1 : nWindows
-						result(i,1) = calculateWindow(me, xy(1), xy(2), windows(i,:));
+						result(i,1) = calculateWindow(me, event.xy(1), event.xy(2), windows(i,:));
 						if result(i,1); win = i; result = true; break;end
 					end
 				end
-				event.result = result;
-				me.event = event;
-				me.x = xy(1); me.y = xy(2);
+				me.event.result = result;
 			end
 		end
 

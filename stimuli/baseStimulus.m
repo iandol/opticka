@@ -79,9 +79,11 @@ classdef baseStimulus < optickaCore & dynamicprops
 	end
 
 	%--------------------HIDDEN PROPERTIES-----------%
-	properties(SetAccess = protected, Hidden = true)
+	properties(Transient = true, Hidden = true)
 		%> size in pixels
-		szPx
+		szPx					= []
+		xFinalD					= []
+		yFinalD					= []
 	end
 	
 	%--------------------VISIBLE PROPERTIES-----------%
@@ -150,7 +152,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> the setup method
 		ignorePropertiesBase = {'specialFlags','handles','ppd','sM','name','comment','fullName'...
 			'family','type','dX','dY','delta','verbose','texture','dstRect','xFinal','yFinal'...
-			'isVisible','dateStamp','paths','uuid','tick','mouseOverride','isRect'...
+			'xFinalD','yFinalD','pxsz','isVisible','dateStamp','paths','uuid','tick','mouseOverride','isRect'...
 			'dstRect','mvRect','sM','screenVals','isSetup','isGUI','showOnTracker'...
 			'doDots','doMotion','doDrift','doFlash','doAnimator'}
 		%> Which properties to not draw in the UI panel
@@ -326,7 +328,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%>
 		% ===================================================================
 		function resetTicks(me)
-			global mouseTick mouseGlobalX mouseGlobalY mouseValid %#ok<*GVMIS> %shared across all stimuli
+			global mouseTick %#ok<*GVMIS> %shared across all stimuli
 			if max(me.delayTime) > 0 %delay display a number of frames
 				if length(me.delayTime) == 1
 					me.delayTicks = round(me.delayTime/me.screenVals.ifi);
@@ -579,7 +581,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 			end
 			if isprop(me,'ignorePropertiesUIBase'); igB = findPropertyDefault(me,'ignorePropertiesUIBase'); end
 			if ischar(igA);igA = strsplit(igA,'|');end
-			if ischar(igB); igB = {'animator','fullName','mvRect','xFinal','yFinal'}; end
+			if ischar(igB); igB = {'animator','fullName','mvRect','xFinal','yFinal','xFinalD','yFinalD'}; end
 			excl = [igA igB];	
 			eidx = [];
 			for i = 1:length(pr)
@@ -947,13 +949,12 @@ classdef baseStimulus < optickaCore & dynamicprops
 		function updateXY(me,x,y,degrees)
 			if ~exist('degrees','var') || isempty(degrees); degrees = false; end
 			if degrees
-				if ~isempty(x); me.xFinal = me.sM.toPixels(x, 'x'); end
-				if ~isempty(y); me.yFinal = me.sM.toPixels(y, 'y'); end
+				if ~isempty(x); me.xFinal = me.sM.toPixels(x, 'x'); me.xFinalD = x; end
+				if ~isempty(y); me.yFinal = me.sM.toPixels(y, 'y'); me.yFinalD = y; end
 			else
-				if ~isempty(x); me.xFinal = x; end
-				if ~isempty(y); me.yFinal = y; end
+				if ~isempty(x); me.xFinal = x; me.xFinalD = me.sM.toDegrees(x, 'x'); end
+				if ~isempty(y); me.yFinal = y; me.yFinalD = me.sM.toDegrees(y, 'y'); end
 			end
-			
 			if length(me.mvRect) == 4
 				me.mvRect=CenterRectOnPointd(me.mvRect, me.xFinal, me.yFinal);
 			end
@@ -1059,6 +1060,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 				end
 				me.xFinal = me.xPositionOut + (dx * me.ppd) + me.sM.xCenter;
 				me.yFinal = me.yPositionOut + (dy * me.ppd) + me.sM.yCenter;
+				me.xFinalD = me.sM.toDegrees(me.xFinal,'x');
+				me.yFinalD = me.sM.toDegrees(me.yFinal,'y');
 				if me.verbose; fprintf('---> computePosition: %s X = %gpx / %gpx / %gdeg | Y = %gpx / %gpx / %gdeg\n',me.fullName, me.xFinal, me.xPositionOut, dx, me.yFinal, me.yPositionOut, dy); end
 			end
 			setAnimationDelta(me);
@@ -1136,6 +1139,10 @@ classdef baseStimulus < optickaCore & dynamicprops
 					delete(m)
 				end
 			end
+			me.xFinal	= [];
+			me.xFinalD	= [];
+			me.yFinal	= [];
+			me.yFinalD	= [];
 		end
 
 		% ===================================================================

@@ -25,7 +25,7 @@ classdef animationManager < optickaCore
 		%> default length of the animation in seconds for prerendering
 		timeToEnd double = 10
 	end
-	
+
 	properties (SetAccess = private, GetAccess = public)
 		%> tick updates +1 on each draw, resets on each update
 		tick double = 0
@@ -91,8 +91,8 @@ classdef animationManager < optickaCore
 			me.reset;
 			me.stimulus = stimulus;
 			me.ppd = stimulus.ppd;
-			me.x = stimulus.sM.toDegrees(stimulus.xPositionOut);
-			me.y = stimulus.sM.toDegrees(stimulus.yPositionOut);
+			me.x = stimulus.sM.toDegrees(stimulus.xFinal,'x');
+			me.y = stimulus.sM.toDegrees(stimulus.yFinal,'y');
 			me.rigidparams.radius = stimulus.size/2;
 			me.tick = 0;
 			me.timeStep = [];
