@@ -189,7 +189,7 @@ classdef imageStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function loadImage(me,in)
-			ialpha = [];
+			ialpha = uint8([]);
 			tt = tic;
 			if ~exist('in','var'); in = []; end
 			if ~isempty(in) && ischar(in)
@@ -399,7 +399,9 @@ classdef imageStimulus < baseStimulus
 					if ~exist(me.filePaths{i},'file');warning('Image %s not available!',me.filePaths{i});end
 				end
 			elseif exist(me.filePath,'file') == 2
-				me.filePaths{1} = which(me.filePath);
+				me.filePath = regexprep(me.filePath,'\~',getenv('HOME'));
+				me.filePath = which(me.filePath);
+				me.filePaths{1} = me.filePath;
 				me.selection = 1;
 			end
 			me.currentImage = me.filePaths{me.selection};
@@ -448,7 +450,6 @@ classdef imageStimulus < baseStimulus
 						me.filePaths{n} = regexprep(me.filePaths{n},'\/\/','/');
 					end
 				end
-				me.nImages = length(me.filePaths);
 				if me.selection < 1 || me.selection > me.nImages; me.selection = 1; end
 			end
 		end

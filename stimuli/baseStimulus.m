@@ -1,7 +1,7 @@
 % ========================================================================
 classdef baseStimulus < optickaCore & dynamicprops
 %> @class baseStimulus
-%> @brief baseStimulus is the superclass for all opticka stimulus objects
+%> @brief baseStimulus is the superclass for all stimulus objects
 %>
 %> Superclass providing basic structure for all stimulus classes. This is a dynamic properties
 %> descendant, allowing for the temporary run variables used, which get appended "name"Out, i.e.
@@ -13,13 +13,13 @@ classdef baseStimulus < optickaCore & dynamicprops
 %>
 %> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
-	
+
 	%--------------------ABSTRACT PROPERTIES----------%
 	properties (Abstract = true)
 		%> stimulus type
 		type char
 	end
-	
+
 	%--------------------ABSTRACT PROPERTIES----------%
 	properties (Abstract = true, SetAccess = protected)
 		%> the stimulus family (grating, dots etc.)
@@ -141,20 +141,21 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%>are we setting up?
 		inSetup logical		= false
 		%> delta cache
-		delta_
+		delta_		= []
 		%> dX cache
-		dX_
+		dX_			= []
 		%> dY cache
-		dY_
+		dY_			= []
 		% deal with interaction of colour and alpha
 		isInSetColour logical	= false
-		%> Which properties to ignore to clone when making transient copies in
-		%> the setup method
-		ignorePropertiesBase = {'specialFlags','handles','ppd','sM','name','comment','fullName'...
-			'family','type','dX','dY','delta','verbose','texture','dstRect','xFinal','yFinal'...
-			'xFinalD','yFinalD','pxsz','isVisible','dateStamp','paths','uuid','tick','mouseOverride','isRect'...
-			'dstRect','mvRect','sM','screenVals','isSetup','isGUI','showOnTracker'...
-			'doDots','doMotion','doDrift','doFlash','doAnimator'}
+		setLoop		= 0
+		%> Which properties to ignore cloning when making transient copies in setup
+		ignorePropertiesBase = {'dp','animator','specialFlags','handles','ppd','sM',...
+			'name','comment','fullName','family','type','dX','dY','delta','verbose',...
+			'texture','dstRect','xFinal','yFinal','isVisible','dateStamp','paths',...
+			'uuid','tick','delayTicks','mouseOverride','isRect','dstRect','mvRect','sM',...
+			'screenVals','isSetup','isGUI','showOnTracker','doDots','doMotion',...
+			'doDrift','doFlash','doAnimator','mouseX','mouseY'}
 		%> Which properties to not draw in the UI panel
 		ignorePropertiesUIBase = {'animator','fullName','mvRect','xFinal','yFinal'}
 	end
@@ -205,7 +206,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 			me=me@optickaCore(varargin); %superclass constructor
 			me.parseArgs(varargin, me.allowedProperties);
 		end
-		
+
 		% ===================================================================
 		%> @brief colour set method
 		%> Allow 1 (R=G=B) 3 (RGB) or 4 (RGBA) value colour
@@ -322,7 +323,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 			me.delayTime = time;
 		end
 
-		
+
 		% ===================================================================
 		%> @brief reset the various tick counters for our stimulus
 		%>
@@ -393,7 +394,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		function run(me, benchmark, runtime, s, forceScreen, showVBL)
 		% run(benchmark, runtime, s, forceScreen, showVBL)
 			try
-				warning off
+
 				if ~exist('benchmark','var') || isempty(benchmark)
 					benchmark=false;
 				end
@@ -503,9 +504,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				fprintf('======>>> <strong>SPEED</strong> (%i frames in %.3f secs) = <strong>%g</strong> fps\n\n',nFrames, diffT, fps);
 				if ~benchmark;fprintf('\b======>>> First - Last frame time: %.3f\n\n',vbl(end)-startT);end
 				clear s fps benchmark runtime b bb i vbl; %clear up a bit
-				warning on
-				catch ME
-				warning on
+			catch ME
 				try getReport(ME); end
 				try Priority(0); end
 				if exist('s','var') && isa(s,'screenManager')
@@ -908,7 +907,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		% ===================================================================
 		function [value, name] = getP(me, name, range)
 			if isprop(me, name)
-				if isprop(me,[name 'Out'])
+				if isprop(me, [name 'Out'])
 					name = [name 'Out'];
 				end
 				value = me.(name);
@@ -1053,10 +1052,11 @@ classdef baseStimulus < optickaCore & dynamicprops
 			if me.mouseOverride && me.mouseValid
 				me.xFinal = me.mouseX; me.yFinal = me.mouseY;
 			else
+				sP = getP(me, 'startPosition');
 				if isprop(me,'direction')
-					[dx, dy]=pol2cart(me.d2r(getP(me,'direction')),me.startPosition);
+					[dx, dy]=pol2cart(me.d2r(getP(me,'direction')), sP);
 				else
-					[dx, dy]=pol2cart(me.d2r(getP(me,'angle')),me.startPositionOut);
+					[dx, dy]=pol2cart(me.d2r(getP(me,'angle')), sP);
 				end
 				me.xFinal = me.xPositionOut + (dx * me.ppd) + me.sM.xCenter;
 				me.yFinal = me.yPositionOut + (dy * me.ppd) + me.sM.yCenter;
@@ -1085,24 +1085,23 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> @brief setRect
 		%> setRect makes the PsychRect based on the texture and screen
 		%> values, you should call computePosition() first to get xFinal and
-		%> yFinal. 
+		%> yFinal.
 		% ===================================================================
 		function setRect(me)
-			if ~isempty(me.texture)
-				if isprop(me,'scale')
-					me.dstRect = ScaleRect(Screen('Rect',me.texture(1)), me.scale, me.scale);
-				else
-					me.dstRect=Screen('Rect',me.texture(1));
-				end
-				if me.mouseOverride && me.mouseValid
-					me.dstRect = CenterRectOnPointd(me.dstRect, me.mouseX, me.mouseY);
-				else
-					me.dstRect=CenterRectOnPointd(me.dstRect, me.xFinal, me.yFinal);
-				end
-				me.mvRect=me.dstRect;
+			if isempty(me.texture); me.mvRect = [0 0 100 100]; return; end
+			if isprop(me,'scale')
+				me.dstRect = ScaleRect(Screen('Rect',me.texture(1)), me.scale, me.scale);
+			else
+				me.dstRect=Screen('Rect',me.texture(1));
 			end
+			if me.mouseOverride && me.mouseValid
+				me.dstRect = CenterRectOnPointd(me.dstRect, me.mouseX, me.mouseY);
+			else
+				me.dstRect=CenterRectOnPointd(me.dstRect, me.xFinal, me.yFinal);
+			end
+			me.mvRect=me.dstRect;
 		end
-		
+
 		% ===================================================================
 		%> @brief Converts properties to a structure
 		%>

@@ -250,7 +250,6 @@ classdef screenManager < optickaCore
 			args = optickaCore.addDefaults(varargin,struct('name','screenManager'));
 			me=me@optickaCore(args); %superclass constructor
 			me.parseArgs(args,me.allowedProperties); %check remaining properties from varargin
-			
 			try
 				AssertOpenGL;
 				me.isPTB = true;
@@ -263,9 +262,8 @@ classdef screenManager < optickaCore
 			me.font.FontName = me.monoFont;
 
 			prepareScreen(me);
-
 		end
-		
+
 		% ===================================================================
 		function screenVals = prepareScreen(me)
 		%> @fn prepareScreen
@@ -447,7 +445,7 @@ classdef screenManager < optickaCore
 				PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
 				if me.useVulkan
 					if ~me.screenVals.isVulkan; fprintf('---> screenManager: Probing for Vulkan failed...\n'); end
-					try 
+					try
 						PsychImaging('AddTask', 'General', 'UseVulkanDisplay');
 						fprintf('---> screenManager: Vulkan appears to be activated...\n');
 					catch
@@ -475,7 +473,7 @@ classdef screenManager < optickaCore
 							PsychImaging('AddTask', 'General', bD);
 						end
 					else
-						warning('---> screenManager: You are connected to a Display++ but not using a Bits++ mode...')
+						warning('---> screenManager: You are connected to a Display++ but not using a Bits++ mode...');
 					end
 				else
 					fprintf('\tNO Display++\n');
@@ -735,6 +733,7 @@ classdef screenManager < optickaCore
 
 				me.screenVals = sv;
 			catch ME
+				getReport(ME);
 				close(me);
 				Priority(0);
 				prepareScreen(me);
@@ -947,7 +946,7 @@ classdef screenManager < optickaCore
 					Screen('Close',me.win);
 				end
 			catch ME
-					disp(ME.message);
+				getReport(ME);
 			end
 			me.win = [];
 			if isfield(me.screenVals,'win');me.screenVals=rmfield(me.screenVals,'win');end
@@ -1603,8 +1602,8 @@ classdef screenManager < optickaCore
 		%>
 		%> @param filename optional filename
 		% ===================================================================
-			if ~exist('filename','var') 
-				filename=[me.paths.parent filesep 'Shot' datestr(now,'YYYY-mm-DD-HH-MM-SS') '.png']; 
+			if ~exist('filename','var')
+				filename=[me.paths.parent filesep 'Shot' datestr(now,'YYYY-mm-DD-HH-MM-SS') '.png'];
 			end
 			myImg = Screen('GetImage',me.win);
 			imwrite(myImg, filename);
@@ -1785,9 +1784,9 @@ classdef screenManager < optickaCore
 		function out = toDegrees(me, in, axis)
 			if ~exist('axis','var') || isempty(axis)
 				if size(in, 2) == 2
-					axis='xy'; 
+					axis = 'xy';
 				elseif size(in, 2) == 4
-					axis='rect';
+					axis = 'rect';
 				else
 					axis = 'x';
 				end
@@ -1825,7 +1824,7 @@ classdef screenManager < optickaCore
 		function out = toPixels(me, in, axis)
 			if ~exist('axis','var') || isempty(axis)
 				if size(in, 2) == 2
-					axis='xy'; 
+					axis='xy';
 				elseif size(in, 2) == 4
 					axis='rect';
 				else
@@ -1865,7 +1864,7 @@ classdef screenManager < optickaCore
 		function delete(me)
 			if me.isOpen
 				close(me);
-				salutation(me,'DELETE method','Screen closed');
+				salutation(me, 'DELETE method', 'Screen closed');
 			end
 		end
 	end
