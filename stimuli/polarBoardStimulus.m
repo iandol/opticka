@@ -305,7 +305,7 @@ classdef polarBoardStimulus < baseStimulus
 				me.needUpdate = true;
 			end
 			function set_sfOut(me,value)
-				me.sfOut = value * (me.ppd*10*(1/me.ppd)) * me.scale;
+				me.sfOut = value * (me.ppd*3*(1/me.ppd)) * me.scale;
 				me.sfCache = me.sfOut;
 			end
 			function set_sf2Out(me,value)
@@ -343,7 +343,6 @@ classdef polarBoardStimulus < baseStimulus
 			me.driftPhase=me.phaseOut;
 			me.driftPhase2=me.driftPhase;
 
-			updateSFs(me);
 			if me.mask == true
 				me.maskValue = floor(me.sizeOut/2);
 			else
@@ -374,6 +373,7 @@ classdef polarBoardStimulus < baseStimulus
 				me.visibleFlip = Inf; me.visibleTick = 0;
 			end
 
+			updateSFs(me);
 			computePosition(me);
 			setRect(me);
 
@@ -478,7 +478,7 @@ classdef polarBoardStimulus < baseStimulus
 		% ===================================================================
 		function set.sf(me,value)
 			if value <= 0
-				value = 0.05;
+				value = 0.01;
 			end
 			me.sf = value;
 			me.salutation(['set sf: ' num2str(value)],'Custom set method')
@@ -563,10 +563,9 @@ classdef polarBoardStimulus < baseStimulus
 			else
 				me.maskValue = [];
 			end
-			me.sfRecurse = true;
-			try me.sfOut = me.sfCache * me.scale; end
-			try me.sf2Out = me.sf2Cache * me.scale; end
-			%fprintf('\nCalculate SFOut: %d | in: %d | scale: %d\n', me.sfOut, me.sfCache, me.scale);
+			try me.sfOut = me.sfCache; end
+			try me.sf2Out = me.sf2Cache; end
+			updateSFs(me);
 		end
 		
 		% ===================================================================
@@ -604,7 +603,7 @@ classdef polarBoardStimulus < baseStimulus
 		%> 
 		% ===================================================================
 		function updateSFs(me)
-			fprintf('ppd: %.2f | SFA: %.2f | SFB: %.2f\n',me.ppd, me.sfOut,me.sf2Out);
+			if me.verbose;fprintf('SF modification: ppd: %.2f | SF circular: %.2f | SF radial: %.2f\n',me.ppd, me.sfOut,me.sf2Out);end
 		end
 		
 	end
