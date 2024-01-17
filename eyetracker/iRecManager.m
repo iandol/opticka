@@ -254,11 +254,11 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 			one = KbName('1!'); two = KbName('2@'); three = KbName('3#');
 			four = KbName('4$'); five = KbName('5%'); six = KbName('6^');
 			seven = KbName('7&'); eight = KbName('8*'); nine = KbName('9(');
-			zero = KbName('0)'); esc = KbName('escape'); cal = KbName('c');
+			zero = KbName('0)'); quit = KbName('q'); cal = KbName('c');
 			val = KbName('v'); dr = KbName('d'); smpl = KbName('s'); menu = KbName('LeftShift');
 			sample = KbName('RightShift'); shot = KbName('F1');
 			oldr = RestrictKeysForKbCheck([one two three four five six seven ...
-				eight nine zero esc cal val dr smpl menu sample shot]);
+				eight nine zero quit cal val dr smpl menu sample shot]);
 
 			cpos = me.calibration.calPositions;
 			vpos = me.calibration.valPositions;
@@ -289,10 +289,10 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 						while cloop
 							a = a + 1;
 							me.getSample();
-							s.drawText('MENU: esc = exit | c = calibrate | v = validate | d = drift offset | s = sample | F1 = screenshot');
+							s.drawText('MENU: q = exit | c = calibrate | v = validate | d = drift offset | s = sample | F1 = screenshot');
 							s.flip();
 							if me.useOperatorScreen
-								s2.drawText('MENU: esc = exit | c = calibrate | v = validate | d = drift offset | s = sample | F1 = screenshot');
+								s2.drawText('MENU: q = exit | c = calibrate | v = validate | d = drift offset | s = sample | F1 = screenshot');
 								if ~isempty(me.x);s2.drawSpot(0.75,[0 1 0.25 0.2],me.x,me.y);end
 								drawValidationResults(me, vn);
 								if mod(a,ref) == 0
@@ -304,7 +304,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 
 							[pressed,~,keys] = optickaCore.getKeys();
 							if pressed
-								if keys(esc)
+								if keys(quit)
 									cloop = false; loop = false;
 								elseif keys(cal)
 									mode = 'calibrate'; cloop = false;

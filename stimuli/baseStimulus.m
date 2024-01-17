@@ -155,9 +155,9 @@ classdef baseStimulus < optickaCore & dynamicprops
 			'texture','dstRect','xFinal','yFinal','isVisible','dateStamp','paths',...
 			'uuid','tick','delayTicks','mouseOverride','isRect','dstRect','mvRect','sM',...
 			'screenVals','isSetup','isGUI','showOnTracker','doDots','doMotion',...
-			'doDrift','doFlash','doAnimator','mouseX','mouseY'}
+			'doDrift','doFlash','doAnimator','mouseX','mouseY','szPx','xFinalD','yFinalD'}
 		%> Which properties to not draw in the UI panel
-		ignorePropertiesUIBase = {'animator','fullName','mvRect','xFinal','yFinal'}
+		ignorePropertiesUIBase = {'animator','fullName','mvRect','xFinal','yFinal','szPx','xFinalD','yFinalD'}
 	end
 	
 	%--------------------PRIVATE PROPERTIES----------%
