@@ -118,6 +118,8 @@ classdef eyetrackerCore < optickaCore
 		screen					= []
 		%> operator screen used during calibration
 		operatorScreen			= []
+		%> the PTB screen handle, normally set by screenManager but can force it to use another screen
+		win						= []
 		%> is operator screen being used?
 		secondScreen			= false
 		%> size to draw eye position on screen
@@ -141,12 +143,14 @@ classdef eyetrackerCore < optickaCore
 		isBlink					= false
 		%> are we in an exclusion zone?
 		isExclusion				= false
-		%> total time searching and holding fixation
+		%> total time searching for and holding fixation
 		fixTotal				= 0
 		%> Initiate fixation length
 		fixInitLength			= 0
-		%how long have we been fixated?
+		%> how long have we been in the fixation window?
 		fixLength				= 0
+		%> when ~strict, we accumulate the total time in the window
+		fixBuffer				= 0
 		%> Initiate fixation time
 		fixInitStartTime		= 0
 		%the first timestamp fixation was true
@@ -190,8 +194,6 @@ classdef eyetrackerCore < optickaCore
 		%> currentSample template
 		sampleTemplate struct	= struct('raw',[],'time',NaN,'timeD',NaN,'gx',NaN,'gy',NaN,...
 									'pa',NaN,'valid',false)
-		%> the PTB screen handle, normally set by screenManager but can force it to use another screen
-		win						= []
 		ppd_					= 36
 		% these are used to test strict fixation
 		fixN double				= 0
@@ -255,6 +257,7 @@ classdef eyetrackerCore < optickaCore
 			if ~exist('removeHistory','var'); removeHistory = false; end
 			me.fixStartTime			= 0;
 			me.fixLength			= 0;
+			me.fixBuffer			= 0;
 			me.fixInitStartTime		= 0;
 			me.fixInitLength		= 0;
 			me.fixTotal				= 0;
@@ -289,6 +292,7 @@ classdef eyetrackerCore < optickaCore
 		function resetFixationTime(me)
 			me.fixStartTime		= 0;
 			me.fixLength		= 0;
+			me.fixBuffer		= 0;
 		end
 		
 		% ===================================================================
@@ -503,6 +507,8 @@ classdef eyetrackerCore < optickaCore
 			if me.fixInitStartTime == 0
 				me.fixInitStartTime = me.currentSample.time;
 				me.fixStartTime = 0;
+				me.fixLength = 0;
+				me.fixBuffer = 0;
 				me.fixTotal = 0;
 				me.fixInitLength = 0;
 			else
@@ -557,16 +563,16 @@ classdef eyetrackerCore < optickaCore
 			% logic if we are in or not in a fixation window
 			if me.fixWindow > 0 % inside fixation window
 				if me.fixStartTime == 0
+					me.fixN = me.fixN + 1;
 					me.fixStartTime = me.currentSample.time;
 				end
-				if me.fixN == 0
-					me.fixN = 1;
+				if me.fixN == 1
 					me.fixSelection = me.fixWindow;
 				end
 				if me.fixSelection == me.fixWindow
 					fixated = true; searching = false;
 					me.fixLength = (me.currentSample.time - me.fixStartTime);
-					if me.fixLength >= me.fixation.time
+					if me.fixLength + me.fixBuffer >= me.fixation.time
 						fixtime = true;
 					end
 				else
@@ -574,16 +580,20 @@ classdef eyetrackerCore < optickaCore
 				end
 				me.isFix = fixated; me.fixInitLength = 0;
 			else % not inside the fixation window
-				if me.fixN == 1
-					me.fixN = -100;
-				end
 				me.fixInitLength = (me.currentSample.time - me.fixInitStartTime);
 				if me.fixInitLength < me.fixation.initTime
 					searching = true;
 				else
 					searching = false;
 				end
-				me.isFix = false; me.fixLength = 0; me.fixStartTime = 0;
+				me.isFix = false; 
+				if me.fixation.strict
+					me.fixLength = 0;
+					me.fixBuffer = 0;
+				elseif ~me.fixation.strict && me.fixStartTime > 0
+					me.fixBuffer = me.fixBuffer + me.fixLength;
+				end
+				me.fixStartTime = 0;
 			end
 		end
 		
@@ -634,7 +644,7 @@ classdef eyetrackerCore < optickaCore
 				return
 			end
 			if searching
-				if (me.fixation.strict==true && (me.fixN == 0)) || me.fixation.strict==false
+				if (me.fixation.strict == true && me.fixN == 0) || me.fixation.strict==false
 					out = 'searching';
 				else
 					out = noString;
@@ -643,7 +653,7 @@ classdef eyetrackerCore < optickaCore
 				end
 				return
 			elseif fix
-				if (me.fixation.strict==true && ~(me.fixN == -100)) || me.fixation.strict==false
+				if (me.fixation.strict==true && me.fixN == 1) || me.fixation.strict==false
 					if fixtime
 						out = yesString;
 						if me.verbose; fprintf('-+-+-> ET:testSearchHoldFixation FIXATION SUCCESSFUL!: %s time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
@@ -691,7 +701,7 @@ classdef eyetrackerCore < optickaCore
 				return
 			end
 			if fix
-				if (me.fixation.strict==true && ~(me.fixN == -100)) || me.fixation.strict==false
+				if (me.fixation.strict == true && me.fixN == 1) || me.fixation.strict==false
 					if fixtime
 						out = yesString;
 						if me.verbose; fprintf('-+-+-> ET:testHoldFixation FIXATION SUCCESSFUL!: %s time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
@@ -762,7 +772,7 @@ classdef eyetrackerCore < optickaCore
 			if (me.isDummy || me.isConnected) && isa(me.screen,'screenManager') && me.screen.isOpen && ~isempty(me.x) && ~isempty(me.y)
 				xy = toPixels(me,[me.x-me.offset.X me.y-me.offset.Y]);
 				if me.isFix
-					if me.fixLength > me.fixation.time && ~me.isBlink
+					if me.fixLength+me.fixBuffer > me.fixation.time && ~me.isBlink
 						Screen('DrawDots', me.screen.win, xy, me.eyeSize, [0 1 0.25 1], [], 3);
 					elseif ~me.isBlink
 						Screen('DrawDots', me.screen.win, xy, me.eyeSize, [0.75 0 0.75 1], [], 3);
@@ -883,7 +893,7 @@ classdef eyetrackerCore < optickaCore
 		function trackerDrawEyePosition(me)
 			if isempty(me.x) || isempty(me.y); return;end
 			if me.isFix
-				if me.fixLength > me.fixation.time
+				if me.fixLength+me.fixBuffer > me.fixation.time
 					drawSpot(me.operatorScreen,0.5,[0 1 0.25 0.7],me.x,me.y);
 				else
 					drawSpot(me.operatorScreen,0.5,[0.75 0.25 0.75 0.7],me.x,me.y);

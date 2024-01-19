@@ -8,24 +8,23 @@
 % ========================================================================
 classdef imageStimulus < baseStimulus
 	properties %--------------------PUBLIC PROPERTIES----------%
+		%> stimulus type: 'picture'
 		type char					= 'picture'
 		%> filePath to load, if it is a directory use all images within
 		filePath char				= ''
-		%> selection if N > 0, then this is a number of images from 1:N, e.g.
-		%> filePath = base.jpg, selection=5, then base1.jpg - base5.jpg
-		%> update() will randomly select one from this group.
+		%> if you pass a directory of images, which one is selected
 		selection double			= 0
-		%> contrast multiplier
+		%> contrast multiplier to the image
 		contrast double				= 1
-		%> precision, 0 keeps 8bit, 1 16bit, 2 32bit
+		%> precision: 0 = 8bit | 1 = 16bit | 2 = 32bit
 		precision					= 0
 		%> special flags: 0 = hardware filter, 2 = PTB
 		%> filter, 4 = fast texture creation, 8 = prevent
 		%> auto mip-map generation, 32 = stop Screen('Close')
 		%> clearing texture
 		specialFlags				= []
-		%> filterMode' How to compute the pixel color values when the
-		%> texture is drawn magnified, minified or drawn shifted, e.g., if
+		%> How to compute the pixel color values when the texture is drawn 
+		%> magnified, minified or drawn shifted, e.g., if
 		%> sourceRect and destinationRect do not have the same size or if
 		%> sourceRect specifies fractional pixel values. 0 = Nearest
 		%> neighbour filtering, 1 = Bilinear filtering - this is the
@@ -47,9 +46,9 @@ classdef imageStimulus < baseStimulus
 		%> blurred or low-pass filtered images, e.g., for gaze-contingent
 		%> displays.
 		filter						= 1
-		%> crop: none or vertical or horizontal
+		%> crop: none | square | vertical | horizontal
 		crop						= 'none'
-		%> direction for motion, different to angle
+		%> direction for motion of the image, different to angle
 		direction					= []
 	end
 
@@ -71,8 +70,8 @@ classdef imageStimulus < baseStimulus
 	end
 
 	properties(Dependent)
-		%> number of images
-		nImages						= 0;
+		%> number of images in the filePath directory
+		nImages						= 0
 	end
 
 	properties (SetAccess = protected, GetAccess = public, Hidden = true)
@@ -80,15 +79,15 @@ classdef imageStimulus < baseStimulus
 		filePathList		= 'filerequestor';
 		interpMethodList	= {'nearest','linear','spline','cubic'}
 		%> properties to ignore in the UI
-		ignorePropertiesUI	= {}
+		ignorePropertiesUI	= {'nImages','type'}
 	end
 
 	properties (Access = protected)
 		%> allowed properties passed to object upon construction
 		allowedProperties = {'type', 'filePath', 'selection', 'contrast', ...
-			'precision','filter','crop'}
+			'precision','filter','crop','specialFlags'}
 		%>properties to not create transient copies of during setup phase
-		ignoreProperties = {'type', 'scale', 'filePath'}
+		ignoreProperties = {'type', 'scale', 'filePath','nImages'}
 	end
 
 	%=======================================================================

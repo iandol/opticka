@@ -565,10 +565,27 @@ classdef baseStimulus < optickaCore & dynamicprops
 			
 			disableList = 'fullName';
 
+			tic
 			mc = metaclass(me);
 			pl = string({mc.PropertyList.Name});
-			dl = string({mc.PropertyList.Description});
-			
+			d1 = {mc.PropertyList.Description};
+			d2 = {mc.PropertyList.DetailedDescription};
+			for i = 1:length(d1)
+				a = regexprep(d1{i},'^\s*>\s*','');
+				a = regexprep(a,'''','`');
+				b = d2{i};
+				if isempty(b)
+					dl{i} = string(a);
+				else
+					b = strsplit(b,'\n');
+					for j = 1:length(b)
+						b{j} = regexprep(b{j},'^\s*>\s*','');
+						b{j} = regexprep(b{j},'''','`');
+					end
+					dl{i} = string([{a} b(:)']);
+				end
+			end
+			toc
 			pr = findAttributesandType(me,'SetAccess','public','notlogical');
 			pr = sort(pr);
 			igA = {}; igB = {};
@@ -612,7 +629,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 						% this gets descriptions
 						ix = find(pl == nm);
 						if ~isempty(ix)
-							desc = regexprep(dl(ix),'^>\s+','');
+							desc = dl{ix};
 						else
 							desc = nm;
 						end
@@ -729,7 +746,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				% this gets descriptions
 				ix = find(pl == nm);
 				if ~isempty(ix)
-					desc = regexprep(dl(ix),'^>\s+','');
+					desc = dl{ix};
 				else
 					desc = nm;
 				end
