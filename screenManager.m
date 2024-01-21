@@ -240,7 +240,7 @@ classdef screenManager < optickaCore
 	methods
 		% ===================================================================
 		function me = screenManager(varargin)
-		%> @fn screenManager(varargin)
+		%> @fn me = screenManager(varargin)
 		%>
 		%> screenManager CONSTRUCTOR
 		%>

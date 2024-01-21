@@ -50,6 +50,8 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 						'movie',[],...
 						'reloadCalibration',true,...
 						'calFile','tobiiCalibration.mat')
+		%> optional eyetracker address
+		address			= []
 	end
 	
 	properties (Hidden = true)
@@ -70,7 +72,7 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 		calStim
 		isCollectedData = false
 		%> allowed properties passed to object upon construction
-		allowedProperties = {'calibration', 'settings'}
+		allowedProperties = {'calibration', 'settings', 'address'}
 	end
 	
 	%=======================================================================
@@ -171,7 +173,7 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 				me.calStim.fixBackColor				= 0;
 				me.calStim.fixFrontColor			= 255;
 				me.settings.cal.drawFunction		= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);
-				if me.calibration.manual;me.settings.mancal.drawFunction	= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);end
+				%if me.calibration.manual;me.settings.mancal.drawFunction	= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);end
 			elseif strcmpi(me.calibration.stimulus,'movie')
 				me.calStim							= tittaCalMovieStimulus();
 				me.calStim.moveTime					= 0.75;
@@ -184,7 +186,7 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 				setup(me.calibration.movie, me.screen);
 				me.calStim.initialise(me.calibration.movie);
 				me.settings.cal.drawFunction		= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);
-				if me.manualCalibration;me.settings.mancal.drawFunction	= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);end
+				%if me.manualCalibration;me.settings.mancal.drawFunction	= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);end
 			end
 			if me.calibration.autoPace
 				me.settings.cal.autoPace			= 2;
@@ -208,23 +210,19 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 			me.settings.val.pointNotifyFunction	= @tittaCalCallback;
 			
 			if me.calibration.manual
-				me.settings.UI.mancal.bgColor		= floor(me.screen.backgroundColour*255);
-				me.settings.mancal.bgColor			= floor(me.screen.backgroundColour*255);
-				me.settings.mancal.cal.pointPos		= me.calibration.calPositions;
-				me.settings.mancal.val.pointPos		= me.calibration.valPositions;
-				me.settings.mancal.cal.paceDuration	= me.calibration.paceDuration;
-				me.settings.mancal.val.paceDuration	= me.calibration.paceDuration;
-				me.settings.UI.mancal.showHead		= true;
-				me.settings.UI.mancal.headScale		= 0.4;
-				me.settings.mancal.cal.pointNotifyFunction	= @tittaCalCallback;
-				me.settings.mancal.val.pointNotifyFunction	= @tittaCalCallback;
+				%me.settings.mancal.cal.pointNotifyFunction	= @tittaCalCallback;
+				%me.settings.mancal.val.pointNotifyFunction	= @tittaCalCallback;
 			end
 
 			if ~isa(me.tobii, 'Titta') || isempty(me.tobii); initTracker(me); end
 			assert(isa(me.tobii,'Titta'),'TOBIIMANAGER:INIT-ERROR','Cannot Initialise...')
 			if me.isDummy; me.tobii = me.tobii.setDummyMode(); end
 			
-			me.tobii.init();
+			if isempty(me.address)
+				me.tobii.init();
+			else
+				me.tobii.init(me.address);
+			end
 			checkConnection(me);
 			me.systemTime							= me.tobii.getTimeAsSystemTime;
 			
@@ -302,9 +300,9 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 				if ~isempty(incal) && isstruct(incal)...
 						&& (isfield(incal,'type') && contains(incal.type,'manual'))...
 						&& (isfield(cal,'wasSkipped') && ~cal.wasSkipped)
-					cal = me.tobii.calibrateManual([me.screen.win me.operatorScreen.win], incal); 
+					cal = me.tobii.calibrateAdvanced([me.screen.win me.operatorScreen.win], incal); 
 				else
-					cal = me.tobii.calibrateManual([me.screen.win me.operatorScreen.win]);
+					cal = me.tobii.calibrateAdvanced([me.screen.win me.operatorScreen.win]);
 				end
 			else
 				if ~isempty(incal) && isstruct(incal)...
@@ -471,10 +469,18 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 				td				= me.tobii.buffer.peekN('gaze',me.smoothing.nSamples);
 				if isempty(td);me.currentSample=sample;return;end
 				sample.raw		= td;
-				sample.time		= double(td.systemTimeStamp(end)) / 1e6; %remember these are in microseconds
-				sample.timeD	= double(td.deviceTimeStamp(end)) / 1e6;
-				sample.timeD2	= GetSecs;
 				if any(td.left.gazePoint.valid) || any(td.right.gazePoint.valid)
+					if isfield(td,'systemTimeStamp') && ~isempty(td.systemTimeStamp)
+						sample.time		= double(td.systemTimeStamp(end)) / 1e6; %remember these are in microseconds
+					else
+						sample.time = [];
+					end
+					if isfield(td,'deviceTimeStamp') && ~isempty(td.deviceTimeStamp)
+						sample.timeD	= double(td.deviceTimeStamp(end)) / 1e6;
+					else
+						sample.timeD = [];
+					end
+					sample.timeD2	= GetSecs;
 					switch me.smoothing.eyes
 						case 'left'
 							xy	= td.left.gazePoint.onDisplayArea(:,td.left.gazePoint.valid);
