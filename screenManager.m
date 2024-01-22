@@ -1,5 +1,4 @@
 % ========================================================================
-classdef screenManager < optickaCore
 %> @class screenManager
 %> @brief screenManager — manage opening and configuring the PTB screen
 %>
@@ -15,8 +14,9 @@ classdef screenManager < optickaCore
 %> drawing commands like grids, text, spots or other basic things that would
 %> be overkill for aa dedicated stimulus class.
 %>
-%> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2024 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
+classdef screenManager < optickaCore
 
 	properties
 		%> the display to use, 0 is the main display on macOS/Linux

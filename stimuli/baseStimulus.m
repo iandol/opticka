@@ -923,10 +923,12 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> @return value of property
 		% ===================================================================
 		function [value, name] = getP(me, name, range)
-			if isprop(me, name)
-				if isprop(me, [name 'Out'])
-					name = [name 'Out'];
-				end
+		% [value, name] = getP(me, name, range)
+			if isprop(me, [name 'Out'])
+				name = [name 'Out'];
+				value = me.(name);
+				if exist('range','var'); value = value(range); end
+			elseif isprop(me, name)
 				value = me.(name);
 				if exist('range','var'); value = value(range); end
 			else
@@ -948,10 +950,10 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> @return value of property
 		% ===================================================================
 		function setP(me, name, value)
-			if isprop(me, name)
-				if isprop(me,[name 'Out'])
-					name = [name 'Out'];
-				end
+		% setP(me, name, value)
+			if isprop(me,[name 'Out'])
+				me.([name 'Out']) = value;
+			elseif isprop(me, name)
 				me.(name) = value;
 			else
 				if me.verbose;fprintf('Property %s doesn''t exist...\n',name);end

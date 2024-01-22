@@ -904,8 +904,8 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 						vbl = flip(s);
 						if useS2; flip(s2,[],[],2); end
 						trackerMessage(me,'END_RT',vbl);
-						trackerMessage(me,'TRIAL_RESULT 1')
-						trackerMessage(me,sprintf('Ending trial %i @ %i',trialn,int64(round(vbl*1e6))))
+						trackerMessage(me,'TRIAL_RESULT 1');
+						trackerMessage(me,sprintf('Ending trial %i @ %i',trialn,int64(round(vbl*1e6))));
 						resetFixation(me);
 						me.fixation.X = randi([-7 7]);
 						me.fixation.Y = randi([-7 7]);
@@ -931,8 +931,8 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 						vbl = flip(s);
 						if useS2; flip(s2,[],[],2); end
 						trackerMessage(me,'END_RT',vbl);
-						trackerMessage(me,'TRIAL_RESULT -10 ABORT')
-						trackerMessage(me,sprintf('Aborting %i @ %i', trialn, int64(round(vbl*1e6))))
+						trackerMessage(me,'TRIAL_RESULT -10 ABORT');
+						trackerMessage(me,sprintf('Aborting %i @ %i', trialn, int64(round(vbl*1e6))));
 					end
 				end
 				stopRecording(me,true);

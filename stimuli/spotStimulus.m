@@ -47,7 +47,7 @@ classdef spotStimulus < baseStimulus
 		currentColour = [1 1 1]
 		colourOutTemp = [1 1 1]
 		flashColourOutTemp = [1 1 1]
-		stopLoop = false
+		isInCompute = false
 		allowedProperties={'type', 'flashTime', 'flashOn', 'flashColour', 'contrast'}
 		ignoreProperties = {'flashSwitch','flashOn'}
 	end
@@ -139,43 +139,29 @@ classdef spotStimulus < baseStimulus
 				me.isInSetColour = true;
 				if length(value)==4 
 					alpha = value(4);
-				elseif isempty(me.findprop('alphaOut'))
-					alpha = me.alpha;
-				else
-					alpha = me.alphaOut;
+				else 
+					alpha = getP(me,'alpha');
 				end
 				switch length(value)
 					case 4
-						if isempty(me.findprop('alphaOut'))
-							me.alpha = alpha;
-						else
-							me.alphaOut = alpha;
-						end
+						setP(me,'alpha',alpha);
 					case 3
 						value = [value(1:3) alpha];
 					case 1
 						value = [value value value alpha];
 				end
-				if isempty(me.colourOutTemp);me.colourOutTemp = value;end
 				me.colourOut = value;
+				if ~me.isInCompute; me.colourOutTemp = value; end
 				me.isInSetColour = false;
-				if isempty(me.findprop('contrastOut'))
-					contrast = me.contrast; %#ok<*PROPLC>
-				else
-					contrast = me.contrastOut;
-				end
-				if ~me.inSetup && ~me.stopLoop && contrast < 1
+				if ~me.inSetup && ~me.isInCompute
+					disp('colourOut compute')
 					computeColour(me);
 				end
 			end
 			function set_flashColourOut(me, value)
 				me.isInSetColour = true;
-				if length(value)==4 
-					alpha = value(4);
-				elseif isempty(me.findprop('alphaOut'))
-					alpha = me.alpha;
-				else
-					alpha = me.alphaOut;
+				if length(value) < 4 
+					alpha = getP(me,'alpha');
 				end
 				switch length(value)
 					case 3
@@ -183,40 +169,27 @@ classdef spotStimulus < baseStimulus
 					case 1
 						value = [value value value alpha];
 				end
-				if isempty(me.flashColourOutTemp);me.flashColourOutTemp = value;end
 				me.flashColourOut = value;
+				if ~me.isInCompute; me.flashColourOutTemp = value; end
 				me.isInSetColour = false;
-				if isempty(me.findprop('contrastOut'))
-					contrast = me.contrast; %#ok<*PROPLC>
-				else
-					contrast = me.contrastOut;
-				end
-				if ~me.inSetup && ~me.stopLoop && contrast < 1
+				if ~me.inSetup && ~me.isInCompute
+					disp('flashcolourOut compute')
 					computeColour(me);
 				end
 			end
 			function set_alphaOut(me, value)
 				if me.isInSetColour; return; end
 				me.alphaOut = value;
-				if isempty(me.findprop('colourOut'))
-					me.colour = [me.colour(1:3) me.alphaOut];
-				else
-					me.colourOut = [me.colourOut(1:3) me.alphaOut];
-				end
-				if isempty(me.findprop('flashColourOut'))
-					if ~isempty(me.flashColour)
-						me.flashColour = [me.flashColour(1:3) me.alphaOut];
-					end
-				else
-					if ~isempty(me.flashColourOut)
-						me.flashColourOut = [me.flashColourOut(1:3) me.alphaOut];
-					end
-				end
+				c = getP(me,'colour');
+				fc = getP(me,'flashColour');
+				setP(me,'colour', [c(1:3) me.alphaOut]);
+				if ~isempty(fc); setP(me,'flashColour', [fc(1:3) me.alphaOut]); end
 			end
 			function set_contrastOut(me, value)
 				if iscell(value); value = value{1}; end
 				me.contrastOut = value;
-				if ~me.inSetup && ~me.stopLoop && value < 1
+				if ~me.inSetup
+					disp('contrastOut compute')
 					computeColour(me);
 				end
 			end
@@ -230,13 +203,15 @@ classdef spotStimulus < baseStimulus
 		% ===================================================================
 		function update(me)
 			resetTicks(me);
-			me.colourOutTemp = [];
-			me.flashColourOutTemp = [];
-			me.stopLoop = false;
+			me.isInCompute = false;
 			me.inSetup = false;
 			computePosition(me);
 			setAnimationDelta(me);
-			if me.doFlash; me.setupFlash; end
+			if me.doFlash
+				me.colourOutTemp = [];
+				me.flashColourOutTemp = [];
+				me.setupFlash; 
+			end
 		end
 		
 		% ===================================================================
@@ -301,7 +276,7 @@ classdef spotStimulus < baseStimulus
 			resetTicks(me);
 			removeTmpProperties(me);
 			me.texture=[];
-			me.stopLoop = false;
+			me.isInCompute = false;
 			me.inSetup = false; me.isSetup = false;
 			me.colourOutTemp = [];
 			me.flashColourOutTemp = [];
@@ -334,13 +309,19 @@ classdef spotStimulus < baseStimulus
 		%> many more times), than an event which is only called on update
 		% ===================================================================
 		function computeColour(me,~,~)
-			if me.inSetup || me.stopLoop; return; end
-			me.stopLoop = true;
-			me.colourOut = [me.mix(me.colourOutTemp(1:3)) me.alphaOut];
-			if ~isempty(me.flashColourOut)
-				me.flashColourOut = [me.mix(me.flashColourOutTemp(1:3)) me.alphaOut];
+			if me.inSetup || me.isInCompute; return; end
+			disp('computeColour')
+			me.isInCompute = true;
+			if isprop(me,'contrastOut') && me.contrastOut < 1
+				me.colourOut = [me.mix(me.colourOutTemp(1:3)) me.alphaOut];
+				if ~isempty(me.flashColourOut)
+					me.flashColourOut = [me.mix(me.flashColourOutTemp(1:3)) me.alphaOut];
+				end
+			else
+				me.colourOut = me.colourOutTemp;
+				if ~isempty(me.flashColourOut);me.flashColourOut = me.flashColourOutTemp; end
 			end
-			me.stopLoop = false;
+			me.isInCompute = false;
 			me.setupFlash();
 		end
 		

@@ -1,10 +1,12 @@
 % ========================================================================
-%> @brief textureStimulus
+%> @class imageStimulus
+%> @brief Show images or directories full of images
 %>
-%> Superclass providing basic structure for texture stimulus classes
+%> Class providing basic structure for image (texture) stimulus classes.
+%> You can control multiple aspects of the image presentation, and scale
+%> images to values in degrees, rotate them, animate them etc.
 %>
-%>
-%> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2024 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef imageStimulus < baseStimulus
 	properties %--------------------PUBLIC PROPERTIES----------%

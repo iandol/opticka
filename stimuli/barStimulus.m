@@ -1,7 +1,7 @@
 % ========================================================================
 %> @brief barStimulus single bar stimulus, inherits from baseStimulus
 %>
-%> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2024 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef barStimulus < baseStimulus
 	
@@ -475,7 +475,7 @@ classdef barStimulus < baseStimulus
 						tmat(:,:,2)=ones(blscale,bwscale) * (colour(2) * contrast);
 						tmat(:,:,3)=ones(blscale,bwscale) * (colour(3) * contrast);
 				end
-				if ~strcmpi(me.type,'checkerboard') || ~strcmpi(me.type,'solid')
+				if ~strcmpi(me.type,'checkerboard') && ~strcmpi(me.type,'solid')
 					aw=0:scale:bwpixels;
 					al=0:scale:blpixels;
 					[a,b]=meshgrid(aw,al);
