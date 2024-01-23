@@ -430,7 +430,7 @@ else
 	incExitFcn = [ {@()updatePlot(bR, me); @()resetRun(task)}; incExitFcn ]; 
 	breakExitFcn = [ {@()updatePlot(bR, me); @()resetRun(task)}; breakExitFcn ];
 end
-if tS.useTask %we are using task
+if tS.useTask || task.nBlocks > 0
 	correctExitFcn = [ correctExitFcn; {@()checkTaskEnded(me)} ];
 	incExitFcn = [ incExitFcn; {@()checkTaskEnded(me)} ];
 	breakExitFcn = [ breakExitFcn; {@()checkTaskEnded(me)} ];

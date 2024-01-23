@@ -948,7 +948,7 @@ classdef runExperiment < optickaCore
 				me.doTrackerFlip			= false;
 				me.sendStrobe				= false;
 				tL.t.vbl(1)					= Screen('Flip', s.win);
-				tL.lastvbl					= tL.vbl(1);
+				tL.lastvbl					= tL.t.vbl(1);
 				tL.t.miss(1)				= 0;
 				tL.t.stimTime(1)			= 0;
 				tL.startTime				= tL.lastvbl;

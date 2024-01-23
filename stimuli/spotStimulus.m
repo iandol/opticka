@@ -154,8 +154,7 @@ classdef spotStimulus < baseStimulus
 				if ~me.isInCompute; me.colourOutTemp = value; end
 				me.isInSetColour = false;
 				if ~me.inSetup && ~me.isInCompute
-					disp('colourOut compute')
-					computeColour(me);
+					computeColour(me); % need to modify using contrast
 				end
 			end
 			function set_flashColourOut(me, value)
@@ -173,8 +172,7 @@ classdef spotStimulus < baseStimulus
 				if ~me.isInCompute; me.flashColourOutTemp = value; end
 				me.isInSetColour = false;
 				if ~me.inSetup && ~me.isInCompute
-					disp('flashcolourOut compute')
-					computeColour(me);
+					computeColour(me); % need to modify using contrast
 				end
 			end
 			function set_alphaOut(me, value)
@@ -189,8 +187,7 @@ classdef spotStimulus < baseStimulus
 				if iscell(value); value = value{1}; end
 				me.contrastOut = value;
 				if ~me.inSetup
-					disp('contrastOut compute')
-					computeColour(me);
+					computeColour(me); % need to modify using contrast
 				end
 			end
 		end
@@ -307,10 +304,11 @@ classdef spotStimulus < baseStimulus
 		%> @brief computeColour triggered event
 		%> Use an event to recalculate as get method is slower (called
 		%> many more times), than an event which is only called on update
+		%> This modifies colour using the contrast value mixed with the
+		%> background colour
 		% ===================================================================
 		function computeColour(me,~,~)
 			if me.inSetup || me.isInCompute; return; end
-			disp('computeColour')
 			me.isInCompute = true;
 			if isprop(me,'contrastOut') && me.contrastOut < 1
 				me.colourOut = [me.mix(me.colourOutTemp(1:3)) me.alphaOut];

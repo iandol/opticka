@@ -797,6 +797,8 @@ classdef stateMachine < optickaCore
 				s = plot([log.tnow]-[log.startTime],'ro','MarkerSize',10, 'MarkerFaceColor', [1 1 1]);
 				s.DataTipTemplate.DataTipRows(1).Label='State';
 				s.DataTipTemplate.DataTipRows(2).Label='Time (s)';
+				r = dataTipTextRow('uuid',log.uuid);
+				s.DataTipTemplate.DataTipRows(end+1)=r;
 				r = dataTipTextRow('Name',log.name);
 				s.DataTipTemplate.DataTipRows(end+1)=r;
 				r = dataTipTextRow('InTime',log.tnow-log.entryTime);
