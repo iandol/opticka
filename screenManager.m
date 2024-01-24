@@ -105,7 +105,7 @@ classdef screenManager < optickaCore
 		%> settings for movie output
 		%> type 1 = video file, 2 = mat array, 3 = single pictures
 		movieSettings						= struct('record',false,'type',1,'loop',inf,...
-											'size',[600 600],'fps',30,'quality',0.7,...
+											'size',[600 600],'fps',[],'quality',0.7,...
 											'keyframe',5,'nFrames', inf,...
 											'prefix','Movie','codec','x264enc')
 		%> populated on window open; useful screen info, initial gamma tables 
@@ -727,6 +727,10 @@ classdef screenManager < optickaCore
 					me.gridColour = [1 1 0.8];
 				end
 
+				if me.movieSettings.record
+					prepareMovie(me);
+				end
+
 				sv.white = WhiteIndex(me.screen);
 				sv.black = BlackIndex(me.screen);
 				sv.gray = GrayIndex(me.screen);
@@ -815,6 +819,7 @@ classdef screenManager < optickaCore
 		% ===================================================================
 			if ~me.isOpen; return; end
 			[vbl, when, flipTime, missed] = Screen('Flip',me.win,varargin{:});
+			if me.movieSettings.record; addMovieFrame(me); end
 		end
 
 		% ===================================================================
@@ -933,6 +938,9 @@ classdef screenManager < optickaCore
 			end
 			if me.isInAsync
 				try Screen('ASyncFlipEnd',me.win); end
+			end
+			if me.movieSettings.record
+				finaliseMovie(me);
 			end
 			me.isInAsync = false;
 			if me.isPlusPlus
@@ -1660,8 +1668,11 @@ classdef screenManager < optickaCore
 			if me.movieSettings.record == true
 				if length(me.movieSettings.size) == 2
 					me.movieSettings.size=CenterRect([0 0 me.movieSettings.size(1) me.movieSettings.size(2)],me.winRect);
-				elseif isempty(me.movieSettings.size)
+				else
 					me.movieSettings.size = me.winRect;
+				end
+				if isempty(me.movieSettings.fps)
+					me.movieSettings.fps = me.screenVals.fps;
 				end
 				me.movieSettings.loop=1;
 				if ismac || isunix
@@ -1674,27 +1685,29 @@ classdef screenManager < optickaCore
 				if ~exist([me.paths.parent filesep 'Movie' filesep],'dir')
 					try mkdir([me.paths.parent filesep 'Movie' filesep]); end
 				end
-				me.movieSettings.moviepath = [me.paths.parent filesep 'Movie' filesep];
+				me.movieSettings.moviePath = [me.paths.parent filesep 'Movie' filesep];
 				switch me.movieSettings.type
 					case {'movie',1}
 						if isempty(me.movieSettings.codec)
-							settings = sprintf(':CodecSettings= Profile=3 Keyframe=%g Videoquality=%g',...
-								me.movieSettings.keyframe, me.movieSettings.quality);
+							settings = [];
 						else
 							settings = sprintf(':CodecType=%s Profile=3 Keyframe=%g Videoquality=%g',...
 								me.movieSettings.codec, me.movieSettings.keyframe, me.movieSettings.quality);
 						end
-						me.movieSettings.movieFile = [me.movieSettings.moviepath me.movieSettings.prefix datestr(now,'dd-mm-yyyy-HH-MM-SS') '.mp4'];
+						me.movieSettings.movieFile = [me.movieSettings.moviePath me.movieSettings.prefix datestr(now,'dd-mm-yyyy-HH-MM-SS') '.mp4'];
+						% moviePtr = Screen('CreateMovie', windowPtr, movieFile [, width][, height]...
+						% [, frameRate=30][, movieOptions][, numChannels=4]...
+						% [, bitdepth=8]);
 						me.moviePtr = Screen('CreateMovie', me.win,...
 							me.movieSettings.movieFile,...
-							me.movieSettings.size(1), me.movieSettings.size(2),...
-							me.movieSettings.fps, settings);
+							RectWidth(me.movieSettings.size), RectHeight(me.movieSettings.size),...
+							me.movieSettings.fps);
 					case {'mat',2}
 						settings = 'mat';
 						me.movieMat = zeros(RectHeight(me.movieSettings.size),RectWidth(me.movieSettings.size),3,me.movieSettings.nFrames);
 					case {'image','png','jpg',3}
 						settings = 'png';
-						me.movieSettings.movieFile = [me.movieSettings.moviepath me.movieSettings.prefix '_' datestr(now,'dd-mm-yyyy-HH-MM-SS')];
+						me.movieSettings.movieFile = [me.movieSettings.moviePath me.movieSettings.prefix '_' datestr(now,'dd-mm-yyyy-HH-MM-SS')];
 				end
 				fprintf('\n---> screenManager: Movie [enc:%s] [rect:%s] will be saved to:\n\t%s\n',settings,...
 				  num2str(me.movieSettings.size),me.movieSettings.movieFile);
@@ -1735,18 +1748,17 @@ classdef screenManager < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function finaliseMovie(me, wasError)
-			if ~exist('wasError','file'); wasError = false; end
+		function finaliseMovie(me)
 			if me.movieSettings.record == true
 				switch me.movieSettings.type
 					case 1
 						if ~isempty(me.moviePtr)
 							Screen('FinalizeMovie', me.moviePtr);
 							fprintf(['\n---> screenManager: movie saved to ' me.movieSettings.movieFile '\n']);
-							Screen('CloseMovie', me.moviePtr);
+							try Screen('CloseMovie', me.moviePtr); end
 						end
 					otherwise
-
+						fprintf(['\n---> screenManager: movie file[s] saved to ' me.movieSettings.moviePath '\n']);
 				end
 			end
 			me.movieSettings.loop = 1;
