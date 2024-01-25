@@ -217,10 +217,9 @@ pauseEntryFcn = {
 	@()disp('PAUSED, press [p] to resume...');
 	@()trackerDrawStatus(eT,'PAUSED, press [p] to resume', stims.stimulusPositions);
 	@()trackerMessage(eT,'TRIAL_RESULT -100'); %store message in EDF
-	@()resetAll(eT); % reset all fixation markers to initial state
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()stopRecording(eT, true); %stop recording eye position data, true=both eyelink & tobii
-	@()needFlip(me, false); % no need to flip the PTB screen
+	@()needFlip(me, false, 0); % no need to flip the PTB screen or tracker
 	@()needEyeSample(me, false); % no need to check eye position
 };
 
@@ -242,10 +241,11 @@ prefixEntryFcn = {
 	@()needEyeSample(me, true); % make sure we start measuring eye position
 	@()getStimulusPositions(stims); % make a struct eT can use for drawing stim positions
 	@()hide(stims); % hide all stimuli
+	@()resetAll(eT); % reset all fixation markers to initial state
 	% update the fixation window to initial values
 	@()updateFixationValues(eT,tS.fixX,tS.fixY,[],tS.firstFixTime); %reset fixation window
 	% send the trial start messages to the eyetracker
-	@()trackerStartTrial(eT, getTaskIndex(me));
+	@()trackerTrialStart(eT, getTaskIndex(me));
 	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
 	% you can add any other messages, such as stimulus values as needed,
 	% e.g. @()trackerMessage(eT,['MSG:ANGLE' num2str(stims{1}.angleOut)]) etc.
@@ -358,7 +358,6 @@ correctExitFcn = {
 	@()updateTask(me,tS.CORRECT); % make sure our taskSequence is moved to the next trial
 	@()updateVariables(me); % randomise our stimuli, and set strobe value too
 	@()update(stims); % update our stimuli ready for display
-	@()resetAll(eT); % resets the fixation state timers	
 	@()plot(bR, 1); % actually do our behaviour record drawing
 };
 

@@ -164,6 +164,7 @@ classdef discStimulus < baseStimulus
 			% Placing them as inline functions like here and they work!
 			function set_sizeOut(me, value)
 				me.sizeOut = value * me.ppd;
+				me.szPx = me.sizeOut;
 				if isprop(me,'discSize') && ~isempty(me.discSize) && ~isempty(me.texture)
 					me.scale = me.sizeOut / me.discSize;
 					setRect(me);
@@ -383,6 +384,7 @@ classdef discStimulus < baseStimulus
 				me.dstRect = CenterRectOnPointd(me.dstRect, me.xFinal, me.yFinal);
 			end
 			me.mvRect=me.dstRect;
+			me.szPx = RectWidth(me.mvRect);
 			me.setAnimationDelta();
 		end
 		

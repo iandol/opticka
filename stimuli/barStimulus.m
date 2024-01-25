@@ -194,6 +194,7 @@ classdef barStimulus < baseStimulus
 			end
 			function set_sizeOut(me,value)
 				me.sizeOut = value;
+				me.szPx = me.sizeOut * me.ppd;
 				if ~me.inSetup
 					me.barHeightOut = me.sizeOut;
 					me.barWidthOut = me.sizeOut;

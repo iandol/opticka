@@ -406,6 +406,7 @@ classdef movieStimulus < baseStimulus
 					fprintf('---> stimulus TEXTURE dstRect = %5.5g %5.5g %5.5g %5.5g\n',me.dstRect(1), me.dstRect(2),me.dstRect(3),me.dstRect(4));
 				end
 				me.mvRect = me.dstRect;
+				me.szPx = RectWidth(me.mvRect);
 			end
 		end
 		

@@ -177,6 +177,7 @@ classdef dotsStimulus < baseStimulus
 			end
 			function set_sizeOut(me,value)
 				me.sizeOut = value * me.ppd;
+				me.szPx = me.sizeOut;
 				if me.mask == true
 					me.fieldSize = round(me.sizeOut + me.maskSmoothing); %mask needs to be bigger!
 				else

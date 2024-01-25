@@ -238,6 +238,7 @@ classdef gaborStimulus < baseStimulus
 			end
 			function set_sizeOut(me,value)
 				me.sizeOut = value * me.ppd;
+				me.szPx = me.sizeOut;
 			end
 			
 		end
@@ -377,6 +378,7 @@ classdef gaborStimulus < baseStimulus
 				end
 			end
 			me.mvRect=me.dstRect;
+			me.szPx = RectWidth(me.mvRect);
 			setAnimationDelta(me);
 		end
 	

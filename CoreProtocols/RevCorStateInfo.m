@@ -234,7 +234,7 @@ prefixEntryFcn = {
 	@()hide(stims); % hide all stimuli
 	% update the fixation window to initial values
 	@()updateFixationValues(eT,tS.fixX,tS.fixY,[],tS.firstFixTime); %reset fixation window
-	@()trackerStartTrial(eT, getTaskIndex(me));
+	@()trackerTrialStart(eT, getTaskIndex(me));
 	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
 };
 

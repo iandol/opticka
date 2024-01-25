@@ -169,6 +169,9 @@ classdef imageStimulus < baseStimulus
 			loadImage(me, in);
 			if me.sizeOut > 0
 				me.scale = me.sizeOut / (me.width / me.ppd);
+				me.szPx = me.sizeOut * me.ppd;
+			else
+				me.szPx = (me.width+me.height)/2;
 			end
 			computePosition(me);
 			if me.doAnimator

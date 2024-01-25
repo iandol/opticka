@@ -236,6 +236,7 @@ classdef checkerboardStimulus < baseStimulus
 			end
 			function set_sizeOut(me,value)
 				me.sizeOut = ceil(value*me.ppd);
+				me.szPx = me.sizeOut;
 				%fprintf('SET sizeOut: %.2f | in: %.2f \n', me.sizeOut, value);
 			end
 			function set_xPositionOut(me, value)
@@ -432,6 +433,7 @@ classdef checkerboardStimulus < baseStimulus
 				end
 			end
 			me.mvRect=me.dstRect;
+			me.szPx = RectWidth(me.mvRect);
 			me.setAnimationDelta();
 		end
 		

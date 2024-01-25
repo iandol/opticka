@@ -139,7 +139,7 @@ prefixEntryFcn = {
 	@()resetExclusionZones(eT); % reset the exclusion zones on eyetracker
 	@()updateFixationValues(eT,tS.fixX,tS.fixY,[],tS.firstFixTime); %reset fixation window
 	% send the trial start messages to the eyetracker
-	@()trackerStartTrial(eT, getTaskIndex(me));
+	@()trackerTrialStart(eT, getTaskIndex(me));
 	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
 };
 

@@ -82,6 +82,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 	properties(Transient = true, Hidden = true)
 		%> size in pixels
 		szPx					= []
+		%> position in degrees
 		xFinalD					= []
 		yFinalD					= []
 	end
@@ -1119,6 +1120,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				me.dstRect=CenterRectOnPointd(me.dstRect, me.xFinal, me.yFinal);
 			end
 			me.mvRect=me.dstRect;
+			if me.isRect; me.szPx=RectWidth(me.vRect); end
 		end
 
 		% ===================================================================

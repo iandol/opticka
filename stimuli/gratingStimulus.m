@@ -273,6 +273,7 @@ classdef gratingStimulus < baseStimulus
 			end
 			function set_sizeOut(me,value)
 				me.sizeOut = value * me.ppd;
+				me.szPx = me.sizeOut;
 			end
 			function set_xPositionOut(me, value)
 				me.xPositionOut = value * me.ppd;
@@ -431,6 +432,7 @@ classdef gratingStimulus < baseStimulus
 				end
 			end
 			me.mvRect=me.dstRect;
+			me.szPx = RectWidth(me.mvRect);
 			me.setAnimationDelta();
 		end
 

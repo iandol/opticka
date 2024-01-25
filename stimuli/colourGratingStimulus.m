@@ -551,8 +551,8 @@ classdef colourGratingStimulus < baseStimulus
 					me.dstRect=OffsetRect(me.dstRect,(me.xPosition)*me.ppd,(me.yPosition)*me.ppd);
 				end
 			end
-			me.szPx = RectWidth(me.dstRect);
 			me.mvRect=me.dstRect;
+			me.szPx = RectWidth(me.dstRect);
 			setAnimationDelta(me);
 		end
 		

@@ -132,6 +132,7 @@ classdef revcorStimulus < baseStimulus
 			end
 			function set_sizeOut(me,value)
 				me.sizeOut = value * me.ppd;
+				me.szPx = me.sizeOut;
 			end
 		end
 		
@@ -259,6 +260,7 @@ classdef revcorStimulus < baseStimulus
 					me.dstRect=CenterRectOnPointd(me.dstRect, me.xFinal, me.yFinal);
 				end
 				me.mvRect=me.dstRect;
+				me.szPx = RectWidth(me.mvRect);
 			end
 		end
 

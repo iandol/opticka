@@ -75,8 +75,8 @@ classdef polarGratingStimulus < baseStimulus
 		phaseOfReverse(1,1) double	= 180
 		%> aspect ratio of the grating
 		aspectRatio(1,1) double		= 1;
-        %> turn stimulus on/off at X hz, [] diables this
-        visibleRate             = []
+		%> turn stimulus on/off at X hz, [] diables this
+		visibleRate					= []
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -120,7 +120,7 @@ classdef polarGratingStimulus < baseStimulus
 		needUpdate				= false;
 		colourCache
 		colour2Cache
-        visibleTick				= 0
+		visibleTick				= 0
 		visibleFlip				= Inf
 		sf1
 		sf2
@@ -269,8 +269,8 @@ classdef polarGratingStimulus < baseStimulus
 			me.colourCache = me.colourOut; me.colour2Cache = me.colour2Out;
 
 			if ~isempty(me.visibleRateOut) && isnumeric(me.visibleRateOut)
-                me.visibleTick = 0;
-                me.visibleFlip = round((me.screenVals.fps/2) / me.visibleRateOut);
+				me.visibleTick = 0;
+				me.visibleFlip = round((me.screenVals.fps/2) / me.visibleRateOut);
 			else
 				me.visibleFlip = Inf; me.visibleTick = 0;
 			end
@@ -334,6 +334,7 @@ classdef polarGratingStimulus < baseStimulus
 			end
 			function set_sizeOut(me,value)
 				me.sizeOut = value*me.ppd;
+				me.szPx = me.sizeOut;
 				me.needUpdate = true;
 			end
 			function set_xPositionOut(me, value)
@@ -351,8 +352,8 @@ classdef polarGratingStimulus < baseStimulus
 		function update(me)
 
 			resetTicks(me);
-            me.isVisible = true;
-            me.visibleTick = 0;
+			me.isVisible = true;
+			me.visibleTick = 0;
 
 			if me.correctPhase
 				ps=me.calculatePhase;
@@ -594,6 +595,7 @@ classdef polarGratingStimulus < baseStimulus
 				me.dstRect = CenterRectOnPointd(me.dstRect, me.xFinal, me.yFinal);
 			end
 			me.mvRect=me.dstRect;
+			me.szPx = RectWidth(me.mvRect);
 			setAnimationDelta(me);
 		end
 		

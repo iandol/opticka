@@ -828,7 +828,7 @@ classdef eyetrackerCore < optickaCore
 		function trackerTrialEnd(me, result)
 			if ~exist('result','var'); result = -100; end
 			@()trackerMessage(me,'END_RT'); %send END_RT message to tracker
-			if isnumeric(trialNumber)
+			if isnumeric(result)
 				@()trackerMessage(me,sprintf('TRIAL_RESULT %i', result)); %send TRIAL_RESULT message to tracker
 			else
 				@()trackerMessage(me,sprintf('TRIAL_RESULT %s', result)); %send TRIAL_RESULT message to tracker
@@ -865,7 +865,7 @@ classdef eyetrackerCore < optickaCore
 			if ~isempty(comment);trackerDrawText(me, comment);end
 			if ~isempty(me.xAll);trackerDrawEyePositions(me);end
 			
-			trackerFlip(me, 1, true);
+			trackerFlip(me, dontClear, true);
 		end
 
 		% ===================================================================
@@ -885,7 +885,7 @@ classdef eyetrackerCore < optickaCore
 				y = me.stimulusPositions(i).y;
 				size = me.stimulusPositions(i).size;
 				if isempty(size); size = 1; end
-				fprintf('eT Stim: %.2fx %.2fy %.2fsz\n',x,y,size)
+				%fprintf('\n!!!===>>> eT Stim: %.2fx %.2fy %.2fsz\n',x,y,size)
 				if me.stimulusPositions(i).selected == true
 					drawBox(me.operatorScreen,[x; y],size,[0.5 1 0 0.5]);
 				else
@@ -962,7 +962,7 @@ classdef eyetrackerCore < optickaCore
 		end
 
 		% ===================================================================
-		%> @brief flip the tracker display
+		%> @brief flip the tracker display, always use dontsync
 		%>
 		%> remember: dontclear affects the NEXT flip, not this one!
 		% ===================================================================

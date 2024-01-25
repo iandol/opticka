@@ -134,6 +134,7 @@ classdef spotStimulus < baseStimulus
 			end
 			function set_sizeOut(me,value)
 				me.sizeOut = value * me.ppd; %divide by 2 to get diameter
+				me.szPx = me.sizeOut;
 			end
 			function set_colourOut(me, value)
 				me.isInSetColour = true;

@@ -175,6 +175,7 @@ classdef fixationCrossStimulus < baseStimulus
 			end
 			function set_sizeOut(me,value)
 				me.sizeOut = value * me.ppd; %divide by 2 to get diameter
+				me.szPx = me.sizeOut;
 				me.currentSize = me.sizeOut;
 				me.pulseMod = ((me.sizeOut/me.ppd) / 100) * (me.pulseRange/2);
 			end

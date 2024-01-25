@@ -257,8 +257,8 @@ classdef polarBoardStimulus < baseStimulus
 			me.colourCache = me.colourOut; me.colour2Cache = me.colour2Out;
 
 			if ~isempty(me.visibleRateOut) && isnumeric(me.visibleRateOut)
-                me.visibleTick = 0;
-                me.visibleFlip = round((me.screenVals.fps/2) / me.visibleRateOut);
+				me.visibleTick = 0;
+				me.visibleFlip = round((me.screenVals.fps/2) / me.visibleRateOut);
 			else
 				me.visibleFlip = Inf; me.visibleTick = 0;
 			end
@@ -320,6 +320,7 @@ classdef polarBoardStimulus < baseStimulus
 			end
 			function set_sizeOut(me,value)
 				me.sizeOut = value*me.ppd;
+				me.szPx = me.sizeOut;
 				me.needUpdate = true;
 			end
 			function set_xPositionOut(me, value)
@@ -337,8 +338,8 @@ classdef polarBoardStimulus < baseStimulus
 		function update(me)
 
 			resetTicks(me);
-            me.isVisible = true;
-            me.visibleTick = 0;
+			me.isVisible = true;
+			me.visibleTick = 0;
 
 			me.driftPhase=me.phaseOut;
 			me.driftPhase2=me.driftPhase;
@@ -548,6 +549,7 @@ classdef polarBoardStimulus < baseStimulus
 				me.dstRect = CenterRectOnPointd(me.dstRect, me.xFinal, me.yFinal);
 			end
 			me.mvRect=me.dstRect;
+			me.szPx = RectWidth(me.mvRect);
 			setAnimationDelta(me);
 		end
 		
