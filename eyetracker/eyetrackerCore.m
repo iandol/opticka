@@ -802,6 +802,44 @@ classdef eyetrackerCore < optickaCore
 		end
 
 		% ===================================================================
+		%> @brief Send trial start information to tracker
+		%> 
+		%> @param trialNumber the unique number or string for this trial
+		% ===================================================================
+		function trackerTrialStart(me, trialNumber)
+			if ~exist('trialNumber','var'); trialNumber = 'unknown'; end
+			if strcmpi(me.type,'eyelink')
+				startRecording(me); 
+			end
+			trackerMessage(me,'V_RT MESSAGE END_FIX END_RT'); % Eyelink commands
+			if isnumeric(trialNumber)
+				trackerMessage(me,sprintf('TRIALID %i', trialNumber));
+			else
+				trackerMessage(me,sprintf('TRIALID %s', trialNumber));
+			end
+			
+		end
+
+		% ===================================================================
+		%> @brief Send trial end information to tracker
+		%> 
+		%> @param result a code at the trial end
+		% ===================================================================
+		function trackerTrialEnd(me, result)
+			if ~exist('result','var'); result = -100; end
+			@()trackerMessage(me,'END_RT'); %send END_RT message to tracker
+			if isnumeric(trialNumber)
+				@()trackerMessage(me,sprintf('TRIAL_RESULT %i', result)); %send TRIAL_RESULT message to tracker
+			else
+				@()trackerMessage(me,sprintf('TRIAL_RESULT %s', result)); %send TRIAL_RESULT message to tracker
+			end
+			if strcmpi(me.type,'eyelink')
+				stopRecording(me); % stop recording in eyelink
+				setOffline(me); % set eyelink offline 
+			end
+		end
+
+		% ===================================================================
 		%> @brief draw the background colour
 		%>
 		% ===================================================================

@@ -182,7 +182,7 @@ psEntryFn = {
 	@()startRecording(eT); % start eyelink recording for this trial (ignored by tobii/irec as they always records)
 	@()getStimulusPositions(stims,true); %make a struct the eT can use for drawing stim positions
 	@()resetAll(eT); %reset all fixation counters and history ready for a new trial
-	@()updateFixationTarget(me, true);
+	@()updateFixationTarget(me, true); %move the fixation window to match the current stim position
 	@()trackerMessage(eT,'V_RT MESSAGE END_FIX END_RT'); % Eyelink-specific commands, ignored by other eyetrackers
 	@()trackerMessage(eT,sprintf('TRIALID %i',getTaskIndex(me))); %Eyetracker start trial marker
 	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
@@ -255,6 +255,7 @@ correctExitFn = {
 	@()updateVariables(me,[],[],true); ... %update the task variables
 	@()update(stims); ... %update our stimuli ready for display
 	@()plot(bR, 1); % actually do our behaviour record drawing
+	@()checkTaskEnded(me); % check the trial / block # and if met stop the task
 };
 
 %----------------------break entry
@@ -294,6 +295,7 @@ breakExitFn = {
 	@()updateVariables(me,[],[],false); ... %update the task variables
 	@()update(stims); %update our stimuli ready for display
 	@()plot(bR, 1); % actually do our behaviour record drawing
+	@()checkTaskEnded(me); % check the trial / block # and if met stop the task
 };
 
 %========================================================

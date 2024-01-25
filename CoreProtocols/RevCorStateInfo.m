@@ -230,15 +230,11 @@ pauseExitFcn = {
 prefixEntryFcn = {
 	@()needFlip(me, true, 1); % enable the screen and trackerscreen flip
 	@()needEyeSample(me, true); % make sure we start measuring eye position
+	@()getStimulusPositions(stims); % make a struct eT can use for drawing stim positions
 	@()hide(stims); % hide all stimuli
 	% update the fixation window to initial values
 	@()updateFixationValues(eT,tS.fixX,tS.fixY,[],tS.firstFixTime); %reset fixation window
-	@()startRecording(eT); % start eyelink recording for this trial (tobii ignores this)
-	% tracker messages that define a trial start
-	% you can add any other messages, such as stimulus values as needed,
-	% e.g. @()trackerMessage(eT,['MSG:ANGLE' num2str(stims{1}.angleOut)]) etc.
-	@()trackerMessage(eT,'V_RT MESSAGE END_FIX END_RT'); % Eyelink commands
-	@()trackerMessage(eT,sprintf('TRIALID %i',getTaskIndex(me))); %Eyelink start trial marker
+	@()trackerStartTrial(eT, getTaskIndex(me));
 	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
 };
 
@@ -328,10 +324,7 @@ stimExitFcn = {
 %========================================================CORRECT
 %--------------------if the subject is correct (small reward)
 correctEntryFcn = {
-	@()trackerMessage(eT,'END_RT'); %send END_RT message to tracker
-	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.CORRECT)); %send TRIAL_RESULT message to tracker
-	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
-	@()setOffline(eT); % set eyelink offline [tobii ignores this]
+	@()trackerTrialEnd(eT, tS.CORRECT); % send the end trial messages and other cleanup
 	@()needEyeSample(me,false); % no need to collect eye data until we start the next trial
 	@()hide(stims); % hide all stims
 };
@@ -360,19 +353,13 @@ correctExitFcn = {
 %========================================================INCORRECT/BREAKFIX
 %--------------------incorrect entry
 incEntryFcn = {
-	@()trackerMessage(eT,'END_RT');
-	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.INCORRECT));
-	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
-	@()setOffline(eT); % set eyelink offline [tobii ignores this]
+	@()trackerTrialEnd(eT, tS.INCORRECT); % send the end trial messages and other cleanup
 	@()needEyeSample(me,false);
 	@()hide(stims);
 };
 %--------------------break entry
 breakEntryFcn = {
-	@()trackerMessage(eT,'END_RT');
-	@()trackerMessage(eT,sprintf('TRIAL_RESULT %i',tS.BREAKFIX));
-	@()stopRecording(eT);
-	@()setOffline(eT); % set eyelink offline [tobii ignores this]
+	@()trackerTrialEnd(eT, tS.BREAKFIX); % send the end trial messages and other cleanup
 	@()needEyeSample(me,false);
 	@()hide(stims);
 };

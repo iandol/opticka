@@ -101,9 +101,11 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 				me.sampleRate = 90; 
 				me.calibration.mode = 'Default';
 			end
-			p = fileparts(me.saveFile);
+			[p,f,e] = fileparts(me.saveFile);
+			if isempty(e); e = '.mat'; end
 			if isempty(p)
-				me.saveFile = [me.paths.savedData filesep me.name '-' me.saveFile];
+				initialiseSaveFile(me);
+				me.saveFile = [me.paths.savedData filesep f e];
 			end
 			me.smoothing.sampleRate = me.sampleRate;
 		end
@@ -141,6 +143,15 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 			end
 			me.secondScreen		= true;
 			if ismac; me.operatorScreen.useRetina = true; end
+
+			initialiseSaveFile(me);
+			[p,f,e] = fileparts(me.saveFile);
+			if isempty(e); e = '.mat'; end
+			if isempty(p)
+				me.saveFile = [me.paths.savedData filesep me.name '-' me.savePrefix '-' f e];
+			else
+				me.saveFile = [p filesep me.name '-' me.savePrefix '-' f e];
+			end
 
 			[rM, aM] = initialiseGlobals(me, false, true);
 
@@ -573,22 +584,31 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 				me.data = me.tobii.collectSessionData();
 				me.isCollectedData = true;
 			end
-			me.initialiseSaveFile();
 			if ~isempty(me.data) && tofile
 				tobii = me;
 				if exist(me.saveFile,'file')
+					initialiseSaveFile(me);
 					[p,f,e] = fileparts(me.saveFile);
 					me.saveFile = [p filesep me.savePrefix '-' f '.mat'];
 				end
-				save(me.saveFile,'tobii')
-				disp('===========================')
-				me.salutation('saveData',sprintf('Save: %s in %.1fms\n',strrep(me.saveFile,'\','/'),toc(ts)*1e3),true);
-				disp('===========================')
-				clear tobii
+				try
+					save(me.saveFile,'tobii');
+					disp('===========================')
+					me.salutation('saveData',sprintf('Save: %s in %.1fms\n',strrep(me.saveFile,'\','/'),toc(ts)*1e3),true);
+					disp('===========================')
+					clear tobii
+				catch ERR
+					warning('Save FAILED: %s in %.1fms\n',strrep(me.saveFile,'\','/'),toc(ts)*1e3);
+					getReport(ERR);
+				end
 			elseif isempty(me.data)
+				disp('===========================')
 				me.salutation('saveData',sprintf('NO data available... (%.1fms)...\n',toc(ts)*1e3),true);
+				disp('===========================')
 			elseif ~isempty(me.data)
+				disp('===========================')
 				me.salutation('saveData',sprintf('Data retrieved to object in %.1fms)...\n',toc(ts)*1e3),true);
+				disp('===========================')
 			end
 		end
 		

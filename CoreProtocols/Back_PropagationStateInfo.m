@@ -390,7 +390,7 @@ else
 	incExitFn = [ {@()updatePlot(bR, me); @()resetRun(task)}; incExitFn ]; 
 	breakExitFn = [ {@()updatePlot(bR, me); @()resetRun(task)}; breakExitFn ];
 end
-if tS.useTask %we are using task
+if tS.useTask || task.nBlocks > 0 % we are using a task or repeat blocks
 	correctExitFn = [ correctExitFn; {@()checkTaskEnded(me)} ];
 	incExitFn = [ incExitFn; {@()checkTaskEnded(me)} ];
 	breakExitFn = [ breakExitFn; {@()checkTaskEnded(me)} ];

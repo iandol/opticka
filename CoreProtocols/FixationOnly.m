@@ -266,6 +266,7 @@ ExitFcn = {
 	@()randomise(stims); %uses stimulusTable to give new values to variables (not saved in data, used for training)
 	@()getStimulusPositions(stims); % make a struct the eT can use for drawing stim positions
 	@()plot(bR, 1); % actually do our behaviour record drawing
+	@()checkTaskEnded(me); % check the trial / block # and if met stop the task
 };
 
 %========================================================

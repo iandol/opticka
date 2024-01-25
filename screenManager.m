@@ -105,8 +105,8 @@ classdef screenManager < optickaCore
 		%> settings for movie output
 		%> type 1 = video file, 2 = mat array, 3 = single pictures
 		movieSettings						= struct('record',false,'type',1,'loop',inf,...
-											'size',[600 600],'fps',[],'quality',0.7,...
-											'keyframe',5,'nFrames', inf,...
+											'size',[],'fps',[],'quality',0.7,...
+											'channels',3,'keyframe',5,'nFrames', inf,...
 											'prefix','Movie','codec','x264enc')
 		%> populated on window open; useful screen info, initial gamma tables 
 		%> and the like
@@ -1703,8 +1703,10 @@ classdef screenManager < optickaCore
 							RectWidth(me.movieSettings.size), RectHeight(me.movieSettings.size),...
 							me.movieSettings.fps);
 					case {'mat',2}
+						me.movieSettings.movieFile = [me.movieSettings.moviePath me.movieSettings.prefix datestr(now,'dd-mm-yyyy-HH-MM-SS') '.mat'];
 						settings = 'mat';
-						me.movieMat = zeros(RectHeight(me.movieSettings.size),RectWidth(me.movieSettings.size),3,me.movieSettings.nFrames);
+						nFrames = 120;
+						me.movieMat = uint8(zeros(RectHeight(me.movieSettings.size),RectWidth(me.movieSettings.size), me.movieSettings.channels, nFrames));
 					case {'image','png','jpg',3}
 						settings = 'png';
 						me.movieSettings.movieFile = [me.movieSettings.moviePath me.movieSettings.prefix '_' datestr(now,'dd-mm-yyyy-HH-MM-SS')];
@@ -1727,8 +1729,9 @@ classdef screenManager < optickaCore
 						case {'movie',1}
 							Screen('AddFrameToMovie', me.win, me.movieSettings.size, 'frontBuffer', me.moviePtr);
 						case {'mat',2}
+							%Screen('GetImage', windowPtr [,rect] [,bufferName] [,floatprecision=0] [,nrchannels=3])
 							me.movieMat(:,:,:,me.movieSettings.loop)=Screen('GetImage', me.win,...
-								me.movieSettings.size, 'frontBuffer', me.movieSettings.quality, 3);
+								me.movieSettings.size, 'frontBuffer', 0, me.movieSettings.channels);
 						otherwise
 							try
 								m = Screen('GetImage', me.win, me.movieSettings.size);
@@ -1752,10 +1755,18 @@ classdef screenManager < optickaCore
 			if me.movieSettings.record == true
 				switch me.movieSettings.type
 					case 1
+							save(me.movieSettings.movieFile,'mm')
 						if ~isempty(me.moviePtr)
 							Screen('FinalizeMovie', me.moviePtr);
 							fprintf(['\n---> screenManager: movie saved to ' me.movieSettings.movieFile '\n']);
 							try Screen('CloseMovie', me.moviePtr); end
+						end
+					case 2
+						if ~isempty(me.movieMat)
+							mm = me.movieMat;
+							mm = squeeze(mm);
+							save(me.movieSettings.movieFile,'mm');
+							fprintf(['\n---> screenManager: movie MAT saved to ' me.movieSettings.movieFile '\n']);
 						end
 					otherwise
 						fprintf(['\n---> screenManager: movie file[s] saved to ' me.movieSettings.moviePath '\n']);
