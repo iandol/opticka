@@ -582,7 +582,7 @@ classdef runExperiment < optickaCore
 				me.isRunning = false;
 				me.visualDebug = false;
 				
-			catch ME
+			catch ERR
 				me.isRunning = false;
 				fprintf('\n\n---!!! ERROR in runExperiment.runMOC()\n');
 				if strcmp(me.control.device,'plexon')
@@ -605,7 +605,7 @@ classdef runExperiment < optickaCore
 				me.lJack=[];
 				me.io = [];
 				clear tL s tS bR rM eT io sM
-				rethrow(ME);
+				rethrow(ERR);
 			end
 		end %==============END runMOC
 	
@@ -1166,7 +1166,7 @@ classdef runExperiment < optickaCore
 					if isa(me.stimuli,'metaStimulus'); me.stimuli.reset; end
 				end
 				
-			catch ME
+			catch ERR
 				me.isRunning = false;
 				fprintf('\n\n===!!! ERROR in runExperiment.runTask()\n');
 				try reset(stims); end
@@ -1189,7 +1189,7 @@ classdef runExperiment < optickaCore
 				me.behaviouralRecord = [];
 				me.lJack=[];
 				me.io = [];
-				rethrow(ME)
+				rethrow(ERR)
 			end
 
 		end

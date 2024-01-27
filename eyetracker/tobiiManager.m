@@ -44,6 +44,7 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 						'calPositions',[],...
 						'valPositions',[],...
 						'manual', false,...
+						'manualMode','standard',...
 						'autoPace',true,...
 						'paceDuration',0.8,...
 						'eyeUsed','both',...
@@ -171,10 +172,17 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 			me.settings.calibrateEye				= me.calibration.eyeUsed;
 			me.settings.cal.bgColor					= floor(me.screen.backgroundColour*255);
 			me.settings.UI.setup.bgColor			= me.settings.cal.bgColor;
-			%me.settings.UI.setup.showFixPointsToSubject	= false;
-			%me.settings.UI.setup.showHeadToSubject			= true;   
-			%me.settings.UI.setup.showInstructionToSubject	= true;
-			me.settings.UI.setup.eyeClr						= 255;
+			me.settings.UI.setup.eyeClr				= 255;
+			me.settings.UI.setup.showHeadToSubject	= true;
+			me.settings.UI.setup.showInstructionToSubject = false;
+			me.settings.UI.setup.showFixPointsToSubject = false;
+			me.settings.UI.setup.instruct.font		= me.sansFont;
+			me.settings.UI.button.setup.text.font	= me.sansFont;
+			me.settings.UI.button.val.text.font		= me.sansFont;
+			me.settings.UI.cal.errMsg.font			= me.sansFont;
+			me.settings.UI.val.avg.text.font		= me.monoFont;
+			me.settings.UI.val.hover.text.font		= me.monoFont;
+			me.settings.UI.val.menu.text.font		= me.monoFont;
 			if strcmpi(me.calibration.stimulus,'animated')
 				me.calStim							= AnimatedCalibrationDisplay();
 				me.calStim.moveTime					= 0.75;
@@ -184,7 +192,9 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 				me.calStim.fixBackColor				= 0;
 				me.calStim.fixFrontColor			= 255;
 				me.settings.cal.drawFunction		= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);
-				%if me.calibration.manual;me.settings.mancal.drawFunction	= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);end
+				if me.calibration.manual
+					me.settings.advcal.drawFunction	= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);
+				end
 			elseif strcmpi(me.calibration.stimulus,'movie')
 				me.calStim							= tittaCalMovieStimulus();
 				me.calStim.moveTime					= 0.75;
@@ -197,7 +207,9 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 				setup(me.calibration.movie, me.screen);
 				me.calStim.initialise(me.calibration.movie);
 				me.settings.cal.drawFunction		= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);
-				%if me.manualCalibration;me.settings.mancal.drawFunction	= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);end
+				if me.calibration.manual
+					me.settings.advcal.drawFunction	= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);
+				end
 			end
 			if me.calibration.autoPace
 				me.settings.cal.autoPace			= 2;
@@ -221,8 +233,8 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 			me.settings.val.pointNotifyFunction	= @tittaCalCallback;
 			
 			if me.calibration.manual
-				%me.settings.mancal.cal.pointNotifyFunction	= @tittaCalCallback;
-				%me.settings.mancal.val.pointNotifyFunction	= @tittaCalCallback;
+				me.settings.advcal.cal.pointNotifyFunction	= @tittaCalCallback;
+				me.settings.advcal.val.pointNotifyFunction	= @tittaCalCallback;
 			end
 
 			if ~isa(me.tobii, 'Titta') || isempty(me.tobii); initTracker(me); end
@@ -309,7 +321,7 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 			ListenChar(-1);
 			if me.calibration.manual
 				if ~isempty(incal) && isstruct(incal)...
-						&& (isfield(incal,'type') && contains(incal.type,'manual'))...
+						&& (isfield(incal,'type') && contains(incal.type,'advanced'))...
 						&& (isfield(cal,'wasSkipped') && ~cal.wasSkipped)
 					cal = me.tobii.calibrateAdvanced([me.screen.win me.operatorScreen.win], incal); 
 				else
