@@ -123,7 +123,7 @@ classdef eyetrackerCore < optickaCore
 		%> is operator screen being used?
 		secondScreen			= false
 		%> size to draw eye position on screen
-		eyeSize double			= 10
+		eyeSize					= 10
 		%> for trackerFlip, we can only flip every X frames
 		skipFlips				= 8
 	end
@@ -855,7 +855,7 @@ classdef eyetrackerCore < optickaCore
 		function trackerDrawStatus(me, comment, stimPos, dontClear)
 			if ~exist('comment','var'); comment=''; end
 			if ~exist('stimPos','var'); stimPos = []; end
-			if ~exist('dontClear','var'); dontClear = 0; end
+			if ~exist('dontClear','var'); dontClear = 1; end
 			
 			if dontClear==0; trackerFlip(me, 0, true); trackerClearScreen(me); end
 			trackerDrawFixation(me);
@@ -864,8 +864,7 @@ classdef eyetrackerCore < optickaCore
 			if ~isempty(stimPos); trackerDrawStimuli(me, stimPos, true); end
 			if ~isempty(comment);trackerDrawText(me, comment);end
 			if ~isempty(me.xAll);trackerDrawEyePositions(me);end
-			
-			trackerFlip(me, dontClear, true);
+			if dontClear==0; trackerFlip(me, 0, true); end
 		end
 
 		% ===================================================================

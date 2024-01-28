@@ -252,15 +252,14 @@ classdef arduinoManager < optickaCore
 
 		%===============TIMED TTL================%
 		function timedTTL(me, line, time)
-			if ~me.isOpen; return; end
-			if ~me.silentMode
-				if ~exist('line','var') || isempty(line); line = me.reward.pin; end
-				if ~exist('time','var') || isempty(time); time = me.reward.time; end
-				timedTTL(me.device, line, time);
-				if me.verbose;fprintf('===>>> timedTTL: TTL pin %i for %i ms\n',line,time);end
-			else
-				if me.verbose;fprintf('===>>> timedTTL: Silent Mode\n');end
+			if ~me.isOpen || me.silentMode
+				if me.verbose; fprintf('===>>> timedTTL: Silent Mode\n'); end
+				return; 
 			end
+			if ~exist('line','var') || isempty(line); line = me.reward.pin; end
+			if ~exist('time','var') || isempty(time); time = me.reward.time; end
+			timedTTL(me.device, line, time);
+			if me.verbose;fprintf('===>>> timedTTL: TTL pin %i for %i ms\n',line,time);end
 		end
 
 		%===============STROBED WORD================%
@@ -269,6 +268,8 @@ classdef arduinoManager < optickaCore
 			if ~me.silentMode
 				strobeWord(me.device, value);
 				if me.verbose;fprintf('===>>> STROBED WORD: %i sent to pins 2-8\n',value);end
+			else
+				if me.verbose;fprintf('===>>> STROBED WORD[silentmode]: %i sent to pins 2-8\n',value);end
 			end
 		end
 

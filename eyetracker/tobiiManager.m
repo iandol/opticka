@@ -241,7 +241,7 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 			assert(isa(me.tobii,'Titta'),'TOBIIMANAGER:INIT-ERROR','Cannot Initialise...')
 			if me.isDummy; me.tobii = me.tobii.setDummyMode(); end
 			
-			if isempty(me.address)
+			if isempty(me.address) || me.isDummy
 				me.tobii.init();
 			else
 				me.tobii.init(me.address);
@@ -320,13 +320,18 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 			oldr = RestrictKeysForKbCheck([]);
 			ListenChar(-1);
 			if me.calibration.manual
-				if ~isempty(incal) && isstruct(incal)...
-						&& (isfield(incal,'type') && contains(incal.type,'advanced'))...
-						&& (isfield(cal,'wasSkipped') && ~cal.wasSkipped)
-					cal = me.tobii.calibrateAdvanced([me.screen.win me.operatorScreen.win], incal); 
+				if strcmpi(me.calibration.manualMode,'standard'
+					ctrl = [];
 				else
-					cal = me.tobii.calibrateAdvanced([me.screen.win me.operatorScreen.win]);
+					ctrl = @tempController;
 				end
+				if ~isempty(incal) && isstruct(incal)...
+					&& (isfield(incal,'type') && contains(incal.type,'advanced'))...
+					&& (isfield(cal,'wasSkipped') && ~cal.wasSkipped)
+				else
+					incal = [];
+				end
+				cal = me.tobii.calibrateAdvanced([me.screen.win me.operatorScreen.win], incal, ctrl); 
 			else
 				if ~isempty(incal) && isstruct(incal)...
 						&& (isfield(incal,'type') && contains(incal.type,'standard'))...

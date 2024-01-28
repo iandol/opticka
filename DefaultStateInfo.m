@@ -68,6 +68,7 @@
 % functionality, not just the state machine. Other switches like
 % includeErrors are referenced in this state machine file to change with
 % functions are added to the state machine states…
+tS.name						= 'Default Protocol'; %==name of this protocol
 tS.useTask					= true;		%==use taskSequence (randomises stimulus variables)
 rM.reward.time				= 250;		%==TTL time in milliseconds
 rM.reward.pin				= 2;		%==Output pin, 2 by default with Arduino.
@@ -78,9 +79,8 @@ tS.askForComments			= false;	%==UI requestor asks for comments before/after run
 tS.saveData					= false;	%==save behavioural and eye movement data?
 tS.showBehaviourPlot		= true;		%==open the behaviourPlot figure? Can cause more memory use…
 tS.includeErrors			= false;	%==do we update the trial number even for incorrect saccade/fixate, if true then we call updateTask for both correct and incorrect, otherwise we only call updateTask() for correct responses
-tS.name						= 'default protocol'; %==name of this protocol
 tS.nStims					= stims.n;	%==number of stimuli, taken from metaStimulus object
-tS.tOut						= 2;		%==if wrong response, how long to time out before next trial
+tS.timeOut					= 2;		%==if wrong response, how long to time out before next trial
 tS.CORRECT					= 1;		%==the code to send eyetracker for correct trials
 tS.BREAKFIX					= -1;		%==the code to send eyetracker for break fix trials
 tS.INCORRECT				= -5;		%==the code to send eyetracker for incorrect trials
@@ -88,29 +88,29 @@ tS.correctSound				= [2000, 0.1, 0.1]; %==freq,length,volume
 tS.errorSound				= [300, 1, 1];		%==freq,length,volume
 
 
-%=========================================================================
-%----------------Debug logging to command window------------------
+%==================================================================
+%------------ ----DEBUG LOGGING to command window------------------
 % uncomment each line to get specific verbose logging from each of these
 % components; you can also set verbose in the opticka GUI to enable all of
 % these…
-%sM.verbose					= true;		%==print out stateMachine info for debugging
-%stims.verbose				= true;		%==print out metaStimulus info for debugging
-%io.verbose					= true;		%==print out io commands for debugging
-%eT.verbose					= true;		%==print out eyelink commands for debugging
-%rM.verbose					= true;		%==print out reward commands for debugging
-%task.verbose				= true;		%==print out task info for debugging
+%sM.verbose					= true;	%==print out stateMachine info for debugging
+%stims.verbose				= true;	%==print out metaStimulus info for debugging
+%io.verbose					= true;	%==print out io commands for debugging
+%eT.verbose					= true;	%==print out eyelink commands for debugging
+%rM.verbose					= true;	%==print out reward commands for debugging
+%task.verbose				= true;	%==print out task info for debugging
 
-%=========================================================================
+%==================================================================
 %-----------------INITIAL Eyetracker Settings----------------------
 % These settings define the initial fixation window and set up for the
-% eyetracker. They may be modified during the task (i.e. moving the fixation
-% window towards a target, enabling an exclusion window to stop the subject
-% entering a specific set of display areas etc.)
+% eyetracker. They may be modified during the task (i.e. moving the
+% fixation window towards a target, enabling an exclusion window to stop
+% the subject entering a specific set of display areas etc.)
 %
-% **IMPORTANT**: you need to make sure that the global state time is larger than
-% any fixation timers specified here. Each state has a global timer, so if the
-% state timer is 5 seconds but your fixation timer is 6 seconds, then the state
-% will finish before the fixation time was completed!
+% **IMPORTANT**: you must ensure that the global state time is larger than
+% any fixation timers specified here. Each state has a global timer, so if
+% the state timer is 5 seconds but your fixation timer is 6 seconds, then
+% the state will finish before the fixation time was completed!
 %------------------------------------------------------------------
 % initial fixation X position in degrees (0° is screen centre). Multiple windows
 % can be entered using an array.
@@ -135,9 +135,9 @@ tS.stimulusFixTime			= 1;
 % Initialise eyetracker with X, Y, FixInitTime, FixTime, Radius, StrictFix values
 updateFixationValues(eT, tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
 
-%=========================================================================
-%-------------------------ONLINE Behaviour Plot---------------------------
-% WHICH states assigned as correct or break for online plot?
+%==================================================================
+%-----------------BEAVIOURAL PLOT CONFIGURATION--------------------
+%----WHICH states assigned correct / break for the online plot?----
 bR.correctStateName			= "correct";
 bR.breakStateName			= ["breakfix","incorrect"];
 
@@ -160,15 +160,14 @@ stims.stimulusTable			= [];
 %=========================================================================
 %-------------allows using arrow keys to control variables?-------------
 % another option is to enable manual control of a table of variables
-% this is useful to probe RF properties or other features while still
-% allowing for fixation or other behavioural control.
+% in-task. This is useful to dynamically probe RF properties or other
+% features while still allowing for fixation or other behavioural control.
 % Use arrow keys <- -> to control value and ↑ ↓ to control variable.
 stims.controlTable			= [];
 stims.tableChoice			= 1;
 
 %======================================================================
 % this allows us to enable subsets from our stimulus list
-% 1 = grating | 2 = fixation cross
 stims.stimulusSets			= {[1,2],[1]};
 stims.setChoice				= 1;
 
@@ -481,7 +480,7 @@ stateInfoTmp = {
 'correct'	'prefix'	0.1		correctEntryFcn	correctFcn		{}				correctExitFcn;
 'incorrect'	'timeout'	0.1		incEntryFcn		incFcn			{}				incExitFcn;
 'breakfix'	'timeout'	0.1		breakEntryFcn	incFcn			{}				breakExitFcn;
-'timeout'	'prefix'	tS.tOut	{}				incFcn			{}				{};
+'timeout'	'prefix'	tS.timeOut	{}				incFcn			{}				{};
 %---------------------------------------------------------------------------------------------
 'calibrate'	'pause'		0.5		calibrateFcn	{}				{}				{};
 'drift'		'pause'		0.5		driftFcn		{}				{}				{};
