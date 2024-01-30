@@ -160,11 +160,9 @@ classdef spotStimulus < baseStimulus
 			end
 			function set_flashColourOut(me, value)
 				me.isInSetColour = true;
-				if length(value) < 4 
-					alpha = getP(me,'alpha');
-				end
+				alpha = getP(me,'alpha');
 				switch length(value)
-					case 3
+					case {3, 4}
 						value = [value(1:3) alpha];
 					case 1
 						value = [value value value alpha];
@@ -219,14 +217,15 @@ classdef spotStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function draw(me)
-			if me.isVisible && me.tick >= me.delayTicks && me.tick < me.offTicks
+			if me.isVisible && me.tick >= me.delayTicks && me.drawTick < me.offTicks
 				if me.doFlash == false
 					Screen('gluDisk',me.sM.win,me.colourOut,me.xFinal,me.yFinal,me.sizeOut/2);
 				else
 					Screen('gluDisk',me.sM.win,me.currentColour,me.xFinal,me.yFinal,me.sizeOut/2);
 				end
+				me.drawTick = me.drawTick + 1;
 			end
-			me.tick = me.tick + 1;
+			if me.isVisible; me.tick = me.tick + 1; end
 		end
 		
 		% ===================================================================
@@ -322,6 +321,7 @@ classdef spotStimulus < baseStimulus
 			end
 			me.isInCompute = false;
 			me.setupFlash();
+			if me.verbose;logOutput(me,'computeColour',sprintf('%.1f ',me.colourOut));end
 		end
 		
 		% ===================================================================

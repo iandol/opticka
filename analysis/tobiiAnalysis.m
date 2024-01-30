@@ -1,6 +1,6 @@
 % ========================================================================
 %> @brief eyelinkAnalysis offers a set of methods to load, parse & plot raw EDF files. It
-%> understands opticka trials (where EDF messages TRIALID start a trial and TRIAL_RESULT
+%> understands opticka trials (where messages TRIALID start a trial and TRIAL_RESULT
 %> ends a trial by default) so can parse eye data and plot it for trial groups. You
 %> can also manually find microsaccades, and perform ROI/TOI filtering on the eye
 %> movements.
@@ -8,7 +8,7 @@
 %> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef tobiiAnalysis < analysisCore
-	% eyelinkAnalysis offers a set of methods to load, parse & plot raw EDF files.
+	% eyelinkAnalysis offers a set of methods to load, parse & plot raw tobii files.
 	properties
 		%> file name
 		fileName char										= ''
@@ -75,6 +75,7 @@ classdef tobiiAnalysis < analysisCore
 		sampleRate double							= 250
 		%> raw data
 		raw struct
+		exp 
 		%> inidividual trials
 		trials struct
 		%> eye data parsed into invdividual variables
@@ -135,7 +136,7 @@ classdef tobiiAnalysis < analysisCore
 				me.measureRange = [-0.4 1];
 			end
 			if nargin>0; me.parseArgs(varargin, me.allowedProperties); end
-			if isempty(me.file) || isempty(me.dir)
+			if isempty(me.fileName)
 				[f,d] = uigetfile('*.mat','Load MAT File:');
 				me.fileName = [d filesep f];
 			end
@@ -159,7 +160,18 @@ classdef tobiiAnalysis < analysisCore
 				oldpath = pwd;
 				[p, f, e] = fileparts(me.fileName);
 				cd(p)
-				me.raw = load(me.fileName);
+				exp = load(me.fileName);
+				if isstruct(exp) && isfield(exp,'rE') && isa(exp.rE,'runExperiment')% runExperiment data
+					fprintf('<strong>...</strong> runExperiment (Opticka file) found\n');
+					if isa(exp.rE.eyeTracker,'tobiiManager')
+						me.raw = me.exp.rE.eyeTracker.data;
+						me.exp = exp;
+					else
+						warning('This is not a Tobii manager file')
+						me.raw = [];
+						return;
+					end
+				end
 				cd(oldpath)
 			end
 			fprintf('<strong>:#:</strong> Loading Raw MAT Data took <strong>%g ms</strong>\n',round(toc*1000));
@@ -1168,7 +1180,6 @@ classdef tobiiAnalysis < analysisCore
 			tri = 1; %current trial that is being parsed
 			tri2 = 1; %trial ignoring incorrects
 			eventN = 0;
-			me.comment = me.raw.HEADER;
 			me.trials = struct();
 			me.correct.idx = [];
 			me.correct.saccTimes = [];
@@ -1185,381 +1196,8 @@ classdef tobiiAnalysis < analysisCore
 
 			me.ppd; %faster to cache this now (dependant property sets ppd_ too)
 
-			sample = me.raw.FSAMPLE.gx(:,100); %check which eye
-			if sample(1) == -32768 %only use right eye if left eye data is not present
-				eyeUsed = 2; %right eye index for FSAMPLE.gx;
-			else
-				eyeUsed = 1; %left eye index
-			end
-
-			FEVENTN = length(me.raw.FEVENT);
-			pb = textprogressbar(FEVENTN, 'startmsg', 'Parsing Eyelink Events: ',...
-				'showactualnum', true,'updatestep', round(FEVENTN/100));
-			for i = 1:FEVENTN
-				isMessage = false;
-				evt = me.raw.FEVENT(i);
-
-				if evt.type == me.EVENT_TYPES.MESSAGEEVENT %strcmpi(evt.codestring,'MESSAGEEVENT')
-					isMessage = true;
-					no = regexpi(evt.message,'^(?<NO>!cal|!mode|validate|reccfg|elclcfg|gaze_coords|thresholds|elcl_)','names'); %ignore these first
-					if ~isempty(no)  && ~isempty(no.NO)
-						continue
-					end
-				end
-
-				if isMessage && ~isTrial
-					xy = regexpi(evt.message,'^DISPLAY_COORDS \d? \d? (?<x>\d+) (?<y>\d+)','names');
-					if ~isempty(xy)  && ~isempty(xy.x)
-						me.display = [str2double(xy.x) str2double(xy.y)];
-						this.display = me.display;
-						me.xCenter = me.display(1) / 2;
-						me.yCenter = me.display(2) / 2;
-						continue
-					end
-					
-					ms = regexpi(evt.message,'^(?<t>FRAMERATE|DISPLAY_PPD|DISPLAY_DISTANCE|DISPLAY_PIXELSPERCM) (?<n>\d+)','names');
-					if ~isempty(ms) && ~isempty(ms.t) && ~isempty(ms.n)
-						switch ms.t
-							case 'FRAMERATE'
-								this.FrameRate = str2double(ms.n);
-							case 'DISPLAY_PPD'
-								this.ppd = str2double(ms.n);
-							case 'DISPLAY_DISTANCE'
-								this.distance = str2double(ms.n);
-							case 'DISPLAY_PIXELSPERCM'
-								this.pixelspercm = str2double(ms.n);
-						end
-						continue
-					end
-
-					rt = regexpi(evt.message,'^(?<d>V_RT MESSAGE) (?<a>\w+) (?<b>\w+)','names');
-					if ~isempty(rt) && ~isempty(rt.a) && ~isempty(rt.b)
-						me.rtStartMessage = rt.a;
-						me.rtEndMessage = rt.b;
-						continue
-					end
-
-					id = regexpi(evt.message,['^(?<TAG>' me.trialStartMessageName ')(\s*)(?<ID>\d*)'],'names');
-					if ~isempty(id) && ~isempty(id.TAG)
-						if isempty(id.ID) %we have a bug in early EDF files with an empty TRIALID!!!
-							id.ID = '1010';
-						end
-						isTrial = true;
-						eventN=1;
-						me.trials(tri).variable = str2double(id.ID);
-						me.trials(tri).idx = tri;
-						me.trials(tri).correctedIndex = [];
-						me.trials(tri).time = double(evt.time);
-						me.trials(tri).rt = false;
-						me.trials(tri).rtoverride = false;
-						me.trials(tri).fixations = [];
-						me.trials(tri).nfix = 2;
-						me.trials(tri).saccades = [];
-						me.trials(tri).nsacc = [];
-						me.trials(tri).saccadeTimes = [];
-						me.trials(tri).firstSaccade = NaN;
-						me.trials(tri).uuid = [];
-						me.trials(tri).result = [];
-						me.trials(tri).correct = false;
-						me.trials(tri).breakFix = false;
-						me.trials(tri).incorrect = false;
-						me.trials(tri).unknown = false;
-						me.trials(tri).messages = [];
-						me.trials(tri).sttime = double(evt.sttime);
-						me.trials(tri).entime = NaN;
-						me.trials(tri).totaltime = (me.trials(tri).sttime - me.trials(1).sttime)/1e3;
-						me.trials(tri).startsampletime = NaN;
-						me.trials(tri).endsampletime = NaN;
-						me.trials(tri).rtstarttime = double(evt.sttime);
-						me.trials(tri).rtendtime = NaN;
-						me.trials(tri).synctime = NaN;
-						me.trials(tri).deltaT = NaN;
-						me.trials(tri).rttime = NaN;
-						me.trials(tri).times = [];
-						me.trials(tri).gx = [];
-						me.trials(tri).gy = [];
-						me.trials(tri).hx = [];
-						me.trials(tri).hy = [];
-						me.trials(tri).pa = [];
-						continue
-					end
-				end
-
-				if isTrial
-
-					if ~isMessage
-
-						if evt.type == me.EVENT_TYPES.STARTSAMPLES
-							me.trials(tri).startsampletime = double(evt.sttime);
-							continue
-						end
-
-						if evt.type == me.EVENT_TYPES.ENDFIX
-							fixa = [];
-							if isempty(me.trials(tri).fixations)
-								fix = 1;
-							else
-								fix = length(me.trials(tri).fixations)+1;
-							end
-							if me.trials(tri).rt == true
-								rel = me.trials(tri).rtstarttime;
-								fixa.rt = true;
-							else
-								rel = me.trials(tri).sttime;
-								fixa.rt = false;
-							end
-							fixa.n = eventN;
-							fixa.ppd = me.ppd_;
-							fixa.sttime = double(evt.sttime);
-							fixa.entime = double(evt.entime);
-							fixa.time = fixa.sttime - rel;
-							fixa.length = fixa.entime - fixa.sttime;
-							fixa.rel = rel;
-
-							[fixa.gstx, fixa.gsty]  = toDegrees(me, [evt.gstx, evt.gsty]);
-							[fixa.genx, fixa.geny]  = toDegrees(me, [evt.genx, evt.geny]);
-							[fixa.x, fixa.y]		= toDegrees(me, [evt.gavx, evt.gavy]);
-							[fixa.theta, fixa.rho]	= cart2pol(fixa.x, fixa.y);
-							fixa.theta = me.rad2ang(fixa.theta);
-
-							if fix == 1
-								me.trials(tri).fixations = fixa;
-							else
-								me.trials(tri).fixations(fix) = fixa;
-							end
-							me.trials(tri).nfix = fix;
-							eventN = eventN + 1;
-							continue
-						end
-
-						if evt.type == me.EVENT_TYPES.ENDSACC % strcmpi(evt.codestring,'ENDSACC')
-							sacc = [];
-							if isempty(me.trials(tri).saccades)
-								nsacc = 1;
-							else
-								nsacc = length(me.trials(tri).saccades)+1;
-							end
-							if me.trials(tri).rt == true
-								rel = me.trials(tri).rtstarttime;
-								sacc.rt = true;
-							else
-								rel = me.trials(tri).sttime;
-								sacc.rt = false;
-							end
-							sacc.n = eventN;
-							sacc.ppd = me.ppd_;
-							sacc.sttime = double(evt.sttime);
-							sacc.entime = double(evt.entime);
-							sacc.time = sacc.sttime - rel;
-							sacc.length = sacc.entime - sacc.sttime;
-							sacc.rel = rel;
-
-							[sacc.gstx, sacc.gsty]	= toDegrees(me, [evt.gstx evt.gsty]);
-							[sacc.genx, sacc.geny]	= toDegrees(me, [evt.genx evt.geny]);
-							[sacc.x, sacc.y]		= deal((sacc.genx - sacc.gstx), (sacc.geny - sacc.gsty));
-							[sacc.theta, sacc.rho]	= cart2pol(sacc.x, sacc.y);
-							sacc.theta = me.rad2ang(sacc.theta);
-
-							if sacc.rho > me.minSaccadeDistance; sacc.microSaccade = false;
-							else sacc.microSaccade = true; end
-
-							if nsacc == 1
-								me.trials(tri).saccades = sacc;
-							else
-								me.trials(tri).saccades(nsacc) = sacc;
-							end
-							me.trials(tri).nsacc = nsacc;
-							eventN = eventN + 1;
-							continue
-						end
-
-						if evt.type ==  me.EVENT_TYPES.ENDSAMPLES %strcmpi(evt.codestring,'ENDSAMPLES')
-							me.trials(tri).endsampletime = double(evt.sttime);
-							idx = me.raw.FSAMPLE.time >= me.trials(tri).startsampletime & ...
-								me.raw.FSAMPLE.time <= me.trials(tri).endsampletime;
-
-							me.trials(tri).times = double(me.raw.FSAMPLE.time(idx));
-							me.trials(tri).times = me.trials(tri).times - me.trials(tri).rtstarttime;
-
-							me.trials(tri).gx = me.raw.FSAMPLE.gx(eyeUsed, idx);
-							me.trials(tri).gx = me.trials(tri).gx - me.display(1)/2;
-
-							me.trials(tri).gy = me.raw.FSAMPLE.gy(eyeUsed, idx);
-							me.trials(tri).gy = me.trials(tri).gy - me.display(2)/2;
-
-							me.trials(tri).hx = me.raw.FSAMPLE.hx(eyeUsed, idx);
-
-							me.trials(tri).hy = me.raw.FSAMPLE.hy(eyeUsed, idx);
-
-							me.trials(tri).pa = me.raw.FSAMPLE.pa(eyeUsed, idx);
-							continue
-						end
-
-					else
-						vari = regexpi(evt.message,['^(MSG:)?' me.variableMessageName ' (?<VARI>[0-9\.]+)'],'names');
-						if ~isempty(vari) && ~isempty(vari.VARI)
-							me.trials(tri).variable = str2double(vari.VARI);
-							me.trials(tri).variableMessageName = me.variableMessageName;
-							continue
-						end
-
-						uuid = regexpi(evt.message,'^(MSG:)?UUID (?<UUID>[\w]+)','names');
-						if ~isempty(uuid) && ~isempty(uuid.UUID)
-							me.trials(tri).uuid = uuid.UUID;
-							continue
-						end
-
-						msg = regexpi(evt.message,'^MSG:\s?(?<MSG>[\w]+) *(?<VAL>.*)','names');
-						if ~isempty(msg) && ~isempty(msg.MSG)
-							if isfield(me.trials(tri).messages,msg.MSG)
-								me.trials(tri).messages.(msg.MSG){end+1} = msg.VAL;
-								me.trials(tri).messages.([msg.MSG 'TIME']){end+1} = double(evt.sttime);
-							else
-								me.trials(tri).messages.(msg.MSG){1} = msg.VAL;
-								me.trials(tri).messages.([msg.MSG 'TIME']){1} = double(evt.sttime);
-							end
-							if strcmpi(msg.MSG, me.rtOverrideMessage)
-								me.trials(tri).rtstarttimeOLD = me.trials(tri).rtstarttime;
-								me.trials(tri).rtstarttime = double(evt.sttime);
-								me.trials(tri).rtoverride = true;
-								if ~isempty(me.trials(tri).fixations)
-									for lf = 1 : length(me.trials(tri).fixations)
-										me.trials(tri).fixations(lf).time = me.trials(tri).fixations(lf).sttime - me.trials(tri).rtstarttime;
-										me.trials(tri).fixations(lf).rt = true;
-									end
-								end
-								if ~isempty(me.trials(tri).saccades)
-									for lf = 1 : length(me.trials(tri).saccades)
-										me.trials(tri).saccades(lf).time = me.trials(tri).saccades(lf).sttime - me.trials(tri).rtstarttime;
-										me.trials(tri).saccades(lf).rt = true;
-										me.trials(tri).saccadeTimes(lf) = me.trials(tri).saccades(lf).time;
-									end
-								end
-							end
-							continue
-						end
-
-						synct = regexpi(evt.message,'^SYNCTIME','match');
-						if ~isempty(synct)
-							me.trials(tri).synctime = evt.sttime;
-							continue
-						end
-
-						endfix = regexpi(evt.message,['^' me.rtStartMessage],'match');
-						if ~isempty(endfix)
-							me.trials(tri).rtstarttime = double(evt.sttime);
-							me.trials(tri).rt = true;
-							if ~isempty(me.trials(tri).fixations)
-								for lf = 1 : length(me.trials(tri).fixations)
-									me.trials(tri).fixations(lf).time = me.trials(tri).fixations(lf).sttime - me.trials(tri).rtstarttime;
-									me.trials(tri).fixations(lf).rt = true;
-								end
-							end
-							if ~isempty(me.trials(tri).saccades)
-								for lf = 1 : length(me.trials(tri).saccades)
-									me.trials(tri).saccades(lf).time = me.trials(tri).saccades(lf).sttime - me.trials(tri).rtstarttime;
-									me.trials(tri).saccades(lf).rt = true;
-									me.trials(tri).saccadeTimes(lf) = me.trials(tri).saccades(lf).time;
-								end
-							end
-							continue
-						end
-
-						endrt = regexpi(evt.message,['^' me.rtEndMessage],'match');
-						if ~isempty(endrt)
-							me.trials(tri).rtendtime = double(evt.sttime);
-							if isfield(me.trials,'rtstarttime')
-								me.trials(tri).rttime = me.trials(tri).rtendtime - me.trials(tri).rtstarttime;
-							end
-							continue
-						end
-
-						id = regexpi(evt.message,['^' me.trialEndMessage ' (?<ID>(\-|\+|\d)+)'],'names');
-						if ~isempty(id) && ~isempty(id.ID)
-							me.trials(tri).entime = double(evt.sttime);
-							me.trials(tri).result = str2num(id.ID);
-							sT=[];
-							me.trials(tri).saccadeTimes = [];
-							for ii = 1:me.trials(tri).nsacc
-								t = me.trials(tri).saccades(ii).time;
-								me.trials(tri).saccadeTimes(ii) = t;
-								if isnan(me.trials(tri).firstSaccade) && t > 0 && me.trials(tri).saccades(ii).microSaccade == false
-									me.trials(tri).firstSaccade = t;
-									sT=t;
-								end
-							end
-							if any(find(me.trials(tri).result == me.correctValue))
-								me.trials(tri).correct = true;
-								me.correct.idx = [me.correct.idx tri];
-								me.trialList(tri) = me.trials(tri).variable;
-								if ~isempty(sT) && sT > 0
-									me.correct.saccTimes = [me.correct.saccTimes sT];
-								else
-									me.correct.saccTimes = [me.correct.saccTimes NaN];
-								end
-								me.trials(tri).correctedIndex = tri2;
-								tri2 = tri2 + 1;
-							elseif any(find(me.trials(tri).result == me.breakFixValue))
-								me.trials(tri).breakFix = true;
-								me.breakFix.idx = [me.breakFix.idx tri];
-								me.trialList(tri) = -me.trials(tri).variable;
-								if ~isempty(sT) && sT > 0
-									me.breakFix.saccTimes = [me.breakFix.saccTimes sT];
-								else
-									me.breakFix.saccTimes = [me.breakFix.saccTimes NaN];
-								end
-								me.trials(tri).correctedIndex = [];
-							elseif any(find(me.trials(tri).result == me.incorrectValue))
-								me.trials(tri).incorrect = true;
-								me.incorrect.idx = [me.incorrect.idx tri];
-								me.trialList(tri) = -me.trials(tri).variable;
-								if ~isempty(sT) && sT > 0
-									me.incorrect.saccTimes = [me.incorrect.saccTimes sT];
-								else
-									me.incorrect.saccTimes = [me.incorrect.saccTimes NaN];
-								end
-								me.trials(tri).correctedIndex = [];
-							else
-								me.trials(tri).unknown = true;
-								me.unknown.idx = [me.unknown.idx tri];
-								me.trialList(tri) = -me.trials(tri).variable;
-								if ~isempty(sT) && sT > 0
-									me.unknown.saccTimes = [me.unknown.saccTimes sT];
-								else
-									me.unknown.saccTimes = [me.unknown.saccTimes NaN];
-								end
-								me.trials(tri).correctedIndex = [];
-							end
-							me.trials(tri).deltaT = me.trials(tri).entime - me.trials(tri).sttime;
-							isTrial = false;
-							tri = tri + 1;
-							continue
-						end
-					end
-				end
-				pb(i);
-			end
-			pb(i);
 			
-			me.otherinfo = this;
 
-			%prune the end trial if invalid
-			if ~me.trials(end).correct && ~me.trials(end).breakFix && ~me.trials(end).incorrect
-				me.trials(end) = [];
-				me.correct.idx = find([me.trials.correct] == true);
-				me.correct.saccTimes = [me.trials(me.correct.idx).firstSaccade];
-				me.breakFix.idx = find([me.trials.breakFix] == true);
-				me.breakFix.saccTimes = [me.trials(me.breakFix.idx).firstSaccade];
-				me.incorrect.idx = find([me.trials.incorrect] == true);
-				me.incorrect.saccTimes = [me.trials(me.incorrect.idx).firstSaccade];
-			end
-
-			if max(abs(me.trialList)) == 1010 && min(abs(me.trialList)) == 1010
-				me.needOverride = true;
-				me.salutation('','---> TRIAL NAME BUG OVERRIDE NEEDED!\n',true);
-			else
-				me.needOverride = false;
-			end
 		end
 
 		% ===================================================================

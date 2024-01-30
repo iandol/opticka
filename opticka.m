@@ -1092,6 +1092,10 @@ classdef opticka < optickaCore
 				
 				tmp.store = struct(); %lets just nuke this incase some rogue handles are lurking
 				tmp.ui = struct(); %remove the handles to the UI which will not be valid on reload
+
+				for i = 1:tmp.r.stimuli.n
+					reset(tmp.r.stimuli{i});
+				end
 				
 				[~, ~, ee] = fileparts(me.r.stateInfoFile);
 				if copyIt == true

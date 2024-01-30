@@ -2014,15 +2014,17 @@ classdef screenManager < optickaCore
 		%> @return
 		% ===================================================================
 		function identifyScreens()
+			PsychDefaultSetup(2);
 			screens = Screen('Screens');
 			olds = Screen('Preference', 'SkipSyncTests', 2);
 			oldv = Screen('Preference', 'VisualDebugLevel', 0);
 			wins = [];
 			a = 1;
 			for i = screens
-				wins(a) = PsychImaging('OpenWindow', i, 0.5, [0 0 100 100]);
+				x = i*100;
+				wins(a) = PsychImaging('OpenWindow', i, 0.5, [x 0 x+100 100]);
 				os=Screen('TextSize', wins(a),  50);
-				Screen('DrawText',wins(a),['W:' num2str(i)], 5, 30,[1 0 1]);
+				Screen('DrawText',wins(a),['W:' num2str(i)], 5, 30,[0.25 1 1]);
 				Screen('Flip',wins(a));
 				a = a + 1;
 			end
@@ -2032,6 +2034,7 @@ classdef screenManager < optickaCore
 			end
 			Screen('Preference', 'SkipSyncTests', olds);
 			Screen('Preference', 'VisualDebugLevel', oldv);
+			sca
 		end
 
 		% ===================================================================

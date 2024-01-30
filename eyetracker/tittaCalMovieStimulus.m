@@ -22,8 +22,11 @@ classdef tittaCalMovieStimulus < handle
 		accel
 		scrSize
 		startWaiting = false;
+		qFloatColorRange
 	end
 	properties
+		bgColor				= 127;
+		videoSize           = [];
 		doShrink            = false
 		shrinkTime          = 0.5
 		doMove              = true
@@ -82,14 +85,23 @@ classdef tittaCalMovieStimulus < handle
 			% last two inputs, tick (monotonously increasing integer and stage
 			% ("cal" or "val") are not used in this code
 			
-			% if called with drawCmd == 'cleanUp', this is a signal that
-			% calibration/validation is done, and cleanup can occur if
-			% wanted
-			if strcmp(drawCmd,'cleanUp')
-				if obj.verbose;fprintf('!!!>>>RUN CLEANUP\n');end
-				obj.setCleanState();
-				return;
+			% if called with drawCmd == 'fullCleanUp', this is a signal
+            % that calibration/validation is done, and cleanup can occur if
+            % wanted. If called with drawCmd == 'sequenceCleanUp' that
+            % means there should be a gap in the drawing sequence (e.g. no
+            % smooth animation between two positions). For this one we keep
+            % image playback state unless asked to fully clean up.
+            if ismember(drawCmd,{'cleanup','fullCleanUp','sequenceCleanUp'})
+                if strcmp(drawCmd,'fullCleanUp')
+                    obj.setCleanState();
+                end
+                return;
 			end
+
+			% now that we have a wpnt, interrogate window
+            if isempty(obj.qFloatColorRange) && ~isempty(wpnt)
+                obj.qFloatColorRange    = Screen('ColorRange',wpnt)==1;
+            end
 			
 			% check point changed
 			curT = GetSecs;     % instead of using time directly, you could use the 'tick' call sequence number input to this function to animate your display
@@ -176,7 +188,7 @@ classdef tittaCalMovieStimulus < handle
 		function drawMovie(obj,pos)
 			if isempty(obj.oldpos) || ~all(pos==obj.oldpos)
 				obj.oldpos = pos;
-				obj.movie.updatePositions(pos(1),pos(2));
+				obj.movie.updateXY(pos(1),pos(2));
 			end
 			obj.movie.draw();
 		end

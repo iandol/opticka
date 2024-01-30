@@ -763,10 +763,8 @@ classdef optickaCore < handle
 				end
 			end
 		end
-		function salutation(me, in, message, override)
-			if ~exist('override','var');override = false;end
-			if ~exist('message','var'); message = ''; end
-			logOutput(me, in, message, override)
+		function salutation(me, varargin)
+			logOutput(me, varargin{:});
 		end
 		
 	end

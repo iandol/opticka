@@ -840,7 +840,7 @@ classdef runExperiment < optickaCore
 						end
 						trackerDrawEyePosition(eT);
 					end
-					[pressed, name, ~] = optickaCore.getKeys(me.keyboardDevice);
+					[~, ~, ~] = optickaCore.getKeys(me.keyboardDevice);
 					flip(s);
 					if eT.secondScreen; trackerFlip(eT, 1, false); end
 				end

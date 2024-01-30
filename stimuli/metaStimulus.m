@@ -381,7 +381,7 @@ classdef metaStimulus < optickaCore
 			for i = choice
 				show(me.stimuli{i});
 			end
-			if me.verbose;me.salutation('Show',['Show stimuli: ' num2str(choice,'%i ')],true); end
+			if me.verbose;me.logOutput('Show',['Show stimuli: ' num2str(choice,'%i ')],true); end
 		end
 
 		% ===================================================================

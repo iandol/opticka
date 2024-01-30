@@ -238,7 +238,7 @@ classdef movieStimulus < baseStimulus
 		end
 		
 		% ===================================================================
-		%> @brief Update only position info, faster and doesn't reset movie
+		%> @brief Update only position info with pixels, faster and doesn't reset movie
 		%>
 		% ===================================================================
 		function updatePositions(me,x,y)
@@ -246,8 +246,6 @@ classdef movieStimulus < baseStimulus
 			me.yFinal = y;
 			if length(me.mvRect) == 4
 				me.mvRect=CenterRectOnPointd(me.mvRect, me.xFinal, me.yFinal);
-			else
-				fprintf('--->>> movieStimulus invalid mvRect\n');
 			end
 		end
 		

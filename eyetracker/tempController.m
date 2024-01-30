@@ -37,6 +37,7 @@ classdef tempController < handle
 		calDisplay                                  % expected to be a VideoCalibrationDisplay instance
 		rewardProvider
 		audioProvider
+		rewardPacing				= 1000;
 		forceRewardButton           = 'j'           % if provided, when key press on this button is detected, reward is forced on
 
 		gazeFetchDur                = 100          % duration of gaze samples to peek on each iteration (ms, e.g., last 100 ms of gaze)
@@ -88,6 +89,7 @@ classdef tempController < handle
 		logReceiver                 = 0;            % if 0: matlab command line. if 1: Titta
 	end
 	properties (Access=private,Hidden=true)
+		lastRewardTime				= 0;
 		isActive                    = false;
 		isNonActiveShowingVideo     = false;
 		isShowingPointManually      = false;
@@ -150,8 +152,7 @@ classdef tempController < handle
 			if ~isempty(me.forceRewardButton) && ~isempty(me.rewardProvider)
 				[~,~,keyCode] = KbCheck();
 				if any(keyCode) && any(ismember(KbName(keyCode),{me.forceRewardButton}))
-					me.rewardProvider.giveReward;
-					if ~isempty(me.audioProvider);me.audioProvider.beep(2000,0.1,0.1);end
+					me.reward(true);
 				elseif me.dispensingForcedReward
 					me.dispensingForcedReward = false;
 				end
@@ -379,6 +380,8 @@ classdef tempController < handle
 						success = callResult.status==0;     % TOBII_RESEARCH_STATUS_OK
 						me.log_to_cmd('calibration point collect: %s',ternary(success,'success','failed'));
 					end
+					me.lastRewardTime = 0;
+					me.reward(true);
 					% update point status
 					iPoint = find(me.calPoints==currentPoint);
 					if ~isempty(iPoint) && all(posNorm==me.calPoss(iPoint,:))
@@ -396,6 +399,8 @@ classdef tempController < handle
 					if bitget(me.logTypes,2)
 						me.log_to_cmd('validation point collect: success');
 					end
+					me.lastRewardTime = 0;
+					me.reward(true);
 					% update point status
 					iPoint = find(me.valPoints==currentPoint);
 					if ~isempty(iPoint) && all(posNorm==me.valPoss(iPoint,:))
@@ -609,6 +614,7 @@ classdef tempController < handle
 			me.offScreenTimestamp  = nan;
 			me.onVideoTimestamp    = nan;
 			me.latestTimestamp     = nan;
+			me.lastRewardTime	   = 0;
 
 			me.onScreenTimeThresh  = 1;
 			me.videoSize           = 1;
@@ -680,9 +686,12 @@ classdef tempController < handle
 
 		function reward(me, on)
 			if on
-				giveReward(me.rewardProvider);
-				if ~isempty(me.audioProvider);beep(me.audioProvider);end
-				fprintf('--->>>controller reward sent')
+				if me.latestTimestamp > me.lastRewardTime + me.rewardPacing
+					me.lastRewardTime = me.latestTimestamp;
+					if ~isempty(me.rewardProvider);giveReward(me.rewardProvider);end
+					if ~isempty(me.audioProvider);beep(me.audioProvider,2000,0.1,0.1);end
+					fprintf('--->>>controller reward sent @ %.2f',me.lastRewardTime);
+				end
 			end
 		end
 

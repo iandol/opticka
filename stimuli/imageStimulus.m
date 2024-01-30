@@ -54,7 +54,7 @@ classdef imageStimulus < baseStimulus
 		direction					= []
 	end
 
-	properties (SetAccess = protected, GetAccess = public)
+	properties (SetAccess = protected, GetAccess = public, Transient = true)
 		%> list of imagenames if selection > 0
 		filePaths					= {};
 		%> current randomly selected image
@@ -62,13 +62,15 @@ classdef imageStimulus < baseStimulus
 		%> scale is set by size
 		scale						= 1
 		%>
-		family						= 'texture'
-		%>
 		matrix
 		%> pixel width
 		width
 		%> pixel height
 		height
+	end
+
+	properties (SetAccess = protected, GetAccess = public)
+		family						= 'texture'
 	end
 
 	properties(Dependent)
@@ -363,6 +365,7 @@ classdef imageStimulus < baseStimulus
 			if isprop(me,'doAnimator') && me.doAnimator; reset(me.animator); end
 			resetTicks(me);
 			me.texture=[];
+			me.matrix = [];
 			me.scale = 1;
 			me.mvRect = [];
 			me.dstRect = [];

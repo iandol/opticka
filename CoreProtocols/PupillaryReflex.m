@@ -1,64 +1,3 @@
-%> DEFAULT state configuration file for runExperiment.runTask (full
-%> behavioural task design). This state file has a [prefix] state (a blank before
-%> fixation starts), then a [fixate] state for the subject to initiate fixation.
-%> If the subject fails initial fixation, an [breakfix] state is called. If the
-%> subject fails fixation DURING [stimulus] presentation, a [incorrect] state is
-%> called. It assumes there are TWO stimuli in the stims object, the first
-%> (stims{1}) is any type of visual stimulus and the second is a fixation cross
-%> (stims{2}). For this task most state transitions are deterministic, but for
-%> [fixate] there is a transitionFcn that checks if the subject initiates fixation
-%> [inFixFcn], and for [stimulus] there is a check if the subject maintains
-%> fixation for an additional time [maintainFixFcn].
-%>
-%>                                                       ┌───────────────────┐
-%>                                                       │      prefix       │
-%>  ┌──────────────────────────────────────────────────▶ │    hide(stims)    │ ◀┐
-%>  │                                                    └───────────────────┘  │
-%>  │                                                      │                    │
-%>  │                                                      ▼                    │
-%>  │                         ┌───────────┐  inFixFcn:   ┌───────────────────┐  │
-%>  │                         │ breakfix  │  breakfix   │      fixate       │  │
-%>  │                         │           │ ◀─────────── │   show(stims,2)   │  │
-%>  │                         └───────────┘              └───────────────────┘  │
-%>  │                           │                          │ inFixFcn:          │
-%>  │ reward!                   │                          │ stimulus           │
-%>  │                           │                          ▼                    │
-%>┌─────────┐  maintainFixFcn:  │                        ┌───────────────────┐  │
-%>│ correct │  correct          │                        │     stimulus      │  │
-%>│         │ ◀─────────────────┼─────────────────────── │ show(stims,[1 2]) │  │
-%>└─────────┘                   │                        └───────────────────┘  │
-%>                              │                          │ maintainFixFcn:    │
-%>                              │                          │ incorrect          │
-%>                              │                          ▼                    │
-%>                              │                        ┌───────────────────┐  │
-%>                              │                        │     incorrect     │  │
-%>                              │                        └───────────────────┘  │
-%>                              │                          │                    │
-%>                              │                          ▼                    │
-%>                              │                        ┌───────────────────┐  │
-%>                              │                        │      timeout      │  │
-%>                              └──────────────────────▶ │      tS.tOut      │ ─┘
-%>                                                       └───────────────────┘
-%>
-%> This state control file will usually be run in the scope of the calling
-%> runExperiment.runTask() method and other objects will be available at run time
-%> (with easy to use names listed below). The following class objects are already
-%> loaded by runTask() and available to use; each object has methods (functions)
-%> useful for running the task:
-%>
-%> me		= runExperiment object ('self' in OOP terminology) 
-%> s		= screenManager object
-%> aM		= audioManager object
-%> stims	= our list of stimuli (metaStimulus class)
-%> sM		= State Machine (stateMachine class)
-%> task		= task sequence (taskSequence class)
-%> eT		= eyetracker manager
-%> io		= digital I/O to recording system
-%> rM		= Reward Manager (LabJack or Arduino TTL trigger to reward system/Magstim)
-%> bR		= behavioural record plot (on-screen GUI during a task run)
-%> uF       = user functions - add your own functions to this class
-%> tS		= structure to hold general variables, will be saved as part of the data
-
 %=========================================================================
 %-----------------------------General Settings----------------------------
 % These settings are make changing the behaviour of the protocol easier. tS
@@ -68,15 +7,15 @@
 % functionality, not just the state machine. Other switches like
 % includeErrors are referenced in this state machine file to change with
 % functions are added to the state machine states…
-tS.name						= 'Default Protocol'; %==name of this protocol
+tS.name						= 'Pupillary Reflex'; %==name of this protocol
 tS.useTask					= true;		%==use taskSequence (randomises stimulus variables)
 rM.reward.time				= 250;		%==TTL time in milliseconds
 rM.reward.pin				= 2;		%==Output pin, 2 by default with Arduino.
 tS.keyExclusionPattern		= ["fixate","stimulus"]; %==which states to skip keyboard checking
 tS.enableTrainingKeys		= false;	%==enable keys useful during task training, but not for data recording
 tS.recordEyePosition		= false;	%==record local copy of eye position, **in addition** to the eyetracker?
-tS.askForComments			= false;	%==UI requestor asks for comments before/after run
-tS.saveData					= false;	%==save behavioural and eye movement data?
+tS.askForComments			= false;		%==UI requestor asks for comments before/after run
+tS.saveData					= true;		%==save behavioural and eye movement data?
 tS.showBehaviourPlot		= true;		%==open the behaviourPlot figure? Can cause more memory use…
 tS.includeErrors			= false;	%==do we update the trial number even for incorrect saccade/fixate, if true then we call updateTask for both correct and incorrect, otherwise we only call updateTask() for correct responses
 tS.nStims					= stims.n;	%==number of stimuli, taken from metaStimulus object
@@ -86,7 +25,6 @@ tS.BREAKFIX					= -1;		%==the code to send eyetracker for break fix trials
 tS.INCORRECT				= -5;		%==the code to send eyetracker for incorrect trials
 tS.correctSound				= [2000, 0.1, 0.1]; %==freq,length,volume
 tS.errorSound				= [300, 1, 1];		%==freq,length,volume
-
 
 %==================================================================
 %------------ ----DEBUG LOGGING to command window------------------
@@ -122,16 +60,16 @@ tS.fixY						= 0;
 tS.firstFixInit				= 3;
 % time to maintain initial fixation within window, can be single value or a
 % range to randomise between
-tS.firstFixTime				= [0.25 0.75];
+tS.firstFixTime				= [0.35 0.75];
 % fixation window radius in degrees; if you enter [x y] the window will be
 % rectangular.
-tS.firstFixRadius			= 2;
+tS.firstFixRadius			= 3;
 % do we forbid eye to enter-exit-reenter fixation window?
 tS.strict					= true;
 % add an exclusion zone where subject cannot saccade to?
 tS.exclusionZone			= [];
 % time to maintain fixation during stimulus state
-tS.stimulusFixTime			= 1;		
+tS.stimulusFixTime			= 1.25;		
 % Initialise eyetracker with X, Y, FixInitTime, FixTime, Radius, StrictFix values
 updateFixationValues(eT, tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
 
@@ -259,7 +197,7 @@ prefixFcn = {
 prefixExitFcn = {
 	@()logRun(me,'INITFIX');
 	@()trackerMessage(eT,'MSG:Start Fix');
-	@()trackerDrawStatus(eT,'Start trial...', stims.stimulusPositions,0);
+	@()trackerDrawStatus(eT,'Start trial...', stims.stimulusPositions, 0);
 };
 
 %==============================================================
@@ -300,6 +238,8 @@ fixExitFcn = {
 %========================================================
 
 stimEntryFcn = {
+        % send an eyeTracker sync message (reset relative time to 0 after first flip of this state)
+	@()doSyncTime(me);
 	% send stimulus value strobe (value set by updateVariables(me) function)
 	@()doStrobe(me,true);
 };
@@ -351,7 +291,7 @@ correctExitFcn = {
 	@()giveReward(rM); % send a reward
 	@()beep(aM, tS.correctSound); % correct beep
 	@()logRun(me,'CORRECT'); % print current trial info
-	@()trackerDrawStatus(eT, 'CORRECT! :-)');
+	@()trackerDrawStatus(eT, 'CORRECT! :-)',stims.stimulusPositions,0);
 	@()needFlipTracker(me, 0); %for operator screen stop flip
 	@()updatePlot(bR, me); % must run before updateTask
 	@()updateTask(me,tS.CORRECT); % make sure our taskSequence is moved to the next trial
@@ -474,13 +414,13 @@ stateInfoTmp = {
 %---------------------------------------------------------------------------------------------
 'pause'		'prefix'	inf		pauseEntryFcn	{}				{}				pauseExitFcn;
 %---------------------------------------------------------------------------------------------
-'prefix'	'fixate'	0.75	prefixEntryFcn	prefixFcn		{}				{};
+'prefix'	'fixate'	2		prefixEntryFcn	prefixFcn		{}				{};
 'fixate'	'incorrect'	10		fixEntryFcn		fixFcn			inFixFcn		fixExitFcn;
 'stimulus'	'incorrect'	10		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn;
 'correct'	'prefix'	0.1		correctEntryFcn	correctFcn		{}				correctExitFcn;
 'incorrect'	'timeout'	0.1		incEntryFcn		incFcn			{}				incExitFcn;
 'breakfix'	'timeout'	0.1		breakEntryFcn	incFcn			{}				breakExitFcn;
-'timeout'	'prefix'	tS.timeOut	{}				incFcn			{}				{};
+'timeout'	'prefix'	tS.timeOut	{}			incFcn			{}				{};
 %---------------------------------------------------------------------------------------------
 'calibrate'	'pause'		0.5		calibrateFcn	{}				{}				{};
 'drift'		'pause'		0.5		driftFcn		{}				{}				{};
