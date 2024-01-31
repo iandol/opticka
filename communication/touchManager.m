@@ -33,7 +33,7 @@ classdef touchManager < optickaCore
 		exclusionZone		= []
 		%> drain the events to only get the last one? This ensures lots of
 		%> events don't pile up, often you only want the current event,
-		%> but potentially causes a longer delay each time  getEvent is called...
+		%> but potentially causes a longer delay each time getEvent is called...
 		drainEvents			= true;
 		%> panel type, 1 = front, 2 = back aka reverse X position
 		panelType			= 1
@@ -44,8 +44,6 @@ classdef touchManager < optickaCore
 	properties (Hidden = true)
 		%> number of slots for touch events
 		nSlots				= 1e5
-		%> size in degrees around the window for negation to trigger
-		negationBuffer		= 2
 	end
 
 	properties (SetAccess=private, GetAccess=public)
@@ -292,7 +290,8 @@ classdef touchManager < optickaCore
 						me.eventRelease = true;
 					case 5 %ERROR
 						disp('Event lost!');
-						event = [];
+						me.event = []; event = [];
+						return
 				end
 				event.xy = me.screen.toDegrees([event.MappedX event.MappedY],'xy');
 				me.event = event;
@@ -358,6 +357,10 @@ classdef touchManager < optickaCore
 					end
 				end
 				me.event.result = result;
+			end
+			if me.verbose
+				fprintf('checkTouchWindow--->%i n:%i mv:%i p:%i r:%i {%.1fX %.1fY} result:%i\n',...
+				me.eventID,me.eventNew,me.eventMove,me.eventPressed,me.eventRelease,me.x,me.y,result);
 			end
 		end
 
@@ -611,8 +614,8 @@ classdef touchManager < optickaCore
 							if useaudio;beep(a,250,0.3,0.8);end
 							result = 'INCORRECT!!!'; break;
 						end
-						[pressed,~,keys] = optickaCore.getKeys([]);
-						if pressed && any(keys(quitKey)); doQuit = true; break; end
+						[keyDown,~,keys] = optickaCore.getKeys([]);
+						if keyDown && any(keys(quitKey)); doQuit = true; break; end
 					end
 					drawTextNow(sM, result);
 					tend = vbl - ts;

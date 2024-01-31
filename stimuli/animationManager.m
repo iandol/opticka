@@ -15,7 +15,8 @@ classdef animationManager < optickaCore
 			'position', [0, 0], 'velocity', [1, 0], ...
 			'airResistanceCoeff', 0.2, 'elasticityCoeff', 0.8, ...
 			'gravity', 9.8,...
-			'floor', 10, 'leftwall', [], 'rightwall', []);
+			'floor', 10, 'leftwall', [], 'rightwall', [], 'ceiling', [],...
+			'avoidRects',[]);
 		timeDelta		= 0.01
 		%> what happens at edge of screen [bounce | wrap | none]
 		boundsCheck char ...
@@ -157,6 +158,7 @@ classdef animationManager < optickaCore
 			position = [me.x, me.y];
 			velocity = [me.dX, me.dY];
 			acceleration = [0, me.rigidparams.gravity]; 
+			r = me.rigidparams.radius;
 
     		% Apply air resistance
     		airResistance = -me.rigidparams.airResistanceCoeff * velocity;
@@ -177,22 +179,32 @@ classdef animationManager < optickaCore
 			me.y = position(2);
 
 			% Collision detection with floor
-			if me.y + me.rigidparams.radius > me.rigidparams.floor
-    			me.y = me.rigidparams.floor - me.rigidparams.radius - 0.01;
+			if me.y + r > me.rigidparams.floor
+    			me.y = me.rigidparams.floor - r - 0.01;
     			velocity(2) = -me.rigidparams.elasticityCoeff * velocity(2); % reverse and dampen the y-velocity
     			me.angularVelocity = -me.rigidparams.elasticityCoeff * me.angularVelocity; % reverse and dampen the angular velocity
 			end
-			
+			% Collision detection with floor
+			if me.y - r < me.rigidparams.ceiling
+    			me.y = me.rigidparams.ceiling + r + 0.01;
+    			velocity(2) = -me.rigidparams.elasticityCoeff * velocity(2); % reverse and dampen the y-velocity
+    			me.angularVelocity = -me.rigidparams.elasticityCoeff * me.angularVelocity; % reverse and dampen the angular velocity
+			end
 			% Collision detection with walls
-			if ~isempty(me.rigidparams.leftwall) && me.x - me.rigidparams.radius < me.rigidparams.leftwall
-    			me.x = me.rigidparams.leftwall + me.rigidparams.radius;
+			if me.x - r < me.rigidparams.leftwall
+    			me.x = me.rigidparams.leftwall + r;
     			velocity(1) = -me.rigidparams.elasticityCoeff * velocity(1); % reverse and dampen the x-velocity
     			me.angularVelocity = -me.rigidparams.elasticityCoeff * me.angularVelocity; % reverse and dampen the angular velocity
 			end
-			if ~isempty(me.rigidparams.rightwall) && me.x + me.rigidparams.radius > me.rigidparams.rightwall
-    			me.x = me.rigidparams.rightwall - me.rigidparams.radius;
+			if me.x + r > me.rigidparams.rightwall
+    			me.x = me.rigidparams.rightwall - r	;
     			velocity(1) = -me.rigidparams.elasticityCoeff * velocity(1); % reverse and dampen the x-velocity
     			me.angularVelocity = -me.rigidparams.elasticityCoeff * me.angularVelocity; % reverse and dampen the angular velocity
+			end
+			if ~isempty(me.rigidparams.avoidRects)
+				for i = 1:size(me.rigidparams.avoidRects)
+					
+				end
 			end
 
 			me.dX = velocity(1);
