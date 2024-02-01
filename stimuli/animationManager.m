@@ -56,6 +56,14 @@ classdef animationManager < optickaCore
 		ppd double = 36
 		%> stimulus
 		stimulus
+		%> did we hit left wall?
+		hitFloor = false
+		%> did we hit left wall?
+		hitCeiling = false
+		%> did we hit left wall?
+		hitLeftWall = false
+		%> did we hit left wall?
+		hitRightWall = false
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -140,6 +148,10 @@ classdef animationManager < optickaCore
 			me.dX = [];
 			me.dY = [];
 			me.momentOfInertia = 0.5 * me.rigidparams.mass * me.rigidparams.radius^2;
+			me.hitCeiling = false;
+			me.hitFloor = false;
+			me.hitLeftWall = false;
+			me.hitRightWall = false;
 		end
 
 		% ===================================================================
@@ -183,23 +195,27 @@ classdef animationManager < optickaCore
     			me.y = me.rigidparams.floor - r - 0.01;
     			velocity(2) = -me.rigidparams.elasticityCoeff * velocity(2); % reverse and dampen the y-velocity
     			me.angularVelocity = -me.rigidparams.elasticityCoeff * me.angularVelocity; % reverse and dampen the angular velocity
+				me.hitFloor = true;
 			end
-			% Collision detection with floor
+			% Collision detection with ceiling
 			if me.y - r < me.rigidparams.ceiling
     			me.y = me.rigidparams.ceiling + r + 0.01;
     			velocity(2) = -me.rigidparams.elasticityCoeff * velocity(2); % reverse and dampen the y-velocity
     			me.angularVelocity = -me.rigidparams.elasticityCoeff * me.angularVelocity; % reverse and dampen the angular velocity
+				me.hitCeiling = true;
 			end
 			% Collision detection with walls
 			if me.x - r < me.rigidparams.leftwall
     			me.x = me.rigidparams.leftwall + r;
     			velocity(1) = -me.rigidparams.elasticityCoeff * velocity(1); % reverse and dampen the x-velocity
     			me.angularVelocity = -me.rigidparams.elasticityCoeff * me.angularVelocity; % reverse and dampen the angular velocity
+				me.hitLeftWall = true;
 			end
 			if me.x + r > me.rigidparams.rightwall
     			me.x = me.rigidparams.rightwall - r	;
     			velocity(1) = -me.rigidparams.elasticityCoeff * velocity(1); % reverse and dampen the x-velocity
     			me.angularVelocity = -me.rigidparams.elasticityCoeff * me.angularVelocity; % reverse and dampen the angular velocity
+				me.hitRightWall = true;
 			end
 			if ~isempty(me.rigidparams.avoidRects)
 				for i = 1:size(me.rigidparams.avoidRects)
