@@ -273,7 +273,7 @@ classdef eyetrackerCore < optickaCore
 			me.isInitFail			= false;
 			me.flipTick				= 0;
 			if me.verbose
-				fprintf('-+-+-> ET:RESET Fixation: %i %i %i\n',me.fixLength,me.fixTotal,me.fixN);
+				fprintf('-+-+-> EyeTracker:RESET Fixation: fix length=%i fix total=%i fix #%i\n',me.fixLength,me.fixTotal,me.fixN);
 			end
 		end
 		
@@ -343,7 +343,6 @@ classdef eyetrackerCore < optickaCore
 			end
 			trackerMessage(me,'Drift OFFSET');
 			trackerDrawStatus(me,'Drift Offset');
-			escapeKey			= KbName('ESCAPE');
 			stopkey				= KbName('Q');
 			nextKey				= KbName('SPACE');
 			calibkey			= KbName('C');
@@ -373,7 +372,7 @@ classdef eyetrackerCore < optickaCore
 				me.screen.drawCross(0.6,[0 0 0],x,y,0.1,false);
 				Screen('Flip',me.screen.win);
 				[~, ~, keyCode] = optickaCore.getKeys;
-				if keyCode(stopkey) || keyCode(escapeKey); breakLoop = true; break;	end
+				if keyCode(stopkey); breakLoop = true; break;	end
 				if keyCode(nextKey); correct = true; break; end
 				if keyCode(calibkey); trackerSetup(me); break; end
 				if keyCode(driftkey); driftCorrection(me); break; end
@@ -455,7 +454,7 @@ classdef eyetrackerCore < optickaCore
 			if nargin > 5 && ~isempty(radius); me.fixation.radius = radius; end
 			if nargin > 6 && ~isempty(strict); me.fixation.strict = logical(strict); end
 			if me.verbose 
-				fprintf('-+-+-> ET:updateFixationValues: X=%g | Y=%g | IT=%s | FT=%s | R=%s | Strict=%i\n', ... 
+				fprintf('-+-+-> EyeTracker:updateFixationValues: X=%g | Y=%g | IT=%s | FT=%s | R=%s | Strict=%i\n', ... 
 				me.fixation.X, me.fixation.Y, num2str(me.fixation.initTime,'%.2f '), num2str(me.fixation.time,'%.2f '), ...
 				num2str(me.fixation.radius,'%.2f '),me.fixation.strict); 
 			end
@@ -538,7 +537,7 @@ classdef eyetrackerCore < optickaCore
 				if ~any(window)
 					searching = false; initfail = true;
 					me.isInitFail = true; me.isFix = false;
-					if me.verbose;fprintf('-+-+-> ET: Eye left fix init window @ %.3f secs!\n',ft);end
+					if me.verbose;fprintf('-+-+-> EyeTracker: Eye left fix init window @ %.3f secs!\n',ft);end
 					return;
 				end
 			end
@@ -633,13 +632,13 @@ classdef eyetrackerCore < optickaCore
 			[fix, fixtime, searching, window, exclusion, initfail] = me.isFixated();
 			if exclusion
 				out = noString;
-				if me.verbose; fprintf('-+-+-> ET:testSearchHoldFixation EXCLUSION ZONE ENTERED time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
+				if me.verbose; fprintf('-+-+-> EyeTracker:testSearchHoldFixation EXCLUSION ZONE ENTERED time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
 						me.fixTotal, me.fixInitLength, me.fixLength, fix, fixtime, searching, exclusion, initfail); end
 				return;
 			end
 			if initfail
 				out = noString;
-				if me.verbose; fprintf('-+-+-> ET:testSearchHoldFixation FIX INIT TIME FAIL time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
+				if me.verbose; fprintf('-+-+-> EyeTracker:testSearchHoldFixation FIX INIT TIME FAIL time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
 						me.fixTotal, me.fixInitLength, me.fixLength, fix, fixtime, searching, exclusion, initfail); end
 				return
 			end
@@ -648,7 +647,7 @@ classdef eyetrackerCore < optickaCore
 					out = 'searching';
 				else
 					out = noString;
-					if me.verbose; fprintf('-+-+-> ET:testSearchHoldFixation STRICT SEARCH FAIL: %s time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
+					if me.verbose; fprintf('-+-+-> EyeTracker:testSearchHoldFixation STRICT SEARCH FAIL: %s time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
 							out, me.fixTotal, me.fixInitLength, me.fixLength, fix, fixtime, searching, exclusion, initfail);end
 				end
 				return
@@ -656,20 +655,20 @@ classdef eyetrackerCore < optickaCore
 				if (me.fixation.strict==true && me.fixN == 1) || me.fixation.strict==false
 					if fixtime
 						out = yesString;
-						if me.verbose; fprintf('-+-+-> ET:testSearchHoldFixation FIXATION SUCCESSFUL!: %s time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
+						if me.verbose; fprintf('-+-+-> EyeTracker:testSearchHoldFixation FIXATION SUCCESSFUL!: %s time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
 								out, me.fixTotal, me.fixInitLength, me.fixLength, fix, fixtime, searching, exclusion, initfail);end
 					else
 						out = 'fixing';
 					end
 				else
 					out = noString;
-					if me.verbose;fprintf('-+-+-> ET:testSearchHoldFixation FIX FAIL: %s time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
+					if me.verbose;fprintf('-+-+-> EyeTracker:testSearchHoldFixation FIX FAIL: %s time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
 							out, me.fixTotal, me.fixInitLength, me.fixLength, fix, fixtime, searching, exclusion, initfail);end
 				end
 				return
 			elseif searching == false
 				out = noString;
-				if me.verbose;fprintf('-+-+-> ET:testSearchHoldFixation SEARCH FAIL: %s time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
+				if me.verbose;fprintf('-+-+-> EyeTracker:testSearchHoldFixation SEARCH FAIL: %s time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
 						out, me.fixTotal, me.fixInitLength, me.fixLength, fix, fixtime, searching, exclusion, initfail);end
 			else
 				out = '';
@@ -690,13 +689,13 @@ classdef eyetrackerCore < optickaCore
 			[fix, fixtime, searching, window, exclusion, initfail] = me.isFixated();
 			if exclusion
 				out = noString;
-				if me.verbose; fprintf('-+-+-> ET:testHoldFixation EXCLUSION ZONE ENTERED time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
+				if me.verbose; fprintf('-+-+-> EyeTracker:testHoldFixation EXCLUSION ZONE ENTERED time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
 						me.fixTotal, me.fixInitLength, me.fixLength, fix, fixtime, searching, exclusion, initfail); end
 				return;
 			end
 			if initfail
 				out = noString;
-				if me.verbose; fprintf('-+-+-> ET:testHoldFixation FIX INIT TIME FAIL time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
+				if me.verbose; fprintf('-+-+-> EyeTracker:testHoldFixation FIX INIT TIME FAIL time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
 						me.fixTotal, me.fixInitLength, me.fixLength, fix, fixtime, searching, exclusion, initfail); end
 				return;
 			end
@@ -704,7 +703,7 @@ classdef eyetrackerCore < optickaCore
 				if me.fixation.strict==false || (me.fixation.strict == true && me.fixN == 1)
 					if fixtime
 						out = yesString;
-						if me.verbose; fprintf('-+-+-> ET:testHoldFixation FIXATION SUCCESSFUL!: %s time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
+						if me.verbose; fprintf('-+-+-> EyeTracker:testHoldFixation FIXATION SUCCESSFUL!: %s time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
 							out, me.fixTotal, me.fixInitLength, me.fixLength, fix, fixtime, searching, exclusion, initfail);end
 					else
 						out = 'fixing';
@@ -712,14 +711,14 @@ classdef eyetrackerCore < optickaCore
 					return;
 				else
 					out = noString;
-					if me.verbose;fprintf('-+-+-> ET:testHoldFixation FIX FAIL: %s time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
+					if me.verbose;fprintf('-+-+-> EyeTracker:testHoldFixation FIX FAIL: %s time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
 							out, me.fixTotal, me.fixInitLength, me.fixLength, fix, fixtime, searching, exclusion, initfail);end
 					return;
 				end
 			else
 				if (me.fixation.strict == true && me.fixN == 1)
 					out = noString;
-					if me.verbose; fprintf('-+-+-> ET:testHoldFixation FIX FAIL: %s time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
+					if me.verbose; fprintf('-+-+-> EyeTracker:testHoldFixation FIX FAIL: %s time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
 							out, me.fixTotal, me.fixInitLength, me.fixLength, fix, fixtime, searching, exclusion, initfail);end
 					return;
 				else
@@ -862,14 +861,18 @@ classdef eyetrackerCore < optickaCore
 			if ~exist('stimPos','var'); stimPos = []; end
 			if ~exist('dontClear','var'); dontClear = 1; end
 			
-			if dontClear==0; trackerFlip(me, 0, true); trackerClearScreen(me); end
+			if dontClear == 0; trackerFlip(me, 0, true); trackerClearScreen(me); end
 			trackerDrawFixation(me);
 			drawGrid(me.operatorScreen);
 			if ~isempty(me.exclusionZone);trackerDrawExclusion(me);end
 			if ~isempty(stimPos); trackerDrawStimuli(me, stimPos, true); end
 			if ~isempty(comment);trackerDrawText(me, comment);end
 			if ~isempty(me.xAll);trackerDrawEyePositions(me);end
-			if dontClear==0; trackerFlip(me, 0, true); end
+			if dontClear == 0
+				trackerFlip(me, 0, true); 
+			else
+				trackerFlip(me, 1);
+			end
 		end
 
 		% ===================================================================

@@ -258,9 +258,9 @@ classdef animationManager < optickaCore
 		%>
 		% ===================================================================
 		function demo()
-			s =screenManager;
+			s = screenManager;
 			i = imageStimulus('size',4);
-			i.filePath = '/home/cog5/Downloads/moon.png';
+			i.filePath = 'moon.png';
 			i.xPosition = -5;
 			i.yPosition = 5;
 			i.angle = 45;
@@ -278,7 +278,7 @@ classdef animationManager < optickaCore
 			setup(i, s);
 			
 			setup(a, i);
-			
+			tic
 			for jj = 1:sv.fps*10
 			
 				draw(i);
@@ -293,7 +293,7 @@ classdef animationManager < optickaCore
 				pe(jj) = a.potentialEnergy;
 			
 			end
-			
+			toc
 			close(s)
 			reset(i);
 			

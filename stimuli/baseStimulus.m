@@ -28,26 +28,27 @@ classdef baseStimulus < optickaCore & dynamicprops
 
 	%--------------------PUBLIC PROPERTIES----------%
 	properties
-		%> true or false, whether to draw() this object
-		isVisible logical		= true
 		%> X Position ± degrees relative to screen center (0,0)
 		xPosition double		= 0
 		%> Y Position ± degrees relative to screen center (0,0)
 		yPosition double		= 0
-		%> Size in degrees
+		%> Size in visual degrees (°), can also be used to scale images/movies
+		%> or define length of a bar etc.
 		size double				= 4
-		%> Colour as a 0-1 range RGB or RGBA vector
-		colour double			= [1 1 1]
-		%> Alpha as a 0-1 range, this gets added to the RGB colour
+		%> Colour as a 0-1 range RGB or RGBA vector (if you pass A it also
+		%> modifies alpha and visa-versa
+		colour double			= [1 1 1 1]
+		%> Alpha (opacity) [0-1], this gets combined with the RGB colour
 		alpha double			= 1
 		%> For moving stimuli do we start "before" our initial position? This allows you to
 		%> center a stimulus at a screen location, but then drift it across that location, so
 		%> if xyPosition is 0,0 and startPosition is -2 then the stimulus will start at -2 drifing
 		%> towards 0.
 		startPosition double	= 0
-		%> speed in degs/s
+		%> speed in degs/s - this mostly afffects linear motion, but with an
+		%> animationManager is also used to define initial motion value
 		speed double			= 0
-		%> angle in degrees
+		%> angle in degrees (0 - 360)
 		angle double			= 0
 		%> delay time to display relative to stimulus onset, can set upper and lower range
 		%> for random interval. This allows for a group of stimuli some to be delayed relative
@@ -55,6 +56,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 		delayTime double		= 0
 		%> time to turn stimulus off, relative to stimulus onset
 		offTime double			= Inf
+		%> true or false, whether to draw() this object
+		isVisible logical		= true
 		%> animation manager: can assign an animationManager() object that handles
 		%> more complex animation paths than simple builtin linear motion WIP
 		animator				= []
@@ -250,10 +253,10 @@ classdef baseStimulus < optickaCore & dynamicprops
 			if ~me.isInSetColour
 				me.colour = me.colour(1:3); %force colour to be regenerated
 				if ~isempty(findprop(me,'colour2'))
-					me.colour2 = me.colour2(1:3);
+					me.colour2 = [me.colour2(1:3) me.alpha];
 				end
 				if ~isempty(findprop(me,'baseColour'))
-					me.baseColour = me.baseColour(1:3);
+					me.baseColour = [me.baseColour(1:3) me.alpha];
 				end
 			end
 		end
@@ -389,11 +392,17 @@ classdef baseStimulus < optickaCore & dynamicprops
 		end
 
 		% ===================================================================
-		%> @brief Run Stimulus in a window to preview
+		%> @fn run
+		%> @brief Run stimulus in a window to preview it
 		%>
+		%> @param benchmark true|false [optional, default = false]
+		%> @param runtime time to show stimulus [optional, default = 2]
+		%> @param screenManager to use [optional]
+		%> @param forceScreen for a particulr monitor/screen to use
+		%> @param showVBL show a plot of the VBL times
 		% ===================================================================
 		function run(me, benchmark, runtime, s, forceScreen, showVBL)
-		% run(benchmark, runtime, s, forceScreen, showVBL)
+		% run(me, benchmark, runtime, s, forceScreen, showVBL)
 			try
 
 				if ~exist('benchmark','var') || isempty(benchmark)
@@ -505,15 +514,15 @@ classdef baseStimulus < optickaCore & dynamicprops
 				fprintf('======>>> <strong>SPEED</strong> (%i frames in %.3f secs) = <strong>%g</strong> fps\n\n',nFrames, diffT, fps);
 				if ~benchmark;fprintf('\b======>>> First - Last frame time: %.3f\n\n',vbl(end)-startT);end
 				clear s fps benchmark runtime b bb i vbl; %clear up a bit
-			catch ME
-				try getReport(ME); end
+			catch ERR
+				try getReport(ERR); end
 				try Priority(0); end
 				if exist('s','var') && isa(s,'screenManager')
 					try close(s); end
 				end
 				clear fps benchmark runtime b bb i; %clear up a bit
 				reset(me); %reset our stimulus ready for use again
-				rethrow(ME)
+				rethrow(ERR)
 			end
 		end
 		
@@ -895,12 +904,13 @@ classdef baseStimulus < optickaCore & dynamicprops
 		end
 		
 		% ===================================================================
+		%> @fn cleanHandles
 		%> @brief clean any handles
 		%>
 		%> @param
 		%> @return
 		% ===================================================================
-		function cleanHandles(me,varargin)
+		function cleanHandles(me, ~)
 			if isprop(me,'handles')
 				me.handles = [];
 			end
@@ -912,6 +922,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		end
 
 		% ===================================================================
+		%> @fn getP
 		%> @brief gets a property copy or original property
 		%>
 		%> When stimuli are run, their properties are copied, so e.g. angle
@@ -939,6 +950,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		end
 
 		% ===================================================================
+		%> @fn setP
 		%> @brief sets a property copy or original property
 		%>
 		%> When stimuli are run, their properties are copied, so e.g. angle
@@ -962,10 +974,12 @@ classdef baseStimulus < optickaCore & dynamicprops
 		end
 
 		% ===================================================================
-		%> @brief Update only position info, faster and doesn't reset image
+		%> @fn updateXY
+		%> @brief Update only position info, faster and doesn't reset image etc.
 		%>
 		% ===================================================================
 		function updateXY(me,x,y,degrees)
+		% updateXY(me, x, y, degrees)
 			if ~exist('degrees','var') || isempty(degrees); degrees = false; end
 			if degrees
 				if ~isempty(x); me.xFinal = me.sM.toPixels(x, 'x'); me.xFinalD = x; end
@@ -1031,21 +1045,21 @@ classdef baseStimulus < optickaCore & dynamicprops
 	%=======================================================================
 
 		% ===================================================================
-		%> @brief addRuntimeProperties
-		%> these are transient properties that specify actions during runtime
+		%> @fn addRuntimeProperties
+		%> @brief These are transient properties that specify actions during runtime
 		% ===================================================================
 		function addRuntimeProperties(me)
-			if isempty(me.findprop('doFlash'));me.addprop('doFlash');end
-			if isempty(me.findprop('doDots'));me.addprop('doDots');end
-			if isempty(me.findprop('doMotion'));me.addprop('doMotion');end
-			if isempty(me.findprop('doDrift'));me.addprop('doDrift');end
-			if isempty(me.findprop('doAnimator'));me.addprop('doAnimator');end
+			if isempty(me.findprop('doFlash')); me.addprop('doFlash');end
+			if isempty(me.findprop('doDots')); me.addprop('doDots');end
+			if isempty(me.findprop('doMotion')); me.addprop('doMotion');end
+			if isempty(me.findprop('doDrift')); me.addprop('doDrift');end
+			if isempty(me.findprop('doAnimator')); me.addprop('doAnimator');end
 			updateRuntimeProperties(me);
 		end
 
 		% ===================================================================
-		%> @brief updateRuntimeProperties
-		%> these are transient properties that specify actions during runtime
+		%> @fn updateRuntimeProperties
+		%> @brief Update transient properties that specify actions during runtime
 		% ===================================================================
 		function updateRuntimeProperties(me)
 			me.doDots		= false;
@@ -1065,7 +1079,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 		end
 
 		% ===================================================================
-		%> @brief compute xFinal and yFinal
+		%> @brief compute xFinal and yFinal (in pixels) taking startPosition,
+		%> xPosition, yPosition and direction/angle into account
 		%>
 		% ===================================================================
 		function computePosition(me)
@@ -1082,13 +1097,13 @@ classdef baseStimulus < optickaCore & dynamicprops
 				me.yFinal = me.yPositionOut + (dy * me.ppd) + me.sM.yCenter;
 				me.xFinalD = me.sM.toDegrees(me.xFinal,'x');
 				me.yFinalD = me.sM.toDegrees(me.yFinal,'y');
-				if me.verbose; fprintf('---> computePosition: %s X = %gpx / %gpx / %gdeg | Y = %gpx / %gpx / %gdeg\n',me.fullName, me.xFinal, me.xPositionOut, dx, me.yFinal, me.yPositionOut, dy); end
+				if me.verbose; fprintf('---> computePosition: %s X = %gpx | %gpx | %gdeg <> Y = %gpx | %gpx | %gdeg\n',me.fullName, me.xFinal, me.xPositionOut, dx, me.yFinal, me.yPositionOut, dy); end
 			end
 			setAnimationDelta(me);
 		end
 
 		% ===================================================================
-		%> @brief setAnimationDelta
+		%> @fn setAnimationDelta
 		%> setAnimationDelta for performance better not to use get methods for dX dY and
 		%> delta during animation, so we have to cache these properties to private copies so that
 		%> when we call the animate method, it uses the cached versions not the
@@ -1102,7 +1117,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		end
 
 		% ===================================================================
-		%> @brief setRect
+		%> @fn setRect
 		%> setRect makes the PsychRect based on the texture and screen
 		%> values, you should call computePosition() first to get xFinal and
 		%> yFinal.
@@ -1121,11 +1136,16 @@ classdef baseStimulus < optickaCore & dynamicprops
 			end
 			me.mvRect=me.dstRect;
 			if me.isRect; me.szPx=RectWidth(me.mvRect); end
+			if me.verbose
+				fprintf('---> %s setRect = [%.2f %.2f %.2f %.2f] width = %.2f height = %.2f\n',...
+					me.fullName, me.dstRect(1), me.dstRect(2),me.dstRect(3),me.dstRect(4),...
+					RectWidth(me.dstRect),RectHeight(me.dstRect));
+			end
 		end
 
 		% ===================================================================
+		%> @fn toStructure
 		%> @brief Converts properties to a structure
-		%>
 		%>
 		%> @param me this instance object
 		%> @param tmp is whether to use the temporary or permanent properties
@@ -1146,6 +1166,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		end
 
 		% ===================================================================
+		%> @fn removeTmpProperties
 		%> @brief Finds and removes dynamic properties
 		%>
 		%> @param me
@@ -1163,10 +1184,11 @@ classdef baseStimulus < optickaCore & dynamicprops
 			me.xFinalD	= [];
 			me.yFinal	= [];
 			me.yFinalD	= [];
+			me.szPx		= [];
 		end
 
 		% ===================================================================
-		%> @brief Delete method
+		%> @fn Delete method
 		%>
 		%> @param me
 		%> @return

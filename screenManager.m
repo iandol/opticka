@@ -1213,7 +1213,7 @@ classdef screenManager < optickaCore
 		%> @param alpha2 alpha for the disc
 		%> @return
 		% ===================================================================
-			% drawCross(me,size,colour,x,y,lineWidth,showDisk,alpha,alpha2)
+			% drawCross(me, size,colour,x,y,lineWidth,showDisk,alpha,alpha2)
 			if nargin < 9 || isempty(alpha2); alpha2 = 1; end
 			if nargin < 8 || isempty(alpha); alpha = 1; end
 			if nargin < 7 || isempty(showDisk); showDisk = true; end
@@ -1407,6 +1407,9 @@ classdef screenManager < optickaCore
 			for s = c
 				Screen('DrawText',me.win,s{1},x,a);
 				a = a + me.font.TextSize;
+				if me.useRetina
+					a = a + me.font.TextSize;
+				end
 			end
 		end
 
@@ -1735,7 +1738,7 @@ classdef screenManager < optickaCore
 						otherwise
 							try
 								m = Screen('GetImage', me.win, me.movieSettings.size);
-								imwrite(m,[me.movieSettings.movieFile '_' num2str(me.movieSettings.loop) '.png']);
+								imwrite(m,[me.movieSettings.movieFile '_' sprintf('%.4i',me.movieSettings.loop) '.png']);
 							catch ME
 								getReport(ME)
 							end
@@ -1755,7 +1758,6 @@ classdef screenManager < optickaCore
 			if me.movieSettings.record == true
 				switch me.movieSettings.type
 					case 1
-							save(me.movieSettings.movieFile,'mm')
 						if ~isempty(me.moviePtr)
 							Screen('FinalizeMovie', me.moviePtr);
 							fprintf(['\n---> screenManager: movie saved to ' me.movieSettings.movieFile '\n']);
@@ -1887,7 +1889,7 @@ classdef screenManager < optickaCore
 		function delete(me)
 			if me.isOpen
 				close(me);
-				salutation(me, 'DELETE method', 'Screen closed');
+				logOutput(me, 'DELETE method', 'Screen closed');
 			end
 		end
 	end

@@ -1,22 +1,32 @@
 % ========================================================================
-%> @class imageStimulus
-%> @brief Show images or directories full of images
+%> @class dotlineStimulus
+%> @brief Show lines made of dots
 %>
-%> Class providing basic structure for image (texture) stimulus classes.
+%> Class providing basic structure for dotline (texture) stimulus classes.
 %> You can control multiple aspects of the image presentation, and scale
 %> images to values in degrees, rotate them, animate them etc.
 %>
 %> Copyright ©2014-2024 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
-classdef imageStimulus < baseStimulus
+classdef dotlineStimulus < baseStimulus
 	properties %--------------------PUBLIC PROPERTIES----------%
-		%> stimulus type: 'picture'
-		type char					= 'picture'
-		%> filePath to load, if it is a directory use all images within
-		filePath char				= ''
-		%> if you pass a directory of images, which one is selected
-		selection double			= 0
-		%> contrast multiplier to the image
+		%> stimulus type: 'circle', 'square'
+		type char					= 'circle'
+		%> item size
+		itemSize					= 0.8
+		%> inter-item distance
+		itemDistance				= 1
+		%> phase (0 - 360)
+		phase						= 0
+		%> direction for motion of the image, different to angle
+		direction					= 0
+		%> force the angle to be orthogonal to the direction
+		forceOrthogonal				= false
+		%> use even and odd colours?
+		useEven						= false
+		%> even colour
+		colour2						= [0 0 0 1]
+		%> contrast multiplier 
 		contrast double				= 1
 		%> precision: 0 = 8bit | 1 = 16bit | 2 = 32bit
 		precision					= 0
@@ -48,17 +58,9 @@ classdef imageStimulus < baseStimulus
 		%> blurred or low-pass filtered images, e.g., for gaze-contingent
 		%> displays.
 		filter						= 1
-		%> crop: none | square | vertical | horizontal
-		crop						= 'none'
-		%> direction for motion of the image, different to angle
-		direction					= []
 	end
 
 	properties (SetAccess = protected, GetAccess = public, Transient = true)
-		%> list of imagenames if selection > 0
-		filePaths					= {};
-		%> current randomly selected image
-		currentImage				= ''
 		%> scale is set by size
 		scale						= 1
 		%>
@@ -73,25 +75,20 @@ classdef imageStimulus < baseStimulus
 		family						= 'texture'
 	end
 
-	properties(Dependent)
-		%> number of images in the filePath directory
-		nImages						= 0
-	end
-
 	properties (SetAccess = protected, GetAccess = public, Hidden = true)
-		typeList			= {'picture'}
-		filePathList		= 'filerequestor';
+		typeList			= {'dotline'}
 		interpMethodList	= {'nearest','linear','spline','cubic'}
 		%> properties to ignore in the UI
 		ignorePropertiesUI	= {'nImages','type'}
+		filePath			= [];
 	end
 
 	properties (Access = protected)
 		%> allowed properties passed to object upon construction
-		allowedProperties = {'type', 'filePath', 'selection', 'contrast', ...
-			'precision','filter','crop','specialFlags'}
+		allowedProperties = {'type', 'contrast', ...
+			'precision','filter', 'specialFlags'}
 		%>properties to not create transient copies of during setup phase
-		ignoreProperties = {'type', 'scale', 'filePath','nImages'}
+		ignoreProperties = {'type', 'scale'}
 	end
 
 	%=======================================================================
@@ -108,18 +105,16 @@ classdef imageStimulus < baseStimulus
 		%>
 		%> @return instance of class.
 		% ===================================================================
-		function me = imageStimulus(varargin)
-			args = optickaCore.addDefaults(varargin,struct('size',0,...
-				'name','Image'));
+		function me = dotlineStimulus(varargin)
+			args = optickaCore.addDefaults(varargin,struct('size',10,...
+				'name','DotLine'));
 			me=me@baseStimulus(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
 
 			me.isRect = true; %uses a rect for drawing
 
-			checkfilePath(me);
-
 			me.ignoreProperties = [me.ignorePropertiesBase me.ignoreProperties];
-			me.logOutput('constructor','Image Stimulus initialisation complete');
+			me.logOutput('constructor','DotLine Stimulus initialisation complete');
 		end
 
 		% ===================================================================
@@ -135,23 +130,18 @@ classdef imageStimulus < baseStimulus
 		%> properties. This method initialises the object in preperation for display.
 		%>
 		%> @param sM screenManager object for reference
-		%> @param in matrix for conversion to a PTB texture
 		% ===================================================================
-		function setup(me, sM, in)
+		function setup(me, sM)
 
 			reset(me); %reset object back to its initial state
-			if ~exist('in','var');in = []; end
 			me.inSetup = true; me.isSetup = false;
 			if isempty(me.isVisible); show(me); end
-
-			checkfilePath(me);
 
 			me.sM = sM;
 			if ~sM.isOpen; error('Screen needs to be Open!'); end
 			me.ppd = sM.ppd;
 			me.screenVals = sM.screenVals;
-			me.texture = []; %we need to reset this
-
+			
 			if isempty(me.direction); me.direction = me.angle; end
 
 			fn = sort(properties(me));
@@ -160,21 +150,20 @@ classdef imageStimulus < baseStimulus
 					p = me.addprop([fn{j} 'Out']);
 					if strcmp(fn{j},'xPosition'); p.SetMethod = @set_xPositionOut; end
 					if strcmp(fn{j},'yPosition'); p.SetMethod = @set_yPositionOut; end
+					if strcmp(fn{j},'size'); p.SetMethod = @set_sizeOut; end
 					me.([fn{j} 'Out']) = me.(fn{j}); %copy our property value to our tempory copy
 				end
 			end
 
 			addRuntimeProperties(me);
 
+			if me.forceOrthogonal
+				me.angleOut = me.directionOut + 90;
+			end
+
 			me.inSetup = false; me.isSetup = true;
 
-			loadImage(me, in);
-			if me.sizeOut > 0
-				me.scale = me.sizeOut / (me.width / me.ppd);
-				me.szPx = me.sizeOut * me.ppd;
-			else
-				me.szPx = (me.width+me.height)/2;
-			end
+			makeLine(me);
 			computePosition(me);
 			if me.doAnimator
 				setup(me.animator, me);
@@ -185,116 +174,73 @@ classdef imageStimulus < baseStimulus
 				me.xPositionOut = value * me.ppd;
 			end
 			function set_yPositionOut(me,value)
-				me.yPositionOut = value*me.ppd; 
+				me.yPositionOut = value * me.ppd; 
+			end
+			function set_sizeOut(me,value)
+				me.sizeOut = value * me.ppd;
+				me.szPx = me.sizeOut;
 			end
 			
 		end
 
 		% ===================================================================
-		%> @brief Load an image
+		%> @brief Make the line texture
 		%>
 		% ===================================================================
-		function loadImage(me,in)
-			ialpha = uint8([]);
+		function makeLine(me)
 			tt = tic;
-			if ~exist('in','var'); in = []; end
-			if ~isempty(in) && ischar(in)
-				% assume a file path
-				[me.matrix, ~, ialpha] = imread(in);
-				me.currentImage = in;
-			elseif ~isempty(in) && isnumeric(in) && max(size(in))==1 && ~isempty(me.filePaths) && in <= length(me.filePaths)
-				% assume an index to filePaths
-				me.currentImage = me.filePaths{in};
-				[me.matrix, ~, ialpha] = imread(me.currentImage);
-			elseif ~isempty(in) && isnumeric(in) && size(in,3)==3
-				% assume a raw matrix
-				me.matrix = in;
-				me.currentImage = '';
-			elseif ~isempty(me.filePaths)
-				% try to load from filePaths
-				im = me.getP('selection');
-				if im < 1 || im > me.nImages
-					im = randi(length(me.filePaths));
+
+			ep = me.sizeOut;
+			es = me.itemSize * me.ppd;
+			mp = ep / 2;
+			dp = me.itemDistance * me.ppd;
+
+			phase = me.phaseOut / 360;
+
+			pos = [fliplr([mp:-dp:0]) [mp+dp:dp:ep]] + (phase * dp);
+			if pos(1) > dp
+				pos = [pos(1) - dp pos];
+			end
+			lrect = [0 0 ep es*1.5];
+			me.width = RectWidth(lrect);
+			me.height = RectHeight(lrect);
+			crect =[0 0 es es];
+			%[windowPtr,rect]=Screen('OpenOffscreenWindow',windowPtrOrScreenNumber 
+			%[,color] [,rect] [,pixelSize] [,specialFlags] 
+			% [,multiSample]);
+			owin = Screen('OpenOffscreenWindow',me.sM.win,[me.sM.backgroundColour(1:3) 0], ...
+				lrect,8,1,[]);
+
+			c1 = me.colourOut(1:3) * me.contrast;
+			c2 = me.colour2Out(1:3) * me.contrast;
+			
+			% make the position rects and the colours of each dot
+			for i = 1:length(pos)
+				trect = CenterRectOnPointd(crect,pos(i),lrect(4)/2);
+				orects(:,i) = trect';
+				if me.useEven && me.isOdd(i) || ~me.useEven
+					colours(:,i) = [c1 me.alphaOut]';
+				elseif me.useEven && ~me.isOdd(i)
+					colours(:,i) = [c2 me.alphaOut]';
 				end
-				if exist(me.filePaths{im},'file')
-					me.currentImage = me.filePaths{im};
-					fprintf('File %s\n',me.currentImage);
-					[me.matrix, ~, ialpha] = imread(me.currentImage);
-					if isinteger(me.matrix) && isfloat(ialpha)
-						ialpha = uint8(ialpha .* 255);
-					end
-				end
+			end
+		
+			% circle or square
+			if strcmpi(me.type,'circle')
+				Screen('FillOval', owin, colours, orects, 100);
 			else
-				if me.sizeOut <= 0; sz = 2; else; sz = me.sizeOut; end
-				me.matrix = uint8(ones(sz*me.ppd,sz*me.ppd,3)*255); %white texture
-				me.currentImage = '';
+				Screen('FillRect', owin, colours, orects);
+			end
+		
+			% dram a small frame around the texture for debugging
+			debug = false;
+			if debug
+				Screen('FrameRect', owin, [0 0 0 0.2], lrect, 2);
 			end
 
-			if me.precision > 0
-				me.matrix = double(me.matrix)/255;
-			end
+			me.texture = owin;
 
-			me.matrix = me.matrix .* me.contrastOut;
-			w = size(me.matrix,2);
-			h = size(me.matrix,1);
-
-			switch me.crop
-				case 'square'
-					if w < h
-						p = floor((h - w)/2);
-						me.matrix = me.matrix(p+1:w+p, :, :);
-						if ~isempty(ialpha)
-							ialpha = ialpha(p+1:w+p, :);
-						end
-					elseif w > h
-						p = floor((w - h)/2);
-						me.matrix = me.matrix(:, p+1:h+p, :);
-						if ~isempty(ialpha)
-							ialpha = ialpha(:, p+1:h+p);
-						end
-					end
-				case 'vertical'
-					if w < h
-						p = floor((h - w)/2);
-						me.matrix = me.matrix(p+1:w+p, :, :);
-						if ~isempty(ialpha)
-							ialpha = ialpha(p+1:w+p, :);
-						end
-					end
-				case 'horizontal'
-					if w > h
-						p = floor((w - h)/2);
-						me.matrix = me.matrix(:, p+1:h+p, :);
-						if ~isempty(ialpha)
-							ialpha = ialpha(:, p+1:h+p);
-						end
-					end
-			end
-
-			me.width = size(me.matrix,2);
-			me.height = size(me.matrix,1);
-
-			if isempty(ialpha)
-				if isfloat(me.matrix)
-					me.matrix(:,:,4) = me.alphaOut;
-				else
-					me.matrix(:,:,4) = uint8(me.alphaOut .* 255);
-				end
-			else
-				if isfloat(me.matrix)
-					me.matrix(:,:,4) = double(ialpha);
-				else
-					me.matrix(:,:,4) = ialpha;
-				end
-			end
-
-			if isempty(me.specialFlags) && isinteger(me.matrix(1))
-				me.specialFlags = 4; %4 is optimization for uint8 textures. 0 is default
-			end
-			if ~isempty(me.sM) && me.sM.isOpen == true
-				me.texture = Screen('MakeTexture', me.sM.win, me.matrix, 1, me.specialFlags, me.precision);
-			end
-			me.logOutput('loadImage',['Load: ' regexprep(me.currentImage,'\\','/') 'in ' num2str(toc(tt)) ' secs']);
+			if me.verbose;me.logOutput('makeLine',['Made dotline in ' num2str(toc(tt)) ' secs']);end
 		end
 
 		% ===================================================================
@@ -302,16 +248,10 @@ classdef imageStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function update(me)
-			s = me.getP('selection');
-			if s > 0 && ~strcmp(me.currentImage,me.filePaths{s})
-				if ~isempty(me.texture) && me.texture > 0 && Screen(me.texture,'WindowKind') == -1
-					try Screen('Close',me.texture); end %#ok<*TRYNC>
-				end
-				loadImage(me);
+			if me.forceOrthogonal
+				me.angleOut = me.directionOut + 90;
 			end
-			if me.sizeOut > 0
-				me.scale = me.sizeOut / (me.width / me.ppd);
-			end
+			makeLine(me);
 			resetTicks(me);
 			computePosition(me);
 			setRect(me);
@@ -327,7 +267,7 @@ classdef imageStimulus < baseStimulus
 				% Screen('DrawTexture', windowPointer, texturePointer [,sourceRect] [,destinationRect] [,rotationAngle]
 				% [, filterMode] [, globalAlpha] [, modulateColor] [, textureShader] [, specialFlags] [, auxParameters]);
 				Screen('DrawTexture', win, me.texture, [], me.mvRect,...
-					me.angleOut, me.filter, me.alphaOut, me.colourOut);
+					me.angleOut, me.filter, me.alphaOut);
 			end
 			me.tick = me.tick + 1;
 		end
@@ -369,15 +309,9 @@ classdef imageStimulus < baseStimulus
 			me.scale = 1;
 			me.mvRect = [];
 			me.dstRect = [];
+			me.width = [];
+			me.height = [];
 			removeTmpProperties(me);
-		end
-
-		% ===================================================================
-		%> @brief nImages
-		%>
-		% ===================================================================
-		function out = get.nImages(me)
-			out = length(me.filePaths);
 		end
 
 	end %---END PUBLIC METHODS---%
@@ -386,79 +320,8 @@ classdef imageStimulus < baseStimulus
 	methods ( Access = protected ) %-------PROTECTED METHODS-----%
 	%=======================================================================
 
-		% ===================================================================
-		%> @brief checkfilePath - loads a file or sets up a directory
-		%>
-		% ===================================================================
-		function checkfilePath(me)
-			if isempty(me.filePath) || (me.selection==0 && exist(me.filePath,'file') ~= 2 && exist(me.filePath,'file') ~= 7)%use our default
-				p = mfilename('fullpath');
-				p = fileparts(p);
-				me.filePath = [p filesep 'Bosch.jpeg'];
-				me.filePaths{1} = me.filePath;
-				me.selection = 1;
-			elseif exist(me.filePath,'dir') == 7
-				findFiles(me);
-			elseif me.selection > 1
-				[p,f,e]=fileparts(me.filePath);
-				for i = 1:me.selection
-					me.filePaths{i} = [p filesep f num2str(i) e];
-					if ~exist(me.filePaths{i},'file');warning('Image %s not available!',me.filePaths{i});end
-				end
-			elseif exist(me.filePath,'file') == 2
-				me.filePath = regexprep(me.filePath,'\~',getenv('HOME'));
-				me.filePath = which(me.filePath);
-				me.filePaths{1} = me.filePath;
-				me.selection = 1;
-			end
-			me.currentImage = me.filePaths{me.selection};
-		end
-
-		% ===================================================================
-		%> @brief setRect
-		%>  setRect makes the PsychRect based on the texture and screen values
-		%>  This is overridden from parent class so we can scale texture
-		%>  using the size value
-		% ===================================================================
-		function setRect(me)
-			if ~isempty(me.texture)
-				%setRect@baseStimulus(me) %call our superclass version first
-				me.dstRect=Screen('Rect',me.texture);
-				me.dstRect = ScaleRect(me.dstRect, me.scale, me.scale);
-				if me.mouseOverride && me.mouseValid
-					me.dstRect = CenterRectOnPointd(me.dstRect, me.mouseX, me.mouseY);
-				else
-					me.dstRect=CenterRectOnPointd(me.dstRect, me.xFinal, me.yFinal);
-				end
-				if me.verbose
-					fprintf('---> stimulus TEXTURE dstRect = %5.5g %5.5g %5.5g %5.5g width = %.2f height = %.2f\n',...
-						me.dstRect(1), me.dstRect(2),me.dstRect(3),me.dstRect(4),...
-						me.dstRect(3)-me.dstRect(1),me.dstRect(4)-me.dstRect(2));
-				end
-				me.szPx = RectWidth(me.dstRect);
-				me.mvRect = me.dstRect;
-			end
-		end
-
-		% ===================================================================
-		%> @brief findFiles
-		%>
-		% ===================================================================
-		function findFiles(me)
-			if exist(me.filePath,'dir') == 7
-				d = dir(me.filePath);
-				n = 0;
-				for i = 1: length(d)
-					if d(i).isdir; continue; end
-					[~,f,e]=fileparts(d(i).name);
-					if regexpi(e,'png|jpeg|jpg|bmp|tif|tiff')
-						n = n + 1;
-						me.filePaths{n} = [me.filePath filesep f e];
-						me.filePaths{n} = regexprep(me.filePaths{n},'\/\/','/');
-					end
-				end
-				if me.selection < 1 || me.selection > me.nImages; me.selection = 1; end
-			end
+		function result = isOdd(~,n)
+			result = logical(mod(n,2));
 		end
 
 	end
