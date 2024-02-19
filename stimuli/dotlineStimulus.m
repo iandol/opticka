@@ -316,6 +316,7 @@ classdef dotlineStimulus < baseStimulus
 			me.width = [];
 			me.height = [];
 			removeTmpProperties(me);
+			me.isSetup = false;
 		end
 
 	end %---END PUBLIC METHODS---%

@@ -1309,7 +1309,7 @@ classdef screenManager < optickaCore
 			r5 = [0 0 r4(3)+3 r4(4)+3];
 
 			if stop
-				c = [1 1 1; 0 0 0; 1 1 1; 0 0 0]';
+				c = [0 0 0; 1 1 1; 0 0 0; 1 1 1]';
 				r = [r4;r3;r2;r]';
 			else
 				c = [0 0 0; 1 1 1; 0 0 0; 1 1 1; 0 0 0]';

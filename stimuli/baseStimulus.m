@@ -252,10 +252,10 @@ classdef baseStimulus < optickaCore & dynamicprops
 			me.alpha = value;
 			if ~me.isInSetColour
 				me.colour = me.colour(1:3); %force colour to be regenerated
-				if ~isempty(findprop(me,'colour2'))
+				if ~isempty(findprop(me,'colour2')) && ~isempty(me.colour2)
 					me.colour2 = [me.colour2(1:3) me.alpha];
 				end
-				if ~isempty(findprop(me,'baseColour'))
+				if ~isempty(findprop(me,'baseColour')) && ~isempty(me.baseColour)
 					me.baseColour = [me.baseColour(1:3) me.alpha];
 				end
 			end
@@ -1185,6 +1185,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 			me.yFinal	= [];
 			me.yFinalD	= [];
 			me.szPx		= [];
+			me.isSetup	= false;
 		end
 
 		% ===================================================================
