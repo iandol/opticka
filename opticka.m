@@ -357,6 +357,8 @@ classdef opticka < optickaCore
 			me.r.screen.bitDepth = me.gv(me.ui.OKbitDepth);
 			
 			me.r.screen.blend = me.gv(me.ui.OKOpenGLBlending);
+
+			me.r.screen.verbosityLevel = me.gd(me.ui.OKverbosityLevel);
 			
 			value = me.gp(me.ui.OKUseGamma);
 			if isprop(me.r.screen,'gammaTable') && isa(me.r.screen.gammaTable,'calibrateLuminance') && ~isempty(me.r.screen.gammaTable)
@@ -376,7 +378,7 @@ classdef opticka < optickaCore
 			me.r.screen.hideFlash = me.gl(me.ui.OKHideFlash);
 			me.r.screen.useRetina = me.gl(me.ui.OKUseRetina);
 			if strcmpi(me.r.screen.bitDepth,'8bit')
-				me.ui.OKAntiAliasing.Value = '0';
+				%me.ui.OKAntiAliasing.Value = '0';
 			end
 			me.r.screen.antiAlias = me.gd(me.ui.OKAntiAliasing);
 			me.r.photoDiode = me.gl(me.ui.OKUsePhotoDiode);

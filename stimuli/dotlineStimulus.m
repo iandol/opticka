@@ -69,6 +69,8 @@ classdef dotlineStimulus < baseStimulus
 		width
 		%> pixel height
 		height
+		%> base colour (usually the background of the screen)
+		baseColour
 	end
 
 	properties (SetAccess = protected, GetAccess = public)
@@ -76,19 +78,21 @@ classdef dotlineStimulus < baseStimulus
 	end
 
 	properties (SetAccess = protected, GetAccess = public, Hidden = true)
-		typeList			= {'dotline'}
+		typeList			= {'circle','square'}
 		interpMethodList	= {'nearest','linear','spline','cubic'}
 		%> properties to ignore in the UI
-		ignorePropertiesUI	= {'nImages','type'}
+		ignorePropertiesUI	= {}
 		filePath			= [];
 	end
 
 	properties (Access = protected)
 		%> allowed properties passed to object upon construction
 		allowedProperties = {'type', 'contrast', ...
+			'itemSize','itemDistance','phase','direction',...
+			'forceOrthogonal','useEven','colour2',...
 			'precision','filter', 'specialFlags'}
 		%>properties to not create transient copies of during setup phase
-		ignoreProperties = {'type', 'scale'}
+		ignoreProperties = {'type', 'scale', 'width', 'height'}
 	end
 
 	%=======================================================================

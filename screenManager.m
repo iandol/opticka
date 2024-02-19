@@ -1281,6 +1281,53 @@ classdef screenManager < optickaCore
 		end
 
 		% ===================================================================
+		function drawPupilCoreMarker(me, sz, x, y, stop)
+		%> @fn drawPupilCoreMarker(me, size, x, y, stop)
+		%> @brief draw pupil core calibration marker
+		%>
+		%> @param size size in degrees
+		%> @param x position in degrees relative to screen center
+		%> @param y position in degrees relative to screen center
+		%> @param is it a stop marker?
+		% ===================================================================
+			if nargin < 5 || isempty(stop); stop = false; end
+			if nargin < 4 || isempty(y); y = 0; end
+			if nargin < 3 || isempty(x); x = 0; end
+			if nargin < 2 || isempty(sz); sz = 5; end
+
+			xo = x;
+			yo = y;
+
+			x = me.xCenter + (x * me.ppd_);
+			y = me.yCenter + (y * me.ppd_);
+			sz = (sz * me.ppd_)/4;
+
+			r = [0 0 sz sz];
+			r2 = [0 0 r(3)+sz r(4)+sz];
+			r3 = [0 0 r2(3)+sz r2(4)+sz];
+			r4 = [0 0 r3(3)+sz r3(4)+sz];
+			r5 = [0 0 r4(3)+3 r4(4)+3];
+
+			if stop
+				c = [1 1 1; 0 0 0; 1 1 1; 0 0 0]';
+				r = [r4;r3;r2;r]';
+			else
+				c = [0 0 0; 1 1 1; 0 0 0; 1 1 1; 0 0 0]';
+				r = [r5;r4;r3;r2;r]';
+			end
+
+			for i = 1: size(r,2)
+				r(:,i) = CenterRectOnPointd(r(:,i),x,y);
+			end
+
+			Screen('FillOval', me.win, c, r, sz*4+5);
+			if stop == false
+				drawSimpleCross(me, sz/me.ppd_/3, [1 1 1], xo, yo, 3);
+			end
+
+		end
+
+		% ===================================================================
 		function drawSpot(me, size, colour, x, y)
 		%> @fn drawSpot(me, size, colour, x, y)
 		%> @brief draw small spot centered on the screen
