@@ -290,6 +290,7 @@ inFixFcn = {
 
 %--------------------exit fixation phase
 fixExitFcn = { 
+	% reset fixation timers to maintain fixation for tS.stimulusFixTime seconds
 	@()updateFixationValues(eT,[],[],[],tS.stimulusFixTime); 
 	@()show(stims); % show all stims
 	@()trackerMessage(eT,'END_FIX'); %eyetracker message saved to data stream
@@ -300,7 +301,9 @@ fixExitFcn = {
 %========================================================
 
 stimEntryFcn = {
-	% send stimulus value strobe (value set by updateVariables(me) function)
+	% send an eyeTracker sync message (reset relative time to 0 after next flip)
+	@()doSyncTime(me);
+	% send stimulus value strobe (value alreadyset by updateVariables(me) function)
 	@()doStrobe(me,true);
 };
 
@@ -475,7 +478,7 @@ stateInfoTmp = {
 'pause'		'prefix'	inf		pauseEntryFcn	{}				{}				pauseExitFcn;
 %---------------------------------------------------------------------------------------------
 'prefix'	'fixate'	0.75	prefixEntryFcn	prefixFcn		{}				{};
-'fixate'	'incorrect'	10		fixEntryFcn		fixFcn			inFixFcn		fixExitFcn;
+'fixate'	'breakfix'	10		fixEntryFcn		fixFcn			inFixFcn		fixExitFcn;
 'stimulus'	'incorrect'	10		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn;
 'correct'	'prefix'	0.1		correctEntryFcn	correctFcn		{}				correctExitFcn;
 'incorrect'	'timeout'	0.1		incEntryFcn		incFcn			{}				incExitFcn;

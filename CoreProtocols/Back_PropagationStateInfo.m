@@ -1,20 +1,5 @@
-%> BACK-PROPAGATION state configuration file for runExperiment.runTask (full
-%> behavioural task design). The following class objects
-%> are already loaded by runTask() and available to use; each object has
-%> methods (functions) useful for running the task:
-%>
-%> me		= runExperiment object ('self' in OOP terminology) 
-%> s		= screenManager object
-%> aM		= audioManager object
-%> stims	= our list of stimuli (metaStimulus class)
-%> sM		= State Machine (stateMachine class)
-%> task		= task sequence (taskSequence class)
-%> eT		= eyetracker manager
-%> io		= digital I/O to recording system
-%> rM		= Reward Manager (LabJack or Arduino TTL trigger to reward system/Magstim)
-%> bR		= behavioural record plot (on-screen GUI during a task run)
-%> uF       = user functions - add your own functions to this class
-%> tS		= structure to hold general variables, will be saved as part of the data
+%> BACK-PROPAGATION -- fast full-screen receptive field mapping for many
+%> channels.
 
 %==================================================================
 %------------------------General Settings--------------------------
@@ -25,17 +10,17 @@
 % functionality, not just the state machine. Other switches like
 % includeErrors are referenced in this state machine file to change with
 % functions are added to the state machine states…
+tS.name						= 'Back-Propagation'; %==name of this protocol
 tS.useTask					= true;		%==use taskSequence (randomises stimulus variables)
 tS.rewardTime				= 250;		%==TTL time in milliseconds
 tS.rewardPin				= 2;		%==Output pin, 2 by default with Arduino.
 tS.keyExclusionPattern		= ["fixate","stimulus"]; %==which states to skip keyboard checking
-tS.enableTrainingKeys		= true;		%==enable keys useful during task training, but not for data recording
+tS.enableTrainingKeys		= false;		%==enable keys useful during task training, but not for data recording
 tS.recordEyePosition		= false;	%==record local copy of eye position, **in addition** to the eyetracker?
 tS.askForComments			= true;		%==UI requestor asks for comments before/after run
 tS.saveData					= true;		%==save behavioural and eye movement data?
 tS.showBehaviourPlot		= true;		%==open the behaviourPlot figure? Can cause more memory use…
 tS.includeErrors			= false;	%==do we update the trial number even for incorrect saccade/fixate, if true then we call updateTask for both correct and incorrect, otherwise we only call updateTask() for correct responses
-tS.name						= 'back-propagation'; %==name of this protocol
 tS.nStims					= stims.n;	%==number of stimuli, taken from metaStimulus object
 tS.tOut						= 4;		%==if wrong response, how long to time out before next trial
 tS.CORRECT					= 1;		%==the code to send eyetracker for correct trials
@@ -197,10 +182,8 @@ prefixEntryFn = {
 	@()hide(stims); % hide all stimuli
 	% update the fixation window to initial values
 	@()updateFixationValues(eT,tS.fixX,tS.fixY,[],tS.firstFixTime); %reset fixation window
-	@()startRecording(eT); % start eyelink recording for this trial (tobii ignores this)
-	% tracker messages that define a trial start
-	@()trackerMessage(eT,'V_RT MESSAGE END_FIX END_RT'); % Eyelink commands
-	@()trackerMessage(eT,sprintf('TRIALID %i',getTaskIndex(me))); %Eyelink start trial marker
+	% send the trial start messages to the eyetracker
+	@()trackerTrialStart(eT, getTaskIndex(me));
 	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
 	% you can add any other messages, such as stimulus values as needed,
 	% e.g. @()trackerMessage(eT,['MSG:ANGLE' num2str(stims{1}.angleOut)])
@@ -213,7 +196,8 @@ prefixFn = {
 };
 
 prefixExitFn = {
-	@()trackerDrawStatus(eT,'Init Fix...', stims.stimulusPositions);
+	@()trackerMessage(eT,'MSG:Start Fix');
+	@()trackerDrawStatus(eT, 'Init Fix...', stims.stimulusPositions, 0);
 };
 
 %========================================================
@@ -245,7 +229,6 @@ inFixFn = {
 
 %--------------------exit fixation phase
 fixExitFn = { 
-	@()statusMessage(eT,'Show Stimulus...');
 	% reset fixation timers to maintain fixation for tS.stimulusFixTime seconds
 	@()updateFixationValues(eT,[],[],[],tS.stimulusFixTime); 
 	@()show(stims); % show all stims
@@ -257,9 +240,9 @@ fixExitFn = {
 %========================================================
 
 stimEntryFn = {
-	% send an eyeTracker sync message (reset relative time to 0 after first flip of this state)
+	% send an eyeTracker sync message (reset relative time to 0 after next flip)
 	@()doSyncTime(me);
-	% send stimulus value strobe (value set by updateVariables(me) function)
+	% send stimulus value strobe (value alreadyset by updateVariables(me) function)
 	@()doStrobe(me,true);
 };
 
@@ -279,7 +262,7 @@ maintainFixFn = {
 	% otherwise 'breakfix' is returned and the state machine will jump to the
 	% breakfix state. If neither condition matches, then the state table below
 	% defines that after 5 seconds we will switch to the incorrect state.
-	@()testSearchHoldFixation(eT,'correct','incorrect'); 
+	@()testHoldFixation(eT,'correct','incorrect'); 
 };
 
 %as we exit stim presentation state

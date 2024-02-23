@@ -916,10 +916,13 @@ classdef runExperiment < optickaCore
 				tS.initialTaskIdx.vars		= task.outValues;
 				
 				%===========================double check the labJackT handle is still valid
-				if isa(io,'labJackT') && ~io.isHandleValid
-					io.close;
-					io.open;
-					disp('===>>> We had to reopen the labJackT to ensure a stable connection...')
+				if isa(io,'labJackT') 
+					if ~io.isHandleValid
+						io.close;
+						io.open;
+						disp('===>>> We reopened the labJackT to ensure a stable connection...');
+					end
+					assert(io.isServerRunning, true, '===>>> LabJack T Server Not Running!!!');
 				end
 				
 				%===========================set up our behavioural plot
@@ -1973,10 +1976,14 @@ classdef runExperiment < optickaCore
 				io.verbose = me.verbose;
 				io.name = 'runinstance';
 				open(io);
+				WaitSecs(0.2);
 				if io.isOpen
 					fprintf('===> Using labjackT for strobed I/O...\n')
 				else
 					warning('===> !!! labJackT could not properly open !!!');
+				end
+				if ~io.isServerRunning
+					error('===> !!! labJackT server not running !!!');
 				end
 			elseif strcmp(me.strobe.device,'labjack')
 				if ~isa(me.lJack,'labjack')
