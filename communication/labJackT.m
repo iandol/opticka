@@ -44,8 +44,8 @@ classdef labJackT < handle
 		library char			= '/usr/local/lib/libLabJackM'
 		%> do we log everything to the command window?
 		verbose logical			= true
-		%> allows the constructor to run the open method immediately (default)
-		openNow logical			= true
+		%> allows the constructor to run the open method immediately
+		openNow logical			= false
 		%> silentMode=true allows one to gracefully fail methods without a labJack connected
 		silentMode logical		= false
 		%> comment

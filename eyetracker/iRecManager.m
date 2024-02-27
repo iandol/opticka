@@ -44,7 +44,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 						'ip', '127.0.0.1',...
 						'udpport', 35000,... % used to send messages
 						'tcpport', 35001,... % used to send commands
-						'stimulus','animated',... % calibration stimulus can be animated, movie
+						'stimulus','animated',... % calibration stimulus can be animated, core, movie
 						'size', 2,... % size of calibration target in degrees
 						'movie', [],... % if movie optionally pass a filename 
 						'calPositions', [-12 0; 0 -12; 0 0; 0 12; 12 0],...
@@ -145,7 +145,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 
 			me.smoothing.sampleRate = me.sampleRate;
 
-			if strcmp(me.calibration.stimulus,'movie')
+			if strcmpi(me.calibration.stimulus,'movie')
 				if isempty(me.calStim) || ~isa(me.calStim,'movieStimulus')
 					me.calStim = movieStimulus('size',me.calibration.size,'fileName',me.calibration.movie);
 				else
@@ -153,7 +153,10 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 					me.calStim = me.calibration.movie;
 					me.calStim.size = me.calibration.size;
 				end
-			elseif strcmp(me.calibration.stimulus,'animated')
+			elseif strcmpi(me.calibration.stimulus,'pupilcore')
+				me.calStim = pupilCoreStimulus();
+				me.calStim.size = me.calibration.size;
+			elseif strcmpi(me.calibration.stimulus,'animated')
 				me.calStim = fixationCrossStimulus('size',me.calibration.size,'lineWidth',me.calibration.size/8,'type','pulse');
 			else
 				if isempty(me.calStim)

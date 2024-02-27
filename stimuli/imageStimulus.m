@@ -185,7 +185,7 @@ classdef imageStimulus < baseStimulus
 				me.xPositionOut = value * me.ppd;
 			end
 			function set_yPositionOut(me,value)
-				me.yPositionOut = value*me.ppd; 
+				me.yPositionOut = value * me.ppd; 
 			end
 			
 		end
