@@ -11,6 +11,7 @@ classdef pupilCoreStimulus < handle
 		ppd = 36
 		xPositionOut = 0
 		yPositionOut = 0
+		stop = false
 	end
 
 	methods
@@ -26,7 +27,7 @@ classdef pupilCoreStimulus < handle
 		end
 
 		function draw(me,varargin)
-			me.sM.drawPupilCoreMarker(me.size,me.xPositionOut,me.yPositionOut)
+			me.sM.drawPupilCoreMarker(me.size,me.xPositionOut,me.yPositionOut,me.stop)
 		end
 
 		function animate(me)
