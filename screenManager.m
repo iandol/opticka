@@ -571,7 +571,7 @@ classdef screenManager < optickaCore
 				if stereo > 0 && ~isempty(me.anaglyphLeft) && ~isempty(me.anaglyphRight)
 					SetAnaglyphStereoParameters('LeftGains', me.win,  me.anaglyphLeft);
     				SetAnaglyphStereoParameters('RightGains', me.win, me.anaglyphRight);
-				else
+				elseif stereo > 0
 					switch stereo
 						case 6
     						SetAnaglyphStereoParameters('LeftGains', me.win,  [1.0 0.0 0.0]);
