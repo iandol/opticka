@@ -79,6 +79,7 @@ classdef movieStimulus < baseStimulus
 		family = 'movie'
 		%> handle from OpenMovie
 		movie
+		%> details
 		duration
 		fps
 		width

@@ -351,8 +351,7 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 			end
 
 			if strcmpi(me.calibration.stimulus,'movie')
-				me.calStim.movie.reset();
-				%me.calStim.movie.setup(me.screen);
+				try me.calStim.setCleanState(); end
 			end
 
 			if ~isempty(me.calib) && me.calib.wasSkipped ~= 1

@@ -1,27 +1,28 @@
 classdef tittaAdvMovieStimulus < handle
     properties (Access=private, Constant)
-        calStateEnum = struct('undefined',0, 'showing',1, 'blinking',2);
+        calStateEnum = struct('undefined',0, 'showing',1, 'blinking',2)
     end
     properties (SetAccess=private)
-        calState;
-        pointStartT;
-        blinkStartT;
+        calState
+        pointStartT
+        blinkStartT
     end
     properties (Dependent, SetAccess=private)
-        pos;    % can't set position here, you set it through doDraw() with drawCmd 'new'
+        pos   % can't set position here, you set it through doDraw() with drawCmd 'new'
     end
     properties
-        blinkInterval       = 0.3;
-        blinkCount          = 2;
-        bgColor             = 127;
-        videoSize           = [];
+        blinkInterval       = 0.3
+        blinkCount          = 2
+        bgColor             = 127
+        videoSize           = []
     end
-    properties (Access=private, Hidden = true)
-        currentPoint;
-        qFloatColorRange;
-        cumDurations;
-        videoPlayer;
-        tex = 0;
+    properties (Access=private)
+		qFloatColorRange
+        currentPoint
+        cumDurations
+        videoPlayer
+		screen
+        tex = 0
     end
     
     
@@ -32,14 +33,17 @@ classdef tittaAdvMovieStimulus < handle
 
         function setVideoPlayer(obj,videoPlayer)
             obj.videoPlayer = videoPlayer;
+			if videoPlayer.isSetup
+				obj.screen = videoPlayer.sM;
+			end
         end
         
         function setCleanState(obj)
             obj.calState        = obj.calStateEnum.undefined;
             obj.currentPoint    = nan(1,3);
-            if ~isempty(obj.videoPlayer)
-                obj.videoPlayer.reset();
-            end
+			if ~isempty(obj.videoPlayer)
+                try obj.videoPlayer.reset(); end %#ok<*TRYNC>
+			end
         end
 
         function pos = get.pos(obj)
@@ -61,7 +65,11 @@ classdef tittaAdvMovieStimulus < handle
                     obj.setCleanState();
                 end
                 return;
-            end
+			end
+
+			if ~obj.videoPlayer.isSetup
+				setup(obj.videoPlayer, obj.screen);
+			end
             
             % now that we have a wpnt, interrogate window
             if isempty(obj.qFloatColorRange) && ~isempty(wpnt)
