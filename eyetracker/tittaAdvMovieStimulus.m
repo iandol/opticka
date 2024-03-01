@@ -27,7 +27,11 @@ classdef tittaAdvMovieStimulus < handle
     
     
     methods
-        function obj = tittaAdvMovieStimulus()
+		function obj = tittaAdvMovieStimulus(screen)
+			if exist('screen','var')
+				obj.screen = screen;
+				obj.bgColor = round(screen.backgroundColour * 255);
+			end
             obj.setCleanState();
         end
 
@@ -67,6 +71,7 @@ classdef tittaAdvMovieStimulus < handle
                 return;
 			end
 
+			% make sure movieStimulus is setup
 			if ~obj.videoPlayer.isSetup
 				setup(obj.videoPlayer, obj.screen);
 			end
@@ -106,7 +111,9 @@ classdef tittaAdvMovieStimulus < handle
             
             if ~isempty(wpnt)
 				obj.videoPlayer.updateXY(curPos(1),curPos(2));
-                obj.videoPlayer.draw();
+				if (obj.calState~=obj.calStateEnum.blinking || mod((curT-obj.blinkStartT)/obj.blinkInterval/2,1)>.5)
+					obj.videoPlayer.draw();
+				end
             end
         end
     end

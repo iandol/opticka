@@ -18,13 +18,14 @@ classdef behaviouralRecord < optickaCore
 		date				= []
 		info				= ''
 		xAll				= []
-		yAll				= [];
+		yAll				= []
+		pupilAll			= []
 		correctStateName	= "correct"
 		correctStateValue	= 1;
 		breakStateName		= ["breakfix", "incorrect"]
-		breakStateValue		= -1;
-		rewardTime			= 150;
-		rewardVolume		= 3.6067e-04; %for 1ms
+		breakStateValue		= -1
+		rewardTime			= 300
+		rewardVolume		= 3.6067e-04 %for 1ms
 	end
 	
 	properties (GetAccess = public, SetAccess = protected)
@@ -145,11 +146,11 @@ classdef behaviouralRecord < optickaCore
 			me.h.box = tiledlayout(me.h.panel,3,3);
 			me.h.box.Padding='compact';
 			me.h.axis1 = nexttile(me.h.box, [2 2]); me.h.axis1.FontName = SansFont;
-			me.h.axis2 = nexttile(me.h.box, [1 2]); me.h.axis2.FontName = SansFont;
+			me.h.axis2 = nexttile(me.h.box); me.h.axis2.FontName = SansFont;
 			me.h.axis3 = nexttile(me.h.box); me.h.axis3.FontName = SansFont;
 			me.h.axis4 = nexttile(me.h.box); me.h.axis4.FontName = SansFont;
 			me.h.axis5 = nexttile(me.h.box); me.h.axis5.FontName = SansFont;
-			
+			me.h.axis6 = nexttile(me.h.box); me.h.axis5.FontName = SansFont;
 
 			figure(me.h.root);
 			colormap(me.h.root, 'turbo');
@@ -169,9 +170,12 @@ classdef behaviouralRecord < optickaCore
 			title(me.h.axis3,'Hit (blue) / Miss (red)');
 			title(me.h.axis4,'Average (n=10) Hit / Miss %');
 			title(me.h.axis5,'Last Eye Position');
-			set([me.h.axis1 me.h.axis2 me.h.axis3 me.h.axis4 me.h.axis5], ...
+			title(me.h.axis5,'Last Pupil Size');
+			set([me.h.axis1 me.h.axis2 me.h.axis3 me.h.axis4 me.h.axis5 me.h.axis6], ...
 				{'Box','XGrid','YGrid','FontName'},{'on','on','on',SansFont});
+			WaitSecs('YieldSecs',0.01);
 			drawnow;
+			WaitSecs('YieldSecs',0.01);
 			me.isOpen = true;
 		end
 		
@@ -220,6 +224,7 @@ classdef behaviouralRecord < optickaCore
 				me.inittime(me.tick) = eT.fixation.initTime;
 				me.xAll = eT.xAll;
 				me.yAll = eT.yAll;
+				me.pupilAll = eT.pupilAll;
 			else
 				me.rt2(me.tick) = NaN;
 				me.radius(me.tick) = NaN;
@@ -235,6 +240,7 @@ classdef behaviouralRecord < optickaCore
 				me.trials(n).response = me.response(n);
 				me.trials(n).xAll = me.xAll;
 				me.trials(n).yAll = me.yAll;
+				me.trials(n).pupilAll = me.pupilAll;
 			end
 		end
 		
@@ -326,7 +332,7 @@ classdef behaviouralRecord < optickaCore
 			else
 				if ~isempty(me.xAll)
 					hold(me.h.axis5,'off');
-					plot(me.h.axis5, me.xAll, me.yAll, 'b.','MarkerSize',15,'Color',[0.5 0.5 0.8]);
+					plot(me.h.axis5, me.xAll, me.yAll, '-','Color',[0.5 0.5 0.8]);
 					hold(me.h.axis5,'on');
 					plot(me.h.axis5, me.xAll(1), me.yAll(1), 'g.','MarkerSize',18);
 					plot(me.h.axis5, me.xAll(end), me.yAll(end), 'r.','MarkerSize',18,'Color',[1 0.5 0]);
@@ -335,8 +341,22 @@ classdef behaviouralRecord < optickaCore
 			axis(me.h.axis5, 'ij');
 			xlim(me.h.axis5,[-15 15]);
 			ylim(me.h.axis5,[-15 15]);
+
+			%axis 6
+			if me.plotOnly && length(me.trials) > 1
+				set(me.h.axis6,'NextPlot','add')
+				for i = 1:length(me.trials)
+					if isfield(me.trials(i),'pupilAll')
+						plot(me.h.axis6, me.trials(i).pupilAll, 'k-');
+					end
+				end
+			else
+				if ~isempty(me.pupilAll)
+					plot(me.h.axis6, me.pupilAll,'k-');
+				end
+			end
 			
-			set([me.h.axis1 me.h.axis2 me.h.axis3 me.h.axis4 me.h.axis5], ...
+			set([me.h.axis1 me.h.axis2 me.h.axis3 me.h.axis4 me.h.axis5 me.h.axis6], ...
 				{'Box','XGrid','YGrid','FontName'},{'on','on','on',me.SansFont});
 			
 			xlabel(me.h.axis1, 'Trial Number')
@@ -352,6 +372,7 @@ classdef behaviouralRecord < optickaCore
 			title(me.h.axis3,'Hit (blue) / Miss (red)')
 			title(me.h.axis2,'Average (n=10) Hit / Miss %')
 			title(me.h.axis5,'Last Eye Position');
+			title(me.h.axis6,'Last Pupil Data');
 
 			t = {['START @ ' char(me.date)]};
 			try d = me.trials(end).now - me.startTime; catch; d = 0; end

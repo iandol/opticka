@@ -1300,7 +1300,7 @@ classdef screenManager < optickaCore
 
 			x = me.xCenter + (x * me.ppd_);
 			y = me.yCenter + (y * me.ppd_);
-			sz = (sz * me.ppd_)/4;
+			sz = (sz(1) * me.ppd_)/4;
 
 			r = [0 0 sz sz];
 			r2 = [0 0 r(3)+sz r(4)+sz];
@@ -1309,7 +1309,7 @@ classdef screenManager < optickaCore
 			r5 = [0 0 r4(3)+3 r4(4)+3];
 
 			if stop
-				c = [0 0 0; 1 1 1; 0 0 0; 1 1 1]';
+				c = [0 0 0 1; 1 1 1; 0 0 0; 1 1 1]';
 				r = [r4;r3;r2;r]';
 			else
 				c = [0 0 0; 1 1 1; 0 0 0; 1 1 1; 0 0 0]';

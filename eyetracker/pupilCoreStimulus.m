@@ -12,6 +12,7 @@ classdef pupilCoreStimulus < handle
 		xPositionOut = 0
 		yPositionOut = 0
 		stop = false
+		isVisible = true
 	end
 
 	methods
@@ -27,7 +28,9 @@ classdef pupilCoreStimulus < handle
 		end
 
 		function draw(me,varargin)
-			me.sM.drawPupilCoreMarker(me.size,me.xPositionOut,me.yPositionOut,me.stop)
+			if me.isVisible
+				me.sM.drawPupilCoreMarker(me.size,me.xPositionOut,me.yPositionOut,me.stop);
+			end
 		end
 
 		function animate(me)
@@ -41,6 +44,14 @@ classdef pupilCoreStimulus < handle
 		function reset(me)
 			me.sM = [];
 			me.ppd = 36;
+		end
+
+		function hide(me)
+			me.isVisible = false;
+		end
+
+		function show(me)
+			me.isVisible = true;
 		end
 
 		function set.xPositionOut(me, value)

@@ -169,7 +169,10 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 			end
 			me.settings.calibrateEye				= me.calibration.eyeUsed;
 			me.settings.cal.bgColor					= floor(me.screen.backgroundColour*255);
+			me.settings.advcal.bgColor				= me.settings.cal.bgColor;
+			me.settings.UI.advcal.bgColor			= me.settings.cal.bgColor;
 			me.settings.UI.setup.bgColor			= me.settings.cal.bgColor;
+			me.settings.UI.val.bgColor				= me.settings.cal.bgColor;
 			me.settings.UI.setup.eyeClr				= 255;
 			me.settings.UI.setup.showHeadToSubject	= true;
 			me.settings.UI.setup.showInstructionToSubject = false;
@@ -182,11 +185,10 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 			me.settings.UI.val.hover.text.font		= me.monoFont;
 			me.settings.UI.val.menu.text.font		= me.monoFont;
 			if strcmpi(me.calibration.stimulus,'movie') || strcmpi(me.calibration.manualMode,'Smart')
-				me.calStim							= tittaAdvMovieStimulus();
+				me.calStim							= tittaAdvMovieStimulus(me.screen);
+				me.calStim.bgColor					= me.settings.cal.bgColor;
 				me.calStim.blinkCount				= 3;
-				if isempty(me.calibration.movie)
-					me.calibration.movie			= movieStimulus('size',4);
-				end
+				me.calibration.movie				= movieStimulus('size',5,'filePath',me.calibration.movie);
 				reset(me.calibration.movie);
 				setup(me.calibration.movie, me.screen);
 				me.calStim.setVideoPlayer(me.calibration.movie);
@@ -194,12 +196,24 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 				if me.calibration.manual
 					me.settings.advcal.drawFunction	= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);
 				end
-			else
-				me.calStim							= AnimatedCalibrationDisplay();
+			elseif strcmpi(me.calibration.stimulus,'pupilcore')
+				me.calStim							= tittaCalStimulus(me.screen);
+				me.calStim.bgColor					= me.settings.cal.bgColor;
 				me.calStim.moveTime					= 0.75;
 				me.calStim.oscillatePeriod			= 1;
 				me.calStim.blinkCount				= 4;
+				me.calStim.fixBackColor				= 0;
+				me.calStim.fixFrontColor			= 255;
+				me.settings.cal.drawFunction		= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);
+				if me.calibration.manual
+					me.settings.advcal.drawFunction	= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);
+				end
+			else
+				me.calStim							= AnimatedCalibrationDisplay();
 				me.calStim.bgColor					= me.settings.cal.bgColor;
+				me.calStim.moveTime					= 0.75;
+				me.calStim.oscillatePeriod			= 1;
+				me.calStim.blinkCount				= 4;
 				me.calStim.fixBackColor				= 0;
 				me.calStim.fixFrontColor			= 255;
 				me.settings.cal.drawFunction		= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);
@@ -229,6 +243,8 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 			me.settings.val.pointNotifyFunction	= @tittaCalCallback;
 			
 			if me.calibration.manual
+				me.settings.advcal.cal.pointPos				= me.calibration.calPositions;
+				me.settings.advcal.val.pointPos				= me.calibration.valPositions;
 				me.settings.advcal.cal.pointNotifyFunction	= @tittaCalCallback;
 				me.settings.advcal.val.pointNotifyFunction	= @tittaCalCallback;
 			end

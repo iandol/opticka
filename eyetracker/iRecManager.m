@@ -157,7 +157,9 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 				me.calStim = pupilCoreStimulus();
 				me.calStim.size = me.calibration.size;
 			elseif strcmpi(me.calibration.stimulus,'animated')
-				me.calStim = fixationCrossStimulus('size',me.calibration.size,'lineWidth',me.calibration.size/8,'type','pulse');
+				lw = me.calibration.size/8;
+				if lw > 0.3; lw = 0.3; end
+				me.calStim = fixationCrossStimulus('size',me.calibration.size,'lineWidth',lw,'type','pulse');
 			else
 				if isempty(me.calStim)
 					me.calStim = fixationCrossStimulus('size',me.calibration.size,'lineWidth',me.calibration.size/8);
@@ -389,9 +391,9 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 											me.turnOnLED(k,rM);
 										end
 										lastK = k;
-										if thisPos > 0
-											thisX = vpos(thisPos,1);
-											thisY = vpos(thisPos,2);
+										if thisPos > 0 && thisPos <= nPositions
+											thisX = cpos(thisPos,1);
+											thisY = cpos(thisPos,2);
 											f.xPositionOut = thisX;
 											f.yPositionOut = thisY;
 											update(f);
@@ -476,7 +478,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 											me.turnOnLED(k,rM);
 										end
 										lastK = k;
-										if thisPos > 0
+										if thisPos > 0 && thisPos <= nPositions
 											thisX = vpos(thisPos,1);
 											thisY = vpos(thisPos,2);
 											f.xPositionOut = thisX;
