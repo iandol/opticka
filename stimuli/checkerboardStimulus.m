@@ -158,7 +158,7 @@ classdef checkerboardStimulus < baseStimulus
 					me.([fn{j} 'Out']) = me.(fn{j}); %copy our property value to our tempory copy
 				end
 			end
-			
+
 			addRuntimeProperties(me);
 			
 			if isempty(me.findprop('rotateMode'));p=me.addprop('rotateMode');p.Transient=true;p.Hidden=true;end
@@ -379,6 +379,8 @@ classdef checkerboardStimulus < baseStimulus
 					me.baseColour = [value(1:3) me.alpha]; %force our alpha to override
 				case 1
 					me.baseColour = [value value value me.alpha]; %construct RGBA
+				case 0
+					me.baseColour = [];
 				otherwise
 					me.baseColour = [1 1 1 me.alpha]; %return white for everything else	
 			end

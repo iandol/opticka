@@ -356,7 +356,6 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 						while cloop
 							a = a + 1;
 							me.getSample();
-							drawGrid(s);
 							draw(f);
 							animate(f);
 							flip(s);
@@ -441,7 +440,6 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 						while cloop
 							a = a + 1;
 							me.getSample();
-							drawGrid(s);
 							draw(f);
 							animate(f);
 							flip(s);

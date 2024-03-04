@@ -174,9 +174,6 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 			me.settings.UI.setup.bgColor			= me.settings.cal.bgColor;
 			me.settings.UI.val.bgColor				= me.settings.cal.bgColor;
 			me.settings.UI.setup.eyeClr				= 255;
-			me.settings.UI.setup.showHeadToSubject	= true;
-			me.settings.UI.setup.showInstructionToSubject = false;
-			me.settings.UI.setup.showFixPointsToSubject = false;
 			me.settings.UI.setup.instruct.font		= me.sansFont;
 			me.settings.UI.button.setup.text.font	= me.sansFont;
 			me.settings.UI.button.val.text.font		= me.sansFont;

@@ -380,12 +380,6 @@ classdef imageStimulus < baseStimulus
 			out = length(me.filePaths);
 		end
 
-	end %---END PUBLIC METHODS---%
-
-	%=======================================================================
-	methods ( Access = protected ) %-------PROTECTED METHODS-----%
-	%=======================================================================
-
 		% ===================================================================
 		%> @brief checkfilePath - loads a file or sets up a directory
 		%>
@@ -407,12 +401,26 @@ classdef imageStimulus < baseStimulus
 				end
 			elseif exist(me.filePath,'file') == 2
 				me.filePath = regexprep(me.filePath,'\~',getenv('HOME'));
-				me.filePath = which(me.filePath);
+				me.filePaths = {};
 				me.filePaths{1} = me.filePath;
 				me.selection = 1;
 			end
+			if exist(me.filePath,'file') ~= 2 && exist(me.filePath,'file') ~= 7
+				p = mfilename('fullpath');
+				p = fileparts(p);
+				me.filePath = [p filesep 'Bosch.jpeg'];
+				me.filePaths{1} = me.filePath;
+				me.selection = 1;
+				warning('--->>> imageStimulus couldn''t find correct image, reverted to default!')
+			end
 			me.currentImage = me.filePaths{me.selection};
 		end
+
+	end %---END PUBLIC METHODS---%
+
+	%=======================================================================
+	methods ( Access = protected ) %-------PROTECTED METHODS-----%
+	%=======================================================================
 
 		% ===================================================================
 		%> @brief setRect

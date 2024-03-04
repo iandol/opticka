@@ -1309,10 +1309,10 @@ classdef screenManager < optickaCore
 			r5 = [0 0 r4(3)+3 r4(4)+3];
 
 			if stop
-				c = [0 0 0 1; 1 1 1; 0 0 0; 1 1 1]';
+				c = [0 0 0 1; 1 1 1 1; 0 0 0 1; 1 1 1 1]';
 				r = [r4;r3;r2;r]';
 			else
-				c = [0 0 0; 1 1 1; 0 0 0; 1 1 1; 0 0 0]';
+				c = [0 0 0 1; 1 1 1 1; 0 0 0 1; 1 1 1 1; 0 0 0 1]';
 				r = [r5;r4;r3;r2;r]';
 			end
 
@@ -1320,7 +1320,7 @@ classdef screenManager < optickaCore
 				r(:,i) = CenterRectOnPointd(r(:,i),x,y);
 			end
 
-			Screen('FillOval', me.win, c, r, sz*4+5);
+			Screen('FillOval', me.win, c, r);
 			if stop == false
 				drawSimpleCross(me, sz/me.ppd_/3, [1 1 1], xo, yo, 3);
 			end

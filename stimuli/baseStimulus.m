@@ -838,6 +838,9 @@ classdef baseStimulus < optickaCore & dynamicprops
 			
 			if strcmpi(tagName,'alpha')
 				me.handles.colour_num.Value = num2str(me.colour, '%g ');
+				if isprop(me,'colour2') 
+					me.handles.colour2_num.Value = num2str(me.colour2, '%g ');
+				end
 				if isprop(me,'baseColour') 
 					me.handles.baseColour_num.Value = num2str(me.baseColour, '%g ');
 				end
@@ -859,6 +862,10 @@ classdef baseStimulus < optickaCore & dynamicprops
 				if isprop(me,'correctBaseColour') && me.correctBaseColour
 					me.handles.baseColour_num.Value = num2str(me.baseColour, '%g ');
 				end
+			end
+
+			if strcmpi(tagName,'filePath') && isa(me,'imageStimulus')
+				me.checkfilePath();
 			end
 			
 			notify(me,'readPanelUpdate');

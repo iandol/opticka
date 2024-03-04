@@ -769,10 +769,11 @@ classdef eyetrackerCore < optickaCore
 		end
 		
 		% ===================================================================
+		%> @fn drawEyePosition
 		%> @brief draw the current eye position on the main PTB display
 		%>
 		% ===================================================================
-		function drawEyePosition(me,varargin)
+		function drawEyePosition(me, ~)
 			if (me.isDummy || me.isConnected) && isa(me.screen,'screenManager') && me.screen.isOpen && ~isempty(me.x) && ~isempty(me.y)
 				xy = toPixels(me,[me.x-me.offset.X me.y-me.offset.Y]);
 				if me.isFix
