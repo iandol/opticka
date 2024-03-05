@@ -160,22 +160,24 @@ classdef behaviouralRecord < optickaCore
 			xlabel(me.h.axis3, 'Group');
 			xlabel(me.h.axis4, '#');
 			xlabel(me.h.axis5, 'x');
+			xlabel(me.h.axis6, 'Sample');
 			ylabel(me.h.axis1, 'Yes / No');
 			ylabel(me.h.axis2, 'Number #');
 			ylabel(me.h.axis3, '% success');
 			ylabel(me.h.axis4, '% success');
 			ylabel(me.h.axis5, 'y');
+			xlabel(me.h.axis6, 'Pupil Size');
 			title(me.h.axis1,'Success () / Fail ()');
 			title(me.h.axis2,'Response Times');
 			title(me.h.axis3,'Hit (blue) / Miss (red)');
 			title(me.h.axis4,'Average (n=10) Hit / Miss %');
 			title(me.h.axis5,'Last Eye Position');
-			title(me.h.axis5,'Last Pupil Size');
+			title(me.h.axis6,'Last Pupil Size');
 			set([me.h.axis1 me.h.axis2 me.h.axis3 me.h.axis4 me.h.axis5 me.h.axis6], ...
 				{'Box','XGrid','YGrid','FontName'},{'on','on','on',SansFont});
-			WaitSecs('YieldSecs',0.01);
+			WaitSecs('YieldSecs',0.02);
 			drawnow;
-			WaitSecs('YieldSecs',0.01);
+			WaitSecs('YieldSecs',0.02);
 			me.isOpen = true;
 		end
 		
@@ -363,10 +365,12 @@ classdef behaviouralRecord < optickaCore
 			xlabel(me.h.axis2, 'Averaged Point')
 			xlabel(me.h.axis4, 'Time (ms)')
 			xlabel(me.h.axis5, 'X')
+			xlabel(me.h.axis6, 'Sample')
 			ylabel(me.h.axis2, '% success')
 			ylabel(me.h.axis3, '% success')
 			ylabel(me.h.axis4, 'N')
 			ylabel(me.h.axis5, 'Y')
+			ylabel(me.h.axis6, 'Pupil Size')
 			title(me.h.axis1,['Success (' num2str(hitn) ') / Fail (all=' num2str(missn) ' | break=' num2str(breakn) ' | abort=' num2str(missn-breakn) ')'])
 			title(me.h.axis4,sprintf('Time:  total: %g | fixinit: %g',mean(me.rt1),mean(me.rt2)));
 			title(me.h.axis3,'Hit (blue) / Miss (red)')

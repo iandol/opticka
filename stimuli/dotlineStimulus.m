@@ -168,6 +168,7 @@ classdef dotlineStimulus < baseStimulus
 			me.inSetup = false; me.isSetup = true;
 
 			makeLine(me);
+
 			computePosition(me);
 			if me.doAnimator
 				setup(me.animator, me);
@@ -193,11 +194,10 @@ classdef dotlineStimulus < baseStimulus
 		% ===================================================================
 		function makeLine(me)
 			tt = tic;
-
 			ep = me.sizeOut;
-			es = me.itemSize * me.ppd;
+			es = me.itemSizeOut * me.ppd;
 			mp = ep / 2;
-			dp = me.itemDistance * me.ppd;
+			dp = me.itemDistanceOut * me.ppd;
 
 			phase = me.phaseOut / 360;
 
@@ -215,8 +215,8 @@ classdef dotlineStimulus < baseStimulus
 			owin = Screen('OpenOffscreenWindow',me.sM.win,[me.sM.backgroundColour(1:3) 0], ...
 				lrect,8,1,[]);
 
-			c1 = me.colourOut(1:3) * me.contrast;
-			c2 = me.colour2Out(1:3) * me.contrast;
+			c1 = me.mix(me.colourOut(1:3));
+			c2 = me.mix(me.colour2Out(1:3));
 			
 			% make the position rects and the colours of each dot
 			for i = 1:length(pos)
@@ -237,10 +237,10 @@ classdef dotlineStimulus < baseStimulus
 			end
 		
 			% dram a small frame around the texture for debugging
-			debug = false;
-			if debug
-				Screen('FrameRect', owin, [0 0 0 0.2], lrect, 2);
-			end
+			%debug = false;
+			%if debug
+			%	Screen('FrameRect', owin, [0 0 0 0.2], lrect, 2);
+			%end
 
 			me.texture = owin;
 
@@ -324,6 +324,14 @@ classdef dotlineStimulus < baseStimulus
 	%=======================================================================
 	methods ( Access = protected ) %-------PROTECTED METHODS-----%
 	%=======================================================================
+
+		% ===================================================================
+		%> @brief linear interpolation between two arrays
+		%>
+		% ===================================================================
+		function out = mix(me, c)
+			out = me.sM.backgroundColour(1:3) * (1 - me.contrastOut) + c(1:3) * me.contrastOut;
+		end
 
 		function result = isOdd(~,n)
 			result = logical(mod(n,2));

@@ -71,6 +71,7 @@ classdef imageStimulus < baseStimulus
 
 	properties (SetAccess = protected, GetAccess = public)
 		family						= 'texture'
+		chosenImages				= []
 	end
 
 	properties(Dependent)
@@ -144,6 +145,8 @@ classdef imageStimulus < baseStimulus
 			me.inSetup = true; me.isSetup = false;
 			if isempty(me.isVisible); show(me); end
 
+			me.chosenImages = [];
+
 			checkfilePath(me);
 
 			me.sM = sM;
@@ -166,9 +169,8 @@ classdef imageStimulus < baseStimulus
 
 			addRuntimeProperties(me);
 
-			me.inSetup = false; me.isSetup = true;
-
 			loadImage(me, in);
+			me.inSetup = false; me.isSetup = true;
 			if me.sizeOut > 0
 				me.scale = me.sizeOut / (me.width / me.ppd);
 				me.szPx = me.sizeOut * me.ppd;
@@ -294,6 +296,7 @@ classdef imageStimulus < baseStimulus
 			if ~isempty(me.sM) && me.sM.isOpen == true
 				me.texture = Screen('MakeTexture', me.sM.win, me.matrix, 1, me.specialFlags, me.precision);
 			end
+			if me.isSetup; me.chosenImages = [me.chosenImages string(regexprep(me.currentImage,'\\','/'))]; end
 			me.logOutput('loadImage',['Load: ' regexprep(me.currentImage,'\\','/') 'in ' num2str(toc(tt)) ' secs']);
 		end
 
