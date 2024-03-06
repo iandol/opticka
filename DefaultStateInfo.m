@@ -61,23 +61,21 @@
 
 %=========================================================================
 %-----------------------------General Settings----------------------------
-% These settings are make changing the behaviour of the protocol easier. tS
+% These settings make changing the behaviour of the protocol easier. tS
 % is just a struct(), so you can add your own switches or values here and
 % use them lower down. Some basic switches like saveData, useTask,
-% checkKeysDuringstimulus will influence the runeExperiment.runTask()
+% enableTrainingKeys will influence the runeExperiment.runTask()
 % functionality, not just the state machine. Other switches like
-% includeErrors are referenced in this state machine file to change with
+% includeErrors are referenced in this state machine file to change which
 % functions are added to the state machine states…
 tS.name						= 'Default Protocol'; %==name of this protocol
+tS.saveData					= true;		%==save behavioural and eye movement data?
+tS.showBehaviourPlot		= true;		%==open the behaviourPlot figure? Can cause more memory use…
 tS.useTask					= true;		%==use taskSequence (randomises stimulus variables)
-rM.reward.time				= 250;		%==TTL time in milliseconds
-rM.reward.pin				= 2;		%==Output pin, 2 by default with Arduino.
 tS.keyExclusionPattern		= ["fixate","stimulus"]; %==which states to skip keyboard checking
 tS.enableTrainingKeys		= false;	%==enable keys useful during task training, but not for data recording
 tS.recordEyePosition		= false;	%==record local copy of eye position, **in addition** to the eyetracker?
 tS.askForComments			= false;	%==UI requestor asks for comments before/after run
-tS.saveData					= false;	%==save behavioural and eye movement data?
-tS.showBehaviourPlot		= true;		%==open the behaviourPlot figure? Can cause more memory use…
 tS.includeErrors			= false;	%==do we update the trial number even for incorrect saccade/fixate, if true then we call updateTask for both correct and incorrect, otherwise we only call updateTask() for correct responses
 tS.nStims					= stims.n;	%==number of stimuli, taken from metaStimulus object
 tS.timeOut					= 2;		%==if wrong response, how long to time out before next trial
@@ -86,7 +84,9 @@ tS.BREAKFIX					= -1;		%==the code to send eyetracker for break fix trials
 tS.INCORRECT				= -5;		%==the code to send eyetracker for incorrect trials
 tS.correctSound				= [2000, 0.1, 0.1]; %==freq,length,volume
 tS.errorSound				= [300, 1, 1];		%==freq,length,volume
-
+% reward system values, can be set by GUI, or overridden here
+%rM.reward.time				= 250;		%==TTL time in milliseconds
+%rM.reward.pin				= 2;		%==Output pin, 2 by default with Arduino.
 
 %==================================================================
 %------------ ----DEBUG LOGGING to command window------------------
@@ -105,15 +105,18 @@ tS.errorSound				= [300, 1, 1];		%==freq,length,volume
 % These settings define the initial fixation window and set up for the
 % eyetracker. They may be modified during the task (i.e. moving the
 % fixation window towards a target, enabling an exclusion window to stop
-% the subject entering a specific set of display areas etc.)
+% the subject entering a specific set of display areas etc.). 
+% 
+% The GUI sets some default values, but it is good practive to redefine
+% them explicitly here.
 %
-% **IMPORTANT**: you must ensure that the global state time is larger than
+% **IMPORTANT**: you must ensure that the global state time is LARGER than
 % any fixation timers specified here. Each state has a global timer, so if
 % the state timer is 5 seconds but your fixation timer is 6 seconds, then
 % the state will finish before the fixation time was completed!
 %------------------------------------------------------------------
 % initial fixation X position in degrees (0° is screen centre). Multiple windows
-% can be entered using an array.
+% can be entered using an array of X values
 tS.fixX						= 0;
 % initial fixation Y position in degrees  (0° is screen centre). Multiple windows
 % can be entered using an array.
@@ -123,26 +126,28 @@ tS.firstFixInit				= 3;
 % time to maintain initial fixation within window, can be single value or a
 % range to randomise between
 tS.firstFixTime				= [0.25 0.75];
-% fixation window radius in degrees; if you enter [x y] the window will be
+% circular fixation window radius in degrees; if you enter [x y] the window will be
 % rectangular.
 tS.firstFixRadius			= 2;
-% do we forbid eye to enter-exit-reenter fixation window?
+% do we forbid eye to enter-exit-reenter fixation window? Set this to false
+% during initial training, or if you want relaxed checking (non-forced
+% choice gaze tasks).
 tS.strict					= true;
 % add an exclusion zone where subject cannot saccade to?
 tS.exclusionZone			= [];
-% time to maintain fixation during stimulus state
+% time to maintain fixation during the stimulus state
 tS.stimulusFixTime			= 1;		
 % Initialise eyetracker with X, Y, FixInitTime, FixTime, Radius, StrictFix values
 updateFixationValues(eT, tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
 
 %==================================================================
 %-----------------BEAVIOURAL PLOT CONFIGURATION--------------------
-%----WHICH states assigned correct / break for the online plot?----
+%--WHICH states assigned correct / incorrect for the online plot?--
 bR.correctStateName			= "correct";
 bR.breakStateName			= ["breakfix","incorrect"];
 
 %=========================================================================
-%--------------Randomise stimulus variables every trial?-----------
+%------------------Randomise stimulus variables every trial?--------------
 % If you want to have some randomisation of stimuls variables WITHOUT using
 % taskSequence task. Remember this will not be "Saved" for later use, if you
 % want to do controlled experiments use taskSequence to define proper randomised
@@ -158,7 +163,7 @@ stims.choice				= [];
 stims.stimulusTable			= [];
 
 %=========================================================================
-%-------------allows using arrow keys to control variables?-------------
+%--------------allows using arrow keys to control variables?--------------
 % another option is to enable manual control of a table of variables
 % in-task. This is useful to dynamically probe RF properties or other
 % features while still allowing for fixation or other behavioural control.
@@ -181,9 +186,7 @@ stims.setChoice				= 1;
 sM.skipExitStates			= {'fixate','incorrect|breakfix'};
 
 %=========================================================================
-% which stimulus in the list is used for a fixation target? For this
-% protocol it means the subject must saccade to this stimulus (the saccade
-% target is #1 in the list) to get the reward.
+% which stimulus in the list is defined as a saccade target?
 stims.fixationChoice		= 1;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

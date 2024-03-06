@@ -38,17 +38,19 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 	properties
 		%> setup and calibration values
 		calibration		= struct(...
-						'model','Tobii Pro Spectrum',...
-						'mode','human',...
-						'stimulus','animated',...
-						'calPositions',[],...
-						'valPositions',[],...
+						'model', 'Tobii Pro Spectrum',...
+						'mode', 'human',...
+						'stimulus', 'animated',...
+						'calPositions', [],...
+						'valPositions', [],...
 						'manual', false,...
-						'manualMode','standard',...
-						'autoPace',true,...
-						'paceDuration',0.8,...
-						'eyeUsed','both',...
-						'movie',[],...
+						'manualMode', 'standard',...
+						'autoPace', true,...
+						'paceDuration', 0.8,...
+						'eyeUsed', 'both',...
+						'movie', [], ...
+						'filePath', [],...
+						'size', 1,... % size of calibration target in degrees
 						'reloadCalibration',true,...
 						'calFile','tobiiCalibration.mat')
 		%> optional eyetracker address
@@ -169,10 +171,10 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 			end
 			me.settings.calibrateEye				= me.calibration.eyeUsed;
 			me.settings.cal.bgColor					= floor(me.screen.backgroundColour*255);
-			me.settings.advcal.bgColor				= me.settings.cal.bgColor;
-			me.settings.UI.advcal.bgColor			= me.settings.cal.bgColor;
 			me.settings.UI.setup.bgColor			= me.settings.cal.bgColor;
 			me.settings.UI.val.bgColor				= me.settings.cal.bgColor;
+			me.settings.advcal.bgColor				= me.settings.cal.bgColor;
+			me.settings.UI.advcal.bgColor			= me.settings.cal.bgColor;
 			me.settings.UI.setup.eyeClr				= 255;
 			me.settings.UI.setup.instruct.font		= me.sansFont;
 			me.settings.UI.button.setup.text.font	= me.sansFont;
@@ -185,7 +187,21 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 				me.calStim							= tittaAdvMovieStimulus(me.screen);
 				me.calStim.bgColor					= me.settings.cal.bgColor;
 				me.calStim.blinkCount				= 3;
-				me.calibration.movie				= movieStimulus('size',5,'filePath',me.calibration.movie);
+				if ~isempty(me.calibration.filePath); fp = me.calibration.filePath; else; fp = me.calibration.movie; end
+				me.calibration.movie				= movieStimulus('size', me.calibration.size,'filePath', fp);
+				reset(me.calibration.movie);
+				setup(me.calibration.movie, me.screen);
+				me.calStim.setVideoPlayer(me.calibration.movie);
+				me.settings.cal.drawFunction		= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);
+				if me.calibration.manual
+					me.settings.advcal.drawFunction	= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);
+				end
+			elseif strcmpi(me.calibration.stimulus,'image')
+				me.calStim							= tittaAdvMovieStimulus(me.screen);
+				me.calStim.bgColor					= me.settings.cal.bgColor;
+				me.calStim.blinkCount				= 3;
+				if ~isempty(me.calibration.filePath); fp = me.calibration.filePath; else; fp = me.calibration.movie; end
+				me.calibration.movie				= movieStimulus('size', me.calibration.size,'filePath', fp);
 				reset(me.calibration.movie);
 				setup(me.calibration.movie, me.screen);
 				me.calStim.setVideoPlayer(me.calibration.movie);
@@ -197,7 +213,7 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 				me.calStim							= tittaCalStimulus(me.screen);
 				me.calStim.bgColor					= me.settings.cal.bgColor;
 				me.calStim.moveTime					= 0.75;
-				me.calStim.oscillatePeriod			= 1;
+				me.calStim.oscillatePeriod			= 0.8;
 				me.calStim.blinkCount				= 4;
 				me.calStim.fixBackColor				= 0;
 				me.calStim.fixFrontColor			= 255;
@@ -208,6 +224,10 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 			else
 				me.calStim							= AnimatedCalibrationDisplay();
 				me.calStim.bgColor					= me.settings.cal.bgColor;
+				me.calStim.fixBackSizeMin			= round(me.calibration.size * me.ppd_);
+				me.calStim.fixBackSizeMax			= round((me.calibration.size*1.5) * me.ppd_);
+				me.calStim.fixBackSizeMaxOsc		= me.calStim.fixBackSizeMax;
+				me.calStim.fixBackSizeBlink			= me.calStim.fixBackSizeMax;
 				me.calStim.moveTime					= 0.75;
 				me.calStim.oscillatePeriod			= 1;
 				me.calStim.blinkCount				= 4;
@@ -231,9 +251,13 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 			end
 			if ~isempty(me.calibration.calPositions)
 				me.settings.cal.pointPos			= me.calibration.calPositions;
+			else
+				me.calibration.calPositions			= me.settings.cal.pointPos;
 			end
 			if ~isempty(me.calibration.valPositions)
 				me.settings.val.pointPos			= me.calibration.valPositions;
+			else
+				me.calibration.valPositions			= me.settings.val.pointPos;
 			end
 			if me.verbose; me.settings.debugMode=true; end
 			me.settings.cal.pointNotifyFunction	= @tittaCalCallback;

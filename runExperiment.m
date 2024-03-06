@@ -806,6 +806,13 @@ classdef runExperiment < optickaCore
 					end
 				end
 
+				%===========================set up our behavioural plot
+				if tS.showBehaviourPlot
+					fprintf('===>>> Creating Behavioural Record Plot Window...\n');
+					createPlot(bR, eT); 
+					WaitSecs(0.01); drawnow; WaitSecs(0.01); drawnow;
+				end
+
 				%================================raise priority
 				fprintf('===>>> Increasing Priority...\n');
 				op = Screen('Preference', 'Verbosity',4);
@@ -844,7 +851,6 @@ classdef runExperiment < optickaCore
 					flip(s);
 					if eT.secondScreen; trackerFlip(eT, 1, false); end
 				end
-				update(stims); %make sure all stimuli are set back to their start state
 				resetLog(stims);
 				if ~isempty(me.eyetracker.device)
 					resetAll(eT);
@@ -924,13 +930,6 @@ classdef runExperiment < optickaCore
 					end
 					assert(io.isServerRunning, true, '===>>> LabJack T Server Not Running!!!');
 				end
-				
-				%===========================set up our behavioural plot
-				if tS.showBehaviourPlot
-					fprintf('===>>> Creating Behavioural Record Plot Window...\n');
-					createPlot(bR, eT); 
-					WaitSecs(0.01); drawnow;
-				end
 
 				%===========================take over the keyboard + max priority
 				KbReleaseWait; %make sure keyboard keys are all released
@@ -960,7 +959,7 @@ classdef runExperiment < optickaCore
 				tL.screenLog.trackerStartOffset = getTimeOffset(eT);
 				
 				%==============================IGNITE the stateMachine!
-				fprintf('\n===>>> Igniting the State Machine... <<<===\n');
+				fprintf('\n\n===>>> Igniting the State Machine... <<<===\n');
 				start(sM);
 
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

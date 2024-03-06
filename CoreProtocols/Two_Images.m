@@ -13,16 +13,14 @@
 % includeErrors are referenced in this state machine file to change with
 % functions are added to the state machine states…
 tS.name						= 'Two Images'; %==name of this protocol
+tS.saveData					= true;		%==save behavioural and eye movement data?
+tS.showBehaviourPlot		= true;		%==open the behaviourPlot figure? Can cause more memory use…
 tS.useTask					= true;		%==use taskSequence (randomises stimulus variables)
-rM.reward.time				= 250;		%==TTL time in milliseconds
-rM.reward.pin				= 2;		%==Output pin, 2 by default with Arduino.
+tS.includeErrors			= false;	%==do we update the trial number even for incorrect saccade/fixate, if true then we call updateTask for both correct and incorrect, otherwise we only call updateTask() for correct responses
 tS.keyExclusionPattern		= ["fixate","stimulus"]; %==which states to skip keyboard checking
 tS.enableTrainingKeys		= false;	%==enable keys useful during task training, but not for data recording
 tS.recordEyePosition		= false;	%==record local copy of eye position, **in addition** to the eyetracker?
 tS.askForComments			= false;	%==UI requestor asks for comments before/after run
-tS.saveData					= true;		%==save behavioural and eye movement data?
-tS.showBehaviourPlot		= true;		%==open the behaviourPlot figure? Can cause more memory use…
-tS.includeErrors			= false;	%==do we update the trial number even for incorrect saccade/fixate, if true then we call updateTask for both correct and incorrect, otherwise we only call updateTask() for correct responses
 tS.nStims					= stims.n;	%==number of stimuli, taken from metaStimulus object
 tS.tOut						= 2;		%==if wrong response, how long to time out before next trial
 tS.CORRECT					= 1;		%==the code to send eyetracker for correct trials
@@ -65,10 +63,10 @@ tS.fixY						= 0;
 tS.firstFixInit				= 3;
 % time to maintain initial fixation within window, can be single value or a
 % range to randomise between
-tS.firstFixTime				= [0.05];
+tS.firstFixTime				= 0.1;
 % fixation window circular radius in degrees; if you enter [x y] the window
 % will be rectangular.
-tS.firstFixRadius			= 20;
+tS.firstFixRadius			= 2;
 % do we forbid eye to enter-exit-reenter fixation window?
 tS.strict					= false;
 % add an exclusion zone where subject cannot saccade to?
@@ -184,17 +182,18 @@ pauseExitFcn = {
 prefixEntryFcn = { 
 	@()needFlip(me, true, 1); % enable the screen and trackerscreen flip
 	@()needEyeSample(me, true); % make sure we start measuring eye position
+	@()getStimulusPositions(stims); % make a struct the eT can use for drawing stim positions
 	@()hide(stims); % hide all stimuli
 	% update the fixation window to initial values
 	@()updateFixationValues(eT,tS.fixX,tS.fixY,[],tS.firstFixTime,tS.firstFixRadius,tS.strict); %reset fixation window
 	@()trackerTrialStart(eT, getTaskIndex(me));
 	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
-	@()trackerDrawStatus(eT,'Start trial...', stims.stimulusPositions,0);
+	@()trackerDrawStatus(eT,'PREFIXATION...', stims.stimulusPositions, 0, false);
 };
 
 %--------------------prefixate within
 prefixFcn = {
-	@()trackerDrawEyePosition(eT);
+
 };
 
 %--------------------prefixate exit
@@ -209,12 +208,12 @@ prefixExitFcn = {
 fixEntryFcn = { 
 	@()show(stims{3}); % show fixation cross
 	@()logRun(me,'INITFIX');
+	@()trackerDrawStatus(eT,'Start fixation...', stims.stimulusPositions);
 };
 
 %--------------------fix within
 fixFcn = {
 	@()draw(stims); %draw stimuli
-	@()trackerDrawFixation(eT);
 	@()trackerDrawEyePosition(eT);
 	@()animate(stims);
 };
@@ -254,8 +253,6 @@ stimEntryFcn = {
 %--------------------what to run when we are showing stimuli
 stimFcn =  {
 	@()draw(stims);
-	@()trackerDrawFixation(eT);
-	@()trackerDrawStimuli(eT,stims.stimulusPositions);
 	@()trackerDrawEyePosition(eT);
 	@()animate(stims); % animate stimuli for subsequent draw
 };
@@ -269,7 +266,7 @@ maintainFixFcn = {
 	% otherwise 'breakfix' is returned and the state machine will jump to the
 	% breakfix state. If neither condition matches, then the state table below
 	% defines that after 5 seconds we will switch to the incorrect state.
-	@()testHoldFixation(eT,'correct','incorrect'); 
+	@()testHoldFixation(eT,'correct','breakfix'); 
 };
 
 %as we exit stim presentation state
@@ -300,13 +297,12 @@ correctExitFcn = {
 	@()giveReward(rM); % send a reward
 	@()beep(aM, tS.correctSound); % correct beep
 	@()logRun(me,'CORRECT'); % print current trial info
-	@()trackerDrawStatus(eT, 'CORRECT! :-)');
+	@()trackerDrawStatus(eT, 'CORRECT! :-)', stims.stimulusPositions);
 	@()needFlipTracker(me, 0); %for operator screen stop flip
 	@()updatePlot(bR, me); % must run before updateTask
 	@()updateTask(me,tS.CORRECT); % make sure our taskSequence is moved to the next trial
 	@()updateVariables(me); % randomise our stimuli, and set strobe value too
 	@()update(stims); % update our stimuli ready for display
-	@()getStimulusPositions(stims); % make a struct the eT can use for drawing stim positions
 	@()resetAll(eT); % resets the fixation state timers	
 	@()plot(bR, 1); % actually do our behaviour record drawing
 };
@@ -334,11 +330,10 @@ incFcn = {
 incExitFcn = {
 	@()beep(aM, tS.errorSound);
 	@()logRun(me,'INCORRECT'); %fprintf current trial info
-	@()trackerDrawStatus(eT,'INCORRECT! :-(', stims.stimulusPositions, 0);
+	@()trackerDrawStatus(eT,'INCORRECT! :-(', stims.stimulusPositions);
 	@()needFlipTracker(me, 0); %for operator screen stop flip
 	@()updateVariables(me); % randomise our stimuli, set strobe value too
 	@()update(stims); % update our stimuli ready for display
-	@()getStimulusPositions(stims); % make a struct the eT can use for drawing stim positions
 	@()resetAll(eT); % resets the fixation state timers
 	@()plot(bR, 1); % actually do our drawing
 };
@@ -346,11 +341,10 @@ incExitFcn = {
 breakExitFcn = {
 	@()beep(aM, tS.errorSound);
 	@()logRun(me,'BREAK_FIX'); %fprintf current trial info
-	@()trackerDrawStatus(eT,'BREAK_FIX! :-(', stims.stimulusPositions, 0);
+	@()trackerDrawStatus(eT,'BREAK_FIX! :-(', stims.stimulusPositions);
 	@()needFlipTracker(me, 0); %for operator screen stop flip
 	@()updateVariables(me); % randomise our stimuli, set strobe value too
 	@()update(stims); % update our stimuli ready for display
-	@()getStimulusPositions(stims); % make a struct the eT can use for drawing stim positions
 	@()resetAll(eT); % resets the fixation state timers
 	@()plot(bR, 1); % actually do our drawing
 };

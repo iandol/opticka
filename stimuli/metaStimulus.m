@@ -482,7 +482,7 @@ classdef metaStimulus < optickaCore
 		%> @return out copy of the stimulusPositions structure
 		% ===================================================================
 		function out = getStimulusPositions(me, ignoreVisible, toDegrees)
-			if ~exist('ignoreVisible','var'); ignoreVisible=false; end
+			if ~exist('ignoreVisible','var') || isempty(ignoreVisible); ignoreVisible=true; end
 			if ~exist('toDegrees','var'); toDegrees = true; end
 			a=1;
 			out = [];
@@ -491,10 +491,10 @@ classdef metaStimulus < optickaCore
 				if check && me.stimuli{i}.showOnTracker == true
 					if isprop(me.stimuli{i},'xFinal')
 						xy = [me.stimuli{i}.xFinal me.stimuli{i}.yFinal];
-						if toDegrees; xy = me.screen.toDegrees(xy,'xy'); end
 					else
 						xy = [me.stimuli{i}.xPositionOut me.stimuli{i}.yPositionOut];
 					end
+					if toDegrees; xy = me.screen.toDegrees(xy,'xy'); end
 					out(a).x = xy(1); out(a).y = xy(2);
 					if ~isempty(me.stimuli{i}.szPx)
 						out(a).size = me.stimuli{i}.szPx / me.ppd_; 

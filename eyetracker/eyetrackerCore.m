@@ -854,26 +854,51 @@ classdef eyetrackerCore < optickaCore
 		end
 
 		% ===================================================================
+		%> @brief flip the tracker display, always use dontsync
+		%>
+		%> remember: dontclear affects the NEXT flip, not this one!
+		% ===================================================================
+		function trackerFlip(me, dontclear, force)
+			if ~exist('dontclear','var'); dontclear = 1; end
+			if ~exist('force','var'); force = false; end
+
+			me.flipTick = me.flipTick + 1;
+			if force || me.flipTick >= me.skipFlips; me.flipTick = 1; end
+			if me.flipTick ~=1; return; end
+
+			if dontclear ~= 1; dontclear = 0; end
+			% Screen('Flip', windowPtr [, when] [, dontclear] [, dontsync] [, multiflip]);
+			if dontclear == 0; fprintf('------>>> CLEAR TFLIP!\n'); end
+			me.operatorScreen.flip([], dontclear, 2);
+		end
+
+		% ===================================================================
 		%> @brief draw general status
 		%>
 		% ===================================================================
-		function trackerDrawStatus(me, comment, stimPos, dontClear)
-			if ~exist('comment','var'); comment=''; end
+		function trackerDrawStatus(me, comment, stimPos, dontClear, dontFlip)
+			if ~exist('comment','var') || isempty(comment); comment=''; end
 			if ~exist('stimPos','var'); stimPos = []; end
-			if ~exist('dontClear','var'); dontClear = 1; end
+			if ~exist('dontClear','var') || isempty(dontClear); dontClear = 1; end
+			if ~exist('dontFlip','var') || isempty(dontFlip); dontFlip = true; end
 			
-			if dontClear == 0; trackerFlip(me, 0, true); trackerClearScreen(me); end
+			if dontClear == 0; trackerClearScreen(me); end
 			trackerDrawFixation(me);
 			drawGrid(me.operatorScreen);
 			if ~isempty(me.exclusionZone);trackerDrawExclusion(me);end
 			if ~isempty(stimPos); trackerDrawStimuli(me, stimPos, true); end
 			if ~isempty(comment);trackerDrawText(me, comment);end
 			if ~isempty(me.xAll);trackerDrawEyePositions(me);end
-			if dontClear == 0
+			if dontFlip == false && dontClear == 0
 				trackerFlip(me, 0, true); 
+				fprintf('------>>> TRACKER STATUS DRAWN CLEAR %s!\n',comment);
+			elseif dontFlip==false
+				trackerFlip(me, 1, false);
+				fprintf('------>>> TRACKER STATUS DRAWN NOCLEAR %s!\n',comment);
 			else
-				trackerFlip(me, 1);
+				fprintf('------>>> TRACKER STATUS DRAWN NOFLIP %s!\n',comment);
 			end
+			
 		end
 
 		% ===================================================================
@@ -969,24 +994,6 @@ classdef eyetrackerCore < optickaCore
 			drawText(me.operatorScreen, textIn);
 		end
 
-		% ===================================================================
-		%> @brief flip the tracker display, always use dontsync
-		%>
-		%> remember: dontclear affects the NEXT flip, not this one!
-		% ===================================================================
-		function trackerFlip(me, dontclear, force)
-			if ~exist('dontclear','var'); dontclear = 1; end
-			if ~exist('force','var'); force = false; end
-
-			me.flipTick = me.flipTick + 1;
-			if force || me.flipTick >= me.skipFlips; me.flipTick = 1; end
-			if me.flipTick ~=1; return; end
-
-			if dontclear ~= 1; dontclear = 0; end
-			% Screen('Flip', windowPtr [, when] [, dontclear] [, dontsync] [, multiflip]);
-			me.operatorScreen.flip([], dontclear, 2);
-		end
-		
 	end%-------------------------END PUBLIC METHODS--------------------------------%
 	
 	%=======================================================================
