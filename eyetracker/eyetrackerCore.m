@@ -863,12 +863,11 @@ classdef eyetrackerCore < optickaCore
 			if ~exist('force','var'); force = false; end
 
 			me.flipTick = me.flipTick + 1;
-			if force || me.flipTick >= me.skipFlips; me.flipTick = 1; end
-			if me.flipTick ~=1; return; end
+			if force || doFlip(me); me.flipTick = 1; end
+			if me.flipTick ~= 1; return; end
 
 			if dontclear ~= 1; dontclear = 0; end
 			% Screen('Flip', windowPtr [, when] [, dontclear] [, dontsync] [, multiflip]);
-			if dontclear == 0; fprintf('------>>> CLEAR TFLIP!\n'); end
 			me.operatorScreen.flip([], dontclear, 2);
 		end
 
@@ -891,12 +890,8 @@ classdef eyetrackerCore < optickaCore
 			if ~isempty(me.xAll);trackerDrawEyePositions(me);end
 			if dontFlip == false && dontClear == 0
 				trackerFlip(me, 0, true); 
-				fprintf('------>>> TRACKER STATUS DRAWN CLEAR %s!\n',comment);
 			elseif dontFlip==false
 				trackerFlip(me, 1, false);
-				fprintf('------>>> TRACKER STATUS DRAWN NOCLEAR %s!\n',comment);
-			else
-				fprintf('------>>> TRACKER STATUS DRAWN NOFLIP %s!\n',comment);
 			end
 			
 		end
@@ -1000,6 +995,10 @@ classdef eyetrackerCore < optickaCore
 	methods (Hidden = true) %------------------HIDDEN METHODS
 	%=======================================================================
 		
+		function doflip = doFlip(me)
+			if me.flipTick >= me.skipFlips; doflip = true; else; doflip = false; end
+		end
+	
 		% ===================================================================
 		%> @brief send message to store in EDF data
 		% ===================================================================

@@ -1,4 +1,4 @@
-classdef tittaAdvMovieStimulus < handle
+classdef tittaAdvImageStimulus < handle
     properties (Access=private, Constant)
         calStateEnum = struct('undefined',0, 'showing',1, 'blinking',2)
     end
@@ -14,7 +14,8 @@ classdef tittaAdvMovieStimulus < handle
         blinkInterval       = 0.3
         blinkCount          = 2
         bgColor             = 127
-        videoSize           = []
+        size				= []
+		videoSize			= []
     end
     properties (Access=private)
 		qFloatColorRange
@@ -27,26 +28,27 @@ classdef tittaAdvMovieStimulus < handle
     
     
     methods
-		function me = tittaAdvMovieStimulus(screen)
-			if exist('screen','var')
+		function me = tittaAdvImageStimulus(screen)
+			if exist('screen','var') && isa(screen,'screenManager')
 				me.screen = screen;
 				me.bgColor = round(screen.backgroundColour * 255);
 			end
             me.setCleanState();
         end
 
-		function setVideoPlayer(me, in)
+		function setStimulus(me,in)
             me.stimulus = in;
 			if in.isSetup
 				me.screen = in.sM;
-				me.videoSize = [me.stimulus.width; me.stimulus.height];
+				me.videoSize = [me.stimulus.width me.stimulus.height];
+				me.size = me.videoSize;
 			end
         end
         
         function setCleanState(me)
             me.calState        = me.calStateEnum.undefined;
             me.currentPoint    = nan(1,3);
-			if ~isempty(me.stimulus) && isa(me.stimulus,'movieStimulus')
+			if ~isempty(me.stimulus)
                 try me.stimulus.reset(); end %#ok<*TRYNC>
 			end
         end
@@ -75,7 +77,8 @@ classdef tittaAdvMovieStimulus < handle
 			% make sure movieStimulus is setup
 			if ~me.stimulus.isSetup
 				setup(me.stimulus, me.screen);
-				me.videoSize = [me.stimulus.width; me.stimulus.height];
+				me.videoSize = me.stimulus.mvRect;
+				me.size = me.videoSize;
 			end
             
             % now that we have a wpnt, interrogate window

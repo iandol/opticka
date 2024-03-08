@@ -92,7 +92,7 @@ classdef imageStimulus < baseStimulus
 		allowedProperties = {'type', 'filePath', 'selection', 'contrast', ...
 			'precision','filter','crop','specialFlags'}
 		%>properties to not create transient copies of during setup phase
-		ignoreProperties = {'type', 'scale', 'filePath','nImages'}
+		ignoreProperties = {'type', 'scale', 'filePath','nImages','chosenImages'}
 	end
 
 	%=======================================================================

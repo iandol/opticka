@@ -356,11 +356,14 @@ classdef optickaCore < handle
 		% ===================================================================
 		function [rM, aM] = initialiseGlobals(me, doReset, doOpen)
 		%> @fn [rM, aM] = initialiseGlobals(me)
-		%> @brief we try no to use globals but for reward and audio, due to
-		%> e.g. eyelink we can't help it, set them up here
+		%> @brief in general we try NOT to use globals but for reward and audio, due to
+		%> e.g. eyelink we can't avoid it. This initialises and returns the globals
+		%> rM (rewardManager) and aM (audioManager). Run this to get the
+		%> reward/audio manager objects in any child class...
 		%>
-		%> @param doReset - try to reset the object?
-		%> @param doOpen  - try to open the object?
+		%> @param doReset - try to reset the object? [false]
+		%> @param doOpen  - try to open the objects if they are not yet
+		%>					open? [false]
 		% ===================================================================
 			global rM aM
 				
@@ -385,7 +388,7 @@ classdef optickaCore < handle
 					aM.silentMode = true;
 				end
 			end
-			if doOpen && ~aM.isOpen && ~aM.silentMode
+			if doOpen && ~aM.isOpen && ~aM.silentMode && aM.device > -1
 				open(aM);
 				aM.beep(2000,0.1,0.1);
 			end
@@ -545,17 +548,19 @@ classdef optickaCore < handle
 		end
 
 		% ===================================================================
-		function [pressed, name, keys] = getKeys(device)
+		function [pressed, name, keys, shift] = getKeys(device)
 		%> @fn getKeys
 		%> @brief PTB Get key presses, stops key bouncing
 		% ===================================================================
 			persistent oldKeys
+			persistent shiftKey 
 			if ~exist('device','var'); device = []; end
 			if isempty(oldKeys); oldKeys = zeros(1,256); end
-			pressed = false; name = []; keys = [];
+			if isempty(shiftKey); shiftKey = KbName('LeftShift'); end
+			pressed = false; name = []; keys = []; shift = false;
 
 			[press, ~, keyCode] = KbCheck(device);
-
+			shift = logical(keyCode(shiftKey));
 			if press
 				keys = keyCode & ~oldKeys;
 				if any(keys)

@@ -118,7 +118,6 @@ classdef tempController < handle
 		function me = tempController(EThndl,calDisplay,scrRes,rewardProvider,audioProvider)
 			me.setCleanState();
 			me.EThndl = EThndl;
-			assert(isa(calDisplay,"VideoCalibrationDisplay"))
 			me.calDisplay = calDisplay;
 			if nargin>2 && ~isempty(scrRes)
 				me.scrRes = scrRes;

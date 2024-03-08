@@ -984,6 +984,9 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> @fn updateXY
 		%> @brief Update only position info, faster and doesn't reset image etc.
 		%>
+		%> @param x X position
+		%> @param y Y position
+		%> @param degrees where the input is in degrees (true) ot pixels (false)
 		% ===================================================================
 		function updateXY(me,x,y,degrees)
 		% updateXY(me, x, y, degrees)

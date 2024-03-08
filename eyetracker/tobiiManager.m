@@ -188,23 +188,21 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 				me.calStim.bgColor					= me.settings.cal.bgColor;
 				me.calStim.blinkCount				= 3;
 				if ~isempty(me.calibration.filePath); fp = me.calibration.filePath; else; fp = me.calibration.movie; end
-				me.calibration.movie				= movieStimulus('size', me.calibration.size,'filePath', fp);
-				reset(me.calibration.movie);
-				setup(me.calibration.movie, me.screen);
-				me.calStim.setVideoPlayer(me.calibration.movie);
+				m									= movieStimulus('size', me.calibration.size,'filePath', fp);
+				reset(m); setup(m, me.screen);
+				me.calStim.setVideoPlayer(m);
 				me.settings.cal.drawFunction		= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);
 				if me.calibration.manual
 					me.settings.advcal.drawFunction	= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);
 				end
 			elseif strcmpi(me.calibration.stimulus,'image')
-				me.calStim							= tittaAdvMovieStimulus(me.screen);
+				me.calStim							= tittaAdvImageStimulus(me.screen);
 				me.calStim.bgColor					= me.settings.cal.bgColor;
 				me.calStim.blinkCount				= 3;
 				if ~isempty(me.calibration.filePath); fp = me.calibration.filePath; else; fp = me.calibration.movie; end
-				me.calibration.movie				= movieStimulus('size', me.calibration.size,'filePath', fp);
-				reset(me.calibration.movie);
-				setup(me.calibration.movie, me.screen);
-				me.calStim.setVideoPlayer(me.calibration.movie);
+				m									= imageStimulus('size', me.calibration.size,'filePath', fp);
+				reset(m); setup(m, me.screen);
+				me.calStim.setStimulus(m);
 				me.settings.cal.drawFunction		= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);
 				if me.calibration.manual
 					me.settings.advcal.drawFunction	= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);
@@ -357,7 +355,7 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 					ctrl = [];
 				else
 					[rM, aM] = initialiseGlobals(me, false, true);
-					ctrl = tempController;
+					ctrl = tempController(me.tobii, me.calStim);
 					ctrl.rewardProvider = rM;
 					ctrl.audioProvider = aM;
 				end
