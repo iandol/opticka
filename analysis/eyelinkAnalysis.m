@@ -29,7 +29,7 @@ classdef eyelinkAnalysis < analysisCore
 		%> as correct, incorrect, breakfix etc.
 		trialEndMessage char						= 'TRIAL_RESULT'
 		%> override the rtStart time with a custom message?
-		rtOverrideMessage char						= 'SYNCSTROBE'
+		rtOverrideMessage char						= 'SYNCTIME'
 		%> minimum saccade distance in degrees
 		minSaccadeDistance double					= 1.0
 		%> relative velocity threshold

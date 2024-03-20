@@ -1195,6 +1195,144 @@ classdef runExperiment < optickaCore
 			end
 
 		end
+
+
+		% ===================================================================
+		function runTests(me, test)
+		%> @fn runTests
+		%>
+		%> Tests the hardware interfaces 
+		%>
+		%> @param test - marker | reward | audio | eyetracker
+		% ===================================================================
+
+			if ~exist('test','var'); return; end
+			if strcmpi(test,'marker'); do = 1;
+			elseif strcmpi(test,'reward'); do = 2;
+			elseif strcmpi(test,'audio'); do = 3;
+			elseif strcmpi(test,'eyetracker'); do = 4;
+			else do = 5;
+			end
+
+			s = screenManager('verbosityLevel',1,'verbose',false);
+			s.screen = min(Screen('Screens'));
+			s.windowed = [0 0 800 600];
+			s.font.TextSize = s.font.TextSize * 1.5;
+			s.open;
+			s.drawText('===>>> Opticka Testing...');
+			s.flip;
+
+			commandwindow;
+
+			fprintf('\n\n=========================\nOPTICKA TESTING:\n\n');
+
+			WaitSecs(0.5);
+
+			[rM, aM] = initialiseGlobals(me);
+
+			if do==1 || do == 5
+				if isempty(me.strobe.device)
+					s.drawTextNow('No strobe marker hardware selected...');
+					warning('You did not select a strobe device in the menu');
+				else
+					io = configureIO(me, true);
+					io.name = 'test';
+					io.verbose = true;
+					t = sprintf('%s: test markers -- ',io.fullName);
+					s.drawTextNow(t,[],[],40);
+					s.drawTextNow([t 'Sending 255'],[],[],40);io.sendStrobe(255); WaitSecs(0.3);
+					s.drawTextNow([t 'Sending 1'],[],[],40);io.sendStrobe(1); WaitSecs(0.3);
+					s.drawTextNow([t 'Sending 255'],[],[],40);io.sendStrobe(255); WaitSecs(0.3);
+					s.drawTextNow([t 'Sending 1'],[],[],40);io.sendStrobe(1); WaitSecs(0.3);
+					s.drawTextNow('Strobe marker testing finished...',[],[],40);
+				end
+				WaitSecs(1);
+			end
+			
+
+			if do == 2 || do == 5
+				if isempty(me.reward.device)
+					s.drawTextNow('No strobe selected...');
+					warning('You did not select a reward device in the menu');
+					WaitSecs(0.5);
+				else
+					try
+						if isfield(me.reward,'port') && ~isempty(me.reward.port); rM.port = me.reward.port; end
+						if isfield(me.reward,'board') && ~isempty(me.reward.board); rM.board = me.reward.board; end
+						if rM.isOpen
+							try rM.close; rM.reset; end
+						end
+						rM.open;
+						oldv = rM.verbose;
+						rM.verbose = true;
+						t = sprintf('%s: test reward -- ',rM.fullName);
+						for i = 1:10
+							rM.giveReward;
+							s.drawTextNow([t 'Sending reward ' num2str(i)],[],[],40);
+							WaitSecs(0.2);
+						end
+						s.drawTextNow('Reward testing finished...',[],[],40);
+						rM.verbose = oldv;
+					catch ERR
+						getReport(ERR);
+					end
+				end
+				WaitSecs(1);
+			end
+
+			if do == 3 || do == 5
+				try
+					aM.device = me.audioDevice;
+					aM.silentMode = false;
+					reset(aM);
+					oldv = aM.verbose;
+					aM.verbose = true;
+					if ~aM.isSetup;	try setup(aM); end; end
+					s.drawTextNow('Audio Beeps...');
+					aM.beep(4000,0.1,0.1);WaitSecs(0.2);
+					aM.beep(3000,0.1,0.1);WaitSecs(0.2);
+					aM.beep(2000,0.1,0.1);WaitSecs(0.2);
+					aM.beep(1000,0.1,0.1);WaitSecs(0.2);
+					aM.beep(500,0.1,0.1);WaitSecs(0.2);
+					aM.beep(1000,0.1,0.1);WaitSecs(0.2);
+					aM.beep(2000,0.1,0.1);WaitSecs(0.2);
+					aM.beep(3000,0.1,0.1);WaitSecs(0.2);
+					aM.beep(4000,0.1,0.1);WaitSecs(0.2);
+					aM.verbose = oldv;
+				catch ERR
+					getReport(ERR);
+				end
+				WaitSecs(1);
+			end
+			
+			if do == 4 || do == 5
+				if isempty(me.eyetracker.device)
+					s.drawTextNow('No eyetracker selected...');
+					warning('You did not select an eyetracker device in the menu');
+					WaitSecs(0.5);
+				else
+					try
+						configureEyetracker(me, s);
+						me.eyeTracker.initialise(s);
+						s.drawTextNow('Eyetracker open...');
+						WaitSecs(0.25);
+						me.eyeTracker.close;
+					catch ERR
+						getReport(ERR);
+					end
+				end
+				WaitSecs(1);
+			end
+
+			s.drawTextWrapped('Testing finished, please check the command window for details!', 40);
+			s.flip;
+			WaitSecs(1);
+			s.close;
+			rM.close;
+			aM.close;
+			if exist('io','var'); io.close; end
+			
+		end
 		% ===================================================================
 		function initialise(me, config)
 		%> @fn initialise
@@ -1885,21 +2023,22 @@ classdef runExperiment < optickaCore
 				case 'tobii'
 					eT		= tobiiManager();
 					if ~isempty(me.eyetracker.tsettings); eT.addArgs(me.eyetracker.tsettings); end
+					eT.saveFile				= [me.paths.savedData filesep me.name '.mat'];
 				case 'eyelink'
 					eT		= eyelinkManager();
 					if ~isempty(me.eyetracker.esettings); eT.addArgs(me.eyetracker.esettings); end
+					eT.saveFile				= [me.paths.savedData filesep me.name '.edf'];
 				case 'irec'
 					eT		= iRecManager();
 					if ~isempty(me.eyetracker.isettings); eT.addArgs(me.eyetracker.isettings); end
+					eT.saveFile				= '';
 				otherwise
-					me.eyetracker.device = 'irec';
+					me.eyetracker.device = '';
 					eT		= iRecManager();
-					if ~isempty(me.eyetracker.isettings); eT.addArgs(me.eyetracker.isettings); end
 					eT.isDummy = true;
 			end
 			me.eyeTracker			= eT;
 			eT.verbose				= me.verbose;
-			eT.saveFile				= [me.paths.savedData filesep me.name '.edf'];
 			if isempty(me.eyetracker.device)
 				eT.isDummy			= true;
 			else
@@ -1919,17 +2058,6 @@ classdef runExperiment < optickaCore
 			end
 		end
 
-				
-% 		% ===================================================================
-% 		function out = saveobj(me)
-% 		%> @brief called on save, removes opticka handle
-% 		%>
-% 		%> @param
-% 		% ===================================================================
-%  			me.screenSettings.optickahandle = [];
-%  			fprintf('===> Saving runExperiment object...\n')
-%  			out = me;
-%  		end
 	end
 	
 	%=======================================================================
@@ -1937,12 +2065,12 @@ classdef runExperiment < optickaCore
 	%=======================================================================
 
 		% ===================================================================
-		function io = configureIO(me)
+		function io = configureIO(me, onlyIO)
 		%> @fn configureIO
 		%> Configures the IO devices.
 		%> @param
 		% ===================================================================
-			[rM, ~] = initialiseGlobals(me);
+			if ~exist("onlyIO","var") || isempty(onlyIO);onlyIO=false;end
 			%-------Set up Digital I/O (dPixx and labjack) for this task run...
 			if strcmp(me.strobe.device,'display++')
 				if ~isa(me.dPP,'plusplusManager')
@@ -2002,13 +2130,16 @@ classdef runExperiment < optickaCore
 				io = ioManager();
 				io.silentMode = true;
 				io.verbose = false;
-				io.name = 'silentruninstance';
+				io.name = 'dummy';
 				me.strobe.device = '';
 				fprintf('\n===>>> No strobe output I/O...\n')
 			end
 
+			if onlyIO; return; end
 			%--------------------------------------reward
+			[rM, ~] = initialiseGlobals(me);
 			if matches(me.reward.device,'arduino')
+				
 				if ~isa(rM,'arduinoManager')
                     rM = arduinoManager();
 				end

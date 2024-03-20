@@ -1414,12 +1414,16 @@ classdef screenManager < optickaCore
 		%>
 		%> @param text text to draw
 		% ===================================================================
-		function drawTextNow(me,text,x,y)
-			% drawTextNow(me,text,x,y)
-			if ~exist('text','var');return;end
-			if ~exist('x','var');x = (-me.xCenter / me.ppd_) + 0.25;end
-			if ~exist('y','var');y = (-me.yCenter / me.ppd_) + 0.25;end
-			Screen('DrawText', me.win, text, (x * me.ppd_) + me.xCenter, (y * me.ppd_) + me.yCenter, me.font.TextColor);
+		function drawTextNow(me, text, x, y, wrapat)
+			% drawTextNow(me,text,x,y,wrapat)
+			if ~exist('text','var') || isempty(text); return; end
+			if ~exist('x','var') || isempty(x); x = (-me.xCenter / me.ppd_) + 0.25;end
+			if ~exist('y','var') || isempty(y); y = (-me.yCenter / me.ppd_) + 0.25;end
+			if ~exist('wrapat','var') || isempty(wrapat)
+				me.drawText(text, x, y);
+			else
+				me.drawTextWrapped(text, wrapat, x, y);
+			end
 			flip(me,[],[],2);
 		end
 
@@ -1430,9 +1434,9 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		function drawText(me, text, x, y)
 			% drawText(me,text,x,y)
-			if ~exist('text','var');return;end
-			if ~exist('x','var');x = (-me.xCenter / me.ppd_) + 0.25;end
-			if ~exist('y','var');y = (-me.yCenter / me.ppd_) + 0.25;end
+			if ~exist('text','var') || isempty(text); return; end
+			if ~exist('x','var') || isempty(x); x = (-me.xCenter / me.ppd_) + 0.25;end
+			if ~exist('y','var') || isempty(x); y = (-me.yCenter / me.ppd_) + 0.25;end
 			Screen('DrawText', me.win, text, (x * me.ppd_) + me.xCenter, (y * me.ppd_) + me.yCenter);
 		end
 
@@ -1444,18 +1448,18 @@ classdef screenManager < optickaCore
 		%> @param text text to draw
 		%> @param wrapat character to wrap at
 		% ===================================================================
-			if ~exist('text','var');return;end
+			if ~exist('text','var') || isempty(text); return; end
 			if exist('wrapat','var') && ~isempty(wrapat); text = WrapString(text,wrapat); end
 			if ~exist('x','var');x = (-me.xCenter / me.ppd_) + 0.25;end
 			if ~exist('y','var');y = (-me.yCenter / me.ppd_) + 0.25;end
 			c = strsplit(text,'\n');
 			x = (x * me.ppd_) + me.xCenter;
-			a = (y * me.ppd_) + me.yCenter;
+			yy = (y * me.ppd_) + me.yCenter;
 			for s = c
-				Screen('DrawText',me.win,s{1},x,a);
-				a = a + me.font.TextSize;
+				Screen('DrawText',me.win,s{1},x,yy);
+				yy = yy + me.font.TextSize;
 				if me.useRetina
-					a = a + me.font.TextSize;
+					yy = yy + me.font.TextSize;
 				end
 			end
 		end

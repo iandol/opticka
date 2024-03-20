@@ -832,11 +832,11 @@ classdef eyetrackerCore < optickaCore
 		% ===================================================================
 		function trackerTrialEnd(me, result)
 			if ~exist('result','var'); result = -100; end
-			@()trackerMessage(me,'END_RT'); %send END_RT message to tracker
+			trackerMessage(me,'END_RT'); %send END_RT message to tracker
 			if isnumeric(result)
-				@()trackerMessage(me,sprintf('TRIAL_RESULT %i', result)); %send TRIAL_RESULT message to tracker
+				trackerMessage(me,sprintf('TRIAL_RESULT %i', result)); %send TRIAL_RESULT message to tracker
 			else
-				@()trackerMessage(me,sprintf('TRIAL_RESULT %s', result)); %send TRIAL_RESULT message to tracker
+				trackerMessage(me,sprintf('TRIAL_RESULT %s', result)); %send TRIAL_RESULT message to tracker
 			end
 			if strcmpi(me.type,'eyelink')
 				stopRecording(me); % stop recording in eyelink
