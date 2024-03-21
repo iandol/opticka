@@ -121,12 +121,13 @@ classdef tobiiAnalysis < analysisCore
 			'verbose|pixelsPerCm|distance|xCenter|yCenter|rtStartMessage|minSaccadeDistance|'...
 			'rtEndMessage|trialOverride|rtDivision|rtLimits|tS|ROI|TOI|VFAC|MINDUR']
 		trialsTemplate = {'variable','variableMessageName','idx','correctedIndex','time',...
+			'gx','gy','hx','hy','pa','valid',...
 			'rt','rtoverride','fixations','nfix','saccades','nsacc','saccadeTimes',...
 			'firstSaccade','uuid','result','correct','breakFix','incorrect','unknown',...
 			'messages','sttime','entime','totaltime','startsampletime','endsampletime',...
 			'timeRange','rtstarttime','rtstarttimeOLD','rtendtime','synctime','deltaT',...
-			'rttime','times','gx','gy','hx','hy','pa','msacc','sampleSaccades',...
-			'microSaccades','radius'}
+			'rttime','times','msacc','sampleSaccades',...
+			'microSaccades','radius','forcedend'}
 	end
 
 	methods
@@ -159,7 +160,7 @@ classdef tobiiAnalysis < analysisCore
 				warning('No EDF file specified...');
 				return
 			end
-			tic
+			tt=tic
 			if isempty(me.raw) || force == true
 				oldpath = pwd;
 				[p, f, e] = fileparts(me.fileName);
@@ -174,10 +175,16 @@ classdef tobiiAnalysis < analysisCore
 						me.raw = exp.rE.eyeTracker.data;
 						me.exp = exp;
 					else
-						warning('This is not a Tobii manager file, choose another file!!!')
+						warning('This is not a Tobii eyetracker file, choose another file!!!');
 						me.raw = [];
+						me.exp = [];
 						return;
 					end
+				else
+					warning('This is not an Opticka file, choose another file!!!');
+					me.raw = [];
+					me.exp = [];
+					return;
 				end
 				cd(oldpath)
 			end
@@ -186,8 +193,12 @@ classdef tobiiAnalysis < analysisCore
 					me.exp.rE.eyeTracker.fullName,...
 					size(me.raw.messages,1),...
 					length(me.raw.data.gaze.deviceTimeStamp));
+				if ~isempty(me.exp.rE.task.varLabels)
+					fprintf('===>>> Variables contained in the task:\n');
+					disp(me.exp.rE.task.varLabels);
+				end
 			end
-			fprintf('<strong>:#:</strong> Loading Raw MAT Data took <strong>%g ms</strong>\n',round(toc*1e3));
+			fprintf('<strong>:#:</strong> Loading Raw MAT Data took <strong>%g ms</strong>\n',round(toc(tt)*1e3));
 		end
 
 		% ===================================================================
@@ -320,7 +331,7 @@ classdef tobiiAnalysis < analysisCore
 		function plot(me,select,type,seperateVars,name)
 			% plot(me,select,type,seperateVars,name)
 			if ~exist('select','var') || ~isnumeric(select); select = []; end
-			if ~exist('type','var') || isempty(type); type = 'correct'; end
+			if ~exist('type','var') || isempty(type); type = 'all'; end
 			if ~exist('seperateVars','var') || ~islogical(seperateVars); seperateVars = false; end
 			if ~exist('name','var') || isempty(name)
 				if isnumeric(select)
@@ -353,9 +364,9 @@ classdef tobiiAnalysis < analysisCore
 				idx = 1:length(me.trials);
 			end
 			if seperateVars == true && isempty(select)
-				vars = unique([me.trials(idx).id]);
-				for j = vars
-					me.plot(j,type,false);
+				
+				for j = 1:length(me.vars)
+					me.plot(me.vars(j).idx,type,false,me.vars(j).name);
 					drawnow;
 				end
 				return
@@ -389,7 +400,7 @@ classdef tobiiAnalysis < analysisCore
 
 			map = me.optimalColours(length(me.vars));
 			for i = 1:length(me.vars)
-				varidx(i) = str2num(me.vars(i).name);
+				varidx(i) = me.vars(i).var;
 			end
 
 			if isempty(select)
@@ -1198,7 +1209,6 @@ classdef tobiiAnalysis < analysisCore
 			this.distance = [];
 			this.pixelspercm = [];
 			this.display = [];
-
 			me.ppd; %faster to cache this now (dependant property sets ppd_ too)
 
 			trialDef = cell2struct(repmat({[]},length(me.trialsTemplate),1),me.trialsTemplate);
@@ -1221,15 +1231,15 @@ classdef tobiiAnalysis < analysisCore
 			trialDef.synctime = NaN;
 			trialDef.deltaT = NaN;
 			trialDef.rttime = NaN;
-			startSampleTemp = NaN;
+			trialDef.forcedend = false;
 
 			xmod = me.exp.rE.screenVals.rightInDegrees;
 			ymod = me.exp.rE.screenVals.bottomInDegrees;
 			times = double(me.raw.data.gaze.systemTimeStamp) /1e3;
-			FEVENTN = size(me.raw.messages,1);
-			pb = textprogressbar(FEVENTN, 'startmsg', 'Parsing Tobii Experiment Events: ',...
-				'showactualnum', true,'updatestep', round(FEVENTN/(FEVENTN/20)));
-			for i = 1:FEVENTN
+			nMessages = size(me.raw.messages,1);
+			pb = textprogressbar(nMessages, 'startmsg', 'Parsing Tobii Experiment Events: ',...
+				'showactualnum', true,'updatestep', round(nMessages/(nMessages/20)));
+			for i = 1:nMessages
 
 				evtT = double(me.raw.messages{i,1}) / 1e3;
 				evt = me.raw.messages{i,2};
@@ -1252,10 +1262,6 @@ classdef tobiiAnalysis < analysisCore
 						thisTrial.idx = tri;
 						thisTrial.time = evtT;
 						thisTrial.sttime = evtT;
-						if ~isnan(startSampleTemp)
-							thisTrial.startsampletime = startSampleTemp; 
-							startSampleTemp = NaN;
-						end
 						if tri > 1
 							thisTrial.totaltime = thisTrial.sttime - me.trials(1).sttime;
 						end
@@ -1270,7 +1276,7 @@ classdef tobiiAnalysis < analysisCore
 					% assume we are missing an end trial message, force one
 					if startsWith(evt,"V_RT")
 						evt = [me.trialEndMessage ' ' num2str(-101010)];
-						thisTrial.FORCEDEND = true;
+						thisTrial.forcedend = true;
 					end
 
 					% Reaction time start markers (normally start of stim
@@ -1350,7 +1356,6 @@ classdef tobiiAnalysis < analysisCore
 						end
 						isTrial = false; 
 						clear thisTrial;
-						startSampleTemp = NaN;
 						tri = tri + 1;
 						continue
 					end
@@ -1390,6 +1395,9 @@ classdef tobiiAnalysis < analysisCore
 
 			uniqueVars = sort(unique([me.trials.variable]));
 
+			labels = [];
+			try labels = me.exp.rE.task.varLabels; end
+
 			for i = 1:length(me.trials)
 				trial = me.trials(i);
 				var = trial.variable;
@@ -1400,7 +1408,11 @@ classdef tobiiAnalysis < analysisCore
 					continue
 				end
 				idx = find(uniqueVars==var);
-				me.vars(idx).name = num2str(var);
+				if ~isempty(labels) && idx <= length(labels)
+					me.vars(idx).name = labels{idx};
+				else
+					me.vars(idx).name = num2str(var);
+				end
 				me.vars(idx).var = var;
 				me.vars(idx).varidx = [me.vars(idx).varidx idx];
 				me.vars(idx).variable = [me.vars(idx).variable var];

@@ -406,7 +406,7 @@ classdef eyelinkAnalysis < analysisCore
 		function handle = plot(me,select,type,seperateVars,name)
 			% plot(me,select,type,seperateVars,name)
 			if ~exist('select','var') || ~isnumeric(select); select = []; end
-			if ~exist('type','var') || isempty(type); type = 'correct'; end
+			if ~exist('type','var') || isempty(type); type = 'all'; end
 			if ~exist('seperateVars','var') || ~islogical(seperateVars); seperateVars = false; end
 			if ~exist('name','var') || isempty(name)
 				if isnumeric(select) && length(select) > 1
