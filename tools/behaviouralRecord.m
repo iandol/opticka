@@ -184,7 +184,7 @@ classdef behaviouralRecord < optickaCore
 		% ===================================================================
 		function updatePlot(me, rE)
 		%> @fn  updatePlot 
-		%> @brief updates the behaviouralRecord details, use drawPlot() to draw it
+		%> @brief updates the behaviouralRecord details, use plot() to draw it
 		%> 
 		%> @param rE runExperiment object
 		% ===================================================================

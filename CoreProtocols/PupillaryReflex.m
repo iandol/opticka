@@ -321,8 +321,8 @@ incFcn = {
 
 %--------------------incorrect exit
 incExitFcn = {
+	% tS.includeErrors will prepend some code here...
 	@()beep(aM, tS.errorSound);
-	@()logRun(me,'INCORRECT'); %fprintf current trial info
 	@()trackerDrawStatus(eT,'INCORRECT! :-(', stims.stimulusPositions, 0);
 	@()needFlipTracker(me, 0); %for operator screen stop flip
 	@()updateVariables(me); % randomise our stimuli, set strobe value too
@@ -332,8 +332,8 @@ incExitFcn = {
 };
 %--------------------break exit
 breakExitFcn = {
+	% tS.includeErrors will prepend some code here...
 	@()beep(aM, tS.errorSound);
-	@()logRun(me,'BREAK_FIX'); %fprintf current trial info
 	@()trackerDrawStatus(eT,'BREAK_FIX! :-(', stims.stimulusPositions, 0);
 	@()needFlipTracker(me, 0); %for operator screen stop flip
 	@()updateVariables(me); % randomise our stimuli, set strobe value too
@@ -344,18 +344,21 @@ breakExitFcn = {
 };
 
 %--------------------change functions based on tS settings
-% this shows an example of how to use tS options to change the function
-% lists run by the state machine. We can prepend or append new functions to
-% the cell arrays.
+% we use tS options to change the function lists run by the state machine.
+% We can prepend or append new functions to the cell arrays.
+%
+% logRun = add current info to behaviural record
+% updatePlot = updates the behavioural record
 % updateTask = updates task object
-% resetRun = randomise current trial within the block
+% resetRun = randomise current trial within the block (makes it harder for
+%            subject to guess based on previous failed trial.
 % checkTaskEnded = see if taskSequence has finished
 if tS.includeErrors % we want to update our task even if there were errors
-	incExitFcn = [ {@()updatePlot(bR, me); @()updateTask(me,tS.INCORRECT)}; incExitFcn ]; %update our taskSequence 
-	breakExitFcn = [ {@()updatePlot(bR, me); @()updateTask(me,tS.BREAKFIX)}; breakExitFcn ]; %update our taskSequence 
+	incExitFcn = [ {@()logRun(me,'INCORRECT'); @()updatePlot(bR, me); @()updateTask(me,tS.INCORRECT)}; incExitFcn ]; %update our taskSequence 
+	breakExitFcn = [ {@()logRun(me,'BREAK_FIX'); @()updatePlot(bR, me); @()updateTask(me,tS.BREAKFIX)}; breakExitFcn ]; %update our taskSequence 
 else
-	incExitFcn = [ {@()updatePlot(bR, me); @()resetRun(task)}; incExitFcn ]; 
-	breakExitFcn = [ {@()updatePlot(bR, me); @()resetRun(task)}; breakExitFcn ];
+	incExitFcn = [ {@()logRun(me,'INCORRECT'); @()updatePlot(bR, me); @()resetRun(task)}; incExitFcn ]; 
+	breakExitFcn = [ {@()logRun(me,'BREAK_FIX'); @()updatePlot(bR, me); @()resetRun(task)}; breakExitFcn ];
 end
 if tS.useTask || task.nBlocks > 0
 	correctExitFcn = [ correctExitFcn; {@()checkTaskEnded(me)} ];

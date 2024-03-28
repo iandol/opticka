@@ -359,7 +359,7 @@ classdef touchManager < optickaCore
 				me.event.result = result;
 			end
 			if me.verbose
-				fprintf('checkTouchWindow--->%i n:%i mv:%i p:%i r:%i {%.1fX %.1fY} result:%i\n',...
+				fprintf('--->>> checkTouchWindows #:%i new:%i move:%i press:%i release:%i {%.1fX %.1fY} result:%i\n',...
 				me.eventID,me.eventNew,me.eventMove,me.eventPressed,me.eventRelease,me.x,me.y,result);
 			end
 		end

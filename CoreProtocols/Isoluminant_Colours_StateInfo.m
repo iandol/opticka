@@ -413,23 +413,27 @@ breakEntryFcn = {
 
 %--------------------break exit
 breakExitFcn = incExitFcn; % we copy the incorrect exit functions
-
 %--------------------change functions based on tS settings
-% this shows an example of how to use tS options to change the function
-% lists run by the state machine. We can prepend or append new functions to
-% the cell arrays...
+% we use tS options to change the function lists run by the state machine.
+% We can prepend or append new functions to the cell arrays.
+%
+% logRun = add current info to behaviural record
+% updatePlot = updates the behavioural record
+% updateTask = updates task object
+% resetRun = randomise current trial within the block (makes it harder for
+%            subject to guess based on previous failed trial.
+% checkTaskEnded = see if taskSequence has finished
 if tS.includeErrors % we want to update our task even if there were errors
-	incExitFcn = [ {@()updateTask(me,tS.INCORRECT)}; incExitFcn ]; %update our taskSequence 
-	breakExitFcn = [ {@()updateTask(me,tS.BREAKFIX)}; breakExitFcn ]; %update our taskSequence 
+	incExitFcn = [ {@()updatePlot(bR, me); @()updateTask(me,tS.INCORRECT)}; incExitFcn ]; %update our taskSequence 
+	breakExitFcn = [ {@()updatePlot(bR, me); @()updateTask(me,tS.BREAKFIX)}; breakExitFcn ]; %update our taskSequence 
+else
+	incExitFcn = [ {@()updatePlot(bR, me); @()resetRun(task)}; incExitFcn ]; 
+	breakExitFcn = incExitFcn;
 end
-if tS.useTask %we are using task
+if tS.useTask || task.nBlocks > 0
 	correctExitFcn = [ correctExitFcn; {@()checkTaskEnded(me)} ];
 	incExitFcn = [ incExitFcn; {@()checkTaskEnded(me)} ];
 	breakExitFcn = [ breakExitFcn; {@()checkTaskEnded(me)} ];
-	if ~tS.includeErrors % using task but don't include errors 
-		incExitFcn = [ {@()resetRun(task)}; incExitFcn ]; %we randomise the run within this block to make it harder to guess next trial
-		breakExitFcn = [ {@()resetRun(task)}; breakExitFcn ]; %we randomise the run within this block to make it harder to guess next trial
-	end
 end
 
 %--------------------enter tracker calibrate/validate setup mode

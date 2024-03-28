@@ -1222,7 +1222,7 @@ classdef runExperiment < optickaCore
 			s.drawText('===>>> Opticka Testing...');
 			s.flip;
 
-			commandwindow;
+			commandwindow;drawnow();
 
 			fprintf('\n\n=========================\nOPTICKA TESTING:\n\n');
 
@@ -1717,7 +1717,7 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 			if me.isRunning
 				if ~exist('tag','var'); tag = '#'; end
-				t = sprintf('===>%s:%s',tag,infoText(me));
+				t = sprintf('===>>> %s : %s', tag, infoText(me));
 				fprintf('%s\n',t);
 				me.behaviouralRecord.info = t;
 				if me.isRunTask
@@ -2366,6 +2366,7 @@ classdef runExperiment < optickaCore
 		%> @return t info string
 		% ===================================================================
 			etinfo = ''; name = '';
+			tt=tic;
 			if me.isRunTask
 				log = me.taskLog;
 				name = [me.stateMachine.currentName ':' me.stateMachine.currentUUID];
@@ -2416,6 +2417,7 @@ classdef runExperiment < optickaCore
 				t = [t ' | ' me.variableInfo];
 			end
 			t = WrapString(t, 100);
+			fprintf('@@@ time = %.3f\n',toc(tt)*1e3);
 		end
 		
 		% ===================================================================
