@@ -11,7 +11,7 @@ classdef tobiiAnalysis < analysisCore
 	% eyelinkAnalysis offers a set of methods to load, parse & plot raw tobii files.
 	properties
 		%> file name
-		fileName char										= ''
+		fileName char								= ''
 		%> which EDF message contains the trial start tag
 		trialStartMessageName char					= 'TRIALID'
 		%> which EDF message contains the variable name or value
@@ -58,8 +58,6 @@ classdef tobiiAnalysis < analysisCore
 		%> these are used for spikes spike saccade time correlations
 		rtLimits double
 		rtDivision double
-		%> trial list from the saved behavioural data, used to fix trial name bug in old files
-		trialOverride struct
 		%> screen X center in pixels
 		xCenter double								= 640
 		%> screen Y center in pixels
@@ -116,17 +114,18 @@ classdef tobiiAnalysis < analysisCore
 		%> pixels per degree calculated from pixelsPerCm and distance (cache)
 		ppd_
 		%> allowed properties passed to object upon construction
-		allowedProperties char = ['correctValue|incorrectValue|breakFixValue|'...
-			'trialStartMessageName|variableMessageName|trialEndMessage|file|dir|'...
-			'verbose|pixelsPerCm|distance|xCenter|yCenter|rtStartMessage|minSaccadeDistance|'...
-			'rtEndMessage|trialOverride|rtDivision|rtLimits|tS|ROI|TOI|VFAC|MINDUR']
+		allowedProperties = {'correctValue', 'incorrectValue', 'breakFixValue', ...
+			'trialStartMessageName', 'variableMessageName', 'trialEndMessage', 'file', 'dir', ...
+			'verbose', 'pixelsPerCm', 'distance', 'xCenter', 'yCenter', 'rtStartMessage', 'minSaccadeDistance', ...
+			'rtEndMessage', 'trialOverride', 'rtDivision', 'rtLimits', 'tS', 'ROI', 'TOI', 'VFAC', 'MINDUR',...
+			'baselineWindow','measureRange','plotRange'}
 		trialsTemplate = {'variable','variableMessageName','idx','correctedIndex','time',...
-			'gx','gy','hx','hy','pa','valid',...
+			'times','gx','gy','hx','hy','pa','valid',...
 			'rt','rtoverride','fixations','nfix','saccades','nsacc','saccadeTimes',...
 			'firstSaccade','uuid','result','correct','breakFix','incorrect','unknown',...
 			'messages','sttime','entime','totaltime','startsampletime','endsampletime',...
 			'timeRange','rtstarttime','rtstarttimeOLD','rtendtime','synctime','deltaT',...
-			'rttime','times','msacc','sampleSaccades',...
+			'rttime','msacc','sampleSaccades',...
 			'microSaccades','radius','forcedend'}
 	end
 
@@ -137,15 +136,15 @@ classdef tobiiAnalysis < analysisCore
 		% ===================================================================
 		function me = tobiiAnalysis(varargin)
 			args = optickaCore.addDefaults(varargin,struct('name','tobiiAnal',...
-				'measureRange',[-0.4 1],'plotRange',[-0.5 1]));
+				'measureRange',[-0.4 1],'plotRange',[-0.5 1],...
+				'baselineWindow',[]));
 			me=me@analysisCore(args); %superclass constructor
 			me.parseArgs(args, me.allowedProperties);
 	
 			if isempty(me.fileName)
-				[f,d] = uigetfile('*.mat','Load MAT File:');
-				me.fileName = [d filesep f];
+				[f,d] = uigetfile('*.mat','Select Opticka Data MAT File:');
+				if ~isnumeric(f); me.fileName = [d filesep f]; end
 			end
-			me.ppd; %cache our initial ppd_
 		end
 
 		% ===================================================================
@@ -157,10 +156,15 @@ classdef tobiiAnalysis < analysisCore
 		function load(me,force)
 			if ~exist('force','var');force=false;end
 			if isempty(me.fileName)
-				warning('No EDF file specified...');
-				return
+				[f,d] = uigetfile('*.mat','Select Opticka Data MAT File:');
+				if ~isnumeric(f)
+					me.fileName = [d filesep f];
+				else
+					warning('No Data file specified...');
+					return
+				end
 			end
-			tt=tic
+			tt=tic;
 			if isempty(me.raw) || force == true
 				oldpath = pwd;
 				[p, f, e] = fileparts(me.fileName);
@@ -330,6 +334,7 @@ classdef tobiiAnalysis < analysisCore
 		% ===================================================================
 		function plot(me,select,type,seperateVars,name)
 			% plot(me,select,type,seperateVars,name)
+			if ~me.isParsed; warning('You need to parse data first...');return;end
 			if ~exist('select','var') || ~isnumeric(select); select = []; end
 			if ~exist('type','var') || isempty(type); type = 'all'; end
 			if ~exist('seperateVars','var') || ~islogical(seperateVars); seperateVars = false; end
@@ -420,6 +425,7 @@ classdef tobiiAnalysis < analysisCore
 			end
 
 			for i = idx
+				if any(me.trialsToPrune == i); continue; end
 				if idxInternal == true %we're using the eyelink index which includes incorrects
 					f = i;
 				elseif me.excludeIncorrect %we're using an external index which excludes incorrects
@@ -445,16 +451,20 @@ classdef tobiiAnalysis < analysisCore
 				end
 
 				t = thisTrial.times / 1e3; %convert to seconds
-				ix = find((t >= me.measureRange(1)) & (t <= me.measureRange(2)));
-				ip = find((t >= me.plotRange(1)) & (t <= me.plotRange(2)));
+				ix = (t >= me.measureRange(1)) & (t <= me.measureRange(2));
+				ip = (t >= me.plotRange(1)) & (t <= me.plotRange(2));
+				ib = [];
+				if length(me.baselineWindow)==2
+					ib = (t >= me.baselineWindow(1)) & (t <= me.baselineWindow(2));
+				end
 				tm = t(ix);
 				tp = t(ip);
-				xa = thisTrial.gx / me.ppd_;
-				ya = thisTrial.gy / me.ppd_;
+				xa = thisTrial.gx;
+				ya = thisTrial.gy;
+				pupilAll = thisTrial.pa;
 				lim = 50; %max degrees in data
 				xa(xa < -lim) = -lim; xa(xa > lim) = lim; 
 				ya(ya < -lim) = -lim; ya(ya > lim) = lim;
-				pupilAll = thisTrial.pa;
 				
 				x = xa(ix);
 				y = ya(ix);
@@ -463,6 +473,12 @@ classdef tobiiAnalysis < analysisCore
 				xp = xa(ip);
 				yp = ya(ip);
 				pupilPlot = pupilAll(ip);
+				if ~isempty(ib)
+					pb = nanmean(pupilAll(ib));
+					if isnumeric(pb)
+						pupilPlot = pupilPlot - pb;
+					end
+				end
 
 				q(1,1).select();
 				q(1,1).hold('on')
@@ -489,21 +505,6 @@ classdef tobiiAnalysis < analysisCore
 						plot(thisTrial.microSaccades,-0.1,'ko','Color',c,'MarkerSize',4,'MarkerEdgeColor',[0 0 0],...
 							'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
 					end
-				end
-
-				qq(1,1).select();
-				qq(1,1).hold('on')
-				for fix=1:length(thisTrial.fixations)
-					f=thisTrial.fixations(fix);
-					plot3([f.time/1e3 f.time/1e3+f.length/1e3],[f.gstx f.genx],[f.gsty f.geny],'k-o',...
-						'LineWidth',1,'MarkerSize',5,'MarkerEdgeColor',[0 0 0],...
-						'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe)
-				end
-				for sac=1:length(thisTrial.saccades)
-					s=thisTrial.saccades(sac);
-					plot3([s.time/1e3 s.time/1e3+s.length/1e3],[s.gstx s.genx],[s.gsty s.geny],'r-o',...
-						'LineWidth',1.5,'MarkerSize',5,'MarkerEdgeColor',[1 0 0],...
-						'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe)
 				end
 				
 				qq(1,2).select();
@@ -542,7 +543,7 @@ classdef tobiiAnalysis < analysisCore
 			q(1,1).select();
 			ah = gca; ah.ButtonDownFcn = @spawnMe;
 			ah.DataAspectRatio = [1 1 1];
-			axis ij;
+			axis ij; axis equal;
 			grid on;
 			box on;
 			%axis(round([-display(1)/2 display(1)/2 -display(2)/2 display(2)/2]));
@@ -555,7 +556,6 @@ classdef tobiiAnalysis < analysisCore
 			grid on;
 			box on;
 			axis tight;
-			if maxv > 10; maxv = 10; end
 			axis([me.plotRange(1) me.plotRange(2) -0.2 maxv])
 			ti=sprintf('ABS Mean/SD %g - %g s: X=%.2g / %.2g | Y=%.2g / %.2g', t1,t2,...
 				mean(abs(meanx)), mean(abs(stdex)), ...
@@ -567,22 +567,6 @@ classdef tobiiAnalysis < analysisCore
 			xlabel(q(1,2),'Time (s)');
 			ylabel(q(1,2),'Degrees');
 
-			qq(1,1).select();
-			qq(1,1).margin = [30 20 10 35]; %left bottom right top
-			ah = gca; ah.ButtonDownFcn = @spawnMe;
-			grid on;
-			box on;
-			axis([me.plotRange(1) me.plotRange(2) -10 10 -10 10]);
-			view([35 35]);
-			xlabel(qq(1,1),'Time (ms)');
-			ylabel(qq(1,1),'X Position');
-			zlabel(qq(1,1),'Y Position');
-			mn = nanmean(sacc);
-			md = nanmedian(sacc);
-			[~,er] = me.stderr(sacc,'SD');
-			h=title(sprintf('%s %s: Saccades (red) & Fixation (black) | First Saccade mean/median: %.2g / %.2g � %.2g SD [%.2g <> %.2g]',...
-				thisVarName,upper(type),mn,md,er,min(sacc),max(sacc)));
-			set(h,'BackgroundColor',[1 1 1]);
 			
 			qq(1,2).select();
 			ah = gca; ah.ButtonDownFcn = @spawnMe;
@@ -669,8 +653,8 @@ classdef tobiiAnalysis < analysisCore
 				me.ROIInfo(i).fixationX = fixationX;
 				me.ROIInfo(i).fixationY = fixationY;
 				me.ROIInfo(i).fixationRadius = fixationRadius;
-				x = me.trials(i).gx / me.ppd_;
-				y = me.trials(i).gy  / me.ppd_;
+				x = me.trials(i).gx;
+				y = me.trials(i).gy;
 				times = me.trials(i).times / 1e3;
 				idx = find(times > 0); % we only check ROI post 0 time
 				times = times(idx);
@@ -716,8 +700,8 @@ classdef tobiiAnalysis < analysisCore
 			fixationRadius = me.TOI(5);
 			for i = 1:length(me.trials)
 				times = me.trials(i).times / 1e3;
-				x = me.trials(i).gx / me.ppd_;
-				y = me.trials(i).gy  / me.ppd_;
+				x = me.trials(i).gx;
+				y = me.trials(i).gy;
 
 				idx = intersect(find(times>=t1), find(times<=t2));
 				times = times(idx);
@@ -996,44 +980,6 @@ classdef tobiiAnalysis < analysisCore
 			me.ppd_ = ppd;
 		end
 
-		% ===================================================================
-		%> @brief
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function fixVarNames(me)
-			if me.needOverride == true
-				if isempty(me.trialOverride)
-					warning('No replacement trials available!!!')
-					return
-				end
-				trials = me.trialOverride; %#ok<*PROP>
-				if  max([me.trials.correctedIndex]) ~= length(trials)
-					warning('TRIAL ID LENGTH MISMATCH!');
-					return
-				end
-				a = 1;
-				me.trialList = [];
-				for j = 1:length(me.trials)
-					if me.trials(j).incorrect ~= true
-						if a <= length(trials) && me.trials(j).correctedIndex == trials(a).index
-							me.trials(j).oldid = me.trials(j).variable;
-							me.trials(j).variable = trials(a).variable;
-							me.trialList(j) = me.trials(j).variable;
-							if me.trials(j).breakFix == true
-								me.trialList(j) = -[me.trialList(j)];
-							end
-							a = a + 1;
-						end
-					end
-				end
-				parseAsVars(me); %need to redo this now
-				warning('---> Trial name override in place!!!')
-			else
-				me.trialOverride = struct();
-			end
-		end
 
 	end%-------------------------END PUBLIC METHODS--------------------------------%
 
@@ -1332,22 +1278,22 @@ classdef tobiiAnalysis < analysisCore
 							thisTrial.endsampletime = thisTrial.entime;
 							idx = times >= thisTrial.startsampletime & ...
 								times <= thisTrial.endsampletime;
-
-							thisTrial.times = times(idx);
-							thisTrial.times = thisTrial.times - thisTrial.rtstarttime;
-							thisTrial.timeRange = [thisTrial.times(1) thisTrial.times(end)];
-
-							thisTrial.gx = me.raw.data.gaze.left.gazePoint.onDisplayArea(1,idx);
-							thisTrial.gx = (thisTrial.gx * (xmod*2)) - xmod;
-							thisTrial.gy = me.raw.data.gaze.left.gazePoint.onDisplayArea(2,idx);
-							thisTrial.gy = (thisTrial.gy * (ymod*2)) - ymod;
-							thisTrial.hx = me.raw.data.gaze.left.gazePoint.inUserCoords(1,idx);
-
-							thisTrial.hy = me.raw.data.gaze.left.gazePoint.inUserCoords(2,idx);
-
-							thisTrial.pa = me.raw.data.gaze.left.pupil.diameter(idx);
-
-							thisTrial.valid = me.raw.data.gaze.left.pupil.valid(idx);
+							if ~isempty(idx)
+								thisTrial.times = times(idx);
+								thisTrial.times = thisTrial.times - thisTrial.rtstarttime;
+								thisTrial.timeRange = [thisTrial.times(1) thisTrial.times(end)];
+								thisTrial.gx = me.raw.data.gaze.left.gazePoint.onDisplayArea(1,idx);
+								thisTrial.gx = (thisTrial.gx * (xmod*2)) - xmod;
+								thisTrial.gy = me.raw.data.gaze.left.gazePoint.onDisplayArea(2,idx);
+								thisTrial.gy = (thisTrial.gy * (ymod*2)) - ymod;
+								thisTrial.hx = me.raw.data.gaze.left.gazePoint.inUserCoords(1,idx);
+								thisTrial.hy = me.raw.data.gaze.left.gazePoint.inUserCoords(2,idx);
+								thisTrial.pa = me.raw.data.gaze.left.pupil.diameter(idx);
+								thisTrial.valid = me.raw.data.gaze.left.pupil.valid(idx);
+							else
+								thisTrial.result = -101010;
+							end
+							
 						end
 						if tri == 1
 							me.trials = thisTrial;
@@ -1537,14 +1483,14 @@ classdef tobiiAnalysis < analysisCore
 			pb = textprogressbar(length(me.trials),'startmsg','Loading trials to compute microsaccades: ','showactualnum',true);
 			cms = tic;
 			for jj = 1:length(me.trials)
-				if me.trials(jj).incorrect == true || me.trials(jj).breakFix == true || me.trials(jj).unknown == true;	continue;	end
+				if any(isnan(me.trials(jj).timeRange)) || me.trials(jj).incorrect == true || me.trials(jj).breakFix == true || me.trials(jj).unknown == true;	continue;	end
 				samples = []; sac = []; radius = []; monol=[]; monor=[];
 				me.trials(jj).msacc = struct();
 				me.trials(jj).sampleSaccades = [];
 				me.trials(jj).microSaccades = [];
 				samples(:,1) = me.trials(jj).times/1e3;
-				samples(:,2) = me.trials(jj).gx/me.ppd_;
-				samples(:,3) = me.trials(jj).gy/me.ppd_;
+				samples(:,2) = me.trials(jj).gx;
+				samples(:,3) = me.trials(jj).gy;
 				samples(:,4) = nan(size(samples(:,1)));
 				samples(:,5) = samples(:,4);
 				eye_used = 0;

@@ -11,7 +11,7 @@ classdef analysisCore < optickaCore
 	properties
 		%> generate plots?
 		doPlots logical = true
-		%> +- time window (s) for baseline estimation/removal
+		%> +- time window (s) for baseline estimation/removal [-0.2 0]
 		baselineWindow double = [-0.2 0]
 		%> default range (s) to measure values from
 		measureRange double = [0.1 0.2]
@@ -323,10 +323,13 @@ classdef analysisCore < optickaCore
 			if isnumeric(in) && length(in)==2 && in(1)<in(2)
 				if ~isequal(me.baselineWindow, in)
 					me.baselineWindow = in;
-					disp('You should REPARSE the data to fully enable this change')
+					me.logOutput('You should REPARSE the data to fully enable this change')
 				end
+			elseif any(isnan(in))
+				me.baselineWindow = [NaN NaN];
+				me.logOutput('Set baselineWindow to [NaN NaN]')
 			else
-				disp('baselineWindow input invalid.');
+				me.logOutput('baselineWindow input invalid.');
 			end
 		end
 		

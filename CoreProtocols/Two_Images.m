@@ -63,7 +63,7 @@ tS.fixY						= 0;
 tS.firstFixInit				= 3;
 % time to maintain initial fixation within window, can be single value or a
 % range to randomise between
-tS.firstFixTime				= 0.1;
+tS.firstFixTime				= 0.25;
 % fixation window circular radius in degrees; if you enter [x y] the window
 % will be rectangular.
 tS.firstFixRadius			= 2;
@@ -236,7 +236,6 @@ fixExitFcn = {
 	@()updateFixationValues(eT,[],[],[],tS.stimulusFixTime, tS.stimulusFixRadius, tS.strict);
 	@()show(stims,[1 2]); % show images
 	@()hide(stims,3); % hide fixation cross
-	@()trackerMessage(eT,'END_FIX'); %eyetracker message saved to data stream
 }; 
 
 %========================================================
@@ -246,7 +245,7 @@ fixExitFcn = {
 stimEntryFcn = {
 	% send stimulus value strobe (value set by updateVariables(me) function on previous trial)
 	@()doStrobe(me,true);
-	% send 0 time sync signal to eyetracker
+	% send 0-time sync signal to eyetracker
 	@()doSyncTime(me); 
 };
 
@@ -331,6 +330,7 @@ incExitFcn = {
 	@()beep(aM, tS.errorSound);
 	@()logRun(me,'INCORRECT'); %fprintf current trial info
 	@()trackerDrawStatus(eT,'INCORRECT! :-(', stims.stimulusPositions);
+	@()updatePlot(bR, me); % must run before updateTask
 	@()needFlipTracker(me, 0); %for operator screen stop flip
 	@()updateVariables(me); % randomise our stimuli, set strobe value too
 	@()update(stims); % update our stimuli ready for display
@@ -342,6 +342,7 @@ breakExitFcn = {
 	@()beep(aM, tS.errorSound);
 	@()logRun(me,'BREAK_FIX'); %fprintf current trial info
 	@()trackerDrawStatus(eT,'BREAK_FIX! :-(', stims.stimulusPositions);
+	@()updatePlot(bR, me); % must run before updateTask
 	@()needFlipTracker(me, 0); %for operator screen stop flip
 	@()updateVariables(me); % randomise our stimuli, set strobe value too
 	@()update(stims); % update our stimuli ready for display
@@ -350,18 +351,21 @@ breakExitFcn = {
 };
 
 %--------------------change functions based on tS settings
-% this shows an example of how to use tS options to change the function
-% lists run by the state machine. We can prepend or append new functions to
-% the cell arrays.
+% we use tS options to change the function lists run by the state machine.
+% We can prepend or append new functions to the cell arrays.
+%
+% logRun = add current info to behaviural record
+% updatePlot = updates the behavioural record
 % updateTask = updates task object
-% resetRun = randomise current trial within the block
+% resetRun = randomise current trial within the block (makes it harder for
+%            subject to guess based on previous failed trial.
 % checkTaskEnded = see if taskSequence has finished
 if tS.includeErrors % we want to update our task even if there were errors
-	incExitFcn = [ {@()updatePlot(bR, me); @()updateTask(me,tS.INCORRECT)}; incExitFcn ]; %update our taskSequence 
-	breakExitFcn = [ {@()updatePlot(bR, me); @()updateTask(me,tS.BREAKFIX)}; breakExitFcn ]; %update our taskSequence 
+	incExitFcn = [ {@()logRun(me,'INCORRECT'); @()updatePlot(bR, me); @()updateTask(me,tS.INCORRECT)}; incExitFcn ]; %update our taskSequence 
+	breakExitFcn = [ {@()logRun(me,'BREAK_FIX'); @()updatePlot(bR, me); @()updateTask(me,tS.BREAKFIX)}; breakExitFcn ]; %update our taskSequence 
 else
-	incExitFcn = [ {@()updatePlot(bR, me); @()resetRun(task)}; incExitFcn ]; 
-	breakExitFcn = [ {@()updatePlot(bR, me); @()resetRun(task)}; breakExitFcn ];
+	incExitFcn = [ {@()logRun(me,'INCORRECT'); @()updatePlot(bR, me); @()resetRun(task)}; incExitFcn ]; 
+	breakExitFcn = [ {@()logRun(me,'BREAK_FIX'); @()updatePlot(bR, me); @()resetRun(task)}; breakExitFcn ];
 end
 if tS.useTask || task.nBlocks > 0
 	correctExitFcn = [ correctExitFcn; {@()checkTaskEnded(me)} ];

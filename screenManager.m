@@ -985,7 +985,7 @@ classdef screenManager < optickaCore
 		end
 
 		% ===================================================================
-		function set.backgroundColour(me,value)
+		function set.backgroundColour(me, value)
 		%> @fn set.backgroundColour
 		%> @brief Set method for backgroundColour
 		%>
@@ -998,7 +998,9 @@ classdef screenManager < optickaCore
 				case 4
 					me.backgroundColour = value;
 				otherwise
-					error('Wrong colour values given, enter 1, 3 or 4 values');
+					disp('Wrong Input:')
+					disp(value);
+					warning('Wrong colour values given, enter 1, 3 or 4 values');
 			end
 		end
 
@@ -1014,7 +1016,7 @@ classdef screenManager < optickaCore
 			else
 				me.bitDepth = me.bitDepths{1};
 				disp(me.bitDepths)
-				error('Wrong value given, select from list above')
+				warning('Wrong value given, select from list above')
 			end
 		end
 
@@ -1029,7 +1031,7 @@ classdef screenManager < optickaCore
 				me.srcMode = me.blendModes{check};
 			else
 				disp(me.blendModes)
-				error('Wrong value given, select from list above')
+				warning('Wrong value given, select from list above')
 			end
 		end
 
@@ -1045,7 +1047,7 @@ classdef screenManager < optickaCore
 				me.dstMode = me.blendModes{check};
 			else
 				disp(me.blendModes);
-				error('Wrong value given, select from list above');
+				warning('Wrong value given, select from list above');
 			end
 		end
 
