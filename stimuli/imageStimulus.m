@@ -16,6 +16,9 @@ classdef imageStimulus < baseStimulus
 		filePath char				= ''
 		%> if you pass a directory of images, which one is selected
 		selection double			= 0
+		%> for a directory of images do we randomly load one each time we
+		%> update()?
+		randomiseSelection			= false
 		%> contrast multiplier to the image
 		contrast double				= 1
 		%> precision: 0 = 8bit | 1 = 16bit | 2 = 32bit
@@ -58,7 +61,7 @@ classdef imageStimulus < baseStimulus
 		%> list of imagenames if selection > 0
 		filePaths					= {};
 		%> current randomly selected image
-		currentImage				= ''
+		currentFile					= ''
 		%> scale is set by size
 		scale						= 1
 		%>
@@ -170,6 +173,7 @@ classdef imageStimulus < baseStimulus
 			addRuntimeProperties(me);
 
 			loadImage(me, in);
+			me.chosenImages = [me.chosenImages string(regexprep(me.currentFile,'\\','/'))];
 			me.inSetup = false; me.isSetup = true;
 			if me.sizeOut > 0
 				me.scale = me.sizeOut / (me.width / me.ppd);
@@ -196,32 +200,32 @@ classdef imageStimulus < baseStimulus
 		%> @brief Load an image
 		%>
 		% ===================================================================
-		function loadImage(me,in)
+		function loadImage(me, in)
 			ialpha = uint8([]);
 			tt = tic;
 			if ~exist('in','var'); in = []; end
+
 			if ~isempty(in) && ischar(in)
 				% assume a file path
 				[me.matrix, ~, ialpha] = imread(in);
-				me.currentImage = in;
+				me.currentFile = in;
 			elseif ~isempty(in) && isnumeric(in) && max(size(in))==1 && ~isempty(me.filePaths) && in <= length(me.filePaths)
 				% assume an index to filePaths
-				me.currentImage = me.filePaths{in};
-				[me.matrix, ~, ialpha] = imread(me.currentImage);
+				me.currentFile = me.filePaths{in};
+				[me.matrix, ~, ialpha] = imread(me.currentFile);
 			elseif ~isempty(in) && isnumeric(in) && size(in,3)==3
 				% assume a raw matrix
 				me.matrix = in;
-				me.currentImage = '';
+				me.currentFile = '';
 			elseif ~isempty(me.filePaths)
 				% try to load from filePaths
 				im = me.getP('selection');
 				if im < 1 || im > me.nImages
-					im = randi(length(me.filePaths));
+					im = 1;
 				end
 				if exist(me.filePaths{im},'file')
-					me.currentImage = me.filePaths{im};
-					fprintf('File %s\n',me.currentImage);
-					[me.matrix, ~, ialpha] = imread(me.currentImage);
+					me.currentFile = me.filePaths{im};
+					[me.matrix, ~, ialpha] = imread(me.currentFile);
 					if isinteger(me.matrix) && isfloat(ialpha)
 						ialpha = uint8(ialpha .* 255);
 					end
@@ -229,8 +233,9 @@ classdef imageStimulus < baseStimulus
 			else
 				if me.sizeOut <= 0; sz = 2; else; sz = me.sizeOut; end
 				me.matrix = uint8(ones(sz*me.ppd,sz*me.ppd,3)*255); %white texture
-				me.currentImage = '';
+				me.currentFile = '';
 			end
+
 
 			if me.precision > 0
 				me.matrix = double(me.matrix)/255;
@@ -296,8 +301,7 @@ classdef imageStimulus < baseStimulus
 			if ~isempty(me.sM) && me.sM.isOpen == true
 				me.texture = Screen('MakeTexture', me.sM.win, me.matrix, 1, me.specialFlags, me.precision);
 			end
-			if me.isSetup; me.chosenImages = [me.chosenImages string(regexprep(me.currentImage,'\\','/'))]; end
-			me.logOutput('loadImage',['Load: ' regexprep(me.currentImage,'\\','/') 'in ' num2str(toc(tt)) ' secs']);
+			me.logOutput('loadImage',['Load: ' regexprep(me.currentFile,'\\','/') 'in ' num2str(toc(tt)) ' secs']);
 		end
 
 		% ===================================================================
@@ -305,13 +309,18 @@ classdef imageStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function update(me)
-			s = me.getP('selection');
-			if s > 0 && ~strcmp(me.currentImage,me.filePaths{s})
+			if me.randomiseSelection
+				im = randi(length(me.filePaths));
+			else 
+				im = me.getP('selection');
+			end
+			if im > 0 && ~strcmpi(me.currentFile,me.filePaths{im})
 				if ~isempty(me.texture) && me.texture > 0 && Screen(me.texture,'WindowKind') == -1
 					try Screen('Close',me.texture); end %#ok<*TRYNC>
 				end
-				loadImage(me);
+				loadImage(me,im);
 			end
+			me.chosenImages = [me.chosenImages string(regexprep(me.currentFile,'\\','/'))];
 			if me.sizeOut > 0
 				me.scale = me.sizeOut / (me.width / me.ppd);
 			end
@@ -416,7 +425,7 @@ classdef imageStimulus < baseStimulus
 				me.selection = 1;
 				warning('--->>> imageStimulus couldn''t find correct image, reverted to default!')
 			end
-			me.currentImage = me.filePaths{me.selection};
+			me.currentFile = me.filePaths{me.selection};
 		end
 
 	end %---END PUBLIC METHODS---%

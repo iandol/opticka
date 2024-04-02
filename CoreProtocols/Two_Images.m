@@ -328,9 +328,7 @@ incFcn = {
 %--------------------incorrect exit
 incExitFcn = {
 	@()beep(aM, tS.errorSound);
-	@()logRun(me,'INCORRECT'); %fprintf current trial info
 	@()trackerDrawStatus(eT,'INCORRECT! :-(', stims.stimulusPositions);
-	@()updatePlot(bR, me); % must run before updateTask
 	@()needFlipTracker(me, 0); %for operator screen stop flip
 	@()updateVariables(me); % randomise our stimuli, set strobe value too
 	@()update(stims); % update our stimuli ready for display
@@ -340,9 +338,7 @@ incExitFcn = {
 %--------------------break exit
 breakExitFcn = {
 	@()beep(aM, tS.errorSound);
-	@()logRun(me,'BREAK_FIX'); %fprintf current trial info
 	@()trackerDrawStatus(eT,'BREAK_FIX! :-(', stims.stimulusPositions);
-	@()updatePlot(bR, me); % must run before updateTask
 	@()needFlipTracker(me, 0); %for operator screen stop flip
 	@()updateVariables(me); % randomise our stimuli, set strobe value too
 	@()update(stims); % update our stimuli ready for display

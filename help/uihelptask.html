@@ -197,8 +197,8 @@ customised functions required. It can optionally use
 <code>eyeTracker</code>, <code>IO</code>, and other manager classes to
 control stimuli, variables, and hardware interaction.</li>
 <li><strong>Method of Constants (MOC) Task</strong> – a MOC task is a
-task where no behavioural control is required. It uses
-<code>taskSequence</code> and <code>metaStimulus</code> to define a set
+task where <strong>no</strong> behavioural control is required. It uses
+<code>metaStimulus</code> and <code>taskSequence</code> to define a set
 of stimuli and the variables that will drive unique trials repeated over
 blocks.</li>
 </ol>
@@ -213,12 +213,12 @@ for.</li>
 <li><strong>MOC IT time</strong>: the time between trials.</li>
 <li><strong>MOC IB time</strong>: the time between blocks.</li>
 <li><strong>REAL Time</strong>: We can use two timing methods, when REAL
-Time=ON then we use tthe PTB method <code>GetSecs</code> to measure time
-stamps and task time is based on these real time values. When when REAL
-Time=OFF then we calculate how many frames a time interval should
-contain and use ticks to measure time as each frame is shown. REAL Time
-is essential for real experiments, ticks are more useful for debugging
-where you can stop and step through carefully.</li>
+Time=ON then we use the PTB method <code>GetSecs</code> or the VBL to
+measure time stamps and task time is based on these real time values.
+When when REAL Time=OFF then we calculate how many frames a time
+interval should contain and use ticks to measure time as each frame is
+shown. REAL Time is essential for real experiments, ticks are more
+useful for debugging where you can stop and step through carefully.</li>
 </ul>
 <h1 id="task-parameters">Task Parameters</h1>
 <p>Opticka uses the <code>taskSequence</code> class to build the
@@ -229,7 +229,7 @@ List</kbd> editor, but the underlying code looks like this
 (<code>nBlocks</code> is <strong>Task Options &gt; Repeat
 Blocks</strong> in the GUI):</p>
 <div class="sourceCode" id="cb1"><pre
-class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">% task sequence with 5 blocks</span></span>
+class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">% task sequence with 2 blocks</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="va">task</span> <span class="op">=</span> <span class="va">taskSequence</span>(<span class="ss">&#39;nBlocks&#39;</span><span class="op">,</span> <span class="fl">2</span>)<span class="op">;</span></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co">% first variable: 3 angles that will be applied to stimuli 1 &amp; 2</span></span>
@@ -237,15 +237,20 @@ class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb1-1"><a hr
 <span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="va">task</span>.<span class="va">nVar</span>(<span class="fl">1</span>).<span class="va">values</span> <span class="op">=</span> [<span class="op">-</span><span class="fl">25</span> <span class="fl">0</span> <span class="fl">25</span>]<span class="op">;</span></span>
 <span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="va">task</span>.<span class="va">nVar</span>(<span class="fl">1</span>).<span class="va">stimulus</span> <span class="op">=</span> [<span class="fl">1</span> <span class="fl">2</span>]<span class="op">;</span></span>
 <span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co">% second variable: 3 colours that will be applied to stimulus 3</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co">% second variable: 2 colours that will be applied to stimulus 3 only</span></span>
 <span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="va">task</span>.<span class="va">nVar</span>(<span class="fl">2</span>).<span class="va">name</span> <span class="op">=</span> <span class="ss">&#39;colour&#39;</span><span class="op">;</span></span>
 <span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="va">task</span>.<span class="va">nVar</span>(<span class="fl">2</span>).<span class="va">values</span> <span class="op">=</span> {[<span class="fl">1</span> <span class="fl">0</span> <span class="fl">0</span>]<span class="op">,</span> [<span class="fl">0</span> <span class="fl">1</span> <span class="fl">0</span>]}<span class="op">;</span></span>
 <span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="va">task</span>.<span class="va">nVar</span>(<span class="fl">2</span>).<span class="va">stimulus</span> <span class="op">=</span> <span class="fl">3</span><span class="op">;</span></span>
 <span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="va">randomiseTask</span>(<span class="va">task</span>)<span class="op">;</span></span></code></pre></div>
-<p>This will generate a randomisation table like so (3 angles x 2
-colours per block = <strong>6</strong> conditions; 2 block =
-<strong>12</strong> total trials):</p>
+<p>Independent variables can be any stimulus parameter
+(<code>size</code>,<code>angle</code>,<code>xPosition</code> etc.) that
+can be assigned to that stimulus. There are some magic variables like
+<code>xyPosition</code> that allows you to pass both the X and Y
+position in a single variable value.</p>
+<p><code>randomiseTask(task)</code> will generate the randomisation
+table like so (3 angles x 2 colours per block = <strong>6</strong>
+conditions; 2 block = <strong>12</strong> total trials):</p>
 <table>
 <thead>
 <tr class="header">
@@ -369,16 +374,21 @@ colours per block = <strong>6</strong> conditions; 2 block =
 </tr>
 </tbody>
 </table>
+<p>Opticka’s task function can then use this table to assign variables
+on each trial to the defined stimuli and generate strobed words to send
+to external equipment. See core protocols like
+<code>OrientationTuning.mat</code> to get a working example of this in
+action.</p>
 <h2 id="block-level-and-trial-level-factors">Block-Level and Trial-Level
 Factors</h2>
-<p>In addition, you can specify independent block and trial factors. For
-example if we set</p>
+<p>In addition, you can specify <em>independent</em> block and trial
+factors. For example if we set</p>
 <div class="sourceCode" id="cb2"><pre
 class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="va">task</span>.<span class="va">blockVar</span>.<span class="va">values</span><span class="op">=</span>{<span class="ss">&#39;A&#39;</span><span class="op">,</span><span class="ss">&#39;B&#39;</span>}<span class="op">;</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="va">task</span>.<span class="va">blockVar</span>.<span class="va">probability</span> <span class="op">=</span> [<span class="fl">0.6</span> <span class="fl">0.4</span>]<span class="op">;</span></span></code></pre></div>
 <p>Then for each block we assign either <code>A</code> or <code>B</code>
 with a 60:40% probability. Trial-level factors are specified in the same
-way, but for each trial independently from the blocks.</p>
+way, but for each trial independently of the blocks.</p>
 <div class="sourceCode" id="cb3"><pre
 class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="va">task</span>.<span class="va">trialVar</span>.<span class="va">values</span><span class="op">=</span>{<span class="ss">&#39;Y&#39;</span><span class="op">,</span><span class="ss">&#39;Z&#39;</span>}<span class="op">;</span></span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="va">task</span>.<span class="va">trialVar</span>.<span class="va">probability</span> <span class="op">=</span> [<span class="fl">0.5</span> <span class="fl">0.5</span>]<span class="op">;</span></span></code></pre></div>
@@ -506,6 +516,7 @@ class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb3-1"><a hr
 </tbody>
 </table>
 <p>Trial- and Block-factors can be used to drive state machine functions
-if you need it.</p>
+if you need it (<code>Saccadic_Doublestep.mat</code> is an example
+protocol).</p>
 </body>
 </html>

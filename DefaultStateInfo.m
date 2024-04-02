@@ -385,26 +385,13 @@ incFcn = {
 	@()drawPhotoDiodeSquare(s,[0 0 0]);
 };
 
-%--------------------incorrect exit
-incExitFcn = {
+%--------------------generic exit
+exitFcn = {
 	% tS.includeErrors will prepend some code here...
 	@()beep(aM, tS.errorSound);
-	@()trackerDrawStatus(eT,'INCORRECT! :-(', stims.stimulusPositions, 0);
 	@()needFlipTracker(me, 0); %for operator screen stop flip
 	@()updateVariables(me); % randomise our stimuli, set strobe value too
 	@()update(stims); % update our stimuli ready for display
-	@()resetAll(eT); % resets the fixation state timers
-	@()plot(bR, 1); % actually do our drawing
-};
-%--------------------break exit
-breakExitFcn = {
-	% tS.includeErrors will prepend some code here...
-	@()beep(aM, tS.errorSound);
-	@()trackerDrawStatus(eT,'BREAK_FIX! :-(', stims.stimulusPositions, 0);
-	@()needFlipTracker(me, 0); %for operator screen stop flip
-	@()updateVariables(me); % randomise our stimuli, set strobe value too
-	@()update(stims); % update our stimuli ready for display
-	@()getStimulusPositions(stims); % make a struct the eT can use for drawing stim positions
 	@()resetAll(eT); % resets the fixation state timers
 	@()plot(bR, 1); % actually do our drawing
 };
@@ -420,11 +407,31 @@ breakExitFcn = {
 %            subject to guess based on previous failed trial.
 % checkTaskEnded = see if taskSequence has finished
 if tS.includeErrors % we want to update our task even if there were errors
-	incExitFcn = [ {@()logRun(me,'INCORRECT'); @()updatePlot(bR, me); @()updateTask(me,tS.INCORRECT)}; incExitFcn ]; %update our taskSequence 
-	breakExitFcn = [ {@()logRun(me,'BREAK_FIX'); @()updatePlot(bR, me); @()updateTask(me,tS.BREAKFIX)}; breakExitFcn ]; %update our taskSequence 
+	incExitFcn = [ {
+		@()logRun(me,'INCORRECT');
+		@()trackerDrawStatus(eT,'INCORRECT! :-(', stims.stimulusPositions, 0);
+		@()updatePlot(bR, me); 
+		@()updateTask(me,tS.INCORRECT)}; 
+		exitFcn ]; %update our taskSequence 
+	breakExitFcn = [ {
+		@()logRun(me,'BREAK_FIX'); 
+		@()trackerDrawStatus(eT,'BREAK_FIX! :-(', stims.stimulusPositions, 0);
+		@()updatePlot(bR, me); 
+		@()updateTask(me,tS.BREAKFIX)}; 
+		exitFcn ]; %update our taskSequence 
 else
-	incExitFcn = [ {@()logRun(me,'INCORRECT'); @()updatePlot(bR, me); @()resetRun(task)}; incExitFcn ]; 
-	breakExitFcn = [ {@()logRun(me,'BREAK_FIX'); @()updatePlot(bR, me); @()resetRun(task)}; breakExitFcn ];
+	incExitFcn = [ {
+		@()logRun(me,'INCORRECT'); 
+		@()trackerDrawStatus(eT,'INCORRECT! :-(', stims.stimulusPositions, 0);
+		@()updatePlot(bR, me); 
+		@()resetRun(task)}; 
+		exitFcn ]; 
+	breakExitFcn = [ {
+		@()logRun(me,'BREAK_FIX'); 
+		@()trackerDrawStatus(eT,'BREAK_FIX! :-(', stims.stimulusPositions, 0);
+		@()updatePlot(bR, me); 
+		@()resetRun(task)}; 
+		exitFcn ];
 end
 if tS.useTask || task.nBlocks > 0
 	correctExitFcn = [ correctExitFcn; {@()checkTaskEnded(me)} ];

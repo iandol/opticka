@@ -1294,6 +1294,8 @@ classdef runExperiment < optickaCore
 					aM.beep(2000,0.1,0.1);WaitSecs(0.2);
 					aM.beep(1000,0.1,0.1);WaitSecs(0.2);
 					aM.beep(500,0.1,0.1);WaitSecs(0.2);
+					aM.beep(250,0.1,0.1);WaitSecs(0.2);
+					aM.beep(500,0.1,0.1);WaitSecs(0.2);
 					aM.beep(1000,0.1,0.1);WaitSecs(0.2);
 					aM.beep(2000,0.1,0.1);WaitSecs(0.2);
 					aM.beep(3000,0.1,0.1);WaitSecs(0.2);
@@ -1312,8 +1314,8 @@ classdef runExperiment < optickaCore
 					WaitSecs(0.5);
 				else
 					try
-						configureEyetracker(me, s);
-						me.eyeTracker.initialise(s);
+						open(me.screen);
+						configureEyetracker(me, me.screen);
 						s.drawTextNow('Eyetracker open...');
 						WaitSecs(0.25);
 						me.eyeTracker.close;
@@ -2366,7 +2368,6 @@ classdef runExperiment < optickaCore
 		%> @return t info string
 		% ===================================================================
 			etinfo = ''; name = '';
-			tt=tic;
 			if me.isRunTask
 				log = me.taskLog;
 				name = [me.stateMachine.currentName ':' me.stateMachine.currentUUID];
@@ -2413,11 +2414,15 @@ classdef runExperiment < optickaCore
 						me.task.outVars{me.task.thisBlock,i}(me.task.thisRun))];
 				end
 			end
+			for i = 1:me.stimuli.n
+				if isa(me.stimuli{i},'imageStimulus') || isa(me.stimuli{i},'movieStimulus')
+					t = [t sprintf(' | %i = %s',i,me.stimuli{i}.currentFile)];
+				end
+			end
 			if ~isempty(me.variableInfo)
 				t = [t ' | ' me.variableInfo];
 			end
 			t = WrapString(t, 100);
-			fprintf('@@@ time = %.3f\n',toc(tt)*1e3);
 		end
 		
 		% ===================================================================

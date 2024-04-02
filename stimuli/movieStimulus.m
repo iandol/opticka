@@ -72,8 +72,8 @@ classdef movieStimulus < baseStimulus
 		filePaths = {}
 		%> number of videos
 		nVideos	= 0
-		%> current randomly selected image
-		currentMovie				= ''
+		%> current randomly selected movie
+		currentFile				= ''
 		%> scale is dependent on stimulus size and movie width
 		scale = 1
 		family = 'movie'
@@ -230,8 +230,8 @@ classdef movieStimulus < baseStimulus
 			end
 			resetTicks(me);
 			fprintf('selectionOut = %i\n',me.selectionOut);
-			if ~matches(me.currentMovie,me.filePaths{me.selectionOut})
-				me.currentMovie = me.filePaths{me.selectionOut};
+			if ~matches(me.currentFile,me.filePaths{me.selectionOut})
+				me.currentFile = me.filePaths{me.selectionOut};
 				loadMovie(me);
 			end
 			computePosition(me);
@@ -377,9 +377,9 @@ classdef movieStimulus < baseStimulus
 			end
 			t=tic;
 			[me.movie, me.duration, me.fps, me.width, me.height] = Screen('OpenMovie', ...
-				me.sM.win, me.currentMovie, [], me.preloadSecs, me.specialFlagsOpen, me.pixelFormat);
+				me.sM.win, me.currentFile, [], me.preloadSecs, me.specialFlagsOpen, me.pixelFormat);
 			fprintf('\n--->>> movieStimulus: %s\n\t%.2f seconds duration, %i frames @ %f fps, w x h = %i x %i, in %ims\n', ...
-				me.currentMovie, me.duration, me.count, me.fps, me.width, me.height, round(toc(t)*1e3));
+				me.currentFile, me.duration, me.count, me.fps, me.width, me.height, round(toc(t)*1e3));
 			fprintf('\tBlocking: %i | Loop: %i | Preloadsecs: %i | Pixelformat: %i | Flags: %i\n', me.blocking, ...
 				me.loopStrategy, me.preloadSecs, me.pixelFormat, me.specialFlagsOpen);
 		end
@@ -434,7 +434,7 @@ classdef movieStimulus < baseStimulus
 				me.selection = 1;
 				me.filePaths{1} = me.filePath;
 			end
-			me.currentMovie = me.filePaths{me.selection};
+			me.currentFile = me.filePaths{me.selection};
 		end
 
 		% ===================================================================
