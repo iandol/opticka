@@ -46,6 +46,13 @@ classdef tobiiAnalysis < analysisCore
 		pixelsPerCm double							= 32
 		%> screen distance
 		distance double								= 57.3
+		%> screen resolution
+		resolution									= [ 1920 1080 ]
+		%> For Dee's analysis edit these settings
+		ETparams									= [ ]
+		%> Is measure range relative to start and end markers or absolute
+		%> to start marker?
+		relativeMarkers								= false
 	end
 
 	properties (Hidden = true)
@@ -62,6 +69,9 @@ classdef tobiiAnalysis < analysisCore
 		xCenter double								= 640
 		%> screen Y center in pixels
 		yCenter double								= 512
+		%> downsample the data for plotting
+		downSample logical							= true
+		excludeTrials								= []
 	end
 
 	properties (SetAccess = private, GetAccess = public)
@@ -254,6 +264,7 @@ classdef tobiiAnalysis < analysisCore
 			parseROI(me);
 			parseTOI(me);
 			computeMicrosaccades(me);
+			computeFullSaccades(me);
 		end
 
 		% ===================================================================
@@ -332,7 +343,7 @@ classdef tobiiAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function plot(me,select,type,seperateVars,name)
+		function plot(me,select,type,seperateVars,name,handle)
 			% plot(me,select,type,seperateVars,name)
 			if ~me.isParsed; warning('You need to parse data first...');return;end
 			if ~exist('select','var') || ~isnumeric(select); select = []; end
@@ -347,6 +358,7 @@ classdef tobiiAnalysis < analysisCore
 					end
 				end
 			end
+			if ~exist('handle','var'); handle = []; end
 			if isnumeric(select) && ~isempty(select)
 				idx = select;
 				type = '';
@@ -376,9 +388,15 @@ classdef tobiiAnalysis < analysisCore
 				end
 				return
 			end
-			h1=figure;
-			set(gcf,'Color',[1 1 1],'Name',name);
-			figpos(1,[1200 1200]);
+			if isempty(handle)
+				h1=figure('Name',name,'Color',[1 1 1],'NumberTitle','off',...
+					'Papertype','a4','PaperUnits','centimeters',...
+					'PaperOrientation','landscape','Renderer','painters');
+				figpos(1,[0.6 0.9],1,'%');
+			else
+				figure(handle)
+				h1=handle;
+			end
 			p = panel(h1);
 			p.fontsize = 12;
 			p.margin = [10 10 10 20]; %left bottom right top
@@ -409,7 +427,7 @@ classdef tobiiAnalysis < analysisCore
 			end
 
 			if isempty(select)
-				thisVarName = 'ALL VARS';
+				thisVarName = 'ALL';
 			elseif length(select) > 1
 				thisVarName = 'SELECTION';
 			else
@@ -421,11 +439,11 @@ classdef tobiiAnalysis < analysisCore
 			if ~isempty(me.TOI)
 				t1 = me.TOI(1); t2 = me.TOI(2);
 			else
-				t1 = 0; t2 = 0.1;
+				t1 = me.baselineWindow(1); t2 = me.baselineWindow(2);
 			end
 
 			for i = idx
-				if any(me.trialsToPrune == i); continue; end
+				if ~exist('didplot','var'); didplot = false; end
 				if idxInternal == true %we're using the eyelink index which includes incorrects
 					f = i;
 				elseif me.excludeIncorrect %we're using an external index which excludes incorrects
@@ -436,9 +454,14 @@ classdef tobiiAnalysis < analysisCore
 				if isempty(f); continue; end
 
 				thisTrial = me.trials(f(1));
+				
+				if isfield(thisTrial, 'invalid') && thisTrial.invalid 
+					continue; 
+				end
+
 				tidx = find(varidx==thisTrial.variable);
 
-				if thisTrial.variable == 1010 || isempty(me.vars) %early edf files were broken, 1010 signifies this
+				if thisTrial.variable == 1010 || isempty(me.vars) %early CSV files were broken, 1010 signifies this
 					c = rand(1,3);
 				else
 					c = map(tidx,:);
@@ -629,7 +652,6 @@ classdef tobiiAnalysis < analysisCore
 				na.Position = [0.1 0.1 0.8 0.8];
 			end
 		end
-
 		% ===================================================================
 		%> @brief
 		%>
@@ -978,6 +1000,89 @@ classdef tobiiAnalysis < analysisCore
 		function ppd = get.ppd(me)
 			ppd = round( me.pixelsPerCm * (me.distance / 57.3)); %set the pixels per degree
 			me.ppd_ = ppd;
+		end
+
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function plotNH(me, trial, handle)
+			if ~me.isParsed;return;end
+			if ~exist('handle','var'); handle=[]; end
+			try
+				if isempty(handle)
+					handle=figure('Name','Saccade Plots','Color',[1 1 1],'NumberTitle','off',...
+						'Papertype','a4','PaperUnits','centimeters',...
+						'PaperOrientation','landscape');
+					figpos(1,[0.5 0.9],1,'%');
+				end
+				figure(handle);
+				data = me.trials(trial).data;
+				me.ETparams.screen.rect = struct('deg', [-5 -5 5 5]);
+				plotClassification(data,'deg','vel',me.ETparams.samplingFreq,...
+					me.ETparams.glissade.searchWindow,me.ETparams.screen.rect,...
+					'title','Test','showSacInScan',true); 
+			catch ME
+				getReport(ME)
+			end
+		end
+
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function explore(me, close)
+			persistent ww hh fig figA figB N
+
+			if exist('close','var') && close == true
+				try delete(figB); end
+				try delete(figA); end
+				try delete(fig.f); end
+				fig = []; figA = []; figB = [];
+				return;
+			end
+			if isempty(N); N = 1; end
+			if isempty(fig); fig.f = figure('Units','Normalized','Position',[0 0.8 0.05 0.2],'CloseRequestFcn',@exploreClose); end
+			if isempty(figA); figA = figure('Units','Normalized','Position',[0.05 0 0.45 1],'CloseRequestFcn',@exploreClose); end
+			if isempty(figB); figB = figure('Units','Normalized','Position',[0.5 0 0.5 1],'CloseRequestFcn',@exploreClose); end
+
+			if isempty(fig.f.Children)|| ~ishandle(fig.f)
+				fig.b0 = uicontrol('Parent',fig.f,'Units','Normalized',...
+					'Style','text','String',['TRIAL: ' num2str(N)],'Position',[0.1 0.8 0.8 0.1]);
+				fig.b1 = uicontrol('Parent',fig.f,'Units','Normalized',...
+					'String','Next','Position',[0.1 0.1 0.8 0.3],...
+					'Callback', @exploreNext);
+				fig.b2 = uicontrol('Parent',fig.f,'Units','Normalized',...
+					'String','Previous','Position',[0.1 0.5 0.8 0.3],...
+					'Callback', @explorePrevious);
+			end
+
+			if isempty(figA.Children) ; N = 0; exploreNext(); end
+
+			function exploreNext(src, ~)
+				N = N + 1;
+				if N > length(me.trials); N = 1; end
+				clf(figA); clf(figB);
+				plotNH(me,N,figB);
+				plot(me,N,[],[],[],figA);
+				fig.b0.String = ['TRIAL: ' num2str(N)];
+			end
+			function explorePrevious(src, ~)
+				N = N - 1;
+				if N < 1; N = length(me.trials); end
+				clf(figA); clf(figB);
+				plotNH(me,N,figB);
+				plot(me,N,[],[],[],figA);
+				fig.b0.String = ['TRIAL: ' num2str(N)];
+			end
+			function exploreClose(src, ~)
+				me.explore(true);
+			end
+
 		end
 
 
@@ -1470,6 +1575,70 @@ classdef tobiiAnalysis < analysisCore
 				outx = [];
 				outy = [];
 			end
+		end
+
+		% ===================================================================
+		%> @brief
+		%>
+		% ===================================================================
+		function computeFullSaccades(me)
+			assert(exist('runNH2010Classification.m'),'Please add NystromHolmqvist2010 to path!');
+			% load parameters for event classifier
+			if isempty(me.ETparams)
+				me.ETparams = defaultParameters;
+				% settings for code specific to Niehorster, Siu & Li (2015)
+				me.ETparams.extraCut    = [0 0];                       % extra ms of data to cut before and after saccade.
+				me.ETparams.qInterpMissingPos   = true;                 % interpolate using straight lines to replace missing position signals?
+				
+				% settings for the saccade cutting (see cutSaccades.m for documentation)
+				me.ETparams.cutPosTraceMode     = 1;
+				me.ETparams.cutVelTraceMode     = 1;
+				me.ETparams.cutSaccadeSkipWindow= 1;    % don't cut during first x seconds
+				me.ETparams.screen.resolution              = [ me.resolution(1) me.resolution(2) ];
+				me.ETparams.screen.size                    = [ me.resolution(1)/me.pixelsPerCm/100 me.resolution(2)/me.pixelsPerCm/100 ];
+				me.ETparams.screen.viewingDist             = me.distance/100;
+				me.ETparams.screen.dataCenter              = [ me.resolution(1)/2 me.resolution(2)/2 ];  % center of screen has these coordinates in data
+				me.ETparams.screen.subjectStraightAhead    = [ me.resolution(1)/2 me.resolution(2)/2 ];  % Specify the screen coordinate that is straight ahead of the subject. Just specify the middle of the screen unless its important to you to get this very accurate!
+				% change some defaults as needed for this analysis:
+				me.ETparams.data.alsoStoreComponentDerivs  = true;
+				me.ETparams.data.detrendWithMedianFilter   = true;
+				me.ETparams.data.applySaccadeTemplate      = true;
+				me.ETparams.data.minDur                    = 100;
+				me.ETparams.fixation.doClassify            = true;
+				me.ETparams.blink.replaceWithInterp        = true;
+				me.ETparams.blink.replaceVelWithNan        = true;
+			end
+			me.ETparams.samplingFreq = me.sampleRate;
+			
+			% process params
+			ETparams = prepareParameters(me.ETparams);
+
+			for ii = 1:length(me.trials)
+				fprintf('--->>> Full saccadic analysis of Trial %i:\n',ii);
+				x = (me.trials(ii).gx * me.ppd) + ETparams.screen.dataCenter(1);
+				y = (me.trials(ii).gy * me.ppd) + ETparams.screen.dataCenter(2);
+				p = me.trials(ii).pa;
+				t = me.trials(ii).times * 1e3;
+
+				if length(x) < me.ETparams.data.minDur
+					data = struct([]);
+				else
+					data = runNH2010Classification(x,y,p,ETparams,t);
+					% replace missing data by linearly interpolating position and velocity
+    				% between start and end of each missing interval (so, creating a ramp
+    				% between start and end position/velocity).
+    				data = replaceMissing(data,ETparams.qInterpMissingPos);
+				end
+    			
+    			% desaccade velocity and/or position
+    			%data = cutSaccades(data,ETparams,cutPosTraceMode,cutVelTraceMode,extraCut,cutSaccadeSkipWindow);
+    			% construct saccade only traces
+    			%data = cutPursuit(data,ETparams,1);
+
+				me.trials(ii).data = data;
+
+			end
+
 		end
 
 		% ===================================================================
