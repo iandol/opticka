@@ -11,9 +11,7 @@ classdef iRecAnalysis < analysisCore
 	% iRecAnalysis offers a set of methods to load, parse & plot raw CSV files.
 	properties
 		%> file name
-		file char									= ''
-		%> directory
-		dir char									= ''
+		fileName char								= ''
 		%> which message contains the trial start tag
 		trialStartMessageName						= []
 		%> which message contains the variable name or value
@@ -208,11 +206,11 @@ classdef iRecAnalysis < analysisCore
 		% ===================================================================
 		function load(me, force)
 			if ~exist('force','var'); force = false;end
-			if isempty(me.file)
+			if isempty(me.fileName)
 				[f,p]=uigetfile('*.csv','Load Main CSV File:');
-				if ischar(f); me.file = f; me.dir = p; end
+				if ischar(f); me.fileName = f; me.dir = p; end
 			end
-			if isempty(me.file)
+			if isempty(me.fileName)
 				warning('No CSV file specified...');
 				return
 			end
@@ -220,7 +218,7 @@ classdef iRecAnalysis < analysisCore
 			me.raw = []; me.markers = [];
 			tmain = tic;
 			oldpath = pwd;
-			[p,f,e] = fileparts(me.file);
+			[p,f,e] = fileparts(me.fileName);
             if ~isempty(p); me.dir = p; end
 			cd(me.dir);
 			me.raw = readtable([f e],'ReadVariableNames',true);
@@ -384,9 +382,9 @@ classdef iRecAnalysis < analysisCore
 			if ~exist('seperateVars','var') || ~islogical(seperateVars); seperateVars = false; end
 			if ~exist('name','var') || isempty(name)
 				if isnumeric(select) && length(select) > 1
-					name = [me.file ' | Select: ' num2str(length(select)) ' trials'];
+					name = [me.fileName ' | Select: ' num2str(length(select)) ' trials'];
 				else
-					name = [me.file ' | Select: ' num2str(select)];
+					name = [me.fileName ' | Select: ' num2str(select)];
 				end
 			end
 			if ~exist('handle','var'); handle = []; end
@@ -874,7 +872,7 @@ classdef iRecAnalysis < analysisCore
 		% ===================================================================
 		function plotROI(me)
 			if ~isempty(me.ROIInfo)
-				h=figure;figpos(1,[2000 1000]);set(h,'Color',[1 1 1],'Name',me.file);
+				h=figure;figpos(1,[2000 1000]);set(h,'Color',[1 1 1],'Name',me.fileName);
 
 				x1 = me.ROI(1) - me.ROI(3);
 				x2 = me.ROI(1) + me.ROI(3);
@@ -989,7 +987,7 @@ classdef iRecAnalysis < analysisCore
 				disp('No TOI parsed!!!')
 				return
 			end
-			h=figure;figpos(1,[2000 1000]);set(h,'Color',[1 1 1],'Name',me.file);
+			h=figure;figpos(1,[2000 1000]);set(h,'Color',[1 1 1],'Name',me.fileName);
 
 			t1 = me.TOI(1);
 			t2 = me.TOI(2);

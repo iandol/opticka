@@ -132,7 +132,7 @@ classdef tobiiAnalysis < analysisCore
 		trialsTemplate = {'variable','variableMessageName','idx','correctedIndex','time',...
 			'times','gx','gy','hx','hy','pa','valid',...
 			'rt','rtoverride','fixations','nfix','saccades','nsacc','saccadeTimes',...
-			'firstSaccade','uuid','result','correct','breakFix','incorrect','unknown',...
+			'firstSaccade','uuid','result','invalid','correct','breakFix','incorrect','unknown',...
 			'messages','sttime','entime','totaltime','startsampletime','endsampletime',...
 			'timeRange','rtstarttime','rtstarttimeOLD','rtendtime','synctime','deltaT',...
 			'rttime','msacc','sampleSaccades',...
@@ -1245,6 +1245,7 @@ classdef tobiiAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function parseEvents(me)
+			tmain = tic;
 			isTrial = false;
 			tri = 1; %current trial that is being parsed
 			me.trials = struct();
@@ -1262,27 +1263,10 @@ classdef tobiiAnalysis < analysisCore
 			this.display = [];
 			me.ppd; %faster to cache this now (dependant property sets ppd_ too)
 
-			trialDef = cell2struct(repmat({[]},length(me.trialsTemplate),1),me.trialsTemplate);
-			trialDef.rt = false;
-			trialDef.rtoverride = false;
-			trialDef.firstSaccade = NaN;
-			trialDef.correct = false;
-			trialDef.breakFix = false;
-			trialDef.incorrect = false;
-			trialDef.unknown = false;
-			trialDef.sttime = NaN;
-			trialDef.entime = NaN;
-			trialDef.totaltime = 0;
-			trialDef.startsampletime = NaN;
-			trialDef.endsampletime = NaN;
-			trialDef.timeRange = [NaN NaN];
-			trialDef.rtstarttime = NaN;
-			trialDef.rtstarttimeOLD = NaN;
-			trialDef.rtendtime = NaN;
-			trialDef.synctime = NaN;
-			trialDef.deltaT = NaN;
-			trialDef.rttime = NaN;
-			trialDef.forcedend = false;
+			trialDef = getTrialDef(me);
+
+			t1 = -inf;
+			t2 = -inf;
 
 			xmod = me.exp.rE.screenVals.rightInDegrees;
 			ymod = me.exp.rE.screenVals.bottomInDegrees;
@@ -1374,6 +1358,13 @@ classdef tobiiAnalysis < analysisCore
 						if isempty(id.ID); id.ID = -101010; end
 						thisTrial.entime = evtT;
 						thisTrial.result = str2num(id.ID);
+						if thisTrial.result == me.correctValue
+							thisTrial.correct = true;
+						elseif thisTrial.result == me.incorrectValue
+							thisTrial.incorrect = true;
+						elseif thisTrial.result == me.breakFixValue
+							thisTrial.breakFix = true;
+						end
 						sT=[];
 						thisTrial.deltaT = thisTrial.entime - thisTrial.sttime;
 						if isempty(thisTrial.times)
@@ -1395,6 +1386,8 @@ classdef tobiiAnalysis < analysisCore
 								thisTrial.hy = me.raw.data.gaze.left.gazePoint.inUserCoords(2,idx);
 								thisTrial.pa = me.raw.data.gaze.left.pupil.diameter(idx);
 								thisTrial.valid = me.raw.data.gaze.left.pupil.valid(idx);
+								if thisTrial.times(1) > t1; t1 = thisTrial.times(1); end
+								if thisTrial.times(end) > t2; t2 = thisTrial.times(end); end
 							else
 								thisTrial.result = -101010;
 							end
@@ -1415,14 +1408,22 @@ classdef tobiiAnalysis < analysisCore
 			end % END FOR
 			pb(i);
 
+			me.plotRange = [t1/1e3 t2/1e3];
+
 			me.otherinfo = this;
 			
 			if isempty(me.trials)
 				warning('---> eyelinkAnalysis.parseEvents: No trials could be parsed in this data!')
 				return
 			end
-			
 
+			%prune the end trial if invalid
+			me.correct.idx = find([me.trials.correct] == true);
+			me.breakFix.idx = find([me.trials.breakFix] == true);
+			me.incorrect.idx = find([me.trials.incorrect] == true);
+			
+			fprintf('<strong>:#:</strong> Parsing Tobii Events into %i Trials took <strong>%.2f secs</strong> | min-t = %.2f max-t = %.2f\n',length(me.trials),toc(tmain), t1/1e3, t2/1e3);
+		
 		end
 
 		% ===================================================================
@@ -1979,6 +1980,34 @@ classdef tobiiAnalysis < analysisCore
 				end
 			end
 
+		end
+
+		% ===================================================================
+		%> @brief
+		%>
+		% ===================================================================
+		function trialDef = getTrialDef(me)
+			trialDef = cell2struct(repmat({[]},length(me.trialsTemplate),1),me.trialsTemplate);
+			trialDef.rt = false;
+			trialDef.rtoverride = false;
+			trialDef.firstSaccade = NaN;
+			trialDef.invalid = false;
+			trialDef.correct = false;
+			trialDef.breakFix = false;
+			trialDef.incorrect = false;
+			trialDef.unknown = false;
+			trialDef.sttime = NaN;
+			trialDef.entime = NaN;
+			trialDef.totaltime = 0;
+			trialDef.startsampletime = NaN;
+			trialDef.endsampletime = NaN;
+			trialDef.timeRange = [NaN NaN];
+			trialDef.rtstarttime = NaN;
+			trialDef.rtstarttimeOLD = NaN;
+			trialDef.rtendtime = NaN;
+			trialDef.synctime = NaN;
+			trialDef.deltaT = NaN;
+			trialDef.rttime = NaN;
 		end
 
 	end
