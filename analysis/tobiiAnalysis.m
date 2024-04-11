@@ -499,7 +499,7 @@ classdef tobiiAnalysis < analysisCore
 				if ~isempty(ib)
 					pb = nanmean(pupilAll(ib));
 					if isnumeric(pb)
-						pupilPlot = pupilPlot - pb;
+						%pupilPlot = pupilPlot - pb;
 					end
 				end
 
@@ -1082,6 +1082,39 @@ classdef tobiiAnalysis < analysisCore
 			function exploreClose(src, ~)
 				me.explore(true);
 			end
+
+		end
+
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function [out,in] = computePupilAverage(me, trials, sampleRate)
+			if ~exist('trials','var') || isempty(trials); trials = me.correct.idx; end
+			if ~exist('SampleRate','var'); sampleRate = 100; end
+			in = {};
+			a = 1;
+			for ii = trials
+				tr = me.trials(ii);
+				if isfield(tr,'data')
+					t = milliseconds(tr.data.time/1e3);
+					p = tr.data.pupil.size;
+				else
+					t = milliseconds(tr.times);
+					p = tr.pa;
+				end
+				in{a} = timetable(t,p);
+				a = a + 1;
+			end
+
+			out = synchronize(in{:},'regular','median','SampleRate',sampleRate);
+
+			figure;
+			m = mean(out,2,'omitmissing');
+			sd = std(out,0,2,'omitmissing');
+			areabar(m.t,m.mean,sd.std);
 
 		end
 
