@@ -72,6 +72,8 @@ classdef tobiiAnalysis < analysisCore
 		%> downsample the data for plotting
 		downSample logical							= true
 		excludeTrials								= []
+		baselinePupil								= true
+		smoothPupil									= true
 	end
 
 	properties (SetAccess = private, GetAccess = public)
@@ -336,6 +338,12 @@ classdef tobiiAnalysis < analysisCore
 			fprintf('Pruned %i trials from EDF trial data \n',num)
 		end
 
+		function saveChap(me)
+			if ~me.isParsed; warning('You need to parse data first...');return;end
+			data.timestamps = me.raw;
+
+		end
+
 		% ===================================================================
 		%> @brief give a list of trials and it will plot both the raw eye position and the
 		%> events
@@ -496,11 +504,15 @@ classdef tobiiAnalysis < analysisCore
 				xp = xa(ip);
 				yp = ya(ip);
 				pupilPlot = pupilAll(ip);
-				if ~isempty(ib)
+				if ~isempty(ib) && me.baselinePupil
 					pb = nanmean(pupilAll(ib));
-					if isnumeric(pb)
-						%pupilPlot = pupilPlot - pb;
+					if isnumeric(pb) 
+						pupilPlot = pupilPlot - pb;
 					end
+				end
+
+				if me.smoothPupil
+					pupilPlot = smooth(pupilPlot);
 				end
 
 				q(1,1).select();
@@ -1376,6 +1388,22 @@ classdef tobiiAnalysis < analysisCore
 						end
 					end
 
+					% !V Messages
+					if startsWith(evt,"!V")
+						msg = regexpi(evt,'^!V (?<v>.+?) (?<n>.+?) (?<val>.+?)$','names');
+						if ~isempty(msg) && isempty(msg.v) && ~isempty(msg.n) 
+							tag = [msg.v '-' msg.n];
+							if isfield(thisTrial.messages,tag)
+								thisTrial.messages.(tag){end+1} = msg.val;
+								thisTrial.messages.([tag 'TIME']){end+1} = double(evt.sttime);
+							else
+								thisTrial.messages.(tag){1} = msg.val;
+								thisTrial.messages.([tag 'TIME']){1} = double(evt.sttime);
+							end
+							continue
+						end
+					end
+
 					% UUID from state machine
 					if startsWith(evt,"UUID")
 						uuid = regexpi(evt,'^(MSG:)?UUID (?<UUID>[\w]+)','names');
@@ -1386,8 +1414,12 @@ classdef tobiiAnalysis < analysisCore
 					end
 
 					% trial END
-					if startsWith(evt, me.trialEndMessage)
-						id = regexpi(evt,['^' me.trialEndMessage ' (?<ID>(\-|\+|\d)+)'],'names');
+					if startsWith(evt, me.trialEndMessage) || startsWith(evt, 'TRIALEND')
+						if startsWith(evt, 'TRIALEND')
+							id.ID = -101010;
+						else
+							id = regexpi(evt,['^' me.trialEndMessage ' (?<ID>(\-|\+|\d)+)'],'names');
+						end
 						if isempty(id.ID); id.ID = -101010; end
 						thisTrial.entime = evtT;
 						thisTrial.result = str2num(id.ID);

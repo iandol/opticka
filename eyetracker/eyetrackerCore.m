@@ -811,7 +811,7 @@ classdef eyetrackerCore < optickaCore
 		%> 
 		%> @param trialNumber the unique number or string for this trial
 		% ===================================================================
-		function trackerTrialStart(me, trialNumber)
+		function trackerTrialStart(me, trialNumber, task, stimuli)
 			if ~exist('trialNumber','var'); trialNumber = 'unknown'; end
 			if strcmpi(me.type,'eyelink')
 				startRecording(me); 
@@ -821,6 +821,12 @@ classdef eyetrackerCore < optickaCore
 				trackerMessage(me,sprintf('TRIALID %i', trialNumber));
 			else
 				trackerMessage(me,sprintf('TRIALID %s', trialNumber));
+			end
+			if exist('task','var') && isa(task,'taskSequence')
+				
+			end
+			if exist('stimuli','var') && isa(stimuli,'metaStimulus')
+
 			end
 			
 		end
