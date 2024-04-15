@@ -84,7 +84,7 @@ tS.BREAKFIX					= -1;		%==the code to send eyetracker for break fix trials
 tS.INCORRECT				= -5;		%==the code to send eyetracker for incorrect trials
 tS.correctSound				= [2000, 0.1, 0.1]; %==freq,length,volume
 tS.errorSound				= [300, 1, 1];		%==freq,length,volume
-% reward system values, can be set by GUI, or overridden here
+% reward system values, set by GUI, but could be overridden here
 %rM.reward.time				= 250;		%==TTL time in milliseconds
 %rM.reward.pin				= 2;		%==Output pin, 2 by default with Arduino.
 

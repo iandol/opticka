@@ -165,9 +165,9 @@ classdef eyetrackerCore < optickaCore
 		currentSample			= []
 		%current event taken from eyelink
 		currentEvent			= []
-		% are we connected to eyelink?
+		% are we connected to eyetracker?
 		isConnected				= false
-		% are we recording to an EDF file?
+		% are we recording any data?
 		isRecording				= false
 		% which eye is the tracker using?
 		eyeUsed					= -1
@@ -491,10 +491,13 @@ classdef eyetrackerCore < optickaCore
 		%> @return window which fixation window matched
 		%> @return exclusion was any exclusion window entered?
 		%> @return initfail did subject break fixinit rule?
+		%> @return blinking is the subject putatively blinkng?
 		% ===================================================================
-		function [fixated, fixtime, searching, window, exclusion, initfail] = isFixated(me)
+		function [fixated, fixtime, searching, window, exclusion, initfail, blinking] = isFixated(me)
 			fixated = false; fixtime = false; searching = true; 
-			exclusion = false; window = []; initfail = false;
+			exclusion = false; window = []; initfail = false; blinking = false;
+
+			if me.isBlink; blinking = true; end
 			
 			if me.isExclusion || me.isInitFail
 				exclusion = me.isExclusion; initfail = me.isInitFail; searching = false;
@@ -619,7 +622,8 @@ classdef eyetrackerCore < optickaCore
 		%> 2 strings, either one is returned depending on success or
 		%> failure, 'searching' may also be returned meaning the fixation
 		%> window hasn't been entered yet, and 'fixing' means the fixation
-		%> time is not yet met...
+		%> time is not yet met... 'blinking' can be returned when ignoreBlinks
+		%> = true and we think a blink may be occuring.
 		%>
 		%> @param yesString if this function succeeds return this string
 		%> @param noString if this function fails return this string
@@ -630,6 +634,10 @@ classdef eyetrackerCore < optickaCore
 		% ===================================================================
 		function [out, window, exclusion, initfail] = testSearchHoldFixation(me, yesString, noString)
 			[fix, fixtime, searching, window, exclusion, initfail] = me.isFixated();
+			if me.ignoreBlinks && me.isBlink
+				out = 'blinking';
+				return
+			end
 			if exclusion
 				out = noString;
 				if me.verbose; fprintf('-+-+-> EyeTracker:testSearchHoldFixation EXCLUSION ZONE ENTERED time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
@@ -687,6 +695,10 @@ classdef eyetrackerCore < optickaCore
 		% ===================================================================
 		function [out, window, exclusion, initfail] = testHoldFixation(me, yesString, noString)
 			[fix, fixtime, searching, window, exclusion, initfail] = me.isFixated();
+			if me.ignoreBlinks && me.isBlink
+				out = 'blinking';
+				return
+			end
 			if exclusion
 				out = noString;
 				if me.verbose; fprintf('-+-+-> EyeTracker:testHoldFixation EXCLUSION ZONE ENTERED time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
@@ -734,6 +746,10 @@ classdef eyetrackerCore < optickaCore
 		%>
 		% ===================================================================
 		function out = testWithinFixationWindow(me, yesString, noString)
+			if me.ignoreBlinks && me.isBlink
+				out = 'blinking';
+				return
+			end
 			if isFixated(me)
 				out = yesString;
 			else
@@ -751,6 +767,7 @@ classdef eyetrackerCore < optickaCore
 		% ===================================================================
 		function out = testFixationTime(me, yesString, noString)
 			[fix,fixtime] = isFixated(me);
+			me.ignoreBlinks
 			if fix && fixtime
 				out = yesString; %me.salutation(sprintf('Fixation Time: %g',me.fixLength),'TESTFIXTIME');
 			else

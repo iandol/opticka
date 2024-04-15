@@ -338,10 +338,39 @@ classdef tobiiAnalysis < analysisCore
 			fprintf('Pruned %i trials from EDF trial data \n',num)
 		end
 
-		function saveChap(me)
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function data = saveChap(me)
 			if ~me.isParsed; warning('You need to parse data first...');return;end
-			data.timestamps = me.raw;
-
+			t = double(me.raw.data.gaze.systemTimeStamp) / 1e3;
+			data.timestamps = double(me.raw.data.gaze.systemTimeStamp) / 1e3;
+			data.pupil_size = me.raw.data.gaze.left.pupil.diameter;
+			data.pupil_x = me.raw.data.gaze.left.gazePoint.onDisplayArea(1,:);
+			data.pupil_y = me.raw.data.gaze.left.gazePoint.onDisplayArea(2,:);
+			data.rate = me.sampleRate;
+			data.name = me.fileName;
+			tdata = {};
+			vdata = {};
+			for i = 1:length(me.trials)
+				tdata{i,1} = me.trials(i).idx;
+				tdata{i,2} = analysisCore.findNearest(t, me.trials(i).sttime);
+				tdata{i,3} = analysisCore.findNearest(t, me.trials(i).entime);
+				tdata{i,4} = tdata{i,3} - tdata{i,2};
+				
+				vdata{i,1} = ['Variable ' num2str(me.trials(i).variable)];
+				vdata{i,2} = ['Name ' me.trials(i).variableMessageName];
+				vdata{i,3} = ['Correct ' num2str(me.trials(i).correct)];
+				vdata{i,4} = (double(me.trials(i).rtstarttime) / 1e3 ) - tdata{i,2};
+			end
+			data.trial_data = cell2table(tdata,'VariableNames',{'trial_names','Trial_Onset_num','Trial_Offset_num','trial_length'});
+			data.total_var_data_table = cell2table(vdata,'VariableNames',{'variable','name','correct','event_stimulus_onset'});
+			data.event_data = [];
+			data.events2 = [];
+			data.vars2 = [];
 		end
 
 		% ===================================================================
@@ -1117,6 +1146,14 @@ classdef tobiiAnalysis < analysisCore
 					t = milliseconds(tr.times);
 					p = tr.pa;
 				end
+				if me.baselinePupil
+					tt = seconds(t);
+					mp = mean(p(tt >= me.baselineWindow(1) & tt <= me.baselineWindow(2)));
+					p = p - mp;
+				end
+				if me.smoothPupil
+					p = smooth(p);
+				end
 				in{a} = timetable(t,p);
 				a = a + 1;
 			end
@@ -1126,8 +1163,11 @@ classdef tobiiAnalysis < analysisCore
 			figure;
 			m = mean(out,2,'omitmissing');
 			sd = std(out,0,2,'omitmissing');
-			areabar(m.t,m.mean,sd.std);
-
+			analysisCore.areabar(seconds(m.t), m.mean, sd.std);
+			axis tight
+			box on; grid on
+			ylabel('Pupil Diameter');
+			xlabel('Time (s)');
 		end
 
 

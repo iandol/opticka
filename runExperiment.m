@@ -2367,23 +2367,23 @@ classdef runExperiment < optickaCore
 		%>
 		%> @return t info string
 		% ===================================================================
-			etinfo = ''; name = '';
+			etinfo = ''; name = ''; var = NaN;
 			if me.isRunTask
 				log = me.taskLog;
 				name = [me.stateMachine.currentName ':' me.stateMachine.currentUUID];
 				if ~isempty(me.eyetracker.device)
-					etinfo = sprintf('isFix:%i isExcl:%i isFixInit:%i fixLength: %.2f',...
-						me.eyeTracker.isFix,me.eyeTracker.isExclusion,me.eyeTracker.isInitFail,me.eyeTracker.fixLength);
+					etinfo = sprintf('isFix:%i isExcl:%i isFixInit:%i isBlink:%i fixLength: %.2f',...
+						me.eyeTracker.isFix,me.eyeTracker.isExclusion,me.eyeTracker.isInitFail,me.eyeTracker.isBlink,me.eyeTracker.fixLength);
 				end
 			else
 				log = me.runLog;
 				name = sprintf('%s Blank:%i',name,me.task.isBlank);
 			end
 			if isempty(me.task.outValues)
-				if me.isRunTask
-					t = sprintf('%s | Time: %.3f (%i) | isFix: %i | isExclusion: %i | isFixInit: %i',...
+				if me.isRunTask && ~isempty(me.eyetracker.device)
+					t = sprintf('%s | Time: %.3f (%i) | isFix:%i isExclusion:%i isFixInit:%i isBlink:%i',...
 						name,(log.lastvbl-log.startTime), log.tick-1,...
-						me.eyeTracker.isFix,me.eyeTracker.isExclusion,me.eyeTracker.isInitFail);
+						me.eyeTracker.isFix,me.eyeTracker.isExclusion,me.eyeTracker.isInitFail,me.eyeTracker.isBlink);
 				else
 					t = sprintf('%s | Time: %.3f (%i)',...
 						name,(log.lastvbl-log.startTime), log.tick-1);

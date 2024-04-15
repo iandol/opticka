@@ -410,9 +410,14 @@ classdef eyelinkManager < eyetrackerCore
 					x = sample.gx(me.eyeUsed+1);
 					y = sample.gy(me.eyeUsed+1);
 					p = sample.pa(me.eyeUsed+1);
-					if x == me.MISSING_DATA && y == me.MISSING_DATA && me.ignoreBlinks
+					if x == me.MISSING_DATA || y == me.MISSING_DATA
+						me.x = NaN;
+						me.y = NaN;
 						sample.valid = false;
-						me.pupil = 0;
+						me.pupil = NaN;
+						me.xAll = [me.xAll me.x];
+						me.yAll = [me.yAll me.y];
+						me.pupilAll = [me.pupilAll me.pupil];
 						me.isBlink = true;
 					else
 						sample.valid = true;
@@ -434,15 +439,25 @@ classdef eyelinkManager < eyetrackerCore
 				else
 					w = [];
 				end
-				[x, y] = GetMouse(w);
+				[x, y, b] = GetMouse(w);
 				sample.time = GetSecs;
-				xy = toDegrees(me, [x y]);
-				me.x = xy(1); me.y = xy(2);
-				me.pupil = 800 + randi(20);
+				if b(3) == 1
+					me.x = NaN;
+					me.y = NaN;
+					me.pupil = NaN;
+					me.isBlink = true;
+					sample.valid = false;
+					fprintf('BLINK\n');
+				else
+					xy = toDegrees(me, [x y]);
+					me.x = xy(1); me.y = xy(2);
+					me.pupil = 800 + randi(20);
+					me.isBlink = false;
+					sample.valid = true;
+				end
 				sample.gx = me.x;
 				sample.gy = me.y;
 				sample.pa = me.pupil;
-				sample.valid = true;
 				me.xAll = [me.xAll me.x];
 				me.yAll = [me.yAll me.y];
 				me.pupilAll = [me.pupilAll me.pupil];
