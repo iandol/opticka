@@ -53,6 +53,10 @@ classdef tobiiAnalysis < analysisCore
 		%> Is measure range relative to start and end markers or absolute
 		%> to start marker?
 		relativeMarkers								= false
+		%> subtract the baseline for the pupil plot and average?
+		baselinePupil								= true
+		%> smooth the pupil signal for plot and average?
+		smoothPupil									= true
 	end
 
 	properties (Hidden = true)
@@ -72,8 +76,6 @@ classdef tobiiAnalysis < analysisCore
 		%> downsample the data for plotting
 		downSample logical							= true
 		excludeTrials								= []
-		baselinePupil								= true
-		smoothPupil									= true
 	end
 
 	properties (SetAccess = private, GetAccess = public)
@@ -204,8 +206,14 @@ classdef tobiiAnalysis < analysisCore
 				end
 				cd(oldpath)
 			end
-			if ~isempty(me.raw)
-				fprintf('===>>> Loaded %s containing %i messages and %i samples\n',...
+			if ~isempty(me.exp) && isfield(me.exp,'tS') && isfield(me.exp,'rE')
+				try 
+					me.name = [me.exp.tS.name '-' me.exp.rE.name]; 
+					me.comment = me.exp.rE.comment;
+					fprintf('===>>> Experiment Details: name: %s | comment %s\n',...
+						me.name,me.comment);
+				end
+				fprintf('===>>> Eytracker Data %s containing %i messages and %i samples\n',...
 					me.exp.rE.eyeTracker.fullName,...
 					size(me.raw.messages,1),...
 					length(me.raw.data.gaze.deviceTimeStamp));
@@ -364,10 +372,11 @@ classdef tobiiAnalysis < analysisCore
 				vdata{i,1} = ['Variable ' num2str(me.trials(i).variable)];
 				vdata{i,2} = ['Name ' me.trials(i).variableMessageName];
 				vdata{i,3} = ['Correct ' num2str(me.trials(i).correct)];
-				vdata{i,4} = (double(me.trials(i).rtstarttime) / 1e3 ) - tdata{i,2};
+				vdata{i,4} = analysisCore.findNearest(t, me.trials(i).rtstarttime) - tdata{i,2};
+				vdata{i,5} = tdata{i,4};
 			end
 			data.trial_data = cell2table(tdata,'VariableNames',{'trial_names','Trial_Onset_num','Trial_Offset_num','trial_length'});
-			data.total_var_data_table = cell2table(vdata,'VariableNames',{'variable','name','correct','event_stimulus_onset'});
+			data.total_var_data_table = cell2table(vdata,'VariableNames',{'variable','name','correct','event_stimulus_onset','event_trial_end'});
 			data.event_data = [];
 			data.events2 = [];
 			data.vars2 = [];
@@ -392,8 +401,19 @@ classdef tobiiAnalysis < analysisCore
 						name = [me.fileName ' | Select: ' num2str(length(select)) ' trials'];
 					else
 						name = [me.fileName ' | Select: ' num2str(select)];
+						ii = find(cellfun(@(x)ismember(select,x),{me.vars.idx}),1);
+						if ~isempty(ii) && ii > 0
+							name = [name '-' me.vars(ii).name];
+						end
 					end
 				end
+			end
+			if seperateVars == true
+				for j = 1:length(me.vars)
+					me.plot(me.vars(j).idx,type,false,me.vars(j).name);
+					drawnow;
+				end
+				return
 			end
 			if ~exist('handle','var'); handle = []; end
 			if isnumeric(select) && ~isempty(select)
@@ -414,16 +434,8 @@ classdef tobiiAnalysis < analysisCore
 				idxInternal = true;
 			end
 			if isempty(idx)
-				fprintf('No trials were selected to plot, add all...\n');
+				fprintf('No trials were selected to plot, adding all...\n');
 				idx = 1:length(me.trials);
-			end
-			if seperateVars == true && isempty(select)
-				
-				for j = 1:length(me.vars)
-					me.plot(me.vars(j).idx,type,false,me.vars(j).name);
-					drawnow;
-				end
-				return
 			end
 			if isempty(handle)
 				h1=figure('Name',name,'Color',[1 1 1],'NumberTitle','off',...
@@ -469,6 +481,8 @@ classdef tobiiAnalysis < analysisCore
 				thisVarName = 'SELECTION';
 			else
 				thisVarName = ['VAR' num2str(select)];
+				ii = find(cellfun(@(x)ismember(select,x),{me.vars.idx}),1);
+				thisVarName = [thisVarName '-' me.vars(ii).name];
 			end
 
 			maxv = 1;
@@ -1132,11 +1146,15 @@ classdef tobiiAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function [out,in] = computePupilAverage(me, trials, sampleRate)
+		function [out,in,avg,err] = computePupilAverage(me, trials, sampleRate)
 			if ~exist('trials','var') || isempty(trials); trials = me.correct.idx; end
-			if ~exist('SampleRate','var'); sampleRate = 100; end
+			if ~exist('sampleRate','var'); sampleRate = 100; end
 			in = {};
 			a = 1;
+			if ~isempty(me.excludeTrials)
+				trials = setdiff(trials, me.excludeTrials);
+				fprintf('===>>> Excluded trials: %s',num2str(me.excludeTrials));
+			end
 			for ii = trials
 				tr = me.trials(ii);
 				if isfield(tr,'data')
@@ -1160,14 +1178,18 @@ classdef tobiiAnalysis < analysisCore
 
 			out = synchronize(in{:},'regular','median','SampleRate',sampleRate);
 
-			figure;
-			m = mean(out,2,'omitmissing');
-			sd = std(out,0,2,'omitmissing');
-			analysisCore.areabar(seconds(m.t), m.mean, sd.std);
+			handle=figure('Name',me.name,'Color',[1 1 1],'NumberTitle','off',...
+						'Papertype','a4','PaperUnits','centimeters',...
+						'PaperOrientation','landscape','Renderer','painters');
+			figpos(1,[0.5 0.5],1,'%');
+			[avg, err] = analysisCore.stderr(out,'SE',false,0.05,2);
+			analysisCore.areabar(seconds(out.t), avg, err,[0.8 0.4 0.4]);
 			axis tight
 			box on; grid on
-			ylabel('Pupil Diameter');
+			xlim(me.plotRange);
+			ylabel('Pupil Diameter \pm SE');
 			xlabel('Time (s)');
+			title(sprintf('%s - %i trials',me.name,width(out)));
 		end
 
 
@@ -1538,19 +1560,26 @@ classdef tobiiAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function parseAsVars(me)
-			me.vars = struct();
-			me.vars(1).name = '';
-			me.vars(1).var = [];
-			me.vars(1).varidx = [];
-			me.vars(1).variable = [];
-			me.vars(1).idx = [];
-			me.vars(1).correctedidx = [];
-			me.vars(1).trial = [];
-			me.vars(1).sTime = [];
-			me.vars(1).sT = [];
-			me.vars(1).uuid = {};
-
+			if isempty(me.trials)
+				warning('---> eyelinkAnalysis.parseAsVars: No trials and therefore cannot extract variables!')
+				return
+			end
 			uniqueVars = sort(unique([me.trials.variable]));
+			nVars = length(uniqueVars);
+			me.vars = struct();
+			me.vars(nVars).name = '';
+			me.vars(nVars).var = [];
+			me.vars(nVars).varidx = [];
+			me.vars(nVars).variable = [];
+			me.vars(nVars).idx = [];
+			me.vars(nVars).correct = [];
+			me.vars(nVars).idxcorrect = [];
+			me.vars(nVars).result = [];
+			me.vars(nVars).correctedidx = [];
+			me.vars(nVars).trial = [];
+			me.vars(nVars).sTime = [];
+			me.vars(nVars).sT = [];
+			me.vars(nVars).uuid = {};
 
 			labels = [];
 			try labels = me.exp.rE.task.varLabels; end
@@ -1558,10 +1587,7 @@ classdef tobiiAnalysis < analysisCore
 			for i = 1:length(me.trials)
 				trial = me.trials(i);
 				var = trial.variable;
-				if trial.incorrect == true
-					continue
-				end
-				if trial.variable == 1010
+				if trial.invalid == true
 					continue
 				end
 				idx = find(uniqueVars==var);
@@ -1574,9 +1600,14 @@ classdef tobiiAnalysis < analysisCore
 				me.vars(idx).varidx = [me.vars(idx).varidx idx];
 				me.vars(idx).variable = [me.vars(idx).variable var];
 				me.vars(idx).idx = [me.vars(idx).idx i];
+				me.vars(idx).correct = [me.vars(idx).correct trial.correct];
+				if trial.correct > 0
+					me.vars(idx).idxcorrect = [me.vars(idx).idxcorrect i];
+				end
+				me.vars(idx).result = [me.vars(idx).result trial.result];
 				me.vars(idx).correctedidx = [me.vars(idx).correctedidx i];
-				me.vars(idx).trial = [me.vars(idx).trial; trial];
-				me.vars(idx).uuid = [me.vars(idx).uuid, trial.uuid];
+				%me.vars(idx).trial = [me.vars(idx).trial; trial];
+				me.vars(idx).uuid{end+1} = trial.uuid;
 				if ~isempty(trial.saccadeTimes)
 					me.vars(idx).sTime = [me.vars(idx).sTime trial.saccadeTimes(1)];
 				else

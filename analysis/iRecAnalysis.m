@@ -1444,31 +1444,36 @@ classdef iRecAnalysis < analysisCore
 				warning('---> eyelinkAnalysis.parseAsVars: No trials and therefore cannot extract variables!')
 				return
 			end
-			me.vars = struct();
-			me.vars(1).name = '';
-			me.vars(1).var = [];
-			me.vars(1).varidx = [];
-			me.vars(1).variable = [];
-			me.vars(1).idx = [];
-			me.vars(1).idxcorrect = [];
-			me.vars(1).correctedidx = [];
-			me.vars(1).correct = [];
-			me.vars(1).result = [];
-			me.vars(1).trial = [];
-			me.vars(1).sTime = [];
-			me.vars(1).sT = [];
-			me.vars(1).uuid = {};
-
 			uniqueVars = sort(unique([me.trials.variable]));
+			nVars = length(uniqueVars);
+			me.vars = struct();
+			me.vars(nVars).name = '';
+			me.vars(nVars).var = [];
+			me.vars(nVars).varidx = [];
+			me.vars(nVars).variable = [];
+			me.vars(nVars).idx = [];
+			me.vars(nVars).correctedidx = [];
+			me.vars(nVars).correct = [];
+			me.vars(nVars).trial = [];
+			me.vars(nVars).sTime = [];
+			me.vars(nVars).sT = [];
+			me.vars(nVars).uuid = {};
+
+			labels = [];
+			try labels = me.exp.rE.task.varLabels; end
 
 			for i = 1:length(me.trials)
 				trial = me.trials(i);
 				var = trial.variable;
-				if trial.incorrect == true
+				if trial.invalid == true
 					continue
 				end
 				idx = find(uniqueVars==var);
-				me.vars(idx).name = num2str(var);
+				if ~isempty(labels) && idx <= length(labels)
+					me.vars(idx).name = labels{idx};
+				else
+					me.vars(idx).name = num2str(var);
+				end
 				me.vars(idx).var = var;
 				me.vars(idx).varidx = [me.vars(idx).varidx idx];
 				me.vars(idx).variable = [me.vars(idx).variable var];
@@ -1479,8 +1484,8 @@ classdef iRecAnalysis < analysisCore
 				end
 				me.vars(idx).result = [me.vars(idx).result trial.result];
 				me.vars(idx).correctedidx = [me.vars(idx).correctedidx i];
-				me.vars(idx).trial = [me.vars(idx).trial; trial];
-				me.vars(idx).uuid = [me.vars(idx).uuid, trial.uuid];
+				%me.vars(idx).trial = [me.vars(idx).trial; trial];
+				me.vars(idx).uuid{end+1} = trial.uuid;
 				if ~isempty(trial.saccadeTimes)
 					me.vars(idx).sTime = [me.vars(idx).sTime trial.saccadeTimes(1)];
 				else
