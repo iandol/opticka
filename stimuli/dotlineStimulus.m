@@ -28,6 +28,10 @@ classdef dotlineStimulus < baseStimulus
 		colour2						= [0 0 0 1]
 		%> contrast multiplier 
 		contrast double				= 1
+		%> random shift in degrees (diameter)
+		randomShift					= 0
+		%> random shift every N time in seconds
+		shiftTime					= 0
 		%> precision: 0 = 8bit | 1 = 16bit | 2 = 32bit
 		precision					= 0
 		%> special flags: 0 = hardware filter, 2 = PTB
@@ -86,6 +90,9 @@ classdef dotlineStimulus < baseStimulus
 	end
 
 	properties (Access = protected)
+		pRect				=[]
+		randomTick			= 0
+		thisFlashTick		= 0
 		%> allowed properties passed to object upon construction
 		allowedProperties = {'type', 'contrast', ...
 			'itemSize','itemDistance','phase','direction',...
@@ -165,6 +172,11 @@ classdef dotlineStimulus < baseStimulus
 				me.angleOut = me.directionOut + 90;
 			end
 
+			if me.randomShift > 0
+				me.thisFlashTick = 1;
+				me.randomTick = round(me.shiftTime / me.screenVals.ifi);
+			end
+
 			me.inSetup = false; me.isSetup = true;
 
 			makeLine(me);
@@ -174,6 +186,7 @@ classdef dotlineStimulus < baseStimulus
 				setup(me.animator, me);
 			end
 			setRect(me);
+			me.pRect = me.mvRect;
 
 			function set_xPositionOut(me, value)
 				me.xPositionOut = value * me.ppd;
@@ -231,7 +244,9 @@ classdef dotlineStimulus < baseStimulus
 		
 			% circle or square
 			if strcmpi(me.type,'circle')
-				Screen('FillOval', owin, colours, orects, 100);
+				%Screen('FillOval', owin, colours, orects, 100);
+				dpos = [pos;ones(size(pos))*(lrect(4)/2)];
+				Screen('DrawDots', owin, dpos, es, colours, [], 1);
 			else
 				Screen('FillRect', owin, colours, orects);
 			end
@@ -256,9 +271,11 @@ classdef dotlineStimulus < baseStimulus
 				me.angleOut = me.directionOut + 90;
 			end
 			makeLine(me);
+			me.thisFlashTick = 1;
 			resetTicks(me);
 			computePosition(me);
 			setRect(me);
+			me.pRect = me.mvRect;
 		end
 
 		% ===================================================================
@@ -270,8 +287,8 @@ classdef dotlineStimulus < baseStimulus
 				if ~exist('win','var');win = me.sM.win; end
 				% Screen('DrawTexture', windowPointer, texturePointer [,sourceRect] [,destinationRect] [,rotationAngle]
 				% [, filterMode] [, globalAlpha] [, modulateColor] [, textureShader] [, specialFlags] [, auxParameters]);
-				Screen('DrawTexture', win, me.texture, [], me.mvRect,...
-					me.angleOut, me.filter, me.alphaOut);
+				Screen('DrawTexture', win, me.texture, [], me.pRect,...
+					me.angleOut, me.filter, me.alphaOut,[],[],[]);
 			end
 			me.tick = me.tick + 1;
 		end
@@ -286,14 +303,28 @@ classdef dotlineStimulus < baseStimulus
 					getMousePosition(me);
 					if me.mouseValid
 						me.mvRect = CenterRectOnPointd(me.mvRect, me.mouseX, me.mouseY);
+						me.pRect = me.mvRect;
 					end
 				end
 				if me.doAnimator
 					animate(me.animator);
 					me.updateXY(me.animator.x, me.animator.y, true);
 					me.angleOut = -rad2deg(me.animator.angle);
+					me.pRect = me.mvRect;
 				elseif me.doMotion == 1
 					me.mvRect=OffsetRect(me.mvRect,me.dX_,me.dY_);
+					me.pRect = me.mvRect;
+				end
+				if me.randomShift > 0
+					if me.thisFlashTick > me.randomTick
+						shift = ((rand-0.5) * me.randomShift) * me.ppd;
+						[shiftx,shifty] = pol2cart(me.d2r(getP(me,'direction')), shift);
+						%fprintf('Shift was %.2f x and %.2f y px\n',shiftx,shifty);
+						me.pRect = OffsetRect(me.mvRect, shiftx, shifty);
+						me.thisFlashTick = 1;
+					else
+						me.thisFlashTick = me.thisFlashTick + 1;
+					end
 				end
 			end
 		end
@@ -317,6 +348,8 @@ classdef dotlineStimulus < baseStimulus
 			me.height = [];
 			removeTmpProperties(me);
 			me.isSetup = false;
+			me.thisFlashTick = 0;
+			me.randomTick = 0;
 		end
 
 	end %---END PUBLIC METHODS---%

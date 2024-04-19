@@ -125,6 +125,7 @@ classdef tobiiAnalysis < analysisCore
 	end
 
 	properties (SetAccess = private, GetAccess = private)
+		varLabels
 		%> pixels per degree calculated from pixelsPerCm and distance (cache)
 		ppd_
 		%> allowed properties passed to object upon construction
@@ -218,8 +219,9 @@ classdef tobiiAnalysis < analysisCore
 					size(me.raw.messages,1),...
 					length(me.raw.data.gaze.deviceTimeStamp));
 				if ~isempty(me.exp.rE.task.varLabels)
+					me.varLabels = me.exp.rE.task.varLabels;
 					fprintf('===>>> Variables contained in the task:\n');
-					disp(me.exp.rE.task.varLabels);
+					disp(me.varLabels);
 				end
 			end
 			fprintf('<strong>:#:</strong> Loading Raw MAT Data took <strong>%g ms</strong>\n',round(toc(tt)*1e3));
@@ -355,12 +357,13 @@ classdef tobiiAnalysis < analysisCore
 		function data = saveChap(me)
 			if ~me.isParsed; warning('You need to parse data first...');return;end
 			t = double(me.raw.data.gaze.systemTimeStamp) / 1e3;
-			data.timestamps = double(me.raw.data.gaze.systemTimeStamp) / 1e3;
-			data.pupil_size = me.raw.data.gaze.left.pupil.diameter;
-			data.pupil_x = me.raw.data.gaze.left.gazePoint.onDisplayArea(1,:);
-			data.pupil_y = me.raw.data.gaze.left.gazePoint.onDisplayArea(2,:);
+			data.timestamps = t';
+			data.pupil_size = ((me.raw.data.gaze.left.pupil.diameter+me.raw.data.gaze.right.pupil.diameter)/2)';
+			data.pupil_x = me.raw.data.gaze.left.gazePoint.onDisplayArea(1,:)';
+			data.pupil_y = me.raw.data.gaze.left.gazePoint.onDisplayArea(2,:)';
 			data.rate = me.sampleRate;
 			data.name = me.fileName;
+			data.file_name = data.name;
 			tdata = {};
 			vdata = {};
 			for i = 1:length(me.trials)
@@ -369,14 +372,15 @@ classdef tobiiAnalysis < analysisCore
 				tdata{i,3} = analysisCore.findNearest(t, me.trials(i).entime);
 				tdata{i,4} = tdata{i,3} - tdata{i,2};
 				
-				vdata{i,1} = ['Variable ' num2str(me.trials(i).variable)];
-				vdata{i,2} = ['Name ' me.trials(i).variableMessageName];
-				vdata{i,3} = ['Correct ' num2str(me.trials(i).correct)];
+				vdata{i,1} = ['VAR' num2str(me.trials(i).variable)];
+				vdata{i,2} = ['' me.trials(i).variableMessageName];
+				if me.trials(i).correct; ctxt = 'correct'; elseif me.trials(i).breakFix; ctxt='breakfix';else; ctxt='incorrect';end
+				vdata{i,3} = ['' ctxt];
 				vdata{i,4} = analysisCore.findNearest(t, me.trials(i).rtstarttime) - tdata{i,2};
 				vdata{i,5} = tdata{i,4};
 			end
 			data.trial_data = cell2table(tdata,'VariableNames',{'trial_names','Trial_Onset_num','Trial_Offset_num','trial_length'});
-			data.total_var_data_table = cell2table(vdata,'VariableNames',{'variable','name','correct','event_stimulus_onset','event_trial_end'});
+			data.total_var_data_table = cell2table(vdata,'VariableNames',{'VAR','NAME','CORRECT','event_stimulus_onset','event_Trial_Offset'});
 			data.event_data = [];
 			data.events2 = [];
 			data.vars2 = [];
@@ -1401,6 +1405,9 @@ classdef tobiiAnalysis < analysisCore
 						end
 						thisTrial = trialDef;
 						thisTrial.variable = str2double(id.ID);
+						if thisTrial.variable > 0 && thisTrial.variable <= length(me.varLabels)
+							thisTrial.variableMessageName = me.varLabels{thisTrial.variable};
+						end
 						thisTrial.idx = tri;
 						thisTrial.time = evtT;
 						thisTrial.sttime = evtT;
