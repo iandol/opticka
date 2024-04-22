@@ -8,12 +8,14 @@
 classdef nirSmartManager < optickaCore
 	
 	properties
+		ip char = '192.168.31.145'
+		port double = 5566
 		%> verbosity
-		verbose = true
+		verbose logical = true
 		%> the hardware object
-		io
+		io dataConnection
 		%>
-		silentMode logical = true
+		silentMode logical = false
 		%>
 		stimOFFValue = 255
 	end
@@ -41,10 +43,10 @@ classdef nirSmartManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function obj = nirSmartManager(varargin)
+		function me = nirSmartManager(varargin)
 			if nargin == 0; varargin.name = 'NirSmart Manager'; end
-			obj=obj@optickaCore(varargin); %superclass constructor
-			if nargin > 0; obj.parseArgs(varargin,obj.allowedProperties); end
+			me=me@optickaCore(varargin); %superclass constructor
+			if nargin > 0; me.parseArgs(varargin,me.allowedProperties); end
 		end
 
 		% ===================================================================
@@ -52,13 +54,13 @@ classdef nirSmartManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function open(obj,varargin)
-			obj.t_Client = tcpclient('192.168.31.145',5566);
-			set(obj.t_Client,'InputBufferSize',1024);
+		function open(me,varargin)
+			me.io = tcpclient(me.ip,me.port);
+			set(me.t_Client,'InputBufferSize',1024);
 			%%t_Client.InputBuffersize = 100000;
-			fopen(obj.t_Client);
+			fopen(me.t_Client);
 			disp("Connected!");
-			obj.isOpen = true;
+			me.isOpen = true;
 		end
 		
 		% ===================================================================
@@ -66,9 +68,9 @@ classdef nirSmartManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function close(obj,varargin)
-			fclose(obj.t_Client);
-			obj.isOpen = false;
+		function close(me,varargin)
+			fclose(me.t_Client);
+			me.isOpen = false;
 		end
 
 		% ===================================================================
@@ -76,14 +78,14 @@ classdef nirSmartManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function sendStrobe(obj, value)
-			obj.lastValue = obj.sendValue;
-			obj.sendValue = value;
+		function sendStrobe(me, value)
+			me.lastValue = me.sendValue;
+			me.sendValue = value;
 			sentString = [250,252,251,253,3,value,252,253,250,251];
-			if obj.isOpen
+			if me.isOpen
 				for i = 1:length(sentString)
             		data_sent = sentString(i);
-            		fwrite(obj.t_Client, data_sent);
+            		fwrite(me.t_Client, data_sent);
         		end
 			end
 		end
@@ -93,7 +95,7 @@ classdef nirSmartManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function resetStrobe(obj,varargin)
+		function resetStrobe(me,varargin)
 
 		end
 		
@@ -102,7 +104,7 @@ classdef nirSmartManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function triggerStrobe(obj,varargin)
+		function triggerStrobe(me,varargin)
 
 		end
 		
@@ -111,9 +113,9 @@ classdef nirSmartManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function prepareStrobe(obj,value)
-			obj.lastValue = obj.sendValue;
-			obj.sendValue = value;
+		function prepareStrobe(me,value)
+			me.lastValue = me.sendValue;
+			me.sendValue = value;
 		end
 		
 		% ===================================================================
@@ -121,9 +123,9 @@ classdef nirSmartManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function strobeServer(obj,value)
-			obj.lastValue = obj.sendValue;
-			obj.sendValue = value;
+		function strobeServer(me,value)
+			me.lastValue = me.sendValue;
+			me.sendValue = value;
 		end
 
 		% ===================================================================
@@ -131,16 +133,7 @@ classdef nirSmartManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function sendTTL(obj,value)
-
-		end
-		
-		% ===================================================================
-		%> @brief 
-		%> 
-		%> @param 
-		% ===================================================================
-		function startRecording(obj,value)
+		function sendTTL(me,value)
 
 		end
 		
@@ -149,7 +142,7 @@ classdef nirSmartManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function resumeRecording(obj,value)
+		function startRecording(me,value)
 
 		end
 		
@@ -158,7 +151,7 @@ classdef nirSmartManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function pauseRecording(obj,value)
+		function resumeRecording(me,value)
 
 		end
 		
@@ -167,7 +160,7 @@ classdef nirSmartManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function stopRecording(obj,value)
+		function pauseRecording(me,value)
 
 		end
 		
@@ -176,7 +169,16 @@ classdef nirSmartManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function startFixation(obj)
+		function stopRecording(me,value)
+
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
+		% ===================================================================
+		function startFixation(me)
 			
 		end
 		
@@ -185,7 +187,7 @@ classdef nirSmartManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function correct(obj)
+		function correct(me)
 			
 		end
 		
@@ -194,7 +196,7 @@ classdef nirSmartManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function incorrect(obj)
+		function incorrect(me)
 			
 		end
 		
@@ -203,7 +205,7 @@ classdef nirSmartManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function breakFixation(obj)
+		function breakFixation(me)
 			
 		end
 		
@@ -212,7 +214,7 @@ classdef nirSmartManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function rstart(obj,varargin)
+		function rstart(me,varargin)
 
 		end
 		
@@ -222,7 +224,7 @@ classdef nirSmartManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function rstop(obj,varargin)
+		function rstop(me,varargin)
 
 		end
 		
@@ -231,7 +233,7 @@ classdef nirSmartManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function timedTTL(obj,varargin)
+		function timedTTL(me,varargin)
 
 		end
 		
@@ -240,19 +242,19 @@ classdef nirSmartManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function type = get.type(obj)
-			if isempty(obj.io)
+		function type = get.type(me)
+			if isempty(me.io)
 				type = 'undefined';
 			else
-				if isa(obj.io,'plusplusManager')
+				if isa(me.io,'plusplusManager')
 					type = 'Display++';
-				elseif isa(obj.io,'labJackT')
+				elseif isa(me.io,'labJackT')
 					type = 'LabJack T4/T7';
-				elseif isa(obj.io,'labJack')
+				elseif isa(me.io,'labJack')
 					type = 'LabJack U3/U6';
-				elseif isa(obj.io,'dPixxManager')
+				elseif isa(me.io,'dPixxManager')
 					type = 'DataPixx';
-				elseif isa(obj.io,'arduinoManager')
+				elseif isa(me.io,'arduinoManager')
 					type = 'Arduino';
 				end
 			end
@@ -262,10 +264,10 @@ classdef nirSmartManager < optickaCore
 		%> @brief Delete method, closes gracefully
 		%>
 		% ===================================================================
-		function delete(obj)
+		function delete(me)
 			try
-				if ~isempty(obj.io)
-					close(obj);
+				if ~isempty(me.io)
+					close(me);
 				end
 			catch
 				warning('IO Manager Couldn''t close hardware')

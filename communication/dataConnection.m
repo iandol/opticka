@@ -106,7 +106,6 @@ classdef dataConnection < handle
 		%> Configures input structure to assign properties
 		% ===================================================================
 		function me = dataConnection(varargin)
-			
 			me.parseArgs(varargin);
 			if me.autoServer == true
 				me.type='server';
@@ -290,8 +289,9 @@ classdef dataConnection < handle
 		%>
 		%> @return hasData (logical)
 		% ===================================================================
-		function hasData = checkData(me)
-			me.hasData = false;
+		function [hasData, data] = checkData(me)
+			hasData = false;
+			data = '';
 			if matches(me.type,'server') && me.rconn > -1
 				conn = me.rconn; 
 			elseif me.conn > -1
@@ -303,18 +303,17 @@ classdef dataConnection < handle
 				case 'udp'%============================UDP
 					data = pnet(conn, 'read', 65536, me.dataType, 'view');
 					if isempty(data)
-						me.hasData = pnet(conn, 'readpacket') > 0;
+						hasData = pnet(conn, 'readpacket') > 0;
 					else
-						me.hasData = true;
+						hasData = true;
 					end
 				case 'tcp'%============================TCP
-					data = pnet(conn, 'read', me.readSize, me.dataType, 'noblock', 'view');
+					data = pnet(conn, 'read', 'noblock', 'view');
 					if ~isempty(data)
-						me.hasData = true;
+						hasData = true;
 					end
-					
 			end
-			hasData = me.hasData;
+			me.hasData = hasData;
 		end
 
 		% ===================================================================
@@ -607,13 +606,19 @@ classdef dataConnection < handle
 		% 		#define STATUS_UDP_SERVER_CONNECT 19
 		function status = checkStatus(me, conn) %#ok<INUSD>
 			status = -1;
-			try
-				if ~exist('conn','var') && matches(me.type,'client') || strcmp(conn,'conn')
-					conn='conn';
+			if ~exist('conn','var') || isempty(conn)
+				if matches(me.type,'client')
+					conn=me.conn;
 				else
-					conn = 'rconn';
+					conn = me.rconn;
 				end
-				me.status = pnet(me.(conn),'status');
+			elseif ischar(conn) && strcmp(conn,'conn')
+				conn = me.conn;
+			elseif ischar(conn) && strcmp(conn,'rconn')
+				conn = me.rconn;
+			end
+			try
+				me.status = pnet(conn,'status');
 				if me.status <=0;me.(conn) = -1; me.isOpen = false;me.salutation('checkStatus Method','Connection appears closed...');end
 				switch me.status
 					case -1
@@ -641,7 +646,7 @@ classdef dataConnection < handle
 					otherwise
 						me.statusMessage = 'UNDEFINED';
 				end
-				me.salutation(me.statusMessage,'checkStatus')
+				me.salutation(me.statusMessage,'checkStatus',true)
 				status = me.status;
 			catch %#ok<CTCH>
 				me.status = -1;
@@ -1081,8 +1086,9 @@ classdef dataConnection < handle
 		%> @param in the calling function
 		%> @param message the message that needs printing to command window
 		% ===================================================================
-		function salutation(me,in,message)
-			if me.verbosity > 0
+		function salutation(me,in,message,verbose)
+			if ~exist('verbose','var'); verbose = me.verbosity; end
+			if verbose
 				if ~exist('in','var')
 					in = 'General Message';
 				end

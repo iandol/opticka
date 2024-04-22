@@ -2074,7 +2074,19 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 			if ~exist("onlyIO","var") || isempty(onlyIO);onlyIO=false;end
 			%-------Set up Digital I/O (dPixx and labjack) for this task run...
-			if strcmp(me.strobe.device,'display++')
+			if strcmp(me.strobe.device,'nirsmart')
+				if ~isa(me.nirSmart,'nirsmartManager')
+					me.dPP = nirsmartManager('verbose',me.verbose);
+				end
+				io = me.dPP;  %#ok<*PROP>
+				io.sM = me.screen;
+				io.strobeMode = me.dPPMode;
+				io.name = me.name;
+				io.verbose = me.verbose;
+				io.name = 'runinstance';
+				open(io);
+				fprintf('===> Using Display++ for strobed I/O...\n')
+			elseif strcmp(me.strobe.device,'display++')
 				if ~isa(me.dPP,'plusplusManager')
 					me.dPP = plusplusManager('verbose',me.verbose);
 				end
