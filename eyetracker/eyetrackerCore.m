@@ -180,9 +180,9 @@ classdef eyetrackerCore < optickaCore
 		%> all pupil size reset using resetFixation
 		pupilAll				= []
 		%> data streamed out from the Tobii
-		data					= struct()
+		data					= []
 		%> validation data
-		validationData			= struct()
+		validationData			= {}
 	end
 	
 	properties (SetAccess = protected, GetAccess = ?optickaCore)

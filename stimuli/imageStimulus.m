@@ -173,7 +173,7 @@ classdef imageStimulus < baseStimulus
 			addRuntimeProperties(me);
 
 			loadImage(me, in);
-			me.chosenImages = [me.chosenImages string(regexprep(me.currentFile,'\\','/'))];
+			me.chosenImages = string(['[setup]' regexprep(me.currentFile,'\\','/')]);
 			me.inSetup = false; me.isSetup = true;
 			if me.sizeOut > 0
 				me.scale = me.sizeOut / (me.width / me.ppd);
@@ -320,7 +320,7 @@ classdef imageStimulus < baseStimulus
 				end
 				loadImage(me,im);
 			end
-			me.chosenImages = [me.chosenImages string(regexprep(me.currentFile,'\\','/'))];
+			me.chosenImages = [me.chosenImages string(['[' num2str(me.getP('selection')) ']' regexprep(me.currentFile,'\\','/')])];
 			if me.sizeOut > 0
 				me.scale = me.sizeOut / (me.width / me.ppd);
 			end

@@ -389,13 +389,17 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 				try me.calStim.setCleanState(); end
 			end
 
-			if ~isempty(me.calib) && me.calib.wasSkipped ~= 1
-				if isfield(me.calib,'selectedCal')
-					try
-						calMsg = me.tobii.getValidationQualityMessage(me.calib);
-						fprintf('-+-+-> CAL RESULT = ');
-						disp(calMsg);
+			if ~isempty(me.calib) && me.calib.wasSkipped ~= 1 && isfield(me.calib,'selectedCal')
+				try
+					calMsg = me.tobii.getValidationQualityMessage(me.calib);
+					fprintf('\n-+-+-> CAL RESULT = ');
+					disp(calMsg);
+					if isempty(me.validationData)
+						me.validationData{1} = calMsg;
+					else
+						me.validationData{end+1} = calMsg;
 					end
+					me.calib.v = calMsg;
 				end
 			else
  				disp('-+-+!!! The calibration was unsuccesful or skipped !!!+-+-')
