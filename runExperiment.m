@@ -156,7 +156,9 @@ classdef runExperiment < optickaCore
 		%> Display++ control object
 		dPP 
 		%> LabJack control object
-		lJack 
+		lJack
+		%> NIRSmart control object
+		NIR
 		%> Arduino control object
 		arduino
 		%> user functions object
@@ -2075,17 +2077,25 @@ classdef runExperiment < optickaCore
 			if ~exist("onlyIO","var") || isempty(onlyIO);onlyIO=false;end
 			%-------Set up Digital I/O (dPixx and labjack) for this task run...
 			if strcmp(me.strobe.device,'nirsmart')
-				if ~isa(me.nirSmart,'nirsmartManager')
-					me.dPP = nirsmartManager('verbose',me.verbose);
+				if ~isa(me.NIR,'nirsmartManager') || isempty(me.NIR)
+					me.NIR = nirSmartManager('verbose',me.verbose);
 				end
-				io = me.dPP;  %#ok<*PROP>
-				io.sM = me.screen;
-				io.strobeMode = me.dPPMode;
+				if ~isempty(me.control.port)
+					v = strsplit(me.control.port,':');
+				else
+					v{1} = '127.0.0.1';
+					v{2} = '5000';
+				end
+				io = me.NIR;  %#ok<*PROP>
+				io.ip = v{1};
+				io.port = str2double(v{2});
 				io.name = me.name;
-				io.verbose = me.verbose;
-				io.name = 'runinstance';
 				open(io);
-				fprintf('===> Using Display++ for strobed I/O...\n')
+				if io.isOpen
+					fprintf('===> Using NIRSmart for strobed I/O...\n')
+				else
+					warning('Couldn''t open nirSmartManager, check TCP port is valid!!!')
+				end
 			elseif strcmp(me.strobe.device,'display++')
 				if ~isa(me.dPP,'plusplusManager')
 					me.dPP = plusplusManager('verbose',me.verbose);
@@ -2095,9 +2105,12 @@ classdef runExperiment < optickaCore
 				io.strobeMode = me.dPPMode;
 				io.name = me.name;
 				io.verbose = me.verbose;
-				io.name = 'runinstance';
 				open(io);
-				fprintf('===> Using Display++ for strobed I/O...\n')
+				if io.isOpen
+					fprintf('===> Using Display++ for strobed I/O...\n')
+				else
+					warning('===> !!! Couldn''t open Display++!!!')
+				end
 			elseif strcmp(me.strobe.device,'datapixx')
 				if ~isa(me.dPixx,'dPixxManager')
 					me.dPixx = dPixxManager('verbose',me.verbose);
@@ -2105,9 +2118,13 @@ classdef runExperiment < optickaCore
 				io = me.dPixx; io.name = me.name;
 				io.silentMode = false;
 				io.verbose = me.verbose;
-				io.name = 'runinstance';
+				io.name = me.name;
 				open(io);
-				fprintf('===> Using dataPixx for strobed I/O...\n')
+				if io.isOpen
+					fprintf('===> Using dataPixx for strobed I/O...\n')
+				else
+					warning('===> !!! Couldn''t open dataPixx!!!')
+				end
 			elseif strcmp(me.strobe.device,'labjackt')
 				if ~isa(me.lJack,'labjackT')
 					me.lJack = labJackT('openNow',false,'device',1);
@@ -2115,7 +2132,7 @@ classdef runExperiment < optickaCore
 				io = me.lJack; io.name = me.name;
 				io.silentMode = false;
 				io.verbose = me.verbose;
-				io.name = 'runinstance';
+				io.name = me.name;
 				open(io);
 				WaitSecs(0.2);
 				if io.isOpen

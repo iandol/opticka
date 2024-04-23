@@ -181,7 +181,6 @@ classdef dataConnection < handle
 								end
 								loop = loop + 1;
 							end
-							
 							if me.conn >= 0
 								% disable blocking
 								pnet(me.conn ,'setwritetimeout', me.writeTimeOut);

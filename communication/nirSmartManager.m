@@ -8,16 +8,16 @@
 classdef nirSmartManager < optickaCore
 	
 	properties
-		ip char = '192.168.31.145'
-		port double = 5566
-		%> verbosity
-		verbose logical = true
+		ip char = '127.0.0.1'
+		port double = 8889
 		%> the hardware object
 		io dataConnection
 		%>
 		silentMode logical = false
 		%>
 		stimOFFValue = 255
+		%> 
+		verbose = false
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Dependent = true)
@@ -33,8 +33,7 @@ classdef nirSmartManager < optickaCore
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> properties allowed to be modified during construction
-		allowedProperties char = 'io|verbose'
-		t_Client
+		allowedProperties = {'ip','port','io','silentMode','verbose'}
 	end
 	
 	methods
@@ -44,9 +43,10 @@ classdef nirSmartManager < optickaCore
 		%> @param 
 		% ===================================================================
 		function me = nirSmartManager(varargin)
-			if nargin == 0; varargin.name = 'NirSmart Manager'; end
+			if nargin == 0; varargin.name = 'NirSmart Manager'; varargin.type = 'NirSmart'; end
 			me=me@optickaCore(varargin); %superclass constructor
 			if nargin > 0; me.parseArgs(varargin,me.allowedProperties); end
+			me.io = dataConnection('rAddress', me.ip, 'rPort', me.port);
 		end
 
 		% ===================================================================
@@ -55,12 +55,26 @@ classdef nirSmartManager < optickaCore
 		%> @param 
 		% ===================================================================
 		function open(me,varargin)
-			me.io = tcpclient(me.ip,me.port);
-			set(me.t_Client,'InputBufferSize',1024);
-			%%t_Client.InputBuffersize = 100000;
-			fopen(me.t_Client);
-			disp("Connected!");
-			me.isOpen = true;
+			if isempty(me.io)
+				me.io = dataConnection('rAddress', me.ip, 'rPort', me.port);
+			end
+			me.io.rAddress = me.ip;
+			me.io.rPort = me.port;
+			me.io.readSize = 1024;
+			try 
+				open(me.io);
+			catch ERR
+				getREport(ERR);
+				me.isOpen = false;
+				return
+			end
+			if me.io.isOpen
+				me.isOpen = true;
+				fprintf('--->>> Connected to %s : %i\n')
+			else
+				me.isOpen = false;
+				error('===>>> !!! Cannot open TCP port');
+			end
 		end
 		
 		% ===================================================================
@@ -69,7 +83,7 @@ classdef nirSmartManager < optickaCore
 		%> @param 
 		% ===================================================================
 		function close(me,varargin)
-			fclose(me.t_Client);
+			try close(me.io); end
 			me.isOpen = false;
 		end
 
@@ -79,15 +93,11 @@ classdef nirSmartManager < optickaCore
 		%> @param 
 		% ===================================================================
 		function sendStrobe(me, value)
+			if ~me.isOpen; return; end
 			me.lastValue = me.sendValue;
 			me.sendValue = value;
-			sentString = [250,252,251,253,3,value,252,253,250,251];
-			if me.isOpen
-				for i = 1:length(sentString)
-            		data_sent = sentString(i);
-            		fwrite(me.t_Client, data_sent);
-        		end
-			end
+			sendString = [250,252,251,253,3,value,252,253,250,251];
+			write(me.io, uint8(sendString));
 		end
 		
 		% ===================================================================
@@ -96,7 +106,8 @@ classdef nirSmartManager < optickaCore
 		%> @param 
 		% ===================================================================
 		function resetStrobe(me,varargin)
-
+			if ~me.isOpen; return; end
+			me.sendValue = 0;
 		end
 		
 		% ===================================================================
@@ -105,7 +116,9 @@ classdef nirSmartManager < optickaCore
 		%> @param 
 		% ===================================================================
 		function triggerStrobe(me,varargin)
-
+			if ~me.isOpen; return; end
+			sendString = [250,252,251,253,3,me.sendValue,252,253,250,251];
+			write(me.io, uint8(sendString));
 		end
 		
 		% ===================================================================
@@ -114,9 +127,14 @@ classdef nirSmartManager < optickaCore
 		%> @param 
 		% ===================================================================
 		function prepareStrobe(me,value)
+			if ~me.isOpen; return; end
 			me.lastValue = me.sendValue;
 			me.sendValue = value;
 		end
+
+	end
+
+	methods (Hidden = true)
 		
 		% ===================================================================
 		%> @brief 
@@ -124,8 +142,7 @@ classdef nirSmartManager < optickaCore
 		%> @param 
 		% ===================================================================
 		function strobeServer(me,value)
-			me.lastValue = me.sendValue;
-			me.sendValue = value;
+			me.sendStrobe(value);
 		end
 
 		% ===================================================================
@@ -237,28 +254,6 @@ classdef nirSmartManager < optickaCore
 
 		end
 		
-		% ===================================================================
-		%> @brief 
-		%> 
-		%> @param 
-		% ===================================================================
-		function type = get.type(me)
-			if isempty(me.io)
-				type = 'undefined';
-			else
-				if isa(me.io,'plusplusManager')
-					type = 'Display++';
-				elseif isa(me.io,'labJackT')
-					type = 'LabJack T4/T7';
-				elseif isa(me.io,'labJack')
-					type = 'LabJack U3/U6';
-				elseif isa(me.io,'dPixxManager')
-					type = 'DataPixx';
-				elseif isa(me.io,'arduinoManager')
-					type = 'Arduino';
-				end
-			end
-		end
 			
 		% ===================================================================
 		%> @brief Delete method, closes gracefully
@@ -267,7 +262,7 @@ classdef nirSmartManager < optickaCore
 		function delete(me)
 			try
 				if ~isempty(me.io)
-					close(me);
+					close(me.io);
 				end
 			catch
 				warning('IO Manager Couldn''t close hardware')
