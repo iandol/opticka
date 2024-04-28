@@ -403,6 +403,8 @@ classdef tobiiAnalysis < analysisCore
 				if isnumeric(select)
 					if length(select) > 1
 						name = [me.fileName ' | Select: ' num2str(length(select)) ' trials'];
+					elseif isempty(select)
+						name = [me.fileName ' | Select: default'];
 					else
 						name = [me.fileName ' | Select: ' num2str(select)];
 						ii = find(cellfun(@(x)ismember(select,x),{me.vars.idx}),1);
@@ -441,6 +443,9 @@ classdef tobiiAnalysis < analysisCore
 				fprintf('No trials were selected to plot, adding all...\n');
 				idx = 1:length(me.trials);
 			end
+
+			vars = sort(unique([me.trials.variable]));
+
 			if isempty(handle)
 				h1=figure('Name',name,'Color',[1 1 1],'NumberTitle','off',...
 					'Papertype','a4','PaperUnits','centimeters',...
@@ -474,10 +479,7 @@ classdef tobiiAnalysis < analysisCore
 			early = 0;
 			mS = [];
 
-			map = me.optimalColours(length(me.vars));
-			for i = 1:length(me.vars)
-				varidx(i) = me.vars(i).var;
-			end
+			map = me.optimalColours(length(vars));
 
 			if isempty(select)
 				thisVarName = 'ALL';
@@ -514,7 +516,7 @@ classdef tobiiAnalysis < analysisCore
 					continue; 
 				end
 
-				tidx = find(varidx==thisTrial.variable);
+				tidx = find(vars==thisTrial.variable);
 
 				if thisTrial.variable == 1010 || isempty(me.vars) %early CSV files were broken, 1010 signifies this
 					c = rand(1,3);
@@ -1376,7 +1378,7 @@ classdef tobiiAnalysis < analysisCore
 
 			trialDef = getTrialDef(me);
 
-			t1 = -inf;
+			t1 = inf;
 			t2 = -inf;
 
 			xmod = me.exp.rE.screenVals.rightInDegrees;
@@ -1520,7 +1522,7 @@ classdef tobiiAnalysis < analysisCore
 								thisTrial.hy = me.raw.data.gaze.left.gazePoint.inUserCoords(2,idx);
 								thisTrial.pa = me.raw.data.gaze.left.pupil.diameter(idx);
 								thisTrial.valid = me.raw.data.gaze.left.pupil.valid(idx);
-								if thisTrial.times(1) > t1; t1 = thisTrial.times(1); end
+								if thisTrial.times(1) < t1; t1 = thisTrial.times(1); end
 								if thisTrial.times(end) > t2; t2 = thisTrial.times(end); end
 							else
 								thisTrial.result = -101010;
@@ -1567,12 +1569,20 @@ classdef tobiiAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function parseAsVars(me)
+			if isempty(me.exp)
+				uniqueVars = sort(unique([me.trials.variable]));
+				labels = [];
+				warning('---> Vars are being parsed from trials directly...')
+			else
+				uniqueVars = [me.exp.rE.task.varList{:,1}];
+				labels = me.exp.rE.task.varLabels;
+
+			end
+			nVars = length(uniqueVars);
 			if isempty(me.trials)
 				warning('---> eyelinkAnalysis.parseAsVars: No trials and therefore cannot extract variables!')
 				return
 			end
-			uniqueVars = sort(unique([me.trials.variable]));
-			nVars = length(uniqueVars);
 			me.vars = struct();
 			me.vars(nVars).name = '';
 			me.vars(nVars).var = [];
@@ -1588,8 +1598,10 @@ classdef tobiiAnalysis < analysisCore
 			me.vars(nVars).sT = [];
 			me.vars(nVars).uuid = {};
 
-			labels = [];
-			try labels = me.exp.rE.task.varLabels; end
+			for i=uniqueVars
+				if i <= length(labels); me.vars(i).name = labels{i}; end
+				me.vars(i).var = uniqueVars(i);
+			end
 
 			for i = 1:length(me.trials)
 				trial = me.trials(i);
