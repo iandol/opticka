@@ -94,10 +94,16 @@ classdef nirSmartManager < optickaCore
 		% ===================================================================
 		function sendStrobe(me, value)
 			if ~me.isOpen; return; end
-			me.lastValue = me.sendValue;
-			me.sendValue = value;
+			if ~exist('value','var') || isempty(value)
+				if ~isempty(me.sendValue)
+					value = me.sendValue; 
+				else
+					warning('--->>> nirSmartManager No strobe value set, no stobe sent!'); return
+				end
+			end
 			sendString = [250,252,251,253,3,value,252,253,250,251];
 			write(me.io, uint8(sendString));
+			me.sendValue = value;
 		end
 		
 		% ===================================================================
@@ -117,6 +123,7 @@ classdef nirSmartManager < optickaCore
 		% ===================================================================
 		function triggerStrobe(me,varargin)
 			if ~me.isOpen; return; end
+			if isempty(me.sendValue); warning('--->>> nirSmartManager No strobe value set, trigger failed!'); return; end
 			sendString = [250,252,251,253,3,me.sendValue,252,253,250,251];
 			write(me.io, uint8(sendString));
 		end
