@@ -269,12 +269,6 @@ classdef runExperiment < optickaCore
 				diary off
 				diary([me.paths.savedData filesep me.name '.log']);
 			end
-
-			%===============================enable diary logging if requested
-			if me.diaryMode
-				diary off
-				diary([me.paths.savedData filesep me.name '.log']);
-			end
 			
 			%===============================initialise runLog for this run
 			me.previousInfo.runLog	= [];
@@ -475,7 +469,7 @@ classdef runExperiment < optickaCore
 					end
 
 					%======LabJack: I/O needs to send strobe immediately after screen flip -----%
-					if me.sendStrobe && matches(me.strobe.device,'labjackt')
+					if me.sendStrobe && ~matches(me.strobe.device,'display++') && ~matches(me.strobe.device,'datapixx')
 						sendStrobe(io); me.sendStrobe = false;
 					end
 					

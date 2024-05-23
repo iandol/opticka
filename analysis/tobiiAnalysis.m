@@ -1381,8 +1381,18 @@ classdef tobiiAnalysis < analysisCore
 			t1 = inf;
 			t2 = -inf;
 
-			xmod = me.exp.rE.screenVals.rightInDegrees;
-			ymod = me.exp.rE.screenVals.bottomInDegrees;
+			if ~isempty(me.exp.rE.screen.screenVals)
+				sV = me.exp.rE.screen.screenVals;
+			else
+				sV = me.exp.rE.screenVals;
+			end
+			if isfield(sV,'bottomInDegrees')
+				xmod = sV.rightInDegrees;
+				ymod = sV.bottomInDegrees;
+			else
+				xmod = 0;
+				ymod = 0;
+			end
 			times = double(me.raw.data.gaze.systemTimeStamp) /1e3;
 			nMessages = size(me.raw.messages,1);
 			pb = textprogressbar(nMessages, 'startmsg', 'Parsing Tobii Experiment Events: ',...
