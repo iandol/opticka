@@ -113,7 +113,7 @@ classdef dataConnection < handle
 				me.startServer;
 			elseif me.autoOpen == true
 				me.open;
-			end
+            end
 		end
 		
 		% ===================================================================
@@ -483,29 +483,29 @@ classdef dataConnection < handle
 			end
 			if ~exist('sendPacket','var') || isempty(sendPacket)
 				sendPacket = true;
-			end
-			
-			if matches(me.type,'server') && me.rconn > -1
-				conn = me.rconn; 
-			elseif me.conn > -1
-				conn = me.conn;
-			else
-				return;
-			end
+            end
 
 			switch me.protocol
 				case 'udp'%============================UDP
 					if formatted == false
-						pnet(conn, 'write', data);
+						pnet(me.conn, 'write', data);
 					else
-						pnet(conn, 'printf', data);
+						pnet(me.conn, 'printf', data);
 					end
 					if sendPacket;pnet(me.conn, 'writepacket', me.rAddress, me.rPort);end
 				case 'tcp'%============================TCP
 					if formatted == false
-						pnet(conn, 'write', data);
-					else
-						pnet(conn, 'printf', data);
+						try
+                            pnet(me.conn, 'write', data);
+                        catch
+                            warning('No data written')
+                        end
+                    else
+                        try
+						    pnet(me.conn, 'printf', data);
+                        catch
+                            warning('No data written')
+                        end
 					end
 			end
 		end
@@ -528,16 +528,9 @@ classdef dataConnection < handle
 		% ===================================================================
 		% Write data to the given pnet socket.
 		function writeVar(me, varargin)
-			if matches(me.type,'server') && me.rconn > -1
-				conn = me.rconn; 
-			elseif me.conn > -1
-				conn = me.conn;
-			else
-				return;
-			end
-			pnet(conn ,'setwritetimeout', 5);
+			pnet(me.conn ,'setwritetimeout', 5);
 			me.putVar(varargin);
-			pnet(conn ,'setwritetimeout', me.writeTimeOut);
+			pnet(me.conn ,'setwritetimeout', me.writeTimeOut);
 		end
 		
 		% ===================================================================
@@ -811,7 +804,7 @@ classdef dataConnection < handle
 			out=false;
 			[~,~,key] = KbCheck(-1);
 			key=KbName(key);
-			if strcmpi(key,'escape') %allow keyboard break
+			if strcmpi(key,'escape') | strcmpi(key,'esc') %allow keyboard break
 				out=true;
 			end
 		end

@@ -70,7 +70,7 @@ classdef nirSmartManager < optickaCore
 			end
 			if me.io.isOpen
 				me.isOpen = true;
-				fprintf('--->>> Connected to %s : %i\n')
+				fprintf('--->>> Connected to %s : %i\n',me.ip,me.port)
 			else
 				me.isOpen = false;
 				error('===>>> !!! Cannot open TCP port');
