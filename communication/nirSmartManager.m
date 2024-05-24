@@ -104,6 +104,7 @@ classdef nirSmartManager < optickaCore
 			sendString = [250,252,251,253,3,value,252,253,250,251];
 			write(me.io, uint8(sendString));
 			me.sendValue = value;
+            if me.verbose; fprintf('We sent %i strobe!\n',value);end
 		end
 		
 		% ===================================================================

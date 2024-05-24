@@ -641,6 +641,7 @@ classdef runExperiment < optickaCore
 			%------make sure we reset any state machine functions to not cause
 			% problems when they are reassigned below. For example, io interfaces
 			% can be reset unless we clear this before we open the io.
+            me.userFunctions = [];
 			me.stateInfo = {};
 			if isa(me.stateMachine,'stateMachine'); me.stateMachine.reset; me.stateMachine = []; end
 			
@@ -1167,6 +1168,7 @@ classdef runExperiment < optickaCore
 			catch ERR
 				me.isRunning = false;
 				fprintf('\n\n===!!! ERROR in runExperiment.runTask()\n');
+                try me.userFunctions = []; end %user functions
 				try reset(stims); end
 				try close(s); end
 				try close(aM); end
@@ -1187,7 +1189,8 @@ classdef runExperiment < optickaCore
 				me.behaviouralRecord = [];
 				me.lJack=[];
 				me.io = [];
-				rethrow(ERR)
+                getReport(ERR);
+				rethrow(ERR);
 			end
 
 		end

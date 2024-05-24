@@ -255,9 +255,12 @@ classdef dataConnection < handle
 						end
 					end
 					me.(name) = -1; me.(list) = [];
-				end
-				me.isOpen = false;
-			end
+                end
+            end
+            me.isOpen = false;
+            me.conn = -1;
+            me.rconn = -1;
+            me.connList = [];
 		end
 		
 		% ===================================================================
