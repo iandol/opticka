@@ -548,7 +548,7 @@ classdef dataConnection < handle
 					me.conn=pnet(me.rconn,'tcplisten');
 					if me.conn > -1
 						[rhost,rport]=pnet(me.conn,'gethost');
-						fprintf('START SERVING NEW CONNECTION FROM IP %d.%d.%d.%d port:%d',rhost,rport)
+						fprintf('START SERVING NEW CONNECTION FROM IP %d.%d.%d.%d port:%d\n\n',rhost,rport)
 						pnet(me.conn ,'setwritetimeout', me.writeTimeOut);
 						pnet(me.conn ,'setreadtimeout', me.readTimeOut);
 						me.rPort = rport;
@@ -757,25 +757,28 @@ classdef dataConnection < handle
 			if ~strcmpi(me.type,'server'); warning('Object needs to be a server!');return;end
 			if ~me.isOpen; open(me); end
 			disp('Will wait for a client...')
-			while ~checkClient(me)
-				WaitSecs(0.1);
-			end
-			disp('Will wait for some data...')
-			while pnet(me.conn,'status') > -1
-				in=pnet(me.conn,'read');
-				if ~isempty(in)
-					disp('GOT:');
-					if isnumeric(in)
-						fprintf(' %i ',in);
-					else
-						disp(in);
+			doEcho = true;
+			while doEcho
+				while ~checkClient(me)
+					WaitSecs(0.1);
+					if checkForEscape(me); doEcho=false; return; end
+				end
+				disp('Will wait for some data...')
+				while pnet(me.conn,'status') > -1
+					in=pnet(me.conn,'read');
+					if ~isempty(in)
+						disp('==========GOT:');
+						if isnumeric(in)
+							fprintf(' %i ',in); fprintf(' %i ',uint8(in));
+						else
+							disp(in); disp(uint8(in));
+						end
+						disp('==============');
 					end
-				end
-				if checkForEscape(me)
-					return;
-				end
-				WaitSecs(0.05);
-			end %END WHILE
+					if checkForEscape(me); doEcho=false; return; end
+					WaitSecs(0.05);
+				end %END WHILE
+			end
 		end
 		
 		

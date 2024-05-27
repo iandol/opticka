@@ -94,7 +94,7 @@ classdef polarGratingStimulus < baseStimulus
 
 	properties (SetAccess = protected, GetAccess = {?baseStimulus})
 		%> properties to not show in the UI panel
-		ignorePropertiesUI = 'alpha';
+		ignorePropertiesUI = {'alpha','angle','aspectRatio'}
 	end
 	
 	properties (SetAccess = protected, GetAccess = protected)
@@ -106,7 +106,8 @@ classdef polarGratingStimulus < baseStimulus
 		%> allowed properties passed to object upon construction
 		allowedProperties = {'type','colour2', 'sf', 'tf', 'angle', 'direction', 'phase', 'rotateTexture' ... 
 			'contrast', 'mask', 'reverseDirection', 'speed', 'startPosition', 'aspectRatio' ... 
-			'sigma', 'correctPhase', 'phaseReverseTime', 'phaseOfReverse','visibleRate'}
+			'sigma', 'correctPhase', 'phaseReverseTime', 'phaseOfReverse','visibleRate', ...
+			'spiralFactor','arcValue','arcSymmetry','centerMask'}
 		%> properties to not create transient copies of during setup phase
 		ignoreProperties = {'type', 'scale', 'phaseIncrement', 'correctPhase', 'contrastMult', 'mask', 'typeList'}
 		%> how many frames between phase reverses

@@ -92,19 +92,30 @@ classdef nirSmartManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
+		function prepareStrobe(me,value)
+			if ~me.isOpen; return; end
+			me.lastValue = me.sendValue;
+			me.sendValue = value;
+		end
+
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
+		% ===================================================================
 		function sendStrobe(me, value)
 			if ~me.isOpen; return; end
 			if ~exist('value','var') || isempty(value)
 				if ~isempty(me.sendValue)
 					value = me.sendValue; 
 				else
-					warning('--->>> nirSmartManager No strobe value set, no stobe sent!'); return
+					warning('--->>> nirSmartManager No strobe value set, no strobe sent!'); return
 				end
 			end
 			sendString = [250,252,251,253,3,value,252,253,250,251];
 			write(me.io, uint8(sendString));
 			me.sendValue = value;
-            if me.verbose; fprintf('We sent %i strobe!\n',value);end
+            if me.verbose; fprintf('===>>> nirSmartManager: We sent strobe %i!\n',value);end
 		end
 		
 		% ===================================================================
@@ -127,17 +138,6 @@ classdef nirSmartManager < optickaCore
 			if isempty(me.sendValue); warning('--->>> nirSmartManager No strobe value set, trigger failed!'); return; end
 			sendString = [250,252,251,253,3,me.sendValue,252,253,250,251];
 			write(me.io, uint8(sendString));
-		end
-		
-		% ===================================================================
-		%> @brief 
-		%> 
-		%> @param 
-		% ===================================================================
-		function prepareStrobe(me,value)
-			if ~me.isOpen; return; end
-			me.lastValue = me.sendValue;
-			me.sendValue = value;
 		end
 
 	end

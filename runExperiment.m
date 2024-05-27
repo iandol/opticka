@@ -694,6 +694,8 @@ classdef runExperiment < optickaCore
 			tS.tOut						= 5;		%==if wrong response, how long to time out before next trial
 			tS.correctSound				= [2000, 0.1, 0.1]; %==freq,length,volume
 			tS.errorSound				= [300, 1, 1]; %==freq,length,volume
+			tS.fixX						= 0;
+			tS.fixY						= 0;
 	
 			%------initialise time logs for this run
 			me.taskLog = []; clear timeLogger;
@@ -779,15 +781,17 @@ classdef runExperiment < optickaCore
 						runDeployed(me.stateInfoFile);
 					end
 					me.stateInfo		= stateInfoTmp;
+					didFind=false;
 					for jj = 1:length(stateInfoTmp(:))
 						stemp = stateInfoTmp{jj};
 						if ~iscell(stemp); continue; end
 						for kk = 1:length(stemp)
 							if contains(char(stemp{kk}),regexpPattern('\(eT\s*?,')) && eT.isOff
 								warning('The State Machine contains eyeTracker functions BUT you have the eyetracker turned OFF!')
-								return;
+								didFind=true;break
 							end
 						end
+						if didFind; break; end
 					end
 					addStates(sM, me.stateInfo);
 					me.paths.stateInfoFile = me.stateInfoFile;
@@ -798,9 +802,11 @@ classdef runExperiment < optickaCore
 				me.lastYPosition		= tS.fixY;
 				me.lastXExclusion		= [];
 				me.lastYExclusion		= [];
-				me.eyetracker.name		= tS.name;
-				if me.eyetracker.dummy;	eT.isDummy = true; end %===use dummy or real eyetracker? 
-				if tS.saveData;			eT.recordData = true; end %===save Eyetracker data?			
+				if ~eT.isOff
+					me.eyetracker.name		= tS.name;
+					if me.eyetracker.dummy;	eT.isDummy = true; end %===use dummy or real eyetracker? 
+					if tS.saveData;			eT.recordData = true; end %===save Eyetracker data?		
+				end
 				if isfield(tS,'rewardTime'); bR.rewardTime = tS.rewardTime; end
 
 				%================================get pre-run comments for this data collection
@@ -856,7 +862,7 @@ classdef runExperiment < optickaCore
 					end
 					[~, ~, ~] = optickaCore.getKeys(me.keyboardDevice);
 					flip(s);
-					if eT.secondScreen; trackerFlip(eT, 1, false); end
+					if ~eT.isOff && eT.secondScreen; trackerFlip(eT, 1, false); end
 				end
 				resetLog(stims);
 				if ~eT.isOff
@@ -979,7 +985,7 @@ classdef runExperiment < optickaCore
 				while me.stopTask == false
 					
 					%------ Check eye position manually. -----%
-					if me.needSample; getSample(eT); end
+					if me.needSample && ~eT.isOff; getSample(eT); end
 
 					%------ Run stateMachine one step forward -----%
 					update(sM);
@@ -1030,7 +1036,7 @@ classdef runExperiment < optickaCore
 						end
 
 						% %----- Send Eyetracker messages -----%
-						if me.sendSyncTime % sends SYNCTIME message to eyetracker
+						if ~eT.isOff && me.sendSyncTime % sends SYNCTIME message to eyetracker
 							syncTime(eT);
 							me.sendSyncTime = false;
 						end
@@ -1056,15 +1062,17 @@ classdef runExperiment < optickaCore
 					end %%%%%%%%%% END me.doFlip
 
 					%----- For operator display, do we flip? -----%
-					if me.doTrackerFlip == 1
-						trackerFlip(eT, 1, false);
-					elseif me.doTrackerFlip == 2
-						trackerFlip(eT, 0, false);
-					elseif me.doTrackerFlip == 3 
-						trackerFlip(eT, 0, true);
-					elseif me.doTrackerFlip == 4
-						trackerFlip(eT, 0, true);
-						me.doTrackerFlip = 1;
+					if ~eT.isOff
+						if me.doTrackerFlip == 1
+							trackerFlip(eT, 1, false);
+						elseif me.doTrackerFlip == 2
+							trackerFlip(eT, 0, false);
+						elseif me.doTrackerFlip == 3 
+							trackerFlip(eT, 0, true);
+						elseif me.doTrackerFlip == 4
+							trackerFlip(eT, 0, true);
+							me.doTrackerFlip = 1;
+						end
 					end
 					
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
