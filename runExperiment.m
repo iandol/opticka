@@ -779,6 +779,16 @@ classdef runExperiment < optickaCore
 						runDeployed(me.stateInfoFile);
 					end
 					me.stateInfo		= stateInfoTmp;
+					for jj = 1:length(stateInfoTmp(:))
+						stemp = stateInfoTmp{jj};
+						if ~iscell(stemp); continue; end
+						for kk = 1:length(stemp)
+							if contains(char(stemp{kk}),regexpPattern('\(eT\s*?,')) && eT.isOff
+								warning('The State Machine contains eyeTracker functions BUT you have the eyetracker turned OFF!')
+								return;
+							end
+						end
+					end
 					addStates(sM, me.stateInfo);
 					me.paths.stateInfoFile = me.stateInfoFile;
 					clear stateInfoTmp
@@ -836,7 +846,7 @@ classdef runExperiment < optickaCore
 					finishDrawing(s);
 					animate(stims); % run our stimulus animation routines to the next frame
 					if ~mod(i,10); sendStrobe(io, 255); end % send a strobed word
-					if ~isempty(me.eyetracker.device)
+					if ~eT.isOff
 						getSample(eT); % get an eyetracker sample
 						if i == 1
 							trackerMessage(eT,sprintf('WARMUP_TEST %i',getTaskIndex(me)));
@@ -849,7 +859,7 @@ classdef runExperiment < optickaCore
 					if eT.secondScreen; trackerFlip(eT, 1, false); end
 				end
 				resetLog(stims);
-				if ~isempty(me.eyetracker.device)
+				if ~eT.isOff
 					resetAll(eT);
 					trackerClearScreen(eT);
 					if eT.secondScreen; trackerFlip(eT, 0, true); end 
@@ -2015,46 +2025,48 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 			if ~exist('s','var'); s = me.screen; end
 			
-			clear tobiiManager eyelinkManager iRecManager pupilLabsManager
-			
+			clear tobiiManager eyelinkManager iRecManager pupilLabsManager eyetrackerCore
+
 			if ~isfield(me.eyetracker,'isettings'); me.eyetracker.isettings = []; end
 			if ~isfield(me.eyetracker,'psettings'); me.eyetracker.psettings = []; end
 			
 			switch lower(me.eyetracker.device)
 				case 'tobii'
-					eT		= tobiiManager();
+					eT			= tobiiManager();
 					if ~isempty(me.eyetracker.tsettings); eT.addArgs(me.eyetracker.tsettings); end
-					eT.saveFile				= [me.paths.savedData filesep me.name '.mat'];
+					eT.saveFile	= [me.paths.savedData filesep me.name '.mat'];
+					eT.isOff	= false;
 				case 'eyelink'
-					eT		= eyelinkManager();
+					eT			= eyelinkManager();
 					if ~isempty(me.eyetracker.esettings); eT.addArgs(me.eyetracker.esettings); end
-					eT.saveFile				= [me.paths.savedData filesep me.name '.edf'];
+					eT.saveFile	= [me.paths.savedData filesep me.name '.edf'];
+					eT.isOff	= false;
 				case 'irec'
-					eT		= iRecManager();
+					eT			= iRecManager();
 					if ~isempty(me.eyetracker.isettings); eT.addArgs(me.eyetracker.isettings); end
-					eT.saveFile				= '';
+					eT.saveFile	= '';
+					eT.isOff	= false;
 				otherwise
 					me.eyetracker.device = '';
-					eT		= iRecManager();
-					eT.isDummy = true;
+					eT			= iRecManager();
+					eT.isOff	= true;
+					eT.isDummy	= true;
 			end
-			me.eyeTracker			= eT;
-			eT.verbose				= me.verbose;
-			if isempty(me.eyetracker.device)
-				eT.isDummy			= true;
-			else
-				eT.isDummy			= me.eyetracker.dummy;
+			me.eyeTracker		= eT;
+			eT.verbose			= me.verbose;
+			if ~isempty(me.eyetracker.device)
+				eT.isDummy		= me.eyetracker.dummy;
 			end
 			if strcmp(me.eyetracker.device, 'irec') || strcmp(me.eyetracker.device, 'tobii')
 				eT.useOperatorScreen = true;
 				initialise(eT, s);
 				trackerSetup(eT);
-			elseif strcmp(me.eyetracker.device, 'eyelink') || me.eyetracker.dummy
+			elseif strcmp(me.eyetracker.device, 'eyelink') || ~isempty(me.eyetracker.device)
 				initialise(eT, s);
 				trackerSetup(eT);
 			end
 			ShowCursor();
-			if ~eT.isConnected && ~eT.isDummy
+			if ~eT.isConnected && ~eT.isDummy && ~eT.isOff
 				warning('Eyetracker is not connected and not in dummy mode, potential connection issue...')
 			end
 		end

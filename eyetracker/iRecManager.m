@@ -114,6 +114,8 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		%>  none is provided a default will be made.
 		% ===================================================================
 			
+			if me.isOff; me.isDummy = true; return; end
+
 			[rM, aM] = initialiseGlobals(me, false, true);
 
 			if ~exist('sM','var') || isempty(sM)
@@ -240,6 +242,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		%> @brief calibration + validation
 		%>
 		% ===================================================================
+			if me.isOff; return; end
             [rM, aM] = initialiseGlobals(me);
 
 			if ~rM.isOpen; open(rM); end
@@ -605,7 +608,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		%> access, all data is saved to CSV irrespective of this
 		%>
 		% ===================================================================
-			if me.isDummy; return; end
+			if me.isDummy || me.isOff; return; end
 			if me.tcp.isOpen; me.tcp.write(int8('start')); end
 			me.isRecording = true;
 		end
@@ -617,7 +620,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		%> access, all data is saved to CSV irrespective of this
 		%>
 		% ===================================================================
-			if me.isDummy; return; end
+			if me.isDummy || me.isOff; return; end
 			if me.tcp.isOpen; me.tcp.write(int8('stop')); end
 			me.isRecording = false;
 		end
@@ -630,6 +633,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		%>
 		% ===================================================================
 			sample				= me.sampleTemplate;
+			if me.isOff; return; end
 			if me.isDummy %lets use a mouse to simulate the eye signal
 				if ~isempty(me.win)
 					[mx, my]	= GetMouse(me.win);
@@ -700,6 +704,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		%> TRIALID and TRIALRESULT we extract the integer value, END_FIX becomes
 		%> -1500 and END_RT becomes -1501
 		% ===================================================================
+			if me.isOff; return; end
 			if me.isConnected
 				if isnumeric(message)
 					me.udp.write(int32(message));

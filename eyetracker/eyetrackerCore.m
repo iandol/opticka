@@ -126,6 +126,8 @@ classdef eyetrackerCore < optickaCore
 		eyeSize					= 10
 		%> for trackerFlip, we can only flip every X frames
 		skipFlips				= 8
+		%> make the eyetracker not useable
+		isOff					= false
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -332,7 +334,7 @@ classdef eyetrackerCore < optickaCore
 		%>
 		% ===================================================================
 			success = false;
-			if ~me.isConnected || ~me.isDummy; return; end
+			if me.isOff || ~me.isConnected || ~me.isDummy; return; end
 			
 			ListenChar(0);
 			oldrk = RestrictKeysForKbCheck([]); %just in case someone has restricted keys
@@ -440,14 +442,14 @@ classdef eyetrackerCore < optickaCore
 					end
 				elseif length(inittime) == 2
 					me.fixation.initTime = randi(inittime.*1000)/1000;
-				elseif length(inittime) == 1
+				elseif isscalar(inittime)
 					me.fixation.initTime = inittime;
 				end
 			end
 			if nargin > 4 && ~isempty(fixtime)
 				if length(fixtime) == 2
 					me.fixation.time = randi(fixtime.*1000)/1000;
-				elseif length(fixtime) == 1
+				elseif isscalar(fixtime)
 					me.fixation.time = fixtime;
 				end
 			end
@@ -496,7 +498,7 @@ classdef eyetrackerCore < optickaCore
 		function [fixated, fixtime, searching, window, exclusion, initfail, blinking] = isFixated(me)
 			fixated = false; fixtime = false; searching = true; 
 			exclusion = false; window = []; initfail = false; blinking = false;
-
+			if me.isOff || ~me.isConnected; return; end
 			if me.isBlink; blinking = true; end
 			
 			if me.isExclusion || me.isInitFail
@@ -549,7 +551,7 @@ classdef eyetrackerCore < optickaCore
 			% radius is single value, assume circular, otherwise assume
 			% rectangular
 			w = 0;
-			if length(me.fixation.radius) == 1 % circular test
+			if isscalar(me.fixation.radius) % circular test
 				r = sqrt((x - me.fixation.X).^2 + (y - me.fixation.Y).^2); %fprintf('x: %g-%g y: %g-%g r: %g-%g\n',x, me.fixation.X, me.y, me.fixation.Y,r,me.fixation.radius);
 				w = find(r < me.fixation.radius);
 			else % x y rectangular window test
@@ -872,7 +874,7 @@ classdef eyetrackerCore < optickaCore
 		%>
 		% ===================================================================
 		function trackerClearScreen(me)
-			if ~me.isConnected || ~me.operatorScreen.isOpen; return;end
+			if me.isOff || ~me.isConnected || ~me.operatorScreen.isOpen; return; end
 			drawBackground(me.operatorScreen);
 		end
 
@@ -882,6 +884,7 @@ classdef eyetrackerCore < optickaCore
 		%> remember: dontclear affects the NEXT flip, not this one!
 		% ===================================================================
 		function trackerFlip(me, dontclear, force)
+			if me.isOff || ~me.isConnected || ~me.operatorScreen.isOpen; return; end
 			if ~exist('dontclear','var'); dontclear = 1; end
 			if ~exist('force','var'); force = false; end
 
@@ -899,6 +902,7 @@ classdef eyetrackerCore < optickaCore
 		%>
 		% ===================================================================
 		function trackerDrawStatus(me, comment, stimPos, dontClear, dontFlip)
+			if me.isOff || ~me.isConnected || ~me.operatorScreen.isOpen; return; end
 			if ~exist('comment','var') || isempty(comment); comment=''; end
 			if ~exist('stimPos','var'); stimPos = []; end
 			if ~exist('dontClear','var') || isempty(dontClear); dontClear = 1; end
@@ -924,6 +928,7 @@ classdef eyetrackerCore < optickaCore
 		%>
 		% ===================================================================
 		function trackerDrawStimuli(me, ts, dontClear)
+			if me.isOff || ~me.isConnected || ~me.operatorScreen.isOpen; return; end
 			if exist('ts','var') && isstruct(ts) && isfield(ts,'x')
 				me.stimulusPositions = ts;
 			else
@@ -950,7 +955,8 @@ classdef eyetrackerCore < optickaCore
 		%>
 		% ===================================================================
 		function trackerDrawFixation(me)
-			if length(me.fixation.radius) == 1
+			if me.isOff || ~me.isConnected || ~me.operatorScreen.isOpen; return; end
+			if isscalar(me.fixation.radius)
 				drawSpot(me.operatorScreen,me.fixation.radius,[0.5 0.6 0.5 0.7],me.fixation.X,me.fixation.Y);
 			else
 				rect = [me.fixation.X - me.fixation.radius(1), ...
@@ -966,7 +972,7 @@ classdef eyetrackerCore < optickaCore
 		%>
 		% ===================================================================
 		function trackerDrawExclusion(me)
-			if isempty(me.exclusionZone); return; end
+			if isempty(me.exclusionZone) || me.isOff || ~me.isConnected || ~me.operatorScreen.isOpen; return; end
 			for i = 1:size(me.exclusionZone,1)
 				drawRect(me.operatorScreen, [me.exclusionZone(1), ...
 					me.exclusionZone(3), me.exclusionZone(2), ...
@@ -980,7 +986,7 @@ classdef eyetrackerCore < optickaCore
 		%>
 		% ===================================================================
 		function trackerDrawEyePosition(me)
-			if isempty(me.x) || isempty(me.y); return;end
+			if isempty(me.x) || isempty(me.y) || me.isOff || ~me.isConnected || ~me.operatorScreen.isOpen; return; end
 			if me.isFix
 				if me.fixLength+me.fixBuffer > me.fixation.time
 					drawSpot(me.operatorScreen,0.5,[0 1 0.25 0.7],me.x,me.y);
@@ -997,6 +1003,7 @@ classdef eyetrackerCore < optickaCore
 		%>
 		% ===================================================================
 		function trackerDrawEyePositions(me)
+			if me.isOff || ~me.isConnected || ~me.operatorScreen.isOpen; return; end
 			if ~isempty(me.xAll) && ~isempty(me.yAll) && (length(me.xAll)==length(me.yAll))
 				xy = [me.xAll;me.yAll];
 				drawDots(me.operatorScreen,xy,0.4,[0.5 0.9 0.2 0.2]);
@@ -1008,7 +1015,7 @@ classdef eyetrackerCore < optickaCore
 		%>
 		% ===================================================================
 		function trackerDrawText(me,textIn)
-			if ~exist('textIn','var'); return; end
+			if ~exist('textIn','var') || me.isOff || ~me.isConnected || ~me.operatorScreen.isOpen; return; end
 			drawText(me.operatorScreen, textIn);
 		end
 
