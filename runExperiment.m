@@ -53,10 +53,10 @@ classdef runExperiment < optickaCore
 		%> user functions file that can be passed to the state machine
 		userFunctionsFile char		= ''
 		%> what strobe device to use
-		%> device = display++ | datapixx | labjackt | labjack | arduino
+		%> device = '' | display++ | datapixx | labjackt | labjack | nirsmart
 		%> optional port = not needed for most of the interfaces
 		%> optional config = plain | plexon style strobe
-		%> optional stim OFF strobe value used for MOC tasks
+		%> default stim OFF strobe value
 		strobe struct				= struct('device','','port','',...
 									'mode','plain','stimOFFValue',255)
 		%> what reward device to use
@@ -76,8 +76,6 @@ classdef runExperiment < optickaCore
 		logFrames logical			= true
 		%> enable debugging? (poorer temporal fidelity)
 		debug logical				= false
-		%> flip as fast as possible?
-		benchmark logical			= false
 		%> verbose logging to command window?
 		verbose						= false
 	end
@@ -92,6 +90,8 @@ classdef runExperiment < optickaCore
 	end
 	
 	properties (Hidden = true)
+		%> flip as fast as possible?
+		benchmark logical			= false
 		%> draw simple fixation cross during trial for MOC tasks?
 		drawFixation logical		= false
 		%> shows the info text and position grid during stimulus presentation
@@ -104,12 +104,6 @@ classdef runExperiment < optickaCore
 		tS struct
 		%> ask for comments?
 		askForComments				= false
-		%> what mode to run the Display++ digital I/O in? Plexon requires
-		%> the use of a strobe trigger line, whereas most other equipment
-		%> just uses simple threshold reading
-		dPPMode char				= 'plain'
-		%> which port is the arduino on?
-		arduinoPort char			= ''
 		%> show a white square in the top-right corner to trigger a photodiode
 		%> attached to screen for MOC task. For stateMachine tasks you need 
 		%> to pass in the drawing command for this to take effect.
@@ -149,18 +143,8 @@ classdef runExperiment < optickaCore
 		stateMachine
 		%> eyetracker manager object
 		eyeTracker 
-		%> generic IO manager
-		io
-		%> DataPixx control object
-		dPixx 
-		%> Display++ control object
-		dPP 
-		%> LabJack control object
-		lJack
-		%> NIRSmart control object
-		NIR
-		%> Arduino control object
-		arduino
+		%> strobe / trigger manager
+		strobeDevice
 		%> user functions object
 		userFunctions
 		%> data connection
@@ -469,7 +453,7 @@ classdef runExperiment < optickaCore
 					end
 
 					%======LabJack: I/O needs to send strobe immediately after screen flip -----%
-					if me.sendStrobe && ~matches(me.strobe.device,'display++') && ~matches(me.strobe.device,'datapixx')
+					if me.sendStrobe && matches(me.strobe.device,{'labjackt','nirsmart'})
 						sendStrobe(io); me.sendStrobe = false;
 					end
 					
@@ -1030,8 +1014,8 @@ classdef runExperiment < optickaCore
 							thisN = 1;
 						end
 
-						%----- LabJack: I/O needs to send strobe immediately after screen flip -----%
-						if me.sendStrobe && strcmpi(me.strobe.device,'labjackt')
+						%----- LabJack/nirSmart: I/O needs to send strobe immediately after screen flip -----%
+						if me.sendStrobe && matches(me.strobe.device,{'labjackt','nirsmart','labjack'})
 							sendStrobe(io); me.sendStrobe = false;
 						end
 
@@ -1111,7 +1095,7 @@ classdef runExperiment < optickaCore
 				%profile off; profile viewer;
 
 				%================================Amplifier control
-				if strcmp(me.control.device,'intan')
+				if strcmpi(me.control.device,'intan')
 					write(dC,uint8('set runmode stop'));
 				elseif strcmp(me.control.device,'plexon') 
 					if strcmp(me.strobe.device,'datapixx') || strcmp(me.strobe.device,'display++')
@@ -1192,21 +1176,20 @@ classdef runExperiment < optickaCore
 				try close(aM); end
 				try close(eT); end
 				try close(rM); end
-				if exist('io','var')
+				if strcmpi(me.control.device,'plexon') && exist('io','var')
 					try pauseRecording(io); end%pause plexon
 					WaitSecs(0.25)
 					try stopRecording(io); end
-					try close(io); end
 				end
+				try close(io); end
 				%profile off; profile clear
-				warning('on') 
+				warning('on');
 				Priority(0);
 				ListenChar(0); RestrictKeysForKbCheck([]);
 				ShowCursor;
 				me.eyeTracker = [];
 				me.behaviouralRecord = [];
-				me.lJack=[];
-				me.io = [];
+				me.strobeDevice = [];
                 getReport(ERR);
 				rethrow(ERR);
 			end
@@ -1382,11 +1365,7 @@ classdef runExperiment < optickaCore
 				me.task.initialise();
 			end
 			
-			if contains(me.strobe.device,'display++')
-				me.dPP = plusplusManager();
-			elseif contains(me.strobe.device,'datapixx')
-				me.dPixx = dPixxManager();
-			end
+			me.strobeDevice = ioManager();
 			
 			if ~isdeployed && isempty(me.stateInfoFile)
 				if exist([me.paths.root filesep 'DefaultStateInfo.m'],'file')
@@ -1589,14 +1568,8 @@ classdef runExperiment < optickaCore
 			if (isa(me.eyeTracker,'eyelinkManager') || isa(me.eyeTracker,'tobiiManager')) && ~isempty(me.eyeTracker)
 				me.eyeTracker.verbose = value;
 			end
-			if isa(me.lJack,'labJack') && ~isempty(me.lJack)
-				me.lJack.verbose = value;
-			end
-			if isa(me.dPixx,'dPixxManager') && ~isempty(me.dPixx)
-				me.dPixx.verbose = value;
-			end
-			if isa(me.dPP,'plusplusManager')  && ~isempty(me.dPP)
-				me.dPP.verbose = value;
+			if ~isempty(me.strobeDevice)
+				me.strobeDevice.verbose = value;
 			end
 			if isa(me.stimuli,'metaStimulus') && ~isempty(me.stimuli) && me.stimuli.n > 0
 				for i = 1:me.stimuli.n
@@ -1646,20 +1619,14 @@ classdef runExperiment < optickaCore
 		%> @param value the value to set the I/O system
 		% ===================================================================
 			if value == Inf; value = me.strobe.stimOFFValue; end
-			if strcmp(me.strobe.device, 'display++')
-				prepareStrobe(me.dPP, value);
-			elseif strcmp(me.strobe.device, 'datapixx')
-				prepareStrobe(me.dPixx, value);
-			elseif strcmp(me.strobe.device, 'labjackt') || strcmp(me.strobe.device, 'labjack')
-				prepareStrobe(me.lJack, value);
-			end
+			prepareStrobe(me.strobeDevice, value);
 		end
 		
 		% ===================================================================
 		function doStrobe(me, value)
 		%> @fn doStrobe
 		%> 
-		%> set I/O strobe to trigger on next flip
+		%> set I/O strobe to trigger on NEXT FLIP
 		%>
 		%> @param value true or false
 		% ===================================================================
@@ -1688,7 +1655,7 @@ classdef runExperiment < optickaCore
 		%>
 		%> @param value
 		% ===================================================================
-			if ~exist('value','var'); value = true; end
+			if ~exist('value','var') || isempty(value); value = true; end
 			me.needSample = value;
 		end
 
@@ -2094,8 +2061,8 @@ classdef runExperiment < optickaCore
 			if ~exist("onlyIO","var") || isempty(onlyIO);onlyIO=false;end
 			%-------Set up Digital I/O (dPixx and labjack) for this task run...
 			if strcmp(me.strobe.device,'nirsmart')
-				if ~isa(me.NIR,'nirsmartManager') || isempty(me.NIR)
-					me.NIR = nirSmartManager('verbose',me.verbose);
+				if ~isa(me.strobeDevice,'nirsmartManager') || isempty(me.strobeDevice)
+					me.strobeDevice = nirSmartManager('verbose',me.verbose);
 				end
 				if ~isempty(me.control.port)
 					v = strsplit(me.control.port,':');
@@ -2103,7 +2070,7 @@ classdef runExperiment < optickaCore
 					v{1} = '127.0.0.1';
 					v{2} = '5000';
 				end
-				io = me.NIR;  %#ok<*PROP>
+				io = me.strobeDevice;  %#ok<*PROP>
 				io.ip = v{1};
 				io.port = str2double(v{2});
 				io.name = me.name;
@@ -2114,10 +2081,10 @@ classdef runExperiment < optickaCore
 					warning('Couldn''t open nirSmartManager, check TCP port is valid!!!')
 				end
 			elseif strcmp(me.strobe.device,'display++')
-				if ~isa(me.dPP,'plusplusManager')
-					me.dPP = plusplusManager('verbose',me.verbose);
+				if ~isa(me.strobeDevice,'plusplusManager')
+					me.strobeDevice = plusplusManager('verbose',me.verbose);
 				end
-				io = me.dPP;  %#ok<*PROP>
+				io = me.strobeDevice;  %#ok<*PROP>
 				io.sM = me.screen;
 				io.strobeMode = me.dPPMode;
 				io.name = me.name;
@@ -2129,10 +2096,10 @@ classdef runExperiment < optickaCore
 					warning('===> !!! Couldn''t open Display++!!!')
 				end
 			elseif strcmp(me.strobe.device,'datapixx')
-				if ~isa(me.dPixx,'dPixxManager')
-					me.dPixx = dPixxManager('verbose',me.verbose);
+				if ~isa(me.strobeDevice,'dPixxManager')
+					me.strobeDevice = dPixxManager('verbose',me.verbose);
 				end
-				io = me.dPixx; io.name = me.name;
+				io = me.strobeDevice; io.name = me.name;
 				io.silentMode = false;
 				io.verbose = me.verbose;
 				io.name = me.name;
@@ -2143,10 +2110,10 @@ classdef runExperiment < optickaCore
 					warning('===> !!! Couldn''t open dataPixx!!!')
 				end
 			elseif strcmp(me.strobe.device,'labjackt')
-				if ~isa(me.lJack,'labjackT')
-					me.lJack = labJackT('openNow',false,'device',1);
+				if ~isa(me.strobeDevice,'labjackT')
+					me.strobeDevice = labJackT('openNow',false,'device',1);
 				end
-				io = me.lJack; io.name = me.name;
+				io = me.strobeDevice; io.name = me.name;
 				io.silentMode = false;
 				io.verbose = me.verbose;
 				io.name = me.name;
@@ -2161,10 +2128,10 @@ classdef runExperiment < optickaCore
 					error('===> !!! labJackT server not running !!!');
 				end
 			elseif strcmp(me.strobe.device,'labjack')
-				if ~isa(me.lJack,'labjack')
-					me.lJack = labJack('openNow',false);
+				if ~isa(me.strobeDevice,'labjack')
+					me.strobeDevice = labJack('openNow',false);
 				end
-				io = me.lJack; io.name = me.name;
+				io = me.strobeDevice; io.name = me.name;
 				io.silentMode = false;
 				io.verbose = me.verbose;
 				io.name = 'runinstance';
@@ -2175,7 +2142,8 @@ classdef runExperiment < optickaCore
 					warning('===> !!! labJackT could not properly open !!!');
 				end
 			else
-				io = ioManager();
+				me.strobeDevice = ioManager();
+				io = me.strobeDevice;
 				io.silentMode = true;
 				io.verbose = false;
 				io.name = 'dummy';

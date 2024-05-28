@@ -1324,6 +1324,7 @@ classdef opticka < optickaCore
 				if optickaCore.hasKey(tmp.r,'drawFixation');me.r.drawFixation=tmp.r.drawFixation;end
 				if optickaCore.hasKey(tmp.r,'dPPMode'); me.r.dPPMode = tmp.r.dPPMode; end
 
+				me.ui.OKUseNirSmart.Checked			= 'off';
 				me.ui.OKuseLabJackStrobe.Checked	= 'off';
 				me.ui.OKuseLabJackTStrobe.Checked	= 'off';
 				me.ui.OKuseDataPixx.Checked			= 'off';
@@ -1378,6 +1379,8 @@ classdef opticka < optickaCore
 							me.ui.OKuseDisplayPP.Checked = 'on';
 						case 'labjack'
 							me.ui.OKuseLabJackStrobe.Checked = 'on';
+						case 'nirsmart'
+							me.ui.OKUseNirSmart.Checked = 'on';
 					end
 				end
 				if optickaCore.hasKey(tmp.r,'reward')

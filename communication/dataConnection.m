@@ -639,7 +639,7 @@ classdef dataConnection < handle
 						otherwise
 							me.statusMessage = 'UNDEFINED';
 					end
-					me.salutation(me.statusMessage,'checkStatus',true)
+					me.salutation(me.statusMessage,'checkStatus')
 					status = [status me.status];
 				end
 			catch %#ok<CTCH>
@@ -756,14 +756,14 @@ classdef dataConnection < handle
 		function echoServer(me)
 			if ~strcmpi(me.type,'server'); warning('Object needs to be a server!');return;end
 			if ~me.isOpen; open(me); end
-			disp('Will wait for a client...')
 			doEcho = true;
 			while doEcho
+				disp('Will wait for a client...')
 				while ~checkClient(me)
-					WaitSecs(0.1);
-					if checkForEscape(me); doEcho=false; return; end
+					WaitSecs('YieldSecs',0.01);
+					if checkForEscape(me); doEcho=false; break; end
 				end
-				disp('Will wait for some data...')
+				disp('...will now wait for some data...')
 				while pnet(me.conn,'status') > -1
 					in=pnet(me.conn,'read');
 					if ~isempty(in)
@@ -775,8 +775,12 @@ classdef dataConnection < handle
 						end
 						disp('==============');
 					end
-					if checkForEscape(me); doEcho=false; return; end
-					WaitSecs(0.05);
+					if checkForEscape(me); doEcho=false; break; end
+					s = pnet(me.conn,'status');
+					if s == 0
+						break; 
+					end
+					WaitSecs('YieldSecs',0.01);
 				end %END WHILE
 			end
 		end
