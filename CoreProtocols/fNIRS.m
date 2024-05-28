@@ -1,18 +1,18 @@
-% FNIRS protocol. Doesn't use the eyetracker, runs a polar grating with
-% different conditions, but we do present a fixation cross to keep the
+% FNIRS protocol. DOESN'T use the eyetracker, runs a polar grating with
+% different conditions, but we do present a fixation cross to guide the
 % subject's eye's stable.
 %
 % me		= runExperiment object ('self' in OOP terminology) 
-% s		= screenManager object
+% s			= screenManager object
 % aM		= audioManager object
-% stims	= our list of stimuli (metaStimulus class)
+% stims		= our list of stimuli (metaStimulus class)
 % sM		= State Machine (stateMachine class)
 % task		= task sequence (taskSequence class)
 % eT		= eyetracker manager
 % io		= digital I/O to recording system
 % rM		= Reward Manager (LabJack or Arduino TTL trigger to reward system/Magstim)
 % bR		= behavioural record plot (on-screen GUI during a task run)
-% uF       = user functions - add your own functions to this class
+% uF		= user functions - add your own functions to this class
 % tS		= structure to hold general variables, will be saved as part of the data
 
 %=========================================================================
@@ -31,18 +31,15 @@ tS.useTask					= true;		%==use taskSequence (randomises stimulus variables)
 tS.keyExclusionPattern		= ["fixate","stimulus"]; %==which states to skip keyboard checking
 tS.enableTrainingKeys		= false;	%==enable keys useful during task training, but not for data recording
 tS.recordEyePosition		= false;	%==record local copy of eye position, **in addition** to the eyetracker?
-tS.askForComments			= false;	%==UI requestor asks for comments before/after run
+tS.askForComments			= true;		%==UI requestor asks for comments before/after run
 tS.includeErrors			= false;	%==do we update the trial number even for incorrect saccade/fixate, if true then we call updateTask for both correct and incorrect, otherwise we only call updateTask() for correct responses
 tS.nStims					= stims.n;	%==number of stimuli, taken from metaStimulus object
-tS.timeOut					= 2;		%==if wrong response, how long to time out before next trial
-tS.CORRECT					= 1;		%==the code to send eyetracker for correct trials
-tS.BREAKFIX					= -1;		%==the code to send eyetracker for break fix trials
-tS.INCORRECT				= -5;		%==the code to send eyetracker for incorrect trials
+tS.timeOut					= 0.75;		%==if wrong response, how long to time out before next trial
+tS.CORRECT					= 1;		%==the code to send for correct trials
+tS.BREAKFIX					= -1;		%==the code to send for break fix trials
+tS.INCORRECT				= -5;		%==the code to send for incorrect trials
 tS.correctSound				= [2000, 0.1, 0.1]; %==freq,length,volume
 tS.errorSound				= [300, 1, 1];		%==freq,length,volume
-% reward system values, set by GUI, but could be overridden here
-%rM.reward.time				= 250;		%==TTL time in milliseconds
-%rM.reward.pin				= 2;		%==Output pin, 2 by default with Arduino.
 
 %==================================================================
 %------------ ----DEBUG LOGGING to command window------------------
@@ -197,7 +194,8 @@ stimFcn =  {
 
 %as we exit stim presentation state
 stimExitFcn = {
-	@()sendStrobe(me, 255);
+	@()prepareStrobe(io, 255); % stim OFF = 255
+	@()doStrobe(me, true);
 };
 
 %========================================================
