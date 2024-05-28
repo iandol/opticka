@@ -582,8 +582,6 @@ classdef runExperiment < optickaCore
 				me.eyeTracker = [];
 				me.behaviouralRecord = [];
 				try close(rM); end
-				me.lJack=[];
-				me.io = [];
 				clear tL s tS bR rM eT io sM
 				rethrow(ERR);
 			end
@@ -2166,7 +2164,6 @@ classdef runExperiment < optickaCore
 					rM.silentMode = false;
 					rM.open();
 				end
-				me.arduino = rM;
 				if rM.isOpen; fprintf('===> Using Arduino for reward TTLs...\n'); end
 			else
 				if isa(rM,'arduinoManager')
