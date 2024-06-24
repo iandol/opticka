@@ -1,31 +1,40 @@
 % ========================================================================
-%> @brief ANIMATIONMANAGER TODO provides per frame paths for stimuli
+%> @brief ANIMATIONMANAGER Provides per frame paths for stimuli
+%> We integrate dyn4j java physics engine for rigid body
 %>
-%> @todo build the physics code for the different types of motion
+%> @todo build the code for the different types of motion
 %>
 %> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================	
 classdef animationManager < optickaCore
+
 	properties
 		%> type of animation path, rigid | linear | sinusoidal | brownian | circular
+		%> only rigid supported so far
 		type char ...
 			{mustBeMember(type,{'rigid','linear','sinusoidal','brownian','circular'})} = 'rigid'
+		%> bodyList
+		bodies = struct([])
 		%> parameters for each animation type
-		rigidparams = struct('radius', 2, 'mass', 2, ...
-			'position', [0, 0], 'velocity', [1, 0], ...
-			'airResistanceCoeff', 0.2, 'elasticityCoeff', 0.8, ...
-			'gravity', 9.8,...
-			'floor', 10, 'leftwall', [], 'rightwall', [], 'ceiling', [],...
-			'avoidRects',[]);
-		timeDelta		= 0.01
+		rigidParams = struct('gravity', [0 -9.8],'LinearDamping', 0.05, 'AngularDamping', 0.075,...
+			'screenBounds',false);
+		sinusoidalParams = struct();
+		brownianParams = struct();
+		timeDelta		= 0.016
+		%> verbose?
+		verbose = false
+		%> default length of the animation in seconds if prerendering
+		timeToEnd double = 10
 		%> what happens at edge of screen [bounce | wrap | none]
 		boundsCheck char ...
 			{mustBeMember(boundsCheck,{'bounce','wrap','none'})} = 'bounce'
-		%> verbose?
-		verbose = true
-		%> default length of the animation in seconds for prerendering
-		timeToEnd double = 10
 	end
+
+	properties (Dependent = true, SetAccess = protected, GetAccess = public)
+		nBodies
+		nObstacles
+	end
+
 
 	properties (SetAccess = private, GetAccess = public)
 		%> tick updates +1 on each draw, resets on each update
@@ -54,8 +63,6 @@ classdef animationManager < optickaCore
 		dY double
 		%> pixels per degree, inhereted from a screenManager
 		ppd double = 36
-		%> stimulus
-		stimulus
 		%> did we hit left wall?
 		hitFloor = false
 		%> did we hit left wall?
@@ -64,13 +71,23 @@ classdef animationManager < optickaCore
 		hitLeftWall = false
 		%> did we hit left wall?
 		hitRightWall = false
+		%> world for rigidbody simulation
+		world = []
+		screenBounds = []
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		isFloor = false
+		isLeftWall = false
+		isRightWall = false
+		isCeiling = false
+		massType = struct('NORMAL',[],'INFINITE',[],'FIXED_ANGULAR_VELOCITY',[],'FIXED_LINEAR_VELOCITY',[])
+		bodyTemplate = struct('body',[],'stimulus',[],'shape','Circle','radius',2,'density',1,'friction',0.2,'elasticity',0.75,'position',[0 0],'velocity',[0 0])
+		obstacleTemplate = struct('name',[],'body',[],'params',[],'sensor',false,'x',[],'y',[])
 		%> useful screen info and initial gamma tables and the like
 		screenVals struct
 		%> what properties are allowed to be passed on construction
-		allowedProperties='type|speed|angle|startPosition|verbose'
+		allowedProperties='screen|bodies|obstacles|type|speed|angle|startPosition|verbose'
 	end
 	
 	%=======================================================================
@@ -90,41 +107,186 @@ classdef animationManager < optickaCore
 			args = optickaCore.addDefaults(varargin,struct('name','animationManager'));
 			me=me@optickaCore(args); %superclass constructor
 			me.parseArgs(args,me.allowedProperties);
+			% dyn4j jar -- see https://dyn4j.org/pages/getting-started
+			javaaddpath([me.paths.whereami '/stimuli/lib/dyn4j-5.0.2.jar']);
+			me.massType.NORMAL = javaMethod('valueOf', 'org.dyn4j.geometry.MassType', 'NORMAL');
+    		me.massType.INFINITE = javaMethod('valueOf', 'org.dyn4j.geometry.MassType', 'INFINITE');
+			me.massType.FIXED_ANGULAR_VELOCITY = javaMethod('valueOf', 'org.dyn4j.geometry.MassType', 'FIXED_ANGULAR_VELOCITY');
+			me.massType.FIXED_LINEAR_VELOCITY = javaMethod('valueOf', 'org.dyn4j.geometry.MassType', 'FIXED_LINEAR_VELOCITY');
+		end
+
+		% % ===================================================================
+		% %> @brief Load an image
+		% %>
+		% % ===================================================================
+		% function addObstacle(me, name, shape, params, isSensor)
+		% 	if ~exist('name','var') || isempty(name); name = 'generic'; end
+		% 	if ~exist('shape','var') || isempty(shape); shape = 'Rectangle'; end
+		% 	if ~exist('params','var') || isempty(params); params = [-20 15 2- 15.1]; end
+		% 	if ~exist('isSensor','var') || isempty(isSensor); isSensor = false; end
+		% 	shape = [upper(shape(1)) lower(shape(2:end))];
+		% 	if ~matches(shape,{'Circle','Rectangle','Triangle','Ellipse','Segment'}); warning('Not supported shape');return;end
+		% 	switch shape
+		% 		case 'Rectangle'
+		% 			f = javaObject('org.dyn4j.geometry.Rectangle', RectWidth(params), RectHeight(params));
+		% 			[thisX, thisY] = RectCenterd(params); 
+		% 		case 'Segment'
+		% 			wa=javaObject('org.dyn4j.geometry.Vector2', params(1), params(2));
+		% 			wb=javaObject('org.dyn4j.geometry.Vector2', params(3), params(4));
+		% 			f = javaObject('org.dyn4j.geometry.Segment', wa, wb);
+		% 			thisX = params(1) - params(3);
+		% 			thisY = params(2) - params(4);
+		% 		otherwise
+		% 			f = javaObject('org.dyn4j.geometry.Circle', params(3));
+		% 			thisX = params(1); thisY = params(2);
+		% 	end
+		% 	thisObstacle = me.obstacleTemplate;
+		% 	thisObstacle.x = thisX;
+		% 	thisObstacle.y = thisY;
+		% 	thisObstacle.name = name;
+		% 	thisObstacle.sensor = isSensor;
+		% 	thisObstacle.body = javaObject('org.dyn4j.dynamics.Body');
+		% 	fixture = thisObstacle.body.addFixture(f);
+		% 	if isSensor; fixture.setSensor(true); end
+		% 	thisObstacle.body.setMass(me.massType.INFINITE);
+		% 	if ~strcmpi(shape,'Segment'); thisObstacle.body.translate(thisX, thisY); end	
+		% 	if isempty(me.obstacles)
+		% 		me.obstacles = thisObstacle;
+		% 	else
+		% 		me.obstacles(end+1) = thisObstacle;
+		% 	end
+		% end
+
+		% ===================================================================
+		%> @brief 
+		%>
+		% ===================================================================
+		function addBody(me, stimulus, shape, type, density, friction, elasticity)
+			if ~exist('stimulus','var') || ~isa(stimulus, 'baseStimulus'); return; end
+			if ~exist('shape','var') || isempty(shape); shape = 'Circle'; end
+			if ~exist('type','var') || isempty(tye); type = 'normal'; end
+			if ~exist('density','var') || isempty(density); density = 1; end
+			if ~exist('friction','var') || isempty(friction); friction = 0.2; end
+			if ~exist('elasticity','var') || isempty(elasticity); elasticity = 0.75; end
+			shape = [upper(shape(1)) lower(shape(2:end))];
+			if ~matches(shape,{'Circle','Rectangle','Triangle','Ellipse'}); warning('Not supported shape');return;end
+			
+			thisX = stimulus.xPosition;
+			thisY = stimulus.yPosition;
+			sz = stimulus.getP('size');
+			bw = stimulus.getP('barWidth');
+			bh = stimulus.getP('barHeight');
+			w = stimulus.getP('widthD');
+			h = stimulus.getP('heightD');
+			if isempty(bw) 
+				if ~isempty(w) || w > 0
+					bw = w;
+				elseif ~isempty(sz) || sz > 0
+					bw = sz; 
+				end
+			end
+			if isempty(bh) 
+				if ~isempty(h) && h > 0
+					bh = h;
+				elseif ~isempty(sz) || sz > 0
+					bh = sz; 
+				end
+			end
+			if isempty(sz) || sz == 0; sz = bw; end
+			r = sz / 2;
+			rect = [0 0 bw bh];
+			rect = CenterRectOnPointd(rect,thisX,thisY);
+			if bh > bw; params = [0 0 0.1 bh]; else; params = [0 0 bh 0.1]; end
+
+			switch shape
+				case 'Rectangle'
+					f = javaObject('org.dyn4j.geometry.Rectangle', bw, bh);
+				case 'Segment'
+					wa=javaObject('org.dyn4j.geometry.Vector2', params(1), params(2));
+					wb=javaObject('org.dyn4j.geometry.Vector2', params(3), params(4));
+					f = javaObject('org.dyn4j.geometry.Segment', wa, wb);
+				otherwise
+					f = javaObject('org.dyn4j.geometry.Circle', sz / 2);
+			end
+			thisBody = me.bodyTemplate;
+			thisBody.stimulus = stimulus;
+			thisBody.shape = shape;
+			thisBody.density = density;
+			thisBody.friction = friction;
+			thisBody.elasticity = elasticity;
+			if stimulus.size > 0
+				thisBody.radius = stimulus.size / 2;
+			elseif isprop(stimulus,'barWidth')
+				thisBody.radius = (stimulus.barWidth + stimulus.barHeight) / 2;
+			end
+			if isprop(stimulus,'direction')
+				theta = stimulus.getP('direction');
+			else
+				theta = stimulus.getP('angle');
+			end
+			if isempty(theta); theta = 0; end
+			[cx,cy] = pol2cart(theta, stimulus.speed);
+			thisBody.velocity = [cx cy];
+			thisBody.position = [stimulus.xPosition stimulus.yPosition];
+			thisBody.body = javaObject('org.dyn4j.dynamics.Body');
+    		shape = javaObject(['org.dyn4j.geometry.' thisBody.shape], thisBody.radius);
+    		fixture = thisBody.body.addFixture(shape);
+			fixture.setDensity(thisBody.density);
+			fixture.setFriction(thisBody.friction);
+    		fixture.setRestitution(thisBody.elasticity); % set coefficient of restitution
+    		thisBody.body.setMass(me.massType.NORMAL);
+    		thisBody.body.translate(thisBody.position(1), thisBody.position(2));
+    		initialVelocity = javaObject('org.dyn4j.geometry.Vector2', thisBody.velocity(1), thisBody.velocity(2));
+    		thisBody.body.setLinearVelocity(initialVelocity);
+			if isempty(me.bodies)
+				me.bodies = thisBody;
+			else
+				me.bodies(end+1) = thisBody;
+			end
 		end
 		
 		% ===================================================================
 		%> @brief Load an image
 		%>
 		% ===================================================================
-		function setup(me, stimulus)
+		function setup(me, screen)
+			if ~exist('screen','var') || isempty(screen); screen = screenManager; end
 			me.reset;
-			me.stimulus = stimulus;
-			me.ppd = stimulus.ppd;
-			me.x = stimulus.sM.toDegrees(stimulus.xFinal,'x');
-			me.y = stimulus.sM.toDegrees(stimulus.yFinal,'y');
-			me.rigidparams.radius = stimulus.size/2;
 			me.tick = 0;
 			me.timeStep = [];
 			me.torque = 0;
-			me.angularVelocity = 0;
-			me.momentOfInertia = 0.5 * me.rigidparams.mass * me.rigidparams.radius^2;
 
-			if ~isempty(me.findprop('direction'))
-				me.angle = deg2rad(stimulus.direction);
-			else
-				me.angle = deg2rad(stimulus.angle);
+			me.ppd = screen.ppd;
+
+			me.world = javaObject('org.dyn4j.world.World');
+			me.world.setGravity(me.rigidParams.gravity(1),me.rigidParams.gravity(2));
+
+			if ~isempty(screen.screenVals.rectInDegrees)
+				me.screenBounds = screen.screenVals.rectInDegrees;
+				if me.rigidParams.screenBounds
+					bnds = javaObject('org.dyn4j.collision.AxisAlignedBounds', Rectwidth(screen.screenVals.rectInDegrees), RectHeight(screen.screenVals.rectInDegrees));
+					me.world.setBounds(bnds);
+				end
 			end
 
-			[me.dX, me.dY] = pol2cart(me.angle, stimulus.speed);
-			me.rigidparams.position = [me.x me.y];
-			me.rigidparams.velocity = [me.dX me.dY];
+			settings = me.world.getSettings();
+			settings.setAtRestDetectionEnabled(true);
+			settings.setStepFrequency(screen.screenValues.ifi);
+			settings.setMaximumAtRestLinearVelocity(0.75);
+			settings.setMaximumAtRestAngularVelocity(0.5);
+			settings.setMinimumAtRestTime(0.2); %def = 0.5
+
+			for i = 1:me.nBodies
+				me.world.addBody(me.bodies(i).body);
+			end
+			
 		end
 		
 		% ===================================================================
 		%> @brief Load an image
 		%>
 		% ===================================================================
-		function animate(me)
+		function step(me)
 			switch me.type
 				case 'rigid'
 					rigidStep(me);
@@ -136,6 +298,15 @@ classdef animationManager < optickaCore
 		%>
 		% ===================================================================
 		function reset(me)
+			me.world = [];
+			me.isFloor = false;
+			me.isLeftWall = false;
+			me.isRightWall = false;
+			me.isCeiling = false;
+			me.hitCeiling = false;
+			me.hitFloor = false;
+			me.hitLeftWall = false;
+			me.hitRightWall = false;
 			me.tick = 0;
 			me.timeStep = [];
 			me.torque = 0;
@@ -147,33 +318,58 @@ classdef animationManager < optickaCore
 			me.y = [];
 			me.dX = [];
 			me.dY = [];
-			me.momentOfInertia = 0.5 * me.rigidparams.mass * me.rigidparams.radius^2;
-			me.hitCeiling = false;
-			me.hitFloor = false;
-			me.hitLeftWall = false;
-			me.hitRightWall = false;
+			me.screenBounds = [];
 		end
 
 		% ===================================================================
 		%> @brief Load an image
 		%>
 		% ===================================================================
-		function rigidStep(me)
-			if isempty(me.timeStep) 
+		function rigidStep(me, tick)
+			if ~exist('tick','var') || isempty(tick); tick = 1; end
+
+			me.world.step(tick);
+			me.tick = me.tick + tick;
+			me.timeStep = (me.tick - 1) * me.timeDelta;
+
+			a = 1;
+			for ii=1:length(me.bodies)
+				if matches(me.bodies(ii).type,'normal')
+					pos = me.bodies(ii).body.getWorldCenter();
+					v = me.bodies(ii).body.getLinearVelocity();
+					a = me.bodies(ii).body.getAngularVelocity();
+					me.x(a) = pos(1);
+					me.y(a) = pos(2);
+					me.angularVelocity = a;
+					a = a + 1;
+				end
+			end
+			
+		end
+
+		% ===================================================================
+		%> @brief Load an image
+		%>
+		% ===================================================================
+		function oldrigidStep(me, tick)
+			if exist('tick','var') && ~isempty(tick)
+				me.tick = tick;
+				me.timeStep = (me.tick - 1) * me.timeDelta;
+			elseif isempty(me.timeStep) 
 				me.timeStep = 0;
 				me.tick = 1;
 			else
-				me.timeStep = me.timeStep + me.timeDelta;
 				me.tick = me.tick + 1;
+				me.timeStep = (me.tick - 1) * me.timeDelta;
 			end
 
 			position = [me.x, me.y];
 			velocity = [me.dX, me.dY];
-			acceleration = [0, me.rigidparams.gravity]; 
-			r = me.rigidparams.radius;
+			acceleration = [0, me.rigidParams.gravity]; 
+			r = me.rigidParams.radius;
 
     		% Apply air resistance
-    		airResistance = -me.rigidparams.airResistanceCoeff * velocity;
+    		airResistance = -me.rigidParams.airResistanceCoeff * velocity;
     		acceleration = acceleration + airResistance;
     		
     		% Update velocity and position
@@ -191,34 +387,35 @@ classdef animationManager < optickaCore
 			me.y = position(2);
 
 			% Collision detection with floor
-			if me.y + r > me.rigidparams.floor
-    			me.y = me.rigidparams.floor - r - 0.01;
-    			velocity(2) = -me.rigidparams.elasticityCoeff * velocity(2); % reverse and dampen the y-velocity
-    			me.angularVelocity = -me.rigidparams.elasticityCoeff * me.angularVelocity; % reverse and dampen the angular velocity
+			if me.y + r > me.rigidParams.floor
+    			me.y = me.rigidParams.floor - r - 0.01;
+    			velocity(2) = -me.rigidParams.elasticityCoeff * velocity(2); % reverse and dampen the y-velocity
+    			me.angularVelocity = -me.rigidParams.elasticityCoeff * me.angularVelocity; % reverse and dampen the angular velocity
 				me.hitFloor = true;
 			end
 			% Collision detection with ceiling
-			if me.y - r < me.rigidparams.ceiling
-    			me.y = me.rigidparams.ceiling + r + 0.01;
-    			velocity(2) = -me.rigidparams.elasticityCoeff * velocity(2); % reverse and dampen the y-velocity
-    			me.angularVelocity = -me.rigidparams.elasticityCoeff * me.angularVelocity; % reverse and dampen the angular velocity
+			if me.y - r < me.rigidParams.ceiling
+    			me.y = me.rigidParams.ceiling + r + 0.01;
+    			velocity(2) = -me.rigidParams.elasticityCoeff * velocity(2); % reverse and dampen the y-velocity
+    			me.angularVelocity = -me.rigidParams.elasticityCoeff * me.angularVelocity; % reverse and dampen the angular velocity
 				me.hitCeiling = true;
 			end
 			% Collision detection with walls
-			if me.x - r < me.rigidparams.leftwall
-    			me.x = me.rigidparams.leftwall + r;
-    			velocity(1) = -me.rigidparams.elasticityCoeff * velocity(1); % reverse and dampen the x-velocity
-    			me.angularVelocity = -me.rigidparams.elasticityCoeff * me.angularVelocity; % reverse and dampen the angular velocity
+			if me.x - r < me.rigidParams.leftwall
+    			me.x = me.rigidParams.leftwall + r;
+    			velocity(1) = -me.rigidParams.elasticityCoeff * velocity(1); % reverse and dampen the x-velocity
+    			me.angularVelocity = -me.rigidParams.elasticityCoeff * me.angularVelocity; % reverse and dampen the angular velocity
 				me.hitLeftWall = true;
 			end
-			if me.x + r > me.rigidparams.rightwall
-    			me.x = me.rigidparams.rightwall - r	;
-    			velocity(1) = -me.rigidparams.elasticityCoeff * velocity(1); % reverse and dampen the x-velocity
-    			me.angularVelocity = -me.rigidparams.elasticityCoeff * me.angularVelocity; % reverse and dampen the angular velocity
+			if me.x + r > me.rigidParams.rightwall
+    			me.x = me.rigidParams.rightwall - r	;
+    			velocity(1) = -me.rigidParams.elasticityCoeff * velocity(1); % reverse and dampen the x-velocity
+    			me.angularVelocity = -me.rigidParams.elasticityCoeff * me.angularVelocity; % reverse and dampen the angular velocity
 				me.hitRightWall = true;
 			end
-			if ~isempty(me.rigidparams.avoidRects)
-				for i = 1:size(me.rigidparams.avoidRects)
+			if ~isempty(me.rigidParams.avoidRects)
+				for i = 1:size(me.rigidParams.avoidRects)
+					rect = me.rigidParams.avoidRects{i};
 					
 				end
 			end
@@ -230,14 +427,14 @@ classdef animationManager < optickaCore
     		arcLength = me.dX * me.timeDelta;
     		
     		% Update angle based on arc length
-    		me.angle = me.angle - arcLength / me.rigidparams.radius;
+    		me.angle = me.angle - arcLength / me.rigidParams.radius;
 
-			me.kineticEnergy = 0.5 * me.rigidparams.mass * norm(velocity)^2 + 0.5 * me.momentOfInertia * me.angularVelocity^2;
-			me.potentialEnergy = me.rigidparams.mass * -me.rigidparams.gravity * (me.y - me.rigidparams.radius - me.rigidparams.floor);
+			me.kineticEnergy = 0.5 * me.rigidParams.mass * norm(velocity)^2 + 0.5 * me.momentOfInertia * me.angularVelocity^2;
+			me.potentialEnergy = me.rigidParams.mass * -me.rigidParams.gravity * (me.y - me.rigidParams.radius - me.rigidParams.floor);
 		end
 
 		% ===================================================================
-		%> @brief Load an image
+		%> @brief 
 		%>
 		% ===================================================================
 		function editBody(me,x,y,dx,dy)
@@ -246,6 +443,15 @@ classdef animationManager < optickaCore
 			if exist('dx','var') && ~isempty(dx); me.dX = dx; end
 			if exist('dy','var') && ~isempty(dy); me.dY = dy; end
 		end
+
+		% ===================================================================
+		%> @brief 
+		%>
+		% ===================================================================
+		function value = get.nBodies(me)
+			value = length(me.bodies);
+		end
+
 		
 	end
 	
@@ -259,30 +465,46 @@ classdef animationManager < optickaCore
 		% ===================================================================
 		function demo()
 			s = screenManager;
-			i = imageStimulus('size',4);
-			i.filePath = 'moon.png';
-			i.xPosition = -5;
-			i.yPosition = 5;
-			i.angle = 45;
-			i.speed = 20;
-			
+			s.windowed = [0 0 1200 800];
 			sv = open(s);
+
+			i = imageStimulus('filePath','moon.png','size',3);
+			i.name = 'moon';
+			i.xPosition = sv.leftInDegrees+4;
+			i.yPosition = 0;
+			i.angle = -45;
+			i.speed = 20;
+			setup(i, s);
+
+			floor = barStimulus('alpha',0.2,'barWidth',40,'barHeight',1,'yPosition',sv.bottomInDegrees-2);
+			floor.name = 'floor';
+			wall1 = barStimulus('alpha',0.2,'barWidth',1,'barHeight',30,'xPosition',sv.leftInDegrees+2);
+			wall1.name = 'wall1';
+			wall2 = barStimulus('alpha',0.2,'barWidth',1,'barHeight',30,'xPosition',sv.leftInDegrees+2);
+			wall2.name = 'wall2';
+			ceiling = floor.clone;
+			ceiling.name = 'ceiling';
+			ceiling.yPosition = sv.topInDegrees + 2;
+			sensor = discStimulus('alpha',0.2,'size',4);
+			sensor.name = 'sensor';
+
+			m = metaStimulus('stimuli',{i,floor,wall1,wall2,celing,sensor});
+			m.setup(s);
 			
 			a = animationManager;
-			a.rigidparams.mass = 5;
-			a.rigidparams.leftwall = sv.leftInDegrees;
-			a.rigidparams.rightwall = sv.rightInDegrees;
-			a.rigidparams.floor = sv.bottomInDegrees;
 			a.timeDelta = sv.ifi;
+			%addBody(me, stimulus, shape, type, density, friction, elasticity)
+			a.addBody(i, 'Circle', 'normal', 10, 0.2, 0.8);
+			a.addBody(floor,'Rectangle','infinite');
+			a.addBody(wall1,'Rectangle','infinite');
+			a.addBody(wall2,'Rectangle','infinite');
+			a.addBody(ceiling,'Rectangle','infinite');
+			a.addBody(sensor,'Circle','sensor');
 			
-			setup(i, s);
-			
-			setup(a, i);
-			tic
 			for jj = 1:sv.fps*10
-			
-				draw(i);
+				draw(m);
 				flip(s);
+				step(a);
 				i.updateXY(a.x, a.y, true);
 				i.angleOut = -rad2deg(a.angle);
 				animate(a);
@@ -291,22 +513,29 @@ classdef animationManager < optickaCore
 				y(jj)=a.y;
 				ke(jj) = a.kineticEnergy;
 				pe(jj) = a.potentialEnergy;
-			
 			end
-			toc
+
 			close(s)
 			reset(i);
 			
-			figure
+			figure;
 			tiledlayout(2,1);
-			nexttile
+			nexttile;
 			plot(t,x);
-			hold on
+			hold on;
 			plot(t,y);
-			nexttile
+			box on; grid on; axis ij
+			legend({'X','Y'})
+			xlabel('Time (s)')
+			ylabel('X|Y Position')
+			nexttile;
 			plot(t,ke);
-			hold on
+			hold on;
 			plot(t,pe);
+			box on; grid on;
+			xlabel('Time (s)')
+			ylabel('Kinetic|Potential Energy')
+			legend({'KE','PE'})
 		
 		end
 

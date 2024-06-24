@@ -70,6 +70,10 @@ classdef imageStimulus < baseStimulus
 		width
 		%> pixel height
 		height
+		%> deg width
+		widthD
+		%> deg height
+		heightD
 	end
 
 	properties (SetAccess = protected, GetAccess = public)
@@ -175,12 +179,7 @@ classdef imageStimulus < baseStimulus
 			loadImage(me, in);
 			me.chosenImages = string(['[setup]' regexprep(me.currentFile,'\\','/')]);
 			me.inSetup = false; me.isSetup = true;
-			if me.sizeOut > 0
-				me.scale = me.sizeOut / (me.width / me.ppd);
-				me.szPx = me.sizeOut * me.ppd;
-			else
-				me.szPx = (me.width+me.height)/2;
-			end
+			
 			computePosition(me);
 			if me.doAnimator
 				setup(me.animator, me);
@@ -280,6 +279,14 @@ classdef imageStimulus < baseStimulus
 
 			me.width = size(me.matrix,2);
 			me.height = size(me.matrix,1);
+			me.widthD = me.width / me.ppd;
+			me.heightD = me.height / me.ppd;
+			if me.sizeOut > 0
+				me.scale = me.sizeOut / (me.width / me.ppd);
+				me.szPx = me.sizeOut * me.ppd;
+			else
+				me.szPx = (me.width+me.height)/2;
+			end
 
 			if isempty(ialpha)
 				if isfloat(me.matrix)
