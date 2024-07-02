@@ -204,6 +204,7 @@ classdef eyetrackerCore < optickaCore
 		allowedPropertiesBase	= {'useOperatorScreen','fixation', 'exclusionZone', 'fixInit', ...
 			'offset', 'sampleRate', 'ignoreBlinks', 'saveData',...
 			'recordData', 'verbose', 'isDummy'}
+		debug = true
 	end
 
 	%> ALL Children must implement these methods!
@@ -236,6 +237,33 @@ classdef eyetrackerCore < optickaCore
 			args = optickaCore.addDefaults(varargin);
 			me=me@optickaCore(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedPropertiesBase);
+		end
+
+		% ===================================================================
+		%> @brief get mouse sample as eye data
+		%>
+		% ===================================================================
+		function sample = getMouseSample(me)
+			sample			= me.sampleTemplate;
+			if ~isempty(me.win)
+				[mx, my]	= GetMouse(me.win);
+			else
+				[mx, my]	= GetMouse([]);
+			end
+			sample.valid	= true;
+			me.pupil		= 5 + randn;
+			sample.gx		= mx;
+			sample.gy		= my;
+			sample.pa		= me.pupil;
+			sample.time		= GetSecs;
+			sample.timeD	= sample.time;
+			xy				= me.toDegrees([sample.gx sample.gy]);
+			me.x = xy(1); me.y = xy(2);
+			me.xAll			= [me.xAll me.x];
+			me.yAll			= [me.yAll me.y];
+			me.pupilAll		= [me.pupilAll me.pupil];
+			me.xAllRaw = me.xAll; me.yAllRaw = me.yAll;
+			if me.debug;fprintf('>>X: %.2f | Y: %.2f | P: %.2f\n',me.x,me.y,me.pupil);end
 		end
 
 		% ===================================================================

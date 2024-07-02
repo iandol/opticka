@@ -311,12 +311,14 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 						resetAll(me);
 						while cloop
 							a = a + 1;
-							me.getSample();
+							getSample(me);
 							s.drawText('MENU: q = exit | c = calibrate | v = validate | d = drift offset | s = sample | F1 = screenshot');
-							s.flip();
+							flip(s);
 							if me.useOperatorScreen
 								s2.drawText('MENU: q = exit | c = calibrate | v = validate | d = drift offset | s = sample | F1 = screenshot');
-								if ~isempty(me.x);s2.drawSpot(0.75,[0 1 0.25 0.2],me.x,me.y);end
+								if ~isempty(me.x)
+									s2.drawSpot(0.75,[0 1 0.25 0.2],me.x,me.y);
+								end
 								drawValidationResults(me, vn);
 								if mod(a,ref) == 0
 									trackerFlip(me,0,true);
@@ -632,29 +634,11 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		%> the mouse as an eye signal
 		%>
 		% ===================================================================
-			sample				= me.sampleTemplate;
 			if me.isOff; return; end
 			if me.isDummy %lets use a mouse to simulate the eye signal
-				if ~isempty(me.win)
-					[mx, my]	= GetMouse(me.win);
-				else
-					[mx, my]	= GetMouse([]);
-				end
-				sample.valid	= true;
-				me.pupil		= 5 + randn;
-				sample.gx		= mx;
-				sample.gy		= my;
-				sample.pa		= me.pupil;
-				sample.time		= GetSecs;
-				me.x			= me.toDegrees(sample.gx,'x');
-				me.y			= me.toDegrees(sample.gy,'y');
-				me.xAll			= [me.xAll me.x];
-				me.xAllRaw		= me.xAll;
-				me.yAll			= [me.yAll me.y];
-				me.yAllRaw		= me.yAll;
-				me.pupilAll		= [me.pupilAll me.pupil];
-				%if me.verbose;fprintf('>>X: %.2f | Y: %.2f | P: %.2f\n',me.x,me.y,me.pupil);end
+				sample = getMouseSample(me);
 			elseif me.isConnected && me.isRecording
+				sample				= me.sampleTemplate;
 				xy				= [];
 				td				= me.tcp.readLines(me.smoothing.nSamples,'last');
 				if isempty(td); me.currentSample=sample; return; end
@@ -675,7 +659,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 					me.x		= xy(1);
 					me.y		= xy(2);
 					me.pupil	= sample.pa;
-					if me.verbose;fprintf('>>X: %2.2f | Y: %2.2f | P: %.2f\n',me.x,me.y,me.pupil);end
+					if me.debug; fprintf('>>X: %2.2f | Y: %2.2f | P: %.2f\n',me.x,me.y,me.pupil);end
 				else
 					sample.gx	= NaN;
 					sample.gy	= NaN;
@@ -688,8 +672,9 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 				me.yAll			= [me.yAll me.y];
 				me.pupilAll		= [me.pupilAll me.pupil];
 			else
+				sample				= me.sampleTemplate;
 				me.x = []; me.y = []; me.pupil = []; 
-				if me.verbose;fprintf('-+-+-> tobiiManager.getSample(): are you sure you are recording?\n');end
+				if me.verbose; fprintf('-+-+-> iRecManager.getSample(): no data, are you sure you are recording?\n');end
 			end
 			me.currentSample	= sample;
 		end
@@ -921,7 +906,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 				me.fixInit = oldfixinit;
 				me.name = oldname;
 				clear s s2 o
-			catch ME
+			catch ERR
 				stopRecording(me);
 				me.fixation = ofixation;
 				me.smoothing = osmoothing;
@@ -929,13 +914,13 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 				me.fixInit = oldfixinit;
 				me.name = oldname;
 				ListenChar(0);Priority(0);ShowCursor;
-				getReport(ME)
+				getReport(ERR)
 				try close(s); end
 				try close(s2); end
 				sca;
 				try close(me); end
 				clear s s2 o
-				rethrow(ME)
+				rethrow(ERR)
 			end
 			
 		end

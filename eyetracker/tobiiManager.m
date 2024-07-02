@@ -504,32 +504,17 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 		end
 
 		% ===================================================================
+		function sample = getSample(me)
+		%> @fn getSample()
 		%> @brief get a sample from the tracker, if dummymode=true then use
 		%> the mouse as an eye signal
 		%>
 		% ===================================================================
-		function sample = getSample(me)
-			sample				= me.sampleTemplate;
+			if me.isOff; return; end
 			if me.isDummy %lets use a mouse to simulate the eye signal
-				if ~isempty(me.win)
-					[mx, my]	= GetMouse(me.win);
-				else
-					[mx, my]	= GetMouse([]);
-				end
-				sample.valid	= true;
-				me.pupil		= 5 + randn;
-				sample.gx		= mx;
-				sample.gy		= my;
-				sample.pa		= me.pupil;
-				sample.time		= GetSecs;
-				sample.timeD	= sample.time;
-				xy				= me.toDegrees([sample.gx sample.gy]);
-				me.x = xy(1); me.y = xy(2);
-				me.xAll			= [me.xAll me.x];
-				me.yAll			= [me.yAll me.y];
-				me.pupilAll		= [me.pupilAll me.pupil];
-				%if me.verbose;fprintf('>>X: %.2f | Y: %.2f | P: %.2f\n',me.x,me.y,me.pupil);end
+				sample = getMouseSample(me);
 			elseif me.isConnected && me.isRecording
+				sample			= me.sampleTemplate;
 				xy				= [];
 				td				= me.tobii.buffer.peekN('gaze',me.smoothing.nSamples);
 				if isempty(td);me.currentSample=sample;return;end
@@ -574,7 +559,7 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 					xyd	= me.toDegrees(xy);
 					me.x = xyd(1); me.y = xyd(2);
 					me.pupil	= sample.pa;
-					%if me.verbose;fprintf('>>X: %2.2f | Y: %2.2f | P: %.2f\n',me.x,me.y,me.pupil);end
+					if me.debug;fprintf('>>X: %2.2f | Y: %2.2f | P: %.2f\n',me.x,me.y,me.pupil);end
 				else
 					sample.gx	= NaN;
 					sample.gy	= NaN;
@@ -587,7 +572,8 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 				me.yAll			= [me.yAll me.y];
 				me.pupilAll		= [me.pupilAll me.pupil];
 			else
-				if me.verbose;fprintf('-+-+-> tobiiManager.getSample(): are you sure you are recording?\n');end
+				sample			= me.sampleTemplate;
+				if me.debug;fprintf('-+-+-> tobiiManager.getSample(): are you sure you are recording?\n');end
 			end
 			me.currentSample	= sample;
 		end

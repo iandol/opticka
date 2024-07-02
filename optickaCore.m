@@ -388,7 +388,7 @@ classdef optickaCore < handle
 					aM.silentMode = true;
 				end
 			end
-			if doOpen && ~aM.isOpen && ~aM.silentMode && aM.device > -1
+			if doOpen && ~aM.isOpen && ~aM.silentMode && (isempty(aM.device) || aM.device > -1)
 				open(aM);
 				aM.beep(2000,0.1,0.1);
 			end
