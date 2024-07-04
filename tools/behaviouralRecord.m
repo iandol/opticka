@@ -80,7 +80,9 @@ classdef behaviouralRecord < optickaCore
 		% ===================================================================
 		function plotPerformance(me)
 			me.plotOnly = true;
-			createPlot(me);
+			if isempty(me.h) || ~(isfield(me.h,'root') && isgraphics(me.h.root))
+				createPlot(me);
+			end
 			updatePlot(me);
 			plot(me);
 			me.plotOnly = false;

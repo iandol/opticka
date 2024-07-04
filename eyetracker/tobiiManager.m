@@ -120,6 +120,9 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 		%> @param sM2 - a second screenManager used during calibration
 		% ===================================================================
 		function success = initialise(me,sM,sM2)
+			success = false;
+			if me.isOff; me.isDummy = true; return; end
+
 			if ~exist('sM','var') || isempty(sM)
 				if isempty(me.screen) || ~isa(me.screen,'screenManager')
 					me.screen		= screenManager;

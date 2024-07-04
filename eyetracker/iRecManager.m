@@ -113,7 +113,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		%> @param sM2 - a second screenManager used for operator, if
 		%>  none is provided a default will be made.
 		% ===================================================================
-			
+			success = false;
 			if me.isOff; me.isDummy = true; return; end
 
 			[rM, aM] = initialiseGlobals(me, false, true);

@@ -709,7 +709,7 @@ classdef runExperiment < optickaCore
 				me.isRunTask			= true;
 				
 				%================================open the PTB screen and setup stimuli
-				me.screenVals			= s.open(me.debug,tL);
+				me.screenVals			= s.open(me.debug, tL);
 				stims.verbose			= me.verbose;
 				task.fps				= s.screenVals.fps;
 				setup(stims, s);
@@ -1116,6 +1116,7 @@ classdef runExperiment < optickaCore
 				try close(dC); end % data connection
 				
 				WaitSecs(0.25);
+				try plotPerformance(bR); end
 				fprintf('\n\n======>>> Total ticks: %g | stateMachine ticks: %g\n', tS.totalTicks, sM.totalTicks);
 				fprintf('======>>> Tracker Time: %g | PTB time: %g | Drift Offset: %g\n', ...
 					tL.screenLog.trackerEndTime-tL.screenLog.trackerStartTime, ...
@@ -2002,7 +2003,9 @@ classdef runExperiment < optickaCore
 
 			if ~isfield(me.eyetracker,'isettings'); me.eyetracker.isettings = []; end
 			if ~isfield(me.eyetracker,'psettings'); me.eyetracker.psettings = []; end
-			
+			if ~isfield(me.eyetracker,'tsettings'); me.eyetracker.tsettings = []; end
+			if ~isfield(me.eyetracker,'esettings'); me.eyetracker.esettings = []; end
+
 			switch lower(me.eyetracker.device)
 				case 'tobii'
 					eT			= tobiiManager();

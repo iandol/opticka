@@ -128,6 +128,8 @@ classdef eyetrackerCore < optickaCore
 		skipFlips				= 8
 		%> make the eyetracker not useable
 		isOff					= false
+		%> lots of logging if debug = true
+		debug					= false
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -204,7 +206,6 @@ classdef eyetrackerCore < optickaCore
 		allowedPropertiesBase	= {'useOperatorScreen','fixation', 'exclusionZone', 'fixInit', ...
 			'offset', 'sampleRate', 'ignoreBlinks', 'saveData',...
 			'recordData', 'verbose', 'isDummy'}
-		debug = true
 	end
 
 	%> ALL Children must implement these methods!
@@ -244,21 +245,38 @@ classdef eyetrackerCore < optickaCore
 		%>
 		% ===================================================================
 		function sample = getMouseSample(me)
-			sample			= me.sampleTemplate;
 			if ~isempty(me.win)
-				[mx, my]	= GetMouse(me.win);
+				w = me.win;
+			elseif ~isempty(me.screen) && ~isempty(me.screen.screen)
+				w = me.screen.screen;
 			else
-				[mx, my]	= GetMouse([]);
+				w = [];
 			end
-			sample.valid	= true;
-			me.pupil		= 5 + randn;
-			sample.gx		= mx;
-			sample.gy		= my;
-			sample.pa		= me.pupil;
+			[x, y, b] = GetMouse(w);
+			sample			= me.sampleTemplate;
 			sample.time		= GetSecs;
 			sample.timeD	= sample.time;
-			xy				= me.toDegrees([sample.gx sample.gy]);
-			me.x = xy(1); me.y = xy(2);
+			if b(3) == 1
+				me.x = NaN;
+				me.y = NaN;
+				me.pupil = NaN;
+				me.isBlink = true;
+				sample.valid = false;
+				if me.debug;fprintf('BLINK\n');end
+			else
+				xy = toDegrees(me, [x y]);
+				me.x = xy(1); me.y = xy(2);
+				if strcmpi(me.type,'eyelink')
+					me.pupil = 800 + randi(20);
+				else
+					me.pupil = 5 + rand;
+				end
+				me.isBlink = false;
+				sample.valid = true;
+			end
+			sample.gx		= x;
+			sample.gy		= y;
+			sample.pa		= me.pupil;
 			me.xAll			= [me.xAll me.x];
 			me.yAll			= [me.yAll me.y];
 			me.pupilAll		= [me.pupilAll me.pupil];
