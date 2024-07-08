@@ -114,7 +114,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		%>  none is provided a default will be made.
 		% ===================================================================
 			success = false;
-			if me.isOff; me.isDummy = true; return; end
+			if me.isOff; me.isConnected = false; success = true; return; end
 
 			[rM, aM] = initialiseGlobals(me, false, true);
 
@@ -182,7 +182,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 			
 			if me.isDummy
 				me.salutation('Initialise', 'Running iRec in Dummy Mode', true);
-				me.isConnected = false;
+				me.isConnected = true;
 			else
 				if isempty(me.tcp) || ~isa(me.tcp,'dataConnection')
 					me.tcp = dataConnection('rAddress', me.calibration.ip,'rPort',...
@@ -638,7 +638,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 			if me.isDummy %lets use a mouse to simulate the eye signal
 				sample = getMouseSample(me);
 			elseif me.isConnected && me.isRecording
-				sample				= me.sampleTemplate;
+				sample			= me.sampleTemplate;
 				xy				= [];
 				td				= me.tcp.readLines(me.smoothing.nSamples,'last');
 				if isempty(td); me.currentSample=sample; return; end

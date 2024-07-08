@@ -121,7 +121,7 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 		% ===================================================================
 		function success = initialise(me,sM,sM2)
 			success = false;
-			if me.isOff; me.isDummy = true; return; end
+			if me.isOff; me.isConnected = false; return; end
 
 			if ~exist('sM','var') || isempty(sM)
 				if isempty(me.screen) || ~isa(me.screen,'screenManager')
@@ -282,6 +282,7 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 			end
 			checkConnection(me);
 			me.systemTime							= me.tobii.getTimeAsSystemTime;
+			me.isConnected = true;
 			
 			if me.screen.isOpen == true
 				me.win								= me.screen.win;

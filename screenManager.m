@@ -2206,19 +2206,19 @@ classdef screenManager < optickaCore
 				Screen('Preference', 'TextRenderer', me.font.TextRenderer);
 				if me.useRetina
 					Screen('Preference', 'DefaultFontSize', me.font.TextSize*2);
-					Screen('TextSize', me.win, me.font.TextSize*2);
+					if ~isempty(me.win);Screen('TextSize', me.win, me.font.TextSize*2);end
 				else
 					if IsWin
 						Screen('Preference', 'DefaultFontSize', ceil(me.font.TextSize/1.6));
-						Screen('TextSize', me.win, ceil(me.font.TextSize/1.6));
+						if ~isempty(me.win);Screen('TextSize', me.win, ceil(me.font.TextSize/1.6));end
 					else
 						Screen('Preference', 'DefaultFontSize', me.font.TextSize);
-						Screen('TextSize', me.win, me.font.TextSize);
+						if ~isempty(me.win);Screen('TextSize', me.win, me.font.TextSize);end
 					end
 				end
-				Screen('TextColor', me.win, me.font.TextColor);
-				Screen('TextBackgroundColor', me.win, me.font.TextBackgroundColor);
-				Screen('TextFont', me.win, me.font.FontName);
+				if ~isempty(me.win);Screen('TextColor', me.win, me.font.TextColor);end
+				if ~isempty(me.win);Screen('TextBackgroundColor', me.win, me.font.TextBackgroundColor);end
+				if ~isempty(me.win);Screen('TextFont', me.win, me.font.FontName);end
 			else
 				if me.useRetina
 					Screen('Preference', 'DefaultFontSize', me.font.TextSize*2);

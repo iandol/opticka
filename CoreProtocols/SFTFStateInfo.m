@@ -174,23 +174,54 @@ breakEntryFcn = { @()statusMessage(eT,'Broke Fixation :-('); ...%status message 
 	@()hide(obj.stimuli); ...
 	};
 
-%calibration function
-calibrateFcn = { @()setOffline(eT); % set eyelink offline [tobii ignores this]
+%========================================================
+%========================================================EYETRACKER
+%========================================================
+%--------------------calibration function
+calibrateFcn = {
+	@()drawBackground(s); %blank the display
+	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
+	@()trackerSetup(eT);  %enter tracker calibrate/validate setup mode
+};
 
-%debug override
-overrideFcn = @()keyOverride(obj); %a special mode which enters a matlab debug state so we can manually edit object values
+%--------------------drift correction function
+driftFcn = {
+	@()drawBackground(s); %blank the display
+	@()stopRecording(eT); % stop recording in eyelink [others ignores this]
+	@()setOffline(eT); % set eyelink offline [others ignores this]
+	@()driftCorrection(eT) % enter drift correct (only eyelink)
+};
+offsetFcn = {
+	@()drawBackground(s); %blank the display
+	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
+	@()driftOffset(eT) % enter drift offset (works on tobii & eyelink)
+};
 
-%screenflash
-flashFcn = @()flashScreen(s, 0.2); % fullscreen flash mode for visual background activity detection
+%========================================================
+%========================================================GENERAL
+%========================================================
+%--------------------DEBUGGER override
+overrideFcn = { @()keyOverride(me) }; %a special mode which enters a matlab debug state so we can manually edit object values
 
-%show 1deg size grid
-gridFcn = @()drawGrid(s);
+%--------------------screenflash
+flashFcn = { @()flashScreen(s, 0.2) }; % fullscreen flash mode for visual background activity detection
 
-%----------------------State Machine Table-------------------------
-disp('================>> Building state info file <<================')
-%specify our cell array that is read by the stateMachine
+%--------------------show 1deg size grid
+gridFcn = { @()drawGrid(s) };
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%------------------------------------------------------------------------%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%==========================================================================
+%==========================================================================
+%==========================================================================
+%--------------------------State Machine Table-----------------------------
+% specify our cell array that is read by the stateMachine
 stateInfoTmp = { ...
-'name'      'next'		'time'  'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn'; ...
+'name'		'next'		'time'  'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn'; ...
 'pause'		'fixate'	inf		pauseEntryFcn	[]				[]				pauseExitFcn; ...
 'prefix'	'fixate'	0.75	[]				prefixFcn		[]				[]; ...
 'fixate'	'incorrect'	1	 	fixEntryFcn		fixFcn			initFixFcn		fixExitFcn; ...
@@ -204,8 +235,7 @@ stateInfoTmp = { ...
 'showgrid'	'pause'		10		[]				gridFcn			[]				[]; ...
 };
 
+disp('=================>> Built state info file <<==================')
 disp(stateInfoTmp)
-disp('================>> Loaded state info file  <<================')
-clear pauseEntryFcn fixEntryFcn fixFcn initFixFcn fixExitFcn stimFcn maintainFixFcn incEntryFcn ...
-	incFcn incExitFcn breakEntryFcn breakFcn correctEntryFcn correctFcn correctExitFcn ...
-	calibrateFcn overrideFcn flashFcn gridFcn
+disp('=================>> Built state info file <<=================')
+clearvars -regexp '.+Fcn$' % clear the cell array Fcns in the current workspace

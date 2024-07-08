@@ -25,15 +25,15 @@
 
 %==================================================================
 %------------General Settings-----------------
-tS.useTask					= false;		%==use taskSequence (randomised variable task object)
+tS.name						= 'Fixation-only Task'; %==name of this protocol
+tS.useTask					= false;	%==use taskSequence (randomised variable task object)
 tS.rewardTime				= 250;		%==TTL time in milliseconds
 tS.rewardPin				= 2;		%==Output pin, 2 by default with Arduino.
-tS.keyExclusionPattern		= ["stimulus"]; %==which states to skip keyboard checking
+tS.keyExclusionPattern		= [];		%==which states to skip keyboard checking
 tS.recordEyePosition		= false;	%==record eye position within PTB, **in addition** to the EDF?
 tS.askForComments			= false;	%==little UI requestor asks for comments before/after run
-tS.saveData					= false;		%==save behavioural and eye movement data?
+tS.saveData					= false;	%==save behavioural and eye movement data?
 tS.showBehaviourPlot		= true;		%==open the behaviourPlot figure? Can cause more memory use…
-tS.name						= 'fixation-only task'; %==name of this protocol
 tS.nStims					= stims.n;	%==number of stimuli
 tS.tOut						= 5;		%==if wrong response, how long to time out before next trial
 tS.CORRECT					= 1;		%==the code to send eyetracker for correct trials

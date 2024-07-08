@@ -62,7 +62,7 @@ classdef opticka < optickaCore
 			'OKaudioDevice','OKverbosityLevel',...
 			'OKarduinoPort','OKarduinoType',...
 			'OKrewardType','OKTTLPin','OKTTLTime',...
-			'OKDebug','OKOpenGLBlending','OKWindowSize',...
+			'OKOpenGLBlending','OKWindowSize',...
 			'OKUseDummy','OKINTANPort', 'OKstrobeOFF',...
 			'OKELCalibProp','OKELCalibDevice','OKELManualMode','OKELCalibBeep',...
 			'OKTobiiCal','OKTobiiVal','OKTobiiAddress',...
@@ -936,8 +936,8 @@ classdef opticka < optickaCore
 		%> 
 		% ===================================================================
 		function loadPrefs(me)
-			anyLoaded = false; prefnames = '';
 			if ~ispref('opticka'); return; end
+			anyLoaded = false; prefnames = '';
 			for i = 1:length(me.uiPrefsList)
 				prfname = me.uiPrefsList{i};
 				if ispref('opticka',prfname) %pref exists
@@ -968,8 +968,12 @@ classdef opticka < optickaCore
 								end
 							case 'uimenu'
 								myhandle.Checked = prf;
+								thisVal = char(prf);
 							case 'uirockerswitch'
-								myhandle.Value = prf;
+								if strcmpi(prf,'on') || strcmpi(prf,'off')
+									myhandle.Value = prf;
+									thisVal = prf;
+								end
 						end
 						prefnames = [prefnames ' ' prfname '«' thisVal '»'];
 						if ~mod(i,4);prefnames = [prefnames '\n']; end
@@ -1174,7 +1178,7 @@ classdef opticka < optickaCore
 		%> Load Protocol
 		%> @param ui -- do we show a uiload dialog?
 		% ===================================================================	
-			if ~exist('ui','var') || isempty(useList); useList = true; end
+			if ~exist('useList','var') || isempty(useList); useList = true; end
 			me.paths.currentPath = pwd;
 
 			doIO = me.ui.OKOverrideIO.Value;
