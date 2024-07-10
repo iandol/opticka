@@ -175,7 +175,7 @@ classdef opticka < optickaCore
 				if me.oc.checkStatus > 0 %check again to make sure we are still open
 					me.oc.write('--readStimulus--');
 					pause(0.25);
-					tic
+					tt=tic;
 					if sendLog == false
 						if ~isempty(me.r.runLog);tLog = me.r.runLog;end
 						me.r.deleteRunLog; %so we don't send too much data over TCP
@@ -185,7 +185,7 @@ classdef opticka < optickaCore
 					if sendLog == false
 						if ~isempty(tLog);me.r.restoreRunLog(tLog);end
 					end
-					fprintf('>>>Opticka: It took %g seconds to write and send stimulus to Omniplex machine\n',toc);
+					fprintf('>>>Opticka: It took %g seconds to write and send stimulus to Omniplex machine\n',toc(tt));
 					loop = 1;
 				while loop < 10
 					in = me.oc.read(0);
@@ -216,7 +216,7 @@ classdef opticka < optickaCore
 		%> @brief Start the UI
 		% ===================================================================
 			try
-				t = tic;
+				tt = tic;
 				jv = version('-java');
 				if contains(jv,'not enabled');isjava=false;else;isjava=true;end
 				if isjava
@@ -288,7 +288,7 @@ classdef opticka < optickaCore
 					me.r.userFunctionsFile = [me.paths.whereami filesep 'userFunctions.m'];
 				end
 
-				fprintf('===>>> Opticka UI took %.2fsecs to initialise\n',toc(t));
+				fprintf('===>>> Opticka UI took %.2fsecs to initialise\n',toc(tt));
 
 				try if ~isempty(me.ss); pause(0.1); delete(me.ss); me.ss = []; end; end
 			catch ME
@@ -713,7 +713,7 @@ classdef opticka < optickaCore
 					end
 					me.store.evnt = addlistener(me.r.stimuli{v}, 'readPanelUpdate', @me.readPanel);
 					me.store.visibleStimulus = me.r.stimuli{v};
-					me.refreshStimulusList;
+					refreshStimulusList(me);
 				end
 			end
 		end
@@ -1200,6 +1200,8 @@ classdef opticka < optickaCore
 				return
 			end
 			me.ui.OKOptickaVersion.Text = 'Loading Protocol, please wait...';
+			me.ui.OKRoot.Pointer='watch';
+			drawnow;
 			cd(p);
 			load(fileName, 'tmp');
 			
@@ -1426,6 +1428,7 @@ classdef opticka < optickaCore
 						end
 					end
 				end 
+				fprintf('\t…IO settings loaded\n');
 			end
 			
 			%copy screen parameters
@@ -1521,32 +1524,32 @@ classdef opticka < optickaCore
 				set(me.ui.OKStimulusRunAll,'Enable','on');
 				set(me.ui.OKStimulusRunAllBenchmark,'Enable','on');
 				me.store.visibleStimulus.uuid='';
-				me.editStimulus;
+				editStimulus(me);
 			end
 			
 			me.ui.TabGroup.SelectedTab = me.ui.TabGroup.Children(1);
 
-			me.getScreenVals;
-			me.getTaskVals;
-			me.refreshStimulusList;
-			me.refreshVariableList;
-			me.editVariable;
-			me.refreshProtocolsList(me.store.protocolPath);
-			me.ui.propertiesToVariables;
+			getScreenVals(me);
+			getTaskVals(me);
+			refreshStimulusList(me);
+			refreshVariableList(me);
+			editVariable(me);
+			refreshProtocolsList(me, me.store.protocolPath);
+			propertiesToVariables(me.ui);
 
 			me.r.comment = me.comment;
 			me.r.paths.protocolName = me.store.protocolName;
 			me.r.paths.protocolPath = me.store.protocolPath;
 			
-			fprintf('---> Protocol load finished…\n');
-
 			if isdeployed
 				me.ui.OKOptickaVersion.Text = ['Opticka Experiment Manager [D] V' me.optickaVersion ' - ' me.comment];
 			else
 				me.ui.OKOptickaVersion.Text = ['Opticka Experiment Manager V' me.optickaVersion ' - ' me.comment];
 			end
 			
-			figure(me.ui.OKRoot);
+			me.ui.OKRoot.Pointer='arrow';
+			%figure(me.ui.OKRoot);
+			fprintf('---> Protocol load finished…\n');
 		end
 
 

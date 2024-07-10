@@ -1318,7 +1318,9 @@ classdef runExperiment < optickaCore
 						s.drawTextNow('Eyetracker open...');
 						WaitSecs(0.25);
 						me.eyeTracker.close;
+						close(me.screen);
 					catch ERR
+						close(me.screen);
 						getReport(ERR);
 					end
 				end

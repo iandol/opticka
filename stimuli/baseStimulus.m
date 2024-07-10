@@ -575,7 +575,6 @@ classdef baseStimulus < optickaCore & dynamicprops
 			
 			disableList = 'fullName';
 
-			tic
 			mc = metaclass(me);
 			pl = string({mc.PropertyList.Name});
 			d1 = {mc.PropertyList.Description};
@@ -595,7 +594,6 @@ classdef baseStimulus < optickaCore & dynamicprops
 					dl{i} = string([{a} b(:)']);
 				end
 			end
-			toc
 			pr = findAttributesandType(me,'SetAccess','public','notlogical');
 			pr = sort(pr);
 			igA = {}; igB = {};
