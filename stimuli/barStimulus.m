@@ -94,6 +94,7 @@ classdef barStimulus < baseStimulus
 			me.parseArgs(args, me.allowedProperties);
 			
 			me.isRect = true; %uses a rect for drawing
+			me.szIsPx = false; % sizeOut will be in deg
 			
 			me.ignoreProperties = [me.ignorePropertiesBase me.ignoreProperties];
 			me.salutation('constructor','Bar Stimulus initialisation complete');
@@ -194,8 +195,9 @@ classdef barStimulus < baseStimulus
 			end
 			function set_sizeOut(me,value)
 				me.sizeOut = value;
+				me.szD = me.sizeOut;
 				me.szPx = me.sizeOut * me.ppd;
-				if ~me.inSetup
+				if ~me.inSetup && value > 0
 					me.barHeightOut = me.sizeOut;
 					me.barWidthOut = me.sizeOut;
 				end

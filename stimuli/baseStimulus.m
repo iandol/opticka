@@ -85,6 +85,10 @@ classdef baseStimulus < optickaCore & dynamicprops
 	properties(Transient = true, Hidden = true)
 		%> size in pixels
 		szPx					= []
+		%> size in degrees
+		szD						= []
+		%> whether sizeOut is deg or px
+		szIsPx					= false
 		%> position in degrees
 		xFinalD					= []
 		yFinalD					= []
@@ -150,8 +154,9 @@ classdef baseStimulus < optickaCore & dynamicprops
 		dX_			= []
 		%> dY cache
 		dY_			= []
-		% deal with interaction of colour and alpha
+		%> deal with interaction of colour and alpha
 		isInSetColour logical	= false
+		%>
 		setLoop		= 0
 		%> Which properties to ignore cloning when making transient copies in setup
 		ignorePropertiesBase = {'dp','animator','specialFlags','handles','ppd','sM',...
@@ -159,7 +164,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 			'texture','dstRect','xFinal','yFinal','isVisible','dateStamp','paths',...
 			'uuid','tick','delayTicks','mouseOverride','isRect','dstRect','mvRect','sM',...
 			'screenVals','isSetup','isGUI','showOnTracker','doDots','doMotion',...
-			'doDrift','doFlash','doAnimator','mouseX','mouseY','szPx','xFinalD','yFinalD'}
+			'doDrift','doFlash','doAnimator','mouseX','mouseY','szPx',...
+			'xFinalD','yFinalD','widthD','heightD'}
 		%> Which properties to not draw in the UI panel
 		ignorePropertiesUIBase = {'animator','fullName','mvRect','xFinal','yFinal','szPx','xFinalD','yFinalD'}
 	end
@@ -941,7 +947,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		% ===================================================================
 		function [value, name] = getP(me, name, range)
 		% [value, name] = getP(me, name, range)
-			if isprop(me, [name 'Out'])
+			if isprop(me, [name 'Out']) && ~isempty(me.([name 'Out']))
 				name = [name 'Out'];
 				value = me.(name);
 				if exist('range','var'); value = value(range); end
@@ -1193,6 +1199,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 			me.yFinal	= [];
 			me.yFinalD	= [];
 			me.szPx		= [];
+			me.szD		= [];
 			me.isSetup	= false;
 		end
 

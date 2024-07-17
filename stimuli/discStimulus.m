@@ -81,6 +81,7 @@ classdef discStimulus < baseStimulus
 			me.parseArgs(args, me.allowedProperties);
 			
 			me.isRect = true; %uses a rect for drawing?
+			me.szIsPx = true;
 			
 			me.ignoreProperties = [me.ignorePropertiesBase me.ignoreProperties];
 			me.salutation('constructor','Stimulus initialisation complete');
@@ -125,7 +126,7 @@ classdef discStimulus < baseStimulus
 			addRuntimeProperties(me); % create transient runtime action properties
 			
 			if isempty(me.findprop('discSize'));p=me.addprop('discSize');p.Transient=true;end
-			me.discSize = me.ppd * me.size;
+			me.discSize = me.sizeOut;
 			
 			if isempty(me.findprop('res'));p=me.addprop('res');p.Transient=true;end
 			me.res = round([me.discSize me.discSize]);
@@ -164,6 +165,7 @@ classdef discStimulus < baseStimulus
 			% Placing them as inline functions like here and they work!
 			function set_sizeOut(me, value)
 				me.sizeOut = value * me.ppd;
+				me.szD = value;
 				me.szPx = me.sizeOut;
 				if isprop(me,'discSize') && ~isempty(me.discSize) && ~isempty(me.texture)
 					me.scale = me.sizeOut / me.discSize;
@@ -272,7 +274,7 @@ classdef discStimulus < baseStimulus
 				%Screen('DrawTexture', windowPointer, texturePointer [,sourceRect] [,destinationRect] 
 				%[,rotationAngle] [, filterMode] [, globalAlpha] [, modulateColor] [, textureShader] 
 				%[, specialFlags] [, auxParameters]);
-				if me.mouseOverride && ~me.mouseValid; fprintf('II %i\n',me.tick);me.tick = me.tick + 1;return; end
+				if me.mouseOverride && ~me.mouseValid; me.tick = me.tick + 1;return; end
 				if me.changeBlend;Screen('BlendFunction', me.sM.win, 'GL_SRC_ALPHA', 'GL_ONE_MINUS_SRC_ALPHA');end
 				if me.doFlash == false
 					Screen('DrawTexture', me.sM.win, me.texture, [], me.mvRect,...
@@ -385,6 +387,7 @@ classdef discStimulus < baseStimulus
 			end
 			me.mvRect=me.dstRect;
 			me.szPx = RectWidth(me.mvRect);
+			me.szD = me.szPx / me.ppd;
 			me.setAnimationDelta();
 		end
 		

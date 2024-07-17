@@ -164,7 +164,7 @@ classdef animationManager < optickaCore
 		function addBody(me, stimulus, shape, type, density, friction, elasticity)
 			if ~exist('stimulus','var') || ~isa(stimulus, 'baseStimulus'); return; end
 			if ~exist('shape','var') || isempty(shape); shape = 'Circle'; end
-			if ~exist('type','var') || isempty(tye); type = 'normal'; end
+			if ~exist('type','var') || isempty(type); type = 'normal'; end
 			if ~exist('density','var') || isempty(density); density = 1; end
 			if ~exist('friction','var') || isempty(friction); friction = 0.2; end
 			if ~exist('elasticity','var') || isempty(elasticity); elasticity = 0.75; end
@@ -174,67 +174,71 @@ classdef animationManager < optickaCore
 			thisX = stimulus.xPosition;
 			thisY = stimulus.yPosition;
 			sz = stimulus.getP('size');
+			if stimulus.szIsPx; sz = sz / stimulus.ppd; end
 			bw = stimulus.getP('barWidth');
 			bh = stimulus.getP('barHeight');
-			w = stimulus.getP('widthD');
-			h = stimulus.getP('heightD');
+			sc = stimulus.getP('scale');
+			if isempty(sc); sc = 1; end
+			w = stimulus.getP('widthD') * sc;
+			h = stimulus.getP('heightD') * sc;
 			if isempty(bw) 
-				if ~isempty(w) || w > 0
-					bw = w;
-				elseif ~isempty(sz) || sz > 0
-					bw = sz; 
+				if ~isempty(sz) && sz > 0
+					bw = sz;
+				elseif ~isempty(w) && w > 0
+					bw = w; 
 				end
 			end
 			if isempty(bh) 
-				if ~isempty(h) && h > 0
-					bh = h;
-				elseif ~isempty(sz) || sz > 0
-					bh = sz; 
+				if ~isempty(sz) && sz > 0
+					bh = sz;
+				elseif ~isempty(h) && h > 0
+					bh = h; 
 				end
 			end
 			if isempty(sz) || sz == 0; sz = bw; end
 			r = sz / 2;
-			rect = [0 0 bw bh];
-			rect = CenterRectOnPointd(rect,thisX,thisY);
-			if bh > bw; params = [0 0 0.1 bh]; else; params = [0 0 bh 0.1]; end
-
+			
 			switch shape
 				case 'Rectangle'
-					f = javaObject('org.dyn4j.geometry.Rectangle', bw, bh);
+					thisShape = javaObject('org.dyn4j.geometry.Rectangle', bw, bh);
 				case 'Segment'
+					if bh > bw; params = [0 0 0.1 bh]; else; params = [0 0 bh 0.1]; end
 					wa=javaObject('org.dyn4j.geometry.Vector2', params(1), params(2));
 					wb=javaObject('org.dyn4j.geometry.Vector2', params(3), params(4));
-					f = javaObject('org.dyn4j.geometry.Segment', wa, wb);
+					thisShape = javaObject('org.dyn4j.geometry.Segment', wa, wb);
 				otherwise
-					f = javaObject('org.dyn4j.geometry.Circle', sz / 2);
+					thisShape = javaObject('org.dyn4j.geometry.Circle', r);
 			end
+
 			thisBody = me.bodyTemplate;
 			thisBody.stimulus = stimulus;
 			thisBody.shape = shape;
 			thisBody.density = density;
 			thisBody.friction = friction;
 			thisBody.elasticity = elasticity;
-			if stimulus.size > 0
-				thisBody.radius = stimulus.size / 2;
-			elseif isprop(stimulus,'barWidth')
-				thisBody.radius = (stimulus.barWidth + stimulus.barHeight) / 2;
-			end
+			thisBody.radius = r;
 			if isprop(stimulus,'direction')
-				theta = stimulus.getP('direction');
+				theta = deg2rad(stimulus.getP('direction'));
 			else
-				theta = stimulus.getP('angle');
+				theta = deg2rad(stimulus.getP('angle'));
 			end
 			if isempty(theta); theta = 0; end
 			[cx,cy] = pol2cart(theta, stimulus.speed);
-			thisBody.velocity = [cx cy];
-			thisBody.position = [stimulus.xPosition stimulus.yPosition];
+			thisBody.velocity = [cx -cy];
+			thisBody.position = [stimulus.xPosition -stimulus.yPosition];
 			thisBody.body = javaObject('org.dyn4j.dynamics.Body');
-    		shape = javaObject(['org.dyn4j.geometry.' thisBody.shape], thisBody.radius);
-    		fixture = thisBody.body.addFixture(shape);
+    		fixture = thisBody.body.addFixture(thisShape);
 			fixture.setDensity(thisBody.density);
 			fixture.setFriction(thisBody.friction);
     		fixture.setRestitution(thisBody.elasticity); % set coefficient of restitution
-    		thisBody.body.setMass(me.massType.NORMAL);
+			if matches(lower(type),'normal')
+				thisBody.body.setMass(me.massType.NORMAL);
+			elseif matches(lower(type),'sensor')
+				fixture.setSensor(true);
+				thisBody.body.setMass(me.massType.INFINITE);
+			else
+				thisBody.body.setMass(me.massType.INFINITE);
+			end
     		thisBody.body.translate(thisBody.position(1), thisBody.position(2));
     		initialVelocity = javaObject('org.dyn4j.geometry.Vector2', thisBody.velocity(1), thisBody.velocity(2));
     		thisBody.body.setLinearVelocity(initialVelocity);
@@ -465,7 +469,7 @@ classdef animationManager < optickaCore
 		% ===================================================================
 		function demo()
 			s = screenManager;
-			s.windowed = [0 0 1200 800];
+			if max(Screen('Screens')) == 0; s.windowed = [0 0 1200 800]; end
 			sv = open(s);
 
 			i = imageStimulus('filePath','moon.png','size',3);
@@ -474,7 +478,6 @@ classdef animationManager < optickaCore
 			i.yPosition = 0;
 			i.angle = -45;
 			i.speed = 20;
-			setup(i, s);
 
 			floor = barStimulus('alpha',0.2,'barWidth',40,'barHeight',1,'yPosition',sv.bottomInDegrees-2);
 			floor.name = 'floor';
@@ -488,7 +491,7 @@ classdef animationManager < optickaCore
 			sensor = discStimulus('alpha',0.2,'size',4);
 			sensor.name = 'sensor';
 
-			m = metaStimulus('stimuli',{i,floor,wall1,wall2,celing,sensor});
+			m = metaStimulus('stimuli',{i,floor,wall1,wall2,ceiling,sensor});
 			m.setup(s);
 			
 			a = animationManager;

@@ -138,6 +138,7 @@ classdef movieStimulus < baseStimulus
 			me.parseArgs(args, me.allowedProperties);
 			
 			me.isRect = true; %uses a rect for drawing
+			me.szIsPx = false; % sizeOut will be in deg
 			
 			checkfilePath(me);
 			

@@ -66,9 +66,9 @@ classdef imageStimulus < baseStimulus
 		scale						= 1
 		%>
 		matrix
-		%> pixel width
+		%> raw pixel width
 		width
-		%> pixel height
+		%> raw pixel height
 		height
 		%> deg width
 		widthD
@@ -123,6 +123,7 @@ classdef imageStimulus < baseStimulus
 			me.parseArgs(args, me.allowedProperties);
 
 			me.isRect = true; %uses a rect for drawing
+			me.szIsPx = false; % sizeOut will be in deg
 
 			checkfilePath(me);
 
@@ -283,9 +284,11 @@ classdef imageStimulus < baseStimulus
 			me.heightD = me.height / me.ppd;
 			if me.sizeOut > 0
 				me.scale = me.sizeOut / (me.width / me.ppd);
-				me.szPx = me.sizeOut * me.ppd;
+				me.szPx = (me.sizeOut * me.ppd) * me.scale;
+				me.szD  = me.sizeOut * me.scale;
 			else
 				me.szPx = (me.width+me.height)/2;
+				me.szD = me.szPx / me.ppd;
 			end
 
 			if isempty(ialpha)
@@ -330,6 +333,11 @@ classdef imageStimulus < baseStimulus
 			me.chosenImages = [me.chosenImages string(['[' num2str(me.getP('selection')) ']' regexprep(me.currentFile,'\\','/')])];
 			if me.sizeOut > 0
 				me.scale = me.sizeOut / (me.width / me.ppd);
+				me.szPx = (me.sizeOut * me.ppd) * me.scale;
+				me.szD  = me.sizeOut * me.scale;
+			else
+				me.szPx = (me.width+me.height)/2;
+				me.szD = me.szPx / me.ppd;
 			end
 			resetTicks(me);
 			computePosition(me);
