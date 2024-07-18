@@ -82,8 +82,7 @@ classdef animationManager < optickaCore
 		isRightWall = false
 		isCeiling = false
 		massType = struct('NORMAL',[],'INFINITE',[],'FIXED_ANGULAR_VELOCITY',[],'FIXED_LINEAR_VELOCITY',[])
-		bodyTemplate = struct('body',[],'stimulus',[],'shape','Circle','radius',2,'density',1,'friction',0.2,'elasticity',0.75,'position',[0 0],'velocity',[0 0])
-		obstacleTemplate = struct('name',[],'body',[],'params',[],'sensor',false,'x',[],'y',[])
+		bodyTemplate = struct('name','','type','','body',[],'stimulus',[],'shape','Circle','radius',2,'density',1,'friction',0.2,'elasticity',0.75,'position',[0 0],'velocity',[0 0])
 		%> useful screen info and initial gamma tables and the like
 		screenVals struct
 		%> what properties are allowed to be passed on construction
@@ -195,7 +194,7 @@ classdef animationManager < optickaCore
 					bh = h; 
 				end
 			end
-			if isempty(sz) || sz == 0; sz = bw; end
+			if isempty(sz) || sz == 0; sz = max([bw bh]); end
 			r = sz / 2;
 			
 			switch shape
@@ -211,6 +210,8 @@ classdef animationManager < optickaCore
 			end
 
 			thisBody = me.bodyTemplate;
+			thisBody.name = stimulus.name;
+			thisBody.type = type;
 			thisBody.stimulus = stimulus;
 			thisBody.shape = shape;
 			thisBody.density = density;
@@ -250,11 +251,12 @@ classdef animationManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief Load an image
+		%> @brief 
 		%>
 		% ===================================================================
-		function setup(me, screen)
+		function setup(me, screen, useBounds)
 			if ~exist('screen','var') || isempty(screen); screen = screenManager; end
+			if ~exist('useBounds','var') || isempty(useBounds); useBounds = false; end
 			me.reset;
 			me.tick = 0;
 			me.timeStep = [];
@@ -265,7 +267,7 @@ classdef animationManager < optickaCore
 			me.world = javaObject('org.dyn4j.world.World');
 			me.world.setGravity(me.rigidParams.gravity(1),me.rigidParams.gravity(2));
 
-			if ~isempty(screen.screenVals.rectInDegrees)
+			if useBounds && ~isempty(screen.screenVals.rectInDegrees)
 				me.screenBounds = screen.screenVals.rectInDegrees;
 				if me.rigidParams.screenBounds
 					bnds = javaObject('org.dyn4j.collision.AxisAlignedBounds', Rectwidth(screen.screenVals.rectInDegrees), RectHeight(screen.screenVals.rectInDegrees));
@@ -275,19 +277,23 @@ classdef animationManager < optickaCore
 
 			settings = me.world.getSettings();
 			settings.setAtRestDetectionEnabled(true);
-			settings.setStepFrequency(screen.screenValues.ifi);
+			settings.setStepFrequency(screen.screenVals.ifi);
 			settings.setMaximumAtRestLinearVelocity(0.75);
 			settings.setMaximumAtRestAngularVelocity(0.5);
 			settings.setMinimumAtRestTime(0.2); %def = 0.5
 
+			fprintf('--->>> RigidBody World with %.2fs step time created!\n',settings.getStepFrequency);
+
 			for i = 1:me.nBodies
+				fprintf('\t--> Adding body %s as a %s\n',...
+					me.bodies(i).name,me.bodies(i).shape);
 				me.world.addBody(me.bodies(i).body);
 			end
 			
 		end
 		
 		% ===================================================================
-		%> @brief Load an image
+		%> @brief 
 		%>
 		% ===================================================================
 		function step(me)
@@ -340,11 +346,12 @@ classdef animationManager < optickaCore
 			for ii=1:length(me.bodies)
 				if matches(me.bodies(ii).type,'normal')
 					pos = me.bodies(ii).body.getWorldCenter();
-					v = me.bodies(ii).body.getLinearVelocity();
-					a = me.bodies(ii).body.getAngularVelocity();
-					me.x(a) = pos(1);
-					me.y(a) = pos(2);
-					me.angularVelocity = a;
+					lv = me.bodies(ii).body.getLinearVelocity();
+					av = me.bodies(ii).body.getAngularVelocity();
+					me.x(a) = pos.x;
+					me.y(a) = -pos.y;
+					if lv.x > 0; av = abs(av); else; av = -abs(av); end
+					me.angularVelocity(a) = a;
 					a = a + 1;
 				end
 			end
@@ -472,22 +479,25 @@ classdef animationManager < optickaCore
 			if max(Screen('Screens')) == 0; s.windowed = [0 0 1200 800]; end
 			sv = open(s);
 
-			i = imageStimulus('filePath','moon.png','size',3);
+			i = imageStimulus('filePath','moon.png','size',4);
 			i.name = 'moon';
 			i.xPosition = sv.leftInDegrees+4;
-			i.yPosition = 0;
-			i.angle = -45;
+			i.yPosition = -5;
+			i.angle = -75;
 			i.speed = 20;
 
-			floor = barStimulus('alpha',0.2,'barWidth',40,'barHeight',1,'yPosition',sv.bottomInDegrees-2);
+			floor = barStimulus('alpha',0.2,'barWidth',sv.widthInDegrees,...
+				'barHeight',1,'yPosition',sv.bottomInDegrees-2);
 			floor.name = 'floor';
-			wall1 = barStimulus('alpha',0.2,'barWidth',1,'barHeight',30,'xPosition',sv.leftInDegrees+2);
+			wall1 = barStimulus('alpha',0.2,'barWidth',1,'barHeight',...
+				sv.heightInDegrees,'xPosition',sv.leftInDegrees+2);
 			wall1.name = 'wall1';
-			wall2 = barStimulus('alpha',0.2,'barWidth',1,'barHeight',30,'xPosition',sv.leftInDegrees+2);
+			wall2 = barStimulus('alpha',0.2,'barWidth',1,'barHeight',...
+				sv.heightInDegrees,'xPosition',sv.rightInDegrees-2);
 			wall2.name = 'wall2';
 			ceiling = floor.clone;
 			ceiling.name = 'ceiling';
-			ceiling.yPosition = sv.topInDegrees + 2;
+			ceiling.yPosition = sv.topInDegrees;
 			sensor = discStimulus('alpha',0.2,'size',4);
 			sensor.name = 'sensor';
 
@@ -503,14 +513,22 @@ classdef animationManager < optickaCore
 			a.addBody(wall2,'Rectangle','infinite');
 			a.addBody(ceiling,'Rectangle','infinite');
 			a.addBody(sensor,'Circle','sensor');
+
+			a.setup(s);
+
+			RestrictKeysForKbCheck([KbName('LeftArrow') KbName('RightArrow') KbName('UpArrow') KbName('DownArrow') ...
+				KbName('1!') KbName('2@') KbName('3#') KbName('space') KbName('ESCAPE')]);
+
+
+			Priority(1);
 			
 			for jj = 1:sv.fps*10
+				step(a);
 				draw(m);
 				flip(s);
-				step(a);
+				
 				i.updateXY(a.x, a.y, true);
-				i.angleOut = -rad2deg(a.angle);
-				animate(a);
+				i.angleOut = i.angleOut + rad2deg(a.angle)*sv.ifi;
 				t(jj)=a.timeStep;
 				x(jj)=a.x;
 				y(jj)=a.y;
@@ -518,6 +536,7 @@ classdef animationManager < optickaCore
 				pe(jj) = a.potentialEnergy;
 			end
 
+			Priority(0);
 			close(s)
 			reset(i);
 			

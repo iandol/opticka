@@ -881,7 +881,7 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		function forceWin(me,win)
 		%> @fn forceWin
-		%> @brief force this object to use antother window
+		%> @brief force this object to use an existing window handle
 		%>
 		%> @param win - the window handle to bind to
 		%> @return
@@ -2156,6 +2156,8 @@ classdef screenManager < optickaCore
 				sv.height = sv.screenHeight;
 				me.winRect = Screen('Rect',swin);
 			end
+			sv.widthInDegrees = sv.width / me.ppd;
+			sv.heightInDegrees = sv.height / me.ppd;
 			updateCenter(me);
 			sv.xCenter = me.xCenter;
 			sv.yCenter = me.yCenter;

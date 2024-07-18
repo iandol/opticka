@@ -290,7 +290,8 @@ classdef optickaCore < handle
 			obj_out = feval(class(me),'cloning',true);
 			for i = 1:length(meta.Properties)
 				prop = meta.Properties{i};
-				if strcmpi(prop.SetAccess,'Public') && ~(prop.Dependent || prop.Constant) ...
+				if strcmpi(prop.SetAccess,'Public') ...
+				&& ~(prop.Dependent || prop.Constant) ...
 				&& isprop(obj_out, prop.Name) ...
 				&& ~(isempty(me.(prop.Name)) ...
 				&& isempty(obj_out.(prop.Name)))
@@ -301,7 +302,7 @@ classdef optickaCore < handle
 							if ~matches(prop.Name,'font')
 								obj_out.(prop.Name) = me.(prop.Name);
 							end
-						catch %#ok<CTCH>
+						catch ERR %#ok<CTCH>
 							warning('optickaCore:clone', 'Property not specified: "%s"',prop.Name)
 						end
 					end

@@ -55,7 +55,7 @@ classdef barStimulus < baseStimulus
 		interpMethodList cell = {'nearest','linear','makima','spline','cubic'}
 	end
 	
-	properties (SetAccess = protected, GetAccess = protected)
+	properties (Access = {?baseStimulus})
 		visibleTick				= 0
 		visibleFlip				= Inf
 		baseColour
@@ -88,7 +88,7 @@ classdef barStimulus < baseStimulus
 		% ===================================================================
 		function me = barStimulus(varargin)
 			args = optickaCore.addDefaults(varargin,...
-				struct('name','Bar','colour',[1 1 1 1],'size',0,...
+				struct('name','Bar','colour',[1 1 1],'size',0,...
 				'speed',2,'startPosition',0));
 			me=me@baseStimulus(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);

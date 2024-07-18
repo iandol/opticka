@@ -32,6 +32,7 @@ classdef discStimulus < baseStimulus
 	
 	properties (SetAccess = private, GetAccess = public, Hidden = true)
 		typeList = {'simple','flash'}
+		scale = 1
 	end
 	
 	properties (Dependent = true, SetAccess = private, GetAccess = private)
@@ -55,7 +56,6 @@ classdef discStimulus < baseStimulus
 		colourOutTemp = [1 1 1]
 		flashColourOutTemp = [1 1 1]
 		stopLoop = 0
-		scale = 1
 		allowedProperties = {'type', 'flashTime', 'flashOn', 'flashColour', ...
 			'contrast', 'sigma', 'useAlpha', 'smoothMethod'}
 		ignoreProperties = {'flashSwitch'}
