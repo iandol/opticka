@@ -114,62 +114,30 @@ classdef animationManager < optickaCore
 			me.massType.FIXED_LINEAR_VELOCITY = javaMethod('valueOf', 'org.dyn4j.geometry.MassType', 'FIXED_LINEAR_VELOCITY');
 		end
 
-		% % ===================================================================
-		% %> @brief Load an image
-		% %>
-		% % ===================================================================
-		% function addObstacle(me, name, shape, params, isSensor)
-		% 	if ~exist('name','var') || isempty(name); name = 'generic'; end
-		% 	if ~exist('shape','var') || isempty(shape); shape = 'Rectangle'; end
-		% 	if ~exist('params','var') || isempty(params); params = [-20 15 2- 15.1]; end
-		% 	if ~exist('isSensor','var') || isempty(isSensor); isSensor = false; end
-		% 	shape = [upper(shape(1)) lower(shape(2:end))];
-		% 	if ~matches(shape,{'Circle','Rectangle','Triangle','Ellipse','Segment'}); warning('Not supported shape');return;end
-		% 	switch shape
-		% 		case 'Rectangle'
-		% 			f = javaObject('org.dyn4j.geometry.Rectangle', RectWidth(params), RectHeight(params));
-		% 			[thisX, thisY] = RectCenterd(params); 
-		% 		case 'Segment'
-		% 			wa=javaObject('org.dyn4j.geometry.Vector2', params(1), params(2));
-		% 			wb=javaObject('org.dyn4j.geometry.Vector2', params(3), params(4));
-		% 			f = javaObject('org.dyn4j.geometry.Segment', wa, wb);
-		% 			thisX = params(1) - params(3);
-		% 			thisY = params(2) - params(4);
-		% 		otherwise
-		% 			f = javaObject('org.dyn4j.geometry.Circle', params(3));
-		% 			thisX = params(1); thisY = params(2);
-		% 	end
-		% 	thisObstacle = me.obstacleTemplate;
-		% 	thisObstacle.x = thisX;
-		% 	thisObstacle.y = thisY;
-		% 	thisObstacle.name = name;
-		% 	thisObstacle.sensor = isSensor;
-		% 	thisObstacle.body = javaObject('org.dyn4j.dynamics.Body');
-		% 	fixture = thisObstacle.body.addFixture(f);
-		% 	if isSensor; fixture.setSensor(true); end
-		% 	thisObstacle.body.setMass(me.massType.INFINITE);
-		% 	if ~strcmpi(shape,'Segment'); thisObstacle.body.translate(thisX, thisY); end	
-		% 	if isempty(me.obstacles)
-		% 		me.obstacles = thisObstacle;
-		% 	else
-		% 		me.obstacles(end+1) = thisObstacle;
-		% 	end
-		% end
-
 		% ===================================================================
 		%> @brief 
 		%>
+		%> @param stimulus -- the stimulus object
+		%> @param shape -- what shape to give it in the physics simulation
+		%> @param type -- normal (move & collide) | infinite (non-moveable, collidable) | sensor (non-moveable, non-collidable)
+		%> @param density -- 
+		%> @param friction --
+		%> @param elasticity --
+		%> @param angularvelocity -- initial angular velocity
 		% ===================================================================
-		function addBody(me, stimulus, shape, type, density, friction, elasticity)
+		function addBody(me, stimulus, shape, type, density, friction, elasticity, av)
+			% addBody(me, stimulus, shape, type, density, friction, elasticity, av)
 			if ~exist('stimulus','var') || ~isa(stimulus, 'baseStimulus'); return; end
 			if ~exist('shape','var') || isempty(shape); shape = 'Circle'; end
 			if ~exist('type','var') || isempty(type); type = 'normal'; end
 			if ~exist('density','var') || isempty(density); density = 1; end
 			if ~exist('friction','var') || isempty(friction); friction = 0.2; end
 			if ~exist('elasticity','var') || isempty(elasticity); elasticity = 0.75; end
+			
 			shape = [upper(shape(1)) lower(shape(2:end))];
 			if ~matches(shape,{'Circle','Rectangle','Triangle','Ellipse'}); warning('Not supported shape');return;end
 			
+			% get values from the stimulus
 			thisX = stimulus.xPosition;
 			thisY = stimulus.yPosition;
 			sz = stimulus.getP('size');
@@ -197,6 +165,7 @@ classdef animationManager < optickaCore
 			if isempty(sz) || sz == 0; sz = max([bw bh]); end
 			r = sz / 2;
 			
+			% handle the different shapes
 			switch shape
 				case 'Rectangle'
 					thisShape = javaObject('org.dyn4j.geometry.Rectangle', bw, bh);
@@ -209,6 +178,7 @@ classdef animationManager < optickaCore
 					thisShape = javaObject('org.dyn4j.geometry.Circle', r);
 			end
 
+			% build the structure
 			thisBody = me.bodyTemplate;
 			thisBody.name = stimulus.name;
 			thisBody.type = type;
@@ -223,7 +193,6 @@ classdef animationManager < optickaCore
 			else
 				theta = deg2rad(stimulus.getP('angle'));
 			end
-			if isempty(theta); theta = 0; end
 			[cx,cy] = pol2cart(theta, stimulus.speed);
 			thisBody.velocity = [cx -cy];
 			thisBody.position = [stimulus.xPosition -stimulus.yPosition];
@@ -241,13 +210,36 @@ classdef animationManager < optickaCore
 				thisBody.body.setMass(me.massType.INFINITE);
 			end
     		thisBody.body.translate(thisBody.position(1), thisBody.position(2));
-    		initialVelocity = javaObject('org.dyn4j.geometry.Vector2', thisBody.velocity(1), thisBody.velocity(2));
-    		thisBody.body.setLinearVelocity(initialVelocity);
+    		thisBody.body.setLinearVelocity(javaObject('org.dyn4j.geometry.Vector2', thisBody.velocity(1), thisBody.velocity(2)));
+			thisBody.body.setAngularVelocity(av);
 			if isempty(me.bodies)
 				me.bodies = thisBody;
 			else
 				me.bodies(end+1) = thisBody;
 			end
+		end
+
+		% ===================================================================
+		%> @brief 
+		%>
+		% ===================================================================
+		function rmBody(me, id)
+			if ~exist('id','var') || isempty(id); return; end
+			rmIdx = [];
+			if ischar(id)
+				for j = 1:me.nBodies
+					if matches(id, me.bodies(j).name)
+						rmIdx = [rmIdx j];
+					end
+				end
+			elseif isnumeric(id)
+				for j = 1:length(id)
+					if id(j) > 0 && id(j) < me.nBodies
+						rmIdx = [rmIdx id(j)];
+					end
+				end
+			end
+			me.bodies(rmIdx) = [];
 		end
 		
 		% ===================================================================
@@ -475,17 +467,19 @@ classdef animationManager < optickaCore
 		%>
 		% ===================================================================
 		function demo()
+
+			% open a new PTB screen
 			s = screenManager;
 			if max(Screen('Screens')) == 0; s.windowed = [0 0 1200 800]; end
 			sv = open(s);
 
-			i = imageStimulus('filePath','moon.png','size',4);
-			i.name = 'moon';
-			i.xPosition = sv.leftInDegrees+4;
-			i.yPosition = -5;
-			i.angle = -75;
-			i.speed = 20;
-
+			% create our stimuli
+			ball = imageStimulus('filePath','moon.png','size',4);
+			ball.name = 'moon';
+			ball.xPosition = sv.leftInDegrees+4;
+			ball.yPosition = -5;
+			ball.angle = -75;
+			ball.speed = 20;
 			floor = barStimulus('alpha',0.2,'barWidth',sv.widthInDegrees,...
 				'barHeight',1,'yPosition',sv.bottomInDegrees-2);
 			floor.name = 'floor';
@@ -498,47 +492,49 @@ classdef animationManager < optickaCore
 			ceiling = floor.clone;
 			ceiling.name = 'ceiling';
 			ceiling.yPosition = sv.topInDegrees;
-			sensor = discStimulus('alpha',0.2,'size',4);
+			sensor = discStimulus('colour',[0.7 0.5 0.5 0.2],'size',4);
 			sensor.name = 'sensor';
 
-			m = metaStimulus('stimuli',{i,floor,wall1,wall2,ceiling,sensor});
-			m.setup(s);
+			% setup all stimuli with PTB screen
+			all = metaStimulus('stimuli',{ball,floor,wall1,wall2,ceiling,sensor});
+			all.setup(s);
 			
+			% create a new animation manager
 			a = animationManager;
 			a.timeDelta = sv.ifi;
-			%addBody(me, stimulus, shape, type, density, friction, elasticity)
-			a.addBody(i, 'Circle', 'normal', 10, 0.2, 0.8);
+			% add the stmuli as physics bodies
+			%addBody(me, stimulus, shape, type, density, friction, elasticity, angular velocity)
+			a.addBody(ball, 'Circle', 'normal', 10, 0.2, 0.8, ball.speed/2);
 			a.addBody(floor,'Rectangle','infinite');
 			a.addBody(wall1,'Rectangle','infinite');
 			a.addBody(wall2,'Rectangle','infinite');
 			a.addBody(ceiling,'Rectangle','infinite');
 			a.addBody(sensor,'Circle','sensor');
 
+			% setup animationmamager with PTB screen
 			a.setup(s);
 
 			RestrictKeysForKbCheck([KbName('LeftArrow') KbName('RightArrow') KbName('UpArrow') KbName('DownArrow') ...
 				KbName('1!') KbName('2@') KbName('3#') KbName('space') KbName('ESCAPE')]);
-
-
 			Priority(1);
 			
 			for jj = 1:sv.fps*10
 				step(a);
-				draw(m);
-				flip(s);
-				
-				i.updateXY(a.x, a.y, true);
-				i.angleOut = i.angleOut + rad2deg(a.angle)*sv.ifi;
+				ball.updateXY(a.x(1), a.y(1), true);
+				ball.angleOut = ball.angleOut + rad2deg(a.angle(1))*sv.ifi;
 				t(jj)=a.timeStep;
 				x(jj)=a.x;
 				y(jj)=a.y;
 				ke(jj) = a.kineticEnergy;
 				pe(jj) = a.potentialEnergy;
+
+				draw(all);
+				flip(s);
 			end
 
 			Priority(0);
 			close(s)
-			reset(i);
+			reset(ball);
 			
 			figure;
 			tiledlayout(2,1);
