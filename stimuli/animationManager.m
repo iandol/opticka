@@ -140,7 +140,7 @@ classdef animationManager < optickaCore
 			if ~exist('elasticity','var') || isempty(elasticity); elasticity = 0.75; end
 			
 			shape = [upper(shape(1)) lower(shape(2:end))];
-			if ~matches(shape,{'Circle','Rectangle','Triangle','Ellipse'}); warning('Not supported shape');return;end
+			if ~matches(shape,{'Circle','Segment','Rectangle','Triangle','Ellipse'}); warning('Not supported shape');return;end
 			
 			% get values from the stimulus
 			thisX = stimulus.xPosition;
@@ -354,7 +354,7 @@ classdef animationManager < optickaCore
 		% ===================================================================
 		function rigidStep(me, tick)
 			if ~exist('tick','var') || isempty(tick); tick = 1; end
-
+			if isempty(me.world); error('You need to setup() animationManager BEFORE you can step()');end
 			me.world.step(tick);
 			me.tick = me.tick + tick;
 			me.timeStep = (me.tick - 1) * me.timeDelta;
