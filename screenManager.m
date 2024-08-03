@@ -812,7 +812,8 @@ classdef screenManager < optickaCore
 		%> @fn flip
 		%> @brief Flip the screen
 		%>
-		%> [VBLTimestamp StimulusOnsetTime FlipTimestamp Missed Beampos] = Screen('Flip', me.win [, when] [, dontclear] [, dontsync] [, multiflip]);
+		%> [VBLTimestamp StimulusOnsetTime FlipTimestamp Missed Beampos] = 
+		%>   Screen('Flip', me.win [, when] [, dontclear] [, dontsync] [, multiflip]);
 		%>
 		%> @param varargin - pass other options to screen flip
 		%> @return vbl - a vbl from this flip

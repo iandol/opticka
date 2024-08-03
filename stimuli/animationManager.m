@@ -16,7 +16,7 @@ classdef animationManager < optickaCore
 		%> bodyList
 		bodies = struct([])
 		%> parameters for each animation type
-		rigidParams = struct('gravity', [0 -9.8],'LinearDamping', 0.05, 'AngularDamping', 0.075,...
+		rigidParams = struct('gravity', [0 -9.8],'linearDamping', 0.05, 'angularDamping', 0.075,...
 			'screenBounds',false);
 		sinusoidalParams = struct();
 		brownianParams = struct();
@@ -176,11 +176,15 @@ classdef animationManager < optickaCore
 					thisShape = javaObject('org.dyn4j.geometry.Rectangle', bw, bh);
 					tx = sprintf('width = %.2f height = %.2f',bw,bh);
 				case 'Segment'
-					if bh > bw; params = [0 0 0.1 bh]; else; params = [0 0 bh 0.1]; end
+					if bh > bw
+						params = [0 -(bh/2) 0 (bh/2)]; 
+					else
+						params = [-(bw/2) 0 (bw/2) 0]; 
+					end
 					wa=javaObject('org.dyn4j.geometry.Vector2', params(1), params(2));
 					wb=javaObject('org.dyn4j.geometry.Vector2', params(3), params(4));
 					thisShape = javaObject('org.dyn4j.geometry.Segment', wa, wb);
-					tx = ['points = ' sprintf(' %.2f ', params)];
+					tx = ['points = ' sprintf(' %+.2f ', params)];
 				otherwise
 					thisShape = javaObject('org.dyn4j.geometry.Circle', r);
 					tx = sprintf('radius = %.2f',r);
@@ -222,9 +226,13 @@ classdef animationManager < optickaCore
 				thisBody.velocity = [0 0];
 				if ~exist('av','var') || isempty(av); av = 0; end
 			end
+			thisBody.body.translateToOrigin();
     		thisBody.body.translate(thisBody.position(1), thisBody.position(2));
     		thisBody.body.setLinearVelocity(javaObject('org.dyn4j.geometry.Vector2', thisBody.velocity(1), thisBody.velocity(2)));
 			thisBody.body.setAngularVelocity(av);
+			thisBody.body.setLinearDamping(me.rigidParams.linearDamping);
+			thisBody.body.setangularDamping(me.rigidParams.angularDamping);
+			thisBody.body.updateMass();
 			if isempty(me.bodies)
 				thisBody.idx = 1;
 				me.bodies = thisBody;
@@ -233,7 +241,7 @@ classdef animationManager < optickaCore
 				me.bodies(end+1) = thisBody;
 			end
 			if me.verbose
-				fprintf('---> addBody: %s:%s:%s -- X:%.2f Y:%.2f -- %s\n',thisBody.name,type,shape,stimulus.xPosition,stimulus.yPosition,tx);
+				fprintf('---> addBody: %s:%s:%s -- X:%+0.2f Y:%+0.2f -- %s\n',thisBody.name,type,shape,stimulus.xPosition,stimulus.yPosition,tx);
 			end
 			makeTrackIndex(me);
 		end
@@ -305,17 +313,37 @@ classdef animationManager < optickaCore
 			end
 			fprintf('\n');
 			makeTrackIndex(me);
-			
+		end
+
+		% ===================================================================
+		%> @brief 
+		%>
+		% ===================================================================
+		function updateBodyPositions(me)
+			a = 0;
+			for ii = me.trackIndex
+				a = a + 1;
+				pos = me.bodies(ii).body.getWorldCenter();
+				lv = me.bodies(ii).body.getLinearVelocity();
+				av = me.bodies(ii).body.getAngularVelocity();
+				me.x(a) = pos.x;
+				me.y(a) = -pos.y;
+				if lv.x > 0; av = abs(av); else; av = -abs(av); end
+				me.linearVelocity(a,:) = [lv.x lv.y];
+				me.angularVelocity(a) = av;
+				me.bodies(ii).stimulus.updateXY(me.x(a), me.y(a), true);
+				me.bodies(ii).stimulus.angleOut = me.bodies(ii).stimulus.angleOut + rad2deg(av)*me.timeDelta;
+			end
 		end
 		
 		% ===================================================================
 		%> @brief 
 		%>
 		% ===================================================================
-		function step(me)
+		function step(me,varargin)
 			switch me.type
 				case 'rigid'
-					rigidStep(me);
+					rigidStep(me,varargin);
 			end
 		end
 
@@ -349,27 +377,23 @@ classdef animationManager < optickaCore
 		end
 
 		% ===================================================================
-		%> @brief Load an image
+		%> @brief 
 		%>
 		% ===================================================================
-		function rigidStep(me, tick)
+		function rigidStep(me, tick, updatePositions)
+			if exist('tick','var') && iscell(tick)
+				if length(tick)==2; updatePositions = tick{2}; end
+				tick = tick{1};
+			end
 			if ~exist('tick','var') || isempty(tick); tick = 1; end
+			if ~exist('updatePositions','var') || isempty(updatePositions); updatePositions = true; end
 			if isempty(me.world); error('You need to setup() animationManager BEFORE you can step()');end
 			me.world.step(tick);
 			me.tick = me.tick + tick;
 			me.timeStep = (me.tick - 1) * me.timeDelta;
 
-			a = 1;
-			for ii = me.trackIndex
-				pos = me.bodies(ii).body.getWorldCenter();
-				lv = me.bodies(ii).body.getLinearVelocity();
-				av = me.bodies(ii).body.getAngularVelocity();
-				me.x(a) = pos.x;
-				me.y(a) = -pos.y;
-				if lv.x > 0; av = abs(av); else; av = -abs(av); end
-				me.linearVelocity(a,:) = [lv.x lv.y];
-				me.angularVelocity(a) = a;
-				a = a + 1;
+			if updatePositions
+				updateBodyPositions(me);
 			end
 			
 		end
@@ -387,18 +411,41 @@ classdef animationManager < optickaCore
 		end
 
 		% ===================================================================
-		%> @brief 
+		%> @brief return the first body matching name
 		%>
 		% ===================================================================
-		function body = getBody(me,name)
+		function [body, trackidx, idx] = getBody(me, name)
 			body = [];
+			idx = []; trackidx = [];
+			if ~exist('name','var') || isempty(name); return; end
 			isBody = false;
 			a = 1;
 			while a <= me.nBodies
 				if matches(name,me.bodies(a).name); isBody = true; break; end
 				a = a + 1;
 			end
-			if isBody; body = me.bodies(a).body; end
+			if isBody
+				body = me.bodies(a).body; 
+				idx = a;
+				trackidx = find(me.trackIndex == idx);
+			end
+		end
+
+		% ===================================================================
+		%> @brief 
+		%>
+		% ===================================================================
+		function fixture = getFixture(me, name, num)
+			fixture = [];
+			if ~exist('name','var') || isempty(name); return; end
+			if ~exist('num','var') || isempty(num); num = 0; end
+			isBody = false;
+			a = 1;
+			while a <= me.nBodies
+				if matches(name, me.bodies(a).name); isBody = true; break; end
+				a = a + 1;
+			end
+			if isBody; fixture = me.bodies(a).body.getFixture(num); end
 		end
 
 		% ===================================================================

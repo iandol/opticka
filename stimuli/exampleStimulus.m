@@ -105,8 +105,9 @@ classdef exampleStimulus < baseStimulus
 		function draw(me)
 			if me.isVisible && me.tick >= me.delayTicks && me.tick < me.offTicks
 				Screen('gluDisk',me.sM.win,me.colourOut,me.xFinal,me.yFinal,me.sizeOut/2);
+				me.drawTick = me.drawTick + 1;
 			end
-			me.tick = me.tick + 1;
+			if me.isVisible; me.tick = me.tick + 1; end
 		end
 
 		% ===================================================================

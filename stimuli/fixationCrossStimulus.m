@@ -260,8 +260,9 @@ classdef fixationCrossStimulus < baseStimulus
 					Screen('FillRect', me.sM.win, me.colour2Out, CenterRectOnPointd([0 0 me.lineWidthOut me.sizeOut], me.xFinal,me.yFinal));
 					Screen('gluDisk', me.sM.win, me.currentColour, me.xFinal, me.yFinal, me.lineWidthOut);
 				end
+				me.drawTick = me.drawTick + 1;
 			end
-			me.tick = me.tick + 1;
+			if me.isVisible; me.tick = me.tick + 1; end
 		end
 		
 		% ===================================================================

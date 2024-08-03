@@ -100,7 +100,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		dstRect double			= []
 		%> tick updates +1 on each call of draw (even if delay or off is true and no stimulus is drawn, resets on each update
 		tick double				= 0
-		%> draw tick only updates when a draw command is called, resets on each update
+		%> draw tick only updates when a draw is actually performed, resets on each update
 		drawTick double			= 0
 		%> pixels per degree (normally inhereted from screenManager)
 		ppd double				= 36
@@ -990,12 +990,12 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%>
 		%> @param x X position
 		%> @param y Y position
-		%> @param degrees where the input is in degrees (true) ot pixels (false)
+		%> @param useDegrees where the input is in degrees (true) ot pixels (false)
 		% ===================================================================
-		function updateXY(me,x,y,degrees)
-		% updateXY(me, x, y, degrees)
-			if ~exist('degrees','var') || isempty(degrees); degrees = false; end
-			if degrees
+		function updateXY(me,x,y,useDegrees)
+		% updateXY(me, x, y, useDegrees)
+			if ~exist('useDegrees','var') || isempty(useDegrees); useDegrees = false; end
+			if useDegrees
 				if ~isempty(x); me.xFinal = me.sM.toPixels(x, 'x'); me.xFinalD = x; end
 				if ~isempty(y); me.yFinal = me.sM.toPixels(y, 'y'); me.yFinalD = y; end
 			else

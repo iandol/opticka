@@ -378,8 +378,9 @@ classdef colourGratingStimulus < baseStimulus
 				Screen('DrawTexture', me.sM.win, me.texture, [], me.mvRect,...
 					me.angleOut, [], [], me.baseColourOut, [], me.rotateMode,...
 					[me.driftPhase, me.sfOut, me.contrastOut, me.sigmaOut]);
+				me.drawTick = me.drawTick + 1;
 			end
-			me.tick = me.tick + 1;
+			if me.isVisible; me.tick = me.tick + 1; end
 		end
 		
 		% ===================================================================

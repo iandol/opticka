@@ -272,7 +272,7 @@ classdef gaborStimulus < baseStimulus
 					me.contrastOut, me.aspectRatioOut, 0, 0, 0]); 
 				me.drawTick = me.drawTick + 1;
 			end
-			me.tick = me.tick + 1;
+			if me.isVisible; me.tick = me.tick + 1; end
 		end
 		
 		% ===================================================================

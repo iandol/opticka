@@ -413,8 +413,9 @@ classdef polarBoardStimulus < baseStimulus
 				if me.centerMask > 0
 					Screen('DrawTexture', me.sM.win, me.cMaskTex, [], me.cMaskRect, [], [], 1, me.baseColourOut, [], []);
 				end
+				me.drawTick = me.drawTick + 1;
 			end
-			me.tick = me.tick + 1;
+			if me.isVisible; me.tick = me.tick + 1; end
 		end
 		
 		% ===================================================================

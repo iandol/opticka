@@ -313,8 +313,9 @@ classdef gratingStimulus < baseStimulus
 					me.angleOut, [], [], me.modulateColor, [], me.rotateMode,...
 					[me.driftPhase, me.sfOut, me.contrastOut, me.sigmaOut]);
 				if me.changeBlend; Screen('BlendFunction', me.sM.win, me.sM.srcMode, me.sM.dstMode); end
+				me.drawTick = me.drawTick + 1;
 			end
-			me.tick = me.tick + 1;
+			if me.isVisible; me.tick = me.tick + 1; end
 		end
 
 		% ===================================================================

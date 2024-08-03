@@ -355,8 +355,9 @@ classdef imageStimulus < baseStimulus
 				% [, filterMode] [, globalAlpha] [, modulateColor] [, textureShader] [, specialFlags] [, auxParameters]);
 				Screen('DrawTexture', win, me.texture, [], me.mvRect,...
 					me.angleOut, me.filter, me.alphaOut, me.colourOut);
+				me.drawTick = me.drawTick + 1;
 			end
-			me.tick = me.tick + 1;
+			if me.isVisible; me.tick = me.tick + 1; end
 		end
 
 		% ===================================================================

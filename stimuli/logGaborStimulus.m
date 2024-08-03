@@ -251,8 +251,9 @@ classdef logGaborStimulus < baseStimulus
 						me.alphaOut,me.modulateColourOut);
 					end
 				end
+				me.drawTick = me.drawTick + 1;
 			end
-			me.tick = me.tick + 1;
+			if me.isVisible; me.tick = me.tick + 1; end
 		end
 		
 		% ===================================================================

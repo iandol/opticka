@@ -279,6 +279,20 @@ classdef metaStimulus < optickaCore
 		end
 
 		% ===================================================================
+		%> @brief update verbosity
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function updateVerbosity(me)
+
+			for i = 1:me.n
+				me.stimuli{i}.verbose = me.verbose;
+			end
+			
+		end
+
+		% ===================================================================
 		%> @brief add tag wrapper
 		%>
 		%> @param
@@ -523,6 +537,7 @@ classdef metaStimulus < optickaCore
 		% run(benchmark, runtime, screenManager, forceFullscreen)
 			try
 				warning off
+				updateVerbosity(me);
 				if ~exist('benchmark','var') || isempty(benchmark)
 					benchmark=false;
 				end

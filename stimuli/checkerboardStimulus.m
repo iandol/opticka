@@ -287,8 +287,9 @@ classdef checkerboardStimulus < baseStimulus
 					me.angleOut, [], [], me.baseColourOut, [], sf,...
 					[me.ppd, me.sfOut, me.contrastOut, me.driftPhase, ...
 					me.colourOut, me.colour2Out]);
+				me.drawTick = me.drawTick + 1;
 			end
-			me.tick = me.tick + 1;
+			if me.isVisible; me.tick = me.tick + 1; end
 		end
 		
 		% ===================================================================

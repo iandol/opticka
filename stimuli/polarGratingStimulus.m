@@ -432,8 +432,9 @@ classdef polarGratingStimulus < baseStimulus
 				if me.centerMask > 0
 					Screen('DrawTexture', me.sM.win, me.cMaskTex, [], me.cMaskRect, [], [], 1, me.baseColourOut, [], []);
 				end
+				me.drawTick = me.drawTick + 1;
 			end
-			me.tick = me.tick + 1;
+			if me.isVisible; me.tick = me.tick + 1; end
 		end
 		
 		% ===================================================================
@@ -457,11 +458,11 @@ classdef polarGratingStimulus < baseStimulus
 				if mod(me.tick,me.phaseCounter) == 0
 					me.driftPhase = me.driftPhase + me.phaseOfReverse;
 				end
-                me.visibleTick = me.visibleTick + 1;
-                if me.visibleTick == me.visibleFlip
-                    me.isVisible = ~me.isVisible;
-                    me.visibleTick = 0;
-                end
+				me.visibleTick = me.visibleTick + 1;
+				if me.visibleTick == me.visibleFlip
+					me.isVisible = ~me.isVisible;
+					me.visibleTick = 0;
+				end
 			end
 		end
 		

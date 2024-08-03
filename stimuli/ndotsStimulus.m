@@ -252,7 +252,7 @@ classdef ndotsStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function draw(me)
-			if me.isVisible && me.tick >= me.delayTicks
+			if me.isVisible && me.tick >= me.delayTicks && me.tick < me.offTicks
 				if me.mask == true
 					Screen('BlendFunction', me.sM.win, me.msrcMode, me.mdstMode);
 					Screen('DrawDots', ...
@@ -273,8 +273,9 @@ classdef ndotsStimulus < baseStimulus
 						me.pixelOrigin, ...
 						me.dotType);
 				end
-				me.tick = me.tick + 1;
+				me.drawTick = me.drawTick + 1;
 			end
+			if me.isVisible; me.tick = me.tick + 1; end
 		end
 		
 		% ===================================================================

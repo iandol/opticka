@@ -229,8 +229,9 @@ classdef dotsStimulus < baseStimulus
 				else
 					Screen('DrawDots',me.sM.win,me.xy,me.dotSizeOut,me.colours,[me.xFinal me.yFinal],me.dotTypeOut);
 				end
+				me.drawTick = me.drawTick + 1;
 			end
-			me.tick = me.tick + 1;
+			if me.isVisible; me.tick = me.tick + 1; end
 		end
 		
 		% ===================================================================

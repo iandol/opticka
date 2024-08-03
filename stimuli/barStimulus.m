@@ -20,7 +20,7 @@ classdef barStimulus < baseStimulus
 		sf double               = 1
 		%> texture interpolation: 'nearest','linear','spline','cubic'
 		interpMethod char		= 'nearest'
-		%> For checkerboard, allow timed phase reversal
+		%> For checkerboard, allow timed phase reversal every N seconds
 		phaseReverseTime double	= 0
 		%> update() method also regenerates the texture, this can be slow, but 
 		%> normally update() is only called after a trial has finished
@@ -56,6 +56,7 @@ classdef barStimulus < baseStimulus
 	end
 	
 	properties (Access = {?baseStimulus})
+		tempTime				= 0
 		visibleTick				= 0
 		visibleFlip				= Inf
 		baseColour
@@ -247,8 +248,9 @@ classdef barStimulus < baseStimulus
 				end
 				Screen('DrawTexture',me.sM.win, me.texture,[ ],...
 					me.mvRect, me.angleOut, [], [], colour);
+				me.drawTick = me.drawTick + 1;
 			end
-			me.tick = me.tick + 1;
+			if me.isVisible; me.tick = me.tick + 1; end
 		end
 		
 		% ===================================================================
@@ -258,6 +260,7 @@ classdef barStimulus < baseStimulus
 		% ===================================================================
 		function update(me)
 			resetTicks(me);
+			me.tempTime = 0;
 			if me.sizeOut > 0; me.barHeightOut = me.sizeOut; me.barWidthOut = me.sizeOut; end
 			if me.phaseReverseTime > 0 
 				me.phaseCounter = round( me.phaseReverseTime / me.sM.screenVals.ifi );
@@ -297,11 +300,17 @@ classdef barStimulus < baseStimulus
 				if me.doMotion == 1
 					me.mvRect=OffsetRect(me.mvRect,me.dX_,me.dY_);
 				end
-				if me.phaseReverseTime > 0 && mod(me.tick,me.phaseCounter) == 0
+				if me.verbose && me.tempTime == 0; me.tempTime = GetSecs; end
+				if me.phaseReverseTime > 0 && mod(me.drawTick,me.phaseCounter) == 0
 					tx = me.texture;
 					tx2 = me.texture2;
 					me.texture = tx2;
 					me.texture2 = tx;
+					if me.verbose
+						t = me.tempTime;
+						me.tempTime = GetSecs;
+						fprintf('tick: %i drawtick: %i counter: %i time: %.3f ms\n',me.tick,me.drawTick,me.phaseCounter,(me.tempTime-t)*1e3);
+					end
 				end
 			end
 		end
@@ -320,6 +329,7 @@ classdef barStimulus < baseStimulus
 				if me.verbose; fprintf('!!!>>>Closing texture: %i kind: %i\n',me.texture,Screen(me.texture2,'WindowKind')); end
 				try Screen('Close',me.texture2); end %#ok<*TRYNC>
 			end
+			me.tempTime			= 0;
 			me.texture			= []; 
 			me.texture2			= [];
 			me.matrix			= [];
