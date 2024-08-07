@@ -316,6 +316,37 @@ classdef animationManager < optickaCore
 		end
 
 		% ===================================================================
+		%> @brief addScreenBoundaries add physical walls at the screen edges
+		%>
+		%> @param sv screenVals from screenManager
+		% ===================================================================
+		function addScreenBoundaries(me, sv)
+			if ~exist('sv','var'); return; end
+
+			w = sv.widthInDegrees;
+			h = sv.heightInDegrees;
+			l = sv.leftInDegrees;
+			r = sv.rightInDegrees;
+			t = sv.topInDegrees;
+			b = sv.bottomInDegrees;
+
+			fl = barStimulus('isVisible',false,'barWidth',w,'barHeight',0.01,...
+				'xPosition',0,'yPosition',b,'name','floor');
+			cl = barStimulus('isVisible',false,'barWidth',w,'barHeight',0.01,...
+				'xPosition',0,'yPosition',t,'name','ceiling');
+			lw = barStimulus('isVisible',false,'barWidth',0.01,'barHeight',h,...
+				'xPosition',l,'yPosition',0,'name','leftwall');
+			rw = barStimulus('isVisible',false,'barWidth',0.01,'barHeight',h,...
+				'xPosition',r,'yPosition',0,'name','rightwall');
+
+			me.addBody(fl,'Segment','infinite');
+			me.addBody(cl,'Segment','infinite');
+			me.addBody(lw,'Segment','infinite');
+			me.addBody(rw,'Segment','infinite');
+
+		end
+
+		% ===================================================================
 		%> @brief 
 		%>
 		% ===================================================================

@@ -34,31 +34,53 @@
 %==================================================================
 %--------------------TASK SPECIFIC CONFIG--------------------------
 % is this run a 'saccade' or 'anti-saccade' task run?
-tS.type						= 'saccade';
+% we use manuN to show a selection menu to get values from the user.
+title = {'[Anti]Saccade','Choose which type of task to perform.|You can also set the alpha of the |pro and anti saccade targets|which helps the subject during training.'};
+tS.options = {'r|¤Pro-Saccade|Anti-Saccade','Choose Protocol Type:';...
+	't|0.1','Prosaccade Target Initial Alpha:';...
+	't|0.75','Prosaccade Target Main Alpha:';...
+	't|0.1','Antisaccade Target Initial Alpha:';...
+	't|0.75','Antisaccade Target Main Alpha:'};
+tS.ua = menuN(title,tS.options);
+if tS.ua{1} == 1
+	tS.type						= 'saccade';
+else
+	tS.type						= 'anti-saccade';
+end
 % update the trial number for incorrect saccades: if true then we call
 % updateTask for both correct and incorrect trials, otherwise we only call
-% updateTask() for correct responses. 'false' is useful during training.
+% updateTask() for correct responses.
 tS.includeErrors			= false; 
 tS.name						= 'saccade-antisaccade'; %==name of this protocol
+% 
+% note there are TWO alpha values, this is used by
+% tS.fixAndStimTime below to control an initial visualisation 
+% of the targets during fixation mostly used during training
+% to guide the subject
 if strcmp(tS.type,'saccade')
 	% a flag to conditionally set visualisation on the eye tracker interface
 	stims{1}.showOnTracker	= true;
 	stims{2}.showOnTracker	= false;
-	tS.targetAlpha1			= 0.15;
-	tS.targetAlpha2			= 0.75;
+	tS.targetAlpha1			= tS.ua{2};
+	tS.targetAlpha2			= tS.ua{3};
+	tS.antitargetAlpha1		= 0;
+	tS.antitargetAlpha2		= 0;
 else
 	% a flag to conditionally set visualisation on the eye tracker interface
 	stims{1}.showOnTracker	= false;
 	stims{2}.showOnTracker	= true;
-	% this can be used during training to keep saccade target visible (i.e. in
+	% for use with tS.fixAndStimTime:
+	% alpha can be used during training to keep saccade target visible (i.e. in
 	% the anti-saccade task the subject must saccade away from the
 	% anti-saccade target towards to place where the pro-saccade target is, so
 	% starting training keeping the pro-saccade target visible helps the
-	% subject understand the task
-	tS.targetAlpha1			= 0.15;
-	tS.targetAlpha2			= 0.025;
-	tS.antitargetAlpha1		= 0.5;
-	tS.antitargetAlpha2		= 0.75;
+	% subject understand the task. Change the relative alpha values over
+	% training until ONLY the anti target is visible before collecting
+	% data.
+	tS.targetAlpha1			= tS.ua{2};
+	tS.targetAlpha2			= tS.ua{3};
+	tS.antitargetAlpha1		= tS.ua{4};
+	tS.antitargetAlpha2		= tS.ua{5};
 end
 disp(['\n===>>> Task ' tS.name ' Type:' tS.type ' <<<===\n'])
 
@@ -69,7 +91,6 @@ tS.rewardTime				= 250;		%==TTL time in milliseconds
 tS.rewardPin				= 2;		%==Output pin, 2 by default with Arduino.
 tS.keyExclusionPattern		= ["fixstim","stimulus"];		%==which states to skip keyboard checking
 tS.recordEyePosition		= false;	%==record local copy of eye position, **in addition** to the eyetracker?
-tS.askForComments			= false;	%==UI requestor asks for comments before/after run
 tS.saveData					= true;		%==save behavioural and eye movement data?
 tS.showBehaviourPlot		= true;		%==open the behaviourPlot figure? Can cause more memory use
 tS.nStims					= stims.n;	%==number of stimuli, taken from metaStimulus object
@@ -118,6 +139,7 @@ tS.firstFixRadius			= 2;
 % do we forbid eye to enter-exit-reenter fixation window?
 tS.strict					= true;
 % time to show BOTH fixation cross and [anti]saccade target
+% this allows the first alpha values to be useful
 tS.fixAndStimTime			= 0;
 % in this task the subject must saccade to the pro-saccade target location.
 % These settings define the rules to "accept" the target fixation as
@@ -381,7 +403,21 @@ incExitFn = {
 	@()update(stims); %update our stimuli ready for display
 	@()resetExclusionZones(eT); %reset the exclusion zones
 	@()checkTaskEnded(me); %check if task is finished
-	@()plot(bR, 1); % actually do our drawing
+	@()plot(bR, 1); % actually do our drawing%===================================================================
+%===================================================================
+%===================================================================
+%-----------------State Machine Task Functions---------------------
+% Each cell {array} holds a set of anonymous function handles which are
+% executed by the state machine to control the experiment. The state
+% machine can run sets at entry ['entryFcn'], during ['withinFcn'], to
+% trigger a transition jump to another state ['transitionFcn'], and at exit
+% ['exitFcn'. Remember these {sets} need to access the objects that are
+% available within the runExperiment context (see top of file). You can
+% also add global variables/objects then use these. The values entered here
+% are set on load, if you want up-to-date values then you need to use
+% methods/function wrappers to retrieve/set them.
+
+%====================================================PAUSE
 };
 if tS.includeErrors
 	incExitFn = [ {@()updateTask(me,tS.BREAKFIX)}; incExitFn ]; % make sure our taskSequence is moved to the next trial

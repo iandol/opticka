@@ -18,7 +18,7 @@ classdef optickaCore < handle
 		%> object name
 		name char = ''
 		%> comment
-		comment char = ''
+		comment string = ""
 	end
 
 	%--------------------ABSTRACT PROPERTIES----------%

@@ -108,7 +108,12 @@ classdef behaviouralRecord < optickaCore
 				eL.fixation.initTime = 1;
 			end
 			tx = {['START @ ' char(me.date)]};
-			tx{end+1} = ['RUN = ' me.comment];
+			if ~isempty(me.comment)
+				c=char(me.comment(1,:));
+			else
+				c = '';
+			end
+			tx{end+1} = ['RUN = ' c];
 			tx{end+1} = ['RADIUS = ' num2str(eL.fixation.radius)];
 			tx{end+1} = ' ';
 			tx{end+1} = ['TIME = ' num2str(eL.fixation.time)];
@@ -240,7 +245,7 @@ classdef behaviouralRecord < optickaCore
 				me.trials(n).now = datetime('now');
 				me.trials(n).info = me.info;
 				me.trials(n).tick = me.tick;
-				me.trials(n).comment = me.comment;
+				me.trials(n).comment = '';
 				me.trials(n).response = me.response(n);
 				me.trials(n).xAll = me.xAll;
 				me.trials(n).yAll = me.yAll;
@@ -380,10 +385,15 @@ classdef behaviouralRecord < optickaCore
 			title(me.h.axis5,'Last Eye Position');
 			title(me.h.axis6,'Last Pupil Data');
 
+			if ~isempty(me.comment)
+				c=char(me.comment(1,:));
+			else
+				c = '';
+			end
 			t = {['START @ ' char(me.date)]};
 			try d = me.trials(end).now - me.startTime; catch; d = 0; end
 			t{end+1} = ['RUN time = ' char(d)];
-			t{end+1} = ['RUN:' me.comment];
+			t{end+1} = ['RUN: ' c];
 			t{end+1} = ['INFO:' me.info];
 			if ~isempty(me.radius) && ~isempty(me.inittime) && ~isempty(me.time)
 				t{end+1} = ['RADIUS (red) b|n = ' num2str(me.radius(end)) 'deg'];
@@ -392,7 +402,9 @@ classdef behaviouralRecord < optickaCore
 			end
 			t{end+1} = ' ';
 			if ~isempty(me.rt1)
-				t{end+1} = ['Last/Mean Init Time = ' num2str(me.rt2(end)) ' / ' num2str(mean(me.rt2)) 'secs | Last/Mean Init+Fix = ' num2str(me.rt1(end)) ' / ' num2str(mean(me.rt1)) 'secs'];
+				t{end+1} = ['Last/Mean Init Time = ' num2str(me.rt2(end)) ...
+					' / ' num2str(mean(me.rt2)) 'secs | Last/Mean Init+Fix = ' ...
+					num2str(me.rt1(end)) ' / ' num2str(mean(me.rt1)) 'secs'];
 			end
 			t{end+1} = ['Overall | Latest (n=10) Hit Rate = ' num2str(hitmiss) ' | ' num2str(avg)];
 			t{end+1} = sprintf('Estimated Volume at %gms TTL = %g mls', me.rewardTime, (me.rewardVolume*me.rewardTime)*hitn);
@@ -407,7 +419,8 @@ classdef behaviouralRecord < optickaCore
 				startt = length(me.trials)-10; endt = length(me.trials);
 			end
 			for i = startt:endt
-				t{end+1} = ['#' num2str(i) '<' num2str(me.trials(i).response) '>: ' me.trials(i).info ' <> ' me.trials(i).comment];
+				t{end+1} = ['#' num2str(i) '<' num2str(me.trials(i).response) '>: ' ...
+					char(me.trials(i).info)];
 			end
 			me.h.info.Value = t';
 			if ~me.plotOnly
@@ -433,7 +446,7 @@ classdef behaviouralRecord < optickaCore
 			me.inittime = [];
 			me.xAll = [];
 			me.yAll = [];
-			me.comment = '';
+			me.comment = "";
 		end
 		
 		% ===================================================================

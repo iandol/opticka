@@ -273,7 +273,7 @@ classdef runExperiment < optickaCore
 				tS.askForComments	= true;
 			end
 			if ~isfield(tS,'controlPlexon'); tS.controlPlexon = false; end
-			if ~isfield(tS,'askForComments'); tS.askForComments = true; end
+			if ~isfield(me,'askForComments'); tS.askForComments = false; end
 
 			%===============================initialise task
 			task					= me.task;
@@ -287,14 +287,9 @@ classdef runExperiment < optickaCore
 				me.isRunTask		= false;
 
 				%================================get pre-run comments for this data collection
-				if tS.askForComments && ~me.debug
-					comment = inputdlg({'CHECK Recording system!!! Initial Comment for this Run?'},['Run Comment for ' me.name]);
-					if ~isempty(comment)
-						comment = comment{1};
-						me.comment = [me.name ':' comment];
-						bR.comment = me.comment; eT.comment = me.comment; sM.comment = me.comment; io.comment = me.comment; tL.comment = me.comment; tS.comment = me.comment;
-					end
-				end
+				prompt = '\bfCHECK Recording system! \itInitial Comment for this MOC Run?';
+				updateComments(me,prompt);
+				s.comment = me.comment; io.comment = me.comment; tL.comment = me.comment; tS.comment = me.comment;
 
 				%=============================Premptive save in case of crash or error: SAVES IN /TMP
 				rE = me;
@@ -532,20 +527,11 @@ classdef runExperiment < optickaCore
 				removeEmptyValues(tL);
 				me.tS = tS; %store our tS structure for backup
 
-				if tS.askForComments && ~me.debug
-					comment = inputdlg('Final Comment for this Run?','Run Comment');
-					if ~isempty(comment)
-						comment = comment{1};
-						me.comment = [me.comment ' | Final Comment: ' comment];
-						bR.comment = me.comment;
-						eT.comment = me.comment;
-						sM.comment = me.comment;
-						io.comment = me.comment;
-						tL.comment = me.comment;
-						tS.comment = me.comment;
-					end
-				end
-				
+				prompt = '\bfFinal Comment for this MOC Run?';
+				updateComments(me,prompt);
+				s.comment = me.comment; io.comment = me.comment; tL.comment = me.comment; tS.comment = me.comment;
+
+
 				%------SAVE the DATA
 				sname = [me.paths.savedData filesep me.name '.mat'];
 				rE = me;
@@ -604,7 +590,6 @@ classdef runExperiment < optickaCore
 			end
 			refreshScreen(me);
 			initialiseSaveFile(me); %generate a savePrefix for this run
-			me.comment = [me.comment ' ' me.name];
 			me.name = [me.subjectName '-' me.savePrefix]; %give us a run name
 			if isempty(me.screen) || isempty(me.task)
 				me.initialise; %we set up screenManager and taskSequence objects
@@ -627,7 +612,6 @@ classdef runExperiment < optickaCore
 			me.stateInfo = {};
 			if isa(me.stateMachine,'stateMachine'); me.stateMachine.reset; me.stateMachine = []; end
 			
-
 			%------initialise the rewardManager global object
 			[rM, aM] = initialiseGlobals(me);
 			if rM.isOpen
@@ -649,12 +633,11 @@ classdef runExperiment < optickaCore
 				reset(aM);
 				aM.silentMode = true;
 			end
+
+			if ischar(me.comment);me.comment = string(me.comment);end
 			
-			if isempty(regexpi(me.comment, '^Protocol','once'))
-				me.comment = '';
-			end
-			
-			fprintf('\n\n\n===>>>>>> Start task: %s <<<<<<===\n\n\n',me.name);
+			fprintf('\n\n\n===>>>>>> START BEHAVIOURAL TASK: %s <<<<<<===',me.name);
+			fprintf('\tInitial Comments: %s\n\n\n',me.comment);
 			
 			%--------------------------------------------------------------
 			% tS is a general structure to hold various parameters will be saved
@@ -792,14 +775,9 @@ classdef runExperiment < optickaCore
 				if isfield(tS,'rewardTime'); bR.rewardTime = tS.rewardTime; end
 
 				%================================get pre-run comments for this data collection
-				if tS.askForComments
-					comment = inputdlg({'CHECK Recording system!!! Initial Comment for this Run?'},['Run Comment for ' me.name]);
-					if ~isempty(comment)
-						comment = comment{1};
-						me.comment = [me.name ':' comment];
-						bR.comment = me.comment; eT.comment = me.comment; sM.comment = me.comment; io.comment = me.comment; tL.comment = me.comment; tS.comment = me.comment;
-					end
-				end
+				prompt = '\bf CHECK Recording system! \it Initial Comment for this Task Run?';
+				updateComments(me,prompt);
+				bR.comment = me.comment; eT.comment = me.comment; sM.comment = me.comment; io.comment = me.comment; tL.comment = me.comment; tS.comment = me.comment;
 
 				%===========================set up our behavioural plot
 				if tS.showBehaviourPlot
@@ -877,7 +855,7 @@ classdef runExperiment < optickaCore
 						write(dC,uint8(['set Filename.BaseFilename ' me.name]));
 						write(dC,uint8(['set Filename.Path ' me.paths.savedData]));
 						write(dC,uint8(['set Note1 ' me.name]));
-						write(dC,uint8(['set Note2 ' me.comment]));
+						write(dC,uint8(['set Note2 ' me.comment(1,:)]));
 						write(dC,uint8('set runmode record'));
 						WaitSecs(0.5);
 					catch
@@ -1128,20 +1106,11 @@ classdef runExperiment < optickaCore
 					tS.eO=[];
 				end
 				
-				if tS.askForComments
-					comment = inputdlg('Final Comment for this Run?','Run Comment');
-					if ~isempty(comment)
-						comment = comment{1};
-						me.comment = [me.comment ' | Final Comment: ' comment];
-						bR.comment = me.comment;
-						eT.comment = me.comment;
-						sM.comment = me.comment;
-						io.comment = me.comment;
-						tL.comment = me.comment;
-						tS.comment = me.comment;
-					end
-				end
-				
+				% Final comments
+				prompt = '\bf Final Comments for this Run?';
+				updateComments(me,prompt);
+				bR.comment = me.comment; eT.comment = me.comment; sM.comment = me.comment; io.comment = me.comment; tL.comment = me.comment; tS.comment = me.comment;
+
 				removeEmptyValues(tL);
 				me.tS = tS; %store our tS structure for backup
 				
@@ -2468,6 +2437,32 @@ classdef runExperiment < optickaCore
 				else
 					tS.eyePos.(uuid).x = eT.x;
 					tS.eyePos.(uuid).y = eT.y;
+				end
+			end
+		end
+
+		% ===================================================================
+		function comment = updateComments(me,prompt,tS)
+		%> @fn updateComments
+		%> @brief updates comment field
+		%>
+		%> @param prompt
+		%> @param tS structure
+		% ===================================================================
+			if ~exist('prompt','var')||isempty(prompt);prompt="\bf Please add Comments:";end
+			if ~exist('tS','var'); tS.askForComments=me.askForComments;end
+			if ischar(me.comment) || iscell(me.comment)
+				comment = strip(string(me.comment));
+			else
+				comment = strip(me.comment);
+			end
+			if (me.askForComments || tS.askForComments) && ~me.debug
+				opts.Interpreter='tex';opts.Resize='on';
+				comment = inputdlg(prompt,['Comments for ' me.name],[10 80],{me.comment},opts);
+				if ~isempty(comment)
+					comment = string(comment{1});
+					comment = strip(comment);
+					me.comment = comment;
 				end
 			end
 		end

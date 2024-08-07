@@ -75,7 +75,6 @@ tS.useTask					= true;		%==use taskSequence (randomises stimulus variables)
 tS.keyExclusionPattern		= ["fixate","stimulus"]; %==which states to skip keyboard checking
 tS.enableTrainingKeys		= false;	%==enable keys useful during task training, but not for data recording
 tS.recordEyePosition		= false;	%==record local copy of eye position, **in addition** to the eyetracker?
-tS.askForComments			= false;	%==UI requestor asks for comments before/after run
 tS.includeErrors			= false;	%==do we update the trial number even for incorrect saccade/fixate, if true then we call updateTask for both correct and incorrect, otherwise we only call updateTask() for correct responses
 tS.nStims					= stims.n;	%==number of stimuli, taken from metaStimulus object
 tS.timeOut					= 2;		%==if wrong response, how long to time out before next trial
@@ -277,6 +276,7 @@ fixEntryFcn = {
 fixFcn = {
 	@()draw(stims); %draw stimuli
 	@()drawPhotoDiodeSquare(s,[0 0 0]);
+	@()animate(stims); % animate stimuli for subsequent draw
 };
 
 %--------------------test we are fixated for a certain length of time

@@ -63,20 +63,24 @@
 
 %==================================================================
 %------------------------General Settings--------------------------
+tS.name						= 'Isoluminant'; %==name of this protocol
+tS.saveData					= true;		%==save behavioural and eye movement data?
+tS.showBehaviourPlot		= true;		%==open the behaviourPlot figure? Can cause more memory use…
 tS.useTask					= true;		%==use taskSequence (randomises stimulus variables)
-tS.rewardTime				= 250;		%==TTL time in milliseconds
-tS.rewardPin				= 2;		%==Output pin, 2 by default with Arduino.
-tS.checkKeysDuringStimulus  = true;		%==allow keyboard control within stimulus state? Slight drop in performance…
+tS.keyExclusionPattern		= ["fixate","stimulus"]; %==which states to skip keyboard checking
+tS.enableTrainingKeys		= false;	%==enable keys useful during task training, but not for data recording
 tS.recordEyePosition		= false;	%==record local copy of eye position, **in addition** to the eyetracker?
-tS.askForComments			= false;	%==UI requestor asks for comments before/after run
-tS.saveData					= false;	%==save behavioural and eye movement data?
 tS.includeErrors			= false;	%==do we update the trial number even for incorrect saccade/fixate, if true then we call updateTask for both correct and incorrect, otherwise we only call updateTask() for correct responses
-tS.name						= 'isoluminant'; %==name of this protocol
 tS.nStims					= stims.n;	%==number of stimuli, taken from metaStimulus object
-tS.tOut						= 5;		%==if wrong response, how long to time out before next trial
-tS.CORRECT 					= 1;		%==the code to send eyetracker for correct trials
-tS.BREAKFIX 				= -1;		%==the code to send eyetracker for break fix trials
-tS.INCORRECT 				= -5;		%==the code to send eyetracker for incorrect trials
+tS.timeOut					= 2;		%==if wrong response, how long to time out before next trial
+tS.CORRECT					= 1;		%==the code to send eyetracker for correct trials
+tS.BREAKFIX					= -1;		%==the code to send eyetracker for break fix trials
+tS.INCORRECT				= -5;		%==the code to send eyetracker for incorrect trials
+tS.correctSound				= [2000, 0.1, 0.1]; %==freq,length,volume
+tS.errorSound				= [300, 1, 1];		%==freq,length,volume
+% reward system values, set by GUI, but could be overridden here
+%rM.reward.time				= 250;		%==TTL time in milliseconds
+%rM.reward.pin				= 2;		%==Output pin, 2 by default with Arduino.
 
 %==================================================================
 %----------------Debug logging to command window------------------
@@ -95,8 +99,16 @@ tS.INCORRECT 				= -5;		%==the code to send eyetracker for incorrect trials
 % These settings define the initial fixation window and set up for the
 % eyetracker. They may be modified during the task (i.e. moving the
 % fixation window towards a target, enabling an exclusion window to stop
-% the subject entering a specific set of display areas etc.)
+% the subject entering a specific set of display areas etc.). 
+% 
+% The GUI sets some default values, but it is good practive to redefine
+% them explicitly here.
 %
+% **IMPORTANT**: you must ensure that the global state time is LARGER than
+% any fixation timers specified here. Each state has a global timer, so if
+% the state timer is 5 seconds but your fixation timer is 6 seconds, then
+% the state will finish before the fixation time was completed!
+%------------------------------------------------------------------
 % initial fixation X position in degrees (0° is screen centre)
 tS.fixX						= 0;	
 % initial fixation Y position in degrees
@@ -113,95 +125,31 @@ tS.strict					= true;
 % do we add an exclusion zone where subject cannot saccade to...
 tS.exclusionZone			= [];
 % time to fix on the stimulus
-tS.stimulusFixTime			= 0.5;
-% historical log of X and Y position, and exclusion zone
-me.lastXPosition			= tS.fixX;
-me.lastYPosition			= tS.fixY;
-me.lastXExclusion			= [];
-me.lastYExclusion			= [];
-
-
-%=========================================================================
-%-------------------------------Eyetracker setup--------------------------
-% NOTE: the opticka GUI can set eyetracker options too; me.eyetracker.esettings
-% and me.eyetracker.tsettings contain the GUI settings. We test if they are
-% empty or not and set general values based on that...
-
-eT.name 					= tS.name;
-if tS.saveData == true;		eT.recordData = true; end %===save ET data?					
-switch me.eyetracker.device
-	case 'eyelink'
-	eT.name 						= tS.name;
-	if me.eyetracker.dummy == true;				eT.isDummy = true; end %===use dummy or real eyetracker? 
-	if tS.saveData == true;			eT.recordData = true; end %===save EDF file?
-	if isempty(me.eyetracker.esettings)		%==check if GUI settings are empty
-		eT.sampleRate				= 250;		%==sampling rate
-		eT.calibrationStyle			= 'HV5';	%==calibration style
-		eT.calibrationProportion	= [0.4 0.4]; %==the proportion of the screen occupied by the calibration stimuli
-		%-----------------------
-		% remote calibration enables manual control and selection of each
-		% fixation this is useful for a baby or monkey who has not been trained
-		% for fixation use 1-9 to show each dot, space to select fix as valid,
-		% INS key ON EYELINK KEYBOARD to accept calibration!
-		eT.remoteCalibration		= false; 
-		%-----------------------
-		eT.modify.calibrationtargetcolour = [1 1 1]; %==calibration target colour
-		eT.modify.calibrationtargetsize = 2;		%==size of calibration target as percentage of screen
-		eT.modify.calibrationtargetwidth = 0.15;	%==width of calibration target's border as percentage of screen
-		eT.modify.waitformodereadytime	= 500;
-		eT.modify.devicenumber 			= -1;		%==-1 = use any attachedkeyboard
-		eT.modify.targetbeep 			= 1;		%==beep during calibration
-	end
-case 'tobii'
-	eT.name 						= tS.name;
-	if me.eyetracker.dummy == true;				eT.isDummy = true; end %===use dummy or real eyetracker? 
-	if isempty(me.eyetracker.tsettings) 	%==check if GUI settings are empty
-		eT.model					= 'Tobii Pro Spectrum';
-		eT.sampleRate				= 300;
-		eT.trackingMode				= 'human';
-		eT.calibrationStimulus		= 'animated';
-		eT.autoPace					= true;
-		%-----------------------
-		% remote calibration enables manual control and selection of each
-		% fixation this is useful for a baby or monkey who has not been trained
-		% for fixation
-		eT.manualCalibration		= false;
-		%-----------------------
-		eT.calPositions				= [ .2 .5; .5 .5; .8 .5];
-		eT.valPositions				= [ .5 .5 ];
-	end
-end
-
+tS.stimulusFixTime			= 1;
 %Initialise the eyeTracker object with X, Y, FixInitTime, FixTime, Radius, StrictFix
 eT.updateFixationValues(tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
-%Ensure we don't start with any exclusion zones set up
-eT.resetExclusionZones();
 
 %==================================================================
-%----WHICH states assigned as correct or break for online plot?----
-%----You need to use regex patterns for the match (doc regexp)-----
-bR.correctStateName				= "correct";
-bR.breakStateName				= ["breakfix","incorrect"];
+%-----------------BEAVIOURAL PLOT CONFIGURATION--------------------
+%--WHICH states assigned correct / incorrect for the online plot?--
+bR.correctStateName			= "correct";
+bR.breakStateName			= ["breakfix","incorrect"];
 
-%==================================================================
-%--------------randomise stimulus variables every trial?-----------
-% if you want to have some randomisation of stimuls variables without using
-% taskSequence task (i.e. general training tasks), you can uncomment this
-% and runExperiment can use this structure to change e.g. X or Y position,
-% size, angle see metaStimulus for more details. Remember this will not be
-% "Saved" for later use, if you want to do controlled methods of constants
-% experiments use taskSequence to define proper randomised and balanced
-% variable sets and triggers to send to recording equipment etc...
-%
-% stims.choice					= [];
-% n								= 1;
-% in(n).name					= 'xyPosition';
-% in(n).values					= [6 6; 6 -6; -6 6; -6 -6; -6 0; 6 0];
-% in(n).stimuli					= 1;
-% in(n).offset					= [];
-% stims.stimulusTable			= in;
-stims.choice					= [];
-stims.stimulusTable				= [];
+%=========================================================================
+%------------------Randomise stimulus variables every trial?--------------
+% If you want to have some randomisation of stimuls variables WITHOUT using
+% taskSequence task. Remember this will not be "Saved" for later use, if you
+% want to do controlled experiments use taskSequence to define proper randomised
+% and balanced variable sets and triggers to send to recording equipment etc...
+% Good for training tasks, or stimulus variability irrelevant to the task.
+% n							= 1;
+% in(n).name				= 'xyPosition';
+% in(n).values				= [6 6; 6 -6; -6 6; -6 -6; -6 0; 6 0];
+% in(n).stimuli				= 1;
+% in(n).offset				= [];
+% stims.stimulusTable		= in;
+stims.choice				= [];
+stims.stimulusTable			= [];
 
 %==================================================================
 %this allows us to enable subsets from our stimulus list
@@ -210,7 +158,7 @@ stims.stimulusSets				= {[1,2],[1]};
 stims.setChoice					= 1;
 hide(stims);
 
-%==================================================================
+%=========================================================================
 % N x 2 cell array of regexpi strings, list to skip the current -> next
 % state's exit functions; for example skipExitStates =
 % {'fixate','incorrect|breakfix'}; means that if the currentstate is
@@ -219,34 +167,43 @@ hide(stims);
 % exit states.
 sM.skipExitStates			= {'fixate','incorrect|breakfix'};
 
+%=========================================================================
+% which stimulus in the list is defined as a saccade target?
+stims.fixationChoice		= 1;
+
 %===================================================================
 %===================================================================
 %===================================================================
-%-----------------State Machine Task Functions---------------------
+%------------------State Machine Task Functions---------------------
 % Each cell {array} holds a set of anonymous function handles which are
 % executed by the state machine to control the experiment. The state
-% machine can run sets at entry ['entryFcn'], during ['withinFcn'], to
-% trigger a transition jump to another state ['transitionFcn'], and at exit
-% ['exitFcn'. Remember these {sets} need to access the objects that are
+% machine can run sets at entry ['entryFn'], during ['withinFn'], to
+% trigger a transition jump to another state ['transitionFn'], and at exit
+% ['exitFn'. Remember these {sets} need to access the objects that are
 % available within the runExperiment context (see top of file). You can
 % also add global variables/objects then use these. The values entered here
 % are set on load, if you want up-to-date values then you need to use
 % methods/function wrappers to retrieve/set them.
+%===================================================================
+%===================================================================
+%===================================================================
 
-%====================================================PAUSE
+%========================================================
+%========================================================PAUSE
+%========================================================
 %--------------------pause entry
 pauseEntryFcn = { 
-	@()hide(stims);
-	@()drawBackground(s); %blank the subject display
+	@()hide(stims); % hide all stimuli
+	@()drawBackground(s); % blank the subject display
+	@()drawPhotoDiodeSquare(s,[0 0 0]); % draw black photodiode
 	@()drawTextNow(s,'PAUSED, press [p] to resume...');
 	@()disp('PAUSED, press [p] to resume...');
-	@()trackerClearScreen(eT); % blank the eyelink screen
-	@()trackerDrawText(eT,'PAUSED, press [P] to resume...');
+	@()trackerDrawStatus(eT,'PAUSED, press [p] to resume', stims.stimulusPositions);
 	@()trackerMessage(eT,'TRIAL_RESULT -100'); %store message in EDF
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
-	@()stopRecording(eT, true); %stop recording eye position data
-	@()needFlip(me, false); % no need to flip the PTB screen
-	@()needEyeSample(me,false); % no need to check eye position
+	@()stopRecording(eT, true); %stop recording eye position data, true=both eyelink & tobii
+	@()needFlip(me, false, 0); % no need to flip the PTB screen or tracker
+	@()needEyeSample(me, false); % no need to check eye position
 };
 
 %pause exit
@@ -260,28 +217,37 @@ pauseExitFcn = {
 
 %====================================================PREFIXATION
 prefixEntryFcn = { 
-	@()needFlip(me, true); 
+	@()needFlip(me, true, 1); 
 	@()needEyeSample(me, true); % make sure we start measuring eye position
-	@()hide(stims);
+	@()getStimulusPositions(stims); % make a struct eT can use for drawing stim positions
+	@()hide(stims); % hide all stimuli
+	@()resetAll(eT); % reset all fixation markers to initial state
+	% update the fixation window to initial values
+	@()updateFixationValues(eT,tS.fixX,tS.fixY,[],tS.firstFixTime); %reset fixation window
+	% send the trial start messages to the eyetracker
+	@()trackerTrialStart(eT, getTaskIndex(me));
+	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
+	% you can add any other messages, such as stimulus values as needed,
+	% e.g. @()trackerMessage(eT,['MSG:ANGLE' num2str(stims{1}.angleOut)]) etc.
 };
 
 prefixFcn = {
 	@()drawBackground(s);
 };
 
+%--------------------prefixate exit
+prefixExitFcn = {
+	@()logRun(me,'INITFIX');
+	@()trackerMessage(eT,'MSG:Start Fix');
+	@()trackerDrawStatus(eT,'Start trial...', stims.stimulusPositions,0);
+};
+
+%==============================================================
+%====================================================FIXATION
+%==============================================================
 %--------------------fixate entry
 fixEntryFcn = { 
-	@()updateFixationValues(eT,tS.fixX,tS.fixY,[],tS.firstFixTime); %reset fixation window
-	@()startRecording(eT); % start eyelink recording for this trial
-	@()trackerMessage(eT,'V_RT MESSAGE END_FIX END_RT'); % Eyelink commands
-	@()trackerMessage(eT,sprintf('TRIALID %i',getTaskIndex(me))); %Eyelink start trial marker
-	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
-	@()trackerClearScreen(eT); % blank the eyelink screen
-	@()trackerDrawFixation(eT); %draw fixation window on eyelink computer
-	@()trackerDrawStimuli(eT,stims.stimulusPositions); %draw location of stimulus on eyelink
-	@()statusMessage(eT,'Initiate Fixation...'); %status text on the eyelink
-	@()show(stims{tS.nStims}); % show only last stim in list (fix cross)
-	@()logRun(me,'INITFIX'); %fprintf current trial info to command window
+	@()show(stims{tS.nStims}); % show last stim which is usually fixation cross
 };
 
 %--------------------fix within
@@ -292,23 +258,36 @@ fixFcn = {
 };
 
 %--------------------test we are fixated for a certain length of time
-initFixFcn = { 
-	@()testSearchHoldFixation(eT,'stimulus','incorrect'); 
+inFixFcn = {
+	% this command performs the logic to search and then maintain fixation
+	% inside the fixation window. The eyetracker parameters are defined above.
+	% If the subject does initiate and then maintain fixation, then 'correct'
+	% is returned and the state machine will jump to the correct state,
+	% otherwise 'breakfix' is returned and the state machine will jump to the
+	% breakfix state. If neither condition matches, then the state table below
+	% defines that after 5 seconds we will switch to the incorrect state.
+	@()testSearchHoldFixation(eT,'stimulus','breakfix')
 };
 
 %--------------------exit fixation phase
 fixExitFcn = { 
-	@()statusMessage(eT,'Show Stimulus...');
-	@()updateFixationValues(eT,[],[],[],tS.stimulusFixTime); %reset a maintained fixation of 1 second
-	@()show(stims); % show all stims)
-    @()trackerMessage(eT,'END_FIX');
+	% reset fixation timers to maintain fixation for tS.stimulusFixTime seconds
+	@()updateFixationValues(eT,[],[],[],tS.stimulusFixTime); 
+	@()show(stims); % show all stims
+	@()trackerMessage(eT,'END_FIX'); %eyetracker message saved to data stream
 }; 
 
-%--------------------what to run when we enter the stim presentation state
-stimEntryFcn = { 
-	@()doSyncTime(me); %EDF sync message
-	@()doStrobe(me,true)
-};  
+%========================================================
+%========================================================STIMULUS
+%========================================================
+
+stimEntryFcn = {
+	% send an eyeTracker sync message (reset relative time to 0 after next flip)
+	@()doSyncTime(me);
+	% send stimulus value strobe (value alreadyset by updateVariables(me) function)
+	@()doStrobe(me,true);
+};
+  
 
 %--------------------what to run when we are showing stimuli
 stimFcn =  { 
@@ -326,93 +305,76 @@ maintainFixFcn = {
 	% otherwise 'breakfix' is returned and the state machine will jump to the
 	% breakfix state. If neither condition matches, then the state table below
 	% defines that after 5 seconds we will switch to the incorrect state.
-	@()testSearchHoldFixation(eT,'correct','breakfix'); 
+	@()testHoldFixation(eT,'correct','incorrect'); 
 };
 
 %as we exit stim presentation state
-stimExitFcn = { 
-	@()sendStrobe(io,255);
+stimExitFcn = {
+	@()setStrobeValue(me, 255); % 255 indicates stimulus OFF
+	@()doStrobe(me, true);
 };
 
-%if the subject is correct (small reward)
+%========================================================
+%========================================================DECISIONS
+%========================================================
+
+%========================================================CORRECT
+%--------------------if the subject is correct (small reward)
 correctEntryFcn = {
-	@()giveReward(rM); % send a reward TTL
-	@()beep(aM,2000); % correct beep
-	@()trackerMessage(eT,'END_RT'); %send END_RT message to tracker
-	@()trackerMessage(eT,['TRIAL_RESULT ' str2double(tS.CORRECT)]); %send TRIAL_RESULT message to tracker
-	@()trackerDrawText(eT,'Correct! :-)');
-	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
-	@()setOffline(eT); % set eyelink offline [tobii ignores this]
+	@()trackerTrialEnd(eT, tS.CORRECT); % send the end trial messages and other cleanup
 	@()needEyeSample(me,false); % no need to collect eye data until we start the next trial
-	@()hide(stims); %hide all stims
-	@()logRun(me,'CORRECT'); %fprintf current trial info
+	@()hide(stims); % hide all stims
 };
 
-%correct stimulus
-correctFcn = { 
-	@()drawBackground(s);
+%--------------------correct stimulus
+correctFcn = {
+	@()drawPhotoDiodeSquare(s,[0 0 0]);
 };
 
-%when we exit the correct state
+%--------------------when we exit the correct state
 correctExitFcn = {
-	@()updateTask(me,tS.CORRECT); %make sure our taskSequence is moved to the next trial
-	@()updateVariables(me); %randomise our stimuli, and set strobe value too
-	@()update(me.stimuli); %update our stimuli ready for display
-	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions
-	@()trackerClearScreen(eT); 
-	@()updatePlot(bR, me); %update our behavioural plot
-	@()checkTaskEnded(me); %check if task is finished
-	@()resetFixation(eT); %resets the fixation state timers	
-	@()resetFixationHistory(eT); %reset the stored X and Y values
-	@()drawnow;
+	@()giveReward(rM); % send a reward
+	@()beep(aM, tS.correctSound); % correct beep
+	@()logRun(me,'CORRECT'); % print current trial info
+	@()trackerDrawStatus(eT, 'CORRECT! :-)');
+	@()needFlipTracker(me, 0); %for operator screen stop flip
+	@()updatePlot(bR, me); % must run before updateTask
+	@()updateTask(me, tS.CORRECT); % make sure our taskSequence is moved to the next trial
+	@()updateVariables(me); % randomise our stimuli, and set strobe value too
+	@()update(stims); % update our stimuli ready for display
+	@()plot(bR, 1); % actually do our behaviour record drawing
 };
 
-%incorrect entry
-incEntryFcn = { 
-	@()beep(aM,tS.errorSound);
-	@()trackerClearScreen(eT);
-	@()trackerDrawText(eT,'Incorrect! :-(');
-	@()trackerMessage(eT,'END_RT');
-	@()trackerMessage(eT,['TRIAL_RESULT ' str2double(tS.INCORRECT)]);
+%========================================================INCORRECT/BREAKFIX
+%--------------------incorrect entry
+incEntryFcn = {
+	@()trackerTrialEnd(eT, tS.INCORRECT); % send the end trial messages and other cleanup
 	@()needEyeSample(me,false);
 	@()hide(stims);
-	@()logRun(me,'INCORRECT'); %fprintf current trial info
-}; 
-
-%our incorrect/breakfix stimulus
-incFcn = {
-	@()drawBackground(s);
 };
-
-%--------------------incorrect exit
-incExitFcn = { 
-	@()updateVariables(me); %randomise our stimuli, set strobe value too
-	@()update(stims); %update our stimuli ready for display
-	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions
-	@()trackerClearScreen(eT); 
-	@()updatePlot(bR, me); %update our behavioural plot, must come before updateTask() / updateVariables()
-	@()resetFixation(eT); %resets the fixation state timers
-	@()resetFixationHistory(eT); %reset the stored X and Y values
-	@()drawnow;
-};
-
 %--------------------break entry
 breakEntryFcn = {
-	@()beep(aM,tS.errorSound);
-	@()edfMessage(eT,'END_RT');
-	@()edfMessage(eT,['TRIAL_RESULT ' num2str(tS.BREAKFIX)]);
-	@()trackerClearScreen(eT);
-	@()trackerDrawText(eT,'Broke maintain fix! :-(');
-	@()stopRecording(eT);
-	@()setOffline(eT); % set eyelink offline [tobii ignores this]
+	@()trackerTrialEnd(eT, tS.BREAKFIX); % send the end trial messages and other cleanup
 	@()needEyeSample(me,false);
-	@()sendStrobe(io,252);
 	@()hide(stims);
-	@()logRun(me,'BREAKFIX'); %fprintf current trial info
 };
 
-%--------------------break exit
-breakExitFcn = incExitFcn; % we copy the incorrect exit functions
+%--------------------our incorrect/breakfix stimulus
+incFcn = {
+	@()drawPhotoDiodeSquare(s,[0 0 0]);
+};
+
+%--------------------generic exit
+exitFcn = {
+	% tS.includeErrors will prepend some code here...
+	@()beep(aM, tS.errorSound);
+	@()needFlipTracker(me, 0); %for operator screen stop flip
+	@()updateVariables(me); % randomise our stimuli, set strobe value too
+	@()update(stims); % update our stimuli ready for display
+	@()resetAll(eT); % resets the fixation state timers
+	@()plot(bR, 1); % actually do our drawing
+};
+
 %--------------------change functions based on tS settings
 % we use tS options to change the function lists run by the state machine.
 % We can prepend or append new functions to the cell arrays.
@@ -424,17 +386,38 @@ breakExitFcn = incExitFcn; % we copy the incorrect exit functions
 %            subject to guess based on previous failed trial.
 % checkTaskEnded = see if taskSequence has finished
 if tS.includeErrors % we want to update our task even if there were errors
-	incExitFcn = [ {@()updatePlot(bR, me); @()updateTask(me,tS.INCORRECT)}; incExitFcn ]; %update our taskSequence 
-	breakExitFcn = [ {@()updatePlot(bR, me); @()updateTask(me,tS.BREAKFIX)}; breakExitFcn ]; %update our taskSequence 
+	incExitFcn = [ {
+		@()logRun(me,'INCORRECT');
+		@()trackerDrawStatus(eT,'INCORRECT! :-(', stims.stimulusPositions, 0);
+		@()updatePlot(bR, me); 
+		@()updateTask(me,tS.INCORRECT)}; 
+		exitFcn ]; %update our taskSequence 
+	breakExitFcn = [ {
+		@()logRun(me,'BREAK_FIX'); 
+		@()trackerDrawStatus(eT,'BREAK_FIX! :-(', stims.stimulusPositions, 0);
+		@()updatePlot(bR, me); 
+		@()updateTask(me,tS.BREAKFIX)}; 
+		exitFcn ]; %update our taskSequence 
 else
-	incExitFcn = [ {@()updatePlot(bR, me); @()resetRun(task)}; incExitFcn ]; 
-	breakExitFcn = incExitFcn;
+	incExitFcn = [ {
+		@()logRun(me,'INCORRECT'); 
+		@()trackerDrawStatus(eT,'INCORRECT! :-(', stims.stimulusPositions, 0);
+		@()updatePlot(bR, me); 
+		@()resetRun(task)}; 
+		exitFcn ]; 
+	breakExitFcn = [ {
+		@()logRun(me,'BREAK_FIX'); 
+		@()trackerDrawStatus(eT,'BREAK_FIX! :-(', stims.stimulusPositions, 0);
+		@()updatePlot(bR, me); 
+		@()resetRun(task)}; 
+		exitFcn ];
 end
 if tS.useTask || task.nBlocks > 0
 	correctExitFcn = [ correctExitFcn; {@()checkTaskEnded(me)} ];
 	incExitFcn = [ incExitFcn; {@()checkTaskEnded(me)} ];
 	breakExitFcn = [ breakExitFcn; {@()checkTaskEnded(me)} ];
 end
+
 
 %--------------------enter tracker calibrate/validate setup mode
 calibrateFcn = { 

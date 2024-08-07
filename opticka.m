@@ -341,7 +341,7 @@ classdef opticka < optickaCore
 			
 			me.r.subjectName = me.gv(me.ui.OKSubject);
 			me.r.researcherName = me.gv(me.ui.OKResearcher);
-			me.r.askForComments = me.gl(me.ui.OKComments);
+			me.r.askForComments = me.gl(me.ui.OKAskComments);
 
 			me.r.audioDevice = me.gn(me.ui.OKaudioDevice);
 
@@ -1209,7 +1209,7 @@ classdef opticka < optickaCore
 			
 			me.comment = ['Protocol: ' fileName];
 			me.store.protocolName = fileName;
-			me.store.protocolPath = p;
+			me.store.protocolsPath = p;
 
 			clearStimulusList(me);
 			clearVariableList(me);
@@ -1534,17 +1534,17 @@ classdef opticka < optickaCore
 			refreshStimulusList(me);
 			refreshVariableList(me);
 			editVariable(me);
-			refreshProtocolsList(me, me.store.protocolPath);
+			refreshProtocolsList(me, me.store.protocolsPath);
 			propertiesToVariables(me.ui);
 
 			me.r.comment = me.comment;
 			me.r.paths.protocolName = me.store.protocolName;
-			me.r.paths.protocolPath = me.store.protocolPath;
+			me.r.paths.protocolsPath = me.store.protocolsPath;
 			
 			if isdeployed
-				me.ui.OKOptickaVersion.Text = ['Opticka Experiment Manager [D] V' me.optickaVersion ' - ' me.comment];
+				me.ui.OKOptickaVersion.Text = ['OPTICKA Experiment Manager [D] V' me.optickaVersion ' - ' me.store.protocolName];
 			else
-				me.ui.OKOptickaVersion.Text = ['Opticka Experiment Manager V' me.optickaVersion ' - ' me.comment];
+				me.ui.OKOptickaVersion.Text = ['OPTICKA Experiment Manager V' me.optickaVersion ' - ' me.store.protocolName];
 			end
 			
 			me.ui.OKRoot.Pointer='arrow';
@@ -1566,6 +1566,10 @@ classdef opticka < optickaCore
 				else
 					ppath = me.paths.protocols;
 				end
+			end
+
+			if ~exist(ppath,'dir')
+				ppath = me.paths.protocols;
 			end
 			
 			set(me.ui.OKProtocolsList,'Items',{''});
@@ -1596,6 +1600,7 @@ classdef opticka < optickaCore
 	
 			set(me.ui.OKProtocolsList,'Items',fileList);
 			cd(me.paths.currentPath);
+			me.store.protocolsPath = ppath;
 		end
 	end
 
