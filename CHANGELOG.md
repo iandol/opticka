@@ -6,9 +6,11 @@ Note only changes which may affect your use of Opticka will be detailed here, st
 ## V2.16.1 -- 106 files changed
 
 > [!TIP]
-> Please check changes in `DefaultStateInfo.m` to see the changes for state machine files, this may inform changes you could add to your own state machine files...
+> Please double-check changes in `DefaultStateInfo.m` to see the changes for state machine files, this may inform changes you could add to your own state machine files...
 
-* add Rigid Body physics engine. We use [dyn4j](https://dyn4j.org), an open-source Java 2D physics engine. `animationManager` is upgraded (previously it used my own simple physics engine, which couldn't scale to many collisions). Opticka uses degrees, and we do a simple mapping of degrees > meters, so 1deg stimulus is a 1m object.Test it with:
+
+* **BREAKING**: we want to support ALYX and ONE Protocol integration, and we are now follwoing ALF filenaming for saved files. the root folder is still `OptickaFiles/savedData/` but now we use a folder hierarchy: `lab / subjects / subjectName / YYYY-MM-DD / SessionID`
+* add improved Rigid Body physics engine. We now use [dyn4j](https://dyn4j.org), an open-source Java 2D physics engine. `animationManager` is upgraded (previously it used my own simple physics engine, which couldn't scale to many collisions). Opticka uses degrees, and we do a simple mapping of degrees > meters, so 1deg stimulus is a 1m object.Test it with:
 ```matlab
 s = screenManager();
 b = imageStimulus('size',4,'filePath','moon.png','name','moon');
@@ -26,6 +28,7 @@ for i = 1:60
 	step(a); % step the simulation
 end
 ```
+* Improve touchManager to better use the rigid body animations with touch events. You can now finger-drag and "fling" physical objects around the screen.
 * add Procedurally generated polar checkerboards: `polarBoardStimulus`, and improved polar gratings to mask with arc segments: `polarGratingStimulus`.
 * added new stimulus: `dotlineStimulus` - a line made of dots.
 * `pupilCoreStimulus` -- a calibration stimulus for pupil core eyetrackers.

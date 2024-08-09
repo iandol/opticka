@@ -9,8 +9,6 @@
 % functions are added to the state machine states…
 tS.name						= 'Pupillary Reflex'; %==name of this protocol
 tS.useTask					= true;		%==use taskSequence (randomises stimulus variables)
-rM.reward.time				= 250;		%==TTL time in milliseconds
-rM.reward.pin				= 2;		%==Output pin, 2 by default with Arduino.
 tS.keyExclusionPattern		= ["fixate","stimulus"]; %==which states to skip keyboard checking
 tS.enableTrainingKeys		= false;	%==enable keys useful during task training, but not for data recording
 tS.recordEyePosition		= false;	%==record local copy of eye position, **in addition** to the eyetracker?

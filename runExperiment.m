@@ -38,10 +38,10 @@ classdef runExperiment < optickaCore
 %> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================	
 	properties
-		%> subject name
-		subjectName char			= 'Simulcra'
-		%> researcher name
-		researcherName char			= 'Jane Doe'
+		sessionData struct		=struct('subjectName','Simulcra',...
+								'researcherName','Jane Doe', ...
+								'labName','lab','labLocation','',...
+								'sessionPrefix','session','alyxIP','');
 		%> a metaStimulus class instance holding our stimulus objects
 		stimuli metaStimulus
 		%> a taskSequence class instance determining our stimulus variables
@@ -120,6 +120,10 @@ classdef runExperiment < optickaCore
 		stimulus
 		%> audio device
 		audioDevice					= []
+		%> DEPRECATED
+		subjectName char			= ''
+		%> DEPRECATED
+		researcherName char			= ''
 	end
 
 	properties (Transient = true, Hidden = true)
@@ -187,7 +191,7 @@ classdef runExperiment < optickaCore
 		stimShown				= false
 		%> properties allowed to be modified during construction
 		allowedProperties = {'reward','strobe','eyetracker','control',...
-			'logFrames','logStateTimers','subjectName','researcherName'...
+			'logFrames','logStateTimers','sessionData',...
 			'stateInfoFile','userFunctionFile','dummyMode','stimuli','task',...
 			'screen','visualDebug','debug','verbose','screenSettings','benchmark',...
 			'comments','arduinoPort','photoDiode'}
@@ -238,8 +242,7 @@ classdef runExperiment < optickaCore
 			end
 					
 			refreshScreen(me);
-			initialiseSaveFile(me); %generate a savePrefix for this run
-			me.name = [me.subjectName '-' me.savePrefix]; %give us a run name
+
 			if isempty(me.screen) || isempty(me.task)
 				me.initialise; %we set up screenManager and taskSequence objects
 			end
@@ -286,6 +289,12 @@ classdef runExperiment < optickaCore
 				me.isRunning		= true;
 				me.isRunTask		= false;
 
+				%================================INIT SAVE
+				% subject, sessionPrefix, lab, create
+				[me.paths.alfPath, sessionID, dateID] = me.getALF(me.sessionData.subjectName,...
+				me.sessionData.sessionPrefix,me.sessionData.labName, true);
+				me.name = [me.sessionData.subjectName '-' sessionID '-' dateID]; %give us a run name
+			
 				%================================get pre-run comments for this data collection
 				prompt = '\bfCHECK Recording system! \itInitial Comment for this MOC Run?';
 				updateComments(me,prompt);
@@ -335,7 +344,6 @@ classdef runExperiment < optickaCore
 						io.setDIO([3,0,0],[3,0,0])%(Set HIGH FIO0->Pin 24), unpausing the omniplex
 					end
 				end
-
 			
 				%=========================================================
 				% lets draw 2 seconds worth of the stimuli we will be using
@@ -531,13 +539,14 @@ classdef runExperiment < optickaCore
 				updateComments(me,prompt);
 				s.comment = me.comment; io.comment = me.comment; tL.comment = me.comment; tS.comment = me.comment;
 
-
-				%------SAVE the DATA
-				sname = [me.paths.savedData filesep me.name '.mat'];
+				%================================SAVE the DATA
+				sname = [me.paths.alfPath filesep 'opticka.raw.' me.name '.mat'];
 				rE = me;
 				save(sname,'rE','tS');
-				fprintf('\n\n#####################\n===>>> SAVED DATA to: %s\n#####################\n\n',sname)
-				
+				fprintf('\n\n#####################\n===>>> <strong>SAVED DATA to: %s</strong>\n#####################\n\n',sname)
+				assignin('base', 'tS', tS); % assign tS in base for manual checking
+				%================================SAVE the DATA
+
 				tL.calculateMisses;
 				if tL.nMissed > 0
 					fprintf('\n!!!>>> >>> >>> There were %i MISSED FRAMES <<< <<< <<<!!!\n',tL.nMissed);
@@ -588,12 +597,11 @@ classdef runExperiment < optickaCore
 				warning('You are trying to start a Default behavioural task without stimuli!');
 				return
 			end
-			refreshScreen(me);
-			initialiseSaveFile(me); %generate a savePrefix for this run
-			me.name = [me.subjectName '-' me.savePrefix]; %give us a run name
+			
 			if isempty(me.screen) || isempty(me.task)
 				me.initialise; %we set up screenManager and taskSequence objects
 			end
+			refreshScreen(me);
 			if me.screen.isPTB == false %NEED PTB!
 				errordlg('There is no working PTB available!')
 				error('There is no working PTB available!')
@@ -602,7 +610,7 @@ classdef runExperiment < optickaCore
 			%------enable diary logging if requested
 			if me.diaryMode
 				diary off
-				diary([me.paths.savedData filesep me.name '.log']);
+				diary([alfPath filesep 'log.text.' me.name '.log']);
 			end
 
 			%------make sure we reset any state machine functions to not cause
@@ -635,9 +643,6 @@ classdef runExperiment < optickaCore
 			end
 
 			if ischar(me.comment);me.comment = string(me.comment);end
-			
-			fprintf('\n\n\n===>>>>>> START BEHAVIOURAL TASK: %s <<<<<<===',me.name);
-			fprintf('\tInitial Comments: %s\n\n\n',me.comment);
 			
 			%--------------------------------------------------------------
 			% tS is a general structure to hold various parameters will be saved
@@ -737,6 +742,7 @@ classdef runExperiment < optickaCore
 				if ~exist(me.stateInfoFile,'file')
 					errordlg('runExperiment.runTask(): Please specify a valid State Machine file!!!')
 				else
+					stateInfoTmp = [];
 					me.stateInfoFile	= regexprep(me.stateInfoFile,'\s+','\\ ');
 					disp(['======>>> Loading State File: ' me.stateInfoFile]);
 					clear(me.stateInfoFile);
@@ -744,6 +750,9 @@ classdef runExperiment < optickaCore
 						run(me.stateInfoFile);
 					else
 						runDeployed(me.stateInfoFile);
+					end
+					if isempty(stateInfoTmp)
+						errordlg('runExperiment.runTask(): State File loading failed!!!');
 					end
 					me.stateInfo		= stateInfoTmp;
 					didFind=false;
@@ -773,6 +782,21 @@ classdef runExperiment < optickaCore
 					if tS.saveData;			eT.recordData = true; end %===save Eyetracker data?		
 				end
 				if isfield(tS,'rewardTime'); bR.rewardTime = tS.rewardTime; end
+
+				%================================initialise save file
+				% subject, sessionPrefix, lab, create
+				if tS.saveData
+					[me.paths.alfPath, sessionID, dateID] = me.getALF(me.sessionData.subjectName,...
+						me.sessionData.sessionPrefix,me.sessionData.labName, true);
+					me.name = [me.sessionData.subjectName '-' sessionID '-' dateID]; %give us a run name
+				else
+					[me.paths.alfPath, sessionID, dateID] = me.getALF(me.sessionData.subjectName,...
+						me.sessionData.sessionPrefix,me.sessionData.labName, false);
+					me.name = [me.sessionData.subjectName '-' dateID]; %give us a run name
+				end
+				fprintf('\n\n\n===>>>>>> START BEHAVIOURAL TASK: %s <<<<<<===',me.name);
+				fprintf('\tInitial Path: %s\n\n\n',me.paths.alfPath);
+				fprintf('\tInitial Comments: %s\n\n\n',me.comment);
 
 				%================================get pre-run comments for this data collection
 				prompt = '\bf CHECK Recording system! \it Initial Comment for this Task Run?';
@@ -834,8 +858,8 @@ classdef runExperiment < optickaCore
 
 				%=============================Preemptive save in case of crash or error: SAVES IN /TMP
 				rE = me;
-				tS.tmpFile = [tempdir filesep me.name '.mat'];
-				fprintf('\n===>>> Save initial state: %s ...\n',tS.tmpFile);
+				tS.tmpFile = [me.paths.alfPath 'TEMP' me.name '.mat'];
+				fprintf('\n===>>> Save initial state in case of crash: %s ...\n',tS.tmpFile);
 				save(tS.tmpFile,'rE','tS');
 				fprintf('\t ... Saved!\n');
 
@@ -1114,9 +1138,9 @@ classdef runExperiment < optickaCore
 				removeEmptyValues(tL);
 				me.tS = tS; %store our tS structure for backup
 				
-				%------SAVE the DATA
+				%================================SAVE the DATA
 				if tS.saveData
-					sname = [me.paths.savedData filesep me.name '.mat'];
+					sname = [me.paths.alfPath filesep 'opticka.raw.' me.name '.mat'];
 					rE = me;
 					save(sname,'rE','tS');
 					fprintf('\n\n#####################\n===>>> <strong>SAVED DATA to: %s</strong>\n#####################\n\n',sname)
@@ -1125,6 +1149,7 @@ classdef runExperiment < optickaCore
 						assignin('base', 'staircase', me.task.staircase); % assign tS in base for manual checking
 					end
 				end
+				%================================SAVE the DATA
 
 				%------disable diary logging 
 				if me.diaryMode; diary off; end
@@ -3130,8 +3155,14 @@ classdef runExperiment < optickaCore
 				try lobj.uuid = in.uuid; end
 				try lobj.savePrefix = in.savePrefix; end
 				try lobj.comment = in.comment; end
-				try lobj.subjectName = in.subjectName; end
-				try lobj.researcherName = in.researcherName; end
+				try lobj.sessionData.subjectName = in.subjectName; end
+				try lobj.sessionData.researcherName = in.researcherName; end
+				try lobj.sessionData.subjectName = in.sessionData.subjectName; end
+				try lobj.sessionData.researcherName = in.sessionData.researcherName; end
+				try lobj.sessionData.labName = in.sessionData.labName; end
+				try lobj.sessionData.labLocation = in.sessionData.labLocation; end
+				try lobj.sessionData.sessionPrefix = in.sessionData.sessionPrefix; end
+				try lobj.sessionData.alyxIP = in.sessionData.alyxIP; end
 				if isnumeric(in.dateStamp)
 					try lobj.dateStamp = datetime(in.dateStamp); end
 				elseif isa(in.dateStamp,'datetime')

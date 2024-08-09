@@ -58,7 +58,8 @@ classdef opticka < optickaCore
 		uiPrefsList cell = {'OKOmniplexIP','OKMonitorDistance','OKpixelsPerCm',...
 			'OKbackgroundColour','OKAntiAliasing','OKbitDepth','OKUseRetina',...
 			'OKHideFlash','OKlogFrames','OKlogStateTimers','OKUsePhotoDiode',...
-			'OKResearcher','OKSubject',...
+			'OKResearcher','OKSubject','OKLabName',...
+			'OKSessionPrefix','OKLabLocation','OKAlyxIP',...
 			'OKaudioDevice','OKverbosityLevel',...
 			'OKarduinoPort','OKarduinoType',...
 			'OKrewardType','OKTTLPin','OKTTLTime',...
@@ -338,11 +339,16 @@ classdef opticka < optickaCore
 			rM.reward.type = me.gv(me.ui.OKrewardType);
 			rM.reward.pin = me.gv(me.ui.OKTTLPin);
 			rM.reward.time = me.gv(me.ui.OKTTLTime);
-			
-			me.r.subjectName = me.gv(me.ui.OKSubject);
-			me.r.researcherName = me.gv(me.ui.OKResearcher);
-			me.r.askForComments = me.gl(me.ui.OKAskComments);
 
+			me.r.askForComments = me.gl(me.ui.OKAskComments);
+			
+			me.r.sessionData.subjectName = me.gv(me.ui.OKSubject);
+			me.r.sessionData.researcherName = me.gv(me.ui.OKResearcher);
+			me.r.sessionData.alyxIP = me.gv(me.ui.OKAlyxIP);
+			me.r.sessionData.labName = me.gv(me.ui.OKLabName);
+			me.r.sessionData.labLocation = me.gv(me.ui.OKLabLocation);
+			me.r.sessionData.sessionPrefix = me.gv(me.ui.OKSessionPrefix);
+		
 			me.r.audioDevice = me.gn(me.ui.OKaudioDevice);
 
 			me.r.screen.screen = me.gd(me.ui.OKSelectScreen);
@@ -1153,7 +1159,16 @@ classdef opticka < optickaCore
 		function saveData(me)
 			me.paths.currentPath = pwd;
 			cd(me.paths.savedData);
-			[f,p] = uiputfile('*.mat','Save Last Run Data','Data.mat');
+			[me.paths.alfPath, sessionID, dateID] = me.getALF(me.r.sessionData.subjectName,...
+				me.r.sessionData.sessionPrefix,me.r.sessionData.labName, false);
+			if ~isempty(me.r.name)
+				name = me.r.name;
+			else
+				name = [me.r.sessionData.subjectName '-' sessionID '-' dateID]; %give us a run name
+			end
+			name = ['opticka.raw.' name '.mat'];
+			cd(me.paths.alfPath);
+			[f,p] = uiputfile('*.mat','Save Last Run Data',name);
 			if f ~= 0
 				cd(p);
 				data = clone(me);

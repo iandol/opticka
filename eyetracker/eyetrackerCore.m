@@ -281,7 +281,7 @@ classdef eyetrackerCore < optickaCore
 			me.yAll			= [me.yAll me.y];
 			me.pupilAll		= [me.pupilAll me.pupil];
 			me.xAllRaw = me.xAll; me.yAllRaw = me.yAll;
-			if me.debug;fprintf('>>X: %.2f | Y: %.2f | P: %.2f\n',me.x,me.y,me.pupil);end
+			if me.debug;fprintf('< MOUSE X: %.2f | Y: %.2f | BLINK: %i>\n',me.x,me.y, me.isBlink);end
 		end
 
 		% ===================================================================
@@ -544,7 +544,7 @@ classdef eyetrackerCore < optickaCore
 		function [fixated, fixtime, searching, window, exclusion, initfail, blinking] = isFixated(me)
 			fixated = false; fixtime = false; searching = true; 
 			exclusion = false; window = []; initfail = false; blinking = false;
-			if me.isOff || ~me.isConnected; return; end
+			if me.isOff || (~me.isDummy && ~me.isConnected); return; end
 			if me.isBlink; blinking = true; end
 			
 			if me.isExclusion || me.isInitFail
@@ -609,6 +609,8 @@ classdef eyetrackerCore < optickaCore
 				end
 			end
 			if ~isempty(w) && w > 0; me.fixWindow = w; else; me.fixWindow = 0; end
+
+			if me.debug;fprintf('<ISFIX x: %.2f y: %.2f fix: %i >\n',x,y,me.fixWindow);end
 
 			% logic if we are in or not in a fixation window
 			if me.fixWindow > 0 % inside fixation window

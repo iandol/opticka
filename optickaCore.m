@@ -10,7 +10,7 @@ classdef optickaCore < handle
 %> clone the object, parse arguments safely on construction and add default
 %> properties such as paths, dateStamp, uuid and name/comment management.
 %>
-%> Copyright ©2014-2023 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2024 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 
 	%--------------------PUBLIC PROPERTIES----------%
@@ -118,19 +118,67 @@ classdef optickaCore < handle
 		end
 
 		% ===================================================================
-		function c = initialiseSaveFile(me, path)
-		%> @fn initialiseSaveFile(me, path)
-		%> @brief Initialise Save Dir
+		function [path, sessionID, dateid] = getALF(me, subject, sessionPrefix, lab, create)
+		%> @fn initialiseSaveFile(me)
+		%> @brief Initialise Save prefix
 		%>
-		%> @param path - the path to use.
+		%> @return path - the path to use
+		%> @return dateid - YYYY-MM-DD-HH-MM-SS
 		% ===================================================================
-			if exist('path','var') && exist(path,"dir")
-				me.paths.savedData = path;
+			if ~exist('subject','var') || isempty(subject); subject = 'unknown'; end
+			if ~exist('sessionPrefix','var') || isempty(sessionPrefix); sessionPrefix = ''; end
+			if ~exist('lab','var') || isempty(lab); lab = 'lab'; end
+			if ~exist('create','var') || isempty(create); create = false; end
+			
+			dateid = fix(clock); %#ok<*CLOCK> compatible with octave
+			dateid = num2str(dateid(1:6));
+			dateid = regexprep(dateid,' +','-');
+			
+			d = char(datetime("today"));
+			path = [me.paths.savedData filesep lab filesep 'subjects' filesep subject filesep d];
+			if ~exist(path,'dir')
+				sessionID = [sessionPrefix '001'];
+				path = [path filesep sessionID filesep];
+				s = mkdir(path);
+				if s == 0; error('Cannot make Save File directory!!!'); end
+				fprintf('---> Path: %s created...\n',path);
+				return
+			else
+				isMatch = false;
+				n = 0;
+				d = dir(path);
+				pattern = sessionPrefix + digitsPattern(3);
+				for jj = 1:length(d)
+					e = extract(d(jj).name, pattern);
+					if ~isempty(e)
+						isMatch = true;
+						nn = str2double(e{1}(end-2:end));
+						if nn > n; n = nn; end
+					end
+				end
+				if isMatch
+					if create
+						sessionID = [sessionPrefix sprintf('%0.3d',n+1)];
+						path = [path filesep sessionID filesep];
+						s = mkdir(path);
+						if s == 0; error('Cannot make Save File directory!!!'); end
+						fprintf('---> Path: %s created...\n',path);
+						return
+					else
+						sessionID = [sessionPrefix sprintf('%0.3d',n)];
+						path = [path filesep sessionID filesep];
+						fprintf('---> Path: %s found...\n',path);
+						return
+					end
+				else
+					sessionID = [sessionPrefix '001'];
+					path = [path filesep sessionID filesep];
+					s = mkdir(path);
+					if s == 0; error('Cannot make Save File directory!!!'); end
+					fprintf('---> Path: %s created...\n',path);
+				end
 			end
-			c = fix(clock); %#ok<*CLOCK> compatible with octave
-			c = num2str(c(1:6));
-			c = regexprep(c,' +','-');
-			me.savePrefix = c;
+			me.paths.ALFPath = path;
 		end
 		
 		% ===================================================================
