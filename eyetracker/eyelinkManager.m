@@ -187,8 +187,8 @@ classdef eyelinkManager < eyetrackerCore
 				if me.recordData
 					err = Eyelink('Openfile', me.tempFile);
 					if err ~= 0
-						warning('eyelinkManager Cannot setup Eyelink data file, aborting data recording');
 						me.isRecording = false;
+						error('eyelinkManager Cannot setup Eyelink data file, aborting data recording'); %#ok<CPROPLC>
 					else
 						Eyelink('Command', ['add_file_preamble_text ''Recorded by:' me.fullName ' tracker'''],true);
 						me.isRecording = true;
@@ -498,7 +498,11 @@ classdef eyelinkManager < eyetrackerCore
 					Eyelink('CloseFile');
 					oldp = pwd;
 					try
-						cd(me.paths.savedData);
+						if isfield(me.paths,'alfPath') && exist(me.paths.alfPath,'dir')
+							cd(me.paths.alfPath);
+						else
+							cd(me.paths.savedData);
+						end
 						me.salutation('Close Method',sprintf('Receiving data file %s.edf', me.tempFile),true);
 						status=Eyelink('ReceiveFile');
 						if status > 0

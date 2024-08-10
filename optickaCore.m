@@ -127,7 +127,7 @@ classdef optickaCore < handle
 		% ===================================================================
 			if ~exist('subject','var') || isempty(subject); subject = 'unknown'; end
 			if ~exist('sessionPrefix','var') || isempty(sessionPrefix); sessionPrefix = ''; end
-			if ~exist('lab','var') || isempty(lab); lab = 'lab'; end
+			if ~exist('lab','var') || isempty(lab); lab = []; end
 			if ~exist('create','var') || isempty(create); create = false; end
 			
 			dateid = fix(clock); %#ok<*CLOCK> compatible with octave
@@ -135,7 +135,11 @@ classdef optickaCore < handle
 			dateid = regexprep(dateid,' +','-');
 			
 			d = char(datetime("today"));
-			path = [me.paths.savedData filesep lab filesep 'subjects' filesep subject filesep d];
+			if isempty(lab)
+				path = [me.paths.savedData filesep subject filesep d];
+			else
+				path = [me.paths.savedData filesep lab filesep 'subjects' filesep subject filesep d];
+			end
 			if ~exist(path,'dir')
 				sessionID = [sessionPrefix '001'];
 				path = [path filesep sessionID filesep];

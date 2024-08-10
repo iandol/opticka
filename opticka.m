@@ -1703,14 +1703,24 @@ classdef opticka < optickaCore
 						sz=s.size;
 						c=s.contrast;
 						sp=s.speed;
-						p=s.filePath;
+						p = [];
+						if isfield(s,'filePath')
+							p=s.filePath;
+						elseif isfield(s,'fileName')
+							p=s.fileName;
+						end
 						str{i} = [num2str(i) '.' name ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' c=' num2str(c) ' sp=' num2str(sp) ' [' p ']'];
 					case 'movie'
 						x=s.xPosition;
 						y=s.yPosition;
 						sz=s.size;
 						sp=s.speed;
-						p=s.filePath;
+						p = [];
+						if isfield(s,'filePath')
+							p=s.filePath;
+						elseif isfield(s,'fileName')
+							p=s.fileName;
+						end
 						str{i} = [num2str(i) '.' name ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' sp=' num2str(sp) ' [' p ']'];
 					case 'fixationcross'
 						x=s.xPosition;

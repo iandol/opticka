@@ -709,7 +709,7 @@ classdef runExperiment < optickaCore
 				%================================set up the eyetracker interface
 				configureEyetracker(me, s);
 				eT						= me.eyeTracker;
-
+				
 				%================================initialise the user functions object
 				if ~exist(me.userFunctionsFile,'file')
 					me.userFunctionsFile = [me.paths.root filesep 'userFunctions.m'];
@@ -787,15 +787,21 @@ classdef runExperiment < optickaCore
 				% subject, sessionPrefix, lab, create
 				if tS.saveData
 					[me.paths.alfPath, sessionID, dateID] = me.getALF(me.sessionData.subjectName,...
-						me.sessionData.sessionPrefix,me.sessionData.labName, true);
+						me.sessionData.sessionPrefix, [], true);
 					me.name = [me.sessionData.subjectName '-' sessionID '-' dateID]; %give us a run name
 				else
-					[me.paths.alfPath, sessionID, dateID] = me.getALF(me.sessionData.subjectName,...
-						me.sessionData.sessionPrefix,me.sessionData.labName, false);
+					[me.paths.alfPath, ~, dateID] = me.getALF(me.sessionData.subjectName,...
+						me.sessionData.sessionPrefix, [], false);
 					me.name = [me.sessionData.subjectName '-' dateID]; %give us a run name
 				end
+				eT.paths.alfPath = me.paths.alfPath;
+				if matches(lower(me.eyetracker.device),'eyelink')
+					eT.saveFile	= [eT.paths.alfPath 'eyelink.raw.' me.name '.edf'];
+				else
+					eT.saveFile	= [eT.paths.alfPath 'tobii.raw.' me.name '.mat'];
+				end
 				fprintf('\n\n\n===>>>>>> START BEHAVIOURAL TASK: %s <<<<<<===',me.name);
-				fprintf('\tInitial Path: %s\n\n\n',me.paths.alfPath);
+				fprintf('\tInitial Path: %s\n',me.paths.alfPath);
 				fprintf('\tInitial Comments: %s\n\n\n',me.comment);
 
 				%================================get pre-run comments for this data collection
@@ -858,7 +864,7 @@ classdef runExperiment < optickaCore
 
 				%=============================Preemptive save in case of crash or error: SAVES IN /TMP
 				rE = me;
-				tS.tmpFile = [me.paths.alfPath 'TEMP' me.name '.mat'];
+				tS.tmpFile = [tempdir filesep 'TEMP' me.name '.mat'];
 				fprintf('\n===>>> Save initial state in case of crash: %s ...\n',tS.tmpFile);
 				save(tS.tmpFile,'rE','tS');
 				fprintf('\t ... Saved!\n');
@@ -1132,7 +1138,9 @@ classdef runExperiment < optickaCore
 				
 				% Final comments
 				prompt = '\bf Final Comments for this Run?';
+				Priority(0);ListenChar(0);RestrictKeysForKbCheck([]);
 				updateComments(me,prompt);
+				disp(me.comment);
 				bR.comment = me.comment; eT.comment = me.comment; sM.comment = me.comment; io.comment = me.comment; tL.comment = me.comment; tS.comment = me.comment;
 
 				removeEmptyValues(tL);
@@ -2483,10 +2491,11 @@ classdef runExperiment < optickaCore
 			end
 			if (me.askForComments || tS.askForComments) && ~me.debug
 				opts.Interpreter='tex';opts.Resize='on';
-				comment = inputdlg(prompt,['Comments for ' me.name],[10 80],{me.comment},opts);
-				if ~isempty(comment)
-					comment = string(comment{1});
-					comment = strip(comment);
+				ncomment = inputdlg(prompt,['Comments for ' me.name],[10 80],{''},opts);
+				if ~isempty(ncomment)
+					ncomment = string(ncomment{1});
+					ncomment = strip(ncomment);
+					comment = [comment; ncomment];
 					me.comment = comment;
 				end
 			end

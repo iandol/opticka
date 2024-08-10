@@ -28,24 +28,26 @@ classdef baseStimulus < optickaCore & dynamicprops
 
 	%--------------------PUBLIC PROPERTIES----------%
 	properties
-		%> X Position ± degrees relative to screen center (0,0)
+		%> initial X Position ± visual degrees (°) relative to screen center (0,0)
+		%> in opticka +X is from left-to-right
 		xPosition double		= 0
-		%> Y Position ± degrees relative to screen center (0,0)
+		%> initial Y Position ± visual degrees (°) relative to screen center (0,0)
+		%> in opticka +Y is from top-to-bottom
 		yPosition double		= 0
 		%> Size in visual degrees (°), can also be used to scale images/movies
-		%> or define length of a bar etc.
+		%> or define width+height of a bar etc.
 		size double				= 4
 		%> Colour as a 0-1 range RGB or RGBA vector (if you pass A it also
 		%> modifies alpha and visa-versa
 		colour double			= [1 1 1 1]
 		%> Alpha (opacity) [0-1], this gets combined with the RGB colour
 		alpha double			= 1
-		%> For moving stimuli do we start "before" our initial position? This allows you to
+		%> For moving stimuli do we start "before" our initial XY position? This allows you to
 		%> center a stimulus at a screen location, but then drift it across that location, so
 		%> if xyPosition is 0,0 and startPosition is -2 then the stimulus will start at -2 drifing
 		%> towards 0.
 		startPosition double	= 0
-		%> speed in degs/s - this mostly afffects linear motion, but with an
+		%> speed in °/s - this mostly afffects linear motion, but with an
 		%> animationManager is also used to define initial motion value
 		speed double			= 0
 		%> angle in degrees (0 - 360)
@@ -58,57 +60,56 @@ classdef baseStimulus < optickaCore & dynamicprops
 		offTime double			= Inf
 		%> true or false, whether to draw() this object
 		isVisible logical		= true
-		%> animation manager: can assign an animationManager() object that handles
-		%> more complex animation paths than simple builtin linear motion WIP
-		animator				= []
 		%> override X and Y position with mouse input? Useful for RF mapping
 		mouseOverride logical	= false
 		%> show the position on the Eyetracker display?
 		showOnTracker logical	= true
-		%> Do we print details to the commandline?
+		%> Do we log extra details to the command-line?
 		verbose					= false
 	end
 
 	%--------------------TRANSIENT PROPERTIES-----------%
 	properties (Transient = true)
-		%> final centered X position in pixel coordinates PTB uses: 0,0 top-left
-		%> see computePosition();
+		%> computed X position in pixel coordinates PTB uses: 0,0 top-left
+		%> see computePosition(); a copy in degrees is made in xFinalD
 		xFinal double			= []
-		%> final centerd Y position in pixel coordinates PTB uses: 0,0 top-left
-		%> see computePosition();
+		%> computed Y position in pixel coordinates PTB uses: 0,0 top-left
+		%> see computePosition(); ; a copy in degrees is made in yFinalD
 		yFinal double			= []
-		%> current screen rectangle position [LEFT TOP RIGHT BOTTOM]
+		%> current screen rectangle position [LEFT TOP RIGHT BOTTOM] in
+		%> pixels
 		mvRect double			= []
+		%> whether sizeOut is degrees or pixels, see .szPx .szD for copies
+		%> in pixels and degrees respectively
+		szIsPx					= false
 	end
 
 	%--------------------HIDDEN PROPERTIES-----------%
 	properties(Transient = true, Hidden = true)
-		%> size in pixels
+		%> computed size in pixels
 		szPx					= []
-		%> size in degrees
+		%> computed size in °
 		szD						= []
-		%> whether sizeOut is deg or px
-		szIsPx					= false
-		%> position in degrees
+		%> X and Y position in °
 		xFinalD					= []
 		yFinalD					= []
 	end
 	
 	%--------------------VISIBLE PROPERTIES-----------%
 	properties (SetAccess = protected, GetAccess = public)
-		%> initial screen rectangle position [LEFT TOP RIGHT BOTTOM]
-		dstRect double			= []
+		%> is PTB stimulus type position defined via rect [true] or point [false]
+		%> mvRect is the property used for rect based stimuli
+		%> xFinal and yFinal are used for point-based positioninng
+		isRect logical			= true
 		%> tick updates +1 on each call of draw (even if delay or off is true and no stimulus is drawn, resets on each update
 		tick double				= 0
 		%> draw tick only updates when a draw is actually performed, resets on each update
 		drawTick double			= 0
 		%> pixels per degree (normally inhereted from screenManager)
 		ppd double				= 36
-		%> is stimulus position defined as rect [true] or point [false]
-		isRect logical			= true
 	end
 	
-	%--------------------DEPENDENT PROPERTIES----------%
+	%--------------------DEPENDENT PROTECTED PROPERTIES----------%
 	properties (Dependent = true, SetAccess = protected, GetAccess = public)
 		%> What our per-frame motion delta is
 		delta double
@@ -118,7 +119,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		dY double
 	end
 	
-	%--------------------TRANSIENT PROPERTIES----------%
+	%--------------------TRANSIENT PROTECTED PROPERTIES----------%
 	properties (SetAccess = protected, Transient = true)
 		%> Our texture pointer for texture-based stimuli
 		texture double
@@ -126,6 +127,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 		handles struct
 		%> our screen manager
 		sM screenManager
+		%> animation manager
+		animator 
 		%> screen settings generated by sM on setup
 		screenVals struct	= struct('ifi',1/60,'fps',60,'winRect',[0 0 1920 1080])
 		%. is object set up?
@@ -136,6 +139,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 	
 	%--------------------PROTECTED PROPERTIES----------%
 	properties (Access = protected)
+		%> initial screen rectangle position [LEFT TOP RIGHT BOTTOM]
+		dstRect double			= []
 		%> is mouse position within screen co-ordinates?
 		mouseValid logical	= false
 		%> mouse X position
@@ -167,7 +172,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 			'doDrift','doFlash','doAnimator','mouseX','mouseY','szPx',...
 			'xFinalD','yFinalD','widthD','heightD'}
 		%> Which properties to not draw in the UI panel
-		ignorePropertiesUIBase = {'animator','fullName','mvRect','xFinal','yFinal','szPx','xFinalD','yFinalD'}
+		ignorePropertiesUIBase = {'comment','animator','fullName','mvRect','xFinal','yFinal','szPx','xFinalD','yFinalD'}
 	end
 	
 	%--------------------PRIVATE PROPERTIES----------%
@@ -326,13 +331,12 @@ classdef baseStimulus < optickaCore & dynamicprops
 		end
 
 		% ===================================================================
-		%> @brief set offTime
+		%> @brief set delayTime
 		%>
 		% ===================================================================
 		function setDelayTime(me, time)
 			me.delayTime = time;
 		end
-
 
 		% ===================================================================
 		%> @brief reset the various tick counters for our stimulus
