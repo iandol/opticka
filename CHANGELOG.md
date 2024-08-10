@@ -9,8 +9,15 @@ Note only changes which may affect your use of Opticka will be detailed here, st
 > Please double-check changes in `DefaultStateInfo.m` to see the changes for state machine files, this may inform changes you could add to your own state machine files...
 
 
-* **BREAKING**: we want to support ALYX and ONE Protocol integration, and we are now follwoing ALF filenaming for saved files. the root folder is still `OptickaFiles/savedData/` but now we use a folder hierarchy: `lab / subjects / subjectName / YYYY-MM-DD / SessionID`
-* add improved Rigid Body physics engine. We now use [dyn4j](https://dyn4j.org), an open-source Java 2D physics engine. `animationManager` is upgraded (previously it used my own simple physics engine, which couldn't scale to many collisions). Opticka uses degrees, and we do a simple mapping of degrees > meters, so 1deg stimulus is a 1m object.Test it with:
+* **BREAKING CHANGE**: we want to support the [International Brain Lab ONE Protocol](https://int-brain-lab.github.io/ONE/alf_intro.html) (see "A modular architecture for organizing, processing and sharing neurophysiology data," The International Brain Laboratory et al., 2023 Nat. Methods, [DOI](https://doi.org/10.1038/s41592-022-01742-6)), and we are now follwoing ALF filenaming for saved files. the root folder is still `OptickaFiles/savedData/` but now we use a folder hierarchy: `lab / subjects / subjectName / YYYY-MM-DD / SessionID /` -- the `MAT` file will **not** changed structure or content, but we will add extra files to help data sharing.
+* **BREAKING CHANGE**: LabJack T4 -- we increased the strobe word from 8 to 11 bits, now on EIO1:8 CIO1:3, this should in theory be backwards compatible as 8bits is still the same lines. Upgrade the LabJack T4 like this:
+```
+t = labJackT();
+open(t);
+initialiseServer(t);
+close(t);
+```
+* Add improved Rigid Body physics engine. We now use [dyn4j](https://dyn4j.org), an open-source Java 2D physics engine. `animationManager` is upgraded (previously it used my own simple physics engine, which couldn't scale to many collisions). Opticka uses degrees, and we do a simple mapping of degrees > meters, so 1deg stimulus is a 1m object.Test it with:
 ```matlab
 s = screenManager();
 b = imageStimulus('size',4,'filePath','moon.png','name','moon');
@@ -34,10 +41,9 @@ end
 * `pupilCoreStimulus` -- a calibration stimulus for pupil core eyetrackers.
 * all stimuli: `updateXY()` method quickly updates the X and Y position without a full stimulus `update()`, used by the update `animationManager`.
 * all stimuli: added `szPx` `szD` `xfinalD` and `yFinalD` properties so we have both pixels and degrees values available.
-* all stimuli: `szIsPx` property tells us whether the dynamically generated size for each trial is in pixels or degrees.
+* all stimuli: `szIsPx` property tells us whether the dynamically generated size at each trial is in pixels or degrees.
 * add `nirSmartManager` to support nirSmart FNIRS recording system.
 * improved the mouse dummy mode for the touchscreen `touchManager`.
-* LabJack T4 -- we increased the strobe word from 8 to 11 bits, now on EIO1:8 CIO1:3, this should in theory be backwards compatible as 8bits is still the same lines
 * `arduinoManager` can now use a raspberry pi GPIO if no arduino is present.
 * Update image and movie stimuli to better handle mutliple images.
 * Add a `Test Hardware` menu to opticka GUI. You can use this to test that the reward system / eyetracker / recording markers are working before you do any data collection each day.
