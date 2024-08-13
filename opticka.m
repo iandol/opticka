@@ -339,7 +339,9 @@ classdef opticka < optickaCore
 			rM.reward.type = me.gv(me.ui.OKrewardType);
 			rM.reward.pin = me.gv(me.ui.OKTTLPin);
 			rM.reward.time = me.gv(me.ui.OKTTLTime);
-
+			me.r.reward.port = me.gv(me.ui.OKarduinoPort);
+			me.r.reward.board = me.gv(me.ui.OKarduinoType);
+			
 			me.r.askForComments = me.gl(me.ui.OKAskComments);
 			
 			me.r.sessionData.subjectName = me.gv(me.ui.OKSubject);
@@ -424,9 +426,7 @@ classdef opticka < optickaCore
 				me.r.strobe.device = '';
 			end
 
-			me.r.reward.port = me.gv(me.ui.OKarduinoPort);
-			me.r.reward.board = me.gv(me.ui.OKarduinoType);
-			
+	
 			if me.ui.OKuseArduino.Checked == true
 				me.r.reward.device = 'arduino';
 			elseif me.ui.OKuseLabJackReward.Checked == true

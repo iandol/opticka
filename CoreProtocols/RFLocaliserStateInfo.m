@@ -2,6 +2,10 @@
 % visual responses from a wide range of stimulus classes while a subject
 % maintains fixation.
 %
+% SEE keyboard mapping for the keyboard control keys to use. Basically the
+% arrow keys to change variable types and values, < and > to change stimulus 
+% type, s to show/hide the mouse cursor.
+%
 % This protocol uses mouse and keyboard control of 10 different classes of
 % stimuli (see opticka Stimulus List. You can change which stimulus and
 % what variables are during the task, while the subject maintains fixation.
@@ -27,16 +31,14 @@
 % tS		= general structure to hold general variables, will be saved as part of the data
 
 %------------General Settings-----------------
+tS.name					= 'RF Localiser'; %==name of this protocol
 tS.useTask              = false;	%==use taskSequence (randomised stimulus variable task object)
-rM.reward.time			= 250;		%==TTL time in milliseconds
-rM.reward.pin			= 2;		%==Output pin, 2 by default with Arduino.
 tS.keyExclusionPattern	= [];		%==which states to skip keyboard checking
 tS.enableTrainingKeys	= true;		%==enable keys useful during task training, but not for data recording
 tS.recordEyePosition	= false;	%==record local copy of eye position, **in addition** to the eyetracker?
 tS.askForComments		= false;	%==UI requestor asks for comments before/after run
 tS.saveData				= false;	%==save behavioural and eye movement data?
 tS.showBehaviourPlot	= true;		%==open the behaviourPlot figure? Can cause more memory use…
-tS.name					= 'RF Localiser'; %==name of this protocol
 tS.nStims				= stims.n;	%==number of stimuli
 tS.tOut					= 5;		%==if breakfix response, how long to timeout before next trial
 tS.CORRECT				= 1;		%==the code to send eyetracker for correct trials

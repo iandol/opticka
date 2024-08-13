@@ -47,17 +47,18 @@
 %> useful for running the task:
 %>
 %> me		= runExperiment object ('self' in OOP terminology) 
-%> s		= screenManager object
+%> tS		= structure to hold general variables, will be saved as part of the data
+%> s		= PTB screen manager object (screenManager class)
+%> sM		= state machine (stateMachine class) parses and runs this file
+%> task		= task independent variable manager (taskSequence class)
+%> stims	= all visual stimuli (metaStimulus class)
 %> aM		= audioManager object
-%> stims	= our list of stimuli (metaStimulus class)
-%> sM		= State Machine (stateMachine class)
-%> task		= task sequence (taskSequence class)
-%> eT		= eyetracker manager
-%> io		= digital I/O to recording system
+%> eT		= eyetracker manager (eyelink / tobii / irec / pupilcore classes)
+%> tM		= touchscreen manager
+%> io		= digital I/O for recording system
 %> rM		= Reward Manager (LabJack or Arduino TTL trigger to reward system/Magstim)
 %> bR		= behavioural record plot (on-screen GUI during a task run)
-%> uF       = user functions - add your own functions to this class
-%> tS		= structure to hold general variables, will be saved as part of the data
+%> uF		= user functions - add your own functions to this class
 
 %=========================================================================
 %-----------------------------General Settings----------------------------

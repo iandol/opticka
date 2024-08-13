@@ -64,7 +64,9 @@ classdef runExperiment < optickaCore
 									'board','');
 		%> which eyetracker to use
 		eyetracker struct			= struct('device','','dummy',true,...
-									'esettings',[],'tsettings',[])
+									'esettings',[],'tsettings',[],...
+									'isettings',[],'psettings',[])
+		touch struct				= struct('device','','dummy',true)
 		%> use control commands to start / stop recording
 		%> device = intan | plexon | none
 		%> port = tcp port
@@ -1991,6 +1993,15 @@ classdef runExperiment < optickaCore
 		%> @fn noop
 		%> no operation, tests method call overhead
 		%>
+		% ===================================================================
+			
+		end
+
+		% ===================================================================
+		function configureTouchScreen(me, s)
+		%> @fn configureEyetracker
+		%> Configures (calibration etc.) the eyetracker.
+		%> @param s screen object
 		% ===================================================================
 			
 		end

@@ -1,10 +1,29 @@
 % ========================================================================
 %> @brief ANIMATIONMANAGER Provides per frame paths for stimuli
-%> We integrate dyn4j java physics engine for rigid body
+%> We integrate dyn4j java physics engine for rigid body. The plan is to
+%> also support sinusoidal, brownian, circular etc.
+%> 
+%> ```matlab
+%> s = screenManager();
+%> b = imageStimulus('size',4,'filePath','moon.png','name','moon');
+%> b.speed = 25; % will define velocity
+%> b.angle = -45; % will define velocity
+%> a = animationManager();
+%> sv = open(s); % open screen
+%> setup(b, s); % initialise stimulus with open screen
+%> addScreenBoundaries(a, sv); % add floor, ceiling and walls based on the screen
+%> addBody(a, b); % add stimulus as a rigidbody to animationManager
+%> setup(a); % initialise the simulation.
+%> for i = 1:60
+%> 	draw(b); % draw the stimulus
+%> 	flip(s); % flip the screen
+%> 	step(a); % step the simulation
+%> end
+%> ```
 %>
-%> @todo build the code for the different types of motion
+%> @TODO build the code for the different types of motion
 %>
-%> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2024 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================	
 classdef animationManager < optickaCore
 
@@ -231,7 +250,7 @@ classdef animationManager < optickaCore
     		thisBody.body.setLinearVelocity(javaObject('org.dyn4j.geometry.Vector2', thisBody.velocity(1), thisBody.velocity(2)));
 			thisBody.body.setAngularVelocity(av);
 			thisBody.body.setLinearDamping(me.rigidParams.linearDamping);
-			thisBody.body.setangularDamping(me.rigidParams.angularDamping);
+			thisBody.body.setAngularDamping(me.rigidParams.angularDamping);
 			thisBody.body.updateMass();
 			if isempty(me.bodies)
 				thisBody.idx = 1;
@@ -319,16 +338,18 @@ classdef animationManager < optickaCore
 		%> @brief addScreenBoundaries add physical walls at the screen edges
 		%>
 		%> @param sv screenVals from screenManager
+		%> @param padding [left top right bottom]
 		% ===================================================================
-		function addScreenBoundaries(me, sv)
+		function addScreenBoundaries(me, sv, padding)
 			if ~exist('sv','var'); return; end
+			if ~exist('padding','var') || isempty(padding); padding = [0 0 0 0]; end
 
 			w = sv.widthInDegrees;
 			h = sv.heightInDegrees;
-			l = sv.leftInDegrees;
-			r = sv.rightInDegrees;
-			t = sv.topInDegrees;
-			b = sv.bottomInDegrees;
+			l = sv.leftInDegrees + padding(1);
+			t = sv.topInDegrees + padding(2);
+			r = sv.rightInDegrees - padding(1);
+			b = sv.bottomInDegrees - padding(1);
 
 			fl = barStimulus('isVisible',false,'barWidth',w,'barHeight',0.01,...
 				'xPosition',0,'yPosition',b,'name','floor');
@@ -343,7 +364,6 @@ classdef animationManager < optickaCore
 			me.addBody(cl,'Segment','infinite');
 			me.addBody(lw,'Segment','infinite');
 			me.addBody(rw,'Segment','infinite');
-
 		end
 
 		% ===================================================================
@@ -445,7 +465,7 @@ classdef animationManager < optickaCore
 		%> @brief return the first body matching name
 		%>
 		% ===================================================================
-		function [body, trackidx, idx] = getBody(me, name)
+		function [body, trackidx, idx, stim] = getBody(me, name)
 			body = [];
 			idx = []; trackidx = [];
 			if ~exist('name','var') || isempty(name); return; end
@@ -456,7 +476,8 @@ classdef animationManager < optickaCore
 				a = a + 1;
 			end
 			if isBody
-				body = me.bodies(a).body; 
+				body = me.bodies(a).body;
+				stim = me.bodies(a).stimulus;
 				idx = a;
 				trackidx = find(me.trackIndex == idx);
 			end
