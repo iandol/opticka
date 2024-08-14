@@ -104,7 +104,7 @@ classdef animationManager < optickaCore
 		isRightWall = false
 		isCeiling = false
 		massType = struct('NORMAL',[],'INFINITE',[],'FIXED_ANGULAR_VELOCITY',[],'FIXED_LINEAR_VELOCITY',[])
-		bodyTemplate = struct('idx',0,'name','','type','','body',[],...
+		bodyTemplate = struct('idx',0,'hash',[],'name','','type','','body',[],...
 			'stimulus',[],'shape','Circle','radius',2,'density',1,...
 			'friction',0.2,'elasticity',0.75,'position',[0 0],'velocity',[0 0])
 		%> useful screen info and initial gamma tables and the like
@@ -212,6 +212,7 @@ classdef animationManager < optickaCore
 			% build the structure
 			thisBody = me.bodyTemplate;
 			thisBody.body = javaObject('org.dyn4j.dynamics.Body');
+			thisBody.hash = thisBody.body.hashCode;
 			thisBody.name = stimulus.name;
 			thisBody.type = type;
 			thisBody.stimulus = stimulus;
@@ -291,7 +292,33 @@ classdef animationManager < optickaCore
 			end
 			makeTrackIndex(me);
 		end
-		
+
+		% ===================================================================
+		%> @brief 
+		%>
+		% ===================================================================
+		function resetBodies(me)
+			for ii = 1:me.nBodies
+				me.bodies(ii).idx = ii;
+			end
+		end
+
+		% ===================================================================
+		%> @brief 
+		%>
+		% ===================================================================
+		function isCollision(me,name)
+			body = me.getBody(name);
+			if ~isempty(body)
+				c = me.world.getContacts(body);
+				if ~isempty(c)
+					c = c.get(0);
+					body2 = c.getOtherBody(body);
+
+				end
+			end
+		end
+
 		% ===================================================================
 		%> @brief 
 		%>
@@ -446,7 +473,6 @@ classdef animationManager < optickaCore
 			if updatePositions
 				updateBodyPositions(me);
 			end
-			
 		end
 
 		% ===================================================================
@@ -454,31 +480,29 @@ classdef animationManager < optickaCore
 		%>
 		% ===================================================================
 		function editBody(me,x,y,dx,dy)
-			if exist3('x','var') && ~isempty(x); me.x = x; end
+			if exist('x','var') && ~isempty(x); me.x = x; end
 			if exist('y','var') && ~isempty(y); me.y = y; end
 			if exist('dx','var') && ~isempty(dx); me.dX = dx; end
 			if exist('dy','var') && ~isempty(dy); me.dY = dy; end
-
 		end
 
 		% ===================================================================
 		%> @brief return the first body matching name
 		%>
 		% ===================================================================
-		function [body, trackidx, idx, stim] = getBody(me, name)
-			body = [];
-			idx = []; trackidx = [];
-			if ~exist('name','var') || isempty(name); return; end
-			isBody = false;
-			a = 1;
-			while a <= me.nBodies
-				if matches(name,me.bodies(a).name); isBody = true; break; end
-				a = a + 1;
+		function [body, trackidx, idx, stim] = getBody(me, id)
+			body = []; idx = []; trackidx = []; stim = [];
+			if ~exist('id','var') || isempty(id); return; end
+			if ischar(id)
+				names = string({me.bodies.name});
+				idx = find(matches(names,id));
+			else
+				hashes = [me.bodies.hash];
+				idx = find(hashes == id);
 			end
-			if isBody
-				body = me.bodies(a).body;
-				stim = me.bodies(a).stimulus;
-				idx = a;
+			if ~isempty(idx)
+				body = me.bodies(idx).body;
+				stim = me.bodies(idx).stimulus;
 				trackidx = find(me.trackIndex == idx);
 			end
 		end
@@ -508,8 +532,7 @@ classdef animationManager < optickaCore
 			value = length(me.bodies);
 		end
 
-		
-	end
+	end % END PUBLIC METHODS
 	
 	%=======================================================================
 	methods ( Static ) % STATIC METHODS
