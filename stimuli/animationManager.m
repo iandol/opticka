@@ -39,7 +39,7 @@ classdef animationManager < optickaCore
 			'screenBounds',false);
 		sinusoidalParams = struct();
 		brownianParams = struct();
-		timeDelta		= 0.016
+		timeDelta		= []
 		%> verbose?
 		verbose = false
 		%> default length of the animation in seconds if prerendering
@@ -98,6 +98,8 @@ classdef animationManager < optickaCore
 	end
 	
 	properties (Access = protected)
+		screen screenManager
+		useBounds = false
 		trackIndex = []
 		isFloor = false
 		isLeftWall = false
@@ -200,8 +202,8 @@ classdef animationManager < optickaCore
 					else
 						params = [-(bw/2) 0 (bw/2) 0]; 
 					end
-					wa=javaObject('org.dyn4j.geometry.Vector2', params(1), params(2));
-					wb=javaObject('org.dyn4j.geometry.Vector2', params(3), params(4));
+					wa = javaObject('org.dyn4j.geometry.Vector2', params(1), params(2));
+					wb = javaObject('org.dyn4j.geometry.Vector2', params(3), params(4));
 					thisShape = javaObject('org.dyn4j.geometry.Segment', wa, wb);
 					tx = ['points = ' sprintf(' %+.2f ', params)];
 				otherwise
@@ -307,14 +309,16 @@ classdef animationManager < optickaCore
 		%> @brief 
 		%>
 		% ===================================================================
-		function isCollision(me,name)
+		function [collision, collisionBody] = isCollision(me,name)
+			collision = false;
+			collisionBody = [];
 			body = me.getBody(name);
 			if ~isempty(body)
 				c = me.world.getContacts(body);
 				if ~isempty(c)
+					collision = true;
 					c = c.get(0);
-					body2 = c.getOtherBody(body);
-
+					collisionBody = c.getOtherBody(body);
 				end
 			end
 		end
@@ -326,38 +330,49 @@ classdef animationManager < optickaCore
 		function setup(me, screen, useBounds)
 			if ~exist('screen','var') || isempty(screen); screen = screenManager; end
 			if ~exist('useBounds','var') || isempty(useBounds); useBounds = false; end
+			me.screen = screen;
+			me.useBounds = useBounds;
+			me.ppd = me.screen.ppd;
+			if isempty(me.timeDelta)
+				me.timeDelta = me.screen.screenVals.ifi;
+			end
+			setupWorld(me);
+		end
+
+
+		% ===================================================================
+		%> @brief 
+		%>
+		% ===================================================================
+		function setupWorld(me)
 			me.reset;
 			me.tick = 0;
 			me.timeStep = [];
 			me.torque = 0;
-
-			me.ppd = screen.ppd;
-
 			me.world = javaObject('org.dyn4j.world.World');
 			me.world.setGravity(me.rigidParams.gravity(1),me.rigidParams.gravity(2));
-
-			if useBounds && ~isempty(screen.screenVals.rectInDegrees)
-				me.screenBounds = screen.screenVals.rectInDegrees;
+			if me.useBounds && ~isempty(me.screen.screenVals.rectInDegrees)
+				me.screenBounds = me.screen.screenVals.rectInDegrees;
 				if me.rigidParams.screenBounds
-					bnds = javaObject('org.dyn4j.collision.AxisAlignedBounds', Rectwidth(screen.screenVals.rectInDegrees), RectHeight(screen.screenVals.rectInDegrees));
+					bnds = javaObject('org.dyn4j.collision.AxisAlignedBounds', Rectwidth(me.screen.screenVals.rectInDegrees), RectHeight(me.screen.screenVals.rectInDegrees));
 					me.world.setBounds(bnds);
 				end
 			end
-
 			settings = me.world.getSettings();
 			settings.setAtRestDetectionEnabled(true);
-			settings.setStepFrequency(screen.screenVals.ifi);
+			settings.setStepFrequency(me.timeDelta);
 			settings.setMaximumAtRestLinearVelocity(0.75);
 			settings.setMaximumAtRestAngularVelocity(0.5);
-			settings.setMinimumAtRestTime(0.2); %def = 0.5
-
-			fprintf('--->>> RigidBody World with %.3fs step time created!\n',settings.getStepFrequency);
-			fprintf('\t Adding bodies: ');
-			for i = 1:me.nBodies
-				fprintf('%s  ',me.bodies(i).name);
-				me.world.addBody(me.bodies(i).body);
+			settings.setMinimumAtRestTime(0.25); %def = 0.5
+			if me.verbose
+				fprintf('--->>> RigidBody World with %.3fs step time created!\n',settings.getStepFrequency);
+				fprintf('\t Adding bodies: ');
+				for i = 1:me.nBodies
+					fprintf('%s  ',me.bodies(i).name);
+					me.world.addBody(me.bodies(i).body);
+				end
+				fprintf('\n');
 			end
-			fprintf('\n');
 			makeTrackIndex(me);
 		end
 
@@ -487,7 +502,7 @@ classdef animationManager < optickaCore
 		end
 
 		% ===================================================================
-		%> @brief return the first body matching name
+		%> @brief return the first body matching name or hash
 		%>
 		% ===================================================================
 		function [body, trackidx, idx, stim] = getBody(me, id)
