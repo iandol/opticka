@@ -9,9 +9,9 @@ Note only changes which may affect your use of Opticka will be detailed here, st
 > Please double-check changes in `DefaultStateInfo.m` to see the changes for state machine files, this may inform changes you could add to your own state machine files...
 
 
-* **BREAKING CHANGE**: we want to support the [International Brain Lab ONE Protocol](https://int-brain-lab.github.io/ONE/alf_intro.html) (see "A modular architecture for organizing, processing and sharing neurophysiology data," The International Brain Laboratory et al., 2023 Nat. Methods, [DOI](https://doi.org/10.1038/s41592-022-01742-6)), and we are now follwoing ALF filenaming for saved files. the root folder is still `OptickaFiles/savedData/` but now we use a folder hierarchy: `lab / subjects / subjectName / YYYY-MM-DD / SessionID /` -- the `MAT` file will **not** changed structure or content, but we will add extra files to help data sharing.
-* **BREAKING CHANGE**: LabJack T4 -- we increased the strobe word from 8 to 11 bits, now on EIO1:8 CIO1:3, this should in theory be backwards compatible as 8bits is still the same lines. Upgrade the LabJack T4 like this:
-```
+* **BREAKING CHANGE**: we want to support the [International Brain Lab ONE Protocol](https://int-brain-lab.github.io/ONE/alf_intro.html) (see "A modular architecture for organizing, processing and sharing neurophysiology data," The International Brain Laboratory et al., 2023 Nat. Methods, [DOI](https://doi.org/10.1038/s41592-022-01742-6)), and we are now follwoing ALF filenaming for saved files. the root folder is still `OptickaFiles/savedData/` but now we use a folder hierarchy: ` subjectName / YYYY-MM-DD / SessionID /` -- the opticka `MAT` file will **not** change structure or content, but we will add extra metadata files to help data sharing in future releases.
+* **BREAKING CHANGE**: LabJack T4 -- we increased the strobe word from 8 to 11 bits, now on EIO1:8 CIO1:3, this should in theory be backwards compatible as 8bits is still the same lines. Upgrade the LabJack T4 (connected over USB) like this:
+```matlab
 t = labJackT();
 open(t);
 initialiseServer(t);
@@ -19,20 +19,22 @@ close(t);
 ```
 * Add improved Rigid Body physics engine. We now use [dyn4j](https://dyn4j.org), an open-source Java 2D physics engine. `animationManager` is upgraded (previously it used my own simple physics engine, which couldn't scale to many collisions). Opticka uses degrees, and we do a simple mapping of degrees > meters, so 1deg stimulus is a 1m object.Test it with:
 ```matlab
-s = screenManager();
-b = imageStimulus('size',4,'filePath','moon.png','name','moon');
+sM = screenManager();
+b = imageStimulus('size',4,'filePath','moon.png',...
+    'name','moon');
 b.speed = 25; % will define velocity
 b.angle = -45; % will define velocity
-a = animationManager();
-sv = open(s); % open screen
-setup(b, s); % initialise stimulus with open screen
-addScreenBoundaries(a, sv); % add floor, ceiling and walls based on the screen
-addBody(a, b); % add stimulus as a rigidbody to animationManager
-setup(a); % initialise the simulation.
+aM = animationManager(); % our new animation manager
+sv = open(sM); % open PTB screen, sv is screen info
+setup(b, sM); % initialise stimulus with PTB screen
+addScreenBoundaries(aM, sv); % add floor, ceiling and
+% walls to rigidbody world based on the screen dimensions sv
+addBody(aM, b); % add stimulus as a rigidbody
+setup(aM); % initialise the simulation.
 for i = 1:60
 	draw(b); % draw the stimulus
-	flip(s); % flip the screen
-	step(a); % step the simulation
+	flip(sM); % flip the screen
+	step(aM); % step the simulation
 end
 ```
 * Improve touchManager to better use the rigid body animations with touch events. You can now finger-drag and "fling" physical objects around the screen.

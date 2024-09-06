@@ -118,7 +118,7 @@ classdef optickaCore < handle
 		end
 
 		% ===================================================================
-		function [path, sessionID, dateid] = getALF(me, subject, sessionPrefix, lab, create)
+		function [path, sessionID, dateID] = getALF(me, subject, sessionPrefix, lab, create)
 		%> @fn initialiseSaveFile(me)
 		%> @brief Initialise Save prefix
 		%>
@@ -130,9 +130,9 @@ classdef optickaCore < handle
 			if ~exist('lab','var') || isempty(lab); lab = []; end
 			if ~exist('create','var') || isempty(create); create = false; end
 			
-			dateid = fix(clock); %#ok<*CLOCK> compatible with octave
-			dateid = num2str(dateid(1:6));
-			dateid = regexprep(dateid,' +','-');
+			dateID = fix(clock); %#ok<*CLOCK> compatible with octave
+			dateID = num2str(dateID(1:6));
+			dateID = regexprep(dateID,' +','-');
 			
 			d = char(datetime("today"));
 			if isempty(lab)
@@ -452,6 +452,15 @@ classdef optickaCore < handle
 	%=======================================================================
 	methods ( Hidden = true ) %-------HIDDEN METHODS-----%
 	%=======================================================================
+
+		% ===================================================================
+		function ID = initialiseSaveFile(me)
+		%> @fn initialiseSaveFile
+		%> @brief just get date fragment
+		%>
+		% ===================================================================
+			[~,~,ID] = getALF(me);
+		end
 
 		% ===================================================================
 		function checkPaths(me)

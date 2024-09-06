@@ -99,20 +99,18 @@ classdef animationManager < optickaCore
 	
 	properties (Access = protected)
 		screen screenManager
-		useBounds = false
-		trackIndex = []
-		isFloor = false
-		isLeftWall = false
-		isRightWall = false
-		isCeiling = false
-		massType = struct('NORMAL',[],'INFINITE',[],'FIXED_ANGULAR_VELOCITY',[],'FIXED_LINEAR_VELOCITY',[])
-		bodyTemplate = struct('idx',0,'hash',[],'name','','type','','body',[],...
-			'stimulus',[],'shape','Circle','radius',2,'density',1,...
+		useBounds logical = false
+		trackIndex		= []
+		isFloor			= false
+		isLeftWall		= false
+		isRightWall		= false
+		isCeiling		= false
+		massType		= struct('NORMAL',[],'INFINITE',[],'FIXED_ANGULAR_VELOCITY',[],'FIXED_LINEAR_VELOCITY',[])
+		bodyTemplate	= struct('idx',0,'hash',[],'name','','type','','body',[],...
+			'stimulus',[],'shape','Circle','radius',2,'density',1,'theta',0,...
 			'friction',0.2,'elasticity',0.75,'position',[0 0],'velocity',[0 0])
-		%> useful screen info and initial gamma tables and the like
-		screenVals struct
 		%> what properties are allowed to be passed on construction
-		allowedProperties='screen|bodies|obstacles|type|speed|angle|startPosition|verbose'
+		allowedProperties = ["type","bodies","rigidParams","brownianParams","timeDelta","verbose"]
 	end
 	
 	%=======================================================================
@@ -133,7 +131,7 @@ classdef animationManager < optickaCore
 			me=me@optickaCore(args); %superclass constructor
 			me.parseArgs(args,me.allowedProperties);
 			% dyn4j jar -- see https://dyn4j.org/pages/getting-started
-			javaaddpath([me.paths.whereami '/stimuli/lib/dyn4j-5.0.2.jar']);
+			javaaddpath([me.paths.whereami '/stimuli/lib/dyn4j-5.0.2.jar'],'-begin');
 			me.massType.NORMAL = javaMethod('valueOf', 'org.dyn4j.geometry.MassType', 'NORMAL');
     		me.massType.INFINITE = javaMethod('valueOf', 'org.dyn4j.geometry.MassType', 'INFINITE');
 			me.massType.FIXED_ANGULAR_VELOCITY = javaMethod('valueOf', 'org.dyn4j.geometry.MassType', 'FIXED_ANGULAR_VELOCITY');
@@ -159,6 +157,7 @@ classdef animationManager < optickaCore
 			if ~exist('density','var') || isempty(density); density = 1; end
 			if ~exist('friction','var') || isempty(friction); friction = 0.2; end
 			if ~exist('elasticity','var') || isempty(elasticity); elasticity = 0.75; end
+			if ~exist('av','var') || isempty(av); av = []; end
 			
 			shape = [upper(shape(1)) lower(shape(2:end))];
 			if ~matches(shape,{'Circle','Segment','Rectangle','Triangle','Ellipse'}); warning('Not supported shape');return;end
@@ -202,8 +201,8 @@ classdef animationManager < optickaCore
 					else
 						params = [-(bw/2) 0 (bw/2) 0]; 
 					end
-					wa = javaObject('org.dyn4j.geometry.Vector2', params(1), params(2));
-					wb = javaObject('org.dyn4j.geometry.Vector2', params(3), params(4));
+					wa = me.vector2( params(1), params(2) );
+					wb = me.vector2( params(3), params(4) );
 					thisShape = javaObject('org.dyn4j.geometry.Segment', wa, wb);
 					tx = ['points = ' sprintf(' %+.2f ', params)];
 				otherwise
@@ -214,6 +213,7 @@ classdef animationManager < optickaCore
 			% build the structure
 			thisBody = me.bodyTemplate;
 			thisBody.body = javaObject('org.dyn4j.dynamics.Body');
+			thisBody.body.addFixture(thisShape);
 			thisBody.hash = thisBody.body.hashCode;
 			thisBody.name = stimulus.name;
 			thisBody.type = type;
@@ -228,44 +228,78 @@ classdef animationManager < optickaCore
 			else
 				theta = deg2rad(stimulus.getP('angle'));
 			end
-			[cx,cy] = pol2cart(theta, stimulus.speed);
-			thisBody.position = [stimulus.xPosition -stimulus.yPosition];
-    		fixture = thisBody.body.addFixture(thisShape);
-			fixture.setDensity(thisBody.density);
-			fixture.setFriction(thisBody.friction);
-    		fixture.setRestitution(thisBody.elasticity); % set coefficient of restitution
-			if matches(lower(type),'normal')
-				thisBody.body.setMass(me.massType.NORMAL);
-				thisBody.velocity = [cx -cy];
-				if ~exist('av','var') || isempty(av); av = cx/2; end
-			elseif matches(lower(type),'sensor')
-				fixture.setSensor(true);
-				thisBody.velocity = [0 0];
-				thisBody.body.setMass(me.massType.INFINITE);
-				if ~exist('av','var') || isempty(av); av = 0; end
-			else
-				thisBody.body.setMass(me.massType.INFINITE);
-				thisBody.velocity = [0 0];
-				if ~exist('av','var') || isempty(av); av = 0; end
-			end
-			thisBody.body.translateToOrigin();
-    		thisBody.body.translate(thisBody.position(1), thisBody.position(2));
-    		thisBody.body.setLinearVelocity(javaObject('org.dyn4j.geometry.Vector2', thisBody.velocity(1), thisBody.velocity(2)));
-			thisBody.body.setAngularVelocity(av);
-			thisBody.body.setLinearDamping(me.rigidParams.linearDamping);
-			thisBody.body.setAngularDamping(me.rigidParams.angularDamping);
-			thisBody.body.updateMass();
+			thisBody.theta = theta;
+			
+			setupBody(me, thisBody);
+
 			if isempty(me.bodies)
 				thisBody.idx = 1;
 				me.bodies = thisBody;
 			else
 				thisBody.idx = me.nBodies+1;
-				me.bodies(end+1) = thisBody;
+				me.bodies(thisBody.idx) = thisBody;
 			end
 			if me.verbose
 				fprintf('---> addBody: %s:%s:%s -- X:%+0.2f Y:%+0.2f -- %s\n',thisBody.name,type,shape,stimulus.xPosition,stimulus.yPosition,tx);
 			end
 			makeTrackIndex(me);
+		end
+
+		% ===================================================================
+		%> @brief 
+		%>
+		% ===================================================================
+		function editBody(me, body, x, y, vx, vy, av)
+			if ~exist('body','var') || isempty(body); return; end
+			
+			idx = getBodyIDX(me, body.hashCode);
+			pos = body.getWorldCenter();
+			lv = body.getLinearVelocity();
+			a = body.getAngularVelocity();
+
+			changePos = false;
+			if exist('x','var') && ~isempty(x)
+				thisX = x; changePos = true;
+			else
+				thisX = pos.x;
+			end
+			if exist('y','var') && ~isempty(y)
+				thisY = -y; changePos = true;
+			else
+				thisY = pos.y;
+			end
+			if changePos
+				body.setAtRest(false);
+				body.translateToOrigin();
+				body.translate(thisX, thisY);
+			end
+
+			changeV = false;
+			if exist('vx','var') && ~isempty(vx)
+				thisVX = vx; changeV = true;
+			else
+				thisVX = lv.x;
+			end
+			if exist('vy','var') && ~isempty(vy)
+				thisVY = vy; changeV = true;
+			else
+				thisVY = lv.y;
+			end
+			if changeV
+				body.setLinearVelocity(thisVX, thisVY);
+			end
+
+			if exist('av','var') && ~isempty(av)
+				body.setAngularVelocity(av);
+			end
+
+			if me.verbose
+				pos2 = body.getWorldCenter();
+				lv2 = body.getLinearVelocity();
+				a2 = body.getAngularVelocity();
+				fprintf('EDITBODY: x:%.1f->%.1f y:%.1f->%.1f vx:%.1f->%.1f vy:%.1f->%.1f a:%.1f->%.1f\n',...
+					pos.x,pos2.x,pos.y,pos2.y,lv.x,lv2.x,lv.y,lv2.y,a,a2);
+			end
 		end
 
 		% ===================================================================
@@ -309,25 +343,16 @@ classdef animationManager < optickaCore
 		%> @brief 
 		%>
 		% ===================================================================
-		function [collision, collisionBody] = isCollision(me,name)
-			collision = false;
-			collisionBody = [];
-			body = me.getBody(name);
-			if ~isempty(body)
-				c = me.world.getContacts(body);
-				if ~isempty(c)
-					collision = true;
-					c = c.get(0);
-					collisionBody = c.getOtherBody(body);
-				end
-			end
+		function update(me)
+			setupBodies(me);
+			setupWorld(me);
 		end
 
 		% ===================================================================
 		%> @brief 
 		%>
 		% ===================================================================
-		function setup(me, screen, useBounds)
+		function setup(me,screen,useBounds)
 			if ~exist('screen','var') || isempty(screen); screen = screenManager; end
 			if ~exist('useBounds','var') || isempty(useBounds); useBounds = false; end
 			me.screen = screen;
@@ -339,41 +364,23 @@ classdef animationManager < optickaCore
 			setupWorld(me);
 		end
 
-
 		% ===================================================================
 		%> @brief 
 		%>
 		% ===================================================================
-		function setupWorld(me)
-			me.reset;
-			me.tick = 0;
-			me.timeStep = [];
-			me.torque = 0;
-			me.world = javaObject('org.dyn4j.world.World');
-			me.world.setGravity(me.rigidParams.gravity(1),me.rigidParams.gravity(2));
-			if me.useBounds && ~isempty(me.screen.screenVals.rectInDegrees)
-				me.screenBounds = me.screen.screenVals.rectInDegrees;
-				if me.rigidParams.screenBounds
-					bnds = javaObject('org.dyn4j.collision.AxisAlignedBounds', Rectwidth(me.screen.screenVals.rectInDegrees), RectHeight(me.screen.screenVals.rectInDegrees));
-					me.world.setBounds(bnds);
+		function [collision, collisionBody] = isCollision(me, body)
+			if ~exist('body','var') || isempty(body); return; end
+			collision = false;
+			collisionBody = [];
+			if ischar(body); body = me.getBody(body); end
+			if isa(body,'org.dyn4j.dynamics.Body')
+				c = me.world.getContacts(body);
+				if ~isempty(c) && c.size > 0
+					collision = true;
+					c2 = c.get(0);
+					collisionBody = c2.getOtherBody(body);
 				end
 			end
-			settings = me.world.getSettings();
-			settings.setAtRestDetectionEnabled(true);
-			settings.setStepFrequency(me.timeDelta);
-			settings.setMaximumAtRestLinearVelocity(0.75);
-			settings.setMaximumAtRestAngularVelocity(0.5);
-			settings.setMinimumAtRestTime(0.25); %def = 0.5
-			if me.verbose
-				fprintf('--->>> RigidBody World with %.3fs step time created!\n',settings.getStepFrequency);
-				fprintf('\t Adding bodies: ');
-				for i = 1:me.nBodies
-					fprintf('%s  ',me.bodies(i).name);
-					me.world.addBody(me.bodies(i).body);
-				end
-				fprintf('\n');
-			end
-			makeTrackIndex(me);
 		end
 
 		% ===================================================================
@@ -382,7 +389,7 @@ classdef animationManager < optickaCore
 		%> @param sv screenVals from screenManager
 		%> @param padding [left top right bottom]
 		% ===================================================================
-		function addScreenBoundaries(me, sv, padding)
+		function boundaryStimuli = addScreenBoundaries(me, sv, padding)
 			if ~exist('sv','var'); return; end
 			if ~exist('padding','var') || isempty(padding); padding = [0 0 0 0]; end
 
@@ -393,40 +400,22 @@ classdef animationManager < optickaCore
 			r = sv.rightInDegrees - padding(1);
 			b = sv.bottomInDegrees - padding(1);
 
-			fl = barStimulus('isVisible',false,'barWidth',w,'barHeight',0.01,...
+			fl = barStimulus('isVisible',false,'barWidth',w,'barHeight',0.1,...
 				'xPosition',0,'yPosition',b,'name','floor');
-			cl = barStimulus('isVisible',false,'barWidth',w,'barHeight',0.01,...
+			cl = barStimulus('isVisible',false,'barWidth',w,'barHeight',0.1,...
 				'xPosition',0,'yPosition',t,'name','ceiling');
-			lw = barStimulus('isVisible',false,'barWidth',0.01,'barHeight',h,...
+			lw = barStimulus('isVisible',false,'barWidth',0.1,'barHeight',h,...
 				'xPosition',l,'yPosition',0,'name','leftwall');
-			rw = barStimulus('isVisible',false,'barWidth',0.01,'barHeight',h,...
+			rw = barStimulus('isVisible',false,'barWidth',0.1,'barHeight',h,...
 				'xPosition',r,'yPosition',0,'name','rightwall');
 
 			me.addBody(fl,'Segment','infinite');
 			me.addBody(cl,'Segment','infinite');
 			me.addBody(lw,'Segment','infinite');
 			me.addBody(rw,'Segment','infinite');
-		end
 
-		% ===================================================================
-		%> @brief 
-		%>
-		% ===================================================================
-		function updateBodyPositions(me)
-			a = 0;
-			for ii = me.trackIndex
-				a = a + 1;
-				pos = me.bodies(ii).body.getWorldCenter();
-				lv = me.bodies(ii).body.getLinearVelocity();
-				av = me.bodies(ii).body.getAngularVelocity();
-				me.x(a) = pos.x;
-				me.y(a) = -pos.y;
-				if lv.x > 0; av = abs(av); else; av = -abs(av); end
-				me.linearVelocity(a,:) = [lv.x lv.y];
-				me.angularVelocity(a) = av;
-				me.bodies(ii).stimulus.updateXY(me.x(a), me.y(a), true);
-				me.bodies(ii).stimulus.angleOut = me.bodies(ii).stimulus.angleOut + rad2deg(av)*me.timeDelta;
-			end
+			boundaryStimuli = metaStimulus('stimuli', {fl, cl, lw, rw});
+
 		end
 		
 		% ===================================================================
@@ -445,60 +434,29 @@ classdef animationManager < optickaCore
 		%>
 		% ===================================================================
 		function reset(me)
-			me.trackIndex = [];
-			me.world = [];
-			me.isFloor = false;
-			me.isLeftWall = false;
-			me.isRightWall = false;
-			me.isCeiling = false;
-			me.hitCeiling = false;
-			me.hitFloor = false;
-			me.hitLeftWall = false;
+			me.trackIndex	= [];
+			if isa(me.world,'org.dyn4j.world.World'); me.world.removeAllBodies(); me.world.removeAllJoints(); end
+			me.world		= [];
+			me.isFloor		= false;
+			me.isLeftWall	= false;
+			me.isRightWall	= false;
+			me.isCeiling	= false;
+			me.hitCeiling	= false;
+			me.hitFloor		= false;
+			me.hitLeftWall	= false;
 			me.hitRightWall = false;
-			me.tick = 0;
-			me.timeStep = [];
-			me.torque = 0;
-			me.kineticEnergy=0;
-			me.potentialEnergy=0;
-			me.angle=0;
+			me.tick			= 0;
+			me.timeStep		= [];
+			me.torque		= 0;
+			me.kineticEnergy = 0;
+			me.potentialEnergy = 0;
+			me.angle		= 0;
 			me.angularVelocity = 0;
-			me.x = [];
-			me.y = [];
-			me.dX = [];
-			me.dY = [];
-			me.screenBounds = [];
-		end
-
-		% ===================================================================
-		%> @brief 
-		%>
-		% ===================================================================
-		function rigidStep(me, tick, updatePositions)
-			if exist('tick','var') && iscell(tick)
-				if length(tick)==2; updatePositions = tick{2}; end
-				tick = tick{1};
-			end
-			if ~exist('tick','var') || isempty(tick); tick = 1; end
-			if ~exist('updatePositions','var') || isempty(updatePositions); updatePositions = true; end
-			if isempty(me.world); error('You need to setup() animationManager BEFORE you can step()');end
-			me.world.step(tick);
-			me.tick = me.tick + tick;
-			me.timeStep = (me.tick - 1) * me.timeDelta;
-
-			if updatePositions
-				updateBodyPositions(me);
-			end
-		end
-
-		% ===================================================================
-		%> @brief 
-		%>
-		% ===================================================================
-		function editBody(me,x,y,dx,dy)
-			if exist('x','var') && ~isempty(x); me.x = x; end
-			if exist('y','var') && ~isempty(y); me.y = y; end
-			if exist('dx','var') && ~isempty(dx); me.dX = dx; end
-			if exist('dy','var') && ~isempty(dy); me.dY = dy; end
+			me.x			= [];
+			me.y			= [];
+			me.dX			= [];
+			me.dY			= [];
+			me.screenBounds	= [];
 		end
 
 		% ===================================================================
@@ -543,6 +501,18 @@ classdef animationManager < optickaCore
 		%> @brief 
 		%>
 		% ===================================================================
+		function name = getBodyName(me, hash)
+			if me.nBodies < 1; return; end
+			hashes = [me.bodies.hash];
+			names = [string({me.bodies.name})];
+			idx = hashes == hash;
+			name = names(idx);
+		end
+
+		% ===================================================================
+		%> @brief 
+		%>
+		% ===================================================================
 		function value = get.nBodies(me)
 			value = length(me.bodies);
 		end
@@ -553,8 +523,17 @@ classdef animationManager < optickaCore
 	methods ( Static ) % STATIC METHODS
 	%=======================================================================
 		
+
 		% ===================================================================
-		%> @brief Load an image
+		%> @brief dyn4j Vector2
+		%>
+		% ===================================================================
+		function v = vector2(x, y)
+			v = javaObject('org.dyn4j.geometry.Vector2', x, y);
+		end
+
+		% ===================================================================
+		%> @brief
 		%>
 		% ===================================================================
 		function demo()
@@ -564,6 +543,12 @@ classdef animationManager < optickaCore
 			if max(Screen('Screens')) == 0; s.windowed = [0 0 1200 800]; end
 			sv = open(s);
 
+			% create a new animation manager
+			a = animationManager;
+			a.verbose = true;
+			a.timeDelta = sv.ifi;
+			stims = a.addScreenBoundaries(sv,[1 1 1 2]);
+			
 			% create our stimuli
 			moon = imageStimulus('filePath','moon.png','size',4);
 			moon.name = 'moon';
@@ -571,37 +556,19 @@ classdef animationManager < optickaCore
 			moon.yPosition = -5;
 			moon.angle = 85;
 			moon.speed = 20;
-			floor = barStimulus('alpha',0.2,'barWidth',sv.widthInDegrees,...
-				'barHeight',1,'yPosition',sv.bottomInDegrees-2);
-			floor.name = 'floor';
-			wall1 = barStimulus('alpha',0.2,'barWidth',1,'barHeight',...
-				sv.heightInDegrees,'xPosition',sv.leftInDegrees+2);
-			wall1.name = 'wall1';
-			wall2 = barStimulus('alpha',0.2,'barWidth',1,'barHeight',...
-				sv.heightInDegrees,'xPosition',sv.rightInDegrees-2);
-			wall2.name = 'wall2';
-			ceiling = floor.clone;
-			ceiling.name = 'ceiling';
-			ceiling.yPosition = sv.topInDegrees;
+			
 			sensor = discStimulus('colour',[0.7 0.5 0.5 0.2],'size',8);
 			sensor.name = 'sensor';
 
-			% setup all stimuli with PTB screen
-			all = metaStimulus('stimuli',{moon,floor,wall1,wall2,ceiling,sensor});
-			all.setup(s);
-			
-			% create a new animation manager
-			a = animationManager;
-			a.verbose = true;
-			a.timeDelta = sv.ifi;
-			% add the stmuli as physics bodies
-			%me.addBody(stimulus, shape, type, density, friction, elasticity, angular velocity)
-			a.addBody(floor,'Rectangle','infinite');
-			a.addBody(ceiling,'Rectangle','infinite');
-			a.addBody(wall1,'Rectangle','infinite');
-			a.addBody(wall2,'Rectangle','infinite');
+			% add the stimuli as physics bodies
+			% me.addBody(stimulus, shape, type, density, friction, elasticity, angular velocity)
 			a.addBody(sensor,'Circle','sensor');
 			a.addBody(moon, 'Circle', 'normal', 10, 0.2, 0.8, moon.speed);
+
+			% setup all stimuli with PTB screen
+			stims.stimuli{end+1} = sensor;
+			stims.stimuli{end+1} = moon;
+			stims.setup(s);
 			
 			% setup animationmamager with PTB screen
 			a.setup(s);
@@ -616,10 +583,9 @@ classdef animationManager < optickaCore
 			for jj = 1:sv.fps*60
 				step(a);
 				v.x = a.linearVelocity(1,1);
-				v.y = a.linearVelocity(1,1);
+				v.y = a.linearVelocity(1,2);
 				av = a.angularVelocity(1);
-				moon.updateXY(a.x(1), a.y(1), true);
-				moon.angleOut = moon.angleOut + rad2deg(av)*sv.ifi;
+				
 				t(jj)=a.timeStep;
 				x(jj)=a.x(1);
 				y(jj)=a.y(1);
@@ -634,20 +600,16 @@ classdef animationManager < optickaCore
 						break;
 					elseif strcmpi(KbName(keyCode),'LeftArrow')
 						body.setAtRest(false);
-						f = javaObject('org.dyn4j.geometry.Vector2', -20, 0);
-						body.applyImpulse(f);
+						body.applyImpulse(a.vector2(-40,0));
 					elseif strcmpi(KbName(keyCode),'RightArrow')
 						body.setAtRest(false);
-						f = javaObject('org.dyn4j.geometry.Vector2', 20, 0);
-						body.applyImpulse(f);
+						body.applyImpulse(a.vector2(40,0));
 					elseif strcmpi(KbName(keyCode),'UpArrow')
 						body.setAtRest(false);
-						f = javaObject('org.dyn4j.geometry.Vector2', 0, 20);
-						body.applyImpulse(f);
+						body.applyImpulse(a.vector2(0,40));
 					elseif strcmpi(KbName(keyCode),'DownArrow')
 						body.setAtRest(false);
-						f = javaObject('org.dyn4j.geometry.Vector2', 0, -20);
-						body.applyImpulse(f);
+						ody.applyImpulse(a.vector2(0,-40));
 					elseif strcmpi(KbName(keyCode),'1!')
 						body.setAtRest(false);
 						body.translateToOrigin();
@@ -662,7 +624,7 @@ classdef animationManager < optickaCore
 					end
 				end
 
-				draw(all);
+				draw(stims);
 				s.drawText(sprintf('FULL PHYSICS ENGINE SUPPORT:\n X: %.3f  Y: %.3f VX: %.3f VY: %.3f A: %.3f INBOX: %i R: %.2f',...
 					a.x(1),a.y(1),v.x,v.y, av, inBox,3))
 				flip(s);
@@ -690,7 +652,6 @@ classdef animationManager < optickaCore
 			xlabel('Time (s)')
 			ylabel('Kinetic|Potential Energy')
 			legend({'KE','PE'})
-		
 		end
 
 		% ===================================================================
@@ -749,7 +710,170 @@ classdef animationManager < optickaCore
 	%=======================================================================
 	methods ( Access = protected ) % PRIVATE METHODS
 	%=======================================================================
+
+
+		% ===================================================================
+		%> @brief return the first body matching name or hash
+		%>
+		% ===================================================================
+		function [trackidx, idx] = getBodyIDX(me, id)
+			idx = []; trackidx = [];
+			if ~exist('id','var') || isempty(id); return; end
+			if ischar(id)
+				names = string({me.bodies.name});
+				idx = find(matches(names,id));
+			elseif isa(id,'org.dyn4j.dynamics.Body')
+				hashes = [me.bodies.hash];
+				idx = find(hashes == id.hashCode);
+			else
+				hashes = [me.bodies.hash];
+				idx = find(hashes == id);
+			end
+			if ~isempty(idx)
+				trackidx = find(me.trackIndex == idx);
+			end
+		end
+
+		% ===================================================================
+		%> @brief 
+		%>
+		% ===================================================================
+		function rigidStep(me, tick, updatePositions)
+			if exist('tick','var') && iscell(tick) && ~isempty(tick)
+				if length(tick)==2; updatePositions = tick{2}; end
+				tick = tick{1};
+			end
+			if ~exist('tick','var') || isempty(tick); tick = 1; end
+			if ~exist('updatePositions','var') || isempty(updatePositions); updatePositions = true; end
+			if isempty(me.world); error('You need to setup() animationManager BEFORE you can step()');end
+			me.world.step(tick);
+			me.tick = me.tick + tick;
+			me.timeStep = (me.tick - 1) * me.timeDelta;
+
+			if updatePositions
+				updateBodyPositions(me);
+			end
+		end
+
+		% ===================================================================
+		%> @brief 
+		%>
+		% ===================================================================
+		function updateBodyPositions(me)
+			a = 0;
+			for ii = me.trackIndex
+				a = a + 1;
+				pos = me.bodies(ii).body.getWorldCenter();
+				lv = me.bodies(ii).body.getLinearVelocity();
+				av = me.bodies(ii).body.getAngularVelocity();
+				me.x(a) = pos.x;
+				me.y(a) = -pos.y;
+				if lv.x > 0; av = abs(av); else; av = -abs(av); end
+				me.linearVelocity(a,:) = [lv.x lv.y];
+				me.angularVelocity(a) = av;
+				me.bodies(ii).stimulus.updateXY(me.x(a), me.y(a), true);
+				me.bodies(ii).stimulus.angleOut = me.bodies(ii).stimulus.angleOut + rad2deg(av)*me.timeDelta;
+			end
+		end
 		
+		% ===================================================================
+		%> @brief 
+		%>
+		% ===================================================================
+		function setupWorld(me)
+			me.reset;
+			me.tick = 0;
+			me.timeStep = [];
+			me.torque = 0;
+
+			me.world = javaObject('org.dyn4j.world.World');
+			me.world.setGravity(me.rigidParams.gravity(1),me.rigidParams.gravity(2));
+
+			if me.useBounds && ~isempty(me.screen.screenVals.rectInDegrees)
+				me.screenBounds = me.screen.screenVals.rectInDegrees;
+				if me.rigidParams.screenBounds
+					bnds = javaObject('org.dyn4j.collision.AxisAlignedBounds', Rectwidth(me.screen.screenVals.rectInDegrees), RectHeight(me.screen.screenVals.rectInDegrees));
+					me.world.setBounds(bnds);
+				end
+			end
+			settings = me.world.getSettings();
+			settings.setAtRestDetectionEnabled(true);
+			settings.setStepFrequency(me.timeDelta);
+			settings.setMaximumAtRestLinearVelocity(0.75);
+			settings.setMaximumAtRestAngularVelocity(0.5);
+			settings.setMinimumAtRestTime(0.2); %def = 0.5
+
+			setupBodies(me);
+			fprintf('--->>> RigidBody World with %.3fs step time created!\n',settings.getStepFrequency);
+			fprintf('\t Adding bodies: ');
+			for i = 1:me.nBodies
+				fprintf('%s  ',me.bodies(i).name);
+				me.world.addBody(me.bodies(i).body);
+			end
+			makeTrackIndex(me);
+		end
+
+		% ===================================================================
+		%> @brief 
+		%>
+		% ===================================================================
+		function setupBodies(me)
+			for ii = 1:me.nBodies
+				thisBody = me.bodies(ii);
+				setupBody(me, thisBody);
+			end
+		end
+
+		% ===================================================================
+		%> @brief 
+		%>
+		% ===================================================================
+		function setupBody(me, thisBody)
+			if isempty(thisBody.theta); thisBody.theta = 0; end
+			[cx,cy] = pol2cart(thisBody.theta, thisBody.stimulus.speed);
+			thisBody.position = [thisBody.stimulus.xPosition -thisBody.stimulus.yPosition];
+			
+			fixture = thisBody.body.getFixture(0);
+			fixture.setDensity(thisBody.density);
+			fixture.setFriction(thisBody.friction);
+			fixture.setRestitution(thisBody.elasticity); % set coefficient of restitution
+
+			if matches(lower(thisBody.type),'normal')
+				thisBody.body.setMass(me.massType.NORMAL);
+				thisBody.velocity = [cx -cy];
+				av = cx/2;
+			elseif matches(lower(thisBody.type),'sensor')
+				fixture.setSensor(true);
+				thisBody.velocity = [0 0];
+				thisBody.body.setMass(me.massType.INFINITE);
+				av = 0;
+			else
+				thisBody.velocity = [0 0];
+				thisBody.body.setMass(me.massType.INFINITE);
+				av = 0;
+			end
+			if isempty(thisBody.velocity); thisBody.velocity = [0 0]; end
+			thisBody.body.translateToOrigin();
+			thisBody.body.translate(thisBody.position(1), thisBody.position(2));
+			thisBody.body.setLinearVelocity(javaObject('org.dyn4j.geometry.Vector2', thisBody.velocity(1), thisBody.velocity(2)));
+			thisBody.body.setAngularVelocity(av);
+			thisBody.body.setLinearDamping(me.rigidParams.linearDamping);
+			thisBody.body.setAngularDamping(me.rigidParams.angularDamping);
+			thisBody.body.updateMass();
+		end
+
+		% ===================================================================
+		%> @brief 
+		%>
+		% ===================================================================
+		function updateStimuli(me)
+			a = 0;
+			for ii = me.trackIndex
+				me.bodies(ii).stimulus.angleOut = rad2deg(me.bodies(ii).theta);
+				me.bodies(ii).stimulus.update();
+			end
+		end
+
 		% ===================================================================
 		%> @brief 
 		%>
