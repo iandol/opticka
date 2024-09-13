@@ -95,6 +95,7 @@ classdef eyelinkManager < eyetrackerCore
 		%>
 		%> @param sM screenManager to link to
 		% ===================================================================
+			if me.isOff; me.isDummy = true; return; end
 			success = false;
 			if ~exist('sM','var')
 				warning('Cannot initialise without a PTB screen')
@@ -186,8 +187,8 @@ classdef eyelinkManager < eyetrackerCore
 				if me.recordData
 					err = Eyelink('Openfile', me.tempFile);
 					if err ~= 0
-						warning('eyelinkManager Cannot setup Eyelink data file, aborting data recording');
 						me.isRecording = false;
+						error('eyelinkManager Cannot setup Eyelink data file, aborting data recording'); %#ok<CPROPLC>
 					else
 						Eyelink('Command', ['add_file_preamble_text ''Recorded by:' me.fullName ' tracker'''],true);
 						me.isRecording = true;
@@ -255,7 +256,7 @@ classdef eyelinkManager < eyetrackerCore
 
 			if isa(me.screen,'screenManager') && ~me.screen.isOpen; open(me.screen); end
 
-			if ~me.isConnected; return; end
+			if ~me.isConnected || me.isOff; return; end
 			oldrk = RestrictKeysForKbCheck([]); %just in case someone has restricted keys
 			fprintf('\n===>>> CALIBRATING EYELINK... <<<===\n');
 			Eyelink('Verbosity',me.verbosityLevel);
@@ -410,9 +411,14 @@ classdef eyelinkManager < eyetrackerCore
 					x = sample.gx(me.eyeUsed+1);
 					y = sample.gy(me.eyeUsed+1);
 					p = sample.pa(me.eyeUsed+1);
-					if x == me.MISSING_DATA && y == me.MISSING_DATA && me.ignoreBlinks
+					if x == me.MISSING_DATA || y == me.MISSING_DATA
+						me.x = NaN;
+						me.y = NaN;
 						sample.valid = false;
-						me.pupil = 0;
+						me.pupil = NaN;
+						me.xAll = [me.xAll me.x];
+						me.yAll = [me.yAll me.y];
+						me.pupilAll = [me.pupilAll me.pupil];
 						me.isBlink = true;
 					else
 						sample.valid = true;
@@ -424,29 +430,10 @@ classdef eyelinkManager < eyetrackerCore
 						me.pupilAll = [me.pupilAll me.pupil];
 						me.isBlink = false;
 					end
-					%if me.verbose;fprintf('<GS X: %.2g | Y: %.2g | P: %.2g | isBlink: %i>\n',me.x,me.y,me.pupil,me.isBlink);end
+					if me.debug;fprintf('<GS X: %.2g | Y: %.2g | P: %.2g | isBlink: %i>\n',me.x,me.y,me.pupil,me.isBlink);end
 				end
 			else
-				if ~isempty(me.win)
-					w = me.win;
-				elseif ~isempty(me.screen) && ~isempty(me.screen.screen)
-					w = me.screen.screen;
-				else
-					w = [];
-				end
-				[x, y] = GetMouse(w);
-				sample.time = GetSecs;
-				xy = toDegrees(me, [x y]);
-				me.x = xy(1); me.y = xy(2);
-				me.pupil = 800 + randi(20);
-				sample.gx = me.x;
-				sample.gy = me.y;
-				sample.pa = me.pupil;
-				sample.valid = true;
-				me.xAll = [me.xAll me.x];
-				me.yAll = [me.yAll me.y];
-				me.pupilAll = [me.pupilAll me.pupil];
-				%if me.verbose;fprintf('<DM X: %.2f | Y: %.2f | P: %.2f | T: %f>\n',me.x,me.y,me.pupil,sample.time);end
+				sample = getMouseSample(me);
 			end
 			me.currentSample = sample;
 		end
@@ -511,7 +498,11 @@ classdef eyelinkManager < eyetrackerCore
 					Eyelink('CloseFile');
 					oldp = pwd;
 					try
-						cd(me.paths.savedData);
+						if isfield(me.paths,'alfPath') && exist(me.paths.alfPath,'dir')
+							cd(me.paths.alfPath);
+						else
+							cd(me.paths.savedData);
+						end
 						me.salutation('Close Method',sprintf('Receiving data file %s.edf', me.tempFile),true);
 						status=Eyelink('ReceiveFile');
 						if status > 0
@@ -551,7 +542,7 @@ classdef eyelinkManager < eyetrackerCore
 		%> @brief draw the background colour
 		%>
 		% ===================================================================
-			if ~me.isConnected; return; end
+			if ~me.isConnected || me.isOff; return; end
 			Eyelink('Command', 'clear_screen 1');
 		end
 
@@ -560,7 +551,7 @@ classdef eyelinkManager < eyetrackerCore
 		%> @brief draw general status
 		%>
 		% ===================================================================
-			if ~me.isConnected; return; end
+			if ~me.isConnected || me.isOff; return; end
 			if ~exist('comment','var'); comment=''; end
 			if ~exist('ts','var'); ts = []; end
 			if ~exist('dontClear','var'); dontClear = false; end
@@ -576,7 +567,7 @@ classdef eyelinkManager < eyetrackerCore
 		%> @brief draw the stimuli boxes on the tracker display
 		%>
 		% ===================================================================
-			if ~me.isConnected; return; end
+			if ~me.isConnected || me.isOff; return; end
 			if exist('ts','var') && isstruct(ts) && isfield(ts,'x')
 				me.stimulusPositions = ts;
 			else
@@ -606,8 +597,8 @@ classdef eyelinkManager < eyetrackerCore
 		%> @brief draw the fixation box on the tracker display
 		%>
 		% ===================================================================
-			if ~me.isConnected; return; end
-			if length(me.fixation.radius) == 1
+			if ~me.isConnected || me.isOff; return; end
+			if isscalar(me.fixation.radius)
 				rect = [0 0 me.fixation.radius*2 me.fixation.radius*2];
 			else
 				rect = [0 0 me.fixation.radius(1)*2 me.fixation.radius(2)*2];
@@ -624,7 +615,7 @@ classdef eyelinkManager < eyetrackerCore
 		%> @brief draw the fixation box on the tracker display
 		%>
 		% ===================================================================
-			if ~me.isConnected; return; end
+			if ~me.isConnected || me.isOff; return; end
 			if ~isempty(me.exclusionZone) && size(me.exclusionZone,2)==4
 				for i = 1:size(me.exclusionZone,1)
 					rect = round(toPixels(me, me.exclusionZone(i,:)));
@@ -639,7 +630,7 @@ classdef eyelinkManager < eyetrackerCore
 		%> @brief draw the fixation box on the tracker display
 		%>
 		% ===================================================================
-			if ~me.isConnected; return; end
+			if ~me.isConnected || me.isOff; return; end
 			if exist('textIn','var') && ~isempty(textIn)
 				xDraw = toPixels(me, 0, 'x');
 				yDraw = toPixels(me, 0, 'y');
@@ -673,7 +664,7 @@ classdef eyelinkManager < eyetrackerCore
 		%> @brief Sync time message for EDF file
 		%>
 		% ===================================================================
-			if ~me.isConnected; return; end
+			if ~me.isConnected || me.isOff; return; end
 			Eyelink('Message', 'SYNCTIME');		%zero-plot time for EDFVIEW
 		end
 		
@@ -708,10 +699,8 @@ classdef eyelinkManager < eyetrackerCore
 		%> @brief runs a demo of the eyelink, tests this class
 		%>
 		% ===================================================================
-			global aM rM
-			if isempty(aM) || ~isa(aM,'audioManager');aM=audioManager;end
+			[rM, aM] = initialiseGlobals(me);
 			if ~aM.isSetup;	try setup(aM); aM.beep(2000,0.1,0.1); end; end
-			if ~isa(rM,'arduinoManager');rM=arduinoManager();end
 			PsychDefaultSetup(2);
 			stopkey				= KbName('Q');
 			nextKey				= KbName('SPACE');
@@ -901,6 +890,8 @@ classdef eyelinkManager < eyetrackerCore
 				trackerDrawText(me,'FINISHED eyelinkManager Demo!!!');
 				ListenChar(0);Priority(0);ShowCursor;RestrictKeysForKbCheck([]);
 				close(s);
+				try close(aM); end
+				try close(rM); end
 				close(me);
 				clear s o
 				if ~me.isDummy
@@ -928,6 +919,8 @@ classdef eyelinkManager < eyetrackerCore
 				me.salutation('runDemo ERROR!!!')
 				try Eyelink('Shutdown'); end
 				try close(s); end
+				try close(aM); end
+				try close(rM); end
 				try close(me); end
 				sca;
 				clear s o

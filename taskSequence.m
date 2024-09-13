@@ -414,7 +414,7 @@ classdef taskSequence < optickaCore & dynamicprops
 			end
 			
 			buildTable(me); %for display
-			me.salutation('randomiseTask', sprintf('Took %g ms',toc(rSTime)*1000), true);
+			me.salutation('randomiseTask', sprintf('Took %.1f ms',toc(rSTime)*1000), true);
 			
 		end
 		

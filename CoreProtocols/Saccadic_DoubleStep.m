@@ -384,7 +384,6 @@ breakExitFcn = incExitFcn;
 if tS.includeErrors
 	incExitFcn   = [ {@()updatePlot(bR, me);@()updateTask(me,tS.INCORRECT)}; incExitFcn ]; 
 	breakExitFcn = [ {@()updatePlot(bR, me);@()updateTask(me,tS.BREAKFIX)}; incExitFcn ]; 
-
 else 
 	incExitFcn   = [ {@()updatePlot(bR, me);@()resetRun(task)}; incExitFcn ]; % we randomise the run within this block to make it harder to guess next trial
 	breakExitFcn = [ {@()updatePlot(bR, me);@()resetRun(task)}; incExitFcn ]; % we randomise the run within this block to make it harder to guess next trial

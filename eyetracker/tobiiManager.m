@@ -38,18 +38,23 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 	properties
 		%> setup and calibration values
 		calibration		= struct(...
-						'model','Tobii Pro Spectrum',...
-						'mode','human',...
-						'stimulus','animated',...
-						'calPositions',[],...
-						'valPositions',[],...
+						'model', 'Tobii Pro Spectrum',...
+						'mode', 'human',...
+						'stimulus', 'animated',...
+						'calPositions', [],...
+						'valPositions', [],...
 						'manual', false,...
-						'autoPace',true,...
-						'paceDuration',0.8,...
-						'eyeUsed','both',...
-						'movie',[],...
+						'manualMode', 'standard',...
+						'autoPace', true,...
+						'paceDuration', 0.8,...
+						'eyeUsed', 'both',...
+						'movie', [], ...
+						'filePath', [],...
+						'size', 1,... % size of calibration target in degrees
 						'reloadCalibration',true,...
 						'calFile','tobiiCalibration.mat')
+		%> optional eyetracker address
+		address			= []
 	end
 	
 	properties (Hidden = true)
@@ -70,7 +75,7 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 		calStim
 		isCollectedData = false
 		%> allowed properties passed to object upon construction
-		allowedProperties = {'calibration', 'settings'}
+		allowedProperties = {'calibration', 'settings', 'address'}
 	end
 	
 	%=======================================================================
@@ -99,9 +104,11 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 				me.sampleRate = 90; 
 				me.calibration.mode = 'Default';
 			end
-			p = fileparts(me.saveFile);
+			[p,f,e] = fileparts(me.saveFile);
+			if isempty(e); e = '.mat'; end
 			if isempty(p)
-				me.saveFile = [me.paths.savedData filesep me.name '-' me.saveFile];
+				initialiseSaveFile(me);
+				me.saveFile = [me.paths.savedData filesep f e];
 			end
 			me.smoothing.sampleRate = me.sampleRate;
 		end
@@ -113,6 +120,9 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 		%> @param sM2 - a second screenManager used during calibration
 		% ===================================================================
 		function success = initialise(me,sM,sM2)
+			success = false;
+			if me.isOff; me.isConnected = false; return; end
+
 			if ~exist('sM','var') || isempty(sM)
 				if isempty(me.screen) || ~isa(me.screen,'screenManager')
 					me.screen		= screenManager;
@@ -135,12 +145,19 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 					'disableSyncTests',true,'backgroundColour',me.screen.backgroundColour,...
 					'screen', oscreen, 'specialFlags', kPsychGUIWindow);
 				[w,h]			= Screen('WindowSize',me.operatorScreen.screen);
-				me.operatorScreen.windowed	= [0 0 round(w/1.6) round(h/1.8)];
+				me.operatorScreen.windowed	= [0 0 round(w/1.2) round(h/1.2)];
 			end
 			me.secondScreen		= true;
 			if ismac; me.operatorScreen.useRetina = true; end
 
-			[rM, aM] = initialiseGlobals(me, false, true);
+			initialiseSaveFile(me);
+			[p,f,e] = fileparts(me.saveFile);
+			if isempty(e); e = '.mat'; end
+			if isempty(p)
+				me.saveFile = [me.paths.savedData filesep me.name '-' me.savePrefix '-' f e];
+			else
+				me.saveFile = [p filesep me.name '-' me.savePrefix '-' f e];
+			end
 
 			me.smoothing.sampleRate = me.sampleRate;
 			
@@ -158,33 +175,69 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 			me.settings.calibrateEye				= me.calibration.eyeUsed;
 			me.settings.cal.bgColor					= floor(me.screen.backgroundColour*255);
 			me.settings.UI.setup.bgColor			= me.settings.cal.bgColor;
-			%me.settings.UI.setup.showFixPointsToSubject	= false;
-			%me.settings.UI.setup.showHeadToSubject			= true;   
-			%me.settings.UI.setup.showInstructionToSubject	= true;
-			me.settings.UI.setup.eyeClr						= 255;
-			if strcmpi(me.calibration.stimulus,'animated')
-				me.calStim							= AnimatedCalibrationDisplay();
-				me.calStim.moveTime					= 0.75;
-				me.calStim.oscillatePeriod			= 1;
-				me.calStim.blinkCount				= 4;
+			me.settings.UI.val.bgColor				= me.settings.cal.bgColor;
+			me.settings.advcal.bgColor				= me.settings.cal.bgColor;
+			me.settings.UI.advcal.bgColor			= me.settings.cal.bgColor;
+			me.settings.UI.setup.eyeClr				= 255;
+			me.settings.UI.setup.instruct.font		= me.sansFont;
+			me.settings.UI.button.setup.text.font	= me.sansFont;
+			me.settings.UI.button.val.text.font		= me.sansFont;
+			me.settings.UI.cal.errMsg.font			= me.sansFont;
+			me.settings.UI.val.avg.text.font		= me.monoFont;
+			me.settings.UI.val.hover.text.font		= me.monoFont;
+			me.settings.UI.val.menu.text.font		= me.monoFont;
+			if strcmpi(me.calibration.stimulus,'movie') || strcmpi(me.calibration.manualMode,'Smart')
+				me.calStim							= tittaAdvMovieStimulus(me.screen);
 				me.calStim.bgColor					= me.settings.cal.bgColor;
+				me.calStim.blinkCount				= 3;
+				if ~isempty(me.calibration.filePath); fp = me.calibration.filePath; else; fp = me.calibration.movie; end
+				m									= movieStimulus('size', me.calibration.size,'filePath', fp);
+				reset(m); setup(m, me.screen);
+				me.calStim.setVideoPlayer(m);
+				me.settings.cal.drawFunction		= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);
+				if me.calibration.manual
+					me.settings.advcal.drawFunction	= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);
+				end
+			elseif strcmpi(me.calibration.stimulus,'image')
+				me.calStim							= tittaAdvImageStimulus(me.screen);
+				me.calStim.bgColor					= me.settings.cal.bgColor;
+				me.calStim.blinkCount				= 3;
+				if ~isempty(me.calibration.filePath); fp = me.calibration.filePath; else; fp = me.calibration.movie; end
+				m									= imageStimulus('size', me.calibration.size,'filePath', fp);
+				reset(m); setup(m, me.screen);
+				me.calStim.setStimulus(m);
+				me.settings.cal.drawFunction		= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);
+				if me.calibration.manual
+					me.settings.advcal.drawFunction	= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);
+				end
+			elseif strcmpi(me.calibration.stimulus,'pupilcore')
+				me.calStim							= tittaCalStimulus(me.screen);
+				me.calStim.bgColor					= me.settings.cal.bgColor;
+				me.calStim.moveTime					= 0.75;
+				me.calStim.oscillatePeriod			= 0.8;
+				me.calStim.blinkCount				= 4;
 				me.calStim.fixBackColor				= 0;
 				me.calStim.fixFrontColor			= 255;
 				me.settings.cal.drawFunction		= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);
-				if me.calibration.manual;me.settings.mancal.drawFunction	= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);end
-			elseif strcmpi(me.calibration.stimulus,'movie')
-				me.calStim							= tittaCalMovieStimulus();
+				if me.calibration.manual
+					me.settings.advcal.drawFunction	= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);
+				end
+			else
+				me.calStim							= AnimatedCalibrationDisplay();
+				me.calStim.bgColor					= me.settings.cal.bgColor;
+				me.calStim.fixBackSizeMin			= round(me.calibration.size * me.ppd_);
+				me.calStim.fixBackSizeMax			= round((me.calibration.size*1.5) * me.ppd_);
+				me.calStim.fixBackSizeMaxOsc		= me.calStim.fixBackSizeMax;
+				me.calStim.fixBackSizeBlink			= me.calStim.fixBackSizeMax;
 				me.calStim.moveTime					= 0.75;
 				me.calStim.oscillatePeriod			= 1;
-				me.calStim.blinkCount				= 3;
-				if isempty(me.calibration.movie)
-					me.calibration.movie			= movieStimulus('size',4);
-				end
-				reset(me.calibration.movie);
-				setup(me.calibration.movie, me.screen);
-				me.calStim.initialise(me.calibration.movie);
+				me.calStim.blinkCount				= 4;
+				me.calStim.fixBackColor				= 0;
+				me.calStim.fixFrontColor			= 255;
 				me.settings.cal.drawFunction		= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);
-				if me.manualCalibration;me.settings.mancal.drawFunction	= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);end
+				if me.calibration.manual
+					me.settings.advcal.drawFunction	= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);
+				end
 			end
 			if me.calibration.autoPace
 				me.settings.cal.autoPace			= 2;
@@ -199,34 +252,37 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 			end
 			if ~isempty(me.calibration.calPositions)
 				me.settings.cal.pointPos			= me.calibration.calPositions;
+			else
+				me.calibration.calPositions			= me.settings.cal.pointPos;
 			end
 			if ~isempty(me.calibration.valPositions)
 				me.settings.val.pointPos			= me.calibration.valPositions;
+			else
+				me.calibration.valPositions			= me.settings.val.pointPos;
 			end
 			if me.verbose; me.settings.debugMode=true; end
 			me.settings.cal.pointNotifyFunction	= @tittaCalCallback;
 			me.settings.val.pointNotifyFunction	= @tittaCalCallback;
 			
 			if me.calibration.manual
-				me.settings.UI.mancal.bgColor		= floor(me.screen.backgroundColour*255);
-				me.settings.mancal.bgColor			= floor(me.screen.backgroundColour*255);
-				me.settings.mancal.cal.pointPos		= me.calibration.calPositions;
-				me.settings.mancal.val.pointPos		= me.calibration.valPositions;
-				me.settings.mancal.cal.paceDuration	= me.calibration.paceDuration;
-				me.settings.mancal.val.paceDuration	= me.calibration.paceDuration;
-				me.settings.UI.mancal.showHead		= true;
-				me.settings.UI.mancal.headScale		= 0.4;
-				me.settings.mancal.cal.pointNotifyFunction	= @tittaCalCallback;
-				me.settings.mancal.val.pointNotifyFunction	= @tittaCalCallback;
+				me.settings.advcal.cal.pointPos				= me.calibration.calPositions;
+				me.settings.advcal.val.pointPos				= me.calibration.valPositions;
+				me.settings.advcal.cal.pointNotifyFunction	= @tittaCalCallback;
+				me.settings.advcal.val.pointNotifyFunction	= @tittaCalCallback;
 			end
 
 			if ~isa(me.tobii, 'Titta') || isempty(me.tobii); initTracker(me); end
 			assert(isa(me.tobii,'Titta'),'TOBIIMANAGER:INIT-ERROR','Cannot Initialise...')
 			if me.isDummy; me.tobii = me.tobii.setDummyMode(); end
 			
-			me.tobii.init();
+			if isempty(me.address) || me.isDummy
+				me.tobii.init();
+			else
+				me.tobii.init(me.address);
+			end
 			checkConnection(me);
 			me.systemTime							= me.tobii.getTimeAsSystemTime;
+			me.isConnected = true;
 			
 			if me.screen.isOpen == true
 				me.win								= me.screen.win;
@@ -299,13 +355,21 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 			oldr = RestrictKeysForKbCheck([]);
 			ListenChar(-1);
 			if me.calibration.manual
-				if ~isempty(incal) && isstruct(incal)...
-						&& (isfield(incal,'type') && contains(incal.type,'manual'))...
-						&& (isfield(cal,'wasSkipped') && ~cal.wasSkipped)
-					cal = me.tobii.calibrateManual([me.screen.win me.operatorScreen.win], incal); 
+				if strcmpi(me.calibration.manualMode,'standard')
+					ctrl = [];
 				else
-					cal = me.tobii.calibrateManual([me.screen.win me.operatorScreen.win]);
+					[rM, aM] = initialiseGlobals(me, false, true);
+					ctrl = tempController(me.tobii, me.calStim);
+					ctrl.rewardProvider = rM;
+					ctrl.audioProvider = aM;
 				end
+				if ~isempty(incal) && isstruct(incal)...
+					&& (isfield(incal,'type') && contains(incal.type,'advanced'))...
+					&& (isfield(cal,'wasSkipped') && ~cal.wasSkipped)
+				else
+					incal = [];
+				end
+				cal = me.tobii.calibrateAdvanced([me.screen.win me.operatorScreen.win], incal, ctrl); 
 			else
 				if ~isempty(incal) && isstruct(incal)...
 						&& (isfield(incal,'type') && contains(incal.type,'standard'))...
@@ -326,17 +390,20 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 			end
 
 			if strcmpi(me.calibration.stimulus,'movie')
-				me.calStim.movie.reset();
-				%me.calStim.movie.setup(me.screen);
+				try me.calStim.setCleanState(); end
 			end
 
-			if ~isempty(me.calib) && me.calib.wasSkipped ~= 1
-				if isfield(me.calib,'selectedCal')
-					try
-						calMsg = me.tobii.getValidationQualityMessage(me.calib);
-						fprintf('-+-+-> CAL RESULT = ');
-						disp(calMsg);
+			if ~isempty(me.calib) && me.calib.wasSkipped ~= 1 && isfield(me.calib,'selectedCal')
+				try
+					calMsg = me.tobii.getValidationQualityMessage(me.calib);
+					fprintf('\n-+-+-> CAL RESULT = ');
+					disp(calMsg);
+					if isempty(me.validationData)
+						me.validationData{1} = calMsg;
+					else
+						me.validationData{end+1} = calMsg;
 					end
+					me.calib.v = calMsg;
 				end
 			else
  				disp('-+-+!!! The calibration was unsuccesful or skipped !!!+-+-')
@@ -441,40 +508,33 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 		end
 
 		% ===================================================================
+		function sample = getSample(me)
+		%> @fn getSample()
 		%> @brief get a sample from the tracker, if dummymode=true then use
 		%> the mouse as an eye signal
 		%>
 		% ===================================================================
-		function sample = getSample(me)
-			sample				= me.sampleTemplate;
+			if me.isOff; return; end
 			if me.isDummy %lets use a mouse to simulate the eye signal
-				if ~isempty(me.win)
-					[mx, my]	= GetMouse(me.win);
-				else
-					[mx, my]	= GetMouse([]);
-				end
-				sample.valid	= true;
-				me.pupil		= 5 + randn;
-				sample.gx		= mx;
-				sample.gy		= my;
-				sample.pa		= me.pupil;
-				sample.time		= GetSecs;
-				sample.timeD	= sample.time;
-				xy				= me.toDegrees([sample.gx sample.gy]);
-				me.x = xy(1); me.y = xy(2);
-				me.xAll			= [me.xAll me.x];
-				me.yAll			= [me.yAll me.y];
-				me.pupilAll		= [me.pupilAll me.pupil];
-				%if me.verbose;fprintf('>>X: %.2f | Y: %.2f | P: %.2f\n',me.x,me.y,me.pupil);end
+				sample = getMouseSample(me);
 			elseif me.isConnected && me.isRecording
+				sample			= me.sampleTemplate;
 				xy				= [];
 				td				= me.tobii.buffer.peekN('gaze',me.smoothing.nSamples);
 				if isempty(td);me.currentSample=sample;return;end
 				sample.raw		= td;
-				sample.time		= double(td.systemTimeStamp(end)) / 1e6; %remember these are in microseconds
-				sample.timeD	= double(td.deviceTimeStamp(end)) / 1e6;
-				sample.timeD2	= GetSecs;
 				if any(td.left.gazePoint.valid) || any(td.right.gazePoint.valid)
+					if isfield(td,'systemTimeStamp') && ~isempty(td.systemTimeStamp)
+						sample.time		= double(td.systemTimeStamp(end)) / 1e6; %remember these are in microseconds
+					else
+						sample.time = [];
+					end
+					if isfield(td,'deviceTimeStamp') && ~isempty(td.deviceTimeStamp)
+						sample.timeD	= double(td.deviceTimeStamp(end)) / 1e6;
+					else
+						sample.timeD = [];
+					end
+					sample.timeD2	= GetSecs;
 					switch me.smoothing.eyes
 						case 'left'
 							xy	= td.left.gazePoint.onDisplayArea(:,td.left.gazePoint.valid);
@@ -503,7 +563,7 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 					xyd	= me.toDegrees(xy);
 					me.x = xyd(1); me.y = xyd(2);
 					me.pupil	= sample.pa;
-					%if me.verbose;fprintf('>>X: %2.2f | Y: %2.2f | P: %.2f\n',me.x,me.y,me.pupil);end
+					if me.debug;fprintf('>>X: %2.2f | Y: %2.2f | P: %.2f\n',me.x,me.y,me.pupil);end
 				else
 					sample.gx	= NaN;
 					sample.gy	= NaN;
@@ -516,7 +576,8 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 				me.yAll			= [me.yAll me.y];
 				me.pupilAll		= [me.pupilAll me.pupil];
 			else
-				if me.verbose;fprintf('-+-+-> tobiiManager.getSample(): are you sure you are recording?\n');end
+				sample			= me.sampleTemplate;
+				if me.debug;fprintf('-+-+-> tobiiManager.getSample(): are you sure you are recording?\n');end
 			end
 			me.currentSample	= sample;
 		end
@@ -567,22 +628,31 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 				me.data = me.tobii.collectSessionData();
 				me.isCollectedData = true;
 			end
-			me.initialiseSaveFile();
 			if ~isempty(me.data) && tofile
 				tobii = me;
 				if exist(me.saveFile,'file')
+					initialiseSaveFile(me);
 					[p,f,e] = fileparts(me.saveFile);
 					me.saveFile = [p filesep me.savePrefix '-' f '.mat'];
 				end
-				save(me.saveFile,'tobii')
-				disp('===========================')
-				me.salutation('saveData',sprintf('Save: %s in %.1fms\n',strrep(me.saveFile,'\','/'),toc(ts)*1e3),true);
-				disp('===========================')
-				clear tobii
+				try
+					save(me.saveFile,'tobii');
+					disp('===========================')
+					me.salutation('saveData',sprintf('Save: %s in %.1fms\n',strrep(me.saveFile,'\','/'),toc(ts)*1e3),true);
+					disp('===========================')
+					clear tobii
+				catch ERR
+					warning('Save FAILED: %s in %.1fms\n',strrep(me.saveFile,'\','/'),toc(ts)*1e3);
+					getReport(ERR);
+				end
 			elseif isempty(me.data)
+				disp('===========================')
 				me.salutation('saveData',sprintf('NO data available... (%.1fms)...\n',toc(ts)*1e3),true);
+				disp('===========================')
 			elseif ~isempty(me.data)
+				disp('===========================')
 				me.salutation('saveData',sprintf('Data retrieved to object in %.1fms)...\n',toc(ts)*1e3),true);
+				disp('===========================')
 			end
 		end
 		
@@ -861,10 +931,10 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 						getSample(me); isFixated(me);
 						
 						if ~isempty(me.currentSample)
-							txt = sprintf('Q = finish. X: %3.1f / %2.2f | Y: %3.1f / %2.2f | # = %2i %s %s | RADIUS = %s | TIME = %.2f | FIXATION = %.2f | EXC = %i | INIT FAIL = %i',...
+							txt = sprintf('Q = finish. X: %3.1f / %2.2f | Y: %3.1f / %2.2f | # = %2i %s %s | RADIUS = %s | TIME = %.2f | FIXATION %i = %.2f (buffer: %.2f) | EXC = %i | INIT FAIL = %i',...
 								me.currentSample.gx, me.x, me.currentSample.gy, me.y, me.smoothing.nSamples,...
 								me.smoothing.method, me.smoothing.eyes, sprintf('%1.1f ',me.fixation.radius), ...
-								me.fixTotal,me.fixLength,me.isExclusion,me.isInitFail);
+								me.fixTotal,me.fixN,me.fixLength,me.fixBuffer,me.isExclusion,me.isInitFail);
 							Screen('DrawText', s.win, txt, 10, 10,[1 1 1]);
 							drawEyePosition(me);
 							%psn{trialn} = me.tobii.buffer.peekN('positioning',1);
@@ -898,21 +968,20 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 						vbl = flip(s);
 						if useS2; flip(s2,[],[],2); end
 						trackerMessage(me,'END_RT',vbl);
-						trackerMessage(me,'TRIAL_RESULT 1')
-						trackerMessage(me,sprintf('Ending trial %i @ %i',trialn,int64(round(vbl*1e6))))
+						trackerMessage(me,'TRIAL_RESULT 1');
+						trackerMessage(me,sprintf('Ending trial %i @ %i',trialn,int64(round(vbl*1e6))));
 						resetFixation(me);
-						me.fixation.X = randi([-7 7]);
-						me.fixation.Y = randi([-7 7]);
 						if length(me.fixation.radius) == 1
-							me.fixation.radius = randi([1 3]);
+							r = randi([1 3]);
 							o.sizeOut = me.fixation.radius * 2;
 							f.sizeOut = me.fixation.radius * 2;
 						else
-							me.fixation.radius = [randi([1 3]) randi([1 3])];
+							r = [randi([1 3]) randi([1 3])];
 							o.sizeOut = mean(me.fixation.radius) * 2;
 							f.barWidthOut = me.fixation.radius(1) * 2;
 							f.barHeightOut = me.fixation.radius(2) * 2;
 						end
+						updateFixationValues(me,randi([-7 7]),randi([-7 7]));
 						o.xPositionOut = me.fixation.X;
 						o.yPositionOut = me.fixation.Y;
 						f.xPositionOut = me.fixation.X;
@@ -925,8 +994,8 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 						vbl = flip(s);
 						if useS2; flip(s2,[],[],2); end
 						trackerMessage(me,'END_RT',vbl);
-						trackerMessage(me,'TRIAL_RESULT -10 ABORT')
-						trackerMessage(me,sprintf('Aborting %i @ %i', trialn, int64(round(vbl*1e6))))
+						trackerMessage(me,'TRIAL_RESULT -10 ABORT');
+						trackerMessage(me,sprintf('Aborting %i @ %i', trialn, int64(round(vbl*1e6))));
 					end
 				end
 				stopRecording(me,true);

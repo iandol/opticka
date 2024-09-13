@@ -177,6 +177,7 @@ classdef dotsStimulus < baseStimulus
 			end
 			function set_sizeOut(me,value)
 				me.sizeOut = value * me.ppd;
+				me.szPx = me.sizeOut;
 				if me.mask == true
 					me.fieldSize = round(me.sizeOut + me.maskSmoothing); %mask needs to be bigger!
 				else
@@ -228,8 +229,9 @@ classdef dotsStimulus < baseStimulus
 				else
 					Screen('DrawDots',me.sM.win,me.xy,me.dotSizeOut,me.colours,[me.xFinal me.yFinal],me.dotTypeOut);
 				end
+				me.drawTick = me.drawTick + 1;
 			end
-			me.tick = me.tick + 1;
+			if me.isVisible; me.tick = me.tick + 1; end
 		end
 		
 		% ===================================================================

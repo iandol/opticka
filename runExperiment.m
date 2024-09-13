@@ -38,10 +38,10 @@ classdef runExperiment < optickaCore
 %> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================	
 	properties
-		%> subject name
-		subjectName char			= 'Simulcra'
-		%> researcher name
-		researcherName char			= 'Jane Doe'
+		sessionData struct		=struct('subjectName','Simulcra',...
+								'researcherName','Jane Doe', ...
+								'labName','lab','labLocation','',...
+								'sessionPrefix','session','alyxIP','');
 		%> a metaStimulus class instance holding our stimulus objects
 		stimuli metaStimulus
 		%> a taskSequence class instance determining our stimulus variables
@@ -53,10 +53,10 @@ classdef runExperiment < optickaCore
 		%> user functions file that can be passed to the state machine
 		userFunctionsFile char		= ''
 		%> what strobe device to use
-		%> device = display++ | datapixx | labjackt | labjack | arduino
+		%> device = '' | display++ | datapixx | labjackt | labjack | nirsmart
 		%> optional port = not needed for most of the interfaces
 		%> optional config = plain | plexon style strobe
-		%> optional stim OFF strobe value used for MOC tasks
+		%> default stim OFF strobe value
 		strobe struct				= struct('device','','port','',...
 									'mode','plain','stimOFFValue',255)
 		%> what reward device to use
@@ -64,7 +64,9 @@ classdef runExperiment < optickaCore
 									'board','');
 		%> which eyetracker to use
 		eyetracker struct			= struct('device','','dummy',true,...
-									'esettings',[],'tsettings',[])
+									'esettings',[],'tsettings',[],...
+									'isettings',[],'psettings',[])
+		touch struct				= struct('device','','dummy',true)
 		%> use control commands to start / stop recording
 		%> device = intan | plexon | none
 		%> port = tcp port
@@ -76,8 +78,6 @@ classdef runExperiment < optickaCore
 		logFrames logical			= true
 		%> enable debugging? (poorer temporal fidelity)
 		debug logical				= false
-		%> flip as fast as possible?
-		benchmark logical			= false
 		%> verbose logging to command window?
 		verbose						= false
 	end
@@ -92,6 +92,8 @@ classdef runExperiment < optickaCore
 	end
 	
 	properties (Hidden = true)
+		%> flip as fast as possible?
+		benchmark logical			= false
 		%> draw simple fixation cross during trial for MOC tasks?
 		drawFixation logical		= false
 		%> shows the info text and position grid during stimulus presentation
@@ -102,12 +104,8 @@ classdef runExperiment < optickaCore
 		thisStim					= []
 		%> tS is the runtime settings structure, saved here as a backup
 		tS struct
-		%> what mode to run the Display++ digital I/O in? Plexon requires
-		%> the use of a strobe trigger line, whereas most other equipment
-		%> just uses simple threshold reading
-		dPPMode char				= 'plain'
-		%> which port is the arduino on?
-		arduinoPort char			= ''
+		%> ask for comments?
+		askForComments				= false
 		%> show a white square in the top-right corner to trigger a photodiode
 		%> attached to screen for MOC task. For stateMachine tasks you need 
 		%> to pass in the drawing command for this to take effect.
@@ -124,6 +122,10 @@ classdef runExperiment < optickaCore
 		stimulus
 		%> audio device
 		audioDevice					= []
+		%> DEPRECATED
+		subjectName char			= ''
+		%> DEPRECATED
+		researcherName char			= ''
 	end
 
 	properties (Transient = true, Hidden = true)
@@ -147,16 +149,8 @@ classdef runExperiment < optickaCore
 		stateMachine
 		%> eyetracker manager object
 		eyeTracker 
-		%> generic IO manager
-		io
-		%> DataPixx control object
-		dPixx 
-		%> Display++ control object
-		dPP 
-		%> LabJack control object
-		lJack 
-		%> Arduino control object
-		arduino
+		%> strobe / trigger manager
+		strobeDevice
 		%> user functions object
 		userFunctions
 		%> data connection
@@ -199,7 +193,7 @@ classdef runExperiment < optickaCore
 		stimShown				= false
 		%> properties allowed to be modified during construction
 		allowedProperties = {'reward','strobe','eyetracker','control',...
-			'logFrames','logStateTimers','subjectName','researcherName'...
+			'logFrames','logStateTimers','sessionData',...
 			'stateInfoFile','userFunctionFile','dummyMode','stimuli','task',...
 			'screen','visualDebug','debug','verbose','screenSettings','benchmark',...
 			'comments','arduinoPort','photoDiode'}
@@ -250,20 +244,13 @@ classdef runExperiment < optickaCore
 			end
 					
 			refreshScreen(me);
-			initialiseSaveFile(me); %generate a savePrefix for this run
-			me.name = [me.subjectName '-' me.savePrefix]; %give us a run name
+
 			if isempty(me.screen) || isempty(me.task)
 				me.initialise; %we set up screenManager and taskSequence objects
 			end
 			if me.screen.isPTB == false %NEED PTB!
 				errordlg('There is no working PTB available!')
 				error('There is no working PTB available!')
-			end
-
-			%===============================enable diary logging if requested
-			if me.diaryMode
-				diary off
-				diary([me.paths.savedData filesep me.name '.log']);
 			end
 
 			%===============================enable diary logging if requested
@@ -291,7 +278,7 @@ classdef runExperiment < optickaCore
 				tS.askForComments	= true;
 			end
 			if ~isfield(tS,'controlPlexon'); tS.controlPlexon = false; end
-			if ~isfield(tS,'askForComments'); tS.askForComments = true; end
+			if ~isfield(me,'askForComments'); tS.askForComments = false; end
 
 			%===============================initialise task
 			task					= me.task;
@@ -304,15 +291,16 @@ classdef runExperiment < optickaCore
 				me.isRunning		= true;
 				me.isRunTask		= false;
 
+				%================================INIT SAVE
+				% subject, sessionPrefix, lab, create
+				[me.paths.alfPath, sessionID, dateID] = me.getALF(me.sessionData.subjectName,...
+				me.sessionData.sessionPrefix,me.sessionData.labName, true);
+				me.name = [me.sessionData.subjectName '-' sessionID '-' dateID]; %give us a run name
+			
 				%================================get pre-run comments for this data collection
-				if tS.askForComments && ~me.debug
-					comment = inputdlg({'CHECK Recording system!!! Initial Comment for this Run?'},['Run Comment for ' me.name]);
-					if ~isempty(comment)
-						comment = comment{1};
-						me.comment = [me.name ':' comment];
-						bR.comment = me.comment; eT.comment = me.comment; sM.comment = me.comment; io.comment = me.comment; tL.comment = me.comment; tS.comment = me.comment;
-					end
-				end
+				prompt = '\bfCHECK Recording system! \itInitial Comment for this MOC Run?';
+				updateComments(me,prompt);
+				s.comment = me.comment; io.comment = me.comment; tL.comment = me.comment; tS.comment = me.comment;
 
 				%=============================Premptive save in case of crash or error: SAVES IN /TMP
 				rE = me;
@@ -358,7 +346,6 @@ classdef runExperiment < optickaCore
 						io.setDIO([3,0,0],[3,0,0])%(Set HIGH FIO0->Pin 24), unpausing the omniplex
 					end
 				end
-
 			
 				%=========================================================
 				% lets draw 2 seconds worth of the stimuli we will be using
@@ -471,7 +458,7 @@ classdef runExperiment < optickaCore
 					end
 
 					%======LabJack: I/O needs to send strobe immediately after screen flip -----%
-					if me.sendStrobe && matches(me.strobe.device,'labjackt')
+					if me.sendStrobe && matches(me.strobe.device,{'labjackt','nirsmart'})
 						sendStrobe(io); me.sendStrobe = false;
 					end
 					
@@ -550,26 +537,18 @@ classdef runExperiment < optickaCore
 				removeEmptyValues(tL);
 				me.tS = tS; %store our tS structure for backup
 
-				if tS.askForComments && ~me.debug
-					comment = inputdlg('Final Comment for this Run?','Run Comment');
-					if ~isempty(comment)
-						comment = comment{1};
-						me.comment = [me.comment ' | Final Comment: ' comment];
-						bR.comment = me.comment;
-						eT.comment = me.comment;
-						sM.comment = me.comment;
-						io.comment = me.comment;
-						tL.comment = me.comment;
-						tS.comment = me.comment;
-					end
-				end
-				
-				%------SAVE the DATA
-				sname = [me.paths.savedData filesep me.name '.mat'];
+				prompt = '\bfFinal Comment for this MOC Run?';
+				updateComments(me,prompt);
+				s.comment = me.comment; io.comment = me.comment; tL.comment = me.comment; tS.comment = me.comment;
+
+				%================================SAVE the DATA
+				sname = [me.paths.alfPath filesep 'opticka.raw.' me.name '.mat'];
 				rE = me;
 				save(sname,'rE','tS');
-				fprintf('\n\n#####################\n===>>> SAVED DATA to: %s\n#####################\n\n',sname)
-				
+				fprintf('\n\n#####################\n===>>> <strong>SAVED DATA to: %s</strong>\n#####################\n\n',sname)
+				assignin('base', 'tS', tS); % assign tS in base for manual checking
+				%================================SAVE the DATA
+
 				tL.calculateMisses;
 				if tL.nMissed > 0
 					fprintf('\n!!!>>> >>> >>> There were %i MISSED FRAMES <<< <<< <<<!!!\n',tL.nMissed);
@@ -580,7 +559,7 @@ classdef runExperiment < optickaCore
 				me.isRunning = false;
 				me.visualDebug = false;
 				
-			catch ME
+			catch ERR
 				me.isRunning = false;
 				fprintf('\n\n---!!! ERROR in runExperiment.runMOC()\n');
 				if strcmp(me.control.device,'plexon')
@@ -600,10 +579,8 @@ classdef runExperiment < optickaCore
 				me.eyeTracker = [];
 				me.behaviouralRecord = [];
 				try close(rM); end
-				me.lJack=[];
-				me.io = [];
 				clear tL s tS bR rM eT io sM
-				rethrow(ME);
+				rethrow(ERR);
 			end
 		end %==============END runMOC
 	
@@ -622,13 +599,11 @@ classdef runExperiment < optickaCore
 				warning('You are trying to start a Default behavioural task without stimuli!');
 				return
 			end
-			refreshScreen(me);
-			initialiseSaveFile(me); %generate a savePrefix for this run
-			me.comment = [me.comment ' ' me.name];
-			me.name = [me.subjectName '-' me.savePrefix]; %give us a run name
+			
 			if isempty(me.screen) || isempty(me.task)
 				me.initialise; %we set up screenManager and taskSequence objects
 			end
+			refreshScreen(me);
 			if me.screen.isPTB == false %NEED PTB!
 				errordlg('There is no working PTB available!')
 				error('There is no working PTB available!')
@@ -637,16 +612,16 @@ classdef runExperiment < optickaCore
 			%------enable diary logging if requested
 			if me.diaryMode
 				diary off
-				diary([me.paths.savedData filesep me.name '.log']);
+				diary([alfPath filesep 'log.text.' me.name '.log']);
 			end
 
 			%------make sure we reset any state machine functions to not cause
 			% problems when they are reassigned below. For example, io interfaces
 			% can be reset unless we clear this before we open the io.
+            me.userFunctions = [];
 			me.stateInfo = {};
 			if isa(me.stateMachine,'stateMachine'); me.stateMachine.reset; me.stateMachine = []; end
 			
-
 			%------initialise the rewardManager global object
 			[rM, aM] = initialiseGlobals(me);
 			if rM.isOpen
@@ -668,12 +643,8 @@ classdef runExperiment < optickaCore
 				reset(aM);
 				aM.silentMode = true;
 			end
-			
-			if isempty(regexpi(me.comment, '^Protocol','once'))
-				me.comment = '';
-			end
-			
-			fprintf('\n\n\n===>>>>>> Start task: %s <<<<<<===\n\n\n',me.name);
+
+			if ischar(me.comment);me.comment = string(me.comment);end
 			
 			%--------------------------------------------------------------
 			% tS is a general structure to hold various parameters will be saved
@@ -695,6 +666,8 @@ classdef runExperiment < optickaCore
 			tS.tOut						= 5;		%==if wrong response, how long to time out before next trial
 			tS.correctSound				= [2000, 0.1, 0.1]; %==freq,length,volume
 			tS.errorSound				= [300, 1, 1]; %==freq,length,volume
+			tS.fixX						= 0;
+			tS.fixY						= 0;
 	
 			%------initialise time logs for this run
 			me.taskLog = []; clear timeLogger;
@@ -726,7 +699,7 @@ classdef runExperiment < optickaCore
 				me.isRunTask			= true;
 				
 				%================================open the PTB screen and setup stimuli
-				me.screenVals			= s.open(me.debug,tL);
+				me.screenVals			= s.open(me.debug, tL);
 				stims.verbose			= me.verbose;
 				task.fps				= s.screenVals.fps;
 				setup(stims, s);
@@ -738,7 +711,7 @@ classdef runExperiment < optickaCore
 				%================================set up the eyetracker interface
 				configureEyetracker(me, s);
 				eT						= me.eyeTracker;
-
+				
 				%================================initialise the user functions object
 				if ~exist(me.userFunctionsFile,'file')
 					me.userFunctionsFile = [me.paths.root filesep 'userFunctions.m'];
@@ -771,6 +744,7 @@ classdef runExperiment < optickaCore
 				if ~exist(me.stateInfoFile,'file')
 					errordlg('runExperiment.runTask(): Please specify a valid State Machine file!!!')
 				else
+					stateInfoTmp = [];
 					me.stateInfoFile	= regexprep(me.stateInfoFile,'\s+','\\ ');
 					disp(['======>>> Loading State File: ' me.stateInfoFile]);
 					clear(me.stateInfoFile);
@@ -779,7 +753,22 @@ classdef runExperiment < optickaCore
 					else
 						runDeployed(me.stateInfoFile);
 					end
+					if isempty(stateInfoTmp)
+						errordlg('runExperiment.runTask(): State File loading failed!!!');
+					end
 					me.stateInfo		= stateInfoTmp;
+					didFind=false;
+					for jj = 1:length(stateInfoTmp(:))
+						stemp = stateInfoTmp{jj};
+						if ~iscell(stemp); continue; end
+						for kk = 1:length(stemp)
+							if contains(char(stemp{kk}),regexpPattern('\(eT\s*?,')) && eT.isOff
+								warning('The State Machine contains eyeTracker functions BUT you have the eyetracker turned OFF!')
+								didFind=true;break
+							end
+						end
+						if didFind; break; end
+					end
 					addStates(sM, me.stateInfo);
 					me.paths.stateInfoFile = me.stateInfoFile;
 					clear stateInfoTmp
@@ -789,19 +778,44 @@ classdef runExperiment < optickaCore
 				me.lastYPosition		= tS.fixY;
 				me.lastXExclusion		= [];
 				me.lastYExclusion		= [];
-				me.eyetracker.name		= tS.name;
-				if me.eyetracker.dummy;	eT.isDummy = true; end %===use dummy or real eyetracker? 
-				if tS.saveData;			eT.recordData = true; end %===save Eyetracker data?			
+				if ~eT.isOff
+					me.eyetracker.name		= tS.name;
+					if me.eyetracker.dummy;	eT.isDummy = true; end %===use dummy or real eyetracker? 
+					if tS.saveData;			eT.recordData = true; end %===save Eyetracker data?		
+				end
 				if isfield(tS,'rewardTime'); bR.rewardTime = tS.rewardTime; end
 
+				%================================initialise save file
+				% subject, sessionPrefix, lab, create
+				if tS.saveData
+					[me.paths.alfPath, sessionID, dateID] = me.getALF(me.sessionData.subjectName,...
+						me.sessionData.sessionPrefix, [], true);
+					me.name = [me.sessionData.subjectName '-' sessionID '-' dateID]; %give us a run name
+				else
+					[me.paths.alfPath, ~, dateID] = me.getALF(me.sessionData.subjectName,...
+						me.sessionData.sessionPrefix, [], false);
+					me.name = [me.sessionData.subjectName '-' dateID]; %give us a run name
+				end
+				eT.paths.alfPath = me.paths.alfPath;
+				if matches(lower(me.eyetracker.device),'eyelink')
+					eT.saveFile	= [eT.paths.alfPath 'eyelink.raw.' me.name '.edf'];
+				else
+					eT.saveFile	= [eT.paths.alfPath 'tobii.raw.' me.name '.mat'];
+				end
+				fprintf('\n\n\n===>>>>>> START BEHAVIOURAL TASK: %s <<<<<<===',me.name);
+				fprintf('\tInitial Path: %s\n',me.paths.alfPath);
+				fprintf('\tInitial Comments: %s\n\n\n',me.comment);
+
 				%================================get pre-run comments for this data collection
-				if tS.askForComments
-					comment = inputdlg({'CHECK Recording system!!! Initial Comment for this Run?'},['Run Comment for ' me.name]);
-					if ~isempty(comment)
-						comment = comment{1};
-						me.comment = [me.name ':' comment];
-						bR.comment = me.comment; eT.comment = me.comment; sM.comment = me.comment; io.comment = me.comment; tL.comment = me.comment; tS.comment = me.comment;
-					end
+				prompt = '\bf CHECK Recording system! \it Initial Comment for this Task Run?';
+				updateComments(me,prompt);
+				bR.comment = me.comment; eT.comment = me.comment; sM.comment = me.comment; io.comment = me.comment; tL.comment = me.comment; tS.comment = me.comment;
+
+				%===========================set up our behavioural plot
+				if tS.showBehaviourPlot
+					fprintf('===>>> Creating Behavioural Record Plot Window...\n');
+					createPlot(bR, eT); 
+					WaitSecs(0.01); drawnow; WaitSecs(0.01); drawnow;
 				end
 
 				%================================raise priority
@@ -830,7 +844,7 @@ classdef runExperiment < optickaCore
 					finishDrawing(s);
 					animate(stims); % run our stimulus animation routines to the next frame
 					if ~mod(i,10); sendStrobe(io, 255); end % send a strobed word
-					if ~isempty(me.eyetracker.device)
+					if ~eT.isOff
 						getSample(eT); % get an eyetracker sample
 						if i == 1
 							trackerMessage(eT,sprintf('WARMUP_TEST %i',getTaskIndex(me)));
@@ -838,13 +852,12 @@ classdef runExperiment < optickaCore
 						end
 						trackerDrawEyePosition(eT);
 					end
-					[pressed, name, ~] = optickaCore.getKeys(me.keyboardDevice);
+					[~, ~, ~] = optickaCore.getKeys(me.keyboardDevice);
 					flip(s);
-					if eT.secondScreen; trackerFlip(eT, 1, false); end
+					if ~eT.isOff && eT.secondScreen; trackerFlip(eT, 1, false); end
 				end
-				update(stims); %make sure all stimuli are set back to their start state
 				resetLog(stims);
-				if ~isempty(me.eyetracker.device)
+				if ~eT.isOff
 					resetAll(eT);
 					trackerClearScreen(eT);
 					if eT.secondScreen; trackerFlip(eT, 0, true); end 
@@ -853,8 +866,8 @@ classdef runExperiment < optickaCore
 
 				%=============================Preemptive save in case of crash or error: SAVES IN /TMP
 				rE = me;
-				tS.tmpFile = [tempdir filesep me.name '.mat'];
-				fprintf('\n===>>> Save initial state: %s ...\n',tS.tmpFile);
+				tS.tmpFile = [tempdir filesep 'TEMP' me.name '.mat'];
+				fprintf('\n===>>> Save initial state in case of crash: %s ...\n',tS.tmpFile);
 				save(tS.tmpFile,'rE','tS');
 				fprintf('\t ... Saved!\n');
 
@@ -874,7 +887,7 @@ classdef runExperiment < optickaCore
 						write(dC,uint8(['set Filename.BaseFilename ' me.name]));
 						write(dC,uint8(['set Filename.Path ' me.paths.savedData]));
 						write(dC,uint8(['set Note1 ' me.name]));
-						write(dC,uint8(['set Note2 ' me.comment]));
+						write(dC,uint8(['set Note2 ' me.comment(1,:)]));
 						write(dC,uint8('set runmode record'));
 						WaitSecs(0.5);
 					catch
@@ -914,17 +927,13 @@ classdef runExperiment < optickaCore
 				tS.initialTaskIdx.vars		= task.outValues;
 				
 				%===========================double check the labJackT handle is still valid
-				if isa(io,'labJackT') && ~io.isHandleValid
-					io.close;
-					io.open;
-					disp('===>>> We had to reopen the labJackT to ensure a stable connection...')
-				end
-				
-				%===========================set up our behavioural plot
-				if tS.showBehaviourPlot
-					fprintf('===>>> Creating Behavioural Record Plot Window...\n');
-					createPlot(bR, eT); 
-					WaitSecs(0.01); drawnow;
+				if isa(io,'labJackT') 
+					if ~io.isHandleValid
+						io.close;
+						io.open;
+						disp('===>>> We reopened the labJackT to ensure a stable connection...');
+					end
+					assert(io.isServerRunning, true, '===>>> LabJack T Server Not Running!!!');
 				end
 
 				%===========================take over the keyboard + max priority
@@ -946,7 +955,7 @@ classdef runExperiment < optickaCore
 				me.doTrackerFlip			= false;
 				me.sendStrobe				= false;
 				tL.t.vbl(1)					= Screen('Flip', s.win);
-				tL.lastvbl					= tL.vbl(1);
+				tL.lastvbl					= tL.t.vbl(1);
 				tL.t.miss(1)				= 0;
 				tL.t.stimTime(1)			= 0;
 				tL.startTime				= tL.lastvbl;
@@ -955,7 +964,7 @@ classdef runExperiment < optickaCore
 				tL.screenLog.trackerStartOffset = getTimeOffset(eT);
 				
 				%==============================IGNITE the stateMachine!
-				fprintf('\n===>>> Igniting the State Machine... <<<===\n');
+				fprintf('\n\n===>>> Igniting the State Machine... <<<===\n');
 				start(sM);
 
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -968,7 +977,7 @@ classdef runExperiment < optickaCore
 				while me.stopTask == false
 					
 					%------ Check eye position manually. -----%
-					if me.needSample; getSample(eT); end
+					if me.needSample && ~eT.isOff; getSample(eT); end
 
 					%------ Run stateMachine one step forward -----%
 					update(sM);
@@ -1013,13 +1022,13 @@ classdef runExperiment < optickaCore
 							thisN = 1;
 						end
 
-						%----- LabJack: I/O needs to send strobe immediately after screen flip -----%
-						if me.sendStrobe && strcmpi(me.strobe.device,'labjackt')
+						%----- LabJack/nirSmart: I/O needs to send strobe immediately after screen flip -----%
+						if me.sendStrobe && matches(me.strobe.device,{'labjackt','nirsmart','labjack'})
 							sendStrobe(io); me.sendStrobe = false;
 						end
 
 						% %----- Send Eyetracker messages -----%
-						if me.sendSyncTime % sends SYNCTIME message to eyetracker
+						if ~eT.isOff && me.sendSyncTime % sends SYNCTIME message to eyetracker
 							syncTime(eT);
 							me.sendSyncTime = false;
 						end
@@ -1045,15 +1054,17 @@ classdef runExperiment < optickaCore
 					end %%%%%%%%%% END me.doFlip
 
 					%----- For operator display, do we flip? -----%
-					if me.doTrackerFlip == 1
-						trackerFlip(eT, 1, false);
-					elseif me.doTrackerFlip == 2
-						trackerFlip(eT, 0, false);
-					elseif me.doTrackerFlip == 3 
-						trackerFlip(eT, 0, true);
-					elseif me.doTrackerFlip == 4
-						trackerFlip(eT, 0, true);
-						me.doTrackerFlip = 1;
+					if ~eT.isOff
+						if me.doTrackerFlip == 1
+							trackerFlip(eT, 1, false);
+						elseif me.doTrackerFlip == 2
+							trackerFlip(eT, 0, false);
+						elseif me.doTrackerFlip == 3 
+							trackerFlip(eT, 0, true);
+						elseif me.doTrackerFlip == 4
+							trackerFlip(eT, 0, true);
+							me.doTrackerFlip = 1;
+						end
 					end
 					
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1092,7 +1103,7 @@ classdef runExperiment < optickaCore
 				%profile off; profile viewer;
 
 				%================================Amplifier control
-				if strcmp(me.control.device,'intan')
+				if strcmpi(me.control.device,'intan')
 					write(dC,uint8('set runmode stop'));
 				elseif strcmp(me.control.device,'plexon') 
 					if strcmp(me.strobe.device,'datapixx') || strcmp(me.strobe.device,'display++')
@@ -1115,6 +1126,7 @@ classdef runExperiment < optickaCore
 				try close(dC); end % data connection
 				
 				WaitSecs(0.25);
+				try plotPerformance(bR); end
 				fprintf('\n\n======>>> Total ticks: %g | stateMachine ticks: %g\n', tS.totalTicks, sM.totalTicks);
 				fprintf('======>>> Tracker Time: %g | PTB time: %g | Drift Offset: %g\n', ...
 					tL.screenLog.trackerEndTime-tL.screenLog.trackerStartTime, ...
@@ -1126,26 +1138,19 @@ classdef runExperiment < optickaCore
 					tS.eO=[];
 				end
 				
-				if tS.askForComments
-					comment = inputdlg('Final Comment for this Run?','Run Comment');
-					if ~isempty(comment)
-						comment = comment{1};
-						me.comment = [me.comment ' | Final Comment: ' comment];
-						bR.comment = me.comment;
-						eT.comment = me.comment;
-						sM.comment = me.comment;
-						io.comment = me.comment;
-						tL.comment = me.comment;
-						tS.comment = me.comment;
-					end
-				end
-				
+				% Final comments
+				prompt = '\bf Final Comments for this Run?';
+				Priority(0);ListenChar(0);RestrictKeysForKbCheck([]);
+				updateComments(me,prompt);
+				disp(me.comment);
+				bR.comment = me.comment; eT.comment = me.comment; sM.comment = me.comment; io.comment = me.comment; tL.comment = me.comment; tS.comment = me.comment;
+
 				removeEmptyValues(tL);
 				me.tS = tS; %store our tS structure for backup
 				
-				%------SAVE the DATA
+				%================================SAVE the DATA
 				if tS.saveData
-					sname = [me.paths.savedData filesep me.name '.mat'];
+					sname = [me.paths.alfPath filesep 'opticka.raw.' me.name '.mat'];
 					rE = me;
 					save(sname,'rE','tS');
 					fprintf('\n\n#####################\n===>>> <strong>SAVED DATA to: %s</strong>\n#####################\n\n',sname)
@@ -1154,6 +1159,7 @@ classdef runExperiment < optickaCore
 						assignin('base', 'staircase', me.task.staircase); % assign tS in base for manual checking
 					end
 				end
+				%================================SAVE the DATA
 
 				%------disable diary logging 
 				if me.diaryMode; diary off; end
@@ -1164,32 +1170,175 @@ classdef runExperiment < optickaCore
 					if isa(me.stimuli,'metaStimulus'); me.stimuli.reset; end
 				end
 				
-			catch ME
+			catch ERR
 				me.isRunning = false;
 				fprintf('\n\n===!!! ERROR in runExperiment.runTask()\n');
+                try me.userFunctions = []; end %user functions
 				try reset(stims); end
 				try close(s); end
 				try close(aM); end
 				try close(eT); end
 				try close(rM); end
-				if exist('io','var')
+				if strcmpi(me.control.device,'plexon') && exist('io','var')
 					try pauseRecording(io); end%pause plexon
 					WaitSecs(0.25)
 					try stopRecording(io); end
-					try close(io); end
 				end
+				try close(io); end
 				%profile off; profile clear
-				warning('on') 
+				warning('on');
 				Priority(0);
 				ListenChar(0); RestrictKeysForKbCheck([]);
 				ShowCursor;
 				me.eyeTracker = [];
 				me.behaviouralRecord = [];
-				me.lJack=[];
-				me.io = [];
-				rethrow(ME)
+				me.strobeDevice = [];
+                getReport(ERR);
+				rethrow(ERR);
 			end
 
+		end
+
+
+		% ===================================================================
+		function runTests(me, test)
+		%> @fn runTests
+		%>
+		%> Tests the hardware interfaces 
+		%>
+		%> @param test - marker | reward | audio | eyetracker
+		% ===================================================================
+
+			if ~exist('test','var'); return; end
+			if strcmpi(test,'marker'); do = 1;
+			elseif strcmpi(test,'reward'); do = 2;
+			elseif strcmpi(test,'audio'); do = 3;
+			elseif strcmpi(test,'eyetracker'); do = 4;
+			else do = 5;
+			end
+
+			s = screenManager('verbosityLevel',1,'verbose',false);
+			s.screen = min(Screen('Screens'));
+			s.windowed = [0 0 800 600];
+			s.font.TextSize = s.font.TextSize * 1.5;
+			s.open;
+			s.drawText('===>>> Opticka Testing...');
+			s.flip;
+
+			commandwindow;drawnow();
+
+			fprintf('\n\n=========================\nOPTICKA TESTING:\n\n');
+
+			WaitSecs(0.5);
+
+			[rM, aM] = initialiseGlobals(me);
+
+			if do==1 || do == 5
+				if isempty(me.strobe.device)
+					s.drawTextNow('No strobe marker hardware selected...');
+					warning('You did not select a strobe device in the menu');
+				else
+					io = configureIO(me, true);
+					io.name = 'test';
+					io.verbose = true;
+					t = sprintf('%s: test markers -- ',io.fullName);
+					s.drawTextNow(t,[],[],40);
+					s.drawTextNow([t 'Sending 255'],[],[],40);io.sendStrobe(255); WaitSecs(0.3);
+					s.drawTextNow([t 'Sending 1'],[],[],40);io.sendStrobe(1); WaitSecs(0.3);
+					s.drawTextNow([t 'Sending 255'],[],[],40);io.sendStrobe(255); WaitSecs(0.3);
+					s.drawTextNow([t 'Sending 1'],[],[],40);io.sendStrobe(1); WaitSecs(0.3);
+					s.drawTextNow('Strobe marker testing finished...',[],[],40);
+				end
+				WaitSecs(1);
+			end
+			
+
+			if do == 2 || do == 5
+				if isempty(me.reward.device)
+					s.drawTextNow('No strobe selected...');
+					warning('You did not select a reward device in the menu');
+					WaitSecs(0.5);
+				else
+					try
+						if isfield(me.reward,'port') && ~isempty(me.reward.port); rM.port = me.reward.port; end
+						if isfield(me.reward,'board') && ~isempty(me.reward.board); rM.board = me.reward.board; end
+						if rM.isOpen
+							try rM.close; rM.reset; end
+						end
+						rM.open;
+						oldv = rM.verbose;
+						rM.verbose = true;
+						t = sprintf('%s: test reward -- ',rM.fullName);
+						for i = 1:10
+							rM.giveReward;
+							s.drawTextNow([t 'Sending reward ' num2str(i)],[],[],40);
+							WaitSecs(0.2);
+						end
+						s.drawTextNow('Reward testing finished...',[],[],40);
+						rM.verbose = oldv;
+					catch ERR
+						getReport(ERR);
+					end
+				end
+				WaitSecs(1);
+			end
+
+			if do == 3 || do == 5
+				try
+					aM.device = me.audioDevice;
+					aM.silentMode = false;
+					reset(aM);
+					oldv = aM.verbose;
+					aM.verbose = true;
+					if ~aM.isSetup;	try setup(aM); end; end
+					s.drawTextNow('Audio Beeps...');
+					aM.beep(4000,0.1,0.1);WaitSecs(0.2);
+					aM.beep(3000,0.1,0.1);WaitSecs(0.2);
+					aM.beep(2000,0.1,0.1);WaitSecs(0.2);
+					aM.beep(1000,0.1,0.1);WaitSecs(0.2);
+					aM.beep(500,0.1,0.1);WaitSecs(0.2);
+					aM.beep(250,0.1,0.1);WaitSecs(0.2);
+					aM.beep(500,0.1,0.1);WaitSecs(0.2);
+					aM.beep(1000,0.1,0.1);WaitSecs(0.2);
+					aM.beep(2000,0.1,0.1);WaitSecs(0.2);
+					aM.beep(3000,0.1,0.1);WaitSecs(0.2);
+					aM.beep(4000,0.1,0.1);WaitSecs(0.2);
+					aM.verbose = oldv;
+				catch ERR
+					getReport(ERR);
+				end
+				WaitSecs(1);
+			end
+			
+			if do == 4 || do == 5
+				if isempty(me.eyetracker.device)
+					s.drawTextNow('No eyetracker selected...');
+					warning('You did not select an eyetracker device in the menu');
+					WaitSecs(0.5);
+				else
+					try
+						open(me.screen);
+						configureEyetracker(me, me.screen);
+						s.drawTextNow('Eyetracker open...');
+						WaitSecs(0.25);
+						me.eyeTracker.close;
+						close(me.screen);
+					catch ERR
+						close(me.screen);
+						getReport(ERR);
+					end
+				end
+				WaitSecs(1);
+			end
+
+			s.drawTextWrapped('Testing finished, please check the command window for details!', 40);
+			s.flip;
+			WaitSecs(1);
+			s.close;
+			rM.close;
+			aM.close;
+			if exist('io','var'); io.close; end
+			
 		end
 		% ===================================================================
 		function initialise(me, config)
@@ -1221,11 +1370,7 @@ classdef runExperiment < optickaCore
 				me.task.initialise();
 			end
 			
-			if contains(me.strobe.device,'display++')
-				me.dPP = plusplusManager();
-			elseif contains(me.strobe.device,'datapixx')
-				me.dPixx = dPixxManager();
-			end
+			me.strobeDevice = ioManager();
 			
 			if ~isdeployed && isempty(me.stateInfoFile)
 				if exist([me.paths.root filesep 'DefaultStateInfo.m'],'file')
@@ -1428,14 +1573,8 @@ classdef runExperiment < optickaCore
 			if (isa(me.eyeTracker,'eyelinkManager') || isa(me.eyeTracker,'tobiiManager')) && ~isempty(me.eyeTracker)
 				me.eyeTracker.verbose = value;
 			end
-			if isa(me.lJack,'labJack') && ~isempty(me.lJack)
-				me.lJack.verbose = value;
-			end
-			if isa(me.dPixx,'dPixxManager') && ~isempty(me.dPixx)
-				me.dPixx.verbose = value;
-			end
-			if isa(me.dPP,'plusplusManager')  && ~isempty(me.dPP)
-				me.dPP.verbose = value;
+			if ~isempty(me.strobeDevice)
+				me.strobeDevice.verbose = value;
 			end
 			if isa(me.stimuli,'metaStimulus') && ~isempty(me.stimuli) && me.stimuli.n > 0
 				for i = 1:me.stimuli.n
@@ -1485,20 +1624,14 @@ classdef runExperiment < optickaCore
 		%> @param value the value to set the I/O system
 		% ===================================================================
 			if value == Inf; value = me.strobe.stimOFFValue; end
-			if strcmp(me.strobe.device, 'display++')
-				prepareStrobe(me.dPP, value);
-			elseif strcmp(me.strobe.device, 'datapixx')
-				prepareStrobe(me.dPixx, value);
-			elseif strcmp(me.strobe.device, 'labjackt') || strcmp(me.strobe.device, 'labjack')
-				prepareStrobe(me.lJack, value);
-			end
+			prepareStrobe(me.strobeDevice, value);
 		end
 		
 		% ===================================================================
 		function doStrobe(me, value)
 		%> @fn doStrobe
 		%> 
-		%> set I/O strobe to trigger on next flip
+		%> set I/O strobe to trigger on NEXT FLIP
 		%>
 		%> @param value true or false
 		% ===================================================================
@@ -1527,7 +1660,7 @@ classdef runExperiment < optickaCore
 		%>
 		%> @param value
 		% ===================================================================
-			if ~exist('value','var'); value = true; end
+			if ~exist('value','var') || isempty(value); value = true; end
 			me.needSample = value;
 		end
 
@@ -1575,7 +1708,7 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 			if me.isRunning
 				if ~exist('tag','var'); tag = '#'; end
-				t = sprintf('===>%s:%s',tag,infoText(me));
+				t = sprintf('===>>> %s : %s', tag, infoText(me));
 				fprintf('%s\n',t);
 				me.behaviouralRecord.info = t;
 				if me.isRunTask
@@ -1865,6 +1998,15 @@ classdef runExperiment < optickaCore
 		end
 
 		% ===================================================================
+		function configureTouchScreen(me, s)
+		%> @fn configureEyetracker
+		%> Configures (calibration etc.) the eyetracker.
+		%> @param s screen object
+		% ===================================================================
+			
+		end
+
+		% ===================================================================
 		function configureEyetracker(me, s)
 		%> @fn configureEyetracker
 		%> Configures (calibration etc.) the eyetracker.
@@ -1872,60 +2014,54 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 			if ~exist('s','var'); s = me.screen; end
 			
-			clear tobiiManager eyelinkManager iRecManager pupilLabsManager
-			
+			clear tobiiManager eyelinkManager iRecManager pupilLabsManager eyetrackerCore
+
 			if ~isfield(me.eyetracker,'isettings'); me.eyetracker.isettings = []; end
 			if ~isfield(me.eyetracker,'psettings'); me.eyetracker.psettings = []; end
-			
+			if ~isfield(me.eyetracker,'tsettings'); me.eyetracker.tsettings = []; end
+			if ~isfield(me.eyetracker,'esettings'); me.eyetracker.esettings = []; end
+
 			switch lower(me.eyetracker.device)
 				case 'tobii'
-					eT		= tobiiManager();
+					eT			= tobiiManager();
 					if ~isempty(me.eyetracker.tsettings); eT.addArgs(me.eyetracker.tsettings); end
+					eT.saveFile	= [me.paths.savedData filesep me.name '.mat'];
+					eT.isOff	= false;
 				case 'eyelink'
-					eT		= eyelinkManager();
+					eT			= eyelinkManager();
 					if ~isempty(me.eyetracker.esettings); eT.addArgs(me.eyetracker.esettings); end
+					eT.saveFile	= [me.paths.savedData filesep me.name '.edf'];
+					eT.isOff	= false;
 				case 'irec'
-					eT		= iRecManager();
+					eT			= iRecManager();
 					if ~isempty(me.eyetracker.isettings); eT.addArgs(me.eyetracker.isettings); end
+					eT.saveFile	= '';
+					eT.isOff	= false;
 				otherwise
-					me.eyetracker.device = 'irec';
-					eT		= iRecManager();
-					if ~isempty(me.eyetracker.isettings); eT.addArgs(me.eyetracker.isettings); end
-					eT.isDummy = true;
+					me.eyetracker.device = '';
+					eT			= iRecManager();
+					eT.isOff	= true;
+					eT.isDummy	= true;
 			end
-			me.eyeTracker			= eT;
-			eT.verbose				= me.verbose;
-			eT.saveFile				= [me.paths.savedData filesep me.name '.edf'];
-			if isempty(me.eyetracker.device)
-				eT.isDummy			= true;
-			else
-				eT.isDummy			= me.eyetracker.dummy;
+			me.eyeTracker		= eT;
+			eT.verbose			= me.verbose;
+			if ~isempty(me.eyetracker.device)
+				eT.isDummy		= me.eyetracker.dummy;
 			end
 			if strcmp(me.eyetracker.device, 'irec') || strcmp(me.eyetracker.device, 'tobii')
 				eT.useOperatorScreen = true;
 				initialise(eT, s);
 				trackerSetup(eT);
-			elseif strcmp(me.eyetracker.device, 'eyelink') || me.eyetracker.dummy
+			elseif strcmp(me.eyetracker.device, 'eyelink') || ~isempty(me.eyetracker.device)
 				initialise(eT, s);
 				trackerSetup(eT);
 			end
 			ShowCursor();
-			if ~eT.isConnected && ~eT.isDummy
+			if ~eT.isConnected && ~eT.isDummy && ~eT.isOff
 				warning('Eyetracker is not connected and not in dummy mode, potential connection issue...')
 			end
 		end
 
-				
-% 		% ===================================================================
-% 		function out = saveobj(me)
-% 		%> @brief called on save, removes opticka handle
-% 		%>
-% 		%> @param
-% 		% ===================================================================
-%  			me.screenSettings.optickahandle = [];
-%  			fprintf('===> Saving runExperiment object...\n')
-%  			out = me;
-%  		end
 	end
 	
 	%=======================================================================
@@ -1933,54 +2069,85 @@ classdef runExperiment < optickaCore
 	%=======================================================================
 
 		% ===================================================================
-		function io = configureIO(me)
+		function io = configureIO(me, onlyIO)
 		%> @fn configureIO
 		%> Configures the IO devices.
 		%> @param
 		% ===================================================================
-			[rM, ~] = initialiseGlobals(me);
+			if ~exist("onlyIO","var") || isempty(onlyIO);onlyIO=false;end
 			%-------Set up Digital I/O (dPixx and labjack) for this task run...
-			if strcmp(me.strobe.device,'display++')
-				if ~isa(me.dPP,'plusplusManager')
-					me.dPP = plusplusManager('verbose',me.verbose);
+			if strcmp(me.strobe.device,'nirsmart')
+				if ~isa(me.strobeDevice,'nirsmartManager') || isempty(me.strobeDevice)
+					me.strobeDevice = nirSmartManager('verbose',me.verbose);
 				end
-				io = me.dPP;  %#ok<*PROP>
+				if ~isempty(me.control.port)
+					v = strsplit(me.control.port,':');
+				else
+					v{1} = '127.0.0.1';
+					v{2} = '5000';
+				end
+				io = me.strobeDevice;  %#ok<*PROP>
+				io.ip = v{1};
+				io.port = str2double(v{2});
+				io.name = me.name;
+				open(io);
+				if io.isOpen
+					fprintf('===> Using NIRSmart for strobed I/O...\n')
+				else
+					warning('Couldn''t open nirSmartManager, check TCP port is valid!!!')
+				end
+			elseif strcmp(me.strobe.device,'display++')
+				if ~isa(me.strobeDevice,'plusplusManager')
+					me.strobeDevice = plusplusManager('verbose',me.verbose);
+				end
+				io = me.strobeDevice;  %#ok<*PROP>
 				io.sM = me.screen;
 				io.strobeMode = me.dPPMode;
 				io.name = me.name;
 				io.verbose = me.verbose;
-				io.name = 'runinstance';
 				open(io);
-				fprintf('===> Using Display++ for strobed I/O...\n')
+				if io.isOpen
+					fprintf('===> Using Display++ for strobed I/O...\n')
+				else
+					warning('===> !!! Couldn''t open Display++!!!')
+				end
 			elseif strcmp(me.strobe.device,'datapixx')
-				if ~isa(me.dPixx,'dPixxManager')
-					me.dPixx = dPixxManager('verbose',me.verbose);
+				if ~isa(me.strobeDevice,'dPixxManager')
+					me.strobeDevice = dPixxManager('verbose',me.verbose);
 				end
-				io = me.dPixx; io.name = me.name;
+				io = me.strobeDevice; io.name = me.name;
 				io.silentMode = false;
 				io.verbose = me.verbose;
-				io.name = 'runinstance';
+				io.name = me.name;
 				open(io);
-				fprintf('===> Using dataPixx for strobed I/O...\n')
+				if io.isOpen
+					fprintf('===> Using dataPixx for strobed I/O...\n')
+				else
+					warning('===> !!! Couldn''t open dataPixx!!!')
+				end
 			elseif strcmp(me.strobe.device,'labjackt')
-				if ~isa(me.lJack,'labjackT')
-					me.lJack = labJackT('openNow',false,'device',1);
+				if ~isa(me.strobeDevice,'labjackT')
+					me.strobeDevice = labJackT('openNow',false,'device',1);
 				end
-				io = me.lJack; io.name = me.name;
+				io = me.strobeDevice; io.name = me.name;
 				io.silentMode = false;
 				io.verbose = me.verbose;
-				io.name = 'runinstance';
+				io.name = me.name;
 				open(io);
+				WaitSecs(0.2);
 				if io.isOpen
 					fprintf('===> Using labjackT for strobed I/O...\n')
 				else
 					warning('===> !!! labJackT could not properly open !!!');
 				end
-			elseif strcmp(me.strobe.device,'labjack')
-				if ~isa(me.lJack,'labjack')
-					me.lJack = labJack('openNow',false);
+				if ~io.isServerRunning
+					error('===> !!! labJackT server not running !!!');
 				end
-				io = me.lJack; io.name = me.name;
+			elseif strcmp(me.strobe.device,'labjack')
+				if ~isa(me.strobeDevice,'labjack')
+					me.strobeDevice = labJack('openNow',false);
+				end
+				io = me.strobeDevice; io.name = me.name;
 				io.silentMode = false;
 				io.verbose = me.verbose;
 				io.name = 'runinstance';
@@ -1991,16 +2158,20 @@ classdef runExperiment < optickaCore
 					warning('===> !!! labJackT could not properly open !!!');
 				end
 			else
-				io = ioManager();
+				me.strobeDevice = ioManager();
+				io = me.strobeDevice;
 				io.silentMode = true;
 				io.verbose = false;
-				io.name = 'silentruninstance';
+				io.name = 'dummy';
 				me.strobe.device = '';
 				fprintf('\n===>>> No strobe output I/O...\n')
 			end
 
+			if onlyIO; return; end
 			%--------------------------------------reward
+			[rM, ~] = initialiseGlobals(me);
 			if matches(me.reward.device,'arduino')
+				
 				if ~isa(rM,'arduinoManager')
                     rM = arduinoManager();
 				end
@@ -2011,7 +2182,6 @@ classdef runExperiment < optickaCore
 					rM.silentMode = false;
 					rM.open();
 				end
-				me.arduino = rM;
 				if rM.isOpen; fprintf('===> Using Arduino for reward TTLs...\n'); end
 			else
 				if isa(rM,'arduinoManager')
@@ -2226,23 +2396,23 @@ classdef runExperiment < optickaCore
 		%>
 		%> @return t info string
 		% ===================================================================
-			etinfo = ''; name = '';
+			etinfo = ''; name = ''; var = NaN;
 			if me.isRunTask
 				log = me.taskLog;
 				name = [me.stateMachine.currentName ':' me.stateMachine.currentUUID];
 				if ~isempty(me.eyetracker.device)
-					etinfo = sprintf('isFix:%i isExcl:%i isFixInit:%i fixLength: %.2f',...
-						me.eyeTracker.isFix,me.eyeTracker.isExclusion,me.eyeTracker.isInitFail,me.eyeTracker.fixLength);
+					etinfo = sprintf('isFix:%i isExcl:%i isFixInit:%i isBlink:%i fixLength: %.2f',...
+						me.eyeTracker.isFix,me.eyeTracker.isExclusion,me.eyeTracker.isInitFail,me.eyeTracker.isBlink,me.eyeTracker.fixLength);
 				end
 			else
 				log = me.runLog;
 				name = sprintf('%s Blank:%i',name,me.task.isBlank);
 			end
 			if isempty(me.task.outValues)
-				if me.isRunTask
-					t = sprintf('%s | Time: %.3f (%i) | isFix: %i | isExclusion: %i | isFixInit: %i',...
+				if me.isRunTask && ~isempty(me.eyetracker.device)
+					t = sprintf('%s | Time: %.3f (%i) | isFix:%i isExclusion:%i isFixInit:%i isBlink:%i',...
 						name,(log.lastvbl-log.startTime), log.tick-1,...
-						me.eyeTracker.isFix,me.eyeTracker.isExclusion,me.eyeTracker.isInitFail);
+						me.eyeTracker.isFix,me.eyeTracker.isExclusion,me.eyeTracker.isInitFail,me.eyeTracker.isBlink);
 				else
 					t = sprintf('%s | Time: %.3f (%i)',...
 						name,(log.lastvbl-log.startTime), log.tick-1);
@@ -2271,6 +2441,11 @@ classdef runExperiment < optickaCore
 				else
 					t=[t sprintf(' > %s: %.3f',me.task.nVar(i).name,...
 						me.task.outVars{me.task.thisBlock,i}(me.task.thisRun))];
+				end
+			end
+			for i = 1:me.stimuli.n
+				if isa(me.stimuli{i},'imageStimulus') || isa(me.stimuli{i},'movieStimulus')
+					t = [t sprintf(' | %i = %s',i,me.stimuli{i}.currentFile)];
 				end
 			end
 			if ~isempty(me.variableInfo)
@@ -2306,6 +2481,33 @@ classdef runExperiment < optickaCore
 				else
 					tS.eyePos.(uuid).x = eT.x;
 					tS.eyePos.(uuid).y = eT.y;
+				end
+			end
+		end
+
+		% ===================================================================
+		function comment = updateComments(me,prompt,tS)
+		%> @fn updateComments
+		%> @brief updates comment field
+		%>
+		%> @param prompt
+		%> @param tS structure
+		% ===================================================================
+			if ~exist('prompt','var')||isempty(prompt);prompt="\bf Please add Comments:";end
+			if ~exist('tS','var'); tS.askForComments=me.askForComments;end
+			if ischar(me.comment) || iscell(me.comment)
+				comment = strip(string(me.comment));
+			else
+				comment = strip(me.comment);
+			end
+			if (me.askForComments || tS.askForComments) && ~me.debug
+				opts.Interpreter='tex';opts.Resize='on';
+				ncomment = inputdlg(prompt,['Comments for ' me.name],[10 80],{''},opts);
+				if ~isempty(ncomment)
+					ncomment = string(ncomment{1});
+					ncomment = strip(ncomment);
+					comment = [comment; ncomment];
+					me.comment = comment;
 				end
 			end
 		end
@@ -2973,8 +3175,14 @@ classdef runExperiment < optickaCore
 				try lobj.uuid = in.uuid; end
 				try lobj.savePrefix = in.savePrefix; end
 				try lobj.comment = in.comment; end
-				try lobj.subjectName = in.subjectName; end
-				try lobj.researcherName = in.researcherName; end
+				try lobj.sessionData.subjectName = in.subjectName; end
+				try lobj.sessionData.researcherName = in.researcherName; end
+				try lobj.sessionData.subjectName = in.sessionData.subjectName; end
+				try lobj.sessionData.researcherName = in.sessionData.researcherName; end
+				try lobj.sessionData.labName = in.sessionData.labName; end
+				try lobj.sessionData.labLocation = in.sessionData.labLocation; end
+				try lobj.sessionData.sessionPrefix = in.sessionData.sessionPrefix; end
+				try lobj.sessionData.alyxIP = in.sessionData.alyxIP; end
 				if isnumeric(in.dateStamp)
 					try lobj.dateStamp = datetime(in.dateStamp); end
 				elseif isa(in.dateStamp,'datetime')

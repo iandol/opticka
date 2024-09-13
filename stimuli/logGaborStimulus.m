@@ -192,6 +192,7 @@ classdef logGaborStimulus < baseStimulus
 			end
 			function set_sizeOut(me,value)
 				me.sizeOut = value * me.ppd;
+				me.szPx = me.sizeOut;
 				if me.mask == true
 					me.fieldSize = round(me.sizeOut + me.maskSmoothing); %mask needs to be bigger!
 				else
@@ -250,8 +251,9 @@ classdef logGaborStimulus < baseStimulus
 						me.alphaOut,me.modulateColourOut);
 					end
 				end
+				me.drawTick = me.drawTick + 1;
 			end
-			me.tick = me.tick + 1;
+			if me.isVisible; me.tick = me.tick + 1; end
 		end
 		
 		% ===================================================================
@@ -470,7 +472,9 @@ classdef logGaborStimulus < baseStimulus
 				else
 					me.dstRect=CenterRectOnPointd(me.dstRect, me.xFinal, me.yFinal);
 				end
-				me.mvRect = me.dstRect;
+				me.mvRect=me.dstRect;
+				me.szPx = RectWidth(me.mvRect);
+				me.setAnimationDelta();
 				if ~isempty(me.maskTexture)
 					dstRect2= [ 0 0 me.fieldSize me.fieldSize];
 					if me.mouseOverride && me.mouseValid

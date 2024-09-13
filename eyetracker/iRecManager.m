@@ -44,11 +44,13 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 						'ip', '127.0.0.1',...
 						'udpport', 35000,... % used to send messages
 						'tcpport', 35001,... % used to send commands
-						'stimulus','animated',... % calibration stimulus can be animated, movie
-						'movie', [],... % if movie pass a movieStimulus 
+						'stimulus','animated',... % calibration stimulus can be animated, movie, image, pupilcore
+						'size', 2,... % size of calibration target in degrees
+						'movie', [],... % if movie optionally pass a filename 
+						'filePath', [],...
+						'audioFeedback', true, ...
 						'calPositions', [-12 0; 0 -12; 0 0; 0 12; 12 0],...
 						'valPositions', [-12 0; 0 -12; 0 0; 0 12; 12 0],...
-						'size', 2,... % size of calibration cross in degrees
 						'manual', false)
 		%> WIP we can optionally drive physical LEDs for calibration, each LED
 		%> is triggered by the me.calibration.calPositions order
@@ -58,6 +60,8 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 	properties (Hidden = true)
 		% for led calibration, which arduino pin to start from
 		startPin		= 3
+		% stimulus used for calibration
+		calStim			= []
 	end
 	
 	%--------------------PROTECTED PROPERTIES----------%
@@ -67,8 +71,6 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		sv				= []
 		%> tracker time stamp
 		systemTime		= 0
-		% stimulus used for calibration
-		calStim			= []
 		%> allowed properties passed to object upon construction
 		allowedProperties	= {'calibration', 'useLEDs'}
 	end
@@ -111,7 +113,9 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		%> @param sM2 - a second screenManager used for operator, if
 		%>  none is provided a default will be made.
 		% ===================================================================
-			
+			success = false;
+			if me.isOff; me.isConnected = false; success = true; return; end
+
 			[rM, aM] = initialiseGlobals(me, false, true);
 
 			if ~exist('sM','var') || isempty(sM)
@@ -144,10 +148,41 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 			if ismac; me.operatorScreen.useRetina = true; end
 
 			me.smoothing.sampleRate = me.sampleRate;
+
+			if strcmpi(me.calibration.stimulus,'movie')
+				if isempty(me.calStim) || ~isa(me.calStim,'movieStimulus')
+					me.calStim = movieStimulus('size',me.calibration.size,'filePath',me.calibration.filePath);
+				else
+					if ~isempty(me.calStim) && isa(me.calStim,'movieStimulus'); try me.calStim.reset; end; end
+					me.calStim.size = me.calibration.size;
+					me.calStim.filePath = me.calibration.filePath;
+				end
+			elseif strcmpi(me.calibration.stimulus,'image')
+				if isempty(me.calStim) || ~isa(me.calStim,'imageStimulus')
+					me.calStim = imageStimulus('size',me.calibration.size,'filePath',me.calibration.filePath);
+				else
+					if ~isempty(me.calStim)&& isa(me.calStim,'imageStimulus'); try me.calStim.reset; end; end
+					me.calStim.size = me.calibration.size;
+					me.calStim.filePath = me.calibration.filePath;
+				end
+			elseif strcmpi(me.calibration.stimulus,'pupilcore')
+				me.calStim = pupilCoreStimulus();
+				me.calStim.size = me.calibration.size;
+			elseif strcmpi(me.calibration.stimulus,'animated')
+				lw = me.calibration.size/8;
+				if lw > 0.2; lw = 0.2; end
+				me.calStim = fixationCrossStimulus('size',me.calibration.size,'lineWidth',lw,'type','pulse');
+			else
+				if isempty(me.calStim)
+					lw = me.calibration.size/8;
+					if lw > 0.2; lw = 0.2; end
+					me.calStim = fixationCrossStimulus('size',me.calibration.size,'lineWidth',lw);
+				end
+			end
 			
 			if me.isDummy
 				me.salutation('Initialise', 'Running iRec in Dummy Mode', true);
-				me.isConnected = false;
+				me.isConnected = true;
 			else
 				if isempty(me.tcp) || ~isa(me.tcp,'dataConnection')
 					me.tcp = dataConnection('rAddress', me.calibration.ip,'rPort',...
@@ -207,7 +242,11 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		%> @brief calibration + validation
 		%>
 		% ===================================================================
+			if me.isOff; return; end
             [rM, aM] = initialiseGlobals(me);
+
+			if ~rM.isOpen; open(rM); end
+			if me.calibration.audioFeedback; open(aM); beep(aM,1000,0.1,0.1); end
 
 			cal = [];
 			if ~me.isConnected && ~me.isDummy
@@ -226,19 +265,6 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 			if ischar(me.calibration.valPositions); me.calibration.valPositions = str2num(me.calibration.valPositions); end
 
 			fprintf('\n===>>> CALIBRATING IREC... <<<===\n');
-			
-			if strcmp(me.calibration.stimulus,'movie')
-				if isempty(me.stimulus.movie) || ~isa(me.stimulus.movie,'movieStimulus')
-					me.calStim = movieStimulus('size',me.calibration.size);
-				else
-					if ~isempty(me.calStim); try me.calStim.reset; end; end
-					me.calStim = me.movie.movie;
-					me.calStim.size = me.calibration.size;
-				end
-			else
-				if ~isempty(me.calStim); try me.calStim.reset; end; end
-				me.calStim = fixationCrossStimulus('size',me.calibration.size,'lineWidth',me.calibration.size/8,'type','pulse');
-			end
 
 			f = me.calStim;
 
@@ -251,11 +277,11 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 			one = KbName('1!'); two = KbName('2@'); three = KbName('3#');
 			four = KbName('4$'); five = KbName('5%'); six = KbName('6^');
 			seven = KbName('7&'); eight = KbName('8*'); nine = KbName('9(');
-			zero = KbName('0)'); esc = KbName('escape'); cal = KbName('c');
+			zero = KbName('0)'); quit = KbName('q'); cal = KbName('c');
 			val = KbName('v'); dr = KbName('d'); smpl = KbName('s'); menu = KbName('LeftShift');
-			sample = KbName('RightShift'); shot = KbName('F1');
+			sample = KbName('RightShift'); shot = KbName('F1'); esc = KbName('escape');
 			oldr = RestrictKeysForKbCheck([one two three four five six seven ...
-				eight nine zero esc cal val dr smpl menu sample shot]);
+				eight nine zero quit cal val dr smpl menu sample shot esc]);
 
 			cpos = me.calibration.calPositions;
 			vpos = me.calibration.valPositions;
@@ -285,12 +311,14 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 						resetAll(me);
 						while cloop
 							a = a + 1;
-							me.getSample();
-							s.drawText('MENU: esc = exit | c = calibrate | v = validate | d = drift offset | s = sample | F1 = screenshot');
-							s.flip();
+							getSample(me);
+							s.drawText('MENU: q = exit | c = calibrate | v = validate | d = drift offset | s = sample | F1 = screenshot');
+							flip(s);
 							if me.useOperatorScreen
-								s2.drawText('MENU: esc = exit | c = calibrate | v = validate | d = drift offset | s = sample | F1 = screenshot');
-								if ~isempty(me.x);s2.drawSpot(0.75,[0 1 0.25 0.2],me.x,me.y);end
+								s2.drawText('MENU: q = exit | c = calibrate | v = validate | d = drift offset | s = sample | F1 = screenshot');
+								if ~isempty(me.x)
+									s2.drawSpot(0.75,[0 1 0.25 0.2],me.x,me.y);
+								end
 								drawValidationResults(me, vn);
 								if mod(a,ref) == 0
 									trackerFlip(me,0,true);
@@ -299,9 +327,11 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 								end
 							end
 
-							[pressed,~,keys] = optickaCore.getKeys();
+							[pressed,~,keys, shift] = optickaCore.getKeys();
 							if pressed
-								if keys(esc)
+								if keys(quit) && shift
+									error('You have force exited out of the calibration!!!');
+								elseif keys(quit) && ~shift
 									cloop = false; loop = false;
 								elseif keys(cal)
 									mode = 'calibrate'; cloop = false;
@@ -348,20 +378,19 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 						while cloop
 							a = a + 1;
 							me.getSample();
-							drawGrid(s);
 							draw(f);
 							animate(f);
+							% if me.useOperatorScreen
+							% 	s2.drawText ('CALIBRATE: lshift = exit | # = point');
+							% 	s2.drawCross(1,[],thisX,thisY);
+							% 	if ~isempty(me.x);s2.drawSpot(0.75,[0 1 0.25 0.1],me.x,me.y);end
+							% 	if mod(a,ref) == 0
+								% 	trackerFlip(me, 0, true);
+							% 	else
+								% 	trackerFlip(me, 1);
+							% 	end
+							% end
 							flip(s);
-							if me.useOperatorScreen
-								s2.drawText ('CALIBRATE: lshift = exit | # = point');
-								s2.drawCross(1,[],thisX,thisY);
-								if ~isempty(me.x);s2.drawSpot(0.75,[0 1 0.25 0.1],me.x,me.y);end
-								if mod(a,ref) == 0
-									trackerFlip(me,0,true);
-								else
-									trackerFlip(me,1);
-								end
-							end
 
 							[pressed,name,keys] = optickaCore.getKeys();
 							if pressed
@@ -376,16 +405,16 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 										thisPos = k;
 										if k == lastK && f.isVisible
 											f.isVisible = false;
-											me.turnOffLED(k,rM);
+											if me.useLEDs; me.turnOffLED(k,rM); end
 											thisPos = 0;
 										elseif ~f.isVisible
 											f.isVisible = true;
-											me.turnOnLED(k,rM);
+											if me.useLEDs; me.turnOnLED(k,rM); end
 										end
 										lastK = k;
-										if thisPos > 0
-											thisX = vpos(thisPos,1);
-											thisY = vpos(thisPos,2);
+										if thisPos > 0 && thisPos <= nPositions
+											thisX = cpos(thisPos,1);
+											thisY = cpos(thisPos,2);
 											f.xPositionOut = thisX;
 											f.yPositionOut = thisY;
 											update(f);
@@ -394,9 +423,10 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 									end
 								elseif keys(sample)
 									hide(f);
-									for ii=1:length(cpos);me.turnOffLED(ii,rM);end
+									if me.useLEDs; for ii=1:length(cpos);me.turnOffLED(ii,rM); end; end
 									trackerFlip(me,0,true);
-									rM.timedTTL;
+									giveReward(rM);
+									if me.calibration.audioFeedback; beep(aM,2000,0.1,0.1); end
 								elseif keys(menu)
 									trackerFlip(me,0,true);
 									mode = 'menu'; cloop = false;
@@ -433,20 +463,19 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 						while cloop
 							a = a + 1;
 							me.getSample();
-							drawGrid(s);
 							draw(f);
 							animate(f);
+							% if me.useOperatorScreen
+							% 	s2.drawText('VALIDATE: lshift = exit | rshift = sample | # = point');
+							% 	if ~isempty(me.x); s2.drawSpot(0.75,[0 1 0.25 0.25],me.x,me.y); end
+							% 	drawValidationResults(me, vn);
+							% 	if mod(a,ref) == 0
+								% 	trackerFlip(me, 0, true);
+							% 	else
+								% 	trackerFlip(me, 1);
+							% 	end
+							% end
 							flip(s);
-							if me.useOperatorScreen
-								s2.drawText('VALIDATE: lshift = exit | rshift = sample | # = point');
-								if ~isempty(me.x); s2.drawSpot(0.75,[0 1 0.25 0.25],me.x,me.y); end
-								drawValidationResults(me, vn);
-								if mod(a,ref) == 0
-									trackerFlip(me,0,true);
-								else
-									trackerFlip(me,1);
-								end
-							end
 
 							[pressed,name,keys] = optickaCore.getKeys();
 							if pressed
@@ -457,20 +486,20 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 										resetFixationHistory(me);
 										thisPos = 0;
 										hide(f);
-										for ii=1:length(cpos);me.turnOffLED(ii,rM);end
+										if me.useLEDs; for ii=1:length(cpos);me.turnOffLED(ii,rM);end; end
 										trackerFlip(me,0,true);
 									elseif k > 0 && k <= nPositions
 										thisPos = k;
 										if k == lastK && f.isVisible
 											f.isVisible = false;
-											me.turnOffLED(k,rM);
+											if me.useLEDs; me.turnOffLED(k,rM); end
 											thisPos = 0;
 										elseif ~f.isVisible
 											f.isVisible = true;
-											me.turnOnLED(k,rM);
+											if me.useLEDs; me.turnOnLED(k,rM); end
 										end
 										lastK = k;
-										if thisPos > 0
+										if thisPos > 0 && thisPos <= nPositions
 											thisX = vpos(thisPos,1);
 											thisY = vpos(thisPos,2);
 											f.xPositionOut = thisX;
@@ -489,9 +518,10 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 										if l > 5; l = 5; end
 										me.validationData(end).dataS{lastK} = [me.xAll(end-l:end); me.yAll(end-l:end)];
 									end
-									rM.giveReward;
+									giveReward(rM);
+									if me.calibration.audioFeedback; beep(aM,2000,0.1,0.1); end
 									f.isVisible = false;
-									for ii=1:length(cpos);me.turnOffLED(ii,rM);end
+									if me.useLEDs; for ii=1:length(cpos);me.turnOffLED(ii,rM);end; end
 									thisPos = 0;
 									resetFixationHistory(me);
 									trackerFlip(me,0,true);
@@ -580,7 +610,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		%> access, all data is saved to CSV irrespective of this
 		%>
 		% ===================================================================
-			if me.isDummy; return; end
+			if me.isDummy || me.isOff; return; end
 			if me.tcp.isOpen; me.tcp.write(int8('start')); end
 			me.isRecording = true;
 		end
@@ -592,7 +622,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		%> access, all data is saved to CSV irrespective of this
 		%>
 		% ===================================================================
-			if me.isDummy; return; end
+			if me.isDummy || me.isOff; return; end
 			if me.tcp.isOpen; me.tcp.write(int8('stop')); end
 			me.isRecording = false;
 		end
@@ -604,28 +634,11 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		%> the mouse as an eye signal
 		%>
 		% ===================================================================
-			sample				= me.sampleTemplate;
+			if me.isOff; return; end
 			if me.isDummy %lets use a mouse to simulate the eye signal
-				if ~isempty(me.win)
-					[mx, my]	= GetMouse(me.win);
-				else
-					[mx, my]	= GetMouse([]);
-				end
-				sample.valid	= true;
-				me.pupil		= 5 + randn;
-				sample.gx		= mx;
-				sample.gy		= my;
-				sample.pa		= me.pupil;
-				sample.time		= GetSecs;
-				me.x			= me.toDegrees(sample.gx,'x');
-				me.y			= me.toDegrees(sample.gy,'y');
-				me.xAll			= [me.xAll me.x];
-				me.xAllRaw		= me.xAll;
-				me.yAll			= [me.yAll me.y];
-				me.yAllRaw		= me.yAll;
-				me.pupilAll		= [me.pupilAll me.pupil];
-				%if me.verbose;fprintf('>>X: %.2f | Y: %.2f | P: %.2f\n',me.x,me.y,me.pupil);end
+				sample = getMouseSample(me);
 			elseif me.isConnected && me.isRecording
+				sample			= me.sampleTemplate;
 				xy				= [];
 				td				= me.tcp.readLines(me.smoothing.nSamples,'last');
 				if isempty(td); me.currentSample=sample; return; end
@@ -646,7 +659,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 					me.x		= xy(1);
 					me.y		= xy(2);
 					me.pupil	= sample.pa;
-					if me.verbose;fprintf('>>X: %2.2f | Y: %2.2f | P: %.2f\n',me.x,me.y,me.pupil);end
+					if me.debug; fprintf('>>X: %2.2f | Y: %2.2f | P: %.2f\n',me.x,me.y,me.pupil);end
 				else
 					sample.gx	= NaN;
 					sample.gy	= NaN;
@@ -659,8 +672,9 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 				me.yAll			= [me.yAll me.y];
 				me.pupilAll		= [me.pupilAll me.pupil];
 			else
+				sample				= me.sampleTemplate;
 				me.x = []; me.y = []; me.pupil = []; 
-				if me.verbose;fprintf('-+-+-> tobiiManager.getSample(): are you sure you are recording?\n');end
+				if me.verbose; fprintf('-+-+-> iRecManager.getSample(): no data, are you sure you are recording?\n');end
 			end
 			me.currentSample	= sample;
 		end
@@ -675,6 +689,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		%> TRIALID and TRIALRESULT we extract the integer value, END_FIX becomes
 		%> -1500 and END_RT becomes -1501
 		% ===================================================================
+			if me.isOff; return; end
 			if me.isConnected
 				if isnumeric(message)
 					me.udp.write(int32(message));
@@ -891,7 +906,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 				me.fixInit = oldfixinit;
 				me.name = oldname;
 				clear s s2 o
-			catch ME
+			catch ERR
 				stopRecording(me);
 				me.fixation = ofixation;
 				me.smoothing = osmoothing;
@@ -899,13 +914,13 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 				me.fixInit = oldfixinit;
 				me.name = oldname;
 				ListenChar(0);Priority(0);ShowCursor;
-				getReport(ME)
+				getReport(ERR)
 				try close(s); end
 				try close(s2); end
 				sca;
 				try close(me); end
 				clear s s2 o
-				rethrow(ME)
+				rethrow(ERR)
 			end
 			
 		end

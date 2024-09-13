@@ -157,7 +157,10 @@ classdef audioManager < optickaCore
 		%>
 		% ===================================================================
 		function beep(me,freq,durationSec,fVolume)
-			if me.silentMode; return; end
+			if me.silentMode
+				if me.verbose;me.logOutput('beep','SilentMode Beep',true);end
+				return; 
+			end
 			if ~me.isSetup; setup(me);end
 
 			if ~exist('freq', 'var');freq = 1000;end
@@ -187,6 +190,7 @@ classdef audioManager < optickaCore
 			soundVec = soundVec * fVolume;
 			PsychPortAudio('FillBuffer', me.aHandle, soundVec);
 			PsychPortAudio('Start', me.aHandle);
+			if me.verbose; me.logOutput('beep','Beep'); end
 		end
 
 		% ===================================================================

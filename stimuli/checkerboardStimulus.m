@@ -10,40 +10,42 @@ classdef checkerboardStimulus < baseStimulus
 	
 	properties %--------------------PUBLIC PROPERTIES----------%
 		%> family type
-		type char					= 'checkerboard'
+		type char				= 'checkerboard'
 		%> spatial frequency of the checkerboard
-		sf double					= 1
+		sf double				= 1
 		%> temporal frequency of the checkerboard
-		tf double					= 1
+		tf double				= 1
 		%> second colour of the checkerboard
-		colour2 double				= [0 1 0 1]
+		colour2 double			= [0 1 0 1]
 		%> base colour from which colour and colour2 are blended via contrast value
 		%> if empty [default], uses the background colour from screenManager
-		baseColour double			= []
+		baseColour double		= []
 		%> rotate the grating patch (false) or the grating texture within the patch (default = true)?
 		rotateTexture logical	= true
 		%> phase of grating
-		phase double				= 0
+		phase double			= 0
 		%> contrast of grating (technically the contrast from the baseColour)
 		contrast double			= 0.5
 		%> use a circular mask for the grating (default = true).
-		mask logical				= true
+		mask logical			= true
 		%> direction of the drift; default = false means drift left>right when angle is 0deg.
 		%This switch can be accomplished simply setting angle, but this control enables
 		%simple reverse direction protocols.
-		reverseDirection logical = false
+		reverseDirection logical= false
 		%> the direction of the grating object if moving.
-		direction double			= 0
+		direction double		= 0
 		%> Do we need to correct the phase to be relative to center not edge? This enables
 		%> centre surround stimuli are phase matched, and if we enlarge a grating object its
 		%> phase stays identical at the centre of the object (where we would imagine our RF)
-		correctPhase logical		= false
+		correctPhase logical	= false
 		%> Reverse phase of grating X times per second? Useful with a static grating for linearity testing
 		phaseReverseTime double = 0
 		%> What phase to use for reverse?
 		phaseOfReverse double	= 180
 		%> aspect ratio of the grating
 		aspectRatio double		= 1;
+		%> special flags passed to drawing functions
+		specialFlags			= []
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -156,7 +158,7 @@ classdef checkerboardStimulus < baseStimulus
 					me.([fn{j} 'Out']) = me.(fn{j}); %copy our property value to our tempory copy
 				end
 			end
-			
+
 			addRuntimeProperties(me);
 			
 			if isempty(me.findprop('rotateMode'));p=me.addprop('rotateMode');p.Transient=true;p.Hidden=true;end
@@ -165,7 +167,8 @@ classdef checkerboardStimulus < baseStimulus
 			else
 				me.rotateMode = [];
 			end
-			
+			me.specialFlags = mor(me.specialFlags, me.rotateMode);
+
 			if isempty(me.findprop('gratingSize'));p=me.addprop('gratingSize');p.Transient=true;end
 			me.gratingSize = round(me.ppd*me.size); %virtual support larger than initial size
 			
@@ -218,7 +221,7 @@ classdef checkerboardStimulus < baseStimulus
 			setRect(me);
 
 			function set_sfOut(me,value)
-				if value <= 0; value = 0.05; end
+				if value <= 0; value = 0.01; end
 				me.sfCache = value;
 				me.sfOut = me.sfCache;
 				%fprintf('SET SFOut: %.2f | in: %.2f | scale: %.2f\n', me.sfOut, me.sfCache, me.scale);
@@ -233,6 +236,7 @@ classdef checkerboardStimulus < baseStimulus
 			end
 			function set_sizeOut(me,value)
 				me.sizeOut = ceil(value*me.ppd);
+				me.szPx = me.sizeOut;
 				%fprintf('SET sizeOut: %.2f | in: %.2f \n', me.sizeOut, value);
 			end
 			function set_xPositionOut(me, value)
@@ -272,16 +276,20 @@ classdef checkerboardStimulus < baseStimulus
 		% ===================================================================
 		%> @brief Draw this stimulus object for display
 		%>
-		%> 
+		%> @param win -- optional [i.e. offscreen] window pointer
+		%> @param sf - optional special Flags override
 		% ===================================================================
-		function draw(me)
+		function draw(me, win, sf)
+			if ~exist('win','var'); win = me.sM.win; end
+			if ~exist('sf','var'); sf = me.specialFlags; end
 			if me.isVisible && me.tick >= me.delayTicks && me.tick < me.offTicks
-				Screen('DrawTexture', me.sM.win, me.texture, [],me.mvRect,...
-					me.angleOut, [], [], me.baseColourOut, [], me.rotateMode,...
+				Screen('DrawTexture', win, me.texture, [],me.mvRect,...
+					me.angleOut, [], [], me.baseColourOut, [], sf,...
 					[me.ppd, me.sfOut, me.contrastOut, me.driftPhase, ...
-					me.colourOut,me.colour2Out]);
+					me.colourOut, me.colour2Out]);
+				me.drawTick = me.drawTick + 1;
 			end
-			me.tick = me.tick + 1;
+			if me.isVisible; me.tick = me.tick + 1; end
 		end
 		
 		% ===================================================================
@@ -372,6 +380,8 @@ classdef checkerboardStimulus < baseStimulus
 					me.baseColour = [value(1:3) me.alpha]; %force our alpha to override
 				case 1
 					me.baseColour = [value value value me.alpha]; %construct RGBA
+				case 0
+					me.baseColour = [];
 				otherwise
 					me.baseColour = [1 1 1 me.alpha]; %return white for everything else	
 			end
@@ -426,6 +436,7 @@ classdef checkerboardStimulus < baseStimulus
 				end
 			end
 			me.mvRect=me.dstRect;
+			me.szPx = RectWidth(me.mvRect);
 			me.setAnimationDelta();
 		end
 		

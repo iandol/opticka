@@ -29,7 +29,7 @@ classdef eyelinkAnalysis < analysisCore
 		%> as correct, incorrect, breakfix etc.
 		trialEndMessage char						= 'TRIAL_RESULT'
 		%> override the rtStart time with a custom message?
-		rtOverrideMessage char						= 'SYNCSTROBE'
+		rtOverrideMessage char						= 'SYNCTIME'
 		%> minimum saccade distance in degrees
 		minSaccadeDistance double					= 1.0
 		%> relative velocity threshold
@@ -50,6 +50,9 @@ classdef eyelinkAnalysis < analysisCore
 		pixelsPerCm double							= 32
 		%> screen distance
 		distance double								= 57.3
+		%> conversion pupil size to mm? true/false | calibration value | measured
+		%> diameter
+		useDiameter = {false, 9250, 8}
 	end
 
 	properties (Hidden = true)
@@ -148,13 +151,15 @@ classdef eyelinkAnalysis < analysisCore
 		allowedProperties = {'correctValue', 'incorrectValue', 'breakFixValue', ...
 			'trialStartMessageName', 'variableMessageName', 'trialEndMessage', 'file', 'dir', ...
 			'verbose', 'pixelsPerCm', 'distance', 'xCenter', 'yCenter', 'rtStartMessage', 'minSaccadeDistance', ...
-			'rtEndMessage', 'trialOverride', 'rtDivision', 'rtLimits', 'tS', 'ROI', 'TOI', 'VFAC', 'MINDUR'}
+			'rtEndMessage', 'trialOverride', 'rtDivision', 'rtLimits', 'tS', 'ROI', 'TOI', 'VFAC', 'MINDUR',...
+			'baselineWindow','measureRange','plotRange'}
 		trialsTemplate = {'variable','variableMessageName','idx','correctedIndex','time',...
+			'times','gx','gy','hx','hy','pa',...
 			'rt','rtoverride','fixations','nfix','saccades','nsacc','saccadeTimes',...
 			'firstSaccade','uuid','result','correct','breakFix','incorrect','unknown',...
 			'messages','sttime','entime','totaltime','startsampletime','endsampletime',...
 			'timeRange','rtstarttime','rtstarttimeOLD','rtendtime','synctime','deltaT',...
-			'rttime','times','gx','gy','hx','hy','pa','msacc','sampleSaccades',...
+			'rttime','msacc','sampleSaccades',...
 			'microSaccades','radius'}
 	end
 
@@ -164,12 +169,12 @@ classdef eyelinkAnalysis < analysisCore
 		%>
 		% ===================================================================
 		function me = eyelinkAnalysis(varargin)
-			if nargin == 0; varargin.name = ''; end
-			me=me@analysisCore(varargin); %superclass constructor
-			if all(me.measureRange == [0.1 0.2]) %use a different default to superclass
-				me.measureRange = [-0.4 0.8];
-			end
-			if nargin>0; me.parseArgs(varargin, me.allowedProperties); end
+			args = optickaCore.addDefaults(varargin,struct('name','eyelinkAnal',...
+				'measureRange',[-0.4 1],'plotRange',[-0.5 1],...
+				'baselineWindow',[]));
+			me = me@analysisCore(args); %superclass constructor
+			me.parseArgs(args, me.allowedProperties);
+
 			if isempty(me.file) || isempty(me.dir)
 				[f,p]=uigetfile('*.edf','Load EDF File:');
 				if ischar(f); me.file = f; me.dir = p; end
@@ -197,6 +202,12 @@ classdef eyelinkAnalysis < analysisCore
 				if isnumeric(me.raw.RECORDINGS(1).sample_rate)
 					me.sampleRate = double(me.raw.RECORDINGS(1).sample_rate);
 				end
+				if me.useDiameter{1} == true
+					fprintf('<strong>:#:</strong> Correcting pupil size using %.2f for a artificial size of %.2fmm\n',me.useDiameter{2}, me.useDiameter{3});
+					for jj = 1: size(me.raw.FSAMPLE.pa,1)
+						me.raw.FSAMPLE.pa(jj,:) = analysisCore.pupilConversion(me.raw.FSAMPLE.pa(jj,:), me.useDiameter{2}, me.useDiameter{3});
+					end
+				end
 				fprintf('\n');
 				cd(oldpath)
 			end
@@ -216,7 +227,7 @@ classdef eyelinkAnalysis < analysisCore
 			parseEvents(me);
 			parseAsVars(me);
 			if isempty(me.trials)
-				warning('---> eyelinkAnalysis.parseSimple: Could not parse!')
+				warning('---> eyelinkAnalysis.parseSimple: Could not parse trials, only raw data available!');
 				me.isParsed = false;
 			else
 				me.isParsed = true;
@@ -343,10 +354,61 @@ classdef eyelinkAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
+		function plotRaw(me)
+			if isempty(me.raw); return; end
+			sample = me.raw.FSAMPLE.gx(:,100); %check which eye
+			if sample(1) == -32768 %only use right eye if left eye data is not present
+				eyeUsed = 2; %right eye index for FSAMPLE.gx;
+			else
+				eyeUsed = 1; %left eye index
+			end
+			t = double(me.raw.FSAMPLE.time - me.raw.FSAMPLE.time(1));
+			t = t / 1e3;
+			gx = me.raw.FSAMPLE.gx(eyeUsed,:);
+			gy = me.raw.FSAMPLE.gy(eyeUsed,:);
+			pa = me.raw.FSAMPLE.pa(eyeUsed,:);
+			handle=figure('Name',me.raw.FILENAME,'Color',[1 1 1],'NumberTitle','off',...
+				'Papertype','a4','PaperUnits','centimeters',...
+				'PaperOrientation','landscape');
+			figpos(1,[0.95 0.75],1,'%');
+			p = tiledlayout(4,1,'TileSpacing','compact','Padding','compact');
+			ax(1) = nexttile;
+			plot(t,gx);
+			axis tight
+			title(me.raw.FILENAME,'Interpreter','none')
+			ylabel('X Position');
+			ax(2) = nexttile;
+			plot(t,gy);
+			axis tight
+			ylabel('Y Position');
+			ax(3) = nexttile;
+			plot(t,pa);
+			axis tight
+			ylabel('Pupil');
+			xlabel('Time (s)');
+			ax(4) = nexttile;
+			box on;
+			ylim(ax(4),[0 20]);
+			ylabel('Messages')
+			linkaxes(ax,'x');
+			for i = 1:length(me.raw.FEVENT)
+				x = double(me.raw.FEVENT(i).sttime - me.raw.FSAMPLE.time(1)) / 1e3;
+				yy = 20 * rand;
+				text(x,yy,{me.raw.FEVENT(i).codestring,me.raw.FEVENT(i).message},'FontSize',5);
+			end
+		end
+
+		% ===================================================================
+		%> @brief give a list of trials and it will plot both the raw eye position and the
+		%> events
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
 		function handle = plot(me,select,type,seperateVars,name)
 			% plot(me,select,type,seperateVars,name)
 			if ~exist('select','var') || ~isnumeric(select); select = []; end
-			if ~exist('type','var') || isempty(type); type = 'correct'; end
+			if ~exist('type','var') || isempty(type); type = 'all'; end
 			if ~exist('seperateVars','var') || ~islogical(seperateVars); seperateVars = false; end
 			if ~exist('name','var') || isempty(name)
 				if isnumeric(select) && length(select) > 1

@@ -1,6 +1,6 @@
 function [id, rect, shader] = CreateProceduralPolarGrating(windowPtr, width, height, ...
 	color1, color2, radius)
-% [id, rect, shader] = CreateProceduralColorGrating(windowPtr, width,
+% [id, rect, shader] = CreateProceduralPolarGrating(windowPtr, width,
 % height [, color1=[1 0 0]]  [, color2=[0 1 0]] [, radius=0])
 %
 % A procedural color grating shader that can generate either sinusoidal or

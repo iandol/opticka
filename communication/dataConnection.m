@@ -106,7 +106,6 @@ classdef dataConnection < handle
 		%> Configures input structure to assign properties
 		% ===================================================================
 		function me = dataConnection(varargin)
-			
 			me.parseArgs(varargin);
 			if me.autoServer == true
 				me.type='server';
@@ -114,7 +113,7 @@ classdef dataConnection < handle
 				me.startServer;
 			elseif me.autoOpen == true
 				me.open;
-			end
+            end
 		end
 		
 		% ===================================================================
@@ -182,7 +181,6 @@ classdef dataConnection < handle
 								end
 								loop = loop + 1;
 							end
-							
 							if me.conn >= 0
 								% disable blocking
 								pnet(me.conn ,'setwritetimeout', me.writeTimeOut);
@@ -257,9 +255,12 @@ classdef dataConnection < handle
 						end
 					end
 					me.(name) = -1; me.(list) = [];
-				end
-				me.isOpen = false;
-			end
+                end
+            end
+            me.isOpen = false;
+            me.conn = -1;
+            me.rconn = -1;
+            me.connList = [];
 		end
 		
 		% ===================================================================
@@ -290,31 +291,24 @@ classdef dataConnection < handle
 		%>
 		%> @return hasData (logical)
 		% ===================================================================
-		function hasData = checkData(me)
-			me.hasData = false;
-			if matches(me.type,'server') && me.rconn > -1
-				conn = me.rconn; 
-			elseif me.conn > -1
-				conn = me.conn;
-			else
-				return;
-			end
+		function [hasData, data] = checkData(me)
+			hasData = false;
+			data = '';
 			switch me.protocol
 				case 'udp'%============================UDP
-					data = pnet(conn, 'read', 65536, me.dataType, 'view');
+					data = pnet(me.conn, 'read', 65536, me.dataType, 'view');
 					if isempty(data)
-						me.hasData = pnet(conn, 'readpacket') > 0;
+						hasData = pnet(me.conn, 'readpacket') > 0;
 					else
-						me.hasData = true;
+						hasData = true;
 					end
 				case 'tcp'%============================TCP
-					data = pnet(conn, 'read', me.readSize, me.dataType, 'noblock', 'view');
+					data = pnet(me.conn, 'read', 'noblock', 'view');
 					if ~isempty(data)
-						me.hasData = true;
+						hasData = true;
 					end
-					
 			end
-			hasData = me.hasData;
+			me.hasData = hasData;
 		end
 
 		% ===================================================================
@@ -338,7 +332,7 @@ classdef dataConnection < handle
 		function data = readline(me)
 			data = [];
 			if matches(me.type,'server') && me.rconn > -1
-				conn = me.rconn; 
+				conn = me.conn; 
 			elseif me.conn > -1
 				conn = me.conn;
 			else
@@ -346,12 +340,12 @@ classdef dataConnection < handle
 			end
 			switch me.protocol
 				case 'udp'%============================UDP
-					nBytes = pnet(conn, 'readpacket');
+					nBytes = pnet(me.conn, 'readpacket');
 					if nBytes > 0
-						data = pnet(conn, 'readline', nBytes, 'noblock');
+						data = pnet(me.conn, 'readline', nBytes, 'noblock');
 					end
 				case 'tcp'%============================TCP
-					data = pnet(conn, 'readline', me.readSize,' noblock');
+					data = pnet(me.conn, 'readline', me.readSize,' noblock');
 			end
 			me.dataIn = data;
 		end
@@ -365,9 +359,8 @@ classdef dataConnection < handle
 			if ~exist('N','var') || isempty(N); N = 1; end
 			if ~exist('order','var') || ~matches(order,{'first','last'}); order = 'last'; end
 			data = [];
-			if matches(me.type,'server') && me.rconn > -1; conn = me.rconn; elseif me.conn > -1; conn = me.conn; else; return; end
 			while 1
-				thisData = pnet(conn, 'read', 512000, 'noblock');
+				thisData = pnet(me.conn, 'read', 512000, 'noblock');
 				if isempty(thisData); break; end
 				data = [data thisData];
 			end
@@ -493,29 +486,29 @@ classdef dataConnection < handle
 			end
 			if ~exist('sendPacket','var') || isempty(sendPacket)
 				sendPacket = true;
-			end
-			
-			if matches(me.type,'server') && me.rconn > -1
-				conn = me.rconn; 
-			elseif me.conn > -1
-				conn = me.conn;
-			else
-				return;
-			end
+            end
 
 			switch me.protocol
 				case 'udp'%============================UDP
 					if formatted == false
-						pnet(conn, 'write', data);
+						pnet(me.conn, 'write', data);
 					else
-						pnet(conn, 'printf', data);
+						pnet(me.conn, 'printf', data);
 					end
 					if sendPacket;pnet(me.conn, 'writepacket', me.rAddress, me.rPort);end
 				case 'tcp'%============================TCP
 					if formatted == false
-						pnet(conn, 'write', data);
-					else
-						pnet(conn, 'printf', data);
+						try
+                            pnet(me.conn, 'write', data);
+                        catch
+                            warning('No data written')
+                        end
+                    else
+                        try
+						    pnet(me.conn, 'printf', data);
+                        catch
+                            warning('No data written')
+                        end
 					end
 			end
 		end
@@ -526,16 +519,9 @@ classdef dataConnection < handle
 		%> Read any avalable variable from the given pnet socket.
 		% ===================================================================
 		function data = readVar(me)
-			if matches(me.type,'server') && me.rconn > -1
-				conn = me.rconn; 
-			elseif me.conn > -1
-				conn = me.conn;
-			else
-				return;
-			end
-			pnet(conn ,'setreadtimeout', 5);
+			pnet(me.conn ,'setreadtimeout', 5);
 			data = me.getVar;
-			pnet(conn ,'setreadtimeout', me.readTimeOut);
+			pnet(me.conn ,'setreadtimeout', me.readTimeOut);
 		end
 		
 		% ===================================================================
@@ -545,16 +531,9 @@ classdef dataConnection < handle
 		% ===================================================================
 		% Write data to the given pnet socket.
 		function writeVar(me, varargin)
-			if matches(me.type,'server') && me.rconn > -1
-				conn = me.rconn; 
-			elseif me.conn > -1
-				conn = me.conn;
-			else
-				return;
-			end
-			pnet(conn ,'setwritetimeout', 5);
+			pnet(me.conn ,'setwritetimeout', 5);
 			me.putVar(varargin);
-			pnet(conn ,'setwritetimeout', me.writeTimeOut);
+			pnet(me.conn ,'setwritetimeout', me.writeTimeOut);
 		end
 		
 		% ===================================================================
@@ -569,7 +548,7 @@ classdef dataConnection < handle
 					me.conn=pnet(me.rconn,'tcplisten');
 					if me.conn > -1
 						[rhost,rport]=pnet(me.conn,'gethost');
-						fprintf('START SERVING NEW CONNECTION FROM IP %d.%d.%d.%d port:%d',rhost,rport)
+						fprintf('START SERVING NEW CONNECTION FROM IP %d.%d.%d.%d port:%d\n\n',rhost,rport)
 						pnet(me.conn ,'setwritetimeout', me.writeTimeOut);
 						pnet(me.conn ,'setreadtimeout', me.readTimeOut);
 						me.rPort = rport;
@@ -578,8 +557,7 @@ classdef dataConnection < handle
 						isClient = true;
 					else
 						me.conn = -1;
-						me.isOpen = false;
-						me.salutation('No client available')
+						me.salutation('No client available yet...');
 					end
 				catch
 					me.conn = -1;
@@ -606,48 +584,71 @@ classdef dataConnection < handle
 		% 		#define STATUS_UDP_CLIENT_CONNECT 18
 		% 		#define STATUS_UDP_SERVER_CONNECT 19
 		function status = checkStatus(me, conn) %#ok<INUSD>
-			status = -1;
-			try
-				if ~exist('conn','var') && matches(me.type,'client') || strcmp(conn,'conn')
-					conn='conn';
+			status = [];
+			if ~exist('conn','var') || isempty(conn)
+				if matches(me.type,'client')
+					conn = me.conn;
 				else
-					conn = 'rconn';
+					conn = [me .conn me.rconn];
 				end
-				me.status = pnet(me.(conn),'status');
-				if me.status <=0;me.(conn) = -1; me.isOpen = false;me.salutation('checkStatus Method','Connection appears closed...');end
-				switch me.status
-					case -1
-						me.statusMessage = 'STATUS_NOTFOUND';
-					case 0
-						me.statusMessage = 'STATUS_NOCONNECT';
-					case 1
-						me.statusMessage = 'STATUS_TCP_SOCKET';
-					case 5
-						me.statusMessage = 'STATUS_IO_OK';
-					case 6
-						me.statusMessage = 'STATUS_UDP_CLIENT';
-					case 8
-						me.statusMessage = 'UDP_SERVER';
-					case 10
-						me.statusMessage = 'STATUS_CONNECT';
-					case 11
-						me.statusMessage = 'STATUS_TCP_CLIENT';
-					case 12
-						me.statusMessage = 'STATUS_TCP_SERVER';
-					case 18
-						me.statusMessage = 'STATUS_UDP_CLIENT_CONNECT';
-					case 19
-						me.statusMessage = 'STATUS_UDP_SERVER_CONNECT';
-					otherwise
-						me.statusMessage = 'UNDEFINED';
+			elseif ischar(conn) && strcmp(conn,'conn')
+				conn = me.conn;
+			elseif ischar(conn) && strcmp(conn,'rconn')
+				conn = me.rconn;
+			end
+			try
+				for c = conn
+					fprintf('\n==Connection %i== ',c);
+					me.status = pnet(c,'status');
+					if me.status < 0
+						me.salutation('checkStatus Method','Connection appears closed...',true);
+						if me.conn == c
+							pnet(me.conn,'close');
+							me.conn = -1;
+						elseif me.rconn == c
+							pnet(me.conn,'close');
+							pnet(me.rconn,'close');
+							me.conn = -1;
+							me.rconn = -1;
+							me.isOpen = false;
+						end
+					end
+					switch me.status
+						case -1
+							me.statusMessage = 'STATUS_NOTFOUND';
+						case 0
+							me.statusMessage = 'STATUS_NOCONNECT';
+						case 1
+							me.statusMessage = 'STATUS_TCP_SOCKET';
+						case 5
+							me.statusMessage = 'STATUS_IO_OK';
+						case 6
+							me.statusMessage = 'STATUS_UDP_CLIENT';
+						case 8
+							me.statusMessage = 'UDP_SERVER';
+						case 10
+							me.statusMessage = 'STATUS_CONNECT';
+						case 11
+							me.statusMessage = 'STATUS_TCP_CLIENT';
+						case 12
+							me.statusMessage = 'STATUS_TCP_SERVER';
+						case 18
+							me.statusMessage = 'STATUS_UDP_CLIENT_CONNECT';
+						case 19
+							me.statusMessage = 'STATUS_UDP_SERVER_CONNECT';
+						otherwise
+							me.statusMessage = 'UNDEFINED';
+					end
+					me.salutation(me.statusMessage,'checkStatus')
+					status = [status me.status];
 				end
-				me.salutation(me.statusMessage,'checkStatus')
-				status = me.status;
 			catch %#ok<CTCH>
+				close(me)
 				me.status = -1;
 				me.statusMessage = 'UNKNOWN';
 				status = me.status;
-				me.(conn) = -1;
+				me.conn = -1;
+				me.rconn = -1;
 				me.isOpen = false;
 				fprintf('Couldn''t check status\n')
 			end
@@ -659,16 +660,16 @@ classdef dataConnection < handle
 		%> Initialize the server loop
 		% ===================================================================
 		function startServer(me)
-			me.conn = pnet('tcpsocket',me.lPort);
-			pnet(me.conn ,'setwritetimeout', me.writeTimeOut);
-			pnet(me.conn ,'setreadtimeout', me.readTimeOut);
+			me.rconn = pnet('tcpsocket',me.lPort);
+			pnet(me.rconn ,'setwritetimeout', me.writeTimeOut);
+			pnet(me.rconn ,'setreadtimeout', me.readTimeOut);
 			ls = 1;
 			msgloop=1;
 			while ls			
 				if msgloop == 1;fprintf('\nWAIT FOR CONNECTION ON PORT: %d\n',me.lPort);end
 				msgloop=2;
 				try
-					me.rconn = pnet(me.conn,'tcplisten');
+					me.conn = pnet(me.rconn,'tcplisten');
 					pause(0.01);
 				catch ME
 					disp 'Try:  "pnet closeall"  in all matlab sessions on this server.';
@@ -677,10 +678,10 @@ classdef dataConnection < handle
 					rethrow(ME);
 				end
 				
-				if me.rconn >= 0
+				if me.conn >= 0
 					msgloop=1;
 					try
-						[me.rAddress,me.rPort]=pnet(me.rconn,'gethost');
+						[me.rAddress,me.rPort]=pnet(me.conn,'gethost');
 						fprintf('START SERVING NEW CONNECTION FROM IP %d.%d.%d.%d port:%d\n\n',me.rAddress,me.rPort);
 						me.serverLoop;
 					catch %#ok<*CTCH>
@@ -689,16 +690,14 @@ classdef dataConnection < handle
 				end
 				
 				if me.checkForEscape == 1
-					pnet(me.rconn,'close')
-					pnet(me.conn,'close')
+					pnet(me.rconn,'close');
+					pnet(me.conn,'close');
 					me.conn = -1;
 					me.rconn = -1;
+					close(me);
 					break;
 				end
-			end
-			
-			me.close;
-			
+			end	
 		end
 		
 		% ===================================================================
@@ -748,6 +747,45 @@ classdef dataConnection < handle
 			end
 			
 		end
+
+		% ===================================================================
+		%> @brief echo server
+		%>
+		%> Run the server loop
+		% ===================================================================
+		function echoServer(me)
+			if ~strcmpi(me.type,'server'); warning('Object needs to be a server!');return;end
+			if ~me.isOpen; open(me); end
+			doEcho = true;
+			while doEcho
+				disp('Will wait for a client...')
+				while ~checkClient(me)
+					WaitSecs('YieldSecs',0.01);
+					if checkForEscape(me); doEcho=false; break; end
+				end
+				disp('...will now wait for some data...')
+				while pnet(me.conn,'status') > -1
+					in=pnet(me.conn,'read');
+					if ~isempty(in)
+						disp('==========GOT:');
+						if isnumeric(in)
+							fprintf(' %i ',in); fprintf(' %i ',uint8(in));
+						else
+							disp(in); disp(uint8(in));
+						end
+						disp('==============');
+					end
+					if checkForEscape(me); doEcho=false; break; end
+					s = pnet(me.conn,'status');
+					if s == 0
+						break; 
+					end
+					WaitSecs('YieldSecs',0.01);
+				end %END WHILE
+			end
+		end
+		
+		
 		
 		
 	end %END METHODS
@@ -776,7 +814,7 @@ classdef dataConnection < handle
 			out=false;
 			[~,~,key] = KbCheck(-1);
 			key=KbName(key);
-			if strcmpi(key,'escape') %allow keyboard break
+			if strcmpi(key,'escape') | strcmpi(key,'esc') %allow keyboard break
 				out=true;
 			end
 		end
@@ -873,8 +911,7 @@ classdef dataConnection < handle
 			end %END while pnet(me.rconn,'status')
 			
 		end
-		
-		
+
 		% ===================================================================
 		%> @brief Flush the server messagelist
 		%>
@@ -1081,8 +1118,9 @@ classdef dataConnection < handle
 		%> @param in the calling function
 		%> @param message the message that needs printing to command window
 		% ===================================================================
-		function salutation(me,in,message)
-			if me.verbosity > 0
+		function salutation(me,in,message,verbose)
+			if ~exist('verbose','var'); verbose = me.verbosity; end
+			if verbose
 				if ~exist('in','var')
 					in = 'General Message';
 				end

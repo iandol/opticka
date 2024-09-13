@@ -32,15 +32,13 @@ end
 Screen('GetWindowInfo', windowPtr);
 
 % Load shader:
-p = mfilename('fullpath');
-p = [fileparts(p) filesep];
+p = [optickaRoot 'stimuli' filesep];
 shader = LoadGLSLProgramFromFiles({[p 'checkerboard.frag'] [p 'checkerboard.vert']}, 1);
 
 % Setup shader:
 glUseProgram(shader);
 glUniform2f(glGetUniformLocation(shader, 'center'), width/2, height/2);
 glUniform1f(glGetUniformLocation(shader, 'radius'), radius); 
-
 glUseProgram(0);
 
 % Create a purely virtual procedural texture 'id' of size width x height virtual pixels.

@@ -1,6 +1,6 @@
 % ========================================================================
 %> @brief eyelinkAnalysis offers a set of methods to load, parse & plot raw EDF files. It
-%> understands opticka trials (where EDF messages TRIALID start a trial and TRIAL_RESULT
+%> understands opticka trials (where messages TRIALID start a trial and TRIAL_RESULT
 %> ends a trial by default) so can parse eye data and plot it for trial groups. You
 %> can also manually find microsaccades, and perform ROI/TOI filtering on the eye
 %> movements.
@@ -8,10 +8,10 @@
 %> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef tobiiAnalysis < analysisCore
-	% eyelinkAnalysis offers a set of methods to load, parse & plot raw EDF files.
+	% eyelinkAnalysis offers a set of methods to load, parse & plot raw tobii files.
 	properties
 		%> file name
-		fileName char										= ''
+		fileName char								= ''
 		%> which EDF message contains the trial start tag
 		trialStartMessageName char					= 'TRIALID'
 		%> which EDF message contains the variable name or value
@@ -25,7 +25,7 @@ classdef tobiiAnalysis < analysisCore
 		%> as correct, incorrect, breakfix etc.
 		trialEndMessage char						= 'TRIAL_RESULT'
 		%> override the rtStart time with a custom message?
-		rtOverrideMessage char						= 'SYNCSTROBE'
+		rtOverrideMessage char						= 'SYNCTIME'
 		%> minimum saccade distance in degrees
 		minSaccadeDistance double					= 0.99
 		%> relative velocity threshold
@@ -46,6 +46,17 @@ classdef tobiiAnalysis < analysisCore
 		pixelsPerCm double							= 32
 		%> screen distance
 		distance double								= 57.3
+		%> screen resolution
+		resolution									= [ 1920 1080 ]
+		%> For Dee's analysis edit these settings
+		ETparams									= [ ]
+		%> Is measure range relative to start and end markers or absolute
+		%> to start marker?
+		relativeMarkers								= false
+		%> subtract the baseline for the pupil plot and average?
+		baselinePupil								= true
+		%> smooth the pupil signal for plot and average?
+		smoothPupil									= true
 	end
 
 	properties (Hidden = true)
@@ -58,14 +69,13 @@ classdef tobiiAnalysis < analysisCore
 		%> these are used for spikes spike saccade time correlations
 		rtLimits double
 		rtDivision double
-		%> trial list from the saved behavioural data, used to fix trial name bug in old files
-		trialOverride struct
 		%> screen X center in pixels
 		xCenter double								= 640
 		%> screen Y center in pixels
 		yCenter double								= 512
-		%>57.3 bug override
-		override573									= false
+		%> downsample the data for plotting
+		downSample logical							= true
+		excludeTrials								= []
 	end
 
 	properties (SetAccess = private, GetAccess = public)
@@ -75,6 +85,7 @@ classdef tobiiAnalysis < analysisCore
 		sampleRate double							= 250
 		%> raw data
 		raw struct
+		exp 
 		%> inidividual trials
 		trials struct
 		%> eye data parsed into invdividual variables
@@ -84,7 +95,7 @@ classdef tobiiAnalysis < analysisCore
 		%> correct trials indices
 		correct struct								= struct()
 		%> breakfix trials indices
-		breakFix struct							= struct()
+		breakFix struct								= struct()
 		%> incorrect trials indices
 		incorrect struct							= struct()
 		%> unknown trials indices
@@ -114,13 +125,23 @@ classdef tobiiAnalysis < analysisCore
 	end
 
 	properties (SetAccess = private, GetAccess = private)
+		varLabels
 		%> pixels per degree calculated from pixelsPerCm and distance (cache)
 		ppd_
 		%> allowed properties passed to object upon construction
-		allowedProperties char = ['correctValue|incorrectValue|breakFixValue|'...
-			'trialStartMessageName|variableMessageName|trialEndMessage|file|dir|'...
-			'verbose|pixelsPerCm|distance|xCenter|yCenter|rtStartMessage|minSaccadeDistance|'...
-			'rtEndMessage|trialOverride|rtDivision|rtLimits|tS|ROI|TOI|VFAC|MINDUR']
+		allowedProperties = {'correctValue', 'incorrectValue', 'breakFixValue', ...
+			'trialStartMessageName', 'variableMessageName', 'trialEndMessage', 'file', 'dir', ...
+			'verbose', 'pixelsPerCm', 'distance', 'xCenter', 'yCenter', 'rtStartMessage', 'minSaccadeDistance', ...
+			'rtEndMessage', 'trialOverride', 'rtDivision', 'rtLimits', 'tS', 'ROI', 'TOI', 'VFAC', 'MINDUR',...
+			'baselineWindow','measureRange','plotRange'}
+		trialsTemplate = {'variable','variableMessageName','idx','correctedIndex','time',...
+			'times','gx','gy','hx','hy','pa','valid',...
+			'rt','rtoverride','fixations','nfix','saccades','nsacc','saccadeTimes',...
+			'firstSaccade','uuid','result','invalid','correct','breakFix','incorrect','unknown',...
+			'messages','sttime','entime','totaltime','startsampletime','endsampletime',...
+			'timeRange','rtstarttime','rtstarttimeOLD','rtendtime','synctime','deltaT',...
+			'rttime','msacc','sampleSaccades',...
+			'microSaccades','radius','forcedend'}
 	end
 
 	methods
@@ -129,17 +150,16 @@ classdef tobiiAnalysis < analysisCore
 		%>
 		% ===================================================================
 		function me = tobiiAnalysis(varargin)
-			if nargin == 0; varargin.name = ''; end
-			me=me@analysisCore(varargin); %superclass constructor
-			if all(me.measureRange == [0.1 0.2]) %use a different default to superclass
-				me.measureRange = [-0.4 1];
+			args = optickaCore.addDefaults(varargin,struct('name','tobiiAnal',...
+				'measureRange',[-0.4 1],'plotRange',[-0.5 1],...
+				'baselineWindow',[]));
+			me=me@analysisCore(args); %superclass constructor
+			me.parseArgs(args, me.allowedProperties);
+	
+			if isempty(me.fileName)
+				[f,d] = uigetfile('*.mat','Select Opticka Data MAT File:');
+				if ~isnumeric(f); me.fileName = [d filesep f]; end
 			end
-			if nargin>0; me.parseArgs(varargin, me.allowedProperties); end
-			if isempty(me.file) || isempty(me.dir)
-				[f,d] = uigetfile('*.mat','Load MAT File:');
-				me.fileName = [d filesep f];
-			end
-			me.ppd; %cache our initial ppd_
 		end
 
 		% ===================================================================
@@ -151,18 +171,60 @@ classdef tobiiAnalysis < analysisCore
 		function load(me,force)
 			if ~exist('force','var');force=false;end
 			if isempty(me.fileName)
-				warning('No EDF file specified...');
-				return
+				[f,d] = uigetfile('*.mat','Select Opticka Data MAT File:');
+				if ~isnumeric(f)
+					me.fileName = [d filesep f];
+				else
+					warning('No Data file specified...');
+					return
+				end
 			end
-			tic
+			tt=tic;
 			if isempty(me.raw) || force == true
 				oldpath = pwd;
 				[p, f, e] = fileparts(me.fileName);
 				cd(p)
-				me.raw = load(me.fileName);
+				exp = load(me.fileName);
+				if isstruct(exp) && isfield(exp,'rE') && isa(exp.rE,'runExperiment')% runExperiment data
+					fprintf('<strong>...</strong> runExperiment (Opticka file) found\n');
+					me.distance = exp.rE.screen.distance;
+					me.pixelsPerCm = exp.rE.screen.pixelsPerCm;
+					me.sampleRate = exp.rE.eyeTracker.sampleRate;
+					if isa(exp.rE.eyeTracker,'tobiiManager')
+						me.raw = exp.rE.eyeTracker.data;
+						me.exp = exp;
+					else
+						warning('This is not a Tobii eyetracker file, choose another file!!!');
+						me.raw = [];
+						me.exp = [];
+						return;
+					end
+				else
+					warning('This is not an Opticka file, choose another file!!!');
+					me.raw = [];
+					me.exp = [];
+					return;
+				end
 				cd(oldpath)
 			end
-			fprintf('<strong>:#:</strong> Loading Raw MAT Data took <strong>%g ms</strong>\n',round(toc*1000));
+			if ~isempty(me.exp) && isfield(me.exp,'tS') && isfield(me.exp,'rE')
+				try 
+					me.name = [me.exp.tS.name '-' me.exp.rE.name]; 
+					me.comment = me.exp.rE.comment;
+					fprintf('===>>> Experiment Details: name: %s | comment %s\n',...
+						me.name,me.comment);
+				end
+				fprintf('===>>> Eytracker Data %s containing %i messages and %i samples\n',...
+					me.exp.rE.eyeTracker.fullName,...
+					size(me.raw.messages,1),...
+					length(me.raw.data.gaze.deviceTimeStamp));
+				if ~isempty(me.exp.rE.task.varLabels)
+					me.varLabels = me.exp.rE.task.varLabels;
+					fprintf('===>>> Variables contained in the task:\n');
+					disp(me.varLabels);
+				end
+			end
+			fprintf('<strong>:#:</strong> Loading Raw MAT Data took <strong>%g ms</strong>\n',round(toc(tt)*1e3));
 		end
 
 		% ===================================================================
@@ -214,6 +276,7 @@ classdef tobiiAnalysis < analysisCore
 			parseROI(me);
 			parseTOI(me);
 			computeMicrosaccades(me);
+			computeFullSaccades(me);
 		end
 
 		% ===================================================================
@@ -286,26 +349,79 @@ classdef tobiiAnalysis < analysisCore
 		end
 
 		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function data = saveChap(me)
+			if ~me.isParsed; warning('You need to parse data first...');return;end
+			t = double(me.raw.data.gaze.systemTimeStamp) / 1e3;
+			data.timestamps = t';
+			data.pupil_size = ((me.raw.data.gaze.left.pupil.diameter+me.raw.data.gaze.right.pupil.diameter)/2)';
+			data.pupil_x = me.raw.data.gaze.left.gazePoint.onDisplayArea(1,:)';
+			data.pupil_y = me.raw.data.gaze.left.gazePoint.onDisplayArea(2,:)';
+			data.rate = me.sampleRate;
+			data.name = me.fileName;
+			data.file_name = data.name;
+			tdata = {};
+			vdata = {};
+			for i = 1:length(me.trials)
+				tdata{i,1} = me.trials(i).idx;
+				tdata{i,2} = analysisCore.findNearest(t, me.trials(i).sttime);
+				tdata{i,3} = analysisCore.findNearest(t, me.trials(i).entime);
+				tdata{i,4} = tdata{i,3} - tdata{i,2};
+				
+				vdata{i,1} = ['VAR' num2str(me.trials(i).variable)];
+				vdata{i,2} = ['' me.trials(i).variableMessageName];
+				if me.trials(i).correct; ctxt = 'correct'; elseif me.trials(i).breakFix; ctxt='breakfix';else; ctxt='incorrect';end
+				vdata{i,3} = ['' ctxt];
+				vdata{i,4} = analysisCore.findNearest(t, me.trials(i).rtstarttime) - tdata{i,2};
+				vdata{i,5} = tdata{i,4};
+			end
+			data.trial_data = cell2table(tdata,'VariableNames',{'trial_names','Trial_Onset_num','Trial_Offset_num','trial_length'});
+			data.total_var_data_table = cell2table(vdata,'VariableNames',{'VAR','NAME','CORRECT','event_stimulus_onset','event_Trial_Offset'});
+			data.event_data = [];
+			data.events2 = [];
+			data.vars2 = [];
+		end
+
+		% ===================================================================
 		%> @brief give a list of trials and it will plot both the raw eye position and the
 		%> events
 		%>
 		%> @param
 		%> @return
 		% ===================================================================
-		function plot(me,select,type,seperateVars,name)
+		function plot(me,select,type,seperateVars,name,handle)
 			% plot(me,select,type,seperateVars,name)
+			if ~me.isParsed; warning('You need to parse data first...');return;end
 			if ~exist('select','var') || ~isnumeric(select); select = []; end
-			if ~exist('type','var') || isempty(type); type = 'correct'; end
+			if ~exist('type','var') || isempty(type); type = 'all'; end
 			if ~exist('seperateVars','var') || ~islogical(seperateVars); seperateVars = false; end
 			if ~exist('name','var') || isempty(name)
 				if isnumeric(select)
 					if length(select) > 1
-						name = [me.file ' | Select: ' num2str(length(select)) ' trials'];
+						name = [me.fileName ' | Select: ' num2str(length(select)) ' trials'];
+					elseif isempty(select)
+						name = [me.fileName ' | Select: default'];
 					else
-						name = [me.file ' | Select: ' num2str(select)];
+						name = [me.fileName ' | Select: ' num2str(select)];
+						ii = find(cellfun(@(x)ismember(select,x),{me.vars.idx}),1);
+						if ~isempty(ii) && ii > 0
+							name = [name '-' me.vars(ii).name];
+						end
 					end
 				end
 			end
+			if seperateVars == true
+				for j = 1:length(me.vars)
+					me.plot(me.vars(j).idx,type,false,me.vars(j).name);
+					drawnow;
+				end
+				return
+			end
+			if ~exist('handle','var'); handle = []; end
 			if isnumeric(select) && ~isempty(select)
 				idx = select;
 				type = '';
@@ -324,20 +440,21 @@ classdef tobiiAnalysis < analysisCore
 				idxInternal = true;
 			end
 			if isempty(idx)
-				fprintf('No trials were selected to plot...\n')
-				return
+				fprintf('No trials were selected to plot, adding all...\n');
+				idx = 1:length(me.trials);
 			end
-			if seperateVars == true && isempty(select)
-				vars = unique([me.trials(idx).id]);
-				for j = vars
-					me.plot(j,type,false);
-					drawnow;
-				end
-				return
+
+			vars = sort(unique([me.trials.variable]));
+
+			if isempty(handle)
+				h1=figure('Name',name,'Color',[1 1 1],'NumberTitle','off',...
+					'Papertype','a4','PaperUnits','centimeters',...
+					'PaperOrientation','landscape','Renderer','painters');
+				figpos(1,[0.6 0.9],1,'%');
+			else
+				figure(handle)
+				h1=handle;
 			end
-			h1=figure;
-			set(gcf,'Color',[1 1 1],'Name',name);
-			figpos(1,[1200 1200]);
 			p = panel(h1);
 			p.fontsize = 12;
 			p.margin = [10 10 10 20]; %left bottom right top
@@ -362,17 +479,16 @@ classdef tobiiAnalysis < analysisCore
 			early = 0;
 			mS = [];
 
-			map = me.optimalColours(length(me.vars));
-			for i = 1:length(me.vars)
-				varidx(i) = str2num(me.vars(i).name);
-			end
+			map = me.optimalColours(length(vars));
 
 			if isempty(select)
-				thisVarName = 'ALL VARS';
+				thisVarName = 'ALL';
 			elseif length(select) > 1
 				thisVarName = 'SELECTION';
 			else
 				thisVarName = ['VAR' num2str(select)];
+				ii = find(cellfun(@(x)ismember(select,x),{me.vars.idx}),1);
+				thisVarName = [thisVarName '-' me.vars(ii).name];
 			end
 
 			maxv = 1;
@@ -380,10 +496,11 @@ classdef tobiiAnalysis < analysisCore
 			if ~isempty(me.TOI)
 				t1 = me.TOI(1); t2 = me.TOI(2);
 			else
-				t1 = 0; t2 = 0.1;
+				t1 = me.baselineWindow(1); t2 = me.baselineWindow(2);
 			end
 
 			for i = idx
+				if ~exist('didplot','var'); didplot = false; end
 				if idxInternal == true %we're using the eyelink index which includes incorrects
 					f = i;
 				elseif me.excludeIncorrect %we're using an external index which excludes incorrects
@@ -394,9 +511,14 @@ classdef tobiiAnalysis < analysisCore
 				if isempty(f); continue; end
 
 				thisTrial = me.trials(f(1));
-				tidx = find(varidx==thisTrial.variable);
+				
+				if isfield(thisTrial, 'invalid') && thisTrial.invalid 
+					continue; 
+				end
 
-				if thisTrial.variable == 1010 || isempty(me.vars) %early edf files were broken, 1010 signifies this
+				tidx = find(vars==thisTrial.variable);
+
+				if thisTrial.variable == 1010 || isempty(me.vars) %early CSV files were broken, 1010 signifies this
 					c = rand(1,3);
 				else
 					c = map(tidx,:);
@@ -409,16 +531,20 @@ classdef tobiiAnalysis < analysisCore
 				end
 
 				t = thisTrial.times / 1e3; %convert to seconds
-				ix = find((t >= me.measureRange(1)) & (t <= me.measureRange(2)));
-				ip = find((t >= me.plotRange(1)) & (t <= me.plotRange(2)));
+				ix = (t >= me.measureRange(1)) & (t <= me.measureRange(2));
+				ip = (t >= me.plotRange(1)) & (t <= me.plotRange(2));
+				ib = [];
+				if length(me.baselineWindow)==2
+					ib = (t >= me.baselineWindow(1)) & (t <= me.baselineWindow(2));
+				end
 				tm = t(ix);
 				tp = t(ip);
-				xa = thisTrial.gx / me.ppd_;
-				ya = thisTrial.gy / me.ppd_;
+				xa = thisTrial.gx;
+				ya = thisTrial.gy;
+				pupilAll = thisTrial.pa;
 				lim = 50; %max degrees in data
 				xa(xa < -lim) = -lim; xa(xa > lim) = lim; 
 				ya(ya < -lim) = -lim; ya(ya > lim) = lim;
-				pupilAll = thisTrial.pa;
 				
 				x = xa(ix);
 				y = ya(ix);
@@ -427,6 +553,16 @@ classdef tobiiAnalysis < analysisCore
 				xp = xa(ip);
 				yp = ya(ip);
 				pupilPlot = pupilAll(ip);
+				if ~isempty(ib) && me.baselinePupil
+					pb = nanmean(pupilAll(ib));
+					if isnumeric(pb) 
+						pupilPlot = pupilPlot - pb;
+					end
+				end
+
+				if me.smoothPupil
+					pupilPlot = smooth(pupilPlot);
+				end
 
 				q(1,1).select();
 				q(1,1).hold('on')
@@ -453,21 +589,6 @@ classdef tobiiAnalysis < analysisCore
 						plot(thisTrial.microSaccades,-0.1,'ko','Color',c,'MarkerSize',4,'MarkerEdgeColor',[0 0 0],...
 							'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
 					end
-				end
-
-				qq(1,1).select();
-				qq(1,1).hold('on')
-				for fix=1:length(thisTrial.fixations)
-					f=thisTrial.fixations(fix);
-					plot3([f.time/1e3 f.time/1e3+f.length/1e3],[f.gstx f.genx],[f.gsty f.geny],'k-o',...
-						'LineWidth',1,'MarkerSize',5,'MarkerEdgeColor',[0 0 0],...
-						'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe)
-				end
-				for sac=1:length(thisTrial.saccades)
-					s=thisTrial.saccades(sac);
-					plot3([s.time/1e3 s.time/1e3+s.length/1e3],[s.gstx s.genx],[s.gsty s.geny],'r-o',...
-						'LineWidth',1.5,'MarkerSize',5,'MarkerEdgeColor',[1 0 0],...
-						'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe)
 				end
 				
 				qq(1,2).select();
@@ -503,15 +624,13 @@ classdef tobiiAnalysis < analysisCore
 
 			end
 
-			display = me.display / me.ppd_;
-
 			q(1,1).select();
 			ah = gca; ah.ButtonDownFcn = @spawnMe;
 			ah.DataAspectRatio = [1 1 1];
-			axis ij;
+			axis ij; axis equal;
 			grid on;
 			box on;
-			axis(round([-display(1)/2 display(1)/2 -display(2)/2 display(2)/2]));
+			%axis(round([-display(1)/2 display(1)/2 -display(2)/2 display(2)/2]));
 			title(q(1,1),[thisVarName upper(type) ': X vs. Y Eye Position']);
 			xlabel(q(1,1),'X Deg');
 			ylabel(q(1,1),'Y Deg');
@@ -521,7 +640,6 @@ classdef tobiiAnalysis < analysisCore
 			grid on;
 			box on;
 			axis tight;
-			if maxv > 10; maxv = 10; end
 			axis([me.plotRange(1) me.plotRange(2) -0.2 maxv])
 			ti=sprintf('ABS Mean/SD %g - %g s: X=%.2g / %.2g | Y=%.2g / %.2g', t1,t2,...
 				mean(abs(meanx)), mean(abs(stdex)), ...
@@ -533,22 +651,6 @@ classdef tobiiAnalysis < analysisCore
 			xlabel(q(1,2),'Time (s)');
 			ylabel(q(1,2),'Degrees');
 
-			qq(1,1).select();
-			qq(1,1).margin = [30 20 10 35]; %left bottom right top
-			ah = gca; ah.ButtonDownFcn = @spawnMe;
-			grid on;
-			box on;
-			axis([me.plotRange(1) me.plotRange(2) -10 10 -10 10]);
-			view([35 35]);
-			xlabel(qq(1,1),'Time (ms)');
-			ylabel(qq(1,1),'X Position');
-			zlabel(qq(1,1),'Y Position');
-			mn = nanmean(sacc);
-			md = nanmedian(sacc);
-			[~,er] = me.stderr(sacc,'SD');
-			h=title(sprintf('%s %s: Saccades (red) & Fixation (black) | First Saccade mean/median: %.2g / %.2g � %.2g SD [%.2g <> %.2g]',...
-				thisVarName,upper(type),mn,md,er,min(sacc),max(sacc)));
-			set(h,'BackgroundColor',[1 1 1]);
 			
 			qq(1,2).select();
 			ah = gca; ah.ButtonDownFcn = @spawnMe;
@@ -611,7 +713,6 @@ classdef tobiiAnalysis < analysisCore
 				na.Position = [0.1 0.1 0.8 0.8];
 			end
 		end
-
 		% ===================================================================
 		%> @brief
 		%>
@@ -635,8 +736,8 @@ classdef tobiiAnalysis < analysisCore
 				me.ROIInfo(i).fixationX = fixationX;
 				me.ROIInfo(i).fixationY = fixationY;
 				me.ROIInfo(i).fixationRadius = fixationRadius;
-				x = me.trials(i).gx / me.ppd_;
-				y = me.trials(i).gy  / me.ppd_;
+				x = me.trials(i).gx;
+				y = me.trials(i).gy;
 				times = me.trials(i).times / 1e3;
 				idx = find(times > 0); % we only check ROI post 0 time
 				times = times(idx);
@@ -682,8 +783,8 @@ classdef tobiiAnalysis < analysisCore
 			fixationRadius = me.TOI(5);
 			for i = 1:length(me.trials)
 				times = me.trials(i).times / 1e3;
-				x = me.trials(i).gx / me.ppd_;
-				y = me.trials(i).gy  / me.ppd_;
+				x = me.trials(i).gx;
+				y = me.trials(i).gy;
 
 				idx = intersect(find(times>=t1), find(times<=t2));
 				times = times(idx);
@@ -728,7 +829,7 @@ classdef tobiiAnalysis < analysisCore
 		% ===================================================================
 		function plotROI(me)
 			if ~isempty(me.ROIInfo)
-				h=figure;figpos(1,[2000 1000]);set(h,'Color',[1 1 1],'Name',me.file);
+				h=figure;figpos(1,[2000 1000]);set(h,'Color',[1 1 1],'Name',me.fileName);
 
 				x1 = me.ROI(1) - me.ROI(3);
 				x2 = me.ROI(1) + me.ROI(3);
@@ -843,7 +944,7 @@ classdef tobiiAnalysis < analysisCore
 				disp('No TOI parsed!!!')
 				return
 			end
-			h=figure;figpos(1,[2000 1000]);set(h,'Color',[1 1 1],'Name',me.file);
+			h=figure;figpos(1,[2000 1000]);set(h,'Color',[1 1 1],'Name',me.fileName);
 
 			t1 = me.TOI(1);
 			t2 = me.TOI(2);
@@ -958,11 +1059,7 @@ classdef tobiiAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function ppd = get.ppd(me)
-			if me.distance == 57.3 && me.override573 == true
-				ppd = round( me.pixelsPerCm * (67 / 57.3)); %set the pixels per degree, note this fixes some older files where 57.3 was entered instead of 67cm
-			else
-				ppd = round( me.pixelsPerCm * (me.distance / 57.3)); %set the pixels per degree
-			end
+			ppd = round( me.pixelsPerCm * (me.distance / 57.3)); %set the pixels per degree
 			me.ppd_ = ppd;
 		end
 
@@ -972,38 +1069,135 @@ classdef tobiiAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function fixVarNames(me)
-			if me.needOverride == true
-				if isempty(me.trialOverride)
-					warning('No replacement trials available!!!')
-					return
+		function plotNH(me, trial, handle)
+			if ~me.isParsed;return;end
+			if ~exist('handle','var'); handle=[]; end
+			try
+				if isempty(handle)
+					handle=figure('Name','Saccade Plots','Color',[1 1 1],'NumberTitle','off',...
+						'Papertype','a4','PaperUnits','centimeters',...
+						'PaperOrientation','landscape');
+					figpos(1,[0.5 0.9],1,'%');
 				end
-				trials = me.trialOverride; %#ok<*PROP>
-				if  max([me.trials.correctedIndex]) ~= length(trials)
-					warning('TRIAL ID LENGTH MISMATCH!');
-					return
-				end
-				a = 1;
-				me.trialList = [];
-				for j = 1:length(me.trials)
-					if me.trials(j).incorrect ~= true
-						if a <= length(trials) && me.trials(j).correctedIndex == trials(a).index
-							me.trials(j).oldid = me.trials(j).variable;
-							me.trials(j).variable = trials(a).variable;
-							me.trialList(j) = me.trials(j).variable;
-							if me.trials(j).breakFix == true
-								me.trialList(j) = -[me.trialList(j)];
-							end
-							a = a + 1;
-						end
-					end
-				end
-				parseAsVars(me); %need to redo this now
-				warning('---> Trial name override in place!!!')
-			else
-				me.trialOverride = struct();
+				figure(handle);
+				data = me.trials(trial).data;
+				me.ETparams.screen.rect = struct('deg', [-5 -5 5 5]);
+				plotClassification(data,'deg','vel',me.ETparams.samplingFreq,...
+					me.ETparams.glissade.searchWindow,me.ETparams.screen.rect,...
+					'title','Test','showSacInScan',true); 
+			catch ME
+				getReport(ME)
 			end
 		end
+
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function explore(me, close)
+			persistent ww hh fig figA figB N
+
+			if exist('close','var') && close == true
+				try delete(figB); end
+				try delete(figA); end
+				try delete(fig.f); end
+				fig = []; figA = []; figB = [];
+				return;
+			end
+			if isempty(N); N = 1; end
+			if isempty(fig); fig.f = figure('Units','Normalized','Position',[0 0.8 0.05 0.2],'CloseRequestFcn',@exploreClose); end
+			if isempty(figA); figA = figure('Units','Normalized','Position',[0.05 0 0.45 1],'CloseRequestFcn',@exploreClose); end
+			if isempty(figB); figB = figure('Units','Normalized','Position',[0.5 0 0.5 1],'CloseRequestFcn',@exploreClose); end
+
+			if isempty(fig.f.Children)|| ~ishandle(fig.f)
+				fig.b0 = uicontrol('Parent',fig.f,'Units','Normalized',...
+					'Style','text','String',['TRIAL: ' num2str(N)],'Position',[0.1 0.8 0.8 0.1]);
+				fig.b1 = uicontrol('Parent',fig.f,'Units','Normalized',...
+					'String','Next','Position',[0.1 0.1 0.8 0.3],...
+					'Callback', @exploreNext);
+				fig.b2 = uicontrol('Parent',fig.f,'Units','Normalized',...
+					'String','Previous','Position',[0.1 0.5 0.8 0.3],...
+					'Callback', @explorePrevious);
+			end
+
+			if isempty(figA.Children) ; N = 0; exploreNext(); end
+
+			function exploreNext(src, ~)
+				N = N + 1;
+				if N > length(me.trials); N = 1; end
+				clf(figA); clf(figB);
+				plotNH(me,N,figB);
+				plot(me,N,[],[],[],figA);
+				fig.b0.String = ['TRIAL: ' num2str(N)];
+			end
+			function explorePrevious(src, ~)
+				N = N - 1;
+				if N < 1; N = length(me.trials); end
+				clf(figA); clf(figB);
+				plotNH(me,N,figB);
+				plot(me,N,[],[],[],figA);
+				fig.b0.String = ['TRIAL: ' num2str(N)];
+			end
+			function exploreClose(src, ~)
+				me.explore(true);
+			end
+
+		end
+
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function [out,in,avg,err] = computePupilAverage(me, trials, sampleRate)
+			if ~exist('trials','var') || isempty(trials); trials = me.correct.idx; end
+			if ~exist('sampleRate','var'); sampleRate = 100; end
+			in = {};
+			a = 1;
+			if ~isempty(me.excludeTrials)
+				trials = setdiff(trials, me.excludeTrials);
+				fprintf('===>>> Excluded trials: %s',num2str(me.excludeTrials));
+			end
+			for ii = trials
+				tr = me.trials(ii);
+				if isfield(tr,'data')
+					t = milliseconds(tr.data.time/1e3);
+					p = tr.data.pupil.size;
+				else
+					t = milliseconds(tr.times);
+					p = tr.pa;
+				end
+				if me.baselinePupil
+					tt = seconds(t);
+					mp = mean(p(tt >= me.baselineWindow(1) & tt <= me.baselineWindow(2)));
+					p = p - mp;
+				end
+				if me.smoothPupil
+					p = smooth(p);
+				end
+				in{a} = timetable(t,p);
+				a = a + 1;
+			end
+
+			out = synchronize(in{:},'regular','median','SampleRate',sampleRate);
+
+			handle=figure('Name',me.name,'Color',[1 1 1],'NumberTitle','off',...
+						'Papertype','a4','PaperUnits','centimeters',...
+						'PaperOrientation','landscape','Renderer','painters');
+			figpos(1,[0.5 0.5],1,'%');
+			[avg, err] = analysisCore.stderr(out,'SE',false,0.05,2);
+			analysisCore.areabar(seconds(out.t), avg, err,[0.8 0.4 0.4]);
+			axis tight
+			box on; grid on
+			xlim(me.plotRange);
+			ylabel('Pupil Diameter \pm SE');
+			xlabel('Time (s)');
+			title(sprintf('%s - %i trials',me.name,width(out)));
+		end
+
 
 	end%-------------------------END PUBLIC METHODS--------------------------------%
 
@@ -1164,11 +1358,9 @@ classdef tobiiAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function parseEvents(me)
+			tmain = tic;
 			isTrial = false;
 			tri = 1; %current trial that is being parsed
-			tri2 = 1; %trial ignoring incorrects
-			eventN = 0;
-			me.comment = me.raw.HEADER;
 			me.trials = struct();
 			me.correct.idx = [];
 			me.correct.saccTimes = [];
@@ -1182,384 +1374,202 @@ classdef tobiiAnalysis < analysisCore
 			this.distance = [];
 			this.pixelspercm = [];
 			this.display = [];
-
 			me.ppd; %faster to cache this now (dependant property sets ppd_ too)
 
-			sample = me.raw.FSAMPLE.gx(:,100); %check which eye
-			if sample(1) == -32768 %only use right eye if left eye data is not present
-				eyeUsed = 2; %right eye index for FSAMPLE.gx;
+			trialDef = getTrialDef(me);
+
+			t1 = inf;
+			t2 = -inf;
+
+			if ~isempty(me.exp.rE.screen.screenVals)
+				sV = me.exp.rE.screen.screenVals;
 			else
-				eyeUsed = 1; %left eye index
+				sV = me.exp.rE.screenVals;
 			end
+			if isfield(sV,'bottomInDegrees')
+				xmod = sV.rightInDegrees;
+				ymod = sV.bottomInDegrees;
+			else
+				xmod = 0;
+				ymod = 0;
+			end
+			times = double(me.raw.data.gaze.systemTimeStamp) /1e3;
+			nMessages = size(me.raw.messages,1);
+			pb = textprogressbar(nMessages, 'startmsg', 'Parsing Tobii Experiment Events: ',...
+				'showactualnum', true,'updatestep', round(nMessages/(nMessages/20)));
+			for i = 1:nMessages
 
-			FEVENTN = length(me.raw.FEVENT);
-			pb = textprogressbar(FEVENTN, 'startmsg', 'Parsing Eyelink Events: ',...
-				'showactualnum', true,'updatestep', round(FEVENTN/100));
-			for i = 1:FEVENTN
-				isMessage = false;
-				evt = me.raw.FEVENT(i);
-
-				if evt.type == me.EVENT_TYPES.MESSAGEEVENT %strcmpi(evt.codestring,'MESSAGEEVENT')
-					isMessage = true;
-					no = regexpi(evt.message,'^(?<NO>!cal|!mode|validate|reccfg|elclcfg|gaze_coords|thresholds|elcl_)','names'); %ignore these first
-					if ~isempty(no)  && ~isempty(no.NO)
-						continue
-					end
+				evtT = double(me.raw.messages{i,1}) / 1e3;
+				evt = me.raw.messages{i,2};
+				
+				if startsWith(evt,["WARMUP", "POINT ", "Calibration", "CALIBRATION", "START ", "STOP "])
+					pb(i);
+					continue;
 				end
 
-				if isMessage && ~isTrial
-					xy = regexpi(evt.message,'^DISPLAY_COORDS \d? \d? (?<x>\d+) (?<y>\d+)','names');
-					if ~isempty(xy)  && ~isempty(xy.x)
-						me.display = [str2double(xy.x) str2double(xy.y)];
-						this.display = me.display;
-						me.xCenter = me.display(1) / 2;
-						me.yCenter = me.display(2) / 2;
-						continue
-					end
-					
-					ms = regexpi(evt.message,'^(?<t>FRAMERATE|DISPLAY_PPD|DISPLAY_DISTANCE|DISPLAY_PIXELSPERCM) (?<n>\d+)','names');
-					if ~isempty(ms) && ~isempty(ms.t) && ~isempty(ms.n)
-						switch ms.t
-							case 'FRAMERATE'
-								this.FrameRate = str2double(ms.n);
-							case 'DISPLAY_PPD'
-								this.ppd = str2double(ms.n);
-							case 'DISPLAY_DISTANCE'
-								this.distance = str2double(ms.n);
-							case 'DISPLAY_PIXELSPERCM'
-								this.pixelspercm = str2double(ms.n);
-						end
-						continue
-					end
+				if ~isTrial 
 
-					rt = regexpi(evt.message,'^(?<d>V_RT MESSAGE) (?<a>\w+) (?<b>\w+)','names');
-					if ~isempty(rt) && ~isempty(rt.a) && ~isempty(rt.b)
-						me.rtStartMessage = rt.a;
-						me.rtEndMessage = rt.b;
-						continue
-					end
-
-					id = regexpi(evt.message,['^(?<TAG>' me.trialStartMessageName ')(\s*)(?<ID>\d*)'],'names');
-					if ~isempty(id) && ~isempty(id.TAG)
-						if isempty(id.ID) %we have a bug in early EDF files with an empty TRIALID!!!
-							id.ID = '1010';
+					% NEW TRIAL 
+					if startsWith(evt, me.trialStartMessageName)
+						id = regexpi(evt,['^(?<TAG>' me.trialStartMessageName ')(\s*)(?<ID>\d*)'],'names');
+						if isempty(id.ID) 
+							id.ID = '101010';
 						end
+						thisTrial = trialDef;
+						thisTrial.variable = str2double(id.ID);
+						if thisTrial.variable > 0 && thisTrial.variable <= length(me.varLabels)
+							thisTrial.variableMessageName = me.varLabels{thisTrial.variable};
+						end
+						thisTrial.idx = tri;
+						thisTrial.time = evtT;
+						thisTrial.sttime = evtT;
+						if tri > 1
+							thisTrial.totaltime = thisTrial.sttime - me.trials(1).sttime;
+						end
+						thisTrial.rtstarttime = thisTrial.sttime;
 						isTrial = true;
-						eventN=1;
-						me.trials(tri).variable = str2double(id.ID);
-						me.trials(tri).idx = tri;
-						me.trials(tri).correctedIndex = [];
-						me.trials(tri).time = double(evt.time);
-						me.trials(tri).rt = false;
-						me.trials(tri).rtoverride = false;
-						me.trials(tri).fixations = [];
-						me.trials(tri).nfix = 2;
-						me.trials(tri).saccades = [];
-						me.trials(tri).nsacc = [];
-						me.trials(tri).saccadeTimes = [];
-						me.trials(tri).firstSaccade = NaN;
-						me.trials(tri).uuid = [];
-						me.trials(tri).result = [];
-						me.trials(tri).correct = false;
-						me.trials(tri).breakFix = false;
-						me.trials(tri).incorrect = false;
-						me.trials(tri).unknown = false;
-						me.trials(tri).messages = [];
-						me.trials(tri).sttime = double(evt.sttime);
-						me.trials(tri).entime = NaN;
-						me.trials(tri).totaltime = (me.trials(tri).sttime - me.trials(1).sttime)/1e3;
-						me.trials(tri).startsampletime = NaN;
-						me.trials(tri).endsampletime = NaN;
-						me.trials(tri).rtstarttime = double(evt.sttime);
-						me.trials(tri).rtendtime = NaN;
-						me.trials(tri).synctime = NaN;
-						me.trials(tri).deltaT = NaN;
-						me.trials(tri).rttime = NaN;
-						me.trials(tri).times = [];
-						me.trials(tri).gx = [];
-						me.trials(tri).gy = [];
-						me.trials(tri).hx = [];
-						me.trials(tri).hy = [];
-						me.trials(tri).pa = [];
 						continue
 					end
-				end
 
-				if isTrial
 
-					if ~isMessage
+				elseif isTrial
 
-						if evt.type == me.EVENT_TYPES.STARTSAMPLES
-							me.trials(tri).startsampletime = double(evt.sttime);
-							continue
-						end
+					% assume we are missing an end trial message, force one
+					if startsWith(evt,"V_RT")
+						evt = [me.trialEndMessage ' ' num2str(-101010)];
+						thisTrial.forcedend = true;
+					end
 
-						if evt.type == me.EVENT_TYPES.ENDFIX
-							fixa = [];
-							if isempty(me.trials(tri).fixations)
-								fix = 1;
-							else
-								fix = length(me.trials(tri).fixations)+1;
-							end
-							if me.trials(tri).rt == true
-								rel = me.trials(tri).rtstarttime;
-								fixa.rt = true;
-							else
-								rel = me.trials(tri).sttime;
-								fixa.rt = false;
-							end
-							fixa.n = eventN;
-							fixa.ppd = me.ppd_;
-							fixa.sttime = double(evt.sttime);
-							fixa.entime = double(evt.entime);
-							fixa.time = fixa.sttime - rel;
-							fixa.length = fixa.entime - fixa.sttime;
-							fixa.rel = rel;
+					% Reaction time start markers (normally start of stim
+					% onset
+					if startsWith(evt, me.rtStartMessage) || startsWith(evt, me.rtOverrideMessage)
+						thisTrial.synctime = true;
+						thisTrial.rtstarttime = evtT;
+						continue
+					end
 
-							[fixa.gstx, fixa.gsty]  = toDegrees(me, [evt.gstx, evt.gsty]);
-							[fixa.genx, fixa.geny]  = toDegrees(me, [evt.genx, evt.geny]);
-							[fixa.x, fixa.y]		= toDegrees(me, [evt.gavx, evt.gavy]);
-							[fixa.theta, fixa.rho]	= cart2pol(fixa.x, fixa.y);
-							fixa.theta = me.rad2ang(fixa.theta);
-
-							if fix == 1
-								me.trials(tri).fixations = fixa;
-							else
-								me.trials(tri).fixations(fix) = fixa;
-							end
-							me.trials(tri).nfix = fix;
-							eventN = eventN + 1;
-							continue
-						end
-
-						if evt.type == me.EVENT_TYPES.ENDSACC % strcmpi(evt.codestring,'ENDSACC')
-							sacc = [];
-							if isempty(me.trials(tri).saccades)
-								nsacc = 1;
-							else
-								nsacc = length(me.trials(tri).saccades)+1;
-							end
-							if me.trials(tri).rt == true
-								rel = me.trials(tri).rtstarttime;
-								sacc.rt = true;
-							else
-								rel = me.trials(tri).sttime;
-								sacc.rt = false;
-							end
-							sacc.n = eventN;
-							sacc.ppd = me.ppd_;
-							sacc.sttime = double(evt.sttime);
-							sacc.entime = double(evt.entime);
-							sacc.time = sacc.sttime - rel;
-							sacc.length = sacc.entime - sacc.sttime;
-							sacc.rel = rel;
-
-							[sacc.gstx, sacc.gsty]	= toDegrees(me, [evt.gstx evt.gsty]);
-							[sacc.genx, sacc.geny]	= toDegrees(me, [evt.genx evt.geny]);
-							[sacc.x, sacc.y]		= deal((sacc.genx - sacc.gstx), (sacc.geny - sacc.gsty));
-							[sacc.theta, sacc.rho]	= cart2pol(sacc.x, sacc.y);
-							sacc.theta = me.rad2ang(sacc.theta);
-
-							if sacc.rho > me.minSaccadeDistance; sacc.microSaccade = false;
-							else sacc.microSaccade = true; end
-
-							if nsacc == 1
-								me.trials(tri).saccades = sacc;
-							else
-								me.trials(tri).saccades(nsacc) = sacc;
-							end
-							me.trials(tri).nsacc = nsacc;
-							eventN = eventN + 1;
-							continue
-						end
-
-						if evt.type ==  me.EVENT_TYPES.ENDSAMPLES %strcmpi(evt.codestring,'ENDSAMPLES')
-							me.trials(tri).endsampletime = double(evt.sttime);
-							idx = me.raw.FSAMPLE.time >= me.trials(tri).startsampletime & ...
-								me.raw.FSAMPLE.time <= me.trials(tri).endsampletime;
-
-							me.trials(tri).times = double(me.raw.FSAMPLE.time(idx));
-							me.trials(tri).times = me.trials(tri).times - me.trials(tri).rtstarttime;
-
-							me.trials(tri).gx = me.raw.FSAMPLE.gx(eyeUsed, idx);
-							me.trials(tri).gx = me.trials(tri).gx - me.display(1)/2;
-
-							me.trials(tri).gy = me.raw.FSAMPLE.gy(eyeUsed, idx);
-							me.trials(tri).gy = me.trials(tri).gy - me.display(2)/2;
-
-							me.trials(tri).hx = me.raw.FSAMPLE.hx(eyeUsed, idx);
-
-							me.trials(tri).hy = me.raw.FSAMPLE.hy(eyeUsed, idx);
-
-							me.trials(tri).pa = me.raw.FSAMPLE.pa(eyeUsed, idx);
-							continue
-						end
-
-					else
-						vari = regexpi(evt.message,['^(MSG:)?' me.variableMessageName ' (?<VARI>[0-9\.]+)'],'names');
-						if ~isempty(vari) && ~isempty(vari.VARI)
-							me.trials(tri).variable = str2double(vari.VARI);
-							me.trials(tri).variableMessageName = me.variableMessageName;
-							continue
-						end
-
-						uuid = regexpi(evt.message,'^(MSG:)?UUID (?<UUID>[\w]+)','names');
-						if ~isempty(uuid) && ~isempty(uuid.UUID)
-							me.trials(tri).uuid = uuid.UUID;
-							continue
-						end
-
-						msg = regexpi(evt.message,'^MSG:\s?(?<MSG>[\w]+) *(?<VAL>.*)','names');
+					% Messages
+					if startsWith(evt,"MSG:")
+						msg = regexpi(evt,'^MSG:\s?(?<MSG>[\w]+)[ =]*(?<VAL>.*)','names');
 						if ~isempty(msg) && ~isempty(msg.MSG)
-							if isfield(me.trials(tri).messages,msg.MSG)
-								me.trials(tri).messages.(msg.MSG){end+1} = msg.VAL;
-								me.trials(tri).messages.([msg.MSG 'TIME']){end+1} = double(evt.sttime);
+							if isfield(thisTrial.messages,msg.MSG)
+								thisTrial.messages.(msg.MSG){end+1} = msg.VAL;
+								thisTrial.messages.([msg.MSG 'TIME']){end+1} = double(evt.sttime);
 							else
-								me.trials(tri).messages.(msg.MSG){1} = msg.VAL;
-								me.trials(tri).messages.([msg.MSG 'TIME']){1} = double(evt.sttime);
+								thisTrial.messages.(msg.MSG){1} = msg.VAL;
+								thisTrial.messages.([msg.MSG 'TIME']){1} = double(evt.sttime);
 							end
 							if strcmpi(msg.MSG, me.rtOverrideMessage)
-								me.trials(tri).rtstarttimeOLD = me.trials(tri).rtstarttime;
-								me.trials(tri).rtstarttime = double(evt.sttime);
-								me.trials(tri).rtoverride = true;
-								if ~isempty(me.trials(tri).fixations)
-									for lf = 1 : length(me.trials(tri).fixations)
-										me.trials(tri).fixations(lf).time = me.trials(tri).fixations(lf).sttime - me.trials(tri).rtstarttime;
-										me.trials(tri).fixations(lf).rt = true;
-									end
-								end
-								if ~isempty(me.trials(tri).saccades)
-									for lf = 1 : length(me.trials(tri).saccades)
-										me.trials(tri).saccades(lf).time = me.trials(tri).saccades(lf).sttime - me.trials(tri).rtstarttime;
-										me.trials(tri).saccades(lf).rt = true;
-										me.trials(tri).saccadeTimes(lf) = me.trials(tri).saccades(lf).time;
-									end
-								end
+								thisTrial.rtstarttimeOLD = thisTrial.rtstarttime;
+								thisTrial.rtstarttime = double(evt.sttime);
+								thisTrial.rt = true;
+								thisTrial.rtoverride = true;
 							end
-							continue
-						end
-
-						synct = regexpi(evt.message,'^SYNCTIME','match');
-						if ~isempty(synct)
-							me.trials(tri).synctime = evt.sttime;
-							continue
-						end
-
-						endfix = regexpi(evt.message,['^' me.rtStartMessage],'match');
-						if ~isempty(endfix)
-							me.trials(tri).rtstarttime = double(evt.sttime);
-							me.trials(tri).rt = true;
-							if ~isempty(me.trials(tri).fixations)
-								for lf = 1 : length(me.trials(tri).fixations)
-									me.trials(tri).fixations(lf).time = me.trials(tri).fixations(lf).sttime - me.trials(tri).rtstarttime;
-									me.trials(tri).fixations(lf).rt = true;
-								end
-							end
-							if ~isempty(me.trials(tri).saccades)
-								for lf = 1 : length(me.trials(tri).saccades)
-									me.trials(tri).saccades(lf).time = me.trials(tri).saccades(lf).sttime - me.trials(tri).rtstarttime;
-									me.trials(tri).saccades(lf).rt = true;
-									me.trials(tri).saccadeTimes(lf) = me.trials(tri).saccades(lf).time;
-								end
-							end
-							continue
-						end
-
-						endrt = regexpi(evt.message,['^' me.rtEndMessage],'match');
-						if ~isempty(endrt)
-							me.trials(tri).rtendtime = double(evt.sttime);
-							if isfield(me.trials,'rtstarttime')
-								me.trials(tri).rttime = me.trials(tri).rtendtime - me.trials(tri).rtstarttime;
-							end
-							continue
-						end
-
-						id = regexpi(evt.message,['^' me.trialEndMessage ' (?<ID>(\-|\+|\d)+)'],'names');
-						if ~isempty(id) && ~isempty(id.ID)
-							me.trials(tri).entime = double(evt.sttime);
-							me.trials(tri).result = str2num(id.ID);
-							sT=[];
-							me.trials(tri).saccadeTimes = [];
-							for ii = 1:me.trials(tri).nsacc
-								t = me.trials(tri).saccades(ii).time;
-								me.trials(tri).saccadeTimes(ii) = t;
-								if isnan(me.trials(tri).firstSaccade) && t > 0 && me.trials(tri).saccades(ii).microSaccade == false
-									me.trials(tri).firstSaccade = t;
-									sT=t;
-								end
-							end
-							if any(find(me.trials(tri).result == me.correctValue))
-								me.trials(tri).correct = true;
-								me.correct.idx = [me.correct.idx tri];
-								me.trialList(tri) = me.trials(tri).variable;
-								if ~isempty(sT) && sT > 0
-									me.correct.saccTimes = [me.correct.saccTimes sT];
-								else
-									me.correct.saccTimes = [me.correct.saccTimes NaN];
-								end
-								me.trials(tri).correctedIndex = tri2;
-								tri2 = tri2 + 1;
-							elseif any(find(me.trials(tri).result == me.breakFixValue))
-								me.trials(tri).breakFix = true;
-								me.breakFix.idx = [me.breakFix.idx tri];
-								me.trialList(tri) = -me.trials(tri).variable;
-								if ~isempty(sT) && sT > 0
-									me.breakFix.saccTimes = [me.breakFix.saccTimes sT];
-								else
-									me.breakFix.saccTimes = [me.breakFix.saccTimes NaN];
-								end
-								me.trials(tri).correctedIndex = [];
-							elseif any(find(me.trials(tri).result == me.incorrectValue))
-								me.trials(tri).incorrect = true;
-								me.incorrect.idx = [me.incorrect.idx tri];
-								me.trialList(tri) = -me.trials(tri).variable;
-								if ~isempty(sT) && sT > 0
-									me.incorrect.saccTimes = [me.incorrect.saccTimes sT];
-								else
-									me.incorrect.saccTimes = [me.incorrect.saccTimes NaN];
-								end
-								me.trials(tri).correctedIndex = [];
-							else
-								me.trials(tri).unknown = true;
-								me.unknown.idx = [me.unknown.idx tri];
-								me.trialList(tri) = -me.trials(tri).variable;
-								if ~isempty(sT) && sT > 0
-									me.unknown.saccTimes = [me.unknown.saccTimes sT];
-								else
-									me.unknown.saccTimes = [me.unknown.saccTimes NaN];
-								end
-								me.trials(tri).correctedIndex = [];
-							end
-							me.trials(tri).deltaT = me.trials(tri).entime - me.trials(tri).sttime;
-							isTrial = false;
-							tri = tri + 1;
 							continue
 						end
 					end
-				end
+
+					% !V Messages
+					if startsWith(evt,"!V")
+						msg = regexpi(evt,'^!V (?<v>.+?) (?<n>.+?) (?<val>.+?)$','names');
+						if ~isempty(msg) && isempty(msg.v) && ~isempty(msg.n) 
+							tag = [msg.v '-' msg.n];
+							if isfield(thisTrial.messages,tag)
+								thisTrial.messages.(tag){end+1} = msg.val;
+								thisTrial.messages.([tag 'TIME']){end+1} = double(evt.sttime);
+							else
+								thisTrial.messages.(tag){1} = msg.val;
+								thisTrial.messages.([tag 'TIME']){1} = double(evt.sttime);
+							end
+							continue
+						end
+					end
+
+					% UUID from state machine
+					if startsWith(evt,"UUID")
+						uuid = regexpi(evt,'^(MSG:)?UUID (?<UUID>[\w]+)','names');
+						if ~isempty(uuid) && ~isempty(uuid.UUID)
+							thisTrial.uuid = uuid.UUID;
+						end
+						continue
+					end
+
+					% trial END
+					if startsWith(evt, me.trialEndMessage) || startsWith(evt, 'TRIALEND')
+						if startsWith(evt, 'TRIALEND')
+							id.ID = -101010;
+						else
+							id = regexpi(evt,['^' me.trialEndMessage ' (?<ID>(\-|\+|\d)+)'],'names');
+						end
+						if isempty(id.ID); id.ID = -101010; end
+						thisTrial.entime = evtT;
+						thisTrial.result = str2num(id.ID);
+						if thisTrial.result == me.correctValue
+							thisTrial.correct = true;
+						elseif thisTrial.result == me.incorrectValue
+							thisTrial.incorrect = true;
+						elseif thisTrial.result == me.breakFixValue
+							thisTrial.breakFix = true;
+						end
+						sT=[];
+						thisTrial.deltaT = thisTrial.entime - thisTrial.sttime;
+						if isempty(thisTrial.times)
+							if isnan(thisTrial.startsampletime)
+								thisTrial.startsampletime = thisTrial.sttime;
+							end
+							thisTrial.endsampletime = thisTrial.entime;
+							idx = times >= thisTrial.startsampletime & ...
+								times <= thisTrial.endsampletime;
+							if ~isempty(idx)
+								thisTrial.times = times(idx);
+								thisTrial.times = thisTrial.times - thisTrial.rtstarttime;
+								thisTrial.timeRange = [thisTrial.times(1) thisTrial.times(end)];
+								thisTrial.gx = me.raw.data.gaze.left.gazePoint.onDisplayArea(1,idx);
+								thisTrial.gx = (thisTrial.gx * (xmod*2)) - xmod;
+								thisTrial.gy = me.raw.data.gaze.left.gazePoint.onDisplayArea(2,idx);
+								thisTrial.gy = (thisTrial.gy * (ymod*2)) - ymod;
+								thisTrial.hx = me.raw.data.gaze.left.gazePoint.inUserCoords(1,idx);
+								thisTrial.hy = me.raw.data.gaze.left.gazePoint.inUserCoords(2,idx);
+								thisTrial.pa = me.raw.data.gaze.left.pupil.diameter(idx);
+								thisTrial.valid = me.raw.data.gaze.left.pupil.valid(idx);
+								if thisTrial.times(1) < t1; t1 = thisTrial.times(1); end
+								if thisTrial.times(end) > t2; t2 = thisTrial.times(end); end
+							else
+								thisTrial.result = -101010;
+							end
+							
+						end
+						if tri == 1
+							me.trials = thisTrial;
+						else
+							me.trials(tri) = thisTrial;
+						end
+						isTrial = false; 
+						clear thisTrial;
+						tri = tri + 1;
+						continue
+					end
+				end % END isTrial
 				pb(i);
-			end
+			end % END FOR
 			pb(i);
-			
+
+			me.plotRange = [t1/1e3 t2/1e3];
+
 			me.otherinfo = this;
+			
+			if isempty(me.trials)
+				warning('---> eyelinkAnalysis.parseEvents: No trials could be parsed in this data!')
+				return
+			end
 
 			%prune the end trial if invalid
-			if ~me.trials(end).correct && ~me.trials(end).breakFix && ~me.trials(end).incorrect
-				me.trials(end) = [];
-				me.correct.idx = find([me.trials.correct] == true);
-				me.correct.saccTimes = [me.trials(me.correct.idx).firstSaccade];
-				me.breakFix.idx = find([me.trials.breakFix] == true);
-				me.breakFix.saccTimes = [me.trials(me.breakFix.idx).firstSaccade];
-				me.incorrect.idx = find([me.trials.incorrect] == true);
-				me.incorrect.saccTimes = [me.trials(me.incorrect.idx).firstSaccade];
-			end
-
-			if max(abs(me.trialList)) == 1010 && min(abs(me.trialList)) == 1010
-				me.needOverride = true;
-				me.salutation('','---> TRIAL NAME BUG OVERRIDE NEEDED!\n',true);
-			else
-				me.needOverride = false;
-			end
+			me.correct.idx = find([me.trials.correct] == true);
+			me.breakFix.idx = find([me.trials.breakFix] == true);
+			me.incorrect.idx = find([me.trials.incorrect] == true);
+			
+			fprintf('<strong>:#:</strong> Parsing Tobii Events into %i Trials took <strong>%.2f secs</strong> | min-t = %.2f max-t = %.2f\n',length(me.trials),toc(tmain), t1/1e3, t2/1e3);
+		
 		end
 
 		% ===================================================================
@@ -1569,38 +1579,64 @@ classdef tobiiAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function parseAsVars(me)
-			me.vars = struct();
-			me.vars(1).name = '';
-			me.vars(1).var = [];
-			me.vars(1).varidx = [];
-			me.vars(1).variable = [];
-			me.vars(1).idx = [];
-			me.vars(1).correctedidx = [];
-			me.vars(1).trial = [];
-			me.vars(1).sTime = [];
-			me.vars(1).sT = [];
-			me.vars(1).uuid = {};
+			if isempty(me.exp)
+				uniqueVars = sort(unique([me.trials.variable]));
+				labels = [];
+				warning('---> Vars are being parsed from trials directly...')
+			else
+				uniqueVars = [me.exp.rE.task.varList{:,1}];
+				labels = me.exp.rE.task.varLabels;
 
-			uniqueVars = sort(unique([me.trials.variable]));
+			end
+			nVars = length(uniqueVars);
+			if isempty(me.trials)
+				warning('---> eyelinkAnalysis.parseAsVars: No trials and therefore cannot extract variables!')
+				return
+			end
+			me.vars = struct();
+			me.vars(nVars).name = '';
+			me.vars(nVars).var = [];
+			me.vars(nVars).varidx = [];
+			me.vars(nVars).variable = [];
+			me.vars(nVars).idx = [];
+			me.vars(nVars).correct = [];
+			me.vars(nVars).idxcorrect = [];
+			me.vars(nVars).result = [];
+			me.vars(nVars).correctedidx = [];
+			me.vars(nVars).trial = [];
+			me.vars(nVars).sTime = [];
+			me.vars(nVars).sT = [];
+			me.vars(nVars).uuid = {};
+
+			for i=uniqueVars
+				if i <= length(labels); me.vars(i).name = labels{i}; end
+				me.vars(i).var = uniqueVars(i);
+			end
 
 			for i = 1:length(me.trials)
 				trial = me.trials(i);
 				var = trial.variable;
-				if trial.incorrect == true
-					continue
-				end
-				if trial.variable == 1010
+				if trial.invalid == true
 					continue
 				end
 				idx = find(uniqueVars==var);
-				me.vars(idx).name = num2str(var);
+				if ~isempty(labels) && idx <= length(labels)
+					me.vars(idx).name = labels{idx};
+				else
+					me.vars(idx).name = num2str(var);
+				end
 				me.vars(idx).var = var;
 				me.vars(idx).varidx = [me.vars(idx).varidx idx];
 				me.vars(idx).variable = [me.vars(idx).variable var];
 				me.vars(idx).idx = [me.vars(idx).idx i];
+				me.vars(idx).correct = [me.vars(idx).correct trial.correct];
+				if trial.correct > 0
+					me.vars(idx).idxcorrect = [me.vars(idx).idxcorrect i];
+				end
+				me.vars(idx).result = [me.vars(idx).result trial.result];
 				me.vars(idx).correctedidx = [me.vars(idx).correctedidx i];
-				me.vars(idx).trial = [me.vars(idx).trial; trial];
-				me.vars(idx).uuid = [me.vars(idx).uuid, trial.uuid];
+				%me.vars(idx).trial = [me.vars(idx).trial; trial];
+				me.vars(idx).uuid{end+1} = trial.uuid;
 				if ~isempty(trial.saccadeTimes)
 					me.vars(idx).sTime = [me.vars(idx).sTime trial.saccadeTimes(1)];
 				else
@@ -1711,6 +1747,70 @@ classdef tobiiAnalysis < analysisCore
 		%> @brief
 		%>
 		% ===================================================================
+		function computeFullSaccades(me)
+			assert(exist('runNH2010Classification.m'),'Please add NystromHolmqvist2010 to path!');
+			% load parameters for event classifier
+			if isempty(me.ETparams)
+				me.ETparams = defaultParameters;
+				% settings for code specific to Niehorster, Siu & Li (2015)
+				me.ETparams.extraCut    = [0 0];                       % extra ms of data to cut before and after saccade.
+				me.ETparams.qInterpMissingPos   = true;                 % interpolate using straight lines to replace missing position signals?
+				
+				% settings for the saccade cutting (see cutSaccades.m for documentation)
+				me.ETparams.cutPosTraceMode     = 1;
+				me.ETparams.cutVelTraceMode     = 1;
+				me.ETparams.cutSaccadeSkipWindow= 1;    % don't cut during first x seconds
+				me.ETparams.screen.resolution              = [ me.resolution(1) me.resolution(2) ];
+				me.ETparams.screen.size                    = [ me.resolution(1)/me.pixelsPerCm/100 me.resolution(2)/me.pixelsPerCm/100 ];
+				me.ETparams.screen.viewingDist             = me.distance/100;
+				me.ETparams.screen.dataCenter              = [ me.resolution(1)/2 me.resolution(2)/2 ];  % center of screen has these coordinates in data
+				me.ETparams.screen.subjectStraightAhead    = [ me.resolution(1)/2 me.resolution(2)/2 ];  % Specify the screen coordinate that is straight ahead of the subject. Just specify the middle of the screen unless its important to you to get this very accurate!
+				% change some defaults as needed for this analysis:
+				me.ETparams.data.alsoStoreComponentDerivs  = true;
+				me.ETparams.data.detrendWithMedianFilter   = true;
+				me.ETparams.data.applySaccadeTemplate      = true;
+				me.ETparams.data.minDur                    = 100;
+				me.ETparams.fixation.doClassify            = true;
+				me.ETparams.blink.replaceWithInterp        = true;
+				me.ETparams.blink.replaceVelWithNan        = true;
+			end
+			me.ETparams.samplingFreq = me.sampleRate;
+			
+			% process params
+			ETparams = prepareParameters(me.ETparams);
+
+			for ii = 1:length(me.trials)
+				fprintf('--->>> Full saccadic analysis of Trial %i:\n',ii);
+				x = (me.trials(ii).gx * me.ppd) + ETparams.screen.dataCenter(1);
+				y = (me.trials(ii).gy * me.ppd) + ETparams.screen.dataCenter(2);
+				p = me.trials(ii).pa;
+				t = me.trials(ii).times * 1e3;
+
+				if length(x) < me.ETparams.data.minDur
+					data = struct([]);
+				else
+					data = runNH2010Classification(x,y,p,ETparams,t);
+					% replace missing data by linearly interpolating position and velocity
+    				% between start and end of each missing interval (so, creating a ramp
+    				% between start and end position/velocity).
+    				data = replaceMissing(data,ETparams.qInterpMissingPos);
+				end
+    			
+    			% desaccade velocity and/or position
+    			%data = cutSaccades(data,ETparams,cutPosTraceMode,cutVelTraceMode,extraCut,cutSaccadeSkipWindow);
+    			% construct saccade only traces
+    			%data = cutPursuit(data,ETparams,1);
+
+				me.trials(ii).data = data;
+
+			end
+
+		end
+
+		% ===================================================================
+		%> @brief
+		%>
+		% ===================================================================
 		function computeMicrosaccades(me)
 			VFAC=me.VFAC;
 			MINDUR=me.MINDUR;
@@ -1718,14 +1818,14 @@ classdef tobiiAnalysis < analysisCore
 			pb = textprogressbar(length(me.trials),'startmsg','Loading trials to compute microsaccades: ','showactualnum',true);
 			cms = tic;
 			for jj = 1:length(me.trials)
-				if me.trials(jj).incorrect == true || me.trials(jj).breakFix == true || me.trials(jj).unknown == true;	continue;	end
+				if any(isnan(me.trials(jj).timeRange)) || me.trials(jj).incorrect == true || me.trials(jj).breakFix == true || me.trials(jj).unknown == true;	continue;	end
 				samples = []; sac = []; radius = []; monol=[]; monor=[];
 				me.trials(jj).msacc = struct();
 				me.trials(jj).sampleSaccades = [];
 				me.trials(jj).microSaccades = [];
 				samples(:,1) = me.trials(jj).times/1e3;
-				samples(:,2) = me.trials(jj).gx/me.ppd_;
-				samples(:,3) = me.trials(jj).gy/me.ppd_;
+				samples(:,2) = me.trials(jj).gx;
+				samples(:,3) = me.trials(jj).gy;
 				samples(:,4) = nan(size(samples(:,1)));
 				samples(:,5) = samples(:,4);
 				eye_used = 0;
@@ -2045,6 +2145,34 @@ classdef tobiiAnalysis < analysisCore
 				end
 			end
 
+		end
+
+		% ===================================================================
+		%> @brief
+		%>
+		% ===================================================================
+		function trialDef = getTrialDef(me)
+			trialDef = cell2struct(repmat({[]},length(me.trialsTemplate),1),me.trialsTemplate);
+			trialDef.rt = false;
+			trialDef.rtoverride = false;
+			trialDef.firstSaccade = NaN;
+			trialDef.invalid = false;
+			trialDef.correct = false;
+			trialDef.breakFix = false;
+			trialDef.incorrect = false;
+			trialDef.unknown = false;
+			trialDef.sttime = NaN;
+			trialDef.entime = NaN;
+			trialDef.totaltime = 0;
+			trialDef.startsampletime = NaN;
+			trialDef.endsampletime = NaN;
+			trialDef.timeRange = [NaN NaN];
+			trialDef.rtstarttime = NaN;
+			trialDef.rtstarttimeOLD = NaN;
+			trialDef.rtendtime = NaN;
+			trialDef.synctime = NaN;
+			trialDef.deltaT = NaN;
+			trialDef.rttime = NaN;
 		end
 
 	end

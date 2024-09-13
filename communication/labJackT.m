@@ -27,7 +27,7 @@ classdef labJackT < handle
 		%> IP address if using network
 		IP char					= ''
 		%> strobeTime is time of strobe in ms; max = 100ms
-		strobeTime double		= 5
+		strobeTime uint32		= 5
 		%> streamChannels which channels to stream
 		streamChannels double	= 0
 		%> stream sample rate (Hz)
@@ -44,8 +44,8 @@ classdef labJackT < handle
 		library char			= '/usr/local/lib/libLabJackM'
 		%> do we log everything to the command window?
 		verbose logical			= true
-		%> allows the constructor to run the open method immediately (default)
-		openNow logical			= true
+		%> allows the constructor to run the open method immediately
+		openNow logical			= false
 		%> silentMode=true allows one to gracefully fail methods without a labJack connected
 		silentMode logical		= false
 		%> comment
@@ -63,7 +63,7 @@ classdef labJackT < handle
 		%> is streaming?
 		isStreaming logical		= false
 		%> send this value for the next sendStrobe
-		sendValue double		= 0
+		sendValue int32			= 0
 		%> last value sent
 		lastValue double		= []
 		%> function list returned from loading LJM
@@ -115,9 +115,9 @@ classdef labJackT < handle
 		LJM_FLOAT32 int32		= 3
 		LJM_TESTRESULT uint32	= 1122867
 		%> RAM address for communication
-		RAMAddress uint32		= 46000
+		RAMAddress uint32		= 46080
 		%> minimal lua server to allow fast asynchronous strobing of EIO & CIO
-		miniServer char = 'LJ.setLuaThrottle(100)local a=MB.R;local b=MB.W;local c=-1;b(2601,0,255)b(2602,0,255)b(2501,0,0)b(2502,0,0)b(46000,3,0)while true do c=a(46000,3)if c>=1 and c<=255 then b(2501,0,c)b(61590,1,2000)b(2501,0,0)elseif c>=256 and c<=271 then b(2502,0,c-256)b(61590,1,100000)b(61590,1,100000)b(61590,1,100000)b(2502,0,0)elseif c==0 then b(2501,0,0)end;if c>-1 then b(46000,3,-1)end end'
+		miniServer char = 'LJ.setLuaThrottle(80)local a=MB.R;local b=MB.W;local c=-1;local d=0;local e=0;b(2601,0,255)b(2602,0,255)b(2501,0,0)b(2502,0,0)b(46080,2,0)while true do c=a(46080,2)if c>=1 and c<=2047 then d=bit.band(c,0xff)e=bit.band(bit.rshift(c,8),0xff)b(2501,0,d)if e>0 then b(2502,0,e)end;b(61590,1,2000)b(2501,0,0)if e>0 then b(2502,0,0)end elseif c>2047 then b(2502,0,8)b(61590,1,10000)b(2502,0,0)elseif c==0 then b(2501,0,0)end;if c>-1 then b(46080,2,-1)end end'
 		%> test Lua server, just spits out time every second
 		testServer char = 'LJ.IntervalConfig(0,1000)while true do if LJ.CheckInterval(0)then print(LJ.Tick())end end'
 		%> library name
@@ -258,13 +258,20 @@ classdef labJackT < handle
 			me.testValue = uint32(vals(3));
 
 			%initialise EIO and CIO
-			err = calllib(me.libName, 'LJM_eWriteNames', me.handle, 4, {'EIO_DIRECTION','CIO_DIRECTION',...
-				'EIO_STATE','CIO_STATE'}, [255 255 0 0], 0);
+			err = calllib(me.libName, 'LJM_eWriteNames', me.handle, 6, {'FIO_DIRECTION','EIO_DIRECTION','CIO_DIRECTION',...
+				'FIO_STATE','EIO_STATE','CIO_STATE'}, [255 255 255 0 0 0], 0);
 			me.checkError(err);
 
 			me.isValid = me.isHandleValid;
 
-			if ~me.silentMode;me.salutation('OPEN method',sprintf('Loading the LabJackT in %.2fsecs: success!',toc(tS)));end	
+			if ~me.isServerRunning
+				warning('===>>> LabJack T: Lua server NOT running, strobes will fail! Will run labJackT.initialiseServer');
+				initialiseServer(me);
+			else
+				me.salutation('OPEN method','Lua Server is Running :-)');
+			end
+
+			me.salutation('OPEN method',sprintf('Loading the LabJackT in %.2fsecs: success!',toc(tS)));	
 		end
 		
 		% ===================================================================
@@ -351,58 +358,49 @@ classdef labJackT < handle
 		
 		% ===================================================================
 		%> @brief sends a value to RAMAddress, requires the Lua server to
-		%> be running, 0-255 control EIO, 256-271 controls CIO
+		%> be running, 0-2047 controls EIO0-8 & CIO0-3 - 2048 TTLs CIO-4
 		%>	
+		%> @param value 0 - 2048
 		% ===================================================================
 		function sendStrobe(me, value)
 			if me.silentMode || isempty(me.handle); return; end
-			if ~exist('value','var'); value = me.sendValue; end
-			calllib(me.libName, 'LJM_eWriteAddress', me.handle, me.RAMAddress, me.LJM_FLOAT32, value);
-			%if me.verbose; fprintf('--->>> LabjackT:sendStrobe Sending strobe: %i\n',value); end
+			if ~exist('value','var') || isempty(value); value = me.sendValue; end
+			calllib(me.libName, 'LJM_eWriteAddress', me.handle, me.RAMAddress, me.LJM_INT32, int32(value));
+			if me.verbose; fprintf('--->>> LabjackT:sendStrobe Sending strobe: %i\n',value); end
 		end
 
 		% ===================================================================
 		%> @brief 
 		% ===================================================================
-		function sendStrobedEIO(me,value)
+		function sendStrobedEIO(me, value)
 			if me.silentMode || isempty(me.handle); return; end
+			if ~exist('value','var') || isempty(value); value = me.sendValue; end
 			calllib(me.libName, 'LJM_eWriteAddresses', me.handle,...
- 				3, [2501 61590 2501], [me.LJM_UINT16 me.LJM_UINT32 me.LJM_UINT16], [value me.strobeTime*1000 0], 0);
+ 				3, [2501 61590 2501], [me.LJM_UINT16 me.LJM_UINT32 me.LJM_UINT16], [uint16(value) me.strobeTime*1000 uint16(0)], 0);
 		end
 		
 		% ===================================================================
 		%> @brief 
 		% ===================================================================
-		function sendStrobedCIO(me,value)
+		function sendStrobedCIO(me, value)
 			if me.silentMode || isempty(me.handle); return; end
+			if ~exist('value','var') || isempty(value); value = me.sendValue; end
 			calllib(me.libName, 'LJM_eWriteAddresses', me.handle,...
- 				3, [2502 61590 2502], [me.LJM_UINT16 me.LJM_UINT32 me.LJM_UINT16], [value me.strobeTime*1000 0], 0);
+ 				3, [2502 61590 2502], [me.LJM_UINT16 me.LJM_UINT32 me.LJM_UINT16], [uint16(value) me.strobeTime*1000 uint16(0)], 0);
+		end
+
+		function setFIO(me, line, value, direction)
+
 		end
 		
 		% ===================================================================
-		%> @brief Prepare Strobe Word
-		%>	
+		%> @brief 
 		% ===================================================================
-		function prepareStrobe(me,value)
-			if me.silentMode || isempty(me.handle); me.sendValue=value; return; end
-			me.lastValue = me.sendValue;
-			me.sendValue = value;
-			cmd = zeros(64,1);
-			[err,~,~,~,~,~,~,cmd] = calllib(me.libName, 'LJM_AddressesToMBFB',...
-				64, [2501 61590 2501], [0 1 0], [1 1 1], [1 1 1], [value me.strobeTime*1000 0], 3, cmd);
-			me.command = cmd;
-			me.checkError(err);
-			if me.verbose;fprintf('--->>> LabJackT:prepareStrobe saving strobe value: %i\n',value);end
-		end
-		
-		% ===================================================================
-		%> @brief Send the Strobe command
-		%>
-		%>
-		% ===================================================================
-		function strobeWord(me)
-			if me.silentMode || isempty(me.handle) || isempty(me.command); return; end
-			me.writeCmd();
+		function sendTTL(me,fio,value)
+			if me.silentMode || isempty(me.handle); return; end
+			if ~exist('fio','var') || isempty(fio); fio = 1; end
+			if ~exist('value','var') || isempty(value); return; end
+
 		end
 		
 		% ===================================================================
@@ -570,7 +568,7 @@ classdef labJackT < handle
 			me.checkError(err,true);
 			[~, ~, len] = calllib(me.libName, 'LJM_eReadName', me.handle, 'LUA_SOURCE_SIZE', 0);
 			if me.verbose; fprintf('===>>> LUA Server init code sent: %i | recieved: %i | strobe length: %i\n',strN,len,me.strobeTime*1e3); end
-			if len < strN; error('Problem with the upload...'); end
+			if len < strN; error('Problem with the upload, check with Kipling...'); end
 			
 			%copy to flash
 			calllib(me.libName, 'LJM_eWriteNames', me.handle, 2, {'LUA_SAVE_TO_FLASH','LUA_RUN_DEFAULT'}, ...
@@ -619,6 +617,9 @@ classdef labJackT < handle
 	%=======================================================================
 	methods (Hidden = true)
 	%=======================================================================
+		
+		% These commands are for compatability with older hardware and
+		% protocols etc.
 	
 		% ===================================================================
 		%> @brief 
@@ -626,7 +627,7 @@ classdef labJackT < handle
 		%> @param 
 		% ===================================================================
 		function resetStrobe(me,varargin)
-
+			me.sendValue = 0;
 		end
 		
 		% ===================================================================
@@ -682,19 +683,35 @@ classdef labJackT < handle
 		function startFixation(me, varargin)
 			sendStrobe(me,248);
 		end
+
+		% ===================================================================
+		%> @brief LEGACY Command - create a command to strobe EIO 0-255 ONLY
+		%>	
+		% ===================================================================
+		function prepareStrobe(me,value)
+			if me.silentMode || isempty(me.handle); me.sendValue=value; return; end
+			me.lastValue = me.sendValue;
+			me.sendValue = value;
+			cmd = zeros(64,1);
+			[err,~,~,~,~,~,~,cmd] = calllib(me.libName, 'LJM_AddressesToMBFB',...
+				64, [2501 61590 2501], [0 1 0], [1 1 1], [1 1 1], [value me.strobeTime*1000 0], 3, cmd);
+			me.command = cmd;
+			me.checkError(err);
+			if me.verbose;fprintf('--->>> LabJackT:prepareStrobe saving strobe value: %i\n',value);end
+		end
 		
 		% ===================================================================
-		%> @brief 
-		%> 
-		%> @param 
+		%> @brief LEGACY Command - create a command to strobe EIO 0-255 ONLY
+		%>
+		%>
 		% ===================================================================
-		function sendTTL(me, varargin)
-			
+		function strobeWord(me)
+			if me.silentMode || isempty(me.handle) || isempty(me.command); return; end
+			me.writeCmd();
 		end
 
 		% ===================================================================
-		%> @brief sends a value to RAMAddress, requires the Lua server to
-		%> be running, 0-255 control EIO, 256-271 controls CIO
+		%> @brief LEGACY - use sendStrobe
 		%>	
 		% ===================================================================
 		function strobeServer(me, value)

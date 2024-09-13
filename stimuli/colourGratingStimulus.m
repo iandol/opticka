@@ -319,6 +319,7 @@ classdef colourGratingStimulus < baseStimulus
 			end
 			function set_sizeOut(me,value)
 				me.sizeOut = value*me.ppd;
+				me.szPx = me.sizeOut;
 			end
 			function set_xPositionOut(me, value)
 				me.xPositionOut = value * me.ppd;
@@ -377,8 +378,9 @@ classdef colourGratingStimulus < baseStimulus
 				Screen('DrawTexture', me.sM.win, me.texture, [], me.mvRect,...
 					me.angleOut, [], [], me.baseColourOut, [], me.rotateMode,...
 					[me.driftPhase, me.sfOut, me.contrastOut, me.sigmaOut]);
+				me.drawTick = me.drawTick + 1;
 			end
-			me.tick = me.tick + 1;
+			if me.isVisible; me.tick = me.tick + 1; end
 		end
 		
 		% ===================================================================
@@ -551,6 +553,7 @@ classdef colourGratingStimulus < baseStimulus
 				end
 			end
 			me.mvRect=me.dstRect;
+			me.szPx = RectWidth(me.dstRect);
 			setAnimationDelta(me);
 		end
 		

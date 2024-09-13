@@ -23,7 +23,7 @@ classdef arduinoManager < optickaCore
 		%> output logging info
 		verbose					= false
 		%> parameters for use when giving rewards via fluid or food
-		%> actuator, type = TTL / fluid / food
+		%> actuator, type = TTL / fluid / food / rpi
 		reward					= struct('type', 'TTL', 'pin', 2, 'time', 300)
 		%> specify the available pins to use; 2-13 is the default for an Uno
 		%> 0-10 for the xiao (though xiao pins 11-14 can control LEDS)
@@ -85,6 +85,15 @@ classdef arduinoManager < optickaCore
 		%===============OPEN DEVICE================%
 		function open(me)
 			if me.isOpen || ~isempty(me.device);disp('-->arduinoManager: Already open!');return;end
+			if matches(me.reward.type,'rpi')
+				try
+					system('raspi-gpio set 17 op');
+					system('raspi-gpio set 27 op');
+					system('raspi-gpio set 17 dl');
+					system('raspi-gpio set 27 dl');
+					me.silentMode = true;
+				end
+			end
 			if me.silentMode;disp('-->arduinoManager: In silent mode, try to reset() then open()!');me.isOpen=false;return;end
 			if isempty(me.port)
 				warning('--->arduinoManager: Better specify the port to use; will try to select one from available ports!');
@@ -225,6 +234,12 @@ classdef arduinoManager < optickaCore
 					timedTTL(me, me.reward.pin, me.reward.time);
 				case 'fluid'
 					rwdByDCmotor(me, me.reward.time);
+				case 'rpi'
+					try
+						system('raspi-gpio set 27 dh');
+						WaitSecs(me.reward.time);
+						system('raspi-gpio set 27 dl');
+					end
 				otherwise
 					stepper(me, varargin);
 			end
@@ -237,15 +252,14 @@ classdef arduinoManager < optickaCore
 
 		%===============TIMED TTL================%
 		function timedTTL(me, line, time)
-			if ~me.isOpen; return; end
-			if ~me.silentMode
-				if ~exist('line','var') || isempty(line); line = me.reward.pin; end
-				if ~exist('time','var') || isempty(time); time = me.reward.time; end
-				timedTTL(me.device, line, time);
-				if me.verbose;fprintf('===>>> timedTTL: TTL pin %i for %i ms\n',line,time);end
-			else
-				if me.verbose;fprintf('===>>> timedTTL: Silent Mode\n');end
+			if ~me.isOpen || me.silentMode
+				if me.verbose; fprintf('===>>> timedTTL: Silent Mode\n'); end
+				return; 
 			end
+			if ~exist('line','var') || isempty(line); line = me.reward.pin; end
+			if ~exist('time','var') || isempty(time); time = me.reward.time; end
+			timedTTL(me.device, line, time);
+			if me.verbose;fprintf('===>>> timedTTL: TTL pin %i for %i ms\n',line,time);end
 		end
 
 		%===============STROBED WORD================%
@@ -254,6 +268,8 @@ classdef arduinoManager < optickaCore
 			if ~me.silentMode
 				strobeWord(me.device, value);
 				if me.verbose;fprintf('===>>> STROBED WORD: %i sent to pins 2-8\n',value);end
+			else
+				if me.verbose;fprintf('===>>> STROBED WORD[silentmode]: %i sent to pins 2-8\n',value);end
 			end
 		end
 

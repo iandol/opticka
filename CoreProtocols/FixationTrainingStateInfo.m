@@ -1,15 +1,13 @@
-% FIXATION TRAINING 
-%
-% Protocol presents a pulsing fixation cross with a stimulus in a loop to train
-% for fixation. stims should contain 2 stimuli: stims{1} is a attention grabber,
-% stims{2} is the fixation cross. Adjust stimulus sizes and eyetracker setting
-% values over training to refine behaviour. You can use the ↑ ↓ keys to set the
-% variable (size, xPosition, yPosition) and ← → to change the value of the
-% variable. You can also use keys to change fixation window size, and time to
-% fixate during the session.
+% FIXATION TRAINING: Protocol presents a pulsing fixation cross with a
+% stimulus in a loop to train for fixation. stims should contain 2 stimuli:
+% stims{1} is a attention grabber, stims{2} is the fixation cross. Adjust
+% stimulus sizes and eyetracker setting values over training to refine
+% behaviour. You can use the ↑ ↓ keys to set the variable (size, xPosition,
+% yPosition) and ← → to change the value of the variable. You can also use
+% keys to change fixation window size, and time to fixate during the
+% session.
 %
 % The following class objects are already loaded and available to use:
-% 
 %
 % me		= runExperiment object ('self' in OOP terminology) 
 % s			= screenManager object
@@ -21,23 +19,23 @@
 % io		= digital I/O to recording system
 % rM		= Reward Manager (LabJack or Arduino TTL trigger to reward system/Magstim)
 % bR		= behavioural record plot (on-screen GUI during a task run)
-% uF		= user defined functions
+% uF		= user defined functions, see userFunctions.m
 % tS		= structure to hold general variables, will be saved as part of the data
 
 %==================================================================
 %----------------------General Settings----------------------------
-tS.useTask					= false;		%==use taskSequence (randomises stimulus variables)
+tS.name						= 'Fixation Training'; %==name of this protocol
+tS.useTask					= false;	%==use taskSequence (randomises stimulus variables)
 tS.rewardTime				= 300;		%==TTL time in milliseconds
 tS.rewardPin				= 2;		%==Output pin, 2 by default with Arduino.
 tS.keyExclusionPattern		= [];		%==which states to skip keyboard checking
-tS.enableTrainingKeys		= true;	%==enable keys useful during task training, but not for data recording
+tS.enableTrainingKeys		= true;		%==enable keys useful during task training, but not for data recording
 tS.recordEyePosition		= false;	%==record local copy of eye position, **in addition** to the eyetracker?
 tS.askForComments			= false;	%==UI requestor asks for comments before/after run
 tS.saveData					= true;		%==save behavioural and eye movement data?
 tS.showBehaviourPlot		= true;		%==open the behaviourPlot figure? Can cause more memory use
-tS.name						= 'Fixation training'; %==name of this protocol
 tS.nStims					= stims.n;	%==number of stimuli, taken from metaStimulus object
-tS.tOut						= 2;		%==if wrong response, how long to time out before next trial
+tS.timeOut					= 2;		%==if wrong response, how long to time out before next trial
 tS.CORRECT					= 1;		%==the code to send eyetracker for correct trials
 tS.BREAKFIX					= -1;		%==the code to send eyetracker for break fix trials
 tS.INCORRECT				= -5;		%==the code to send eyetracker for incorrect trials
@@ -45,16 +43,16 @@ tS.correctSound				= [2000, 0.1, 0.1]; %==freq,length,volume
 tS.errorSound				= [350, 1, 1];		%==freq,length,volume
 
 %==================================================================
-%----------------Debug logging to command window------------------
+%------------ ----DEBUG LOGGING to command window------------------
 % uncomment each line to get specific verbose logging from each of these
 % components; you can also set verbose in the opticka GUI to enable all of
 % these…
-%sM.verbose					= true;		%==print out stateMachine info for debugging
-%stims.verbose				= true;		%==print out metaStimulus info for debugging
-%io.verbose					= true;		%==print out io commands for debugging
-%eT.verbose					= true;		%==print out eyelink commands for debugging
-%rM.verbose					= true;		%==print out reward commands for debugging
-%task.verbose				= true;		%==print out task info for debugging
+%sM.verbose					= true;	%==print out stateMachine info for debugging
+%stims.verbose				= true;	%==print out metaStimulus info for debugging
+%io.verbose					= true;	%==print out io commands for debugging
+%eT.verbose					= true;	%==print out eyelink commands for debugging
+%rM.verbose					= true;	%==print out reward commands for debugging
+%task.verbose				= true;	%==print out task info for debugging
 
 %==================================================================
 %-----------------INITIAL Eyetracker Settings----------------------
@@ -63,35 +61,45 @@ tS.errorSound				= [350, 1, 1];		%==freq,length,volume
 % fixation window towards a target, enabling an exclusion window to stop
 % the subject entering a specific set of display areas etc.)
 %
-% initial fixation X position in degrees (0° is screen centre)
-tS.fixX						= 0;	
-% initial fixation Y position in degrees
+% **IMPORTANT**: you must ensure that the global state time is larger than
+% any fixation timers specified here. Each state has a global timer, so if
+% the state timer is 5 seconds but your fixation timer is 6 seconds, then
+% the state will finish before the fixation time was completed!
+%------------------------------------------------------------------
+% initial fixation X position in degrees (0° is screen centre). Multiple windows
+% can be entered using an array.
+tS.fixX						= 0;
+% initial fixation Y position in degrees  (0° is screen centre). Multiple windows
+% can be entered using an array.
 tS.fixY						= 0;
-% time to search and enter fixation window
+% time to search and enter fixation window (Initiate fixation)
 tS.firstFixInit				= 3;
-% time to maintain fixation within window, can be single value or a range
-% to randomise between
-tS.firstFixTime				= 1;
-% circular fixation window radius in degrees
+% time to maintain initial fixation within window, can be single value or a
+% range to randomise between
+tS.firstFixTime				= [0.25 0.75];
+% fixation window radius in degrees; if you enter [x y] the window will be
+% rectangular.
 tS.firstFixRadius			= 2;
-% do we forbid eye to enter-exit-reenter fixation window? Set false to make it
-% easier during initial training, set to true for data collection or more
-% precise behaviour.
+% do we forbid eye to enter-exit-reenter fixation window?
 tS.strict					= true;
+% add an exclusion zone where subject cannot saccade to?
+tS.exclusionZone			= [];
+% time to maintain fixation during stimulus state
+tS.stimulusFixTime			= 1;		
 % Initialise eyetracker with X, Y, FixInitTime, FixTime, Radius, StrictFix values
 updateFixationValues(eT, tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
 
 %==================================================================
-%----WHICH states assigned as correct or break for online plot?----
-%----You need to use regex patterns for the match (doc regexp)-----
+%-----------------BEAVIOURAL PLOT CONFIGURATION--------------------
+%----WHICH states assigned correct / break for the online plot?----
 bR.correctStateName				= "correct";
 bR.breakStateName				= ["breakfix","incorrect"];
 
 %==================================================================
-%-------------allows using arrow keys to control variables?-------------
-% another option is to enable manual control of a table of variables
-% this is useful to probe RF properties or other features while still
-% allowing for fixation or other behavioural control. This is also useful for
+%--------------Control Stimulus Variable During Task?--------------
+% another option is to enable manual control of a table of variables this
+% is useful to probe RF properties or other features while still allowing
+% for fixation or other behavioural control. This is also useful for
 % training.
 stims.tableChoice				= 1;
 n								= 1;
@@ -103,12 +111,12 @@ n								= n + 1;
 stims.controlTable(n).variable	= 'xPosition';
 stims.controlTable(n).delta		= 3;
 stims.controlTable(n).stimuli	= [1 2];
-stims.controlTable(n).limits	= [-16 16];
+stims.controlTable(n).limits	= [-18 18];
 n								= n + 1;
 stims.controlTable(n).variable	= 'yPosition';
 stims.controlTable(n).delta		= 3;
 stims.controlTable(n).stimuli	= [1 2];
-stims.controlTable(n).limits	= [-16 16];
+stims.controlTable(n).limits	= [-18 18];
 
 %==================================================================
 %this allows us to enable subsets from our stimulus list
@@ -116,42 +124,25 @@ stims.stimulusSets			= {[1,2]};
 stims.setChoice				= 1;
 hide(stims);
 
-%==================================================================
-% which stimulus in the list is used for a fixation target? For this
-% protocol it means the subject must fixate this stimulus (the saccade
-% target is #1 in the list) to get the reward. Also which stimulus to set
-% an exclusion zone around (where a saccade into this area causes an
-% immediate break fixation).
-stims.fixationChoice = 2;
-stims.exclusionChoice = [];
-
-%==================================================================
+%=========================================================================
 % N x 2 cell array of regexpi strings, list to skip the current -> next
 % state's exit functions; for example skipExitStates =
 % {'fixate','incorrect|breakfix'}; means that if the currentstate is
 % 'fixate' and the next state is either incorrect OR breakfix, then skip
-% running the fixate exit state functions. Add multiple rows for skipping
-% multiple exit states. Sometimes the exit functions prepare for some new
-% state, and those functions are not relevant if another state comes after.
-% In the example, the idea is fixate should go to stimulus, so run
-% preparatory functions in exitFcn, but if the subject didn't properly
-% fixate, then when going to incorrect we don't need to prepare the
-% stimulus.
-sM.skipExitStates = {'fixate','incorrect|breakfix'};
+% the FIXATE exit state. Add multiple rows for skipping multiple state's
+% exit states.
+sM.skipExitStates			= {'fixate','incorrect|breakfix'};
+
+%=========================================================================
+% which stimulus in the list is used for a fixation target? For this
+% protocol it means the subject must saccade to this stimulus (the saccade
+% target is #1 in the list) to get the reward.
+stims.fixationChoice		= 1;
 
 %===================================================================
 %===================================================================
 %===================================================================
 %-----------------State Machine Task Functions---------------------
-% Each cell {array} holds a set of anonymous function handles which are
-% executed by the state machine to control the experiment. The state
-% machine can run sets at entry ['entryFcn'], during ['withinFcn'], to
-% trigger a transition jump to another state ['transitionFcn'], and at exit
-% ['exitFcn'. Remember these {sets} need to access the objects that are
-% available within the runExperiment context (see top of file). You can
-% also add global variables/objects then use these. The values entered here
-% are set on load, if you want up-to-date values then you need to use
-% methods/function wrappers to retrieve/set them.
 
 %====================================================PAUSE
 %--------------------enter pause state
@@ -176,15 +167,13 @@ pauseExitFn = {
 
 %---------------------prestim entry
 psEntryFn = {
-	@()needFlip(me, true, 1); % start PTB screen flips, and tracker screen flip
+	@()needFlip(me, true, 4); % start PTB screen flips, and tracker screen flip
 	@()needEyeSample(me, true); % make sure we start measuring eye position
 	@()hide(stims); % hide all stimuli
-	@()startRecording(eT); % start eyelink recording for this trial (ignored by tobii/irec as they always records)
 	@()getStimulusPositions(stims,true); %make a struct the eT can use for drawing stim positions
 	@()resetAll(eT); %reset all fixation counters and history ready for a new trial
-	@()updateFixationTarget(me, true);
-	@()trackerMessage(eT,'V_RT MESSAGE END_FIX END_RT'); % Eyelink-specific commands, ignored by other eyetrackers
-	@()trackerMessage(eT,sprintf('TRIALID %i',getTaskIndex(me))); %Eyetracker start trial marker
+	@()updateFixationTarget(me, true); %move the fixation window to match the current stim position
+	@()trackerTrialStart(eT, getTaskIndex(me));
 	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
 	@()trackerDrawStatus(eT,'Pre-stimulus...', stims.stimulusPositions);
 	@()logRun(me,'PREFIX'); % log current trial info to command window AND timeLogger
@@ -192,7 +181,7 @@ psEntryFn = {
 
 %---------------------prestimulus blank
 prestimulusFn = {
-	@()trackerDrawFixation(eT);
+	%@()trackerDrawFixation(eT);
 	@()trackerDrawEyePosition(eT); % draw the fixation point
 };
 
@@ -210,6 +199,8 @@ stimEntryFn = {
 stimFn = {
 	@()draw(stims); % draw the stimuli
 	@()animate(stims); % animate stimuli for subsequent draw
+	@()trackerDrawFixation(eT);
+	@()trackerDrawStimuli(eT, stims.stimulusPositions);
 	@()trackerDrawEyePosition(eT); % draw the fixation point
 };
 
@@ -233,11 +224,9 @@ stimExitFn = {
 
 %-----------------------if the subject is correct (small reward)
 correctEntryFn = {
-	@()trackerMessage(eT,['TRIAL_RESULT ' num2str(tS.CORRECT)]); % tell EDF trial was a correct
-	@()trackerDrawStatus(eT,'CORRECT! :-)');
+	@()trackerTrialEnd(eT, tS.CORRECT); % send the end trial messages and other cleanup
+	@()trackerDrawStatus(eT,'CORRECT! :-)', stims.stimulusPositions, 0);
 	@()needFlipTracker(me, 0); %for operator screen stop flip
-	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
-	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()needEyeSample(me,false); % no need to collect eye data until we start the next trial
 	@()giveReward(rM); % send a reward
 	@()beep(aM, tS.correctSound); % correct beep
@@ -255,15 +244,14 @@ correctExitFn = {
 	@()updateVariables(me,[],[],true); ... %update the task variables
 	@()update(stims); ... %update our stimuli ready for display
 	@()plot(bR, 1); % actually do our behaviour record drawing
+	@()checkTaskEnded(me); % check the trial / block # and if met stop the task
 };
 
 %----------------------break entry
 breakEntryFn = {
-	@()trackerMessage(eT,['TRIAL_RESULT ' num2str(tS.BREAKFIX)]); %trial incorrect message
-	@()trackerDrawStatus(eT,'BROKE FIX! :-(');
+	@()trackerTrialEnd(eT, tS.BREAKFIX); % send the end trial messages and other cleanup
+	@()trackerDrawStatus(eT,'BROKE FIX! :-(', stims.stimulusPositions, 0);
 	@()needFlipTracker(me, 0); %for operator screen stop flip
-	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
-	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()needEyeSample(me,false);
 	@()hide(stims);
 	@()beep(aM, tS.errorSound);
@@ -272,11 +260,9 @@ breakEntryFn = {
 
 %----------------------inc entry
 incEntryFn = { 
-	@()trackerMessage(eT,['TRIAL_RESULT ' num2str(tS.INCORRECT)]); %trial incorrect message
+	@()trackerTrialEnd(eT, tS.INCORRECT); % send the end trial messages and other cleanup
 	@()trackerDrawStatus(eT,'INCORRECT! :-(', stims.stimulusPositions);
 	@()needFlipTracker(me, 0); %for operator screen stop flip
-	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
-	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()needEyeSample(me,false);
 	@()hide(stims);
 	@()beep(aM, tS.errorSound);
@@ -294,6 +280,7 @@ breakExitFn = {
 	@()updateVariables(me,[],[],false); ... %update the task variables
 	@()update(stims); %update our stimuli ready for display
 	@()plot(bR, 1); % actually do our behaviour record drawing
+	@()checkTaskEnded(me); % check the trial / block # and if met stop the task
 };
 
 %========================================================
@@ -352,12 +339,12 @@ stateInfoTmp = {
 %---------------------------------------------------------------------------------------------
 'pause'		'blank'		inf		pauseEntryFn	{}				{}				pauseExitFn;
 %---------------------------------------------------------------------------------------------
-'blank'		'stimulus'	1		psEntryFn		prestimulusFn	{}				psExitFn;
+'blank'		'stimulus'	2		psEntryFn		prestimulusFn	{}				psExitFn;
 'stimulus'	'incorrect'	5		stimEntryFn		stimFn			maintainFixFn	stimExitFn;
 'incorrect'	'timeout'	0.1		incEntryFn		breakFn			{}				breakExitFn;
 'breakfix'	'timeout'	0.1		breakEntryFn	breakFn			{}				breakExitFn;
 'correct'	'blank'		0.1		correctEntryFn	correctFn		{}				correctExitFn;
-'timeout'	'blank'		tS.tOut	{}				{}				{}				{};
+'timeout'	'blank'		tS.timeOut	{}				{}				{}				{};
 %---------------------------------------------------------------------------------------------
 'calibrate' 'pause'		0.5		calibrateFn		{}				{}				{};
 'offset'	'pause'		0.5		offsetFn		{}				{}				{};

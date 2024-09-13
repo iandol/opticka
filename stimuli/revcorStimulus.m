@@ -1,7 +1,7 @@
 % ========================================================================
-%> @brief revcorStimulus single bar stimulus, inherits from baseStimulus
+%> @brief revcorStimulus stimulus, inherits from baseStimulus
 %>
-%> Copyright ©2014-2023 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2024 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef revcorStimulus < baseStimulus
 	
@@ -132,6 +132,7 @@ classdef revcorStimulus < baseStimulus
 			end
 			function set_sizeOut(me,value)
 				me.sizeOut = value * me.ppd;
+				me.szPx = me.sizeOut;
 			end
 		end
 		
@@ -142,9 +143,13 @@ classdef revcorStimulus < baseStimulus
 		% ===================================================================
 		function draw(me)
 			if me.isVisible && me.tick >= me.delayTicks && me.tick < me.offTicks
-				if (me.nFrame+1 > me.nFrames) && me.nStim < length(me.texture)
-					me.nStim = me.nStim + 1;
+				if (me.nFrame+1 > me.nFrames)
 					me.nFrame = 0;
+					if me.nStim < length(me.texture)
+						me.nStim = me.nStim + 1;
+					else
+						me.nStim = 1;
+					end
 				end
 				Screen('DrawTexture',me.sM.win, me.texture(me.nStim),[ ],...
 					me.mvRect, me.angleOut,me.interpolation,me.alphaOut);
@@ -255,6 +260,7 @@ classdef revcorStimulus < baseStimulus
 					me.dstRect=CenterRectOnPointd(me.dstRect, me.xFinal, me.yFinal);
 				end
 				me.mvRect=me.dstRect;
+				me.szPx = RectWidth(me.mvRect);
 			end
 		end
 
@@ -299,14 +305,14 @@ classdef revcorStimulus < baseStimulus
 
 			noiseType = 1;
 			pxLength = round(me.sizeOut * (1/blockSize));
-			mx = rand(pxLength,pxLength,me.nStimuli);
+			mx = uint8(rand(pxLength,pxLength,me.nStimuli)*255);
 			if matches(me.type,'trinary')
-				mx(mx < (1/3)) = 0;
-				mx(mx > 0 & mx < (2/3)) = 0.5;
-				mx(mx > 0.5 ) = 1;
+				mx(mx < (1/3*255)) = 0;
+				mx(mx > 0 & mx < (2/3*255)) = 127;
+				mx(mx > 0.5*255 ) = 255;
 			else
-				mx(mx < 0.5) = 0;
-				mx(mx > 0) = 1;
+				mx(mx < 0.5*255) = 0;
+				mx(mx > 0) = 255;
 			end
 			% Screen('MakeTexture', WindowIndex, imageMatrix [, optimizeForDrawAngle=0] [, specialFlags=0]
 			% [, floatprecision] [, textureOrientation=0] [, textureShader=0]);

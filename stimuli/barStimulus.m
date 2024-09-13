@@ -1,36 +1,36 @@
 % ========================================================================
 %> @brief barStimulus single bar stimulus, inherits from baseStimulus
 %>
-%> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2024 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef barStimulus < baseStimulus
 	
 	properties %--------------------PUBLIC PROPERTIES----------%
 		%> type of bar: 'solid','checkerboard','random','randomColour','randomN','randomBW'
-		type char               = 'solid'
+		type char				= 'solid'
 		%> width of bar, inf = width of screen, if size is set this is overridden
-		barWidth double         = 1
+		barWidth double			= 1
 		%> length of bar, inf = width of screen, if size is set this is overridden
-		barHeight double        = 4
+		barHeight double		= 4
 		%> contrast multiplier
-		contrast double         = 1
+		contrast double			= 1
 		%> texture scale
-		scale double            = 1
+		scaleTexture double		= 1
 		%> sf in cycles per degree for checkerboard textures
 		sf double               = 1
 		%> texture interpolation: 'nearest','linear','spline','cubic'
-		interpMethod char       = 'nearest'
-		%> For checkerboard, allow timed phase reversal
-		phaseReverseTime double = 0
+		interpMethod char		= 'nearest'
+		%> For checkerboard, allow timed phase reversal every N seconds
+		phaseReverseTime double	= 0
 		%> update() method also regenerates the texture, this can be slow, but 
 		%> normally update() is only called after a trial has finished
-		regenerateTexture logical   = true
+		regenerateTexture logical = true
 		%> for checkerboard: the second colour
-		colour2 double          = [0 0 0 1];
+		colour2 double			= [0 0 0 1];
 		%> modulate the colour
-		modulateColour double   = []
+		modulateColour double	= []
 		%> turn stimulus on/off at X hz, [] diables this
-		visibleRate             = []
+		visibleRate				= []
 	end
 
 	properties (Hidden = true)
@@ -55,7 +55,8 @@ classdef barStimulus < baseStimulus
 		interpMethodList cell = {'nearest','linear','makima','spline','cubic'}
 	end
 	
-	properties (SetAccess = protected, GetAccess = protected)
+	properties (Access = {?baseStimulus})
+		tempTime				= 0
 		visibleTick				= 0
 		visibleFlip				= Inf
 		baseColour
@@ -68,7 +69,7 @@ classdef barStimulus < baseStimulus
 		%> how many frames between phase reverses
 		phaseCounter double = 0
 		allowedProperties = {'modulateColour', 'colour2', 'regenerateTexture', ...
-			'type', 'barWidth', 'barHeight', 'angle', 'speed', 'contrast', 'scale', ...
+			'type', 'barWidth', 'barHeight', 'angle', 'speed', 'contrast', 'scaleTexture', ...
 			'sf', 'interpMethod', 'phaseReverseTime','visibleRate'}
 		ignoreProperties = {'interpMethod', 'matrix', 'matrix2', 'phaseCounter', 'pixelScale'}
 	end
@@ -88,12 +89,13 @@ classdef barStimulus < baseStimulus
 		% ===================================================================
 		function me = barStimulus(varargin)
 			args = optickaCore.addDefaults(varargin,...
-				struct('name','Bar','colour',[1 1 1 1],'size',0,...
+				struct('name','Bar','colour',[1 1 1],'size',0,...
 				'speed',2,'startPosition',0));
 			me=me@baseStimulus(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
 			
 			me.isRect = true; %uses a rect for drawing
+			me.szIsPx = false; % sizeOut will be in deg
 			
 			me.ignoreProperties = [me.ignorePropertiesBase me.ignoreProperties];
 			me.salutation('constructor','Bar Stimulus initialisation complete');
@@ -130,7 +132,7 @@ classdef barStimulus < baseStimulus
 					if strcmp(fn{j},'yPosition'); p.SetMethod = @set_yPositionOut; end
 					if strcmp(fn{j},'colour'); p.SetMethod = @set_colourOut; end
 					if strcmp(fn{j},'alpha'); p.SetMethod = @set_alphaOut; end
-					if strcmp(fn{j},'scale'); p.SetMethod = @set_scaleOut; end
+					if strcmp(fn{j},'scaleTexture'); p.SetMethod = @set_scaleTextureOut; end
 					me.([fn{j} 'Out']) = me.(fn{j}); %copy our property value to our tempory copy
 				end
 			end
@@ -151,14 +153,14 @@ classdef barStimulus < baseStimulus
 
 			mx = ceil(sqrt(me.screenWidth^2 + me.screenHeight^2));
 			if me.angle == 0 || me.angle == 180 || me.angle == 360
-				if me.barWidthOut > me.screenWidth*sLim; me.barWidthOut=me.screenWidth; end
-				if me.barHeightOut > me.screenHeight*sLim; me.barWidthOut=me.screenHeight; end
+				if me.barWidthOut > me.screenWidth*sLim; me.barWidthOut=me.screenWidth*sLim; end
+				if me.barHeightOut > me.screenHeight*sLim; me.barHeightOut=me.screenHeight*sLim; end
 			elseif me.angle == 90 || me.angle == 270
-				if me.barWidthOut > me.screenHeight*sLim; me.barWidthOut=me.screenHeight; end
-				if me.barHeightOut > me.screenWidth*sLim; me.barWidthOut=me.screenWidth; end
+				if me.barWidthOut > me.screenHeight*sLim; me.barWidthOut=me.screenHeight*sLim; end
+				if me.barHeightOut > me.screenWidth*sLim; me.barHeightOut=me.screenWidth*sLim; end
 			else
 				if me.barWidthOut > me.screenWidth*sLim; me.barWidthOut=mx; end
-				if me.barHeightOut > me.screenHeight*sLim; me.barWidthOut=mx; end
+				if me.barHeightOut > me.screenHeight*sLim; me.barHeightOut=mx; end
 			end
 			
 			constructMatrix(me); %make our matrix
@@ -194,14 +196,16 @@ classdef barStimulus < baseStimulus
 			end
 			function set_sizeOut(me,value)
 				me.sizeOut = value;
-				if ~me.inSetup
+				me.szD = me.sizeOut;
+				me.szPx = me.sizeOut * me.ppd;
+				if ~me.inSetup && value > 0
 					me.barHeightOut = me.sizeOut;
 					me.barWidthOut = me.sizeOut;
 				end
 			end
-			function set_scaleOut(me,value)
+			function set_scaleTextureOut(me,value)
 				if value < 1; value = 1; end
-				me.scaleOut = round(value);
+				me.scaleTextureOut = round(value);
 			end
 			function set_colourOut(me, value)
 				me.isInSetColour = true;
@@ -244,8 +248,9 @@ classdef barStimulus < baseStimulus
 				end
 				Screen('DrawTexture',me.sM.win, me.texture,[ ],...
 					me.mvRect, me.angleOut, [], [], colour);
+				me.drawTick = me.drawTick + 1;
 			end
-			me.tick = me.tick + 1;
+			if me.isVisible; me.tick = me.tick + 1; end
 		end
 		
 		% ===================================================================
@@ -255,6 +260,7 @@ classdef barStimulus < baseStimulus
 		% ===================================================================
 		function update(me)
 			resetTicks(me);
+			me.tempTime = 0;
 			if me.sizeOut > 0; me.barHeightOut = me.sizeOut; me.barWidthOut = me.sizeOut; end
 			if me.phaseReverseTime > 0 
 				me.phaseCounter = round( me.phaseReverseTime / me.sM.screenVals.ifi );
@@ -294,11 +300,17 @@ classdef barStimulus < baseStimulus
 				if me.doMotion == 1
 					me.mvRect=OffsetRect(me.mvRect,me.dX_,me.dY_);
 				end
-				if me.phaseReverseTime > 0 && mod(me.tick,me.phaseCounter) == 0
+				if me.verbose && me.tempTime == 0; me.tempTime = GetSecs; end
+				if me.phaseReverseTime > 0 && mod(me.drawTick,me.phaseCounter) == 0
 					tx = me.texture;
 					tx2 = me.texture2;
 					me.texture = tx2;
 					me.texture2 = tx;
+					if me.verbose
+						t = me.tempTime;
+						me.tempTime = GetSecs;
+						fprintf('tick: %i drawtick: %i counter: %i time: %.3f ms\n',me.tick,me.drawTick,me.phaseCounter,(me.tempTime-t)*1e3);
+					end
 				end
 			end
 		end
@@ -317,6 +329,7 @@ classdef barStimulus < baseStimulus
 				if me.verbose; fprintf('!!!>>>Closing texture: %i kind: %i\n',me.texture,Screen(me.texture2,'WindowKind')); end
 				try Screen('Close',me.texture2); end %#ok<*TRYNC>
 			end
+			me.tempTime			= 0;
 			me.texture			= []; 
 			me.texture2			= [];
 			me.matrix			= [];
@@ -358,16 +371,16 @@ classdef barStimulus < baseStimulus
 		end
 		
 		% ===================================================================
-		%> @brief barWidth set method
+		%> @brief scaleTexture set method
 		%>
-		%> @param width of bar in degrees
+		%> @param scale of texture
 		%> @return
 		% ===================================================================
-		function set.scale(me,value)
+		function set.scaleTexture(me,value)
 			if value < 1
 				value = 1;
 			end
-			me.scale = round(value);
+			me.scaleTexture = round(value);
 		end
 		
 		% ===================================================================
@@ -421,7 +434,7 @@ classdef barStimulus < baseStimulus
 				colour = me.getP('colour');
 				alpha = me.getP('alpha');
 				contrast = me.getP('contrast');
-				scale = me.getP('scale');
+				scale = me.getP('scaleTexture');
 				if isinf(me.barWidthOut) || isinf(me.barHeightOut)
 					bwpixels = round(me.screenWidth*me.ppd);
 					blpixels = round(me.screenHeight*me.ppd);
@@ -475,7 +488,7 @@ classdef barStimulus < baseStimulus
 						tmat(:,:,2)=ones(blscale,bwscale) * (colour(2) * contrast);
 						tmat(:,:,3)=ones(blscale,bwscale) * (colour(3) * contrast);
 				end
-				if ~strcmpi(me.type,'checkerboard') || ~strcmpi(me.type,'solid')
+				if ~strcmpi(me.type,'checkerboard') && ~strcmpi(me.type,'solid')
 					aw=0:scale:bwpixels;
 					al=0:scale:blpixels;
 					[a,b]=meshgrid(aw,al);

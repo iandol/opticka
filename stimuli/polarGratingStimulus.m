@@ -37,6 +37,8 @@ classdef polarGratingStimulus < baseStimulus
 		spiralFactor double		= 1
 		%> arc start angle and width in degrees (0 disable)
 		arcValue(1,2) double	= [0 0]
+		%> shoud arc be symmetrical
+		arcSymmetry logical		= false
 		%> do we mask (size in degrees) the centre part?
 		centerMask(1,1) double	= 0
 		%> spatial frequency of the grating
@@ -73,8 +75,8 @@ classdef polarGratingStimulus < baseStimulus
 		phaseOfReverse(1,1) double	= 180
 		%> aspect ratio of the grating
 		aspectRatio(1,1) double		= 1;
-        %> turn stimulus on/off at X hz, [] diables this
-        visibleRate             = []
+		%> turn stimulus on/off at X hz, [] diables this
+		visibleRate					= []
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -92,7 +94,7 @@ classdef polarGratingStimulus < baseStimulus
 
 	properties (SetAccess = protected, GetAccess = {?baseStimulus})
 		%> properties to not show in the UI panel
-		ignorePropertiesUI = 'alpha';
+		ignorePropertiesUI = {'alpha','angle','aspectRatio'}
 	end
 	
 	properties (SetAccess = protected, GetAccess = protected)
@@ -104,7 +106,8 @@ classdef polarGratingStimulus < baseStimulus
 		%> allowed properties passed to object upon construction
 		allowedProperties = {'type','colour2', 'sf', 'tf', 'angle', 'direction', 'phase', 'rotateTexture' ... 
 			'contrast', 'mask', 'reverseDirection', 'speed', 'startPosition', 'aspectRatio' ... 
-			'sigma', 'correctPhase', 'phaseReverseTime', 'phaseOfReverse','visibleRate'}
+			'sigma', 'correctPhase', 'phaseReverseTime', 'phaseOfReverse','visibleRate', ...
+			'spiralFactor','arcValue','arcSymmetry','centerMask'}
 		%> properties to not create transient copies of during setup phase
 		ignoreProperties = {'type', 'scale', 'phaseIncrement', 'correctPhase', 'contrastMult', 'mask', 'typeList'}
 		%> how many frames between phase reverses
@@ -115,9 +118,10 @@ classdef polarGratingStimulus < baseStimulus
 		shader
 		%> these store the current colour so we can check if update needs
 		%to regenerate the shader
+		needUpdate				= false;
 		colourCache
 		colour2Cache
-        visibleTick				= 0
+		visibleTick				= 0
 		visibleFlip				= Inf
 		sf1
 		sf2
@@ -266,8 +270,8 @@ classdef polarGratingStimulus < baseStimulus
 			me.colourCache = me.colourOut; me.colour2Cache = me.colour2Out;
 
 			if ~isempty(me.visibleRateOut) && isnumeric(me.visibleRateOut)
-                me.visibleTick = 0;
-                me.visibleFlip = round((me.screenVals.fps/2) / me.visibleRateOut);
+				me.visibleTick = 0;
+				me.visibleFlip = round((me.screenVals.fps/2) / me.visibleRateOut);
 			else
 				me.visibleFlip = Inf; me.visibleTick = 0;
 			end
@@ -297,6 +301,7 @@ classdef polarGratingStimulus < baseStimulus
 				end
 				c(c<0)=0; c(c>1)=1;
 				me.colourOut = c;
+				me.needUpdate = true;
 			end
 			function set_c2Out(me, value) %#ok<*MCSGP> 
 				len=length(value);
@@ -310,6 +315,7 @@ classdef polarGratingStimulus < baseStimulus
 				end
 				c(c<0)=0; c(c>1)=1;
 				me.colour2Out = c;
+				me.needUpdate = true;
 			end
 			function set_sfOut(me,value)
 				if me.sfRecurse == false
@@ -329,6 +335,8 @@ classdef polarGratingStimulus < baseStimulus
 			end
 			function set_sizeOut(me,value)
 				me.sizeOut = value*me.ppd;
+				me.szPx = me.sizeOut;
+				me.needUpdate = true;
 			end
 			function set_xPositionOut(me, value)
 				me.xPositionOut = value * me.ppd;
@@ -345,8 +353,8 @@ classdef polarGratingStimulus < baseStimulus
 		function update(me)
 
 			resetTicks(me);
-            me.isVisible = true;
-            me.visibleTick = 0;
+			me.isVisible = true;
+			me.visibleTick = 0;
 
 			if me.correctPhase
 				ps=me.calculatePhase;
@@ -356,9 +364,13 @@ classdef polarGratingStimulus < baseStimulus
 			end
 
 			updateSFs(me);
+			if me.mask == true
+				me.maskValue = floor(me.sizeOut/2);
+			else
+				me.maskValue = [];
+			end
 
-			if ~all(me.colourCache(1:3) == me.colourOut(1:3)) || ...
-				~all(me.colour2Cache(1:3) == me.colour2Out(1:3))
+			if me.needUpdate
 				glUseProgram(me.shader);
 				glUniform4f(glGetUniformLocation(me.shader, 'color1'),...
 					me.colourOut(1),me.colourOut(2),me.colourOut(3),me.alphaOut);
@@ -372,11 +384,12 @@ classdef polarGratingStimulus < baseStimulus
 				glUniform1f(glGetUniformLocation(me.shader, 'radius'), me.maskValue);
 				glUseProgram(0);
 				me.colourCache = me.colourOut; me.colour2Cache = me.colour2Out;
+				me.needUpdate = false;
 			end
 
 			if ~isempty(me.visibleRateOut) && isnumeric(me.visibleRateOut)
-                me.visibleTick = 0;
-                me.visibleFlip = round((me.screenVals.fps/2) / me.visibleRateOut);
+				me.visibleTick = 0;
+				me.visibleFlip = round((me.screenVals.fps/2) / me.visibleRateOut);
 			else
 				me.visibleFlip = Inf; me.visibleTick = 0;
 			end
@@ -400,16 +413,28 @@ classdef polarGratingStimulus < baseStimulus
 					me.angleOut, [], [], me.baseColourOut, [], me.rotateMode,...
 					[me.driftPhase, me.sf1, me.contrastOut, me.sigmaOut, me.sf2, 0, 0, 0]);
 				if me.arcValueOut(2) > 0
-					Screen('FillArc', me.sM.win, me.baseColourOut, ...
-						[me.mvRect(1)-2 me.mvRect(2)-2 me.mvRect(3)+2 me.mvRect(4)+2], ...
-						90+me.arcValueOut(1), ...
-						360-me.arcValueOut(2));
+					if me.arcSymmetry
+						a = me.arcValueOut(1) + (me.arcValueOut(2) / 2);
+						b = 180 - me.arcValueOut(2);
+						c = (180+me.arcValueOut(1)) + (me.arcValueOut(2) / 2);
+						d = b;
+						Screen('FillArc', me.sM.win, me.baseColourOut, ...
+							[me.mvRect(1)-2 me.mvRect(2)-2 me.mvRect(3)+2 me.mvRect(4)+2], a, b);
+						Screen('FillArc', me.sM.win, me.baseColourOut, ...
+							[me.mvRect(1)-2 me.mvRect(2)-2 me.mvRect(3)+2 me.mvRect(4)+2], c, d);
+					else
+						a = me.arcValueOut(1) + (me.arcValueOut(2) / 2);
+						b = 360 - me.arcValueOut(2);
+						Screen('FillArc', me.sM.win, me.baseColourOut, ...
+							[me.mvRect(1)-2 me.mvRect(2)-2 me.mvRect(3)+2 me.mvRect(4)+2], a, b);
+					end
 				end
 				if me.centerMask > 0
 					Screen('DrawTexture', me.sM.win, me.cMaskTex, [], me.cMaskRect, [], [], 1, me.baseColourOut, [], []);
 				end
+				me.drawTick = me.drawTick + 1;
 			end
-			me.tick = me.tick + 1;
+			if me.isVisible; me.tick = me.tick + 1; end
 		end
 		
 		% ===================================================================
@@ -433,11 +458,11 @@ classdef polarGratingStimulus < baseStimulus
 				if mod(me.tick,me.phaseCounter) == 0
 					me.driftPhase = me.driftPhase + me.phaseOfReverse;
 				end
-                me.visibleTick = me.visibleTick + 1;
-                if me.visibleTick == me.visibleFlip
-                    me.isVisible = ~me.isVisible;
-                    me.visibleTick = 0;
-                end
+				me.visibleTick = me.visibleTick + 1;
+				if me.visibleTick == me.visibleFlip
+					me.isVisible = ~me.isVisible;
+					me.visibleTick = 0;
+				end
 			end
 		end
 		
@@ -572,6 +597,7 @@ classdef polarGratingStimulus < baseStimulus
 				me.dstRect = CenterRectOnPointd(me.dstRect, me.xFinal, me.yFinal);
 			end
 			me.mvRect=me.dstRect;
+			me.szPx = RectWidth(me.mvRect);
 			setAnimationDelta(me);
 		end
 		
@@ -582,7 +608,11 @@ classdef polarGratingStimulus < baseStimulus
 		% ===================================================================
 		function calculateScale(me,~,~)
 			me.scale = me.sizeOut/(me.size*me.ppd);
-			me.maskValue = me.sizeOut / 2;
+			if me.mask == true
+				me.maskValue = floor(me.sizeOut/2);
+			else
+				me.maskValue = [];
+			end;
 			me.sfRecurse = true;
 			me.sfOut = me.sfCache * me.scale;
 			%fprintf('\nCalculate SFOut: %d | in: %d | scale: %d\n', me.sfOut, me.sfCache, me.scale);

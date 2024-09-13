@@ -1,8 +1,8 @@
 % ========================================================================
 classdef metaStimulus < optickaCore
 %> @class metaStimulus
-%> @brief Manager for multiple opticka stimuli.
-%> 
+%> @brief Manager for multiple stimuli.
+%>
 %> METASTIMULUS manages a collection of stimuli, wrapped in one object. It
 %> allows you to treat this group of heterogenous stimuli as if they are a
 %> single stimulus (draw, update,animate,reset), so for example
@@ -10,10 +10,10 @@ classdef metaStimulus < optickaCore
 %> group without having to call it for each stimulus. You can also pick
 %> individual stimuli by using cell indexing of this object. So for example
 %> metaStimulus{2} actually calls metaStimulus.stimuli{2}.
-%> 
+%>
 %> You can also pass a mask stimulus set, and when you toggle showMask, the mask
 %> stimuli will be drawn instead of the stimuli themselves.
-%> 
+%>
 %> This manager also allows you to build "sets" of stimuli (set stimulusSets to
 %> e.g [2 4 7] would be stimuli 2 4 and 7), and you can quickly switch between
 %> sets. For example you could have a set of fixation cross alone, and another
@@ -23,9 +23,9 @@ classdef metaStimulus < optickaCore
 %>
 %> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
-	
+
 	%--------------------PUBLIC PROPERTIES----------%
-	properties 
+	properties
 		%>cell array of opticka stimuli to manage
 		stimuli cell		= {}
 		%>cell array of mask stimuli
@@ -58,21 +58,21 @@ classdef metaStimulus < optickaCore
 	end
 
 	properties (Hidden = true)
-		%> choice allows to 'filter' a subset of stimulus in the group when 
+		%> choice allows to 'filter' a subset of stimulus in the group when
 		%> calling draw, update, animate and reset
 		choice				= []
 	end
-	
+
 	%--------------------DEPENDENT PROPERTIES----------%
-	properties (SetAccess = private, Dependent = true) 
+	properties (SetAccess = private, Dependent = true)
 		%> n number of stimuli managed by metaStimulus
 		n
 		%> n number of mask stimuli
 		nMask
 	end
-	
+
 	%--------------------VISIBLE PROPERTIES----------%
-	properties (SetAccess = private, GetAccess = public) 
+	properties (SetAccess = private, GetAccess = public)
 		%> stimulus family
 		family				= 'meta'
 		%> structure holding positions for each stimulus
@@ -80,7 +80,7 @@ classdef metaStimulus < optickaCore
 		%> used for optional logging for update times
 		updateLog			= []
 	end
-	
+
 	%--------------------VISIBLE PROPERTIES----------%
 	properties (SetAccess = private, GetAccess = public, Transient = true)
 		lastXPosition		= 0
@@ -88,7 +88,7 @@ classdef metaStimulus < optickaCore
 		lastXExclusion		= []
 		lastYExclusion		= []
 	end
-	
+
 	%--------------------PRIVATE PROPERTIES----------%
 	properties (SetAccess = private, GetAccess = private)
 		%> cache our dependent values for a bit more speed...
@@ -101,11 +101,11 @@ classdef metaStimulus < optickaCore
 		'exclusionChoice', 'stimulusTable', 'tableChoice'}
 		sM 
 	end
-	
+
 	%=======================================================================
 	methods %------------------PUBLIC METHODS
 	%=======================================================================
-		
+
 		% ===================================================================
 		%> @brief Class constructor
 		%>
@@ -118,7 +118,7 @@ classdef metaStimulus < optickaCore
 			me = me@optickaCore(args); %superclass constructor
 			me.parseArgs(args,me.allowedProperties);
 		end
-		
+
 		% ===================================================================
 		%> @brief setup wrapper
 		%>
@@ -132,7 +132,7 @@ classdef metaStimulus < optickaCore
 				else
 					s = [];
 				end
-			end	
+			end
 			if isa(s,'screenManager')
 				for i = 1:me.n
 					setup(me.stimuli{i},s);
@@ -145,7 +145,7 @@ classdef metaStimulus < optickaCore
 				error('metaStimulus setup: no screenManager has been provided!!!')
 			end
 		end
-		
+
 		% ===================================================================
 		%> @brief update wrapper
 		%>
@@ -169,7 +169,7 @@ classdef metaStimulus < optickaCore
 			end
 			%me.updateLog = [me.updateLog toc*1000];
 		end
-		
+
 		% ===================================================================
 		%> @brief draw wrapper
 		%>
@@ -178,32 +178,32 @@ classdef metaStimulus < optickaCore
 		% ===================================================================
 		function draw(me, choice)
 			if exist('choice','var') && isnumeric(choice) %user forces a single stimulus
-				
+
 				for i = choice
 					draw(me.stimuli{i});
 				end
-				
+
 			elseif ~isempty(me.choice) && isnumeric(me.choice) %object forces a single stimulus
-				
+
 				for i = me.choice
 					draw(me.stimuli{i});
 				end
-				
+
 			elseif me.showMask == true && me.nMask_ > 0 %draw mask instead
-				
+
 				for i = 1:me.nMask_
 					draw(me.maskStimuli{i});
 				end
-				
+
 			else
-				
+
 				for i = 1:me.n_
 					draw(me.stimuli{i});
 				end
-				
+
 			end
 		end
-		
+
 		% ===================================================================
 		%> @brief animate wrapper
 		%>
@@ -212,25 +212,25 @@ classdef metaStimulus < optickaCore
 		% ===================================================================
 		function animate(me, choice)
 			if exist('choice','var') && isnumeric(choice) %user forces a stimulus
-				
+
 				for i = choice
 					animate(me.stimuli{i});
 				end
-				
+
 			elseif ~isempty(me.choice) && isnumeric(me.choice) %object forces a single stimulus
-				
+
 				for i = me.choice
 					animate(me.stimuli{i});
 				end
-				
+
 			elseif me.showMask == true && me.nMask_ > 0 %animate mask instead
-				
+
 				for i = 1:me.nMask_
 					animate(me.maskStimuli{i});
 				end
-				
+
 			else
-	
+
 				for i = 1:me.n_
 					animate(me.stimuli{i});
 				end
@@ -279,6 +279,20 @@ classdef metaStimulus < optickaCore
 		end
 
 		% ===================================================================
+		%> @brief update verbosity
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function updateVerbosity(me)
+
+			for i = 1:me.n
+				me.stimuli{i}.verbose = me.verbose;
+			end
+			
+		end
+
+		% ===================================================================
 		%> @brief add tag wrapper
 		%>
 		%> @param
@@ -291,25 +305,25 @@ classdef metaStimulus < optickaCore
 			end
 
 		end
-		
+
 		% ===================================================================
 		%> @brief reset wrapper
 		%>
 		%> @param
 		%> @return
 		% ===================================================================
-		function reset(me, ~)
+		function reset(me)
 
 			for i = 1:me.n
-				try reset(me.stimuli{i}); end %#ok<*TRYNC> 
+				try reset(me.stimuli{i}); end %#ok<*TRYNC>
 			end
-				
+
 			for i = 1:me.nMask
 				try reset(me.maskStimuli{i}); end
 			end
-			
+
 		end
-		
+
 		% ===================================================================
 		%> @brief randomise wrapper
 		%>
@@ -321,11 +335,11 @@ classdef metaStimulus < optickaCore
 			if isempty(me.stimulusTable); return; end
 			logs = '--->>> RANDOMISE Stimulus: ';
 			for i = 1:length(me.stimulusTable)
-				
+
 				stims = me.stimulusTable(i).stimuli;
 				name = me.stimulusTable(i).name;
 				offset = me.stimulusTable(i).offset;
-				
+
 				if ~isempty(stims) && ~isempty(name)
 
 					[r,c] = size(me.stimulusTable(i).values);
@@ -338,8 +352,8 @@ classdef metaStimulus < optickaCore
 					else
 						values = me.stimulusTable(i).values(1,1);
 					end
-					if iscell(values); values = values{1}; end	
-					
+					if iscell(values); values = values{1}; end
+
 					for j=1:length(stims)
 						if strcmpi(name,'xyPosition')
 							me.stimuli{stims(j)}.xPositionOut = values(1);
@@ -364,13 +378,13 @@ classdef metaStimulus < optickaCore
 							end
 						end
 					end
-				
+
 				end
 			end
 			update(me);
 			me.salutation(logs);
 		end
-		
+
 		% ===================================================================
 		%> @brief show sets isVisible=true.
 		%>
@@ -381,9 +395,9 @@ classdef metaStimulus < optickaCore
 			for i = choice
 				show(me.stimuli{i});
 			end
-			if me.verbose;me.salutation('Show',['Show stimuli: ' num2str(choice,'%i ')],true); end
+			if me.verbose;me.logOutput('Show',['Show stimuli: ' num2str(choice,'%i ')],true); end
 		end
-				
+
 		% ===================================================================
 		%> @brief hide sets isVisible=false.
 		%>
@@ -404,11 +418,11 @@ classdef metaStimulus < optickaCore
 		% ===================================================================
 		function showSet(me, set)
 			if ~exist('set','var'); set = me.setChoice; end
-			if set == 0 || isempty(me.stimulusSets) || set > length(me.stimulusSets); return; end			
+			if set == 0 || isempty(me.stimulusSets) || set > length(me.stimulusSets); return; end
 			hide(me);
 			show(me, me.stimulusSets{set});
 		end
-		
+
 		% ===================================================================
 		%> @brief Edit -- fast change a particular value.
 		%>
@@ -430,7 +444,7 @@ classdef metaStimulus < optickaCore
 			end
 			if me.verbose;me.salutation('Edit',['Edited stim: ' num2str(stims) ' Var:' var ' Value: ' num2str(value)],true); end
 		end
-		
+
 		% ===================================================================
 		%> @brief Return the stimulus fixation positions based on fixationChoice
 		%>
@@ -448,7 +462,7 @@ classdef metaStimulus < optickaCore
 				me.lastYPosition = y;
 			end
 		end
-		
+
 		% ===================================================================
 		%> @brief Return the stimulus exclusion positions
 		%>
@@ -468,7 +482,7 @@ classdef metaStimulus < optickaCore
 				me.lastYExclusion = y;
 			end
 		end
-		
+
 		% ===================================================================
 		%> @brief Find the stimulus positions, setting stimulusPositions
 		%> structure
@@ -476,27 +490,31 @@ classdef metaStimulus < optickaCore
 		%> Loop through all stimuli and get the X, Y and size of each stimulus.
 		%> This is added to stimulusPositions structure and is used to pass to
 		%> the eyetracker so it can draw the stimuli locations on the eyetracker
-		%> interface 
+		%> interface
 		%>
 		%> @param ignoreVisible [false] ignore the visibility status of stims
 		%> @return out copy of the stimulusPositions structure
 		% ===================================================================
 		function out = getStimulusPositions(me, ignoreVisible, toDegrees)
-			if ~exist('ignoreVisible','var'); ignoreVisible=false; end
+			if ~exist('ignoreVisible','var') || isempty(ignoreVisible); ignoreVisible=true; end
 			if ~exist('toDegrees','var'); toDegrees = true; end
 			a=1;
 			out = [];
 			for i = 1:me.n_
 				if ignoreVisible; check = true; else; check = me.stimuli{i}.isVisible; end
 				if check && me.stimuli{i}.showOnTracker == true
-					if me.stimuli{i}.isRect
+					if isprop(me.stimuli{i},'xFinal')
 						xy = [me.stimuli{i}.xFinal me.stimuli{i}.yFinal];
 					else
 						xy = [me.stimuli{i}.xPositionOut me.stimuli{i}.yPositionOut];
 					end
 					if toDegrees; xy = me.screen.toDegrees(xy,'xy'); end
 					out(a).x = xy(1); out(a).y = xy(2);
-					out(a).size = me.stimuli{i}.sizeOut / me.ppd_;
+					if ~isempty(me.stimuli{i}.szPx)
+						out(a).size = me.stimuli{i}.szPx / me.ppd_; 
+					else
+						out(a).size = me.stimuli{i}.sizeOut * me.ppd_;
+					end
 					if any(me.fixationChoice == i) 
 						out(a).selected = true;
 					else
@@ -519,6 +537,7 @@ classdef metaStimulus < optickaCore
 		% run(benchmark, runtime, screenManager, forceFullscreen)
 			try
 				warning off
+				updateVerbosity(me);
 				if ~exist('benchmark','var') || isempty(benchmark)
 					benchmark=false;
 				end
@@ -527,10 +546,10 @@ classdef metaStimulus < optickaCore
 				end
 				if ~exist('s','var') || ~isa(s,'screenManager')
 					s = screenManager;
-					s.blend = true; 
+					s.blend = true;
 					s.disableSyncTests = true;
 					s.visualDebug = true;
-					s.bitDepth = 'FloatingPoint32BitIfPossible';
+					s.bitDepth = '8bit';
 				end
 				if ~exist('forceScreen','var'); forceScreen = -1; end
 				if ~exist('showVBL','var') || isempty(showVBL); showVBL = false; end
@@ -555,7 +574,7 @@ classdef metaStimulus < optickaCore
 						s.windowed = [0 0 s.screenVals.screenWidth/2 s.screenVals.screenHeight/2]; %half of screen
 					end
 				end
-			
+
 				if ~s.isOpen
 					open(s);
 				end
@@ -642,8 +661,8 @@ classdef metaStimulus < optickaCore
 				rethrow(ME)				
 			end
 		end
-		
-		
+
+
 		% ===================================================================
 		%> @brief Run single stimulus in a window to preview
 		%>
@@ -651,6 +670,7 @@ classdef metaStimulus < optickaCore
 		function runSingle(me,choice,varargin)
 			me.stimuli{choice}.run(varargin)
 		end
+
 		% ===================================================================
 		%> @brief print current choice if only single stimulus drawn
 		%>
@@ -660,7 +680,7 @@ classdef metaStimulus < optickaCore
 		function printChoice(me)
 			fprintf('%s current choice is: %g\n',me.fullName,me.choice)
 		end
-		
+
 		% ===================================================================
 		%> @brief get n dependent method
 		%> @param
@@ -670,7 +690,7 @@ classdef metaStimulus < optickaCore
 			n = length(me.stimuli);
 			me.n_ = n;
 		end
-		
+
 		% ===================================================================
 		%> @brief get nMask dependent method
 		%> @param
@@ -696,7 +716,7 @@ classdef metaStimulus < optickaCore
 		% ===================================================================
 		%> @brief set stimuli sanity checker
 		%> @param in a stimuli group
-		%> @return 
+		%> @return
 		% ===================================================================
 		function set.stimuli(me,in)
 			if iscell(in) % a cell array of stimuli
@@ -710,7 +730,7 @@ classdef metaStimulus < optickaCore
 				error([me.name ':set stimuli | not a cell array or baseStimulus child']);
 			end
 		end
-		
+
 		% ===================================================================
 		%> @brief subsref allow {} to call stimuli cell array directly
 		%>
@@ -729,7 +749,7 @@ classdef metaStimulus < optickaCore
 					[varargout{1:nargout}] = builtin('subsref',me.stimuli,s);
 			end
 		end
-		
+
 		% ===================================================================
 		%> @brief subsasgn allow {} to assign to the stimuli cell array
 		%>

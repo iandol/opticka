@@ -125,8 +125,8 @@ myStims{10}=imageStimulus('speed',2,'xPosition',-10,'yPosition',10,'size',4,...
 %%
 % a picture stimulus, loading a simple star. Size is in degrees, scaling the whole picture
 myStims{11}=imageStimulus('speed',0,'xPosition',0,'yPosition',5,'size',5,...
-	'fileName',[myStims.paths.root '/stimuli/star.png'],...
-	'modulateColour',[0.7 0.7 0.2], 'name', 'Image');
+	'filePath',[myStims.paths.root '/stimuli/star.png'],...
+	'modulateColour',[0.7 0.7 0.2], 'name', 'Pupil Core Marker');
 
 %%
 % a movie stimulus, by default this loads a movie from the opticka
@@ -146,7 +146,7 @@ myStims{12}=movieStimulus('speed', 1, 'xPosition', -7, 'yPosition', -10,...
 % experimental protocols, see stateMachine() for more details.
 myTask = taskSequence(); %new taskSequence object instance
 myTask.nBlocks		= 2; %number of blocks
-myTask.trialTime	= 2; %time of stimulus display: 2 seconds
+myTask.trialTime	= 1; %time of stimulus display: 2 seconds
 myTask.isTime		= 0.25; %inter-trial time: 0.25 seconds
 myTask.ibTime		= 0.5; %inter-block time: 1 second
 myTask.realTime		= true; %we use real time for switching trials, false uses a tick timer updated every flip
@@ -198,7 +198,7 @@ randomiseTask(myTask);
 % initialisation.
 myScreen = screenManager('distance', 57.3,... %display distance from observer
 	'pixelsPerCm', 36,... %calibration value for pixel density, measure using calibrateSize()
-	'backgroundColour', [0.5 0.5 0.5],... %initial background colour
+	'backgroundColour', [0.5 0.5 0.5],... %initial background colour, using 0 - 1 colour range
 	'blend', true,... %enable OpenGL blending, you can also set blend modes when needed
 	'debug', false,... %enable debug mode?
 	'windowed', [],... %set to a widthxheight for debugging i.e. [800 600]; set to empty for fullscreen

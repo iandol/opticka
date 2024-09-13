@@ -130,8 +130,17 @@ pauseExitFcn = {
 }; 
 
 prefixEntryFcn = { 
-	@()needFlip(me, true);
-	@()startRecording(eT); %start recording eye position data again
+	@()needFlip(me, true, 1); % enable the screen and trackerscreen flip
+	@()needEyeSample(me, true); % make sure we start measuring eye position
+	@()getStimulusPositions(stims); % make a struct eT can use for drawing stim positions
+	@()hide(stims); % hide all stimuli
+	% update the fixation window to initial values
+	@()resetFixationHistory(eT); % reset the recent eye position history
+	@()resetExclusionZones(eT); % reset the exclusion zones on eyetracker
+	@()updateFixationValues(eT,tS.fixX,tS.fixY,[],tS.firstFixTime); %reset fixation window
+	% send the trial start messages to the eyetracker
+	@()trackerTrialStart(eT, getTaskIndex(me));
+	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
 };
 
 prefixFcn = {
@@ -140,17 +149,7 @@ prefixFcn = {
 };
 
 prefixExitFcn = {
-	@()resetFixationHistory(eT); % reset the recent eye position history
-	@()resetExclusionZones(eT); % reset the exclusion zones on eyetracker
-	@()updateFixationValues(eT,tS.fixX,tS.fixY,[],tS.firstFixTime); %reset fixation window
-	@()trackerMessage(eT,'V_RT MESSAGE END_FIX END_RT'); % Eyelink commands
-	@()trackerMessage(eT,sprintf('TRIALID %i',getTaskIndex(me))); %Eyelink start trial marker
-	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
-	@()trackerClearScreen(eT); % blank the eyelink screen
-	@()trackerDrawFixation(eT); % draw the fixation window
-	@()trackerDrawStimuli(eT,stims.stimulusPositions); %draw location of stimulus on eyelink
-	@()statusMessage(eT,'Initiate Fixation...'); %status text on the eyelink
-	@()needEyeSample(me,true); % make sure we start measuring eye position
+	@()trackerDrawStatus(eT,'Start fix...', stims.stimulusPositions);
 };
 
 %fixate entry
@@ -180,12 +179,12 @@ fixExitFcn = {
 
 %what to run when we enter the stim presentation state
 stimEntryFcn = { 
-	@()doSyncTime(me); %EDF sync message
-	@()doStrobe(me,true)
+	@()doSyncTime(me); %eyetracker sync time=0 message
+	@()doStrobe(me,true);
 };
 
 %what to run when we are showing stimuli
-stimFcn =  { 
+stimFcn = {
 	@()draw(stims);
 	@()drawPhotoDiodeSquare(s,[1 1 1]);
 	@()animate(stims); % animate stimuli for subsequent draw
@@ -227,7 +226,6 @@ correctExitFcn = {
 	@()updateTask(me,tS.CORRECT); %make sure our taskSequence is moved to the next trial
 	@()updateVariables(me); %randomise our stimuli, and set strobe value too
 	@()update(stims); %update our stimuli ready for display
-	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions
 	@()drawTimedSpot(s, 0.5, [0 1 0 1], 0.2, true); %reset the timer on the green spot
 	@()updatePlot(bR, me); %update our behavioural plot
 	@()drawnow;
@@ -255,14 +253,27 @@ incFcn = {
 	@()drawPhotoDiodeSquare(s,[0 0 0]);
 };
 
-%incorrect / break exit
-incExitFcn = { 
-	@()updateVariables(me,[],[],false); %randomise our stimuli, don't run updateTask(task), and set strobe value too
-	@()update(stims); %update our stimuli ready for display
-	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions
-	@()checkTaskEnded(me); %check if task is finished
-	@()updatePlot(bR, me); %update our behavioural plot, must come before updateTask() / updateVariables()
-	@()drawnow;
+%--------------------incorrect exit
+incExitFcn = {
+	@()beep(aM, tS.errorSound);
+	@()logRun(me,'INCORRECT'); %fprintf current trial info
+	@()trackerDrawStatus(eT,'INCORRECT! :-(', stims.stimulusPositions, 0);
+	@()needFlipTracker(me, 0); %for operator screen stop flip
+	@()updateVariables(me); % randomise our stimuli, set strobe value too
+	@()update(stims); % update our stimuli ready for display
+	@()resetAll(eT); % resets the fixation state timers
+	@()plot(bR, 1); % actually do our drawing
+};
+%--------------------break exit
+breakExitFcn = {
+	@()beep(aM, tS.errorSound);
+	@()logRun(me,'BREAK_FIX'); %fprintf current trial info
+	@()trackerDrawStatus(eT,'BREAK_FIX! :-(', stims.stimulusPositions, 0);
+	@()needFlipTracker(me, 0); %for operator screen stop flip
+	@()updateVariables(me); % randomise our stimuli, set strobe value too
+	@()update(stims); % update our stimuli ready for display
+	@()resetAll(eT); % resets the fixation state timers
+	@()plot(bR, 1); % actually do our drawing
 };
 
 %break entry

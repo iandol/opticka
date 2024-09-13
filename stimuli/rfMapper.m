@@ -28,6 +28,8 @@ classdef rfMapper < barStimulus
 		useEyetracker = false
 		%> use dummy eyetracker
 		dummyMode = true
+		%> pass some settings
+		eyeSettings = []
 	end
 	
 	properties (Hidden = true)
@@ -67,7 +69,7 @@ classdef rfMapper < barStimulus
 	
 	%=======================================================================
 	methods %------------------PUBLIC METHODS
-		%=======================================================================
+	%=======================================================================
 		
 		% ===================================================================
 		%> @brief Class constructor
@@ -79,7 +81,10 @@ classdef rfMapper < barStimulus
 		%> @return instance of the class.
 		% ===================================================================
 		function me = rfMapper(varargin)
-			args = optickaCore.addDefaults(varargin,struct('backgroundColour',[0 0 0 0],'name','rfMapper'));
+			args = optickaCore.addDefaults(varargin,...
+				struct('backgroundColour',[0 0 0 0],...
+				'barLength',6,...
+				'name','rfMapper'));
 			me=me@barStimulus(args); %we call the superclass constructor first
 			me.salutation('constructor','rfMapper initialisation complete');
 		end
@@ -99,18 +104,6 @@ classdef rfMapper < barStimulus
 				if isfield(rE.reward,'port') && ~isempty(rE.reward.port); rM.port = rE.reward.port; end
 				if isfield(rE.reward,'board') && ~isempty(rE.reward.board); rM.board = rE.reward.board; end	
 			end
-			
-			%------initialise an audioManager for beeps,playing sounds etc.
-			aM.device = rE.audioDevice;
-			if isempty(aM.device) || aM.device >= 0
-				aM.silentMode = false;
-				reset(aM);
-				if ~aM.isSetup;	try setup(aM); end; end
-				aM.beep(2000,0.1,0.1);
-			else
-				reset(aM);
-				aM.silentMode = true;
-			end
 					
 			if isempty(rE.screen); rE.initialise; end
 			me.useEyetracker = false;
@@ -124,7 +117,7 @@ classdef rfMapper < barStimulus
 				sM.bitDepth = '8bit';
 				oldbg = sM.backgroundColour;
 				sM.backgroundColour = me.colourList{me.bgcolourIndex};
-				open(sM);
+				if ~sM.isOpen; open(sM); end
 				setup(me, sM);
 				if me.useEyetracker
 					try rM.open; end
@@ -140,9 +133,8 @@ classdef rfMapper < barStimulus
 				yOut = 0;
 				me.rchar='';
 				Priority(MaxPriority(sM.win)); %bump our priority to maximum allowed
-				Screen('TextFont', sM.win, me.monoFont);
+				%Screen('TextFont', sM.win, me.monoFont);
 				FlushEvents;
-				HideCursor;
 				if ~sM.debug; ListenChar(-1); end
 				me.tick = 1;
 				me.stopTask = false;
@@ -154,22 +146,23 @@ classdef rfMapper < barStimulus
 					if me.useEyetracker % intitate fixation
 						resetAll(eT);
 						isFix = '';
-						updateFixationValues(eT, [], [], [], eT.fixation.time);
-						trackerDrawStatus(eT,'Initiate Fixation');
+						updateFixationValues(eT, eT.fixation.X, eT.fixation.Y, eT.fixation.initTime, eT.fixation.time,eT.fixation.radius,eT.fixation.strict);
+						trackerDrawStatus(eT,'Initiate Fixation',[],0);
 						statusMessage(eT,'Initiate Fixation...');
 						while ~strcmpi(isFix,'fix') && ~strcmpi(isFix,'break')
 							drawBackground(sM,me.backgroundColour);
 							if me.showGrid; drawGrid(sM); end
-							drawCross(sM, 0.75, [1 1 1 1], 0, 0, 0.1, true, 0.2);
+							drawCross(sM, 0.75, [1 1 1 1], eT.fixation.X, eT.fixation.Y, 0.15, true, 0.2);
 							flip(sM);
+							trackerFlip(eT);
 							getSample(eT);
 							isFix = testSearchHoldFixation(eT,'fix','break');
 							[mX, mY, me.buttons] = GetMouse(sM.screen);
 							checkKeys(me,mX,mY); FlushEvents('keyDown');
 						end
 						if strcmpi(isFix,'break')
-							fprintf('--->>> Broke initiate fixation...\n');
-							trackerDrawStatus(eT,'Broke Initiate Fixation');
+							fprintf('-->> Broke initiate fixation...\n');
+							trackerDrawStatus(eT,'Broke Initiate Fixation',[],0);
 							statusMessage(eT,'Subject Broke Initial Fixation!');
 							vbl = flip(sM); tNow = vbl + 0.75;
 							while vbl <= tNow
@@ -183,7 +176,7 @@ classdef rfMapper < barStimulus
 							continue;
 						end
 						updateFixationValues(eT, [], [], [], me.stimTime);
-						trackerDrawStatus(eT,'Show Stimulus');
+						trackerDrawStatus(eT,'Show Stimulus',[],0);
 						statusMessage(eT,'Show Stimulus...');
 					end
 					%================================================================
@@ -212,24 +205,23 @@ classdef rfMapper < barStimulus
 							end
 						end
 						if me.useEyetracker
-							drawCross(sM, 0.75, [1 1 1 1], 0, 0, 0.1, true, 0.6); 
+							drawCross(sM, 0.8, [1 1 1 1], eT.fixation.X, eT.fixation.Y, 0.15, true, 0.6); 
 						end
 						xOut = (mX - sM.xCenter)/me.ppd;
 						yOut = (mY - sM.yCenter)/me.ppd;
-						if me.showText
-							%draw text
+						if me.showText %draw text
 							width=abs(me.dstRect(1)-me.dstRect(3))/me.ppd;
 							height=abs(me.dstRect(2)-me.dstRect(4))/me.ppd;
 							t=sprintf('X = %+.2f | Y = %+.2f ',xOut,yOut);
 							t=[t sprintf('| W = %.2f H = %.2f ',width,height)];
-							t=[t sprintf('| Scale = %i ',me.scaleOut)];
+							t=[t sprintf('| Scale = %i ',me.scaleTextureOut)];
 							t=[t sprintf('| SF = %.2f ',me.sfOut)];
 							t=[t sprintf('| Texture = %g',me.textureIndex)];
 							t=[t sprintf('| Buttons: %i\t',me.buttons)];
 							if ischar(me.rchar); t=[t sprintf(' | Char: %s ',me.rchar)]; end
-							Screen('DrawText', sM.win, t, 5, 5, [0.5 0.25 0]);
-							Screen('DrawingFinished', sM.win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
+							Screen('DrawText', sM.win, t, 5, 5, [0 0 0]);
 						end
+						finishDrawing(sM);
 						animate(me);
 						if me.buttons(2) == 1
 							me.xClick = [me.xClick xOut];
@@ -248,12 +240,13 @@ classdef rfMapper < barStimulus
 						end
 						me.dstRect=CenterRectOnPointd(me.dstRect, mX, mY);
 						flip(sM);
+						if me.useEyetracker; trackerFlip(eT); end
 						me.tick = me.tick + 1;
 					end
 					if me.useEyetracker
 						statusMessage(eT,'Stimulus turned off...');
-						trackerDrawStatus(eT,'End trial...');
-						fprintf('--->>> Fixation result: %s\n',isFix);
+						trackerDrawStatus(eT,'End trial...',[],0);
+						fprintf('-->> Fixation result: %s\n',isFix);
 						if strcmpi(isFix,'fix')
 							aM.beep(2000, 0.1, 0.1);
 							rM.giveReward();
@@ -263,7 +256,7 @@ classdef rfMapper < barStimulus
 							aM.beep(250, 0.6, 1);
 							tOut = 2;
 						end
-						fprintf('--->>> Given %i rewards...\n',nRewards);
+						fprintf('-->> Given %i rewards...\n',nRewards);
 						vbl = flip(sM); tNow = vbl + tOut;
 						while vbl <= tNow
 							drawBackground(sM,me.backgroundColour);
@@ -274,25 +267,25 @@ classdef rfMapper < barStimulus
 						end
 					end
 				end
-				
+
 				try close(eT); end
 				try close(sM); end
 				sM.bitDepth = oldbd;
 				sM.backgroundColour = oldbg;
 				Priority(0);ListenChar(0); ShowCursor;
 				if ~isempty(me.xClick) && length(me.xClick)>1
-					me.drawMap; 
+					drawMap(me); 
 				end
 				me.fhandle = [];
 				me.ax = [];
 				
-			catch ME
+			catch ERR
 				try close(eT); end
 				try close(me.sM); end
 				try reset(me); end
 				Priority(0); ListenChar(0); ShowCursor;
 				sca;
-				rethrow(ME);
+				rethrow(ERR);
 			end
 		end
 		
@@ -574,23 +567,23 @@ classdef rfMapper < barStimulus
 						
 					case '3#'
 						
-						ol = me.scaleOut;
+						ol = me.scaleTextureOut;
 						switch me.stimulus
 							case 'bar'
-								me.scaleOut = me.scaleOut - 1;
-								if me.scaleOut < 1;me.scaleOut = 1;end
-								nw = me.scaleOut;
+								me.scaleTextureOut = me.scaleTextureOut - 1;
+								if me.scaleTextureOut < 1;me.scaleTextureOut = 1;end
+								nw = me.scaleTextureOut;
 						end
 						if ol~=nw;me.regenerate;end
 							
 					case '4$'
 						
-						ol = me.scaleOut;
+						ol = me.scaleTextureOut;
 						switch me.stimulus
 							case 'bar'
-								me.scaleOut = me.scaleOut + 1;
-								if me.scaleOut >50;me.scaleOut = 50;end
-								nw = me.scaleOut;
+								me.scaleTextureOut = me.scaleTextureOut + 1;
+								if me.scaleTextureOut >50;me.scaleTextureOut = 50;end
+								nw = me.scaleTextureOut;
 						end
 						if ol~=nw;me.regenerate;end
 							
@@ -599,7 +592,7 @@ classdef rfMapper < barStimulus
 						switch me.stimulus
 							case 'bar'
 								me.sfOut = me.sfOut + 0.1;
-								if me.sfOut > 10;me.scaleOut = 10;end
+								if me.sfOut > 10;me.scaleTextureOut = 10;end
 						end
 						nw = me.sfOut;
 						if ol~=nw;me.regenerate;end
@@ -679,6 +672,8 @@ classdef rfMapper < barStimulus
 		function regenerate(me)
 			width = abs(me.dstRect(3)-me.dstRect(1));
 			height = abs(me.dstRect(4)-me.dstRect(2));
+			if width < 5; width = 5; end
+			if height < 5; height = 5; end
 			if width ~= height
 				me.sizeOut = 0;
 			end

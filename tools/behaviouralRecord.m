@@ -18,13 +18,14 @@ classdef behaviouralRecord < optickaCore
 		date				= []
 		info				= ''
 		xAll				= []
-		yAll				= [];
+		yAll				= []
+		pupilAll			= []
 		correctStateName	= "correct"
 		correctStateValue	= 1;
 		breakStateName		= ["breakfix", "incorrect"]
-		breakStateValue		= -1;
-		rewardTime			= 150;
-		rewardVolume		= 3.6067e-04; %for 1ms
+		breakStateValue		= -1
+		rewardTime			= 300
+		rewardVolume		= 3.6067e-04 %for 1ms
 	end
 	
 	properties (GetAccess = public, SetAccess = protected)
@@ -79,7 +80,9 @@ classdef behaviouralRecord < optickaCore
 		% ===================================================================
 		function plotPerformance(me)
 			me.plotOnly = true;
-			createPlot(me);
+			if isempty(me.h) || ~(isfield(me.h,'root') && isgraphics(me.h.root))
+				createPlot(me);
+			end
 			updatePlot(me);
 			plot(me);
 			me.plotOnly = false;
@@ -105,7 +108,12 @@ classdef behaviouralRecord < optickaCore
 				eL.fixation.initTime = 1;
 			end
 			tx = {['START @ ' char(me.date)]};
-			tx{end+1} = ['RUN = ' me.comment];
+			if ~isempty(me.comment)
+				c=char(me.comment(1,:));
+			else
+				c = '';
+			end
+			tx{end+1} = ['RUN = ' c];
 			tx{end+1} = ['RADIUS = ' num2str(eL.fixation.radius)];
 			tx{end+1} = ' ';
 			tx{end+1} = ['TIME = ' num2str(eL.fixation.time)];
@@ -145,11 +153,11 @@ classdef behaviouralRecord < optickaCore
 			me.h.box = tiledlayout(me.h.panel,3,3);
 			me.h.box.Padding='compact';
 			me.h.axis1 = nexttile(me.h.box, [2 2]); me.h.axis1.FontName = SansFont;
-			me.h.axis2 = nexttile(me.h.box, [1 2]); me.h.axis2.FontName = SansFont;
+			me.h.axis2 = nexttile(me.h.box); me.h.axis2.FontName = SansFont;
 			me.h.axis3 = nexttile(me.h.box); me.h.axis3.FontName = SansFont;
 			me.h.axis4 = nexttile(me.h.box); me.h.axis4.FontName = SansFont;
 			me.h.axis5 = nexttile(me.h.box); me.h.axis5.FontName = SansFont;
-			
+			me.h.axis6 = nexttile(me.h.box); me.h.axis5.FontName = SansFont;
 
 			figure(me.h.root);
 			colormap(me.h.root, 'turbo');
@@ -159,26 +167,31 @@ classdef behaviouralRecord < optickaCore
 			xlabel(me.h.axis3, 'Group');
 			xlabel(me.h.axis4, '#');
 			xlabel(me.h.axis5, 'x');
+			xlabel(me.h.axis6, 'Sample');
 			ylabel(me.h.axis1, 'Yes / No');
 			ylabel(me.h.axis2, 'Number #');
 			ylabel(me.h.axis3, '% success');
 			ylabel(me.h.axis4, '% success');
 			ylabel(me.h.axis5, 'y');
+			xlabel(me.h.axis6, 'Pupil Size');
 			title(me.h.axis1,'Success () / Fail ()');
 			title(me.h.axis2,'Response Times');
 			title(me.h.axis3,'Hit (blue) / Miss (red)');
 			title(me.h.axis4,'Average (n=10) Hit / Miss %');
 			title(me.h.axis5,'Last Eye Position');
-			set([me.h.axis1 me.h.axis2 me.h.axis3 me.h.axis4 me.h.axis5], ...
+			title(me.h.axis6,'Last Pupil Size');
+			set([me.h.axis1 me.h.axis2 me.h.axis3 me.h.axis4 me.h.axis5 me.h.axis6], ...
 				{'Box','XGrid','YGrid','FontName'},{'on','on','on',SansFont});
+			WaitSecs('YieldSecs',0.02);
 			drawnow;
+			WaitSecs('YieldSecs',0.02);
 			me.isOpen = true;
 		end
 		
 		% ===================================================================
 		function updatePlot(me, rE)
 		%> @fn  updatePlot 
-		%> @brief updates the behaviouralRecord details, use drawPlot() to draw it
+		%> @brief updates the behaviouralRecord details, use plot() to draw it
 		%> 
 		%> @param rE runExperiment object
 		% ===================================================================
@@ -209,11 +222,18 @@ classdef behaviouralRecord < optickaCore
 			end
 			if exist('eT','var')
 				me.rt2(me.tick) = eT.fixInitLength * 1e3;
-				me.radius(me.tick) = eT.fixation.radius;
+				if length(eT.fixation.radius) == 1
+					me.radius(me.tick) = eT.fixation.radius;
+				elseif length(eT.fixation.radius) == 2
+					me.radius(me.tick) = sqrt(eT.fixation.radius(1)^2 + eT.fixation.radius(1)^2);
+				else
+					me.radius(me.tick) = NaN;
+				end
 				me.time(me.tick) = mean(eT.fixation.time);
 				me.inittime(me.tick) = eT.fixation.initTime;
 				me.xAll = eT.xAll;
 				me.yAll = eT.yAll;
+				me.pupilAll = eT.pupilAll;
 			else
 				me.rt2(me.tick) = NaN;
 				me.radius(me.tick) = NaN;
@@ -225,10 +245,11 @@ classdef behaviouralRecord < optickaCore
 				me.trials(n).now = datetime('now');
 				me.trials(n).info = me.info;
 				me.trials(n).tick = me.tick;
-				me.trials(n).comment = me.comment;
+				me.trials(n).comment = '';
 				me.trials(n).response = me.response(n);
 				me.trials(n).xAll = me.xAll;
 				me.trials(n).yAll = me.yAll;
+				me.trials(n).pupilAll = me.pupilAll;
 			end
 		end
 		
@@ -320,7 +341,7 @@ classdef behaviouralRecord < optickaCore
 			else
 				if ~isempty(me.xAll)
 					hold(me.h.axis5,'off');
-					plot(me.h.axis5, me.xAll, me.yAll, 'b.','MarkerSize',15,'Color',[0.5 0.5 0.8]);
+					plot(me.h.axis5, me.xAll, me.yAll, '-','Color',[0.5 0.5 0.8]);
 					hold(me.h.axis5,'on');
 					plot(me.h.axis5, me.xAll(1), me.yAll(1), 'g.','MarkerSize',18);
 					plot(me.h.axis5, me.xAll(end), me.yAll(end), 'r.','MarkerSize',18,'Color',[1 0.5 0]);
@@ -329,28 +350,50 @@ classdef behaviouralRecord < optickaCore
 			axis(me.h.axis5, 'ij');
 			xlim(me.h.axis5,[-15 15]);
 			ylim(me.h.axis5,[-15 15]);
+
+			%axis 6
+			if me.plotOnly && length(me.trials) > 1
+				set(me.h.axis6,'NextPlot','add')
+				for i = 1:length(me.trials)
+					if isfield(me.trials(i),'pupilAll')
+						plot(me.h.axis6, me.trials(i).pupilAll, 'k-');
+					end
+				end
+			else
+				if ~isempty(me.pupilAll)
+					plot(me.h.axis6, me.pupilAll,'k-');
+				end
+			end
 			
-			set([me.h.axis1 me.h.axis2 me.h.axis3 me.h.axis4 me.h.axis5], ...
+			set([me.h.axis1 me.h.axis2 me.h.axis3 me.h.axis4 me.h.axis5 me.h.axis6], ...
 				{'Box','XGrid','YGrid','FontName'},{'on','on','on',me.SansFont});
 			
 			xlabel(me.h.axis1, 'Trial Number')
 			xlabel(me.h.axis2, 'Averaged Point')
 			xlabel(me.h.axis4, 'Time (ms)')
 			xlabel(me.h.axis5, 'X')
+			xlabel(me.h.axis6, 'Sample')
 			ylabel(me.h.axis2, '% success')
 			ylabel(me.h.axis3, '% success')
 			ylabel(me.h.axis4, 'N')
 			ylabel(me.h.axis5, 'Y')
+			ylabel(me.h.axis6, 'Pupil Size')
 			title(me.h.axis1,['Success (' num2str(hitn) ') / Fail (all=' num2str(missn) ' | break=' num2str(breakn) ' | abort=' num2str(missn-breakn) ')'])
 			title(me.h.axis4,sprintf('Time:  total: %g | fixinit: %g',mean(me.rt1),mean(me.rt2)));
 			title(me.h.axis3,'Hit (blue) / Miss (red)')
 			title(me.h.axis2,'Average (n=10) Hit / Miss %')
 			title(me.h.axis5,'Last Eye Position');
+			title(me.h.axis6,'Last Pupil Data');
 
+			if ~isempty(me.comment)
+				c=char(me.comment(1,:));
+			else
+				c = '';
+			end
 			t = {['START @ ' char(me.date)]};
 			try d = me.trials(end).now - me.startTime; catch; d = 0; end
 			t{end+1} = ['RUN time = ' char(d)];
-			t{end+1} = ['RUN:' me.comment];
+			t{end+1} = ['RUN: ' c];
 			t{end+1} = ['INFO:' me.info];
 			if ~isempty(me.radius) && ~isempty(me.inittime) && ~isempty(me.time)
 				t{end+1} = ['RADIUS (red) b|n = ' num2str(me.radius(end)) 'deg'];
@@ -359,7 +402,9 @@ classdef behaviouralRecord < optickaCore
 			end
 			t{end+1} = ' ';
 			if ~isempty(me.rt1)
-				t{end+1} = ['Last/Mean Init Time = ' num2str(me.rt2(end)) ' / ' num2str(mean(me.rt2)) 'secs | Last/Mean Init+Fix = ' num2str(me.rt1(end)) ' / ' num2str(mean(me.rt1)) 'secs'];
+				t{end+1} = ['Last/Mean Init Time = ' num2str(me.rt2(end)) ...
+					' / ' num2str(mean(me.rt2)) 'secs | Last/Mean Init+Fix = ' ...
+					num2str(me.rt1(end)) ' / ' num2str(mean(me.rt1)) 'secs'];
 			end
 			t{end+1} = ['Overall | Latest (n=10) Hit Rate = ' num2str(hitmiss) ' | ' num2str(avg)];
 			t{end+1} = sprintf('Estimated Volume at %gms TTL = %g mls', me.rewardTime, (me.rewardVolume*me.rewardTime)*hitn);
@@ -374,7 +419,8 @@ classdef behaviouralRecord < optickaCore
 				startt = length(me.trials)-10; endt = length(me.trials);
 			end
 			for i = startt:endt
-				t{end+1} = ['#' num2str(i) '<' num2str(me.trials(i).response) '>: ' me.trials(i).info ' <> ' me.trials(i).comment];
+				t{end+1} = ['#' num2str(i) '<' num2str(me.trials(i).response) '>: ' ...
+					char(me.trials(i).info)];
 			end
 			me.h.info.Value = t';
 			if ~me.plotOnly
@@ -400,7 +446,7 @@ classdef behaviouralRecord < optickaCore
 			me.inittime = [];
 			me.xAll = [];
 			me.yAll = [];
-			me.comment = '';
+			me.comment = "";
 		end
 		
 		% ===================================================================

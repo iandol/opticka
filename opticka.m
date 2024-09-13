@@ -18,7 +18,7 @@ classdef opticka < optickaCore
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> version number
-		optickaVersion char		= '2.15.14'
+		optickaVersion char		= '2.16.1'
 		%> is this a remote instance?
 		remote					= false
 	end
@@ -58,16 +58,19 @@ classdef opticka < optickaCore
 		uiPrefsList cell = {'OKOmniplexIP','OKMonitorDistance','OKpixelsPerCm',...
 			'OKbackgroundColour','OKAntiAliasing','OKbitDepth','OKUseRetina',...
 			'OKHideFlash','OKlogFrames','OKlogStateTimers','OKUsePhotoDiode',...
-			'OKResearcher','OKSubject',...
+			'OKResearcher','OKSubject','OKLabName',...
+			'OKSessionPrefix','OKLabLocation','OKAlyxIP',...
 			'OKaudioDevice','OKverbosityLevel',...
-			'OKarduinoPort','OKArduinoType',...
-			'OKDebug','OKOpenGLBlending','OKWindowSize',...
-			'OKUseDummy','OKINTANPort', ...
-			'OKCalibProp','OKELManualMode',...
-			'OKTobiiCal','OKTobiiVal',...
-			'OKTobiiManualMode', 'OKTobiiTrackingMode',...
+			'OKarduinoPort','OKarduinoType',...
+			'OKrewardType','OKTTLPin','OKTTLTime',...
+			'OKOpenGLBlending','OKWindowSize',...
+			'OKUseDummy','OKINTANPort', 'OKstrobeOFF',...
+			'OKELCalibProp','OKELCalibDevice','OKELManualMode','OKELCalibBeep',...
+			'OKTobiiCal','OKTobiiVal','OKTobiiAddress',...
+			'OKTobiiManualMode', 'OKTobiiTrackingMode','OKTobiiCalStimulus',...
 			'OKTobiiTracker','OKTobiiOperatorScreen',...
-			'OKiRecCal','OKiRecVal','OKiRecAddress','OKiRecTCP','OKiRecUDP'}
+			'OKiRecCal','OKiRecVal','OKiRecAddress','OKiRecTCP','OKiRecUDP',...
+			'OKiRecCalStim','OKiRecSize','OKiRecMovie'}
 	end
 	
 	%=======================================================================
@@ -173,7 +176,7 @@ classdef opticka < optickaCore
 				if me.oc.checkStatus > 0 %check again to make sure we are still open
 					me.oc.write('--readStimulus--');
 					pause(0.25);
-					tic
+					tt=tic;
 					if sendLog == false
 						if ~isempty(me.r.runLog);tLog = me.r.runLog;end
 						me.r.deleteRunLog; %so we don't send too much data over TCP
@@ -183,7 +186,7 @@ classdef opticka < optickaCore
 					if sendLog == false
 						if ~isempty(tLog);me.r.restoreRunLog(tLog);end
 					end
-					fprintf('>>>Opticka: It took %g seconds to write and send stimulus to Omniplex machine\n',toc);
+					fprintf('>>>Opticka: It took %g seconds to write and send stimulus to Omniplex machine\n',toc(tt));
 					loop = 1;
 				while loop < 10
 					in = me.oc.read(0);
@@ -214,7 +217,7 @@ classdef opticka < optickaCore
 		%> @brief Start the UI
 		% ===================================================================
 			try
-				t = tic;
+				tt = tic;
 				jv = version('-java');
 				if contains(jv,'not enabled');isjava=false;else;isjava=true;end
 				if isjava
@@ -264,12 +267,13 @@ classdef opticka < optickaCore
 				end
 
 				me.ui = opticka_ui(me); %our GUI file
+
+				me.store.protocolsPath = me.paths.protocols;
 				
 				loadPrefs(me);
 				getScreenVals(me);
 				getTaskVals(me);
 				loadCalibration(me);
-
 				me.ui.getEyetrackerSettings();
 				
 				if exist([me.paths.root filesep 'DefaultStateInfo.m'],'file')
@@ -279,13 +283,13 @@ classdef opticka < optickaCore
 					me.paths.stateInfoFile = [me.paths.whereami filesep 'DefaultStateInfo.m'];
 					me.r.stateInfoFile = me.paths.stateInfoFile;
 				end
-				if exist([me.paths.protocols filesep 'userFunctions.m'],'file')
+				if exist([me.store.protocolsPath filesep 'userFunctions.m'],'file')
 					me.r.userFunctionsFile = [me.paths.protocols filesep 'userFunctions.m'];
 				elseif ~isdeployed
 					me.r.userFunctionsFile = [me.paths.whereami filesep 'userFunctions.m'];
 				end
 
-				fprintf('===>>> Opticka UI took %.2fsecs to initialise\n',toc(t));
+				fprintf('===>>> Opticka UI took %.2fsecs to initialise\n',toc(tt));
 
 				try if ~isempty(me.ss); pause(0.1); delete(me.ss); me.ss = []; end; end
 			catch ME
@@ -335,10 +339,18 @@ classdef opticka < optickaCore
 			rM.reward.type = me.gv(me.ui.OKrewardType);
 			rM.reward.pin = me.gv(me.ui.OKTTLPin);
 			rM.reward.time = me.gv(me.ui.OKTTLTime);
+			me.r.reward.port = me.gv(me.ui.OKarduinoPort);
+			me.r.reward.board = me.gv(me.ui.OKarduinoType);
 			
-			me.r.subjectName = me.gv(me.ui.OKSubject);
-			me.r.researcherName = me.gv(me.ui.OKResearcher);
-
+			me.r.askForComments = me.gl(me.ui.OKAskComments);
+			
+			me.r.sessionData.subjectName = me.gv(me.ui.OKSubject);
+			me.r.sessionData.researcherName = me.gv(me.ui.OKResearcher);
+			me.r.sessionData.alyxIP = me.gv(me.ui.OKAlyxIP);
+			me.r.sessionData.labName = me.gv(me.ui.OKLabName);
+			me.r.sessionData.labLocation = me.gv(me.ui.OKLabLocation);
+			me.r.sessionData.sessionPrefix = me.gv(me.ui.OKSessionPrefix);
+		
 			me.r.audioDevice = me.gn(me.ui.OKaudioDevice);
 
 			me.r.screen.screen = me.gd(me.ui.OKSelectScreen);
@@ -355,6 +367,8 @@ classdef opticka < optickaCore
 			me.r.screen.bitDepth = me.gv(me.ui.OKbitDepth);
 			
 			me.r.screen.blend = me.gv(me.ui.OKOpenGLBlending);
+
+			me.r.screen.verbosityLevel = me.gd(me.ui.OKverbosityLevel);
 			
 			value = me.gp(me.ui.OKUseGamma);
 			if isprop(me.r.screen,'gammaTable') && isa(me.r.screen.gammaTable,'calibrateLuminance') && ~isempty(me.r.screen.gammaTable)
@@ -374,7 +388,7 @@ classdef opticka < optickaCore
 			me.r.screen.hideFlash = me.gl(me.ui.OKHideFlash);
 			me.r.screen.useRetina = me.gl(me.ui.OKUseRetina);
 			if strcmpi(me.r.screen.bitDepth,'8bit')
-				me.ui.OKAntiAliasing.Value = '0';
+				%me.ui.OKAntiAliasing.Value = '0';
 			end
 			me.r.screen.antiAlias = me.gd(me.ui.OKAntiAliasing);
 			me.r.photoDiode = me.gl(me.ui.OKUsePhotoDiode);
@@ -383,6 +397,7 @@ classdef opticka < optickaCore
 			me.verbose = me.r.verbose;
 			me.r.screen.debug = me.gl(me.ui.OKDebug);
 			me.r.debug = me.r.screen.debug;
+			me.r.screen.disableSyncTests = ~me.gl(me.ui.OKSync);
 			me.r.diaryMode = me.gl(me.ui.OKDiaryMode);
 			me.r.screen.visualDebug = me.r.screen.debug;
 			me.r.screen.backgroundColour = me.gn(me.ui.OKbackgroundColour);
@@ -405,13 +420,13 @@ classdef opticka < optickaCore
 				me.r.strobe.device = 'datapixx';	
 			elseif me.ui.OKuseDisplayPP.Checked == true
 				me.r.strobe.device = 'display++';
+			elseif me.ui.OKUseNirSmart.Checked == true
+				me.r.strobe.device = 'nirsmart';
 			else
 				me.r.strobe.device = '';
 			end
 
-			me.r.reward.port = me.gv(me.ui.OKarduinoPort);
-			me.r.reward.board = me.gv(me.ui.OKarduinoType);
-			
+	
 			if me.ui.OKuseArduino.Checked == true
 				me.r.reward.device = 'arduino';
 			elseif me.ui.OKuseLabJackReward.Checked == true
@@ -704,7 +719,7 @@ classdef opticka < optickaCore
 					end
 					me.store.evnt = addlistener(me.r.stimuli{v}, 'readPanelUpdate', @me.readPanel);
 					me.store.visibleStimulus = me.r.stimuli{v};
-					me.refreshStimulusList;
+					refreshStimulusList(me);
 				end
 			end
 		end
@@ -927,8 +942,8 @@ classdef opticka < optickaCore
 		%> 
 		% ===================================================================
 		function loadPrefs(me)
-			anyLoaded = false; prefnames = '';
 			if ~ispref('opticka'); return; end
+			anyLoaded = false; prefnames = '';
 			for i = 1:length(me.uiPrefsList)
 				prfname = me.uiPrefsList{i};
 				if ispref('opticka',prfname) %pref exists
@@ -959,8 +974,12 @@ classdef opticka < optickaCore
 								end
 							case 'uimenu'
 								myhandle.Checked = prf;
+								thisVal = char(prf);
 							case 'uirockerswitch'
-								myhandle.Value = prf;
+								if strcmpi(prf,'on') || strcmpi(prf,'off')
+									myhandle.Value = prf;
+									thisVal = prf;
+								end
 						end
 						prefnames = [prefnames ' ' prfname '«' thisVal '»'];
 						if ~mod(i,4);prefnames = [prefnames '\n']; end
@@ -1047,7 +1066,7 @@ classdef opticka < optickaCore
 			v = me.gv(me.ui.OKProtocolsList);
 			file = me.gs(me.ui.OKProtocolsList,v);
 			me.paths.currentPath = pwd;
-			cd(me.paths.protocols);
+			cd(me.store.protocolsPath);
 			out=questdlg(['Are you sure you want to delete ' file '?'],'Protocol Delete');
 			if strcmpi(out,'yes')
 				delete(file);
@@ -1064,7 +1083,7 @@ classdef opticka < optickaCore
 		function saveProtocol(me, copyIt)
 			if ~exist('copyIt','var') || isempty(copyIt); copyIt = false; end
 			me.paths.currentPath = pwd;
-			cd(me.paths.protocols);
+			cd(me.store.protocolsPath);
 			if isfield(me.store,'protocolName')
 				fname = me.store.protocolName;
 			else
@@ -1089,6 +1108,10 @@ classdef opticka < optickaCore
 				
 				tmp.store = struct(); %lets just nuke this incase some rogue handles are lurking
 				tmp.ui = struct(); %remove the handles to the UI which will not be valid on reload
+
+				for i = 1:tmp.r.stimuli.n
+					reset(tmp.r.stimuli{i});
+				end
 				
 				[~, ~, ee] = fileparts(me.r.stateInfoFile);
 				if copyIt == true
@@ -1101,6 +1124,9 @@ classdef opticka < optickaCore
 						else
 							me.r.stateInfoFile = tmp.r.stateInfoFile;
 							me.r.paths.stateInfoFile = me.r.stateInfoFile;
+							if ~IsWin
+								try system(['touch ' tmp.r.stateInfoFile]); end
+							end
 						end
 					end
 					save(f,'tmp');
@@ -1133,7 +1159,16 @@ classdef opticka < optickaCore
 		function saveData(me)
 			me.paths.currentPath = pwd;
 			cd(me.paths.savedData);
-			[f,p] = uiputfile('*.mat','Save Last Run Data','Data.mat');
+			[me.paths.alfPath, sessionID, dateID] = me.getALF(me.r.sessionData.subjectName,...
+				me.r.sessionData.sessionPrefix,me.r.sessionData.labName, false);
+			if ~isempty(me.r.name)
+				name = me.r.name;
+			else
+				name = [me.r.sessionData.subjectName '-' sessionID '-' dateID]; %give us a run name
+			end
+			name = ['opticka.raw.' name '.mat'];
+			cd(me.paths.alfPath);
+			[f,p] = uiputfile('*.mat','Save Last Run Data',name);
 			if f ~= 0
 				cd(p);
 				data = clone(me);
@@ -1152,22 +1187,24 @@ classdef opticka < optickaCore
 		end
 		
 		% ===================================================================
-		function loadProtocol(me, ui)
+		function loadProtocol(me, useList)
 		%> @fn loadProtocol
 		%> @brief Load Protocol
 		%> Load Protocol
 		%> @param ui -- do we show a uiload dialog?
 		% ===================================================================	
-			if ~exist('ui','var') || isempty(ui); ui = true; end
+			if ~exist('useList','var') || isempty(useList); useList = true; end
 			me.paths.currentPath = pwd;
 
-			if ui == true
+			doIO = me.ui.OKOverrideIO.Value;
+
+			if useList == true
 				v = me.gv(me.ui.OKProtocolsList);
-				if isempty(v)
+				if isempty(v) || matches(v,'no selection')
 					[fileName,p] = uigetfile('*.mat','Select an Opticka Protocol (saved as a .mat)');
 				else
 					fileName = v;
-					p = me.paths.protocols;
+					p = me.store.protocolsPath;
 				end
 			else
 				[fileName,p] = uigetfile('*.mat','Select an Opticka Protocol (saved as a .mat)'); %cd([me.paths.root filesep 'CoreProtocols'])
@@ -1178,16 +1215,16 @@ classdef opticka < optickaCore
 				return
 			end
 			me.ui.OKOptickaVersion.Text = 'Loading Protocol, please wait...';
+			me.ui.OKRoot.Pointer='watch';
+			drawnow;
 			cd(p);
 			load(fileName, 'tmp');
 			
 			if ~isa(tmp,'opticka');warndlg('This is not an opticka protocol file...');return;end
-
-			me.paths.protocols = p;
 			
 			me.comment = ['Protocol: ' fileName];
 			me.store.protocolName = fileName;
-			me.store.protocolPath = p;
+			me.store.protocolsPath = p;
 
 			clearStimulusList(me);
 			clearVariableList(me);
@@ -1312,84 +1349,102 @@ classdef opticka < optickaCore
 				if optickaCore.hasKey(tmp.r,'drawFixation');me.r.drawFixation=tmp.r.drawFixation;end
 				if optickaCore.hasKey(tmp.r,'dPPMode'); me.r.dPPMode = tmp.r.dPPMode; end
 
-				me.ui.OKuseLabJackStrobe.Checked	= 'off';
-				me.ui.OKuseLabJackTStrobe.Checked	= 'off';
-				me.ui.OKuseDataPixx.Checked			= 'off';
-				me.ui.OKuseDisplayPP.Checked		= 'off';
-				me.ui.OKuseEyelink.Checked			= 'off';
-				me.ui.OKuseIRec2HS.Checked			= 'off';
-				me.ui.OKuseTobii.Checked			= 'off';
-				me.ui.OKuseLabJackReward.Checked	= 'off';
-				me.ui.OKuseArduino.Checked			= 'off';
-				me.ui.OKuseEyeOccluder.Checked		= 'off';
-				me.ui.OKuseMagStim.Checked			= 'off';
+				if doIO == true
+					me.ui.OKUseNirSmart.Checked			= 'off';
+					me.ui.OKuseLabJackStrobe.Checked	= 'off';
+					me.ui.OKuseLabJackTStrobe.Checked	= 'off';
+					me.ui.OKuseDataPixx.Checked			= 'off';
+					me.ui.OKuseDisplayPP.Checked		= 'off';
+					me.ui.OKuseEyelink.Checked			= 'off';
+					me.ui.OKuseIRec2HS.Checked			= 'off';
+					me.ui.OKuseTobii.Checked			= 'off';
+					me.ui.OKuseLabJackReward.Checked	= 'off';
+					me.ui.OKuseArduino.Checked			= 'off';
+					me.ui.OKuseEyeOccluder.Checked		= 'off';
+					me.ui.OKuseMagStim.Checked			= 'off';
+	
+					me.r.strobe.device = '';
+					me.r.reward.device = '';
+					me.r.eyetracker.device = '';
+					me.r.control.device = '';
+					
+					% Legacy properties
+					if optickaCore.hasKey(tmp.r,'useLabJackTStrobe') && tmp.r.useLabJackTStrobe == true
+						me.r.strobe.device = 'labjackt';
+					elseif optickaCore.hasKey(tmp.r,'useDisplayPP') &&  me.r.useDisplayPP == true
+						me.r.strobe.device = 'display++';
+					elseif optickaCore.hasKey(tmp.r,'useDataPixx') &&  me.r.useDataPixx == true
+						me.r.strobe.device = 'display++';
+					elseif optickaCore.hasKey(tmp.r,'OKuseLabJackStrobe') &&  me.r.OKuseLabJackStrobe == true
+						me.r.strobe.device = 'labjack';
+					end
+					if optickaCore.hasKey(tmp.r,'useArduino') && me.r.useArduino == true
+						me.r.reward.device = 'arduino';
+						me.ui.OKuseArduino.Checked = 'on';
+					elseif optickaCore.hasKey(tmp.r,'useLabJackReward') && me.r.useLabJackReward == true
+						me.r.reward.device = 'labjack';
+						me.ui.OKuseLabJackReward.Checked = 'on';
+					end
+					if optickaCore.hasKey(tmp.r,'useTobii') && me.r.useTobii == true
+						me.r.useTobii = tmp.r.useTobii;
+						me.ui.OKuseTobii.Checked = 'on';
+					elseif optickaCore.hasKey(tmp.r,'useEyeLink') && me.r.useEyeLink == true
+						me.r.useEyeLink = tmp.r.useEyeLink;
+						me.ui.OKuseEyelink.Checked = 'on';
+					end
+	
+					% New properties
+					if optickaCore.hasKey(tmp.r,'strobe')
+						me.r.strobe = tmp.r.strobe;
+						switch me.r.strobe.device
+							case 'labjackt'
+								me.ui.OKuseLabJackTStrobe.Checked = 'on';
+							case 'datapixx'
+								me.ui.OKuseDataPixx.Checked = 'on';
+							case 'display++'
+								me.ui.OKuseDisplayPP.Checked = 'on';
+							case 'labjack'
+								me.ui.OKuseLabJackStrobe.Checked = 'on';
+							case 'nirsmart'
+								me.ui.OKUseNirSmart.Checked = 'on';
+						end
+					end
+					if optickaCore.hasKey(tmp.r,'reward')
+						me.r.reward = tmp.r.reward;
+						switch me.r.reward.device
+							case 'arduino'
+								me.ui.OKuseArduino.Checked = 'on';
+							case 'labjack'
+								me.ui.OKuseLabJackReward.Checked = 'on';
+						end
+					end
+					if optickaCore.hasKey(tmp.r,'eyetracker')
+						me.r.eyetracker = tmp.r.eyetracker;
+						me.ui.OKUseDummy.Checked = tmp.r.eyetracker.dummy;
+						switch me.r.eyetracker.device
+							case 'tobii'
+								me.ui.OKuseTobii.Checked = 'on';
+								if isfield(tmp.r.eyetracker,'tsettings') && ~isempty(tmp.r.eyetracker.tsettings)
+									try me.ui.OKTobiiSampleRate.Value = tmp.r.eyetracker.tsettings.sampleRate; end
+									try me.ui.OKTobiiCal.Value = tmp.r.eyetracker.tsettings.calibration.calPositions; end
+									try me.ui.OKTobiiVal.Value = tmp.r.eyetracker.tsettings.calibration.valPositions; end
+									try me.ui.OKTobiiTrackingMode.Value = tmp.r.eyetracker.tsettings.calibration.mode; end
+								end
+							case 'eyelink'
+								me.ui.OKuseEyelink.Checked = 'on';
+								if isfield(tmp.r.eyetracker,'esettings') && ~isempty(tmp.r.esettings)
 
-				me.r.strobe.device = '';
-				me.r.reward.device = '';
-				me.r.eyetracker.device = '';
-				me.r.control.device = '';
-				
-				% Legacy properties
-				if optickaCore.hasKey(tmp.r,'useLabJackTStrobe') && tmp.r.useLabJackTStrobe == true
-					me.r.strobe.device = 'labjackt';
-				elseif optickaCore.hasKey(tmp.r,'useDisplayPP') &&  me.r.useDisplayPP == true
-					me.r.strobe.device = 'display++';
-				elseif optickaCore.hasKey(tmp.r,'useDataPixx') &&  me.r.useDataPixx == true
-					me.r.strobe.device = 'display++';
-				elseif optickaCore.hasKey(tmp.r,'OKuseLabJackStrobe') &&  me.r.OKuseLabJackStrobe == true
-					me.r.strobe.device = 'labjack';
-				end
-				if optickaCore.hasKey(tmp.r,'useArduino') && me.r.useArduino == true
-					me.r.reward.device = 'arduino';
-					me.ui.OKuseArduino.Checked = 'on';
-				elseif optickaCore.hasKey(tmp.r,'useLabJackReward') && me.r.useLabJackReward == true
-					me.r.reward.device = 'labjack';
-					me.ui.OKuseLabJackReward.Checked = 'on';
-				end
-				if optickaCore.hasKey(tmp.r,'useTobii') && me.r.useTobii == true
-					me.r.useTobii = tmp.r.useTobii;
-					me.ui.OKuseTobii.Checked = 'on';
-				elseif optickaCore.hasKey(tmp.r,'useEyeLink') && me.r.useEyeLink == true
-					me.r.useEyeLink = tmp.r.useEyeLink;
-					me.ui.OKuseEyelink.Checked = 'on';
-				end
+								end
+							case 'irec'
+								me.ui.OKuseIRec2HS.Checked = 'on';
+								if isfield(tmp.r.eyetracker,'isettings') && ~isempty(tmp.r.isettings)
 
-				% New properties
-				if optickaCore.hasKey(tmp.r,'strobe')
-					me.r.strobe = tmp.r.strobe;
-					switch me.r.strobe.device
-						case 'labjackt'
-							me.ui.OKuseLabJackTStrobe.Checked = 'on';
-						case 'datapixx'
-							me.ui.OKuseDataPixx.Checked = 'on';
-						case 'display++'
-							me.ui.OKuseDisplayPP.Checked = 'on';
-						case 'labjack'
-							me.ui.OKuseLabJackStrobe.Checked = 'on';
+								end
+						end
 					end
-				end
-				if optickaCore.hasKey(tmp.r,'reward')
-					me.r.reward = tmp.r.reward;
-					switch me.r.reward.device
-						case 'arduino'
-							me.ui.OKuseArduino.Checked = 'on';
-						case 'labjack'
-							me.ui.OKuseLabJackReward.Checked = 'on';
-					end
-				end
-				if optickaCore.hasKey(tmp.r,'eyetracker')
-					me.r.eyetracker = tmp.r.eyetracker;
-					me.ui.OKUseDummy.Checked = tmp.r.eyetracker.dummy;
-					switch me.r.eyetracker.device
-						case 'tobii'
-							me.ui.OKuseTobii.Checked = 'on';
-						case 'eyelink'
-							me.ui.OKuseEyelink.Checked = 'on';
-						case 'irec'
-							me.ui.OKuseIRec2HS.Checked = 'on';
-					end
-				end
-			end % runExperiment
+				end 
+				fprintf('\t…IO settings loaded\n');
+			end
 			
 			%copy screen parameters
 			if isa(tmp.r.screen,'screenManager') && ~isempty(tmp.r.screen)
@@ -1484,32 +1539,32 @@ classdef opticka < optickaCore
 				set(me.ui.OKStimulusRunAll,'Enable','on');
 				set(me.ui.OKStimulusRunAllBenchmark,'Enable','on');
 				me.store.visibleStimulus.uuid='';
-				me.editStimulus;
+				editStimulus(me);
 			end
 			
 			me.ui.TabGroup.SelectedTab = me.ui.TabGroup.Children(1);
 
-			me.getScreenVals;
-			me.getTaskVals;
-			me.refreshStimulusList;
-			me.refreshVariableList;
-			me.editVariable;
-			me.refreshProtocolsList;
-			me.ui.propertiesToVariables;
+			getScreenVals(me);
+			getTaskVals(me);
+			refreshStimulusList(me);
+			refreshVariableList(me);
+			editVariable(me);
+			refreshProtocolsList(me, me.store.protocolsPath);
+			propertiesToVariables(me.ui);
 
 			me.r.comment = me.comment;
 			me.r.paths.protocolName = me.store.protocolName;
-			me.r.paths.protocolPath = me.store.protocolPath;
+			me.r.paths.protocolsPath = me.store.protocolsPath;
 			
-			fprintf('---> Protocol load finished…\n');
-
 			if isdeployed
-				me.ui.OKOptickaVersion.Text = ['Opticka Experiment Manager [D] V' me.optickaVersion ' - ' me.comment];
+				me.ui.OKOptickaVersion.Text = ['OPTICKA Experiment Manager [D] V' me.optickaVersion ' - ' me.store.protocolName];
 			else
-				me.ui.OKOptickaVersion.Text = ['Opticka Experiment Manager V' me.optickaVersion ' - ' me.comment];
+				me.ui.OKOptickaVersion.Text = ['OPTICKA Experiment Manager V' me.optickaVersion ' - ' me.store.protocolName];
 			end
 			
-			figure(me.ui.OKRoot);
+			me.ui.OKRoot.Pointer='arrow';
+			%figure(me.ui.OKRoot);
+			fprintf('---> Protocol load finished…\n');
 		end
 
 
@@ -1518,11 +1573,24 @@ classdef opticka < optickaCore
 		%> Refresh the UI list of Protocols
 		%> @param
 		% ======================================================================
-		function refreshProtocolsList(me)
+		function refreshProtocolsList(me, ppath)
+
+			if ~exist('ppath','var') || isempty(ppath)
+				if isfield(me.store,'protocolsPath')
+					ppath = me.store.protocolsPath;
+				else
+					ppath = me.paths.protocols;
+				end
+			end
+
+			if ~exist(ppath,'dir')
+				ppath = me.paths.protocols;
+			end
 			
 			set(me.ui.OKProtocolsList,'Items',{''});
 			me.paths.currentPath = pwd;
-			cd(me.paths.protocols);
+			cd(ppath);
+			try me.ui.ProtocolsPanel.Title = ['Protocols: ' pwd]; end
 			
 			% Generate path based on given root directory
 			files = dir(pwd);
@@ -1537,16 +1605,17 @@ classdef opticka < optickaCore
 			
 			files = files(isfile); % select only directory entries from the current listing
 			
-			filelist=cell(0);
+			fileList = {'no selection'};
 			for i=1:length(files)
 				filename = files(i).name;
 				if ~isempty(regexpi(filename,'\.mat$'))
-					filelist{end+1} = filename;
+					fileList{end+1} = filename;
 				end
 			end
-			
-			set(me.ui.OKProtocolsList,'Items',filelist);
+	
+			set(me.ui.OKProtocolsList,'Items',fileList);
 			cd(me.paths.currentPath);
+			me.store.protocolsPath = ppath;
 		end
 	end
 
@@ -1634,14 +1703,24 @@ classdef opticka < optickaCore
 						sz=s.size;
 						c=s.contrast;
 						sp=s.speed;
-						p=s.fileName;
+						p = [];
+						if isfield(s,'filePath')
+							p=s.filePath;
+						elseif isfield(s,'fileName')
+							p=s.fileName;
+						end
 						str{i} = [num2str(i) '.' name ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' c=' num2str(c) ' sp=' num2str(sp) ' [' p ']'];
 					case 'movie'
 						x=s.xPosition;
 						y=s.yPosition;
 						sz=s.size;
 						sp=s.speed;
-						p=s.fileName;
+						p = [];
+						if isfield(s,'filePath')
+							p=s.filePath;
+						elseif isfield(s,'fileName')
+							p=s.fileName;
+						end
 						str{i} = [num2str(i) '.' name ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' sp=' num2str(sp) ' [' p ']'];
 					case 'fixationcross'
 						x=s.xPosition;

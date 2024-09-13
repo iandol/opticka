@@ -273,6 +273,7 @@ classdef gratingStimulus < baseStimulus
 			end
 			function set_sizeOut(me,value)
 				me.sizeOut = value * me.ppd;
+				me.szPx = me.sizeOut;
 			end
 			function set_xPositionOut(me, value)
 				me.xPositionOut = value * me.ppd;
@@ -312,8 +313,9 @@ classdef gratingStimulus < baseStimulus
 					me.angleOut, [], [], me.modulateColor, [], me.rotateMode,...
 					[me.driftPhase, me.sfOut, me.contrastOut, me.sigmaOut]);
 				if me.changeBlend; Screen('BlendFunction', me.sM.win, me.sM.srcMode, me.sM.dstMode); end
+				me.drawTick = me.drawTick + 1;
 			end
-			me.tick = me.tick + 1;
+			if me.isVisible; me.tick = me.tick + 1; end
 		end
 
 		% ===================================================================
@@ -431,6 +433,7 @@ classdef gratingStimulus < baseStimulus
 				end
 			end
 			me.mvRect=me.dstRect;
+			me.szPx = RectWidth(me.mvRect);
 			me.setAnimationDelta();
 		end
 

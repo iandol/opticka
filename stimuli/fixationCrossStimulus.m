@@ -89,7 +89,8 @@ classdef fixationCrossStimulus < baseStimulus
 		function me = fixationCrossStimulus(varargin)
 			args = optickaCore.addDefaults(varargin,...
 				struct('name','fix','colour',[1 1 1 0.75],'alpha', 0.75, ...
-				'size',0.8,'comment','colour&alpha apply to disk, colour2&alpha2 apply to cross'));
+				'showOnTracker',false,'size',0.8,...
+				'comment','colour&alpha apply to disk, colour2&alpha2 apply to cross'));
 			me=me@baseStimulus(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
 			
@@ -174,6 +175,7 @@ classdef fixationCrossStimulus < baseStimulus
 			end
 			function set_sizeOut(me,value)
 				me.sizeOut = value * me.ppd; %divide by 2 to get diameter
+				me.szPx = me.sizeOut;
 				me.currentSize = me.sizeOut;
 				me.pulseMod = ((me.sizeOut/me.ppd) / 100) * (me.pulseRange/2);
 			end
@@ -233,6 +235,7 @@ classdef fixationCrossStimulus < baseStimulus
 			me.inSetup = false;
 			computePosition(me);
 			me.currentSize = me.sizeOut;
+			me.szPx = me.currentSize;
 			me.pulseMod = ((me.sizeOut/me.ppd) / 100) * (me.pulseRange/2);
 			me.pulsePosition = 0;
 			if me.doFlash; me.setupFlash; end
@@ -257,8 +260,9 @@ classdef fixationCrossStimulus < baseStimulus
 					Screen('FillRect', me.sM.win, me.colour2Out, CenterRectOnPointd([0 0 me.lineWidthOut me.sizeOut], me.xFinal,me.yFinal));
 					Screen('gluDisk', me.sM.win, me.currentColour, me.xFinal, me.yFinal, me.lineWidthOut);
 				end
+				me.drawTick = me.drawTick + 1;
 			end
-			me.tick = me.tick + 1;
+			if me.isVisible; me.tick = me.tick + 1; end
 		end
 		
 		% ===================================================================
