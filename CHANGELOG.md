@@ -17,7 +17,7 @@ open(t);
 initialiseServer(t);
 close(t);
 ```
-* Add improved Rigid Body physics engine. We now use [dyn4j](https://dyn4j.org), an open-source Java 2D physics engine. `animationManager` is upgraded (previously it used my own simple physics engine, which couldn't scale to many collisions). Opticka uses degrees, and we do a simple mapping of degrees > meters, so 1deg stimulus is a 1m object.Test it with:
+* Add improved Rigid Body physics engine. We now use [dyn4j](https://dyn4j.org), an open-source Java 2D physics engine. `animationManager` is upgraded (previously it used my own simple physics engine, which couldn't scale to many collisions). Opticka uses degrees, and we do a simple mapping of degrees > meters, so 1deg stimulus is a 1m object.Test it with:  \
 ```matlab
 sM = screenManager();
 b = imageStimulus('size',4,'filePath','moon.png',...
@@ -36,7 +36,7 @@ for i = 1:60
 	flip(sM); % flip the screen
 	step(aM); % step the simulation
 end
-```
+```  
 * Improve touchManager to better use the rigid body animations with touch events. You can now finger-drag and "fling" physical objects around the screen.
 * add Procedurally generated polar checkerboards: `polarBoardStimulus`, and improved polar gratings to mask with arc segments: `polarGratingStimulus`.
 * added new stimulus: `dotlineStimulus` - a line made of dots.
