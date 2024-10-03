@@ -924,6 +924,7 @@ classdef eyetrackerCore < optickaCore
 		function trackerClearScreen(me)
 			if me.isOff || ~me.isConnected || ~me.operatorScreen.isOpen; return; end
 			drawBackground(me.operatorScreen);
+			fprintf(' <<<BACKGROUND>>> ');
 		end
 
 		% ===================================================================
@@ -933,8 +934,8 @@ classdef eyetrackerCore < optickaCore
 		% ===================================================================
 		function trackerFlip(me, dontclear, force)
 			if me.isOff || ~me.isConnected || ~me.operatorScreen.isOpen; return; end
-			if ~exist('dontclear','var'); dontclear = 1; end
-			if ~exist('force','var'); force = false; end
+			if ~exist('dontclear','var') || isempty(dontclear); dontclear = 1; end
+			if ~exist('force','var') || isempty(force); force = false; end
 
 			me.flipTick = me.flipTick + 1;
 			if force || doFlip(me); me.flipTick = 1; end
@@ -943,6 +944,7 @@ classdef eyetrackerCore < optickaCore
 			if dontclear ~= 1; dontclear = 0; end
 			% Screen('Flip', windowPtr [, when] [, dontclear] [, dontsync] [, multiflip]);
 			me.operatorScreen.flip([], dontclear, 2);
+			fprintf(' <<<FLIP: %i>>> ',dontclear);
 		end
 
 		% ===================================================================
@@ -959,14 +961,14 @@ classdef eyetrackerCore < optickaCore
 			if dontClear == 0; trackerClearScreen(me); end
 			trackerDrawFixation(me);
 			drawGrid(me.operatorScreen);
-			if ~isempty(me.exclusionZone);trackerDrawExclusion(me);end
-			if ~isempty(stimPos); trackerDrawStimuli(me, stimPos, true); end
-			if ~isempty(comment);trackerDrawText(me, comment);end
-			if ~isempty(me.xAll);trackerDrawEyePositions(me);end
+			if ~isempty(me.exclusionZone);	trackerDrawExclusion(me); end
+			if ~isempty(stimPos);			trackerDrawStimuli(me, stimPos); end
+			if ~isempty(comment);			trackerDrawText(me, comment); end
+			if ~isempty(me.xAll);			trackerDrawEyePositions(me); end
 			if dontFlip == false && dontClear == 0
-				trackerFlip(me, 0, true); 
+				trackerFlip(me, 0, true); fprintf(' <<<STATUSFLIP>>> \n');
 			elseif dontFlip==false
-				trackerFlip(me, 1, false);
+				trackerFlip(me, 1, false); fprintf(' <<<STATUS>>> ');
 			end
 			
 		end
@@ -982,8 +984,12 @@ classdef eyetrackerCore < optickaCore
 			else
 				return
 			end
-			if ~exist('dontClear','var');dontClear = true;end
-			if dontClear==false; trackerClearScreen(me); end
+			if ~exist('dontClear','var')
+				dontClear = 1;
+			elseif islogical(dontClear)
+				dontClear = double(dontClear); 
+			end
+			if dontClear == 0; trackerClearScreen(me); end
 			for i = 1:length(me.stimulusPositions)
 				x = me.stimulusPositions(i).x;
 				y = me.stimulusPositions(i).y;

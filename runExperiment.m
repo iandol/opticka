@@ -697,6 +697,7 @@ classdef runExperiment < optickaCore
 				me.lastIndex			= 0;
 				me.isRunning			= true;
 				me.isRunTask			= true;
+				isRunning				= true;
 				
 				%================================open the PTB screen and setup stimuli
 				me.screenVals			= s.open(me.debug, tL);
@@ -1062,6 +1063,7 @@ classdef runExperiment < optickaCore
 						elseif me.doTrackerFlip == 3 
 							trackerFlip(eT, 0, true);
 						elseif me.doTrackerFlip == 4
+							fprintf('>>> ET FLIP 4\n');
 							trackerFlip(eT, 0, true);
 							me.doTrackerFlip = 1;
 						end

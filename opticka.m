@@ -384,7 +384,6 @@ classdef opticka < optickaCore
 			
 			me.r.logFrames = me.gl(me.ui.OKlogFrames);
 			me.r.logStateTimers = me.gl(me.ui.OKlogStateTimers);
-			me.r.benchmark = me.gl(me.ui.OKbenchmark);
 			me.r.screen.hideFlash = me.gl(me.ui.OKHideFlash);
 			me.r.screen.useRetina = me.gl(me.ui.OKUseRetina);
 			if strcmpi(me.r.screen.bitDepth,'8bit')
@@ -532,6 +531,7 @@ classdef opticka < optickaCore
 					set(met.ui.OKTrainingFileName,'Text',['State-File:  ' met.r.stateInfoFile]);
 
 					try
+						isRunning = false;
 						stims = metaStimulus;
 						me = runExperiment;
 						eT = eyelinkManager;

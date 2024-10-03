@@ -67,8 +67,13 @@ classdef arduinoManager < optickaCore
 			if isempty(me.port)
 				checkPorts(me);
 				if ~isempty(me.ports)
-					fprintf('--->arduinoManager: Ports available: %s\n',me.ports);
-					if isempty(me.port); me.port = char(me.ports{end}); end
+					fprintf('--->arduinoManager: Ports available:\n\t',me.ports);
+					for ii=1:length(me.ports)
+						fprintf('%s ',me.ports(ii));
+						if mod(ii,5)==0; fprintf('\n\t'); end
+					end
+					fprintf('\n');
+					if isempty(me.port); me.port = char(me.ports{1}); end
 				else
 					me.comment = 'No Serial Ports are available, going into silent mode';
 					fprintf('--->arduinoManager: %s\n',me.comment);
@@ -354,15 +359,15 @@ classdef arduinoManager < optickaCore
 			if IsOctave
 				if ~exist('serialportlist','file'); try pkg load instrument-control; end; end
 				if ~verLessThan('instrument-control','0.7')
-					me.ports = serialportlist('available');
+					me.ports = sort(serialportlist('available'));
 				else
 					me.ports = [];
 				end
 			else
 				if ~verLessThan('matlab','9.7')	% use the nice serialport list command
-					me.ports = serialportlist('available');
+					me.ports = sort(serialportlist('available'));
 				else
-					me.ports = seriallist; %#ok<SERLL>
+					me.ports = sort(seriallist); %#ok<SERLL>
 				end
 			end
 		end

@@ -89,7 +89,7 @@ tS.errorSound				= [300, 1, 1];		%==freq,length,volume
 %rM.reward.pin				= 2;		%==Output pin, 2 by default with Arduino.
 
 %==================================================================
-%------------ ----DEBUG LOGGING to command window------------------
+%-----------------DEBUG LOGGING to command window------------------
 % uncomment each line to get specific verbose logging from each of these
 % components; you can also set verbose in the opticka GUI to enable all of
 % these…
@@ -239,7 +239,7 @@ pauseExitFcn = {
 %==============================================================
 %--------------------prefixate entry
 prefixEntryFcn = { 
-	@()needFlip(me, true, 1); % enable the screen and trackerscreen flip
+	@()needFlip(me, true, 4); % enable the screen and trackerscreen flip
 	@()needEyeSample(me, true); % make sure we start measuring eye position
 	@()getStimulusPositions(stims); % make a struct eT can use for drawing stim positions
 	@()hide(stims); % hide all stimuli
@@ -262,7 +262,7 @@ prefixFcn = {
 prefixExitFcn = {
 	@()logRun(me,'INITFIX');
 	@()trackerMessage(eT,'MSG:Start Fix');
-	@()trackerDrawStatus(eT,'Start trial...', stims.stimulusPositions,0);
+	@()trackerDrawStatus(eT,'Start trial...', stims.stimulusPositions, 0, false);
 };
 
 %==============================================================
@@ -358,8 +358,7 @@ correctExitFcn = {
 	@()giveReward(rM); % send a reward
 	@()beep(aM, tS.correctSound); % correct beep
 	@()logRun(me,'CORRECT'); % print current trial info
-	@()trackerDrawStatus(eT, 'CORRECT! :-)');
-	@()needFlipTracker(me, 0); %for operator screen stop flip
+	@()trackerDrawStatus(eT, 'CORRECT! :-)', stims.stimulusPositions, 0, false);
 	@()updatePlot(bR, me); % must run before updateTask
 	@()updateTask(me, tS.CORRECT); % make sure our taskSequence is moved to the next trial
 	@()updateVariables(me); % randomise our stimuli, and set strobe value too
@@ -410,26 +409,26 @@ exitFcn = {
 if tS.includeErrors % we want to update our task even if there were errors
 	incExitFcn = [ {
 		@()logRun(me,'INCORRECT');
-		@()trackerDrawStatus(eT,'INCORRECT! :-(', stims.stimulusPositions, 0);
+		@()trackerDrawStatus(eT,'INCORRECT! :-(', stims.stimulusPositions, 0, false);
 		@()updatePlot(bR, me); 
 		@()updateTask(me,tS.INCORRECT)}; 
 		exitFcn ]; %update our taskSequence 
 	breakExitFcn = [ {
 		@()logRun(me,'BREAK_FIX'); 
-		@()trackerDrawStatus(eT,'BREAK_FIX! :-(', stims.stimulusPositions, 0);
+		@()trackerDrawStatus(eT,'BREAK_FIX! :-(', stims.stimulusPositions, 0, false);
 		@()updatePlot(bR, me); 
 		@()updateTask(me,tS.BREAKFIX)}; 
 		exitFcn ]; %update our taskSequence 
 else
 	incExitFcn = [ {
 		@()logRun(me,'INCORRECT'); 
-		@()trackerDrawStatus(eT,'INCORRECT! :-(', stims.stimulusPositions, 0);
+		@()trackerDrawStatus(eT,'INCORRECT! :-(', stims.stimulusPositions, 0, false);
 		@()updatePlot(bR, me); 
 		@()resetRun(task)}; 
 		exitFcn ]; 
 	breakExitFcn = [ {
 		@()logRun(me,'BREAK_FIX'); 
-		@()trackerDrawStatus(eT,'BREAK_FIX! :-(', stims.stimulusPositions, 0);
+		@()trackerDrawStatus(eT,'BREAK_FIX! :-(', stims.stimulusPositions, 0, false);
 		@()updatePlot(bR, me); 
 		@()resetRun(task)}; 
 		exitFcn ];
