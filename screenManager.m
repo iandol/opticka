@@ -400,7 +400,7 @@ classdef screenManager < optickaCore
 					debug = true;
 				end
 
-				if debug == true || (length(me.windowed)==1 && me.windowed ~= 0)
+				if debug == true || (isscalar(me.windowed) && me.windowed ~= 0)
 					fprintf('\n---> screenManager: Skipping Sync Tests etc. - ONLY FOR DEVELOPMENT!\n');
 					Screen('Preference','SyncTestSettings', 0.002); %up to 2ms variability
 					Screen('Preference', 'SkipSyncTests', 2);
@@ -1743,7 +1743,7 @@ classdef screenManager < optickaCore
 				if ~exist([me.paths.parent filesep 'Movie' filesep],'dir')
 					try mkdir([me.paths.parent filesep 'Movie' filesep]); end
 				end
-				me.movieSettings.moviePath = [me.paths.parent filesep 'Movie' filesep];
+				me.movieSettings.moviePath = [me.paths.parent filesep 'Movie-' filesep];
 				switch me.movieSettings.type
 					case {'movie',1}
 						if isempty(me.movieSettings.codec)

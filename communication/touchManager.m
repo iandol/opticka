@@ -238,23 +238,25 @@ classdef touchManager < optickaCore
 		%> @param
 		%> @return event structure
 		% ===================================================================
-			event = [];
+			event = []; mx = []; my = []; b = [];
 			if me.isDummy
 				[mx, my, b] = GetMouse(me.swin);
 				if any(b) && ~me.lastPressed
-					type = 2; motion = false; press = true;  me.lastPressed = true;
-					me.eventNew = true;
-					me.eventPressed = true;
+					type = 2; motion = false; press = true;  
+					me.lastPressed = true;
+					fprintf('E:%i ',type);
 				elseif any(b) && me.lastPressed
-					type = 3; motion = true; press = true;  me.lastPressed = true;
-					me.eventMove = true;
-					me.eventPressed = true;
-				elseif me.lastPressed && ~any(b)
-					type = 4; motion = false; press = false; me.lastPressed = false;
-					me.eventRelease = true;
+					type = 3; motion = true; press = true;  
+					me.lastPressed = true;
+					fprintf('E:%i ',type);
+				elseif ~any(b) && me.lastPressed
+					type = 4; motion = false; press = false; 
+					me.lastPressed = false;
+					fprintf('E:%i ',type);
 				else
-					type = -1; motion = false; press = 0;  me.lastPressed = false;
-					me.eventNew = false; me.eventMove = false; me.eventRelease = false; me.eventPressed = false;
+					type = -1; motion = false; press = 0;  
+					me.lastPressed = false;
+					fprintf('E:%i ',type);
 				end
 				if type > 0
 					event = struct('Type',type,'Time',GetSecs,...
@@ -292,6 +294,8 @@ classdef touchManager < optickaCore
 						disp('Event lost!');
 						me.event = []; event = [];
 						return
+					otherwise
+						
 				end
 				event.xy = me.screen.toDegrees([event.MappedX event.MappedY],'xy');
 				me.event = event;

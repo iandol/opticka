@@ -397,17 +397,17 @@ classdef animationManager < optickaCore
 			h = sv.heightInDegrees;
 			l = sv.leftInDegrees + padding(1);
 			t = sv.topInDegrees + padding(2);
-			r = sv.rightInDegrees - padding(1);
-			b = sv.bottomInDegrees - padding(1);
+			r = sv.rightInDegrees - padding(3);
+			b = sv.bottomInDegrees - padding(4);
 
 			fl = barStimulus('isVisible',false,'barWidth',w,'barHeight',0.1,...
-				'xPosition',0,'yPosition',b,'name','floor');
+				'xPosition',0,'yPosition',b,'name','floor','colour',[1 0.5 0 1]);
 			cl = barStimulus('isVisible',false,'barWidth',w,'barHeight',0.1,...
-				'xPosition',0,'yPosition',t,'name','ceiling');
+				'xPosition',0,'yPosition',t,'name','ceiling','colour',[1 0.5 0 1]);
 			lw = barStimulus('isVisible',false,'barWidth',0.1,'barHeight',h,...
-				'xPosition',l,'yPosition',0,'name','leftwall');
+				'xPosition',l,'yPosition',0,'name','leftwall','colour',[1 0.5 0 1]);
 			rw = barStimulus('isVisible',false,'barWidth',0.1,'barHeight',h,...
-				'xPosition',r,'yPosition',0,'name','rightwall');
+				'xPosition',r,'yPosition',0,'name','rightwall','colour',[1 0.5 0 1]);
 
 			me.addBody(fl,'Segment','infinite');
 			me.addBody(cl,'Segment','infinite');
