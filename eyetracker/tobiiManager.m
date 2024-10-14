@@ -559,7 +559,7 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 					xy			= toPixels(me, xy,'','relative');
 					sample.gx	= xy(1);
 					sample.gy	= xy(2);
-					sample.pa	= nanmean(td.left.pupil.diameter);
+					sample.pa	= mean(td.left.pupil.diameter,'omitnan');
 					xyd	= me.toDegrees(xy);
 					me.x = xyd(1); me.y = xyd(2);
 					me.pupil	= sample.pa;

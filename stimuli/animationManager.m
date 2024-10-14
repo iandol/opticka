@@ -54,6 +54,9 @@ classdef animationManager < optickaCore
 		nObstacles
 	end
 
+	properties (Hidden = true)
+		wallColour = [1 0.5 0 1];
+	end
 
 	properties (SetAccess = private, GetAccess = public)
 		%> tick updates +1 on each draw, resets on each update
@@ -247,7 +250,8 @@ classdef animationManager < optickaCore
 
 		% ===================================================================
 		%> @brief 
-		%>
+		%> NOTE: input y and vy are in opticka coordinates (-y = up) whereas
+		%> world has +y = up, make sure your Y input is in opticka format
 		% ===================================================================
 		function editBody(me, body, x, y, vx, vy, av)
 			if ~exist('body','var') || isempty(body); return; end
@@ -281,7 +285,7 @@ classdef animationManager < optickaCore
 				thisVX = lv.x;
 			end
 			if exist('vy','var') && ~isempty(vy)
-				thisVY = vy; changeV = true;
+				thisVY = -vy; changeV = true;
 			else
 				thisVY = lv.y;
 			end
@@ -297,7 +301,7 @@ classdef animationManager < optickaCore
 				pos2 = body.getWorldCenter();
 				lv2 = body.getLinearVelocity();
 				a2 = body.getAngularVelocity();
-				fprintf('EDITBODY: x:%.1f->%.1f y:%.1f->%.1f vx:%.1f->%.1f vy:%.1f->%.1f a:%.1f->%.1f\n',...
+				fprintf('--->>> EDITBODY: x:%.1f->%.1f y:%.1f->%.1f vx:%.1f->%.1f vy:%.1f->%.1f a:%.1f->%.1f\n',...
 					pos.x,pos2.x,pos.y,pos2.y,lv.x,lv2.x,lv.y,lv2.y,a,a2);
 			end
 		end
@@ -395,26 +399,28 @@ classdef animationManager < optickaCore
 
 			w = sv.widthInDegrees;
 			h = sv.heightInDegrees;
-			l = sv.leftInDegrees + padding(1);
-			t = sv.topInDegrees + padding(2);
-			r = sv.rightInDegrees - padding(3);
-			b = sv.bottomInDegrees - padding(4);
+			l = sv.leftInDegrees + padding(1)/2;
+			t = sv.topInDegrees + padding(2)/2;
+			r = sv.rightInDegrees - padding(3)/2;
+			b = sv.bottomInDegrees - padding(4)/2;
 
-			fl = barStimulus('isVisible',false,'barWidth',w,'barHeight',0.1,...
-				'xPosition',0,'yPosition',b,'name','floor','colour',[1 0.5 0 1]);
-			cl = barStimulus('isVisible',false,'barWidth',w,'barHeight',0.1,...
-				'xPosition',0,'yPosition',t,'name','ceiling','colour',[1 0.5 0 1]);
-			lw = barStimulus('isVisible',false,'barWidth',0.1,'barHeight',h,...
-				'xPosition',l,'yPosition',0,'name','leftwall','colour',[1 0.5 0 1]);
-			rw = barStimulus('isVisible',false,'barWidth',0.1,'barHeight',h,...
-				'xPosition',r,'yPosition',0,'name','rightwall','colour',[1 0.5 0 1]);
+			padding(padding == 0) = 0.1; 
 
-			me.addBody(fl,'Segment','infinite');
-			me.addBody(cl,'Segment','infinite');
-			me.addBody(lw,'Segment','infinite');
-			me.addBody(rw,'Segment','infinite');
+			lw = barStimulus('isVisible',false,'barWidth',padding(1),'barHeight',h,...
+				'xPosition',l,'yPosition',0,'name','leftwall','colour',me.wallColour);
+			cl = barStimulus('isVisible',false,'barWidth',w,'barHeight',padding(2),...
+				'xPosition',0,'yPosition',t,'name','ceiling','colour',me.wallColour);
+			rw = barStimulus('isVisible',false,'barWidth',padding(3),'barHeight',h,...
+				'xPosition',r,'yPosition',0,'name','rightwall','colour',me.wallColour);
+			fl = barStimulus('isVisible',false,'barWidth',w,'barHeight',padding(4),...
+				'xPosition',0,'yPosition',b,'name','floor','colour',me.wallColour);
+						
+			me.addBody(lw,'Rectangle','infinite');
+			me.addBody(cl,'Rectangle','infinite');
+			me.addBody(rw,'Rectangle','infinite');
+			me.addBody(fl,'Rectangle','infinite');
 
-			boundaryStimuli = metaStimulus('stimuli', {fl, cl, lw, rw});
+			boundaryStimuli = metaStimulus('stimuli', {lw, cl, rw, fl});
 
 		end
 		
@@ -515,6 +521,19 @@ classdef animationManager < optickaCore
 		% ===================================================================
 		function value = get.nBodies(me)
 			value = length(me.bodies);
+		end
+
+		% ===================================================================
+		%> @brief 
+		%>
+		% ===================================================================
+		function value = get.nObstacles(me)
+			value = 0;
+			for jj = 1:me.nBodies
+				if ~matches(me.bodies(jj).type, 'normal')
+					value = value + 1;
+				end
+			end
 		end
 
 	end % END PUBLIC METHODS

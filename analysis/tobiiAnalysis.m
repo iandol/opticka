@@ -554,7 +554,7 @@ classdef tobiiAnalysis < analysisCore
 				yp = ya(ip);
 				pupilPlot = pupilAll(ip);
 				if ~isempty(ib) && me.baselinePupil
-					pb = nanmean(pupilAll(ib));
+					pb = mean(pupilAll(ib),'omitnan');
 					if isnumeric(pb) 
 						pupilPlot = pupilPlot - pb;
 					end
