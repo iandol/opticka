@@ -234,10 +234,7 @@ classdef runExperiment < optickaCore
 		%> @param tS structure with some options to pass
 		% ===================================================================
 			%------initialise the rewardManager global object
-			[rM] = initialiseGlobals(me);
-			if rM.isOpen
-				try rM.close; rM.reset; end
-			end
+			rM = optickaCore.initialiseGlobals(true);
 			try
 				if isfield(me.reward,'port') && ~isempty(me.reward.port); rM.port = me.reward.port; end
 				if isfield(me.reward,'board') && ~isempty(me.reward.board); rM.board = me.reward.board; end	
@@ -623,7 +620,7 @@ classdef runExperiment < optickaCore
 			if isa(me.stateMachine,'stateMachine'); me.stateMachine.reset; me.stateMachine = []; end
 			
 			%------initialise the rewardManager global object
-			[rM, aM] = initialiseGlobals(me);
+			[rM, aM] = optickaCore.initialiseGlobals();
 			if rM.isOpen
 				try rM.close; rM.reset; end
 			end
@@ -1233,7 +1230,7 @@ classdef runExperiment < optickaCore
 
 			WaitSecs(0.5);
 
-			[rM, aM] = initialiseGlobals(me);
+			[rM, aM] = optickaCore.initialiseGlobals(true,true);
 
 			if do==1 || do == 5
 				if isempty(me.strobe.device)
@@ -1336,9 +1333,11 @@ classdef runExperiment < optickaCore
 			s.drawTextWrapped('Testing finished, please check the command window for details!', 40);
 			s.flip;
 			WaitSecs(1);
-			s.close;
-			rM.close;
-			aM.close;
+			try 
+                s.close;
+			    rM.close;
+			    aM.close;
+            end
 			if exist('io','var'); io.close; end
 			
 		end
@@ -2171,9 +2170,8 @@ classdef runExperiment < optickaCore
 
 			if onlyIO; return; end
 			%--------------------------------------reward
-			[rM, ~] = initialiseGlobals(me);
+			rM = optickaCore.initialiseGlobals();
 			if matches(me.reward.device,'arduino')
-				
 				if ~isa(rM,'arduinoManager')
                     rM = arduinoManager();
 				end
@@ -2184,11 +2182,10 @@ classdef runExperiment < optickaCore
 					rM.silentMode = false;
 					rM.open();
 				end
-				if rM.isOpen; fprintf('===> Using Arduino for reward TTLs...\n'); end
+				if rM.isOpen; fprintf('===> Using Arduino %s:%s for reward TTLs...\n', rM.uuid, rM.port); end
 			else
 				if isa(rM,'arduinoManager')
 					rM.close();
-					rM.silentMode = true;
 				else
 					rM = ioManager();
 				end

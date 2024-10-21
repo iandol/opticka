@@ -309,7 +309,7 @@ classdef opticka < optickaCore
 		%> Gets the settings from the UI and updates our runExperiment
 		%> object.
 		% ===================================================================
-			rM = initialiseGlobals(me);
+			rM = optickaCore.initialiseGlobals();
 
 			if isempty(me.r)
 				if ~isdeployed || ~ismcc

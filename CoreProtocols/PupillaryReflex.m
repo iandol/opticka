@@ -63,11 +63,11 @@ tS.firstFixTime				= [0.35 0.75];
 % rectangular.
 tS.firstFixRadius			= 3;
 % do we forbid eye to enter-exit-reenter fixation window?
-tS.strict					= true;
+tS.strict					= false;
 % add an exclusion zone where subject cannot saccade to?
 tS.exclusionZone			= [];
 % time to maintain fixation during stimulus state
-tS.stimulusFixTime			= 1.25;		
+tS.stimulusFixTime			= 0.5;		
 % Initialise eyetracker with X, Y, FixInitTime, FixTime, Radius, StrictFix values
 updateFixationValues(eT, tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
 

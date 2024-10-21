@@ -313,6 +313,7 @@ classdef optickaCore < handle
 			list = cl_array(1:ii);
 		end
 
+		% ===================================================================
 		% TODO 
 		function value = findPropertyDefault(me,propName)
 			value = [];
@@ -404,48 +405,7 @@ classdef optickaCore < handle
 			if isprop(me,property)
 				me.(property) = value;
 			end
-		end
-
-		% ===================================================================
-		function [rM, aM] = initialiseGlobals(me, doReset, doOpen)
-		%> @fn [rM, aM] = initialiseGlobals(me)
-		%> @brief in general we try NOT to use globals but for reward and audio, due to
-		%> e.g. eyelink we can't avoid it. This initialises and returns the globals
-		%> rM (rewardManager) and aM (audioManager). Run this to get the
-		%> reward/audio manager objects in any child class...
-		%>
-		%> @param doReset - try to reset the object? [false]
-		%> @param doOpen  - try to open the objects if they are not yet
-		%>					open? [false]
-		% ===================================================================
-			global rM aM
-				
-			if ~exist('doReset','var'); doReset = false; end
-			if ~exist('doOpen','var'); doOpen = false; end
-
-			%------initialise the rewardManager global object
-			if ~isa(rM,'arduinoManager'); rM = arduinoManager(); end
-			if rM.isOpen && doReset
-				try rM.close; rM.reset; end
-			end
-			if doOpen && ~rM.isOpen; open(rM); end
-			
-			%------initialise an audioManager for beeps,playing sounds etc.
-			if ~isa(aM,'audioManager'); aM = audioManager(); end
-			if doReset
-				try
-					aM.silentMode = false;
-					reset(aM);
-				catch
-					warning('Could not reset audio manager!');
-					aM.silentMode = true;
-				end
-			end
-			if doOpen && ~aM.isOpen && ~aM.silentMode && (isempty(aM.device) || aM.device > -1)
-				open(aM);
-				aM.beep(2000,0.1,0.1);
-			end
-		end
+        end
 		
 	end
 
@@ -544,6 +504,47 @@ classdef optickaCore < handle
 	%=======================================================================
 	methods ( Static = true ) %-------STATIC METHODS-----%
 	%=======================================================================
+
+        % ===================================================================
+		function [rM, aM] = initialiseGlobals(doReset, doOpen)
+		%> @fn [rM, aM] = initialiseGlobals(doReset,doOpen)
+		%> @brief in general we try NOT to use globals but for reward and audio, 
+        %> due to e.g. eyelink and other devices we can't avoid it. This 
+        %> initialises and returns the single-instance globals
+		%> rM (rewardManager) and aM (audioManager). Run this to get the
+		%> reward/audio manager objects in any child class...
+		%>
+		%> @param doReset - try to reset the objects? [false]
+		%> @param doOpen  - try to open objects if not yet open? [false]
+		% ===================================================================
+			global rM aM %#ok<GVMIS>
+				
+			if ~exist('doReset','var'); doReset = false; end
+			if ~exist('doOpen','var'); doOpen = false; end
+
+			%------initialise the rewardManager global object
+			if ~isa(rM,'arduinoManager'); rM = arduinoManager(); end
+			if rM.isOpen && doReset
+				try rM.close; rM.reset; end
+			end
+			if doOpen && ~rM.isOpen; open(rM); end
+			
+			%------initialise an audioManager for beeps,playing sounds etc.
+			if ~isa(aM,'audioManager'); aM = audioManager(); end
+			if doReset
+				try
+					aM.silentMode = false;
+					reset(aM);
+				catch
+					warning('Could not reset audio manager!');
+					aM.silentMode = true;
+				end
+			end
+			if doOpen && ~aM.isOpen && ~aM.silentMode && (isempty(aM.device) || aM.device > -1)
+				open(aM);
+				aM.beep(2000,0.1,0.1);
+			end
+        end
 
 		% ===================================================================
 		function args = makeArgs(args)
