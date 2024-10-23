@@ -7,7 +7,7 @@
 %>
 %> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
-classdef arduinoManager < optickaCore
+classdef arduinoManager < optickaCore & rewardManager
 	% ARDUINOMANAGER Connects and manages arduino communication. By default it
 	% connects using arduinoIOPort and the adio.ino arduino sketch (the legacy
 	% arduino interface by Mathworks), which provide much better performance

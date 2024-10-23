@@ -8,56 +8,64 @@ classdef tittaAdvMovieStimulus < handle
         blinkStartT
     end
     properties (Dependent, SetAccess=private)
-        pos   % can't set position here, you set it through doDraw() with drawCmd 'new'
+        pos    % can't set position here, you set it through doDraw() with drawCmd 'new'
+
     end
     properties
         blinkInterval       = 0.3
         blinkCount          = 2
         bgColor             = 127
         videoSize           = []
+		doMask				= true
+		win					= []
     end
-    properties (Access=private)
-		qFloatColorRange
+    properties (Access=private, Hidden = true)
         currentPoint
+        qFloatColorRange
         cumDurations
-        stimulus
-		screen
+        videoPlayer
         tex = 0
+		masktex = []
     end
-    
     
     methods
-		function me = tittaAdvMovieStimulus(screen)
-			if exist('screen','var')
-				me.screen = screen;
-				me.bgColor = round(screen.backgroundColour * 255);
-			end
-            me.setCleanState();
+		%=============================================================
+        function obj = tittaAdvMovieStimulus()
+            obj.setCleanState();
         end
 
-		function setVideoPlayer(me, in)
-            me.stimulus = in;
-			if in.isSetup
-				me.screen = in.sM;
-				me.videoSize = [me.stimulus.width; me.stimulus.height];
-			end
+        %=============================================================
+        function setVideoPlayer(obj,videoPlayer)
+            obj.videoPlayer = videoPlayer;
         end
         
-        function setCleanState(me)
-            me.calState        = me.calStateEnum.undefined;
-            me.currentPoint    = nan(1,3);
-			if ~isempty(me.stimulus) && isa(me.stimulus,'movieStimulus')
-                try me.stimulus.reset(); end %#ok<*TRYNC>
+        %=============================================================
+        function setCleanState(obj)
+            obj.calState        = obj.calStateEnum.undefined;
+            obj.currentPoint    = nan(1,3);
+            if ~isempty(obj.videoPlayer)
+                obj.videoPlayer.cleanup();
 			end
+			if ~isempty(obj.masktex) && obj.masktex > 0 && Screen(obj.masktex,'WindowKind') == -1
+				try Screen('Close',obj.masktex); end %#ok<*TRYNC>
+			end
+			obj.masktex = [];
         end
 
-        function pos = get.pos(me)
-            pos = me.currentPoint(2:3);
+        %=============================================================
+        function pos = get.pos(obj)
+            pos = obj.currentPoint(2:3);
         end
         
-        function qAllowAcceptKey = doDraw(me,wpnt,drawCmd,currentPoint,pos,~,~)
+        %=============================================================
+        function qAllowAcceptKey = doDraw(obj,wpnt,drawCmd,currentPoint,pos,~,~)
             % last two inputs, tick (monotonously increasing integer) and
             % stage ("cal" or "val") are not used in this code
+
+			if obj.doMask && isempty(obj.masktex)
+				obj.masktex = CreateProceduralSmoothedDisc(wpnt,...
+				500, 500, [], 250, 60, true, 2);
+			end
             
             % if called with drawCmd == 'fullCleanUp', this is a signal
             % that calibration/validation is done, and cleanup can occur if
@@ -67,62 +75,75 @@ classdef tittaAdvMovieStimulus < handle
             % image playback state unless asked to fully clean up.
             if ismember(drawCmd,{'fullCleanUp','sequenceCleanUp'})
                 if strcmp(drawCmd,'fullCleanUp')
-                    me.setCleanState();
+                    obj.setCleanState();
                 end
                 return;
-			end
-
-			% make sure movieStimulus is setup
-			if ~me.stimulus.isSetup
-				setup(me.stimulus, me.screen);
-				me.videoSize = [me.stimulus.width; me.stimulus.height];
-			end
+            end
             
             % now that we have a wpnt, interrogate window
-            if isempty(me.qFloatColorRange) && ~isempty(wpnt)
-                me.qFloatColorRange    = Screen('ColorRange',wpnt)==1;
+            if isempty(obj.qFloatColorRange) && ~isempty(wpnt)
+                obj.qFloatColorRange    = Screen('ColorRange',wpnt)==1;
             end
             
             % check point changed
             curT = GetSecs;     % instead of using time directly, you could use the 'tick' call sequence number input to this function to animate your display
             if strcmp(drawCmd,'new')
-                me.currentPoint    = [currentPoint pos];
-                me.pointStartT     = curT;
-                me.calState        = me.calStateEnum.showing;
+                obj.currentPoint    = [currentPoint pos];
+                obj.pointStartT     = curT;
+                obj.calState        = obj.calStateEnum.showing;
             elseif strcmp(drawCmd,'redo')
                 % start blink, restart animation.
-                me.calState        = me.calStateEnum.blinking;
-                me.blinkStartT     = curT;
-                me.pointStartT     = 0;
+                obj.calState        = obj.calStateEnum.blinking;
+                obj.blinkStartT     = curT;
+                obj.pointStartT     = 0;
             else % drawCmd == 'draw'
                 % regular draw: check state transition
-                if me.calState==me.calStateEnum.blinking && (curT-me.blinkStartT)>me.blinkInterval*me.blinkCount*2
+                if obj.calState==obj.calStateEnum.blinking && (curT-obj.blinkStartT)>obj.blinkInterval*obj.blinkCount*2
                     % blink finished
-                    me.calState    = me.calStateEnum.showing;
-                    me.pointStartT = curT;
+                    obj.calState    = obj.calStateEnum.showing;
+                    obj.pointStartT = curT;
                 end
             end
             
             % determine current point position
-            curPos = me.currentPoint(2:3);
+            curPos = obj.currentPoint(2:3);
             
             % determine if we're ready to accept the user pressing the
             % accept calibration point button. User should not be able to
             % press it if point is not yet at the final position
-            qAllowAcceptKey = me.calState~=me.calStateEnum.blinking;
+            qAllowAcceptKey = obj.calState~=obj.calStateEnum.blinking;
+            
+            % draw
+            newTex = obj.videoPlayer.getFrame();
+            if newTex>0
+                if obj.tex>0
+                    Screen('Close', obj.tex);
+                end
+                obj.tex = newTex;
+            end
             
             if ~isempty(wpnt)
-				me.stimulus.updateXY(curPos(1),curPos(2));
-				if (me.calState~=me.calStateEnum.blinking || mod((curT-me.blinkStartT)/me.blinkInterval/2,1)>.5)
-					me.stimulus.draw();
-				end
+                Screen('FillRect',wpnt,obj.getColorForWindow(obj.bgColor)); % needed when multi-flipping participant and operator screen, doesn't hurt when not needed
+                if obj.tex>0 && (obj.calState~=obj.calStateEnum.blinking || mod((curT-obj.blinkStartT)/obj.blinkInterval/2,1)>.5)
+                    if ~isempty(obj.videoSize)
+                        ts = [0 0 obj.videoSize];
+                    else
+                        ts = Screen('Rect',obj.tex);
+                    end
+                    rect = CenterRectOnPointd(ts,curPos(1),curPos(2));
+                    Screen('DrawTexture',wpnt,obj.tex,[],rect);
+					if obj.doMask
+						Screen('DrawTexture',wpnt,obj.masktex,[],rect,[], [], 1, [0.5 0.5 0.5 1]');
+					end
+                end
             end
         end
     end
     
     methods (Access = private, Hidden)
-        function clr = getColorForWindow(me,clr)
-            if me.qFloatColorRange
+        %=============================================================
+        function clr = getColorForWindow(obj,clr)
+            if obj.qFloatColorRange
                 clr = double(clr)/255;
             end
         end

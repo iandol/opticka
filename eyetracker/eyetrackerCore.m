@@ -924,7 +924,7 @@ classdef eyetrackerCore < optickaCore
 		function trackerClearScreen(me)
 			if me.isOff || ~me.isConnected || ~me.operatorScreen.isOpen; return; end
 			drawBackground(me.operatorScreen);
-			fprintf(' <<<BACKGROUND>>> ');
+			%fprintf(' <<<BACKGROUND>>> ');
 		end
 
 		% ===================================================================
@@ -944,7 +944,7 @@ classdef eyetrackerCore < optickaCore
 			if dontclear ~= 1; dontclear = 0; end
 			% Screen('Flip', windowPtr [, when] [, dontclear] [, dontsync] [, multiflip]);
 			me.operatorScreen.flip([], dontclear, 2);
-			fprintf(' <<<FLIP: %i>>> ',dontclear);
+			%fprintf(' <<<FLIP: %i>>> ',dontclear);
 		end
 
 		% ===================================================================

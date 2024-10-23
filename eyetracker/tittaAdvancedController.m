@@ -35,14 +35,13 @@ classdef tittaAdvancedController < handle
         EThndl
         calDisplay                                 % expected to be a VideoCalibrationDisplay instance
         rewardProvider
-        audioProvider
-        forceRewardButton           = ''           % if provided, when key press on this button is detected, reward is forced on
-        skipTrainingButton          = ''           % if training, when key press on this button is detected and we're in calibration stage, skip forward to 'cal_calibrating' state (i.e. skip positioning and gazing training)
+        forceRewardButton           = 'j'           % if provided, when key press on this button is detected, reward is forced on
+        skipTrainingButton          = 'x'           % if training, when key press on this button is detected and we're in calibration stage, skip forward to 'cal_calibrating' state (i.e. skip positioning and gazing training)
 
         gazeFetchDur                = 100          % duration of gaze samples to peek on each iteration (ms, e.g., last 100 ms of gaze)
         gazeAggregationMethod       = 1            % 1: use mean of all samples during last gazeFetchDur ms, 2: use mean of last valid sample during last gazeFetchDur ms
         minValidGazeFrac            = .5
-        scrRes;
+        scrRes						= []
 
         maxOffScreenTime            = 40/60*1000
         onScreenTimeThreshCap       = 400          % maximum time animal will be required to keep gaze onscreen for rewards
@@ -51,87 +50,82 @@ classdef tittaAdvancedController < handle
         videoShrinkTime             = 1000         % how long eyes on video before video shrinks
         videoShrinkRate             = 0.01         % chance to decrease video size
 
-        videoSizes                  = [
-            1600 1600;
-            1200 1200;
-            800 800;
-            600 600;
-            500 500;
-            400 400;
-            300 300;
-            ]
-        calVideoSize                = [250 250]
+        videoSizes                  = [ 1600 1600;
+            							1200 1200;
+            							800 800;
+            							600 600;
+            							500 500;
+            							400 400;
+            							300 300; ]
+        calVideoSize                = [200 200]
         calShowVideoWhenDone        = true
         calShowVideoWhenDeactivated = true
         calVideoSizeWhenNotActive   = [600 600]
         calNotActiveRewardDistFac   = .5           % fraction of video width (so 0.5 means gaze anywhere on video, since distance is from center)
         calNotActiveRewardTime      = 500          % ms
 
-        valVideoSize                = 250 250]
+        valVideoSize                = [200 200]
         valShowVideoWhenDone        = true
         valShowVideoWhenDeactivated = true
         valVideoSizeNotActive        = [600 600]
         valNotActiveRewardDistFac    = .5          % fraction of video width (so 0.5 means gaze anywhere on video, since distance is from center)
         valNotActiveRewardTime       = 500         % ms
 
-        calOnTargetTime             = 500;          % ms
-        calOnTargetDistFac          = 1/3;          % max gaze distance to be considered close enough to a point to attempt calibration (factor of vertical size of screen)
-        calAfterFirstCollected      = false;        % if true, a calibration compute_and_apply command will be given after the first calibration point is successfully collected, before continueing to collect the next calibration point
+        calOnTargetTime             = 500          % ms
+        calOnTargetDistFac          = 1/3          % max gaze distance to be considered close enough to a point to attempt calibration (factor of vertical size of screen)
+        calAfterFirstCollected      = false        % if true, a calibration compute_and_apply command will be given after the first calibration point is successfully collected, before continueing to collect the next calibration point
 
-        valOnTargetDist             = 150;          % pixels
-        valOnTargetTime             = 500;          % ms
-        valRandomizeTargets         = true;
+        valOnTargetDist             = 150          % pixels
+        valOnTargetTime             = 500          % ms
+        valRandomizeTargets         = true
 
-        reEntryStateCal             = tittaAdvancedController.stateEnum.cal_calibrating;    % when reactivating controller, discard state up to beginning of this state
-        reEntryStateVal             = tittaAdvancedController.stateEnum.val_validating;     % when reactivating controller, discard state up to beginning of this state
+        reEntryStateCal             = tittaAdvancedController.stateEnum.cal_calibrating    % when reactivating controller, discard state up to beginning of this state
+        reEntryStateVal             = tittaAdvancedController.stateEnum.val_validating     % when reactivating controller, discard state up to beginning of this state
 
-        videoRectColor              = [255 255 0];    % color in which to draw the rect indicating where the video is shown on the screen
-        showGazeToOperator          = true;         % if true, aggregated gaze as used by the controller is drawn as a crosshair on the operator screen
-        logTypes                    = 1;            % bitmask: if 0, no logging. bit 1: print basic messages about what its up to. bit 2: print each command received in receiveUpdate(), bit 3: print messages about rewards (many!)
-        logReceiver                 = 0;            % if 0: matlab command line. if 1: Titta
+        videoRectColor              = [255 255 0]    % color in which to draw the rect indicating where the video is shown on the screen
+        showGazeToOperator          = true         % if true, aggregated gaze as used by the controller is drawn as a crosshair on the operator screen
+        logTypes                    = 1            % bitmask: if 0, no logging. bit 1: print basic messages about what its up to. bit 2: print each command received in receiveUpdate(), bit 3: print messages about rewards (many!)
+        logReceiver                 = 0            % if 0: matlab command line. if 1: Titta
     end
     properties (Access=private,Hidden=true)
         rewardTimer                 = 500           % ms
         lastRewardTime              = 0
-        isActive                    = false;
-        isNonActiveShowingVideo     = false;
-        isShowingPointManually      = false;
-        dispensingReward            = false;
-        dispensingForcedReward      = false;
+        isActive                    = false
+        isNonActiveShowingVideo     = false
+        isShowingPointManually      = false
+        dispensingReward            = false
+        dispensingForcedReward      = false
         controlState                = tittaAdvancedController.stateEnum.cal_positioning;
-        shouldRewindState           = false;
-        shouldClearCal              = false;
-        clearCalNow                 = false;
-        clearValNow                 = false;
-        activationCount             = struct('cal',0, 'val',0);
-        shouldUpdateStatusText;
-        trackerFrequency;                           % calling obj.EThndl.frequency is blocking when a calibration action is ongoing, so cache the value
+        shouldRewindState           = false
+        shouldClearCal              = false
+        clearCalNow                 = false
+        clearValNow                 = false
+        activationCount             = struct('cal',0, 'val',0)
+        shouldUpdateStatusText
+        trackerFrequency                          % calling obj.EThndl.frequency is blocking when a calibration action is ongoing, so cache the value
 
-        awaitingPointResult         = 0;            % 0: not awaiting anything; 1: awaiting point collect result; 2: awaiting point discard result; 3: awaiting compute and apply result; 4: calibration clearing result
-        lastUpdate                  = {};
+        awaitingPointResult         = 0            % 0: not awaiting anything; 1: awaiting point collect result; 2: awaiting point discard result; 3: awaiting compute and apply result; 4: calibration clearing result
+        lastUpdate                  = {}
 
-        drawState                   = 0;            % 0: don't issue draws from here; 1: new command should be given to drawer; 2: regular draw command should be given
-        drawExtraFrame              = false;        % because command in tick() is only processed in Titta after fixation point is drawn, we need to draw one extra frame here to avoid flashing when starting calibration point collection
+        drawState                   = 0            % 0: don't issue draws from here; 1: new command should be given to drawer; 2: regular draw command should be given
+        drawExtraFrame              = false        % because command in tick() is only processed in Titta after fixation point is drawn, we need to draw one extra frame here to avoid flashing when starting calibration point collection
 
-        backupPaceDuration          = struct('cal',[],'val',[]);
+        backupPaceDuration          = struct('cal',[],'val',[])
     end
 
 
     methods
         % ===================================================================
-        function obj = tittaAdvancedController(EThndl,calDisplay,scrRes,rewardProvider,audioProvider)
+        function obj = tittaAdvancedController(EThndl,calDisplay,scrRes,rewardProvider)
             obj.setCleanState();
             obj.EThndl = EThndl;
-            assert(isa(calDisplay,"VideoCalibrationDisplay"))
+            assert(isa(calDisplay,"tittaAdvMovieStimulus"))
             obj.calDisplay = calDisplay;
             if nargin>2 && ~isempty(scrRes)
                 obj.scrRes = scrRes;
             end
             if nargin>3 && ~isempty(rewardProvider)
                 obj.rewardProvider = rewardProvider;
-            end
-            if nargin>4 && ~isempty(audioProvider)
-                obj.audioProvider = audioProvider;
             end
         end
 
@@ -160,6 +154,9 @@ classdef tittaAdvancedController < handle
                 [~,~,keyCode] = KbCheck();
                 if any(keyCode)
                     if ~isempty(obj.forceRewardButton) && any(ismember(KbName(keyCode),{obj.forceRewardButton}))
+                        if bitget(obj.logTypes,3)
+                            obj.log_to_cmd('calibrating (force reward)');
+                        end
                         obj.reward(true);
                     elseif ~isempty(obj.skipTrainingButton) && any(ismember(KbName(keyCode),{obj.skipTrainingButton}))
                         obj.controlState = obj.stateEnum.cal_calibrating;
@@ -399,9 +396,10 @@ classdef tittaAdvancedController < handle
                     % calibration point collected
                 case 'cal_collect_done'
                     obj.lastUpdate = {type,currentPoint,posNorm,callResult};
-                    if bitget(obj.logTypes,2)
+                    if bitget(obj.logTypes,1)
                         success = callResult.status==0;     % TOBII_RESEARCH_STATUS_OK
                         obj.log_to_cmd('calibration point collect: %s',ternary(success,'success','failed'));
+                        if success; obj.reward(true); end
                     end
                     % update point status
                     iPoint = find(obj.calPoints==currentPoint);
@@ -416,8 +414,9 @@ classdef tittaAdvancedController < handle
                     end
                     % validation point collected
                 case 'val_collect_done'
+                    obj.reward(true);
                     obj.lastUpdate = {type,currentPoint,posNorm,callResult};
-                    if bitget(obj.logTypes,2)
+                    if bitget(obj.logTypes,1)
                         obj.log_to_cmd('validation point collect: success');
                     end
                     % update point status
@@ -641,6 +640,7 @@ classdef tittaAdvancedController < handle
             obj.offScreenTimestamp  = nan;
             obj.onVideoTimestamp    = nan;
             obj.latestTimestamp     = nan;
+            obj.lastRewardTime      = nan;
 
             obj.onScreenTimeThresh  = 1;
             obj.videoSize           = 1;
@@ -714,16 +714,22 @@ classdef tittaAdvancedController < handle
         % ===================================================================
         function reward(obj,on)
             if ~exist('on','var'); on = false; end
+            if isempty(obj.lastRewardTime) || isnan(obj.lastRewardTime); obj.lastRewardTime = GetSecs; end
             if isempty(obj.rewardProvider); return; end
-            if on == true && (obj.latestTimestamp > (obj.lastRewardTime + obj.rewardTimer))
-                if bitget(obj.logTypes,1)
-                    obj.log_to_cmd('--->>> CONTROLLER-REWARD\n');
+            nextTime = obj.lastRewardTime + 0.5;
+            thisTime = GetSecs;
+            if on == true 
+                if thisTime > nextTime
+                    obj.lastRewardTime = thisTime;
+                    if bitget(obj.logTypes,1)
+                        obj.log_to_cmd('reward() REWARD @ %.10g > %.10g\n', thisTime, nextTime);
+                    end
+                    obj.rewardProvider.giveReward();
+                else
+
                 end
-                obj.rewardProvider.giveReward();
-                obj.audioProvider.beep();
-                obj.lastRewardTime = obj.latestTimestamp;
             else
-                
+               
             end
         end
 
@@ -1103,10 +1109,10 @@ classdef tittaAdvancedController < handle
                 end
                 onDur = obj.latestTimestamp-obj.onVideoTimestamp;
                 if onDur > dur
-                    obj.reward(true)
+                    obj.reward(true);
                 end
             else
-                obj.reward(false)
+                obj.reward(false);
             end
         end
 

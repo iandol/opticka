@@ -37,10 +37,10 @@ classdef tittaRewardProvider < handle
         end
 
         % ===================================================================
-        function start(obj)
+        function giveReward(obj)
             if ~obj.dummyMode
-                obj.startT = GetSecs();
                 obj.rM.giveReward();
+                if ~isempty(obj.aM);obj.aM.beep(3000,0.1,0.1);end
                 if obj.verbose
                     fprintf('tittaRewardProvider: reward\n');
                 end
@@ -48,18 +48,23 @@ classdef tittaRewardProvider < handle
         end
 
         % ===================================================================
+        function start(obj)
+            if ~obj.dummyMode
+                obj.giveReward();
+            end
+        end
+
+        % ===================================================================
         function tick(obj)
             if ~obj.dummyMode
-                
+                obj.startT = GetSecs();
             end
         end
 
         % ===================================================================
         function stop(obj)
             if ~obj.dummyMode
-                if obj.verbose
-                    fprintf('tittaRewardProvider: stop\n');
-                end
+                
             end
         end
     end
