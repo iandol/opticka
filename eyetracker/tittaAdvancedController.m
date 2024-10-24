@@ -90,6 +90,7 @@ classdef tittaAdvancedController < handle
     properties (Access=private,Hidden=true)
         rewardTimer                 = 500           % ms
         lastRewardTime              = 0
+		nRewards					= 0
         isActive                    = false
         isNonActiveShowingVideo     = false
         isShowingPointManually      = false
@@ -615,7 +616,7 @@ classdef tittaAdvancedController < handle
         % ===================================================================
         function setCleanState(obj)
             if bitget(obj.logTypes,1)
-                obj.log_to_cmd('cleanup state');
+                obj.log_to_cmd('cleanup state, total rewards: %i',obj.nRewards);
             end
             obj.isActive            = false;
             obj.isNonActiveShowingVideo = false;
@@ -641,6 +642,7 @@ classdef tittaAdvancedController < handle
             obj.onVideoTimestamp    = nan;
             obj.latestTimestamp     = nan;
             obj.lastRewardTime      = nan;
+			obj.nRewards			= 0;
 
             obj.onScreenTimeThresh  = 1;
             obj.videoSize           = 1;
@@ -721,8 +723,9 @@ classdef tittaAdvancedController < handle
             if on == true 
                 if thisTime > nextTime
                     obj.lastRewardTime = thisTime;
+					obj.nRewards = obj.nRewards + 1;
                     if bitget(obj.logTypes,1)
-                        obj.log_to_cmd('reward() REWARD @ %.10g > %.10g\n', thisTime, nextTime);
+                        obj.log_to_cmd('reward() REWARD N:%i @ %.10g > %.10g\n', obj.nRewards, thisTime, nextTime);
                     end
                     obj.rewardProvider.giveReward();
                 else
