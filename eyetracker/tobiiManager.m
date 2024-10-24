@@ -198,6 +198,7 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 			if strcmpi(me.calibration.stimulus,'movie') || strcmpi(me.calibration.manualMode,'Smart')
 				calStim							= tittaAdvMovieStimulus();
 				calStim.bgColor					= me.settings.cal.bgColor;
+				calStim.videoSize				= [500 500];
 				if ~isempty(me.calibration.filePath); fp = me.calibration.filePath; else; fp = me.calibration.movie; end
 				vids = FileFromFolder(fp, [], 'mp4');
 				vids = arrayfun(@(x) fullfile(x.folder,x.name), vids, 'uni', false);
@@ -292,6 +293,29 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
                 me.settings.advcal.val.pointNotifyFunction = @calCtrl.receiveUpdate;
                 me.settings.advcal.cal.useExtendedNotify = true;
                 me.settings.advcal.val.useExtendedNotify = true;
+				cp = me.settings.cal.pointPos;
+				vp = me.settings.cal.pointPos;
+				switch size(cp,1)
+					case 1
+						calCtrl.setCalPoints(1,cp);
+					case 2
+						calCtrl.setCalPoints(2,cp);
+					case 3
+						calCtrl.setCalPoints(1,cp(2,:));
+					case 4
+						calCtrl.setCalPoints(2:3,cp(2:3,:));
+						calCtrl.calAfterFirstCollected = true;
+					case 5
+						calCtrl.setCalPoints([1 3 5],cp([1 3 5],:));
+					case 6
+						calCtrl.setCalPoints(3:4,cp(3:4,:));
+						calCtrl.calAfterFirstCollected = true;
+					otherwise
+						calCtrl.setCalPoints(1:size(cp,1),cp);
+				end
+				calCtrl.setValPoints(1:size(vp,1),vp);
+				calCtrl.forceRewardButton  = 'j';
+				calCtrl.skipTrainingButton = 'x';
 				me.calController = calCtrl;
             end
 

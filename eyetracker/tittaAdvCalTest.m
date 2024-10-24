@@ -35,7 +35,7 @@ sca
 DEBUGlevel              = 0;
 fixClrs                 = [0 255];
 bgClr                   = 127;
-eyeColors               = {[1 0.5 0],[0 0.3 0.6]}; % for live data view on operator screen
+eyeColors               = {[255 127 0],[0 95 191]}; % for live data view on operator screen
 videoFolder             = '/home/cog/Videos/';
 videoExt                = 'mp4';
 numCalPoints            = 2;        % 2, 3 or 5
@@ -102,9 +102,6 @@ try
     calViz.bgColor              = bgClr;
     % calibration logic: custom controller
     rewardProvider = tittaRewardProvider();
-    [rM, aM] = optickaCore.initialiseGlobals(true, true);
-    rewardProvider.rM = rM; rM.verbose = true;
-    rewardProvider.aM = aM; aM.verbose = true;
     calController = tittaAdvancedController([],calViz,[],rewardProvider);
     % hook up our controller with the state notifications provided by
     % Titta.calibrateAdvanced (request extended notification) so that the
