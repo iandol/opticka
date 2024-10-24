@@ -17,7 +17,6 @@ classdef tittaAdvMovieStimulus < handle
 		bgColor				= 127
 		videoSize			= []
 		doMask				= true
-		win					= []
 	end
 	properties (Access=private, Hidden = true)
 		currentPoint

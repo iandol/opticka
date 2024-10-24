@@ -198,7 +198,7 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 			if strcmpi(me.calibration.stimulus,'movie') || strcmpi(me.calibration.manualMode,'Smart')
 				calStim							= tittaAdvMovieStimulus();
 				calStim.bgColor					= me.settings.cal.bgColor;
-				calStim.videoSize				= [500 500];
+				calStim.videoSize				= [me.calibration.size*me.screen.ppd me.calibration.size*me.screen.ppd];
 				if ~isempty(me.calibration.filePath); fp = me.calibration.filePath; else; fp = me.calibration.movie; end
 				vids = FileFromFolder(fp, [], 'mp4');
 				vids = arrayfun(@(x) fullfile(x.folder,x.name), vids, 'uni', false);
@@ -285,10 +285,9 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
             end
             if strcmpi(me.calibration.manualMode,'Smart')
                 me.rewardProvider = tittaRewardProvider();
-                [rM, aM] = optickaCore.initialiseGlobals(true, true);
-				rM.verbose = true; aM.verbose = true;
-                me.rewardProvider.rM = rM; me.rewardProvider.aM = aM; 
-                calCtrl = tittaAdvancedController([],me.calStim,[],me.rewardProvider);
+                
+				
+				calCtrl = tittaAdvancedController([],me.calStim,[],me.rewardProvider);
                 me.settings.advcal.cal.pointNotifyFunction = @calCtrl.receiveUpdate;
                 me.settings.advcal.val.pointNotifyFunction = @calCtrl.receiveUpdate;
                 me.settings.advcal.cal.useExtendedNotify = true;
