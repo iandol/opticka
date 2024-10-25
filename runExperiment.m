@@ -2189,6 +2189,8 @@ classdef runExperiment < optickaCore
 				else
 					rM = ioManager();
 				end
+				rM.silentMode = true;
+				rM.open;
 				fprintf('===> No reward TTLs will be sent...\n');
 			end
 

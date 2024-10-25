@@ -116,7 +116,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 			success = false;
 			if me.isOff; me.isConnected = false; success = true; return; end
 
-			[rM, aM] = initialiseGlobals(me, false, true);
+			[rM, aM] = optickaCore.initialiseGlobals();
 
 			if ~exist('sM','var') || isempty(sM)
 				if isempty(me.screen) || ~isa(me.screen,'screenManager')
@@ -243,10 +243,10 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		%>
 		% ===================================================================
 			if me.isOff; return; end
-            [rM, aM] = initialiseGlobals(me);
+			
+            [rM, aM] = optickaCore.initialiseGlobals();
 
-			if ~rM.isOpen; open(rM); end
-			if me.calibration.audioFeedback; open(aM); beep(aM,1000,0.1,0.1); end
+			if me.calibration.audioFeedback; open(aM); beep(aM,2000,0.1,0.1); end
 
 			cal = [];
 			if ~me.isConnected && ~me.isDummy

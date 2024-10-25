@@ -121,7 +121,7 @@ classdef pupilCoreManager < eyetrackerCore & eyetrackerSmooth
 		%>  none is provided a default will be made.
 		% ===================================================================
 			
-			[rM, aM] = initialiseGlobals(me, false, true);
+			[rM, aM] = initialiseGlobals();
 
 			if ~exist('sM','var') || isempty(sM)
 				if isempty(me.screen) || ~isa(me.screen,'screenManager')

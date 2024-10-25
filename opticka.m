@@ -64,6 +64,9 @@ classdef opticka < optickaCore
 			'OKarduinoPort','OKarduinoType',...
 			'OKrewardType','OKTTLPin','OKTTLTime',...
 			'OKOpenGLBlending','OKWindowSize',...
+			'OKuseIRec2HS','OKuseTobii','OKuseEyelink','OKusePupilCore',...
+			'OKuseLabJackTStrobe','OKuseLabJackStrobe','OKuseDataPixx','OKuseDisplayPP',...
+			'OKUseNirSmart','OKuseArduino','OKuseLabJackReward',...
 			'OKUseDummy','OKINTANPort', 'OKstrobeOFF',...
 			'OKELCalibProp','OKELCalibDevice','OKELManualMode','OKELCalibBeep',...
 			'OKTobiiCal','OKTobiiVal','OKTobiiAddress',...
@@ -325,8 +328,8 @@ classdef opticka < optickaCore
 					s{i+1} = num2str(i);
 				end
 				if (~isdeployed || ~ismcc) && ~isempty(s)
-					me.ui.OKSelectScreen.Items = s;
-					me.ui.OKSelectScreen.Value = s{end};
+					me.ui.OKScreen.Items = s;
+					me.ui.OKScreen.Value = s{end};
 					clear s;
 					me.ui.OKOptickaVersion.Text = olds; 
 				end
@@ -353,7 +356,7 @@ classdef opticka < optickaCore
 		
 			me.r.audioDevice = me.gn(me.ui.OKaudioDevice);
 
-			me.r.screen.screen = me.gd(me.ui.OKSelectScreen);
+			me.r.screen.screen = me.gd(me.ui.OKScreen);
 			
 			me.r.screen.distance = me.gd(me.ui.OKMonitorDistance);
 			me.r.screen.pixelsPerCm = me.gd(me.ui.OKpixelsPerCm);
