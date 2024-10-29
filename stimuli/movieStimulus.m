@@ -14,18 +14,22 @@ classdef movieStimulus < baseStimulus
 		%> do we lock the texture angle to the direction? If so what is the offset
 		%> (0 = parallel, 90 = orthogonal etc.)
 		lockAngle double = []
-		%> the name / path of a file or folder, if empty a default will be used
+		%> the name / path of a file or folder, if empty a default movie will be used
 		filePath char = ''
-		%> selection if N > 0, then this is a number of images from 1:N, e.g.
-		%> filePath = base.jpg, selection=5, then base1.jpg - base5.jpg
-		%> update() will randomly select one from this group.
+		%> add a circular mask on the movie?
+		circularMask logical = false
+		%> selection if nVideos > 0
 		selection double		= 0
+		%> autoShuffle: time in secs to shuffle to a new video, 0 disables
+		autoShuffle				= 0
 		%> do we block when getting a frame? This is important, as if it is 1
 		%> then you will drop frames waiting for the the synced video frame.
-		%> Set to 0 this class uses double buffering to keep drawing the previous frame
+		%> Set to 0 to use double buffering to keep drawing the previous frame
 		%> unitl a new frame is ready, ensuring other stimuli animate
 		%> smoothly alongside the video. 
 		blocking double = 0
+		%> how to handle looping (1 = PTB default)
+		loopStrategy double		= 1
 		%> pixel format for opening movie? 6 is more efficient if H264
 		%> used. 1 = Luminance/Greyscale image, 2 = Luminance+Alpha, 
 		%> 3 = RGB 8 bit per channel, 4 = RGBA8, 5 = YUV 4:2:2 packed pixel format 
@@ -34,19 +38,19 @@ classdef movieStimulus < baseStimulus
 		%> 7 or 8 = Y8-Y800 planar format, using GLSL shaders, 
 		%> 9 = 16 bit Luminance, 10 = 16 bpc RGBA image
 		pixelFormat double = []
-		%> how many seconds to preload, -1 tries all
-		preloadSecs double = -1
+		%> how many seconds to preload, -1 tries all, 1 secs is PTB default
+		preloadSecs double = 1
 		%> additional special flags, numbers can be added together
 		%> 1 = Use YUV video decoding instead of RGBA
-		%> 2 = linux with psychportaudio
-		%> 4 = draw motion vectors on top of decoded video frames
+		%> 2 = disable sound
+		%> 4 = disable hardware
 		%> 8 = skip all B-Frames during decoding to reduce processor load on very slow machines
 		%> 16 = convert all video textures immediately into a format which makes them useable as offscreen windows
 		%> 32,64,128 = different loop strategies
-		%> 256 = revent automatic deinterlacing of video
+		%> 256 = prevent automatic deinterlacing of video
 		%> 512 = marks the movie as encoded in Psychtoolbox's own proprietary 16 bpc high precision format
 		%> 1024 = video frames are encoded as raw Bayer sensor data
-		specialFlagsOpen double = []
+		specialFlagsOpen double = 0
 		%> special flags for 'GetMovieImage'
 		%> 1 = use GL_TEXTURE_2D
 		%> 2 = high precision
@@ -56,27 +60,34 @@ classdef movieStimulus < baseStimulus
 		%> special flags for 'GetMovieImage'
 		%> 1 = don't return any time info (maybe slightly faster?)
 		%> 2 = don't return any textures, for bechmarking.
-		specialFlags2Frame double = 1;
-		%> how to handle looping (1=PTB default)
-		loopStrategy double = 1
-		%> mask out a colour? e.g. [0 0 0]
-		mask double = []
+		specialFlags2Frame double = 1
+		%> live mask out a colour? e.g. [0 0 0]
+		mask double				= []
 		%> mask tolerance
-		maskTolerance double = [];
-		%> if movie has transparency, enforce opengl blending?
+		maskTolerance double	= [];
+		%> if movie has transparency, optionally enforce opengl blending?
 		enforceBlending logical = false
+	end
+
+	properties (Hidden = true)
+		%> async setting for OpenMovie, 4 may help performance, see OpenMovie help
+		async				= []
+		%> initial settings for circular mask
+		circularMaskSize	= 500
+		circularMaskRadius	= 250
+		circularMaskSmoothing = 60
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> list of imagenames if selection > 0
-		filePaths = {}
+		filePaths		= {}
 		%> number of videos
-		nVideos	= 0
+		nVideos			= 0
 		%> current randomly selected movie
-		currentFile				= ''
+		currentFile		= ''
 		%> scale is dependent on stimulus size and movie width
-		scale = 1
-		family = 'movie'
+		scale			= 1
+		family			= 'movie'
 		%> handle from OpenMovie
 		movie
 		%> details
@@ -88,13 +99,19 @@ classdef movieStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = protected, GetAccess = public, Transient = true, Hidden = true)
-		typeList = {'movie'}
-		filePathList = 'filerequestor';
+		typeList		= {'movie'}
+		filePathList	= 'filerequestor';
+		%> do we need to 'PlayMovie'?
+		needPlayMovie	= false
 		%> texture buffer for non-blocking movie playback, this is the
 		%> previous frame until a new frame is available
-		buffertex = []
+		buffertex		= []
+		%> circular mask texture
+		masktex			= []
 		%> shader for masking
 		shader
+		%> 
+		shuffleTime		= inf
 	end
 
 	properties (SetAccess = protected, GetAccess = ?baseStimulus)
@@ -109,12 +126,12 @@ classdef movieStimulus < baseStimulus
 		%> allowed properties passed to object upon construction
 		allowedProperties = {'filePath', 'blocking', 'pixelFormat', 'preloadSecs', ...
 			'specialFlagsOpen', 'specialFlagsFrame', 'specialFlags2Frame', 'loopStrategy', ...
-			'mask', 'maskTolerance', 'enforceBlending', 'direction','selection'}
+			'mask', 'maskTolerance', 'enforceBlending', 'direction','selection','circularMask'}
 		%> properties to not create transient copies of during setup phase
-		ignoreProperties = {'buffertex', 'shader', 'screenVals', 'movie', 'duration', ...
+		ignoreProperties = {'masktex','circularMask','buffertex', 'shader', 'screenVals', 'movie', 'duration', ...
 			'fps', 'width', 'height', 'count', 'scale', 'filePath', 'pixelFormat', ...
 			'preloadSecs', 'specialFlagsOpen', 'specialFlagsFrame', 'specialFlags2Frame', ...
-			'loopStrategy'}
+			'loopStrategy','needPlayMovie'}
 	end
 	
 	%=======================================================================
@@ -198,6 +215,14 @@ classdef movieStimulus < baseStimulus
 			if ~isempty(me.mask)
 				me.shader = CreateSinglePassImageProcessingShader(me.sM.win, 'BackgroundMaskOut', me.mask, me.maskTolerance);
 			end
+
+			if me.circularMask
+				me.masktex = CreateProceduralSmoothedDisc(me.sM.win, me.circularMaskSize, me.circularMaskSize, [], me.circularMaskRadius, me.circularMaskSmoothing, true, 2);
+			end
+
+			if me.autoShuffle > 0
+				me.selection = randi(me.nVideos);
+			end
 			
 			me.inSetup = false; me.isSetup = true;
 			loadMovie(me);
@@ -217,8 +242,8 @@ classdef movieStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function update(me)
-			Screen('PlayMovie', me.movie, 0);
-			Screen('SetMovieTimeIndex', me.movie, 0); %reset movie
+			try Screen('PlayMovie', me.movie, 0); end
+			Screen('SetMovieTimeIndex', me.movie, 0); %reset movie time
 			if ~isempty(me.texture) && me.texture > 0 && Screen(me.texture,'WindowKind') == -1
 				try Screen('Close',me.texture); end %#ok<*TRYNC>
 			end
@@ -226,14 +251,13 @@ classdef movieStimulus < baseStimulus
 				try Screen('Close',me.buffertex); end 
 			end
 			me.texture = []; me.buffertex = [];
-			if me.sizeOut > 0
-				me.scale = me.sizeOut / (me.width / me.ppd);
-			end
 			resetTicks(me);
-			fprintf('selectionOut = %i\n',me.selectionOut);
 			if ~matches(me.currentFile,me.filePaths{me.selectionOut})
 				me.currentFile = me.filePaths{me.selectionOut};
 				loadMovie(me);
+			end
+			if me.sizeOut > 0
+				me.scale = me.sizeOut / (me.width / me.ppd);
 			end
 			computePosition(me);
 			setRect(me);
@@ -257,27 +281,49 @@ classdef movieStimulus < baseStimulus
 		% ===================================================================
 		function draw(me)
 			if me.isVisible && me.tick >= me.delayTicks && me.tick < me.offTicks
-				if me.tick == 0 || (me.delayTicks > 0 && me.tick == me.delayTicks) 
-					Screen('PlayMovie', me.movie, 1, me.loopStrategy); 
+
+				if me.needPlayMovie
+					fprintf('PLAY\n');
+					Screen('PlayMovie', me.movie, 1, me.loopStrategy);
+					me.shuffleTime = GetSecs;
+					me.needPlayMovie = false;
 				end
+
 				if ~isempty(me.lockAngle); angle = me.directionOut+me.lockAngle; else; angle = me.angleOut; end
+
 				if me.enforceBlending; Screen('BlendFunction', me.sM.win, me.msrcMode, me.mdstMode); end
-				me.texture = Screen('GetMovieImage', me.sM.win, me.movie, me.blocking);
+				
+				me.texture = Screen('GetMovieImage', me.sM.win, me.movie, me.blocking, [], me.specialFlagsFrame, me.specialFlags2Frame);
 				if ~isempty(me.texture) && me.texture > 0
 					if ~isempty(me.buffertex) && me.buffertex > 0 ...
 					&& Screen(me.buffertex,'WindowKind') == -1
 						Screen('Close', me.buffertex);
 					end
+					fprintf('*%i',me.tick);
 					Screen('DrawTexture', me.sM.win, me.texture, [], me.mvRect,...
 						angle,[],[],[],me.shader);
 					me.buffertex = me.texture; %copy new texture to buffer
 					me.texture = [];
 				elseif ~isempty(me.buffertex) && me.buffertex > 0
+					fprintf('.%i',me.tick);
 					Screen('DrawTexture', me.sM.win, me.buffertex, [], me.mvRect,...
 						angle,[],[],[],me.shader)
 				end
+
+				if me.circularMask
+					Screen('DrawTexture', me.sM.win, me.masktex,   [], me.mvRect,...
+						[], [], 1, me.sM.backgroundColour);
+				end
+
 				if me.enforceBlending; Screen('BlendFunction', me.sM.win, me.sM.srcMode, me.sM.dstMode); end
+
 				me.drawTick = me.drawTick + 1;
+			end
+			if me.autoShuffle > 0 && GetSecs > (me.shuffleTime + me.autoShuffle)
+				fprintf('SHUFFLE!\n');
+				me.shuffleMovie();
+				me.shuffleTime = GetSecs;
+				me.tick = 0;
 			end
 			if me.isVisible; me.tick = me.tick + 1; end
 		end
@@ -317,16 +363,21 @@ classdef movieStimulus < baseStimulus
 				try Screen('Close',me.texture); end
 			end
 			if ~isempty(me.buffertex) && me.buffertex>0 ...
-					&& (isempty(me.texture) || me.texture ~= me.buffertex) ...
 					&& Screen(me.buffertex,'WindowKind')==-1
 				try Screen('Close',me.buffertex); end
 			end
-			me.buffertex = []; me.texture = [];
+			me.buffertex = []; me.texture = []; ndrop = 0;
 			if ~isempty(me.movie)
-				try ndrop=Screen('Playmovie', me.movie, 0); end %#ok<*TRYNC>
+				try ndrop = Screen('Playmovie', me.movie, 0); end %#ok<*TRYNC>
 				fprintf('---> Number of dropped movie frames: %i\n',ndrop)
 				try Screen('CloseMovie', me.movie); end
 			end
+			if ~isempty(me.masktex) && me.masktex > 0 && Screen(me.masktex,'WindowKind') == -1
+				try Screen('Close',me.masktex); end %#ok<*TRYNC>
+				me.masktex = [];
+			end
+			me.shuffleTime = inf;
+			me.needPlayMovie = false;
 			me.shader = [];
 			me.movie = [];
 			me.duration = [];
@@ -342,7 +393,7 @@ classdef movieStimulus < baseStimulus
 		% ===================================================================
 		function findFile(me, dir)
 			if ~isprop(me, 'filePath'); return; end
-			if ~exist('dir','var'); dir = false; end
+			if ~exist('dir','var'); dir = true; end
 			if dir
 				p = uigetdir('Select Files Dir');
 				f = '';
@@ -352,11 +403,28 @@ classdef movieStimulus < baseStimulus
 			if ischar(f)
 				me.filePath = [p f];
 			end
+			me.filePaths = {};
+			me.currentFile = '';
 			checkfilePath(me);
-			fprintf('--->>> Found these movies:\n');
+			fprintf('--->>> Found movie[s]:\n');
 			for i = 1:length(me.filePaths)
 				fprintf('\t %s\n',me.filePaths{i});
 			end
+		end
+
+		% ===================================================================
+		%> @brief switch to a new movie
+		%>
+		% ===================================================================
+		function shuffleMovie(me)
+			if me.nVideos < 2; return; end
+			oldn = me.getP('selection');
+			while true
+				n = randi(me.nVideos);
+				if n ~= oldn; break; end
+			end
+			me.setP('selection',n);
+			update(me);
 		end
 		
 	end %---END PUBLIC METHODS---%
@@ -377,12 +445,21 @@ classdef movieStimulus < baseStimulus
 				me.movie = []; me.width = []; me.height = [];
 			end
 			t=tic;
+			% [ moviePtr [duration] [fps] [width] [height] [count] [aspectRatio] [hdrStaticMetaData]]=Screen('OpenMovie', 
+			% windowPtr, moviefile [, async=0] [, preloadSecs=1] [, specialFlags1=0][, pixelFormat=4][, maxNumberThreads=-1][, movieOptions]);
 			[me.movie, me.duration, me.fps, me.width, me.height] = Screen('OpenMovie', ...
-				me.sM.win, me.currentFile, [], me.preloadSecs, me.specialFlagsOpen, me.pixelFormat);
+				me.sM.win, me.currentFile, me.async, me.preloadSecs, me.specialFlagsOpen, me.pixelFormat);
+
 			fprintf('\n--->>> movieStimulus: %s\n\t%.2f seconds duration, %i frames @ %f fps, w x h = %i x %i, in %ims\n', ...
 				me.currentFile, me.duration, me.count, me.fps, me.width, me.height, round(toc(t)*1e3));
 			fprintf('\tBlocking: %i | Loop: %i | Preloadsecs: %i | Pixelformat: %i | Flags: %i\n', me.blocking, ...
 				me.loopStrategy, me.preloadSecs, me.pixelFormat, me.specialFlagsOpen);
+			
+			if ~isempty(me.movie)
+				me.needPlayMovie = true; 
+			else
+				me.needPlay = false; 
+			end
 		end
 
 		% ===================================================================
@@ -425,6 +502,9 @@ classdef movieStimulus < baseStimulus
 				fprintf('---> movieStimulus: Didn''t find specified file so replacing with default movie %s\n',me.filePath);
 			elseif exist(me.filePath,'dir') == 7
 				findFiles(me);
+				if me.autoShuffle
+					me.selection = randi(me.nVideos);
+				end
 			elseif me.selection > 1
 				[p,f,e]=fileparts(me.filePath);
 				for i = 1:me.selection

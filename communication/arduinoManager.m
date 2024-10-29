@@ -169,9 +169,10 @@ classdef arduinoManager < optickaCore & rewardManager
 		end
 
 		%===============RESET================%
-		function reset(me)
+		function reset(me,hard)
+			if ~exist('hard','var');hard=false;end
 			try close(me); end
-			me.silentMode = false;
+			if hard; me.silentMode = false; end
 			notinlist = true;
 			if ~isempty(me.ports)
 				for i = 1:length(me.ports)

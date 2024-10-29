@@ -46,7 +46,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 						'tcpport', 35001,... % used to send commands
 						'stimulus','animated',... % calibration stimulus can be animated, movie, image, pupilcore
 						'size', 2,... % size of calibration target in degrees
-						'movie', [],... % if movie optionally pass a filename 
+						'movie', [],... % if movie optionally pass a filename
 						'filePath', [],...
 						'audioFeedback', true, ...
 						'calPositions', [-12 0; 0 -12; 0 0; 0 12; 12 0],...
@@ -152,6 +152,11 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 			if strcmpi(me.calibration.stimulus,'movie')
 				if isempty(me.calStim) || ~isa(me.calStim,'movieStimulus')
 					me.calStim = movieStimulus('size',me.calibration.size,'filePath',me.calibration.filePath);
+					me.calStim.specialFlagsOpen = 2; % don't load sound
+					me.calStim.circularMask = true;
+					if me.calStim.nVideos > 1
+						me.calStim.autoShuffle = 5;
+					end
 				else
 					if ~isempty(me.calStim) && isa(me.calStim,'movieStimulus'); try me.calStim.reset; end; end
 					me.calStim.size = me.calibration.size;

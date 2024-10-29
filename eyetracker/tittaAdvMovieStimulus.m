@@ -24,7 +24,7 @@ classdef tittaAdvMovieStimulus < handle
 		cumDurations
 		videoPlayer
 		tex = 0
-		masktex = []
+		masktex = 0
 	end
 	
 	methods
@@ -45,10 +45,13 @@ classdef tittaAdvMovieStimulus < handle
 			if ~isempty(obj.videoPlayer)
 				obj.videoPlayer.cleanup();
 			end
-			if ~isempty(obj.masktex) && obj.masktex > 0 && Screen(obj.masktex,'WindowKind') == -1
+			if obj.tex>0
+                try Screen('Close', obj.tex); end %#ok<*TRYNC>
+            end
+			if obj.masktex > 0 && Screen(obj.masktex,'WindowKind') == -1
 				try Screen('Close',obj.masktex); end %#ok<*TRYNC>
 			end
-			obj.masktex = [];
+			obj.masktex = 0;
 		end
 
 		%=============================================================
@@ -61,7 +64,7 @@ classdef tittaAdvMovieStimulus < handle
 			% last two inputs, tick (monotonously increasing integer) and
 			% stage ("cal" or "val") are not used in this code
 
-			if obj.doMask && isempty(obj.masktex)
+			if obj.doMask && obj.masktex==0
 				obj.masktex = CreateProceduralSmoothedDisc(wpnt,500, 500, [], 250, 60, true, 2);
 			end
 			
@@ -131,7 +134,8 @@ classdef tittaAdvMovieStimulus < handle
 					rect = CenterRectOnPointd(ts,curPos(1),curPos(2));
 					Screen('DrawTexture',wpnt,obj.tex,[],rect);
 					if obj.doMask
-						Screen('DrawTexture',wpnt,obj.masktex,[],rect,[], [], 1, [0.5 0.5 0.5 1]');
+						maskClr = obj.getColorForWindow(color2RGBA(obj.bgColor),true);
+						Screen('DrawTexture',wpnt,obj.masktex,[],rect,[], [], 1, maskClr');
 					end
 				end
 			end
@@ -140,8 +144,8 @@ classdef tittaAdvMovieStimulus < handle
 	
 	methods (Access = private, Hidden)
 		%=============================================================
-		function clr = getColorForWindow(obj,clr)
-			if obj.qFloatColorRange
+		function clr = getColorForWindow(obj,clr,forceFloatRange)
+			if obj.qFloatColorRange || (nargin>2&&forceFloatRange)
 				clr = double(clr)/255;
 			end
 		end

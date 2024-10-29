@@ -609,7 +609,7 @@ classdef runExperiment < optickaCore
 			%------enable diary logging if requested
 			if me.diaryMode
 				diary off
-				diary([alfPath filesep 'log.text.' me.name '.log']);
+				diary([me.paths.parent filesep 'log.text.' me.name '.log']);
 			end
 
 			%------make sure we reset any state machine functions to not cause
@@ -621,7 +621,7 @@ classdef runExperiment < optickaCore
 			
 			%------initialise the rewardManager global object
 			[rM, aM] = optickaCore.initialiseGlobals();
-			if rM.isOpen
+			if ~isempty(me.reward.device) && rM.isOpen
 				try rM.close; rM.reset; end
 			end
 			try
@@ -637,7 +637,7 @@ classdef runExperiment < optickaCore
 				if ~aM.isSetup;	try setup(aM); end; end
 				aM.beep(2000,0.1,0.1);
 			else
-				reset(aM);
+				try reset(aM); end
 				aM.silentMode = true;
 			end
 
@@ -1219,18 +1219,18 @@ classdef runExperiment < optickaCore
 			s = screenManager('verbosityLevel',1,'verbose',false);
 			s.screen = min(Screen('Screens'));
 			s.windowed = [0 0 800 600];
-			s.font.TextSize = s.font.TextSize * 1.5;
+			s.font.TextSize = s.font.TextSize * 2;
 			s.open;
 			s.drawText('===>>> Opticka Testing...');
 			s.flip;
 
-			commandwindow;drawnow();
+			commandwindow; drawnow();
 
 			fprintf('\n\n=========================\nOPTICKA TESTING:\n\n');
 
-			WaitSecs(0.5);
+			WaitSecs(0.25);
 
-			[rM, aM] = optickaCore.initialiseGlobals(true,true);
+			[rM, aM] = optickaCore.initialiseGlobals();
 
 			if do==1 || do == 5
 				if isempty(me.strobe.device)
@@ -1242,10 +1242,10 @@ classdef runExperiment < optickaCore
 					io.verbose = true;
 					t = sprintf('%s: test markers -- ',io.fullName);
 					s.drawTextNow(t,[],[],40);
-					s.drawTextNow([t 'Sending 255'],[],[],40);io.sendStrobe(255); WaitSecs(0.3);
-					s.drawTextNow([t 'Sending 1'],[],[],40);io.sendStrobe(1); WaitSecs(0.3);
-					s.drawTextNow([t 'Sending 255'],[],[],40);io.sendStrobe(255); WaitSecs(0.3);
-					s.drawTextNow([t 'Sending 1'],[],[],40);io.sendStrobe(1); WaitSecs(0.3);
+					s.drawTextNow([t 'Sending 255'],[],[],40);io.sendStrobe(255); WaitSecs(0.5);
+					s.drawTextNow([t 'Sending 1'],[],[],40);io.sendStrobe(1); WaitSecs(0.5);
+					s.drawTextNow([t 'Sending 255'],[],[],40);io.sendStrobe(255); WaitSecs(0.5);
+					s.drawTextNow([t 'Sending 1'],[],[],40);io.sendStrobe(1); WaitSecs(0.5);
 					s.drawTextNow('Strobe marker testing finished...',[],[],40);
 				end
 				WaitSecs(1);
@@ -1254,15 +1254,14 @@ classdef runExperiment < optickaCore
 
 			if do == 2 || do == 5
 				if isempty(me.reward.device)
-					s.drawTextNow('No strobe selected...');
+					s.drawTextNow('No reward device selected...');
 					warning('You did not select a reward device in the menu');
-					WaitSecs(0.5);
 				else
 					try
 						if isfield(me.reward,'port') && ~isempty(me.reward.port); rM.port = me.reward.port; end
 						if isfield(me.reward,'board') && ~isempty(me.reward.board); rM.board = me.reward.board; end
 						if rM.isOpen
-							try rM.close; rM.reset; end
+							try rM.close; rM.reset(true); end
 						end
 						rM.open;
 						oldv = rM.verbose;
