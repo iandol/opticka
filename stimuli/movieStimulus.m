@@ -281,9 +281,7 @@ classdef movieStimulus < baseStimulus
 		% ===================================================================
 		function draw(me)
 			if me.isVisible && me.tick >= me.delayTicks && me.tick < me.offTicks
-
 				if me.needPlayMovie
-					fprintf('PLAY\n');
 					Screen('PlayMovie', me.movie, 1, me.loopStrategy);
 					me.shuffleTime = GetSecs;
 					me.needPlayMovie = false;
@@ -299,13 +297,11 @@ classdef movieStimulus < baseStimulus
 					&& Screen(me.buffertex,'WindowKind') == -1
 						Screen('Close', me.buffertex);
 					end
-					fprintf('*%i',me.tick);
 					Screen('DrawTexture', me.sM.win, me.texture, [], me.mvRect,...
 						angle,[],[],[],me.shader);
 					me.buffertex = me.texture; %copy new texture to buffer
 					me.texture = [];
 				elseif ~isempty(me.buffertex) && me.buffertex > 0
-					fprintf('.%i',me.tick);
 					Screen('DrawTexture', me.sM.win, me.buffertex, [], me.mvRect,...
 						angle,[],[],[],me.shader)
 				end
@@ -320,7 +316,7 @@ classdef movieStimulus < baseStimulus
 				me.drawTick = me.drawTick + 1;
 			end
 			if me.autoShuffle > 0 && GetSecs > (me.shuffleTime + me.autoShuffle)
-				fprintf('SHUFFLE!\n');
+				if me.verbose; fprintf('SHUFFLE MOVIE!\n'); end
 				me.shuffleMovie();
 				me.shuffleTime = GetSecs;
 				me.tick = 0;

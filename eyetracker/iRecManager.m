@@ -313,25 +313,26 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 
 					case 'menu'
 						cloop = true;
-						resetAll(me);
+						resetFixation(me, true);
 						while cloop
 							a = a + 1;
 							getSample(me);
-							s.drawText('MENU: q = exit | c = calibrate | v = validate | d = drift offset | s = sample | F1 = screenshot');
-							flip(s);
 							if me.useOperatorScreen
 								s2.drawText('MENU: q = exit | c = calibrate | v = validate | d = drift offset | s = sample | F1 = screenshot');
 								if ~isempty(me.x)
 									s2.drawSpot(0.75,[0 1 0.25 0.2],me.x,me.y);
 								end
 								drawValidationResults(me, vn);
+								drawDriftOffset(me);
 								if mod(a,ref) == 0
 									trackerFlip(me,0,true);
 								else
 									trackerFlip(me,1);
 								end
+							else
+								s.drawText('MENU: q = exit | c = calibrate | v = validate | d = drift offset | s = sample | F1 = screenshot');
 							end
-
+							flip(s);
 							[pressed,~,keys, shift] = optickaCore.getKeys();
 							if pressed
 								if keys(quit) && shift
@@ -463,23 +464,23 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 
 						vn = length(me.validationData);
 
-						resetFixationHistory(me);
+						resetFixation(me, true);
 						nPositions = size(vpos,1);
 						while cloop
 							a = a + 1;
 							me.getSample();
 							draw(f);
 							animate(f);
-							% if me.useOperatorScreen
-							% 	s2.drawText('VALIDATE: lshift = exit | rshift = sample | # = point');
-							% 	if ~isempty(me.x); s2.drawSpot(0.75,[0 1 0.25 0.25],me.x,me.y); end
-							% 	drawValidationResults(me, vn);
-							% 	if mod(a,ref) == 0
-								% 	trackerFlip(me, 0, true);
-							% 	else
-								% 	trackerFlip(me, 1);
-							% 	end
-							% end
+							if me.useOperatorScreen
+								s2.drawText('VALIDATE: lshift = exit | rshift = sample | # = point');
+								if ~isempty(me.x); s2.drawSpot(0.75,[0 1 0.25 0.25],me.x,me.y); end
+								drawValidationResults(me, vn);
+								if mod(a,ref) == 0
+									trackerFlip(me, 0, true);
+								else
+									trackerFlip(me, 1);
+								end
+							end
 							flip(s);
 
 							[pressed,name,keys] = optickaCore.getKeys();
@@ -601,7 +602,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 			s2.drawText('Calibration finished...')
 			s.flip(); s2.flip(); s2.drawBackground; s2.flip();
 			reset(f);
-			resetAll(me);
+			resetFixation(me, true);
 			RestrictKeysForKbCheck(oldr);
 			stopRecording(me);
 			WaitSecs(0.25);

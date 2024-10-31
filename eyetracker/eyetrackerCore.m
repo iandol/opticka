@@ -291,7 +291,6 @@ classdef eyetrackerCore < optickaCore
 		function resetAll(me)
 			resetExclusionZones(me);
 			resetFixInit(me);
-			resetOffset(me);
 			resetFixation(me, true);
 			me.flipTick = 0;
 		end
@@ -381,6 +380,11 @@ classdef eyetrackerCore < optickaCore
 		% ===================================================================
 			success = false;
 			if me.isOff || ~me.isConnected || ~me.isDummy; return; end
+
+			if ~isempty(me.screen) && isa(me.screen,'screenManager'); open(me.screen); end
+			if me.useOperatorScreen && isa(me.operatorScreen,'screenManager'); open(me.operatorScreen); end
+			s = me.screen;
+			if me.useOperatorScreen; s2 = me.operatorScreen; end
 			
 			ListenChar(0);
 			oldrk = RestrictKeysForKbCheck([]); %just in case someone has restricted keys
@@ -389,15 +393,14 @@ classdef eyetrackerCore < optickaCore
 				startRecording(me);
 				statusMessage(me,'Drift Offset Initiated');
 			end
+			resetOffset(me);
 			trackerMessage(me,'Drift OFFSET');
-			trackerDrawStatus(me,'Drift Offset');
-			stopkey				= KbName('Q');
-			nextKey				= KbName('SPACE');
-			calibkey			= KbName('C');
-			driftkey			= KbName('D');
+			trackerDrawStatus(me,'Drift Offset',[],false,false);
+			menu = KbName('LeftShift');
+			sample = KbName('RightShift');
 			x = me.toPixels(me.fixation.X(1),'x'); %#ok<*PROP,*PROPLC>
 			y = me.toPixels(me.fixation.Y(1),'y');
-			Screen('Flip',me.screen.win);
+			flip(s); trackerFlip(me);
 			breakLoop = false; i = 1; flash = true;
 			correct = false;
 			xs = [];
@@ -409,21 +412,28 @@ classdef eyetrackerCore < optickaCore
 				if mod(i,10) == 0
 					flash = ~flash;
 				end
-				drawText(me.screen,'Drift Correction...');
-				if flash
-					Screen('gluDisk',me.screen.win,[1 0 1 0.75],x,y,10);
-					Screen('gluDisk',me.screen.win,[1 1 1 1],x,y,4);
+				if me.useOperatorScreen
+					drawText(s,'Look at the cross...'); 
 				else
-					Screen('gluDisk',me.screen.win,[1 1 0 0.75],x,y,10);
-					Screen('gluDisk',me.screen.win,[0 0 0 1],x,y,4);
+					drawText(s,'Look at the cross [LeftShift = quit | RightShift = sample]');
 				end
-				me.screen.drawCross(0.6,[0 0 0],x,y,0.1,false);
-				Screen('Flip',me.screen.win);
-				[~, ~, keyCode] = optickaCore.getKeys;
-				if keyCode(stopkey); breakLoop = true; break;	end
-				if keyCode(nextKey); correct = true; break; end
-				if keyCode(calibkey); trackerSetup(me); break; end
-				if keyCode(driftkey); driftCorrection(me); break; end
+				trackerDrawText(me,'Drift Correction: LeftShift = quit | RightShift = sample');
+				if flash
+					Screen('gluDisk',s.win,[1 0 1 0.75],x,y,10);
+					Screen('gluDisk',s.win,[1 1 1 1],x,y,4);
+				else
+					Screen('gluDisk',s.win,[1 1 0 0.75],x,y,10);
+					Screen('gluDisk',s.win,[0 0 0 1],x,y,4);
+				end
+				s.drawCross(0.8,[0 0 0],x,y,0.2,false);
+				trackerDrawEyePositions(me);
+				flip(s);
+				if me.useOperatorScreen; flip(s2); end
+				[pressed, ~, keyCode] = optickaCore.getKeys;
+				if pressed
+					if keyCode(menu); breakLoop = true; break;	end
+					if keyCode(sample); correct = true; break; end
+				end
 				i = i + 1;
 			end
 			if correct && length(xs) > 15 && length(ys) > 15
@@ -432,8 +442,11 @@ classdef eyetrackerCore < optickaCore
 				me.offset.Y = median(ys(end-10:end)) - me.fixation.Y(1);
 				t = sprintf('Offset: X = %.2f Y = %.2f\n',me.offset.X,me.offset.Y);
 				me.salutation('Drift [SELF]Correct',t,true);
-				drawText(me.screen,t);
-				flip(me.screen);
+				s.drawText(t);
+				s2.drawText(t);
+				drawDriftOffset(me);
+				flip(s);
+				trackerFlip(me);
 			else
 				me.offset.X = 0;
 				me.offset.Y = 0;
@@ -924,7 +937,6 @@ classdef eyetrackerCore < optickaCore
 		function trackerClearScreen(me)
 			if me.isOff || ~me.isConnected || ~me.operatorScreen.isOpen; return; end
 			drawBackground(me.operatorScreen);
-			%fprintf(' <<<BACKGROUND>>> ');
 		end
 
 		% ===================================================================
@@ -944,7 +956,6 @@ classdef eyetrackerCore < optickaCore
 			if dontclear ~= 1; dontclear = 0; end
 			% Screen('Flip', windowPtr [, when] [, dontclear] [, dontsync] [, multiflip]);
 			me.operatorScreen.flip([], dontclear, 2);
-			%fprintf(' <<<FLIP: %i>>> ',dontclear);
 		end
 
 		% ===================================================================
@@ -965,10 +976,13 @@ classdef eyetrackerCore < optickaCore
 			if ~isempty(stimPos);			trackerDrawStimuli(me, stimPos); end
 			if ~isempty(comment);			trackerDrawText(me, comment); end
 			if ~isempty(me.xAll);			trackerDrawEyePositions(me); end
+			if me.offset.X ~= 0 || me.offset.Y ~= 0; drawDriftOffset(me); end
 			if dontFlip == false && dontClear == 0
-				trackerFlip(me, 0, true); fprintf(' <<<STATUSFLIP>>> \n');
-			elseif dontFlip==false
-				trackerFlip(me, 1, false); fprintf(' <<<STATUS>>> ');
+				trackerFlip(me, 0, true);
+			elseif dontClear == 0
+				trackerFlip(me, 0, false);
+			else
+				trackerFlip(me, 1, false);
 			end
 			
 		end
@@ -1073,6 +1087,15 @@ classdef eyetrackerCore < optickaCore
 			drawText(me.operatorScreen, textIn);
 		end
 
+		% ===================================================================
+		%> @brief draw the fixation box on the tracker display
+		%>
+		% ===================================================================
+		function trackerDrawCross(me,size)
+			if ~exist('textIn','var') || me.isOff || ~me.isConnected || ~me.operatorScreen.isOpen; return; end
+			drawCross(me.operatorScreen, size);
+		end
+
 	end%-------------------------END PUBLIC METHODS--------------------------------%
 	
 	%=======================================================================
@@ -1161,7 +1184,18 @@ classdef eyetrackerCore < optickaCore
 				end
 			end
 		end
-		
+
+
+		% ===================================================================
+		%> @brief to visual degrees from pixels
+		%>
+		% ===================================================================
+		function drawDriftOffset(me)
+			if me.offset.X ~= 0 || me.offset.Y ~= 0
+				drawCross(me.operatorScreen,0.5,[1 1 1],me.offset.X,me.offset.Y);
+				drawText(me.operatorScreen,sprintf('Offset: X = %.2f Y = %.2f\n',me.offset.X,me.offset.Y),me.offset.X,me.offset.Y);
+			end
+		end
 		% ===================================================================
 		%> @brief to visual degrees from pixels
 		%>
