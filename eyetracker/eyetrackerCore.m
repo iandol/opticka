@@ -531,8 +531,8 @@ classdef eyetrackerCore < optickaCore
 		% ===================================================================
 		function updateExclusionZones(me,x,y,radius)
 			resetExclusionZones(me);
+			if ~exist('radius','var') || isempty(radius); return; end
 			if exist('x','var') && exist('y','var') && ~isempty(x) && ~isempty(y)
-				if ~exist('radius','var'); radius = 5; end
 				for i = 1:length(x)
 					if length(radius) == 2
 						me.exclusionZone(i,:) = [x(i)-radius(1) x(i)+radius(1) y(i)-radius(2) y(i)+radius(2)];

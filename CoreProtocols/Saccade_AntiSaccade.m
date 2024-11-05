@@ -1,67 +1,92 @@
-% SACCADE / ANTISACCADE Task
+% PRO-SACCADE and ANTI-SACCADE Task
 %
-% This task uses 3 stimuli: 
+% This task supports both pro and anti saccades and uses 3 stimuli: 
 % (1) pro-saccade target
 % (2) anti-saccade target and 
 % (3) fixation cross. 
 % 
-% The task sequence is set up to randomise the XY position of (1) ±10° on
+% The task sequence is set up to randomise the X & Y position (xpPosition independent variable of (1) ±10° on
 % each trial, and (2) has a modifier set as the inverse (if (1) is -10° on
 % a trial then (2) becomes +10°) - the anti-saccade target is always
 % opposite the saccade target. For the pro-saccade task, show (1) and hide
-% (2), fixation window set on (1) and [optinoal] exclusion zone set around (2). In
-% the anti-saccade task we show (2) and set the opacity of (1) during
+% (2), fixation window set on (1) and [optionally] exclusion zone set around (2). In
+% the anti-saccade task we show (2) and can vary the opacity of (1) during
 % training to encourage the subject to saccade away from (2) towards (1);
-% the fixation and exclusion windows keep the same logic as for the
+% the fixation and optional exclusion windows keep the same logic as for the
 % pro-saccade condition.
 %
-% NOTE: this pro/anti-saccade task does not impose a delay. Delays are
-% common to help analysis of recorded neurons, however, teaching
-% subjects to delay their [pro|anti]saccade interferes with the main
-% effect!
+% The exclusion zone is used to punish subject who saccade in the wrong
+% direction. This is important suring training, but during data collection
+% you may want to measure corrective saccades, in which case you would
+% disable the exclusion zone.
+%
+% NOTE: this pro/anti-saccade task does not impose a response delay. Delays
+% are common to help analysis of recorded neurons, however, teaching
+% subjects to delay their [pro|anti]saccade interferes with the cognitive
+% process we wish to measure!!!
+%
+% BUT this task does support delay of display of the [pro|anti]saccade
+% target as this has a clear impact on error rates and reaction times, with
+% 200ms showing max effect; you can control this by adding a delayTime
+% parameter of 0.2s to the pro-saccade and anti-saccade target stimuli. See
+% Fischer B & Weber H (1997) “Effects of stimulus conditions on the
+% performance of antisaccades in man.” Experimental Brain Research 116(2),
+% 191-200 [doi.org/10.1007/pl00005749](https://doi.org/10.1007/pl00005749)
+
 
 %==================================================================
 %--------------------TASK SPECIFIC CONFIG--------------------------
-% is this run a 'saccade' or 'anti-saccade' task run?
+% name
+tS.name					= 'prosaccade-antisaccade'; %==name of this protocol
+
 % we use manuN to show a selection menu to get values from the user.
-title = {'[Anti]Saccade','Choose which type of task to perform.|You can also set the alpha of the |pro and anti saccade targets|which helps the subject during training.'};
+title = {'[Pro|Anti]Saccade','Choose which type of task to perform.|You can also set the alpha of the |pro and anti saccade targets|which helps the subject during training.'};
 tS.options = {'r|¤Pro-Saccade|Anti-Saccade','Choose Protocol Type:';...
-	'r|¤Check wrong saccade|Ignore wrong saccade','If saccade is wrong direction, do we trigger incorrect?:';...
-	't|0.1','Prosaccade Target Initial Alpha:';...
-	't|0.75','Prosaccade Target Main Alpha:';...
-	't|0.1','Antisaccade Target Initial Alpha:';...
-	't|0.75','Antisaccade Target Main Alpha:'};
+	'r|Use Exclusion Zone|¤Disable Exclusion Zone','Exclusion zone: if saccade is wrong direction, triggers incorrect';...
+	't|0', 'Stimulus Visual Onset Gap (secs):'; ...
+	't|0.1',' Prosaccade Target Initial Alpha [0-1]:';...
+	't|0.75',' Prosaccade Target Main Alpha [0-1]:';...
+	't|0.1','Antisaccade Target Initial Alpha [0-1]:';...
+	't|0.75','Antisaccade Target Main Alpha [0-1]:'};
 if exist('isRunning','var') && isRunning == true % we are actually running a task, ask user
 	tS.ua = menuN(title,tS.options);
 else % just loading the state file, pass defaults
-	tS.ua{1}=1;tS.ua{2}=1;tS.ua{3}=0.1;yS.us{4}=0.75;tS.ua{5}=0.1;tS.ua{6}=0.1;
+	tS.ua{1}=1;tS.ua{2}=1;tS.ua{3}=0;tS.ua{4}=0.1;yS.us{5}=0.75;tS.ua{6}=0.1;tS.ua{7}=0.1;
 end
+% task type
 if tS.ua{1} == 1
-	tS.type						= 'saccade';
+	tS.type				= 'saccade';
 else
-	tS.type						= 'anti-saccade';
+	tS.type				= 'anti-saccade';
 end
+% use an exclude zone around the opposite target?
 if tS.ua{2} == 1
-	tS.exclude						= true;
+	tS.exclude			= true;
 else
-	tS.exclude						= false;
+	tS.exclude			= false;
 end
+% add a gap between when fixation disappears and target appears, see
+% Fischer & Weber 1997
+if tS.ua{3} > 0
+	stims{1}.delayTime = tS.ua{3};
+	stims{2}.delayTime = tS.ua{3};
+end
+
 % update the trial number for incorrect saccades: if true then we call
 % updateTask for both correct and incorrect trials, otherwise we only call
-% updateTask() for correct responses.
-tS.includeErrors			= false; 
-tS.name						= 'saccade-antisaccade'; %==name of this protocol
+% updateTask() for correct responses. 
+tS.includeErrors		= false; 
 
 % note there are TWO alpha values, this is used by
-% tS.fixAndStimTime below to control an initial visualisation 
+% tS.fixAndStimTime below to control initial visualisation 
 % of the targets during fixation mostly used during training
 % to guide the subject.
 if strcmp(tS.type,'saccade')
 	% a flag to conditionally set visualisation on the eye tracker interface
 	stims{1}.showOnTracker	= true;
 	stims{2}.showOnTracker	= false;
-	tS.targetAlpha1			= tS.ua{3};
-	tS.targetAlpha2			= tS.ua{4};
+	tS.targetAlpha1			= tS.ua{4};
+	tS.targetAlpha2			= tS.ua{5};
 	tS.antitargetAlpha1		= 0;
 	tS.antitargetAlpha2		= 0;
 else
@@ -76,10 +101,10 @@ else
 	% subject understand the task. Change the relative alpha values over
 	% training until ONLY the anti target is visible before collecting
 	% data.
-	tS.targetAlpha1			= tS.ua{3};
-	tS.targetAlpha2			= tS.ua{4};
-	tS.antitargetAlpha1		= tS.ua{5};
-	tS.antitargetAlpha2		= tS.ua{6};
+	tS.targetAlpha1			= tS.ua{4};
+	tS.targetAlpha2			= tS.ua{5};
+	tS.antitargetAlpha1		= tS.ua{6};
+	tS.antitargetAlpha2		= tS.ua{7};
 end
 disp(['\n===>>> Task ' tS.name ' Type:' tS.type ' <<<===\n'])
 
@@ -130,9 +155,9 @@ tS.fixY						= 0;
 tS.firstFixInit				= 3;
 % time to maintain initial fixation within window, can be single value or a
 % range to randomise between
-tS.firstFixTime				= [0.5 0.9];
+tS.firstFixTime				= [0.8 1.2];
 % circular fixation window radius in degrees
-tS.firstFixRadius			= 2;
+tS.firstFixRadius			= 1.25;
 % do we forbid eye to enter-exit-reenter fixation window?
 tS.strict					= true;
 % time to show BOTH fixation cross and [anti]saccade target
@@ -141,17 +166,17 @@ tS.fixAndStimTime			= 0;
 % in this task the subject must saccade to the pro-saccade target location.
 % These settings define the rules to "accept" the target fixation as
 % correct
-tS.targetFixInit			= 3; % time to find the target
+tS.targetFixInit			= 0.5; % time to find the target
 tS.targetFixTime			= 0.5; % to to maintain fixation on target 
-tS.targetRadius				= [8]; %radius width x height to fix within.
+tS.targetRadius				= 8; %radius width x height to fix within.
 % this task will establish an exclusion zone around the non-target
 % target for the pro and anti-saccade task. We can change the size of the
 % exclusion zone, here set to 5° around the X and Y position of the
 % anti-saccade target.
 if tS.exclude
-	tS.exclusionRadius			= []; %radius width x height to fix within.
+	tS.exclusionRadius		= 5; %radius width x height to fix within.
 else
-	tS.exclusionRadius			= 5; %radius width x height to fix within
+	tS.exclusionRadius		= []; %empty thus exclusion zone removed
 end
 % Initialise the eyeTracker object with X, Y, FixInitTime, FixTime, Radius, StrictFix
 updateFixationValues(eT, tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
@@ -202,7 +227,7 @@ stims.exclusionChoice		= 2;
 %========================================================
 
 %--------------------pause entry
-pauseEntryFn = { 
+pauseEntryFn = {
 	@()hide(stims);
 	@()drawBackground(s); %blank the subject display
 	@()drawTextNow(s,'PAUSED, press [p] to resume...');
@@ -223,7 +248,7 @@ pauseExitFn = {
 	%continuously, so @()startRecording(eT) only affects eyelink but
 	%@()startRecording(eT, true) affects both eyelink and tobii...
 	@()startRecording(eT, true); %start recording eye position data again
-}; 
+};
 
 %====================================================PRE-FIXATION
 pfEntryFn = {
@@ -246,7 +271,6 @@ pfWithinFn = {
 
 pfExitFn = {
 	@()logRun(me,'INITFIX');
-	@()trackerMessage(eT,'MSG:Start Fix');
 	@()trackerDrawStatus(eT,'Start trial...', stims.stimulusPositions, 0, 1);
 };
 
@@ -255,6 +279,7 @@ pfExitFn = {
 fixEntryFn = { 
 	% show stimulus 3 = fixation cross
 	@()show(stims, 3);
+	@()trackerMessage(eT,'MSG:Start Fix');
 };
 
 %--------------------fix within
@@ -265,26 +290,26 @@ fixWithinFn = {
 };
 
 %--------------------test we are fixated for a certain length of time
-initFixFn = { 
+initFixFn = {
 	% this command performs the logic to search and then maintain fixation
 	% inside the fixation window. The eyetracker parameters are defined above.
 	% If the subject does initiate and then maintain fixation, then 'fixstim'
 	% is returned and the state machine will jump to that state,
 	% otherwise 'incorrect' is returned and the state machine will jump there. 
 	% If neither condition matches, then the state table below
-	% defines that after 5 seconds we will switch to the incorrect state.
+	% defines that after X seconds we will switch to the incorrect state automatically.
 	@()testSearchHoldFixation(eT,'fixstim','breakfix')
 };
 
 %--------------------exit fixation phase
 if strcmpi(tS.type,'saccade')
-	fixExitFn = { 
-		@()show(stims, [1 3]); 
+	fixExitFn = {
+		@()show(stims, [1 3]);
 		@()edit(stims,1,'alphaOut',tS.targetAlpha1);
 	};
 else
-	fixExitFn = { 
-		@()show(stims, [1 2 3]); 
+	fixExitFn = {
+		@()show(stims, [1 2 3]);
 		@()edit(stims,1,'alphaOut',tS.targetAlpha1);
 		@()edit(stims,2,'alphaOut',tS.antitargetAlpha1)
 	};
@@ -292,7 +317,7 @@ end
 
 %====================================================FIX + TARGET STIMULUS
 fsEntryFn = {
-	@()updateFixationValues(eT,[],[],[],tS.fixAndStimTime); %reset the fixation timer 
+	@()updateFixationValues(eT,[],[],[],tS.fixAndStimTime); %reset the fixation timer
 	@()logRun(me,'FIX+STIM'); %fprintf current trial info to command window
 };
 
@@ -303,12 +328,12 @@ fsWithinFn = {
 
 % test we are fixated for a certain length of time, testHoldFixation assumes
 % we are already fixated which we are coming from the fixate state...
-fsFixFn = { 
+fsFixFn = {
 	@()testHoldFixation(eT,'stimulus','incorrect')
 };
 
 % exit fixation phase
-fsExitFn = { 
+fsExitFn = {
 	% use our saccade target stimulus for next fix X and Y, see
 	% stims.fixationChoice above
 	@()updateFixationTarget(me, tS.useTask, tS.targetFixInit, tS.targetFixTime, tS.targetRadius, tS.strict);
@@ -326,7 +351,7 @@ end
 
 %====================================================TARGET STIMULUS ALONE
 % what to run when we enter the stim presentation state
-stimEntryFn = { 
+stimEntryFn = {
 	% send an eyeTracker sync message (reset relative time to 0 after next flip)
 	@()doSyncTime(me);
 	% send stimulus value strobe (value alreadyset by updateVariables(me) function)
@@ -334,7 +359,7 @@ stimEntryFn = {
 };
 
 % what to run when we are showing stimuli
-stimWithinFn = { 
+stimWithinFn = {
 	@()draw(stims);
 	@()animate(stims); % animate stimuli for subsequent draw
 	@()trackerDrawEyePosition(eT);
@@ -346,23 +371,23 @@ targetFixFn = {
 };
 
 %as we exit stim presentation state
-stimExitFn = { 
-	@()setStrobeValue(me,255); 
+stimExitFn = {
+	@()setStrobeValue(me,255);
 	@()doStrobe(me,true);
 };
 
 %====================================================DECISION
 
 %if the subject is correct (small reward)
-correctEntryFn = { 
+correctEntryFn = {
 	@()trackerTrialEnd(eT, tS.CORRECT); % send the end trial messages and other cleanup
 	@()needEyeSample(me,false); % no need to collect eye data until we start the next trial
 	@()hide(stims); % hide all stims
 };
 
 %correct stimulus
-correctWithinFn = { 
-	
+correctWithinFn = {
+
 };
 
 %when we exit the correct state
@@ -391,7 +416,7 @@ incEntryFn = {
 
 %our incorrect stimulus
 incWithinFn = {
-	
+
 };
 
 exitFn = {
@@ -402,10 +427,10 @@ exitFn = {
 	@()resetAll(eT); % resets the fixation state timers
 	@()plot(bR, 1); % actually do our drawing
 	@()checkTaskEnded(me); %check if task is finished
-	@()needFlip(me, false, 0); 
+	@()needFlip(me, false, 0);
 };
 
-if tS.includeErrors
+if tS.includeErrors % do we allow incorrect trials to move to the next trial
 	incExitFn = [ {
 		@()trackerDrawStatus(eT,'INCORRECT! :-(', stims.stimulusPositions, 1, false);
 		@()logRun(me,'INCORRECT');
@@ -436,14 +461,14 @@ if tS.includeErrors
 		@()trackerDrawStatus(eT,'BREAKFIX! :-(', stims.stimulusPositions, 1, false);
 		@()logRun(me,'BREAKFIX');
 		@()updatePlot(bR, me);
-		@()updateTask(me,tS.BREAKFIX)}; 
+		@()updateTask(me,tS.BREAKFIX)};
 		exitFn ]; % make sure our taskSequence is moved to the next trial
 else
 	breakExitFn = [ {
 		@()trackerDrawStatus(eT,'BREAKFIX! :-(', stims.stimulusPositions, 1, false);
 		@()logRun(me,'BREAKFIX');
 		@()updatePlot(bR, me);
-		@()resetRun(task)}; 
+		@()resetRun(task)};
 		exitFn ]; % we randomise the run within this block to make it harder to guess next trial
 end
 

@@ -1,32 +1,48 @@
-%% SACCADE / ANTISACCADE Task
+% PRO-SACCADE and ANTI-SACCADE Task
 %
-% This task uses 3 stimuli: 
+% This task supports both pro and anti saccades and uses 3 stimuli: 
 % (1) pro-saccade target
 % (2) anti-saccade target and 
 % (3) fixation cross. 
 % 
-% The task sequence is set up to randomise the XY position of (1) ±10° on
+% The task sequence is set up to randomise the X & Y position (xpPosition independent variable of (1) ±10° on
 % each trial, and (2) has a modifier set as the inverse (if (1) is -10° on
 % a trial then (2) becomes +10°) - the anti-saccade target is always
 % opposite the saccade target. For the pro-saccade task, show (1) and hide
-% (2), fixation window set on (1) and [optinoal] exclusion zone set around (2). In
-% the anti-saccade task we show (2) and set the opacity of (1) during
+% (2), fixation window set on (1) and [optionally] exclusion zone set around (2). In
+% the anti-saccade task we show (2) and can vary the opacity of (1) during
 % training to encourage the subject to saccade away from (2) towards (1);
-% the fixation and exclusion windows keep the same logic as for the
+% the fixation and optional exclusion windows keep the same logic as for the
 % pro-saccade condition.
 %
-% NOTE: this pro/anti-saccade task does not impose a delay. Delays are
-% common to help analysis of recorded neurons, however, teaching
-% subjects to delay their [pro|anti]saccade interferes with the main
-% effect!
+% The exclusion zone is used to punish subject who saccade in the wrong
+% direction. This is important suring training, but during data collection
+% you may want to measure corrective saccades, in which case you would
+% disable the exclusion zone.
+%
+% NOTE: this pro/anti-saccade task does not impose a response delay. Delays
+% are common to help analysis of recorded neurons, however, teaching
+% subjects to delay their [pro|anti]saccade interferes with the cognitive
+% process we wish to measure!!!
+%
+% BUT this task does support delay of display of the [pro|anti]saccade
+% target as this has a clear impact on error rates and reaction times, with
+% 200ms showing max effect; you can control this by adding a delayTime
+% parameter of 0.2s to the pro-saccade and anti-saccade target stimuli. See
+% Fischer B & Weber H (1997) “Effects of stimulus conditions on the
+% performance of antisaccades in man.” Experimental Brain Research 116(2),
+% 191-200 [doi.org/10.1007/pl00005749](https://doi.org/10.1007/pl00005749)
+
 
 %==================================================================
 %--------------------TASK SPECIFIC CONFIG--------------------------
-% is this run a 'saccade' or 'anti-saccade' task run?
+% name
+tS.name						= 'prosaccade-antisaccade'; %==name of this protocol
+
 % we use manuN to show a selection menu to get values from the user.
-title = {'[Anti]Saccade TRAIN 1','Choose which type of task to perform.|You can also set the alpha of the |pro and anti saccade targets|which helps the subject during training.'};
+title = {'[Pro|Anti]Saccade','Choose which type of task to perform.|You can also set the alpha of the |pro and anti saccade targets|which helps the subject during training.'};
 tS.options = {'r|¤Pro-Saccade|Anti-Saccade','Choose Protocol Type:';...
-	'r|¤Punish wrong saccade|Ignore wrong saccade','If saccade is wrong direction, do we trigger incorrect?:';...
+	'r|¤Use Exclusion Zone|Disable Exclusion Zone','Exclusion zone: if saccade is wrong direction, triggers incorrect';...
 	't|0.1','Prosaccade Target Initial Alpha:';...
 	't|0.75','Prosaccade Target Main Alpha:';...
 	't|0.1','Antisaccade Target Initial Alpha:';...
@@ -48,12 +64,11 @@ else
 end
 % update the trial number for incorrect saccades: if true then we call
 % updateTask for both correct and incorrect trials, otherwise we only call
-% updateTask() for correct responses.
-tS.includeErrors			= false;
-tS.name						= 'saccade-antisaccade'; %==name of this protocol
+% updateTask() for correct responses. 
+tS.includeErrors			= false; 
 
 % note there are TWO alpha values, this is used by
-% tS.fixAndStimTime below to control an initial visualisation
+% tS.fixAndStimTime below to control initial visualisation 
 % of the targets during fixation mostly used during training
 % to guide the subject.
 if strcmp(tS.type,'saccade')
@@ -149,9 +164,9 @@ tS.targetRadius				= 10; %radius width x height to fix within.
 % exclusion zone, here set to 5° around the X and Y position of the
 % anti-saccade target.
 if tS.exclude
-	tS.exclusionRadius			= []; %radius width x height to fix within.
+	tS.exclusionRadius		= 5; %radius width x height to fix within.
 else
-	tS.exclusionRadius			= 5; %radius width x height to fix within
+	tS.exclusionRadius		= []; %empty thus exclusion zone removed
 end
 % Initialise the eyeTracker object with X, Y, FixInitTime, FixTime, Radius, StrictFix
 updateFixationValues(eT, tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
@@ -248,16 +263,15 @@ pfWithinFn = {
 
 pfExitFn = {
 	@()logRun(me,'INITFIX');
-	@()trackerMessage(eT,'MSG:Start Fix');
 	@()trackerDrawStatus(eT,'Start trial...', stims.stimulusPositions, 0, 1);
 };
 
 %====================================================FIXATION
 %--------------------fixate entry
-fixEntryFn = {
+fixEntryFn = { 
 	% show stimulus 3 = fixation cross
 	@()show(stims, 3);
-
+	@()trackerMessage(eT,'MSG:Start Fix');
 };
 
 %--------------------fix within
@@ -273,9 +287,9 @@ initFixFn = {
 	% inside the fixation window. The eyetracker parameters are defined above.
 	% If the subject does initiate and then maintain fixation, then 'fixstim'
 	% is returned and the state machine will jump to that state,
-	% otherwise 'incorrect' is returned and the state machine will jump there.
+	% otherwise 'incorrect' is returned and the state machine will jump there. 
 	% If neither condition matches, then the state table below
-	% defines that after 5 seconds we will switch to the incorrect state.
+	% defines that after X seconds we will switch to the incorrect state automatically.
 	@()testSearchHoldFixation(eT,'fixstim','breakfix')
 };
 
@@ -374,7 +388,6 @@ correctExitFn = {
 	@()beep(aM, tS.correctSound); % correct beep
 	@()trackerDrawStatus(eT, 'CORRECT! :-)', stims.stimulusPositions, 1, false);
 	@()logRun(me,'CORRECT'); % print current trial info
-
 	@()updatePlot(bR, me); %update our behavioural plot, must come before updateTask() / updateVariables()
 	@()updateTask(me,tS.CORRECT); %make sure our taskSequence is moved to the next trial
 	@()updateVariables(me); %randomise our stimuli, and set strobe value too
@@ -393,19 +406,10 @@ incEntryFn = {
 	@()hide(stims);
 };
 
-
-
-
-
-
-
-
-
 %our incorrect stimulus
 incWithinFn = {
 
 };
-
 
 exitFn = {
 	% tS.includeErrors will prepend some code here...
@@ -418,43 +422,19 @@ exitFn = {
 	@()needFlip(me, false, 0);
 };
 
-if tS.includeErrors
-
-
-
-
-
-
-
-
+if tS.includeErrors % do we allow incorrect trials to move to the next trial
 	incExitFn = [ {
 		@()trackerDrawStatus(eT,'INCORRECT! :-(', stims.stimulusPositions, 1, false);
 		@()logRun(me,'INCORRECT');
 		@()updatePlot(bR, me);
-
-
-
-
-
-
-
-
-		@()updateTask(me,tS.BREAKFIX)};
+		@()updateTask(me,tS.BREAKFIX)}; 
 		exitFn ]; % make sure our taskSequence is moved to the next trial
-
-
-
-
-
-
-
 else
 	incExitFn = [ {
 		@()trackerDrawStatus(eT,'INCORRECT! :-(', stims.stimulusPositions, 1, false);
 		@()logRun(me,'INCORRECT');
 		@()updatePlot(bR, me);
-
-		@()resetRun(task)};
+		@()resetRun(task)}; 
 		exitFn ]; % we randomise the run within this block to make it harder to guess next trial
 end
 
@@ -465,7 +445,9 @@ breakEntryFn = {
 	@()needEyeSample(me,false);
 	@()hide(stims);
 };
+
 exclEntryFn = breakEntryFn;
+
 if tS.includeErrors
 	breakExitFn = [ {
 		@()trackerDrawStatus(eT,'BREAKFIX! :-(', stims.stimulusPositions, 1, false);
@@ -480,13 +462,6 @@ else
 		@()updatePlot(bR, me);
 		@()resetRun(task)};
 		exitFn ]; % we randomise the run within this block to make it harder to guess next trial
-
-
-
-
-
-
-
 end
 
 exclExitFcn = [{@()fprintf('EXCLUSION!\n')}; breakExitFn];
