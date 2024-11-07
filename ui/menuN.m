@@ -162,17 +162,30 @@ if any(matches(lf,'Fira Code'))
 	MonoFont = 'Fira Code';
 end
 
+fontSize = 14;
+buttonFontSize = 16;
+
+if IsLinux
+	try
+		[~,d]=system('xrandr --screen 0 | grep -E ''\*\+''');
+		if any(contains(d,{'3840','4384','5120','5760','6144'}))
+			fontSize = 22;
+			buttonFontSize = 24;
+		end
+	end
+end
+
 %% Set up default Opt struct:
 defOpt = struct();
 defOpt.fontName               = SansFont;
-defOpt.subtitleFontSize       = 13;
-defOpt.pushbuttonFontSize     = 11;
-defOpt.popupmenuFontSize      = 11;
-defOpt.radiobuttonFontSize    = 11;
-defOpt.checkboxFontSize       = 11;
-defOpt.listboxFontSize        = 11;
-defOpt.checkboxFontSize       = 11;
-defOpt.sliderFontSize         = 11;
+defOpt.subtitleFontSize       = buttonFontSize;
+defOpt.pushbuttonFontSize     = fontSize;
+defOpt.popupmenuFontSize      = fontSize;
+defOpt.radiobuttonFontSize    = fontSize;
+defOpt.checkboxFontSize       = fontSize;
+defOpt.listboxFontSize        = fontSize;
+defOpt.checkboxFontSize       = fontSize;
+defOpt.sliderFontSize         = fontSize;
 defOpt.sliderStepsFraction    = [0.01,0.1];
 defOpt.okButtonLabel          = 'OK';
 defOpt.pixelHeigthUIcontrol   = 25;

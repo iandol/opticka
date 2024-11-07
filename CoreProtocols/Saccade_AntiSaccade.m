@@ -110,9 +110,9 @@ disp(['\n===>>> Task ' tS.name ' Type:' tS.type ' <<<===\n'])
 
 %==================================================================
 %----------------------General Settings----------------------------
+tS.useTask					= true;		%==use taskSequence (randomises stimulus variables)
 tS.saveData					= true;		%==save behavioural and eye movement data?
 tS.showBehaviourPlot		= true;		%==open the behaviourPlot figure? Can cause more memory use…
-tS.useTask					= true;		%==use taskSequence (randomises stimulus variables)
 tS.keyExclusionPattern		= ["fixstim","stimulus"];		%==which states to skip keyboard checking
 tS.recordEyePosition		= false;	%==record local copy of eye position, **in addition** to the eyetracker?
 tS.nStims					= stims.n;	%==number of stimuli, taken from metaStimulus object
@@ -134,6 +134,7 @@ tS.errorSound				= [300, 1, 1];		%==freq,length,volume
 %eT.verbose					= true;		%==print out eyelink commands for debugging
 %rM.verbose					= true;		%==print out reward commands for debugging
 %task.verbose				= true;		%==print out task info for debugging
+%uF.verbose					= true;		%==print out user function logg for debugging
 
 %==================================================================
 %-----------------INITIAL Eyetracker Settings----------------------
@@ -208,23 +209,24 @@ stims.exclusionChoice		= 2;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %------------------------------------------------------------------------%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%------------------State Machine Task Functions---------------------
-% Each cell {array} holds a set of anonymous function handles which are
-% executed by the state machine to control the experiment. The state
-% machine can run sets at entry ['entryFn'], during ['withinFn'], to
-% trigger a transition jump to another state ['transitionFn'], and at exit
-% ['exitFn'. Remember these {sets} need to access the objects that are
-% available within the runExperiment context (see top of file). You can
-% also add global variables/objects then use these. The values entered here
-% are set on load, if you want up-to-date values then you need to use
-% methods/function wrappers to retrieve/set them.
-%===================================================================
-%===================================================================
-%===================================================================
 
-%========================================================
-%========================================================PAUSE
-%========================================================
+%=========================================================================
+%------------------State Machine Task Functions---------------------
+% Each cell {array} holds a set of function handles that are executed by
+% the state machine to control the experiment. The state machine can run
+% sets at entry ['entryFcn'], during ['withinFcn'], to trigger a transition
+% jump to another state ['transitionFcn'], and at exit ['exitFcn'. Remember
+% these {sets} access the objects that are available within the
+% runExperiment context. You can add custom functions and properties using
+% userFunctions.m file. You can also add global variables/objects then use
+% these. Any values entered here are set at load; if you want up-to-date
+% values at trial time then you need to use methods/function wrappers to
+% retrieve/set them.
+%=========================================================================
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%==================================================================PAUSE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %--------------------pause entry
 pauseEntryFn = {
@@ -249,6 +251,10 @@ pauseExitFn = {
 	%@()startRecording(eT, true) affects both eyelink and tobii...
 	@()startRecording(eT, true); %start recording eye position data again
 };
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%==============================================================PRE-FIXATION
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %====================================================PRE-FIXATION
 pfEntryFn = {

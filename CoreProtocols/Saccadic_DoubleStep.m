@@ -1,16 +1,26 @@
 % DOUBLESTEP SACCADE task, Thakkar et al., 2015 Brain & Cognition 
-% In nostep trials (60%), after 500-1000ms intial fixation, a saccade target
+%
+% This paradigm should be more sensitive to online inhibition than
+% anti-saccade.
+%
+% In nostep trials (60%), after 500-1000ms of intial fixation, a saccade target
 % (target one) is flashed for 100ms in one of 8 equidistant positions. In
 % step trials (40%) after taget one flashes after a delay (target step
 % delay, TSD) a second target (target two) flashes 90deg away and subject must saccade
-% to target two for succesful trial. Subjects are not punished for
+% to target two for successful trial. Subjects are not punished for
 % reorienting from target one to target two.  TSD is modified using a
 % 1U/1D staircase, and nostep / step trial assignment use taskSequence.trialVar
 
 %=========================================================================
 %-------------------------------Task Settings-----------------------------
-% we use a up/down staircase to control the SSD (delay in seconds)
+% name
+tS.name						= 'Saccadic DoubleStep'; %==name of this protocol
+% we use a up/down staircase to control the TSD (delay in seconds)
 assert(exist('PAL_AMUD_setupUD','file'),'MUST Install Palamedes Toolbox: https://www.palamedestoolbox.org')
+
+
+
+
 % See Palamedes toolbox for the PAL_AM methods. 
 % 1up / 1down staircase starts at 225ms and steps at 34ms between 100 and
 % 600ms
@@ -32,26 +42,18 @@ task.staircase(1).invert = true; % a correct increases value.
 % tell timeLog which states are "stimulus" states
 tL.stimStateNames			= ["nostep","step"];
 
-%=========================================================================
-%-----------------------------General Settings----------------------------
-% These settings are make changing the behaviour of the protocol easier. tS
-% is just a struct(), so you can add your own switches or values here and
-% use them lower down. Some basic switches like saveData, useTask,
-% checkKeysDuringstimulus will influence the runeExperiment.runTask()
-% functionality, not just the state machine. Other switches like
-% includeErrors are referenced in this state machine file to change with
-% functions are added to the state machine states…
+% update the trial number for incorrect saccades: if true then we call
+% updateTask for both correct and incorrect trials, otherwise we only call
+% updateTask() for correct responses. 
+tS.includeErrors		= false; 
+
+%==================================================================
+%----------------------General Settings----------------------------
 tS.useTask					= true;		%==use taskSequence (randomises stimulus variables)
-tS.includeErrors			= true;		%==do incorrect error trials count to move taskSequence forward
-tS.rewardTime				= 250;		%==TTL time in milliseconds
-tS.rewardPin				= 2;		%==Output pin, 2 by default with Arduino.
-tS.keyExclusionPattern		= ["nostepfix","nostep","stepfix","step"]; %==which states to skip keyboard checking (slightly improve performance)
-tS.enableTrainingKeys		= false;	%==enable keys useful during task training, but not for data recording
-tS.recordEyePosition		= false;	%==record a local copy of eye position, **in addition** to the eyetracker?
-tS.askForComments			= false;	%==UI requestor asks for comments before/after run
 tS.saveData					= true;		%==save behavioural and eye movement data?
 tS.showBehaviourPlot		= true;		%==open the behaviourPlot figure? Can cause more memory use…
-tS.name						= 'Saccadic DoubleStep'; %==name of this protocol
+tS.keyExclusionPattern		= ["nostepfix","nostep","stepfix","step"]; %==which states to skip keyboard checking (slightly improve performance)
+tS.recordEyePosition		= false;	%==record a local copy of eye position, **in addition** to the eyetracker?
 tS.nStims					= stims.n;	%==number of stimuli, taken from metaStimulus object
 tS.tOut						= 1;		%==timeout if breakfix/incorrect response
 tS.CORRECT					= 1;		%==the code to send eyetracker for correct trials
@@ -70,15 +72,15 @@ tS.errorSound				= [300,  1.0, 1.0]; %==freq,length,volume
 %io.verbose					= true;		%==print out io commands for debugging
 %eT.verbose					= true;		%==print out eyelink commands for debugging
 %rM.verbose					= true;		%==print out reward commands for debugging
-task.verbose				= true;		%==print out task info for debugging
-uF.verbose					= true;		%==print out user function logg for debugging
+%task.verbose				= true;		%==print out task info for debugging
+%uF.verbose					= true;		%==print out user function logg for debugging
 
-%=========================================================================
-%---------------INITIAL Eyetracker Fixation Settings----------------------
+%==================================================================
+%-----------------INITIAL Eyetracker Settings----------------------
 % These settings define the initial fixation window and set up for the
-% eyetracker. They may be modified during the task (i.e. moving the fixation
-% window towards a target, enabling an exclusion window to stop the subject
-% entering a specific set of display areas etc.)
+% eyetracker. They may be modified during the task (i.e. moving the
+% fixation window towards a target, enabling an exclusion window to stop
+% the subject entering a specific set of display areas etc.)
 %
 % **IMPORTANT**: you need to make sure that the overall state time is larger than
 % any fixation timers specified here. Each state has a timer, so if the
@@ -96,14 +98,6 @@ tS.strict					= true; % do we forbid eye to enter-exit-reenter fixation window?
 tS.targetFixInit			= 3;
 tS.targetFixTime			= 1;
 tS.targetFixRadius			= 5;
-
-%=========================================================================
-%-------------------------------Eyetracker setup--------------------------
-% NOTE: the opticka GUI sets eyetracker options, you can override them here if
-% you need...
-eT.name						= tS.name;
-if me.eyetracker.dummy;		eT.isDummy = true; end %===use dummy or real eyetracker? 
-if tS.saveData;				eT.recordData = true; end %===save Eyetracker data?					
 % Initialise eyetracker with X, Y, FixInitTime, FixTime, Radius, StrictFix
 updateFixationValues(eT, tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
 
@@ -141,13 +135,13 @@ pauseEntryFcn = {
 	@()drawPhotoDiodeSquare(s,[0 0 0]); %draw black photodiode
 	@()drawTextNow(s,'PAUSED, press [p] to resume...');
 	@()disp('PAUSED, press [p] to resume...');
-	@()trackerDrawStatus(eT,'PAUSED, press [p] to resume');
+	@()trackerDrawStatus(eT,'PAUSED, press [p] to resume', [], 0, false);
 	@()trackerMessage(eT,'TRIAL_RESULT -100'); %store message in EDF
 	@()resetAll(eT); % reset all fixation markers to initial state
-	@()setOffline(eT); % set eyelink offline [tobii/irec ignores this]
+	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()stopRecording(eT, true); %stop recording eye position data, true=both eyelink & tobii
-	@()needFlip(me, false); % no need to flip the PTB screen
-	@()needEyeSample(me, false); % no need to check eye position
+	@()needFlip(me, false, 0); % no need to flip the PTB screen
+	@()needEyeSample(me,false); % no need to check eye position
 };
 
 %--------------------pause exit
@@ -156,34 +150,25 @@ pauseExitFcn = {
 	%the eyelink is started and stopped on each trial, but the tobii runs
 	%continuously, so @()startRecording(eT) only affects eyelink but
 	%@()startRecording(eT, true) affects both eyelink and tobii...
-	@()startRecording(eT, true); 
-}; 
+	@()startRecording(eT, true); %start recording eye position data again
+};
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %==============================================================PRE-FIXATION
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%--------------------prefixate entry
-prefixEntryFcn = {
-	@()setOffline(eT); % set eyelink offline [tobii/irec ignores this]
-	@()needFlip(me, true, 2); % enable the screen and trackerscreen flip
+%====================================================PRE-FIXATION
+pfEntryFn = {
+	@()needFlip(me, true, 1); % start PTB screen flips, and tracker screen flip
 	@()needEyeSample(me, true); % make sure we start measuring eye position
-	@()hide(stims); % hide all stimuli
-	@()resetAll(eT); % reset the recent eye position history
-	@()updateFixationValues(eT,tS.fixX,tS.fixY,tS.firstFixInit,tS.firstFixTime,tS.firstFixRadius); %reset fixation window to initial values
-	@()getStimulusPositions(stims); %make a struct the eT can use for drawing stim positions
-	% tracker messages that define a trial start
-	@()trackerMessage(eT,'V_RT MESSAGE END_FIX END_RT'); % Eyelink commands
-	@()trackerMessage(eT,sprintf('TRIALID %i',getTaskIndex(me))); %Eyelink start trial marker
+	@()getStimulusPositions(stims,true); %make a struct the eT can use for drawing stim positions
+	@()hide(stims);
+	@()resetAll(eT); % reset all fixation markers to initial state
+	@()updateFixationValues(eT,tS.fixX,tS.fixY,tS.firstFixInit,tS.firstFixTime,tS.firstFixRadius,tS.strict); %reset fixation window
+	@()trackerTrialStart(eT, getTaskIndex(me));
 	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
-	@()trackerDrawStatus(eT,'PREFIX', stims.stimulusPositions);
-	@()startRecording(eT); % start eyelink recording for this trial (tobii/irec ignore this)
-	% updateNextState method is critical, it reads the independent trial factor in
-	% taskSequence to select state to transition to next. This sets
-	% stateMachine.tempNextState to override the state table's default next
-	% field. In this protocol that means we will move to either nostepfix
-	% or stepfix states
-	@()updateNextState(me,'trial');
+	% you can add any other messages, such as stimulus values as needed,
+	% e.g. @()trackerMessage(eT,['MSG:ANGLE' num2str(stims{1}.angleOut)]) etc.
 };
 
 prefixFcn = {
@@ -191,8 +176,9 @@ prefixFcn = {
 	@()drawPhotoDiodeSquare(s,[0 0 0]);
 };
 
-prefixExitFcn = {
-	@()show(stims, 3);
+pfExitFn = {
+	@()logRun(me,'INITFIX');
+	@()trackerDrawStatus(eT,'Start trial...', stims.stimulusPositions, 0, 1);
 };
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
