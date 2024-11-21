@@ -248,7 +248,7 @@ classdef eyelinkManager < eyetrackerCore
 		%> @brief runs the calibration and validation
 		%>
 		% ===================================================================
-			[rM, aM] = initialiseGlobals(me);
+			[rM, aM] = optickaCore.initialiseGlobals();
 			if me.calibration.enableCallbacks && contains(me.calibration.callback, 'eyelinkCustomCallback')
 				try open(aM); end
 				%Snd('Open', aM.aHandle, 1);
@@ -258,6 +258,7 @@ classdef eyelinkManager < eyetrackerCore
 
 			if ~me.isConnected || me.isOff; return; end
 			oldrk = RestrictKeysForKbCheck([]); %just in case someone has restricted keys
+			ListenChar(0);
 			fprintf('\n===>>> CALIBRATING EYELINK... <<<===\n');
 			Eyelink('Verbosity',me.verbosityLevel);
 			if ~isempty(me.calibration.proportion) && length(me.calibration.proportion)==2
@@ -699,7 +700,7 @@ classdef eyelinkManager < eyetrackerCore
 		%> @brief runs a demo of the eyelink, tests this class
 		%>
 		% ===================================================================
-			[rM, aM] = initialiseGlobals(me);
+			[rM, aM] = optickaCore.initialiseGlobals();
 			if ~aM.isSetup;	try setup(aM); aM.beep(2000,0.1,0.1); end; end
 			PsychDefaultSetup(2);
 			stopkey				= KbName('Q');

@@ -171,9 +171,12 @@ classdef checkerboardStimulus < baseStimulus
 
 			if isempty(me.findprop('gratingSize'));p=me.addprop('gratingSize');p.Transient=true;end
 			me.gratingSize = round(me.ppd*me.size); %virtual support larger than initial size
+			if me.gratingSize > me.sM.screenVals.diagonal %scale to be no larger than screen diagonal
+				me.gratingSize = ceil(me.sM.screenVals.diagonal + 1);
+			end
 			
 			if isempty(me.findprop('phaseIncrement'))
-				p=me.addprop('phaseIncrement');
+				p = me.addprop('phaseIncrement');
 			end
 			
 			if isempty(me.findprop('driftPhase'));p=me.addprop('driftPhase');p.Transient=true;end
@@ -191,9 +194,6 @@ classdef checkerboardStimulus < baseStimulus
 					me.res = round([me.gratingSize*me.aspectRatio me.gratingSize]);
 				case 2
 					me.res = round([me.gratingSize*me.aspectRatio(1) me.gratingSize*me.aspectRatio(2)]);
-			end
-			if max(me.res) > me.sM.screenVals.width %scale to be no larger than screen width
-				me.res = floor( me.res / (max(me.res) / me.sM.screenVals.width));
 			end
 			
 			if me.mask == true

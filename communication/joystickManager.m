@@ -79,7 +79,7 @@ classdef joystickManager < optickaCore
 			
 			SetMouse(sv.xCenter,sv.yCenter,sv.win);
 			x = Gamepad('GetAxis', me.id, 1);
-			y = Gamepad('GetAxis', me.id, 1);
+			y = Gamepad('GetAxis', me.id, 2);
 			[xm, ym] = GetMouse(sv.win);
 			HideCursor(s.screen);
 

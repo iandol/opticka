@@ -96,7 +96,7 @@ classdef rfMapper < barStimulus
 		function run(me, rE)
 			if ~exist('rE','var') || ~isa(rE,'runExperiment'); rE = runExperiment; end
 			%------initialise the rewardManager global object
-			[rM, aM] = initialiseGlobals(me);
+			[rM, aM] = optickaCore.initialiseGlobals();
 			if rM.isOpen
 				try rM.close; rM.reset; end
 			end
