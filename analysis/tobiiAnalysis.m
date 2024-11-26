@@ -5,7 +5,7 @@
 %> can also manually find microsaccades, and perform ROI/TOI filtering on the eye
 %> movements.
 %>
-%> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2024 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef tobiiAnalysis < analysisCore
 	% eyelinkAnalysis offers a set of methods to load, parse & plot raw tobii files.
@@ -1584,9 +1584,13 @@ classdef tobiiAnalysis < analysisCore
 				labels = [];
 				warning('---> Vars are being parsed from trials directly...')
 			else
-				uniqueVars = [me.exp.rE.task.varList{:,1}];
-				labels = me.exp.rE.task.varLabels;
-
+				if me.exp.rE.task.nVars == 0
+					uniqueVars = 1;
+					labels = {'1'};
+				else
+					uniqueVars = [me.exp.rE.task.varList{:,1}];
+					labels = me.exp.rE.task.varLabels;
+				end
 			end
 			nVars = length(uniqueVars);
 			if isempty(me.trials)
@@ -1607,6 +1611,7 @@ classdef tobiiAnalysis < analysisCore
 			me.vars(nVars).sTime = [];
 			me.vars(nVars).sT = [];
 			me.vars(nVars).uuid = {};
+			me.vars(nVars).varWarning = [];
 
 			for i=uniqueVars
 				if i <= length(labels); me.vars(i).name = labels{i}; end
@@ -1620,6 +1625,10 @@ classdef tobiiAnalysis < analysisCore
 					continue
 				end
 				idx = find(uniqueVars==var);
+				if var == 101010 || isempty(idx)
+					idx = 1;
+					me.vars(idx).varWarning = [me.vars(idx).varWarning i];
+				end
 				if ~isempty(labels) && idx <= length(labels)
 					me.vars(idx).name = labels{idx};
 				else

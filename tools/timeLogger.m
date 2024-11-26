@@ -80,51 +80,6 @@ classdef timeLogger < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief if we preallocated, remove empty 0 values
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function removeEmptyValues(me)
-			if isprop(me,'t')
-				if isempty(me.t.vbl);return;end
-				if me.tick > 1
-					try
-						me.t.vbl = me.t.vbl(1:me.tick-1);
-						me.t.show = me.t.show(1:me.tick-1);
-						me.t.flip = me.t.flip(1:me.tick-1);
-						me.t.miss = me.t.miss(1:me.tick-1);
-						me.t.stimTime = me.t.stimTime(1:me.tick-1);
-					end
-				end
-				idx=min([length(me.t.vbl) length(me.t.flip) length(me.t.show) length(me.t.stimTime)]);
-				try %#ok<*TRYNC> 
-					me.t.vbl=me.t.vbl(1:idx);
-					me.t.show=me.t.show(1:idx);
-					me.t.flip=me.t.flip(1:idx);
-					me.t.miss=me.t.miss(1:idx);
-					me.t.stimTime=me.t.stimTime(1:idx);
-				end
-			else
-				vbl = me.vbl;
-				idx = find(vbl == 0);
-				me.vbl(idx) = [];
-				me.show(idx) = [];
-				me.flip(idx) = [];
-				me.miss(idx) = [];
-				me.stimTime(idx) = [];
-				idx=min([length(me.vbl) length(me.flip) length(me.show) length(me.stimTime)]);
-				try %#ok<*TRYNC> 
-					me.vbl=me.vbl(1:idx);
-					me.show=me.show(1:idx);
-					me.flip=me.flip(1:idx);
-					me.miss=me.miss(1:idx);
-					me.stimTime=me.stimTime(1:idx);
-				end
-			end
-		end
-		
-		% ===================================================================
 		%> @brief print Log of the frame timings
 		% ===================================================================
 		function plot(me)
@@ -175,14 +130,12 @@ classdef timeLogger < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function printRunLog(me)
-			if length(me.t.vbl) <= 5
-				disp('No timing data available...')
-				return
-			end
-			
+		function h = printRunLog(me)
+			h = [];
 			removeEmptyValues(me)
-			
+			if isempty(me.t.vbl) || max(me.t.vbl) == 0 || length(me.t.vbl) <= 5
+				disp('timeLogger: No VBL timing data available...'); return
+			end
 			if isprop(me,'t')
 				vbl=me.t.vbl.*1e3; %#ok<*PROP>
 				show=me.t.show.*1e3;
@@ -206,10 +159,10 @@ classdef timeLogger < optickaCore
 			calculateMisses(me,miss,stimTime)
 			
 			ssz = get(0,'ScreenSize');
-			figure('Name',me.name,'NumberTitle','off','Color',[1 1 1],...
+			h = figure('Name',me.name,'NumberTitle','off','Color',[1 1 1],...
 				'Position', [10 1 round(ssz(3)/2.5) ssz(4)]);
 			tl = tiledlayout(4,1,'TileSpacing','compact','Padding','compact');
-			
+
 			ax1 = nexttile;
 			hold on
 			plot(x,vbl-vbl(1),'r-','MarkerFaceColor',[1 0 0]);
@@ -296,17 +249,9 @@ classdef timeLogger < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function plotMessages(me)
-			if isempty(me.messages);return;end
-
-			msgs = cell(length(me.messages),4);
-			for i = 1:length(me.messages)
-				msgs{i,1} = me.messages(i).tick;
-				msgs{i,2} = me.messages(i).vbl - me.startTime;
-				if isfield(me.messages,'stimeTime');msgs{i,3} = me.messages(i).stimTime;end
-				msgs{i,4} = me.messages(i).message;
-			end
-			msgs = cell2table(msgs,'VariableNames',{'Tick','Time','Stimulus State','Message'});
+		function h = plotMessages(me)
+			msgs = messageTable(me);
+			if isempty(msgs); h = []; return; end
 
 			h = build_gui();
 			
@@ -337,6 +282,31 @@ classdef timeLogger < optickaCore
 					'ColumnWidth', {'fit','fit','fit','4x'});
 			end
 		end
+
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function tbl = messageTable(me)
+			tbl = [];
+			if isempty(me.messages); return; end
+			msgs = cell(length(me.messages),4);
+			for i = 1:length(me.messages)
+				msgs{i,1} = me.messages(i).tick;
+				msgs{i,2} = me.messages(i).vbl - me.startTime;
+				if isfield(me.messages,'stimeTime');msgs{i,3} = me.messages(i).stimTime;end
+				msgs{i,4} = me.messages(i).message;
+			end
+			tbl = cell2table(msgs,'VariableNames',{'Tick','Time','Stimulus State','Message'});
+		end
+
+	end %---END PUBLIC METHODS---%
+
+	%=======================================================================
+	methods ( Hidden = true ) %-------HIDDEN METHODS-----%
+	%=======================================================================
 		
 		% ===================================================================
 		%> @brief calculate genuine missed stim frames
@@ -354,12 +324,57 @@ classdef timeLogger < optickaCore
 			me.missImportant(1) = -inf; %ignore first frame
 			me.nMissed = length(find(me.missImportant > 0));
 		end
-	end %---END PUBLIC METHODS---%
-	
+
+		% ===================================================================
+		%> @brief if we preallocated, remove empty 0 values
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function removeEmptyValues(me)
+			if isprop(me,'t')
+				if isempty(me.t.vbl);return;end
+				if me.tick > 1
+					try
+						me.t.vbl = me.t.vbl(1:me.tick-1);
+						me.t.show = me.t.show(1:me.tick-1);
+						me.t.flip = me.t.flip(1:me.tick-1);
+						me.t.miss = me.t.miss(1:me.tick-1);
+						me.t.stimTime = me.t.stimTime(1:me.tick-1);
+					end
+				end
+				idx=min([length(me.t.vbl) length(me.t.flip) length(me.t.show) length(me.t.stimTime)]);
+				try %#ok<*TRYNC> 
+					me.t.vbl=me.t.vbl(1:idx);
+					me.t.show=me.t.show(1:idx);
+					me.t.flip=me.t.flip(1:idx);
+					me.t.miss=me.t.miss(1:idx);
+					me.t.stimTime=me.t.stimTime(1:idx);
+				end
+			else
+				vbl = me.vbl;
+				idx = find(vbl == 0);
+				me.vbl(idx) = [];
+				me.show(idx) = [];
+				me.flip(idx) = [];
+				me.miss(idx) = [];
+				me.stimTime(idx) = [];
+				idx=min([length(me.vbl) length(me.flip) length(me.show) length(me.stimTime)]);
+				try %#ok<*TRYNC> 
+					me.vbl=me.vbl(1:idx);
+					me.show=me.show(1:idx);
+					me.flip=me.flip(1:idx);
+					me.miss=me.miss(1:idx);
+					me.stimTime=me.stimTime(1:idx);
+				end
+			end
+		end
+	end
+
 	%=======================================================================
 	methods ( Access = private ) %-------PRIVATE METHODS-----%
 	%=======================================================================
-		
+
 		% ===================================================================
 		%> @brief 
 		%>

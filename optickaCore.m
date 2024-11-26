@@ -184,6 +184,49 @@ classdef optickaCore < handle
 			end
 			me.paths.ALFPath = path;
 		end
+
+		% ===================================================================
+		function makeReport(me)
+			try
+				import mlreportgen.report.* %#ok<*SIMPT>
+				import mlreportgen.dom.* 
+			catch
+				warning('Report Generator Toolbox not installed...');
+			end
+			
+			rpt = Report(me.name,'HTML');
+
+			tp = TitlePage; 
+			tp.Title = 'Opticka Object Report'; 
+			tp.Subtitle = sprintf('Name: %s',me.fullName); 
+			tp.Publisher = 'Opticka';
+			tp.Image = [me.paths.root filesep 'ui' filesep 'images' filesep 'opticka-clear.png'];
+			tp.Author = me.comment; 
+			append(rpt,tp); 
+			append(rpt,TableOfContents); 
+
+			ch1 = Chapter; 
+			ch1.Title = 'Metadata'; 
+			sec1 = Section; 
+			sec1.Title = 'General Information';
+
+			switch class(me)
+				case 'runExperiment'
+					append(sec1, MATLABVariable('Variable', me, 'MaxCols', 2, 'DepthLimit', 0, 'ObjectLimit', 1));
+				case {'tobiiAnalysis','eyelinkAnalysis'}
+					if ~isempty(me.exp.rE) && isa(me.exp.rE,'runExperiment')
+						rE = me.exp.rE;
+						append(sec1,Paragraph('runExperiment Object:'))
+						append(sec1, MATLABVariable('Variable', rE, 'MaxCols', 2, 'DepthLimit', 0, 'ObjectLimit', 1));
+					end
+			end
+
+			append(ch1,sec1);
+			append(rpt,ch1);
+			close(rpt);
+			rptview(rpt);
+
+		end
 		
 		% ===================================================================
 		function [list, typelist] = findAttributes(me, attrName, attrValue)

@@ -776,11 +776,26 @@ classdef stateMachine < optickaCore
 		%>
 		% ===================================================================
 		function plotLogs(log,tin)
-			if ~exist('log','var') || isempty(log) || isempty(log.index); warndlg('No log data yet...');return;end
-			if ~exist('tin','var')
-				tout = ['State Machine with ' num2str(length(log)) ' states']; 
+			if ~exist('log','var') || isempty(log) || ~isstruct(log); warndlg('No log data yet...');return;end
+			% there are two log types, older one is Nxstruct which is
+			% slower, new one is struct with array elements
+			if isfield(log,'n')
+				logN = log.n;
+				lNames = log.name;
+				luuid = log.uuid;
+				intime = log.tnow - log.entryTime;
+				ltick = log.tick;
 			else
-				tout = [tin ' : ' num2str(length(log)) ' states'];
+				logN = length(log);
+				lNames = {log.name};
+				luuid = {log.uuid};
+				intime = [log.tnow]-[log.entryTime];
+				ltick = [log.tick];
+			end
+			if ~exist('tin','var')
+				tout = ['State Machine with ' num2str(logN) ' states']; 
+			else
+				tout = [tin ' : ' num2str(logN) ' states'];
 			end
 			try
 				f = figure('Position',[0 0 1500 1000],'Name','State Machine Time Logs');
@@ -791,26 +806,32 @@ classdef stateMachine < optickaCore
 				s = plot([log.entryTime]-[log.startTime],'ko','MarkerSize',10, 'MarkerFaceColor', [1 1 1]);
 				s.DataTipTemplate.DataTipRows(1).Label='State';
 				s.DataTipTemplate.DataTipRows(2).Label='Time (s)';
-				r = dataTipTextRow('Name',log.name);
-				s.DataTipTemplate.DataTipRows(end+1)=r;
+				try
+					r = dataTipTextRow('Name',lNames);
+					s.DataTipTemplate.DataTipRows(end+1)=r;
+				end
 				hold on
 				s = plot([log.tnow]-[log.startTime],'ro','MarkerSize',10, 'MarkerFaceColor', [1 1 1]);
 				s.DataTipTemplate.DataTipRows(1).Label='State';
 				s.DataTipTemplate.DataTipRows(2).Label='Time (s)';
-				r = dataTipTextRow('uuid',log.uuid);
-				s.DataTipTemplate.DataTipRows(end+1)=r;
-				r = dataTipTextRow('Name',log.name);
-				s.DataTipTemplate.DataTipRows(end+1)=r;
-				r = dataTipTextRow('InTime',log.tnow-log.entryTime);
-				s.DataTipTemplate.DataTipRows(end+1)=r;
-				r = dataTipTextRow('Tick',log.tick);
-				s.DataTipTemplate.DataTipRows(end+1)=r;
+				try
+					r = dataTipTextRow('uuid',luuid);
+					s.DataTipTemplate.DataTipRows(end+1)=r;
+					r = dataTipTextRow('Name',lNames);
+					s.DataTipTemplate.DataTipRows(end+1)=r;
+					r = dataTipTextRow('InTime',intime);
+					s.DataTipTemplate.DataTipRows(end+1)=r;
+					r = dataTipTextRow('Tick',ltick);
+					s.DataTipTemplate.DataTipRows(end+1)=r;
+				end
 				legend('Enter time','Exit time','Location','southeast');
 				%axis([-inf inf 0.97 1.02]);
 				title('State Enter/Exit Times from State Machine Start');
 				ylabel('Time (seconds)');
-				set(gca,'XTick',1:length(log.name));
-				set(gca,'XTickLabel',log.name);
+				try 
+					set(gca,'XTick',1:logN);
+					set(gca,'XTickLabel',lNames);
+				end
 				try set(gca,'XTickLabelRotation',30); end
 				box on; grid on; axis tight;
 				if isfield(log,'fevalEnter') && ~isnan(log.fevalEnter(1))
@@ -818,20 +839,26 @@ classdef stateMachine < optickaCore
 					s = plot(log.fevalEnter,'ko','MarkerSize',10, 'MarkerFaceColor', [1 1 1]);
 					s.DataTipTemplate.DataTipRows(1).Label='State';
 					s.DataTipTemplate.DataTipRows(2).Label='Time (ms)';
-					r = dataTipTextRow('Name',log.name);
-					try s.DataTipTemplate.DataTipRows(end+1)=r; end
+					try 
+						r = dataTipTextRow('Name',lNames);
+						s.DataTipTemplate.DataTipRows(end+1)=r;
+					end
 					hold on;
 					s = plot(log.fevalExit,'ro','MarkerSize',10, 'MarkerFaceColor', [1 1 1]);
 					s.DataTipTemplate.DataTipRows(1).Label='State';
 					s.DataTipTemplate.DataTipRows(2).Label='Time (ms)';
-					r = dataTipTextRow('Name',log.name);
-					try s.DataTipTemplate.DataTipRows(end+1)=r; end
+					try
+						r = dataTipTextRow('Name',lNames);
+						s.DataTipTemplate.DataTipRows(end+1)=r;
+					end
 					if isfield(log,'fevalStore')
 						plot(log.fevalStore,'go','MarkerSize',10, 'MarkerFaceColor', [1 1 1]);
 					end
 					set(gca,'YScale','log');
-					set(gca,'XTick',1:length(log.name));
-					set(gca,'XTickLabel',log.name);
+					try 
+						set(gca,'XTick',1:logN);
+						set(gca,'XTickLabel',lNames);
+					end
 					try set(gca,'XTickLabelRotation',30); end
 					legend('Enter feval','Exit feval', 'Store');
 					title('Time the enter and exit state function evals ran');
