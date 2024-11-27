@@ -41,6 +41,8 @@ classdef optickaCore < handle
 		uuid char
 		%> storage of various paths
 		paths struct
+		%> version number
+		optickaVersion char		= '2.16.3'
 	end
 
 	%--------------------DEPENDENT PROPERTIES----------%
@@ -194,7 +196,9 @@ classdef optickaCore < handle
 				warning('Report Generator Toolbox not installed...');
 			end
 			
-			rpt = Report(me.name,'HTML');
+			name = me.name;
+			name = regexprep(name,'\s*','-');
+			rpt = Report([me.paths.parent filesep name '--' me.uuid],'PDF');
 
 			tp = TitlePage; 
 			tp.Title = 'Opticka Object Report'; 
@@ -203,28 +207,70 @@ classdef optickaCore < handle
 			tp.Image = [me.paths.root filesep 'ui' filesep 'images' filesep 'opticka-clear.png'];
 			tp.Author = me.comment; 
 			append(rpt,tp); 
-			append(rpt,TableOfContents); 
+			append(rpt,TableOfContents);
 
-			ch1 = Chapter; 
-			ch1.Title = 'Metadata'; 
-			sec1 = Section; 
-			sec1.Title = 'General Information';
+			parnote = {Color('#8b008b'),Bold(true),FontSize('14pt')};
+
+			ch1 = Chapter('Metadata'); 
+			sec1 = Section('General Information'); 
+			sec2 = Section('Plotted Data'); 
 
 			switch class(me)
-				case 'runExperiment'
+				case 'opticka'
+					append(sec1,Paragraph('opticka Object:'))
 					append(sec1, MATLABVariable('Variable', me, 'MaxCols', 2, 'DepthLimit', 0, 'ObjectLimit', 1));
-				case {'tobiiAnalysis','eyelinkAnalysis'}
-					if ~isempty(me.exp.rE) && isa(me.exp.rE,'runExperiment')
+					rE = me.r;
+					append(sec1,Paragraph('runExperiment Object:'))
+					append(sec1, MATLABVariable('Variable', rE, 'MaxCols', 2, 'DepthLimit', 0, 'ObjectLimit', 1));
+				case 'runExperiment'
+					append(sec1,Paragraph('runExperiment Object:'))
+					append(sec1, MATLABVariable('Variable', me, 'MaxCols', 2, 'DepthLimit', 0, 'ObjectLimit', 1));
+				case {'tobiiAnalysis','eyelinkAnalysis','iRecAnalysis'}
+					t = me.fileName;
+					append(sec1, MATLABVariable('Title','File','Variable', t, 'MaxCols', 2, 'DepthLimit', 0, 'ObjectLimit', 1));
+					t = me.comment;
+					append(sec1, MATLABVariable('Title','Comment','Variable', t, 'MaxCols', 2, 'DepthLimit', 0, 'ObjectLimit', 1));
+					t = me.comment;
+					append(sec1, MATLABVariable('Title','Comment','Variable', t, 'MaxCols', 2, 'DepthLimit', 0, 'ObjectLimit', 1));
+					p = Paragraph("We will try to load the data...");
+					p.Style = parnote;
+					append(sec1,p)
+					r = evalc('me.load(true)');
+					append(sec1,Paragraph(r));
+					if isfield(me, 'exp') && ~isempty(me.exp) && isfield(me.exp,'rE')
 						rE = me.exp.rE;
 						append(sec1,Paragraph('runExperiment Object:'))
 						append(sec1, MATLABVariable('Variable', rE, 'MaxCols', 2, 'DepthLimit', 0, 'ObjectLimit', 1));
 					end
+					append(sec1,Paragraph('Tobii Messages'))
+					m = me.raw.messages;
+					append(sec1, MATLABVariable('Variable', m));
+					p = Paragraph('We will try to parse the data and plot it now...');
+					p.Style = parnote;
+					append(sec2,p)
+					try
+						r = evalc('me.parseSimple');
+						append(sec2,Paragraph(r));
+
+						plot(me);
+						f = gcf;
+						fr = Figure(f);
+						fr.Scaling = 'none';
+						fr.Snapshot.ScaleToFit = true;
+						append(sec2,fr);
+						close(f);
+					catch ME
+						append(sec2,Paragraph('Parsing / plotting failed'))
+						append(sec2, MATLABVariable('Title','ERROR','Variable', ME));
+					end
 			end
 
 			append(ch1,sec1);
+			append(ch1,sec2);
 			append(rpt,ch1);
 			close(rpt);
 			rptview(rpt);
+		
 
 		end
 		

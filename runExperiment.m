@@ -112,8 +112,6 @@ classdef runExperiment < optickaCore
 		photoDiode logical			= false
 		%> turn diary on for runTask, saved to the same folder as the data
 		diaryMode logical			= false
-		%> opticka version, passed on first use by opticka
-		optickaVersion char
 		%> do we record times for every function run by state machine?
 		logStateTimers logical		= false
 		%> do we ask for comments for runMOC

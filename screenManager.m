@@ -343,7 +343,7 @@ classdef screenManager < optickaCore
 					sv.heightMM	= sv.display.displayHeightMM;
 				end
 			end
-
+			
 			me.screenVals		= sv;
 			screenVals			= sv;
 
@@ -735,7 +735,7 @@ classdef screenManager < optickaCore
 				sv.white = WhiteIndex(me.screen);
 				sv.black = BlackIndex(me.screen);
 				sv.gray = GrayIndex(me.screen);
-
+				sv.ppd = me.ppd;
 				me.screenVals = sv;
 			catch ME
 				getReport(ME);
