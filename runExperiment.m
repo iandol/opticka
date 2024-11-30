@@ -744,6 +744,8 @@ classdef runExperiment < optickaCore
 					me.stateInfoFile	= regexprep(me.stateInfoFile,'\s+','\\ ');
 					disp(['======>>> Loading State File: ' me.stateInfoFile]);
 					clear(me.stateInfoFile);
+					statetext = readlines(me.stateInfoFile,"EmptyLineRule","skip");
+					sM.raw = statetext;
 					if ~isdeployed
 						run(me.stateInfoFile);
 					else
@@ -1691,7 +1693,11 @@ classdef runExperiment < optickaCore
 				index = me.task.totalRuns;
 			end
 			if index > 0 && ~isempty(me.task.outIndex) && length(me.task.outIndex) >= index
-				trial = me.task.outIndex(index);
+				if me.task.nVars == 0
+					trial = 1;
+				else
+					trial = me.task.outIndex(index);
+				end
 			else
 				trial = -1;
 			end

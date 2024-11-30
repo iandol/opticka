@@ -79,13 +79,15 @@ classdef behaviouralRecord < optickaCore
 		%> 
 		% ===================================================================
 		function plotPerformance(me)
+			if isempty(me.response); warning('No data available'); return; end
+			op = me.plotOnly;
 			me.plotOnly = true;
 			if isempty(me.h) || ~(isfield(me.h,'root') && isgraphics(me.h.root))
 				createPlot(me);
 			end
 			updatePlot(me);
 			plot(me);
-			me.plotOnly = false;
+			me.plotOnly = op;
 		end
 		
 		% ===================================================================
@@ -95,7 +97,6 @@ classdef behaviouralRecord < optickaCore
 		% ===================================================================
 		function createPlot(me, eL)
 			if ~me.plotOnly
-				reset(me);
 				me.date = datetime('now');
 			end
 			if isfield(me.h,'root') && ~isempty(findobj(me.h.root))
@@ -140,7 +141,7 @@ classdef behaviouralRecord < optickaCore
 			me.lf = lf;
 			me.SansFont = SansFont;
 			
-			me.h.root = uifigure('Name',me.fullName);
+			me.h.root = uifigure('Name',me.fullName,'Tag','opticka');
 			me.h.root.Units = 'normalized';
 			me.h.root.Position = [0.6 0 0.4 1];
 			me.h.grid = uigridlayout(me.h.root,[2 1]);
@@ -269,7 +270,8 @@ classdef behaviouralRecord < optickaCore
 		%> 
 		% ===================================================================
 		function plot(me, drawNow)
-			if ~me.isOpen; return; end
+			if isempty(me.response); warning('No data available'); return; end
+			if ~me.isOpen || ~isfield(me.h,'root'); me.createPlot; me.plotOnly = true; end
 			if ~exist('drawNow','var'); drawNow = true; end
 			hitn = length( me.response(me.response > 0) );
 			breakn = length( me.response(me.response < 0) );
@@ -455,6 +457,9 @@ classdef behaviouralRecord < optickaCore
 		%> 
 		% ===================================================================
 		function clearHandles(me)
+			if isfield(me.h,'root') && isgraphics(me.h.root)
+				try close(me.h.root); end
+			end
 			me.h = [];
 		end
 		
@@ -482,12 +487,16 @@ classdef behaviouralRecord < optickaCore
 					end
 				end
 			end
-			if contains(in.correctStateName,'correct')
-				in.correctStateName = "correct";
+			
+			if contains(lobj.correctStateName,'correct')
+				lobj.correctStateName = "correct";
 			end
-			if contains(in.breakStateName,'breakfix')
-				in.breakStateName = ["breakfix" "incorrect"];
+			if contains(lobj.breakStateName,'breakfix')
+				lobj.breakStateName = ["breakfix" "incorrect"];
 			end
+			lobj.h = [];
+			lobj.isOpen = false;
+			lobj.plotOnly = true;
 		end
 	end
 	

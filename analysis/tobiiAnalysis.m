@@ -464,7 +464,8 @@ classdef tobiiAnalysis < analysisCore
 			if isempty(handle)
 				h1=figure('Name',name,'Color',[1 1 1],'NumberTitle','off',...
 					'PaperPositionMode','auto','Papertype','a4','PaperUnits','centimeters',...
-					'PaperOrientation','portrait','Renderer','painters');
+					'PaperOrientation','portrait','Renderer','painters',...
+					'Tag','opticka');
 				figpos(1,[0.6 0.9],1,'%');
 			else
 				figure(handle)

@@ -93,6 +93,8 @@ classdef stateMachine < optickaCore
 	properties (Hidden = true)
 		%> size of the log arrays to preallocate
 		logSize = 1
+		%> the raw stateMachine.m file
+		raw
 	end
 	
 	properties (SetAccess = protected, GetAccess = public, Transient = true)
@@ -798,7 +800,7 @@ classdef stateMachine < optickaCore
 				tout = [tin ' : ' num2str(logN) ' states'];
 			end
 			try
-				f = figure('Position',[0 0 1500 1000],'Name','State Machine Time Logs');
+				f = figure('Position',[0 0 1500 1000],'Name','State Machine Time Logs','Tag','opticka');
 				tl = tiledlayout(f,'flow','TileSpacing','tight','Padding','compact');
 				tl.Title.String = tout;
 				tl.Title.FontWeight = 'bold';

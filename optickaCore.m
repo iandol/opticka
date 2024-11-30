@@ -188,90 +188,163 @@ classdef optickaCore < handle
 		end
 
 		% ===================================================================
-		function makeReport(me)
+		function makeReport(me, rpt)
 			try
 				import mlreportgen.report.* %#ok<*SIMPT>
 				import mlreportgen.dom.* 
 			catch
 				warning('Report Generator Toolbox not installed...');
 			end
-			
-			name = me.name;
-			name = regexprep(name,'\s*','-');
-			rpt = Report([me.paths.parent filesep name '--' me.uuid],'PDF');
 
-			tp = TitlePage; 
-			tp.Title = 'Opticka Object Report'; 
-			tp.Subtitle = sprintf('Name: %s',me.fullName); 
-			tp.Publisher = 'Opticka';
-			tp.Image = [me.paths.root filesep 'ui' filesep 'images' filesep 'opticka-clear.png'];
-			tp.Author = me.comment; 
-			append(rpt,tp); 
-			append(rpt,TableOfContents);
+			if ~exist('rpt','var') || isempty(rpt) 
+				fullReport = true; 
+			else
+				fullReport = false; 
+			end
+			
+			if fullReport
+				name = me.name;
+				name = regexprep(name,'\s*','-');
+				rpt = Report([me.paths.parent filesep name '--' me.uuid],'PDF');
+	
+				tp = TitlePage; 
+				tp.Title = 'Opticka Object Report'; 
+				tp.Subtitle = sprintf('Name: %s',me.fullName); 
+				tp.Publisher = 'Opticka';
+				tp.Image = [me.paths.root filesep 'ui' filesep 'images' filesep 'opticka-clear.png'];
+				tp.Author = me.comment; 
+				append(rpt,tp); 
+				append(rpt,TableOfContents);
+			end
 
 			parnote = {Color('#8b008b'),Bold(true),FontSize('14pt')};
 
-			ch1 = Chapter('Metadata'); 
-			sec1 = Section('General Information'); 
-			sec2 = Section('Plotted Data'); 
-
 			switch class(me)
-				case 'opticka'
-					append(sec1,Paragraph('opticka Object:'))
-					append(sec1, MATLABVariable('Variable', me, 'MaxCols', 2, 'DepthLimit', 0, 'ObjectLimit', 1));
-					rE = me.r;
-					append(sec1,Paragraph('runExperiment Object:'))
-					append(sec1, MATLABVariable('Variable', rE, 'MaxCols', 2, 'DepthLimit', 0, 'ObjectLimit', 1));
-				case 'runExperiment'
-					append(sec1,Paragraph('runExperiment Object:'))
-					append(sec1, MATLABVariable('Variable', me, 'MaxCols', 2, 'DepthLimit', 0, 'ObjectLimit', 1));
-				case {'tobiiAnalysis','eyelinkAnalysis','iRecAnalysis'}
-					t = me.fileName;
-					append(sec1, MATLABVariable('Title','File','Variable', t, 'MaxCols', 2, 'DepthLimit', 0, 'ObjectLimit', 1));
-					t = me.comment;
-					append(sec1, MATLABVariable('Title','Comment','Variable', t, 'MaxCols', 2, 'DepthLimit', 0, 'ObjectLimit', 1));
-					t = me.comment;
-					append(sec1, MATLABVariable('Title','Comment','Variable', t, 'MaxCols', 2, 'DepthLimit', 0, 'ObjectLimit', 1));
-					p = Paragraph("We will try to load the data...");
-					p.Style = parnote;
-					append(sec1,p)
-					r = evalc('me.load(true)');
-					append(sec1,Paragraph(r));
-					if isfield(me, 'exp') && ~isempty(me.exp) && isfield(me.exp,'rE')
-						rE = me.exp.rE;
-						append(sec1,Paragraph('runExperiment Object:'))
-						append(sec1, MATLABVariable('Variable', rE, 'MaxCols', 2, 'DepthLimit', 0, 'ObjectLimit', 1));
-					end
-					append(sec1,Paragraph('Tobii Messages'))
-					m = me.raw.messages;
-					append(sec1, MATLABVariable('Variable', m));
-					p = Paragraph('We will try to parse the data and plot it now...');
-					p.Style = parnote;
-					append(sec2,p)
-					try
-						r = evalc('me.parseSimple');
-						append(sec2,Paragraph(r));
 
-						plot(me);
-						f = gcf;
+				case 'opticka'
+					ch = Chapter('opticka Object'); 
+					sec = Section('General Information'); 
+					append(sec,Paragraph('opticka Object:'))
+					append(sec, MATLABVariable('Variable', me, 'MaxCols', 2, 'DepthLimit', 0, 'ObjectLimit', 1));
+					append(ch,sec);
+					append(rpt,ch);
+					me.r.makeReport(rpt);
+
+				case 'runExperiment'
+					ch = Chapter('runExperiment Object'); 
+					sec = Section('General Information'); 
+					append(sec,Paragraph('runExperiment is the main object that manages a task. It contains multiple other managers: screenManager, taskSequence, stateMachine, eyeTracker'))
+					append(sec,Paragraph('runExperiment Object:'))
+					append(sec, MATLABVariable('Variable', me, 'MaxCols', 2, 'DepthLimit', 0, 'ObjectLimit', 1));
+					append(ch,sec);
+					append(rpt,ch);
+					if isa(me.task,'taskSequence') && ~isempty(me.task)
+						me.task.makeReport(rpt);
+					end
+					if isa(me.behaviouralRecord,'behaviouralRecord') && ~isempty(me.behaviouralRecord)
+						me.behaviouralRecord.makeReport(rpt);
+					end
+					if isa(me.stateMachine,'stateMachine') && ~isempty(me.stateMachine)
+						me.stateMachine.makeReport(rpt);
+					end
+
+				case 'taskSequence'
+					ch = Chapter('taskSequence Object'); 
+					sec = Section('General Information'); 
+					append(sec,Paragraph('The taskSequence manages variable randomisation, you pass it a list of variables and their values and the number of repeat blocks and it will generate a balanced table. There is also an indepedent blockVar and trialVar.'))
+					append(sec,Paragraph(' There is also an indepedent blockVar and trialVar.'))
+					append(sec,Paragraph('taskSequence Object:'))
+					append(sec, MATLABVariable('Variable', me, 'MaxCols', 2, 'DepthLimit', 0, 'ObjectLimit', 1));
+					append(ch,sec);
+					append(rpt,ch);
+
+				case 'stateMachine'
+					ch = Chapter('stateMachine Object'); 
+					sec = Section('General Information'); 
+					i = me.stateList;
+					append(sec, MATLABVariable('Title','stateList','Variable', i, 'MaxCols', 2, 'DepthLimit', 0, 'ObjectLimit', 1));
+					me.showLog();
+					f = gcf;
+					if strcmpi(f.Tag,'opticka')
 						fr = Figure(f);
 						fr.Scaling = 'none';
 						fr.Snapshot.ScaleToFit = true;
-						append(sec2,fr);
+						append(sec,Paragraph('All State Events (from the stateMachine.log property):'))
+						append(sec,fr);
+					end
+					close(f);
+					append(ch,sec);
+					append(rpt,ch);
+
+				case 'behaviouralRecord'
+					sec = Section('behaviouralRecord'); 
+					me.plotPerformance;
+					if isgraphics(me.h.root)
+						tmpf = [tempname '.png'];
+						exportapp(me.h.root, tmpf);
+						if exist(tmpf,'file')
+							img = Image(tmpf);
+							img.Style = {ScaleToFit};
+							append(sec,img);
+							try delete tmpf; end
+						end
+						try close(me.h.root); end
+						try me.clearHandles; end
+					end
+					append(rpt,sec);
+					
+				case {'tobiiAnalysis','eyelinkAnalysis','iRecAnalysis'}
+					ch = Chapter('Eyetracker Object'); 
+					sec = Section('General Information'); 
+					
+					t = me.fileName;
+					append(sec, MATLABVariable('Title','File','Variable', t));
+					t = me.comment;
+					append(sec, MATLABVariable('Title','Comment','Variable', t));
+					p = Paragraph("We will try to load the data...");
+					p.Style = parnote;
+					append(sec,p)
+					r = evalc('me.load(true)');
+					append(sec,Preformatted(r));
+					append(ch,sec); append(rpt,ch);
+
+					if isprop(me, 'exp') && ~isempty(me.exp) && isfield(me.exp,'rE')
+						rE = me.exp.rE;
+						rE.makeReport(rpt);
+					end
+					
+					ch = Chapter('Eyetracker Data'); 
+					sec = Section('General Information'); 
+					append(sec,Paragraph('Tobii Messages'))
+					m = me.raw.messages;
+					append(sec, MATLABVariable('Variable', m));
+					p = Paragraph('We will try to parse the data and plot it now...');
+					p.Style = parnote;
+					append(sec,p)
+					try
+						r = evalc('me.parse');
+						append(sec,Preformatted(r));
+						plot(me);
+						f = gcf;
+						if strcmpi(f.Tag,'opticka')
+							fr = Figure(f);
+							fr.Scaling = 'none';
+							fr.Snapshot.ScaleToFit = true;
+							append(sec,fr);
+						end
 						close(f);
 					catch ME
-						append(sec2,Paragraph('Parsing / plotting failed'))
-						append(sec2, MATLABVariable('Title','ERROR','Variable', ME));
+						append(sec,Paragraph('Parsing / plotting failed'))
+						append(sec, MATLABVariable('Title','ERROR','Variable', ME));
 					end
+					append(ch,sec);append(rpt,ch);
 			end
 
-			append(ch1,sec1);
-			append(ch1,sec2);
-			append(rpt,ch1);
-			close(rpt);
-			rptview(rpt);
+			if fullReport
+				close(rpt);
+				rptview(rpt);
+			end
 		
-
 		end
 		
 		% ===================================================================
