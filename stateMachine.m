@@ -151,9 +151,9 @@ classdef stateMachine < optickaCore
 		%> should we run the finish function
 		isFinishing logical = false
 		%> field names of allStates struct array, defining state behaviors
-		stateFields cell = { 'name', 'next', 'entryFcn', 'withinFcn', 'time', 'transitionFcn','exitFcn', 'skipExitFcn' }
+		stateFields cell = { 'name', 'next', 'time', 'entryFcn', 'withinFcn', 'transitionFcn', 'exitFcn', 'skipExitFcn' }
 		%> default values of allStates struct array fields
-		stateDefaults cell = { '', '', {}, {}, 1, {}, {}, false }
+		stateDefaults cell = { '', '', 1, {}, {}, {}, {}, false }
 		%> properties allowed during construction
 		allowedProperties = {'name','realTime','verbose','clockFcn','waitFcn'...
 			'timeDelta','skipExitStates','tempNextState'}
@@ -197,6 +197,10 @@ classdef stateMachine < optickaCore
 		function newStateIndexes = addStates(me,newStates)
 			sz = size(newStates);
 			newStateIndexes = zeros(1,sz(1)-1);
+			for ii = 1:size(newStates,2)
+				% just in case we have e.g. entryFn instead of entryFcn
+				newStates{1,ii} = regexprep(newStates{1,ii},'Fn$','Fcn');
+			end
 			for ii = 2:sz(1)
 				newState = cell2struct(newStates(ii,:), newStates(1,:), 2);
 				if isfield(newState,'name') && ~isempty(newState.name)
@@ -604,6 +608,45 @@ classdef stateMachine < optickaCore
 				stateMachine.plotLogs(me.log, me.fullName);
 			else
 				helpdlg('The current state machine log appears to be empty...')
+			end
+		end
+
+		% ===================================================================
+		%> @brief show the log if present
+		%> @param
+		%> @return
+		% ===================================================================
+		function [tblOut, tbl] = showTable(me, plot)
+			if ~exist('plot','var') || isempty(plot); plot = false; end
+			if isempty(me.stateList); return; end
+			titles = me.stateFields;
+			tbl = cell(me.nStates+1,length(titles));
+			tbl(1,:) = titles;
+			tblD = tbl;
+			for i = 1:me.nStates
+				for j = 1:length(titles)
+					tbl{i+1,j} = me.stateList(i).(titles{j});
+					if iscell(tbl{i+1,j})
+						t = [];
+						for k = 1:length(tbl{i+1,j})
+							if isempty(t)
+								t = char(tbl{i+1,j}{k});
+							else
+								t = [t '; ' char(tbl{i+1,j}{k})];
+							end
+							
+						end
+						tblD{i+1,j} = t;
+					else
+						tblD{i+1,j} = tbl{i+1,j};
+					end
+				end
+			end
+			tblOut = cell2table(tblD(2:end,:),'VariableNames',tblD(1,:));
+			if plot
+				f = uifigure;
+				t = uitable('Parent',f,'Position',[0 0 1 1],'Units','normalized');
+				t.Data = tblOut;
 			end
 		end
 		

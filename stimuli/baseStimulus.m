@@ -1018,6 +1018,14 @@ classdef baseStimulus < optickaCore & dynamicprops
 	%=======================================================================
 
 		% ===================================================================
+		%> @brief linear interpolation between two colour arrays based on a contrast
+		%>
+		% ===================================================================
+		function out = mixColour(c1, c2, contrast)
+			out = c1(1:3) * (1 - contrast) + c2(1:3) * contrast;
+		end
+
+		% ===================================================================
 		%> @brief degrees2radians
 		%>
 		% ===================================================================

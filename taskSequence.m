@@ -937,7 +937,7 @@ classdef taskSequence < optickaCore & dynamicprops
 		% ===================================================================
 		if isempty(me.outIndex); return; end
 			varIndex = sort(unique(me.outIndex));
-			if me.nVars == 0 || varIndex == 1
+			if me.nVars == 0 
 				me.varLabels = {'1'};
 				me.varList = { 1 };
 				return

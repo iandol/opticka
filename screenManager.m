@@ -2158,7 +2158,7 @@ classdef screenManager < optickaCore
 				sv.height = sv.screenHeight;
 				me.winRect = Screen('Rect',swin);
 			end
-			sv.diagonal = sqrt(sv.width^2 + sv.height^2);
+			sv.diagonal = ceil(sqrt(sv.width^2 + sv.height^2));
 			sv.widthInDegrees = sv.width / me.ppd;
 			sv.heightInDegrees = sv.height / me.ppd;
 			sv.diagonalInDegrees = sqrt(sv.widthInDegrees^2 + sv.heightInDegrees^2);

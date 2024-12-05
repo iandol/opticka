@@ -171,6 +171,7 @@ classdef imageStimulus < baseStimulus
 					p = me.addprop([fn{j} 'Out']);
 					if strcmp(fn{j},'xPosition'); p.SetMethod = @set_xPositionOut; end
 					if strcmp(fn{j},'yPosition'); p.SetMethod = @set_yPositionOut; end
+					if strcmp(fn{j},'alpha'); p.SetMethod = @set_alphaOut; end
 					me.([fn{j} 'Out']) = me.(fn{j}); %copy our property value to our tempory copy
 				end
 			end
@@ -192,6 +193,10 @@ classdef imageStimulus < baseStimulus
 			end
 			function set_yPositionOut(me,value)
 				me.yPositionOut = value * me.ppd; 
+			end
+			function set_alphaOut(me,value)
+				me.alphaOut = value; 
+				if isprop(me,'colourOut'); me.colourOut(4) = value; end
 			end
 			
 		end

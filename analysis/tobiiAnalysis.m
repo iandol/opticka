@@ -160,7 +160,7 @@ classdef tobiiAnalysis < analysisCore
 	
 			if isempty(me.fileName)
 				[f,d] = uigetfile('*.mat','Select Opticka Data MAT File:');
-				if ~isnumeric(f); me.fileName = [d filesep f]; end
+				if ~isnumeric(f); me.fileName = [d f]; end
 			end
 		end
 
