@@ -191,10 +191,12 @@ classdef tobiiAnalysis < analysisCore
 					fprintf('<strong>...</strong> runExperiment (Opticka file) found\n');
 					me.distance = exp.rE.screen.distance;
 					me.pixelsPerCm = exp.rE.screen.pixelsPerCm;
-					me.resolution = [exp.rE.screen.screenVals.width exp.rE.screen.screenVals.width];
+					me.resolution = [exp.rE.screen.screenVals.width exp.rE.screen.screenVals.height];
 					me.xmod = (exp.rE.screen.screenVals.width) / exp.rE.screen.ppd;
 					me.ymod = (exp.rE.screen.screenVals.height) / exp.rE.screen.ppd;
 					me.sampleRate = exp.rE.eyeTracker.sampleRate;
+					fprintf('Screen = distance: %.2f ppc: %.2f W: %i [%.2f] H: %i [%.2f], SampleRate: %i \n',...
+						me.distance,me.pixelsPerCm,me.resolution(1),me.xmod,me.resolution(2),me.ymod,me.sampleRate);
 					if isa(exp.rE.eyeTracker,'tobiiManager')
 						me.raw = exp.rE.eyeTracker.data;
 						me.exp = exp;
@@ -205,7 +207,9 @@ classdef tobiiAnalysis < analysisCore
 						return;
 					end
 				else
-					warning('This is not an Opticka file, choose another file!!!');
+					warning('This is not an Opticka:runExperiment file, choose another file!!!');
+					disp(exp);
+					if isfield(exp,'tobii'); disp(exp.tobii); end
 					me.raw = [];
 					me.exp = [];
 					return;

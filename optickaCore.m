@@ -202,18 +202,22 @@ classdef optickaCore < handle
 				fullReport = false; 
 			end
 
-			tt = tic;
+			persistent tt
 			
 			if fullReport
+				warning off
+				tt = tic;
 				name = me.name;
 				name = regexprep(name,'\s*','-');
-				rpt = Report([me.paths.parent filesep name '--' me.uuid],'PDF');
+				name = [me.paths.parent filesep name '--' me.uuid];
+				rpt = Report(name,'HTML');
+				fprintf('=== makeReport: initialise %s...\n',name);
 	
 				tp = TitlePage; 
 				tp.Title = 'Opticka Object Report'; 
 				tp.Subtitle = sprintf('Name: %s',me.fullName); 
 				tp.Publisher = 'Opticka';
-				tp.Image = [me.paths.root filesep 'ui' filesep 'images' filesep 'opticka-small.png'];
+				tp.Image = [me.paths.root filesep 'ui' filesep 'images' filesep 'opticka-clear.png'];
 				tp.Author = me.comment; 
 				append(rpt,tp); 
 				append(rpt,TableOfContents);
@@ -225,7 +229,7 @@ classdef optickaCore < handle
 			switch class(me)
 
 				case 'opticka'
-					fprintf('=== makeReport: opticka @%.2f secs\n',toc(tt));
+					fprintf('=== makeReport: opticka start\n');
 					ch = Chapter('opticka Object'); 
 					sec = Section('General Information'); 
 					append(sec,Paragraph('opticka Object:'))
@@ -233,9 +237,10 @@ classdef optickaCore < handle
 					append(ch,sec);
 					append(rpt,ch);
 					me.r.makeReport(rpt);
+					fprintf('=== makeReport: opticka end @%.2f secs\n',toc(tt));
 
 				case 'runExperiment'
-					fprintf('=== makeReport: runExperiment @%.2f secs\n',toc(tt));
+					fprintf('=== makeReport: runExperiment\n');
 					ch = Chapter('runExperiment Object'); 
 					sec = Section('General Information'); 
 					append(sec,Paragraph('runExperiment is the main object that manages a task. It contains multiple other managers: screenManager, taskSequence, stateMachine, eyeTracker'))
@@ -252,9 +257,11 @@ classdef optickaCore < handle
 					if isa(me.stateMachine,'stateMachine') && ~isempty(me.stateMachine)
 						me.stateMachine.makeReport(rpt);
 					end
+					fprintf('=== makeReport: runExperiment end @%.2f secs\n',toc(tt));
+
 
 				case 'taskSequence'
-					fprintf('=== makeReport: taskSequence @%.2f secs\n',toc(tt));
+					fprintf('=== makeReport: taskSequence start\n');
 					ch = Chapter('taskSequence Object'); 
 					sec = Section('Details'); 
 					append(sec,Paragraph('The taskSequence manages variable randomisation, you pass it a list of variables and their values and the number of repeat blocks and it will generate a balanced table. There is also an indepedent blockVar and trialVar.'))
@@ -263,15 +270,16 @@ classdef optickaCore < handle
 					append(sec, MATLABVariable('Variable', me, 'MaxCols', 2, 'DepthLimit', 0, 'ObjectLimit', 1));
 					append(ch,sec);
 					append(rpt,ch);
+					fprintf('=== makeReport: taskSequence end @%.2f secs\n',toc(tt));
 
 				case 'stateMachine'
-					fprintf('=== makeReport: stateMachine @%.2f secs\n',toc(tt));
+					fprintf('=== makeReport: stateMachine start\n');
 					ch = Chapter('stateMachine Object'); 
 					sec = Section('Details'); 
 					i = me.stateList;
 					append(sec, MATLABVariable('Title','stateList','Variable', i, 'MaxCols', 2, 'DepthLimit', 0, 'ObjectLimit', 1));
-					t = me.showTable();
-					append(sec, MATLABVariable('Title','State Table','Variable', t, 'MaxCols', 2, 'DepthLimit', 0, 'ObjectLimit', 1));
+					%t = me.showTable();
+					%append(sec, MATLABVariable('Title','State Table','Variable', t));
 					sec2 = Section('Plots'); 
 					me.showLog();
 					f = gcf;
@@ -283,12 +291,13 @@ classdef optickaCore < handle
 						append(sec2,fr);
 					end
 					close(f);
-					append(ch,sec);
-					append(ch,sec2);
-					append(rpt,ch);
+					try append(ch,sec); end
+					try append(ch,sec2); end
+					try append(rpt,ch); end
+					fprintf('=== makeReport: stateMachine end @%.2f secs\n',toc(tt));
 
 				case 'behaviouralRecord'
-					fprintf('=== makeReport: behaviouralRecord @%.2f secs\n',toc(tt));
+					fprintf('=== makeReport: behaviouralRecord start\n');
 					ch = Chapter('behaviouralRecord Object'); 
 					sec = Section('Plots'); 
 					me.plotPerformance;
@@ -306,9 +315,10 @@ classdef optickaCore < handle
 					end
 					append(ch,sec);
 					append(rpt,ch);
+					fprintf('=== makeReport: behaviouralRecord end @%.2f secs\n',toc(tt));
 					
 				case {'tobiiAnalysis','eyelinkAnalysis','iRecAnalysis'}
-					fprintf('=== makeReport: eyeTracker @%.2f secs\n',toc(tt));
+					fprintf('=== makeReport: eyeTracker start\n');
 					ch = Chapter('Eyetracker Object'); 
 					sec = Section('General Information'); 
 					
@@ -331,8 +341,12 @@ classdef optickaCore < handle
 					ch = Chapter('Eyetracker Data'); 
 					sec = Section('General Information'); 
 					append(sec,Paragraph('Tobii Messages'))
-					m = me.raw.messages;
-					append(sec, MATLABVariable('Variable', m));
+					try
+						m = me.raw.messages;
+						append(sec, MATLABVariable('Variable', m));
+					catch
+						append(sec,Paragraph('No Tobii messages found!!!'))
+					end
 					p = Paragraph('We will try to parse the data and plot it now...');
 					p.Style = parnote;
 					append(sec,p)
@@ -343,8 +357,8 @@ classdef optickaCore < handle
 						f = gcf;
 						if strcmpi(f.Tag,'opticka')
 							fr = Figure(f);
-							fr.Scaling = 'none';
-							fr.Snapshot.ScaleToFit = true;
+							%fr.Scaling = 'none';
+							%fr.Snapshot.ScaleToFit = true;
 							append(sec,fr);
 						end
 						close(f);
@@ -352,12 +366,18 @@ classdef optickaCore < handle
 						append(sec,Paragraph('Parsing / plotting failed'))
 						append(sec, MATLABVariable('Title','ERROR','Variable', ME));
 					end
-					append(ch,sec);append(rpt,ch);
+					try append(ch,sec); catch; disp('Cannot add Section'); end
+					try append(rpt,ch); catch; disp('Cannot add Chapter'); end
+					fprintf('=== makeReport: eyeTracker finish @%.2f secs\n',toc(tt));
 			end
 
 			if fullReport
+				fprintf('=== makeReport: writing report starting @%.2f secs\n',toc(tt));
 				close(rpt);
 				rptview(rpt);
+				fprintf('=== makeReport: finished report @%.2f secs\n',toc(tt));
+				tt = [];
+				warning on
 			end
 		
 		end

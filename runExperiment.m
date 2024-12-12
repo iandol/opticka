@@ -1,7 +1,7 @@
 % ========================================================================
 classdef runExperiment < optickaCore
 %> @class runExperiment
-%> @brief The main experiment manager.
+%> @brief Behavioural & MOC Task experiment runner.
 %>
 %> RUNEXPERIMENT accepts a variable sequence « taskSequence », stimulus set «
 %> metaStimulus » and for behavioural tasks a « stateMachine » state machine
@@ -11,7 +11,7 @@ classdef runExperiment < optickaCore
 %> and communication over a TCP/UDP client⇄server socket (via «dataConnection»).
 %> It also interfaces with hardware like eyetrackers
 %>
-%> There are 2 main experiment types:
+%> There are 2 fundamental experiment types:
 %>  1) MOC (method of constants) tasks -- uses stimuli and task objects
 %>     directly to run standard randomised variable tasks. See optickatest.m
 %>     for an example. Does not use the «stateMachine».
@@ -33,15 +33,18 @@ classdef runExperiment < optickaCore
 %>
 %> will run a minimal experiment showing a 1c/d circularly masked grating.
 %>
-%> @todo refactor checkKey(): can we use a config for keyboard commands?
+%> @TODO refactor checkKey(): can we use a config for keyboard commands?
 %>
-%> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2024 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================	
 	properties
-		sessionData struct		=struct('subjectName','Simulcra',...
+		sessionData struct		= struct( ...
+								'subjectName','Simulcra',...
 								'researcherName','Jane Doe', ...
-								'labName','lab','labLocation','',...
-								'sessionPrefix','session','alyxIP','');
+								'labName','lab', ...
+								'labLocation','',...
+								'sessionPrefix','session', ...
+								'alyxIP','');
 		%> a metaStimulus class instance holding our stimulus objects
 		stimuli metaStimulus
 		%> a taskSequence class instance determining our stimulus variables
