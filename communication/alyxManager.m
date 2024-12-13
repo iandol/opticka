@@ -10,15 +10,17 @@ classdef alyxManager < optickaCore
 
 	%--------------------PUBLIC PROPERTIES----------%
 	properties
-		IP						= '172.16.102.30'
-		port					= 8000
+		baseURL	char			= 'http://172.16.102.30:8000'
+		queueDir char			= ''
+		pageLimit				= 100
+		sessionURL
 		%> Do we log extra details to the command-line?
 		verbose					= false
 	end
 
 	%--------------------TRANSIENT PROPERTIES-----------%
 	properties (Transient = true)
-		
+		webOptions				= weboptions('MediaType','application/json','Timeout',10);
 	end
 
 	%--------------------HIDDEN PROPERTIES-----------%
@@ -28,17 +30,17 @@ classdef alyxManager < optickaCore
 	
 	%--------------------VISIBLE PROPERTIES-----------%
 	properties (SetAccess = protected, GetAccess = public)
-		
+		user					= 'admin'
 	end
 	
 	%--------------------DEPENDENT PROTECTED PROPERTIES----------%
 	properties (Dependent = true, SetAccess = protected, GetAccess = public)
-		
+		loggedIn
 	end
 	
 	%--------------------TRANSIENT PROTECTED PROPERTIES----------%
 	properties (SetAccess = protected, Transient = true)
-		
+		token
 	end
 	
 	%--------------------PROTECTED PROPERTIES----------%
@@ -49,7 +51,7 @@ classdef alyxManager < optickaCore
 	%--------------------PRIVATE PROPERTIES----------%
 	properties (SetAccess = private, GetAccess = private)
 		%> properties allowed to be passed on construction
-		allowedProperties = {''}
+		allowedProperties = {'baseURL'}
 	end
 	
 	
@@ -68,6 +70,36 @@ classdef alyxManager < optickaCore
 			me=me@optickaCore(varargin); %superclass constructor
 			me.parseArgs(varargin, me.allowedProperties);
 		end
+
+		function me = logout(me)
+      		%LOGOUT Delete token and user data from object
+      		% Unsets the User, Token and SessionURL attributes
+      		% Example:
+      		%   ai = Alyx;
+      		%   ai.login; % Get token, set user
+      		%   ai.logout; % Remove token, unset user
+      		% See also LOGIN
+      		me.Token = [];
+      		me.WebOptions.HeaderFields = []; % Remove token from header field
+      		me.User = [];
+		end
+
+		function bool = get.loggedIn(me)
+      		bool = ~isempty(me.user) && ~isempty(me.token);
+		end
+
+		function set.queueDir(me, qDir)
+			%SET.QUEUEDIR Ensure directory exists
+			if ~exist(qDir, 'dir'); mkdir(qDir); end
+			me.queueDir = qDir;
+    	end
+    	
+    	function set.baseURL(me, value)
+			% Drop trailing slash and ensure protocol defined
+			if isempty(value); me.BaseURL = ''; return; end % return on empty
+			if matches(value(1:4), 'http'); value = ['https://' value]; end
+			if value(end)=='/'; me.baseURL = value(1:end-1); else; me.baseURL =  value; end
+    	end
 
 	end %---END PUBLIC METHODS---%
 
