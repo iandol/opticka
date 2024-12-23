@@ -906,6 +906,9 @@ classdef optickaCore < handle
 			me.paths(1).whatami = me.className;
 			me.paths.root = fileparts(which(mfilename));
 			me.paths.whereami = me.paths.root;
+			me.paths.PTBroot = PsychtoolboxRoot;
+			me.paths.PTBconfig = PsychtoolboxConfigDir;
+			try v = splitlines(PsychtoolboxVersion); me.paths.PTBversion = v{1};end
 			if ~isfield(me.paths, 'stateInfoFile')
 				me.paths.stateInfoFile = '';
 			end
