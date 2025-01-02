@@ -15,6 +15,8 @@ classdef alyxManager < optickaCore
 		queueDir char			= ''
 		sessionURL				= []
 		pageLimit				= 100
+		lab						= 'CognitionPlatform'
+		subject					= 'TestSubject'
 		verbose					= false
 	end
 
@@ -138,16 +140,11 @@ classdef alyxManager < optickaCore
 					error(ex.identifier, 'JSONLab Toolbox required.  Click <a href="matlab:web(''%s'',''-browser'')">here</a> to install.',...
         			'https://uk.mathworks.com/matlabcentral/fileexchange/33381-jsonlab--a-toolbox-to-encode-decode-json-files')
     			elseif strcmp(ex.identifier, 'Alyx:Login:FailedToConnect')
-					me.Headless = true;
+					warning('Alyx:LoginFail:FailedToConnect', 'Failed To Connect.')
 					return
     			elseif contains(ex.message, 'credentials')||strcmpi(ex.message, 'Bad Request')
-      				if me.Headless == true
-        				warning('Alyx:LoginFail:BadCredentials', 'Unable to log in with provided credentials.')
-        				return
-      				else
-        				disp('Unable to log in with provided credentials.')
-        				me.pwd = [];
-      				end
+      				warning('Alyx:LoginFail:BadCredentials', 'Unable to log in with provided credentials.')
+        			return
     			elseif contains(ex.message, 'password')&&contains(ex.message, 'blank')
 					disp('Password may not be left blank')
     			else % Another error altogether
@@ -1192,8 +1189,6 @@ classdef alyxManager < optickaCore
   				% Flush the local queue on successful login
   				me.flushQueue();
 			elseif statusCode == 000
-  				% Alyx is down, set as headless
-  				me.Headless = true;
   				error('Alyx:Login:FailedToConnect', responseBody)
 			elseif statusCode == 400 && isempty(password)
 				error('Alyx:Login:PasswordEmpty', 'Password may not be left blank')
