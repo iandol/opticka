@@ -1,4 +1,4 @@
-% ========================================================================
++% ========================================================================
 classdef touchManager < optickaCore
 %> @class touchManager
 %> @brief Manages touch screens (wraps the PTB TouchQueue* functions), and
