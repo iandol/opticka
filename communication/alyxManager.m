@@ -83,12 +83,15 @@ classdef alyxManager < optickaCore
 				me.token = [];
 				me.sessionURL = [];
 				me.webOptions.HeaderFields = []; % Remove token from header field
-				fprintf('\n--->>> alyxManager: user <<%s>> logged OUT of <<%s>> successfully...\n\n', me.user, me.baseURL);
+				if ~me.loggedIn
+					fprintf('\n--->>> alyxManager: user <<%s>> logged OUT of <<%s>> successfully...\n\n', me.user, me.baseURL);
+				end
 			end
 		end
 
 		% ===================================================================
-		function login(me)
+		function success = login(me)
+			success = false;
 			if me.loggedIn; warning('Already Logged in...'); end
 			noDisplay = usejava('jvm') && ~feature('ShowFigureWindows');
   			if isempty(me.user)
@@ -122,14 +125,16 @@ classdef alyxManager < optickaCore
 					diary(diaryState);
     			else
 					passwd = passwordUI();
+					me.pwd = passwd;
     			end
   			else
     			passwd = me.pwd;
   			end
   			
-  			try
+			try
     			me.getToken(username, passwd);
 				fprintf('\n--->>> alyxManager: user <<%s>> logged in to <<%s>> successfully...\n\n', me.user, me.baseURL);
+				success = me.loggedIn;
   			catch ex
     			products = ver;
     			toolboxes = matlab.addons.toolbox.installedToolboxes;
@@ -386,6 +391,194 @@ classdef alyxManager < optickaCore
 			end
 		end
 
+		function [expRef, expSeq, url] = newExp(obj, subject, expDate, expParams)
+			%ALYX.NEWEXP Create a new unique experiment in the database
+			%   [ref, seq] = ALYX.NEWEXP(subject, expDate, expParams)
+			%   Create a new experiment by creating the relevant folder tree in the
+			%   local and main data repositories in the following format:
+			%
+			%   subject/
+			%          |_ YYYY-MM-DD/
+			%                       |_ expSeq/
+			%
+			%   If experiment parameters are passed into the function, they are saved
+			%   here, as a mat and in JSON (if possible).  If a base session for the
+			%   experiment date is not found, one is created in the Alyx database. A
+			%   corresponding subsession is also created and the parameters file is
+			%   registered with the sub-session.
+			%%% Validate the input, create the new expRef and create any nessessary
+			%%% experiment folders on the respository locations
+			if nargin < 3
+				% use today by default
+				expDate = now;
+			end
+			
+			if nargin < 4
+				% default parameters is empty variable
+				expParams = [];
+			end
+			
+			if ischar(expDate)
+				% if the passed expDate is a string, parse it into a datenum
+				expDate = datenum(expDate, 'yyyy-mm-dd');
+			end
+			
+			% check the subject exists in the database
+			subjectExists = any(strcmp(dat.listSubjects, subject));
+			errMsg = sprintf('subject "%s" does not exist', subject);
+			assert(subjectExists, 'Alyx:newExp:subjectNotFound', errMsg);
+			
+			% retrieve list of experiments for subject
+			[~, dateList, seqList] = dat.listExps(subject);
+			
+			% filter the list by expdate
+			filterIdx = dateList == floor(expDate);
+			
+			% find the next sequence number
+			expSeq = max(seqList(filterIdx)) + 1;
+			if isempty(expSeq)
+  			% if none today, max will have returned [], so override this to 1
+  			expSeq = 1;
+			end
+			
+			files = []; % List of files to register
+			jsonParams = [];
+			
+			% Main repository is the reference location for which experiments exist
+			[expPath, expRef] = dat.expPath(subject, floor(expDate), expSeq, 'main');
+			% ensure nothing went wrong in making a "unique" ref and path to hold
+			present = file.exists(expPath);
+			assert(~any(present), 'Alyx:newExp:expFoldersAlreadyExist', ...
+  			'The following experiment folder(s) already exist(s) for "%s":\r\t%s', ...
+  			expRef, strjoin(expPath(present), '\n\t'))
+			
+			try
+  			% now make the folder(s) to hold the new experiment
+  			created = cellfun(@mkdir, expPath);
+  			assert(all(created))
+			catch
+  			% Delete any folders we just created and rethrow error
+  			cellfun(@rmdir, expPath(created));  
+  			error('Alyx:newExp:mkdirFailed', ...
+    			'Failed to create the following directories:\r\t%s', ...
+    			strjoin(expPath(~created), '\n\t'))
+			end
+			
+			%%% If the parameters had an experiment definition function, save a copy in
+			%%% the experiment's folder and register the file to Alyx
+			expVersion = [];
+			if isfield(expParams, 'defFunction')
+  			assert(file.exists(expParams.defFunction),...
+    			'Experiment definition function does not exist: %s', expParams.defFunction);
+  			assert(all(cellfun(@(p)copyfile(expParams.defFunction, p),...
+    			dat.expFilePath(expRef, 'expDefFun'))),...
+    			'Copying definition function to experiment folders failed');
+  			% Register the experiment definition file
+  			files = [files; {dat.expFilePath(expRef, 'expDefFun', 'master')}];
+  			% Generate a version tag for the defFunction
+  			[~, expDef] = fileparts(expParams.defFunction);
+  			modDate = datetime(getOr(dir(expParams.defFunction), 'date'));
+  			ver = datestr(dateshift(modDate, 'start', 'minute', 'nearest'), 'yy.mm.dd.HH:MM');
+  			expVersion = [expDef '_' ver];
+			elseif isfield(expParams, 'type')
+  			% Generate version tag for old experiment types
+  			if strcmp(expParams.type, 'ChoiceWorld')
+    			modDate = datetime(getOr(dir(which('exp.ChoiceWorld')), 'date'));
+    			ver = datestr(dateshift(modDate, 'start', 'minute', 'nearest'), 'yy.mm.dd.HH:MM');
+    			expVersion = ['ChoiceWorld_' ver];
+  			end
+			end
+			
+			%%% Now save the experiment parameters variable both locally and in the
+			%%% 'master' location
+			%%%TODO Make expFilePath an Alyx query?
+			superSave(dat.expFilePath(expRef, 'parameters'), struct('parameters', expParams));
+			
+			%%% Try to save a copy of the expParams as a JSON file, unpon failing that,
+			%%% save as a mat file instead.  Register the parameters to Alyx
+			try 
+  			% Generate JSON path and save
+  			jsonParams = obj2json(expParams);
+  			jsonPath = dat.expFilePath(expRef, 'parameters', 'master', 'json');
+  			fid = fopen(jsonPath, 'w'); fprintf(fid, '%s', jsonParams); fclose(fid);
+  			% Register our JSON parameter set to Alyx
+  			files = [files; {jsonPath}];
+			catch ex
+  			warning(ex.identifier, 'Failed to save paramters as JSON: %s', ex.message)
+			end
+			
+			%%% Here we create a new base session on Alyx if it doesn't already exist
+			%%% for this subject today.  Then we create a new subsession and save the
+			%%% URL in the Alyx object
+			url = []; % Clear any previous subsession URL
+			if ~strcmp(subject, 'default') && ~(obj.Headless && ~obj.IsLoggedIn) % Ignore fake subject
+  			% logged in, find or create BASE session
+  			expDate = obj.datestr(expDate); % date in Alyx format
+  			% Ensure user is logged in
+  			if ~obj.IsLoggedIn; obj = obj.login; end
+    			% Get list of base sessions.  Sessions returned in descending date order
+    			[sessions, statusCode] = obj.getData(['sessions?type=Base&subject=' subject]);
+    			
+    			% If the date of this latest base session is not the same date as
+    			% today, then create a new base session for today.
+    			if statusCode ~= 000 && (isempty(sessions) || ~strcmp(sessions(1).start_time(1:10), expDate(1:10)))
+      			d = struct;
+      			d.subject = subject;
+      			d.procedures = {'Behavior training/tasks'};
+      			d.narrative = 'auto-generated session';
+      			d.start_time = expDate;
+      			d.type = 'Base';
+      			d.users = {obj.User};
+      			
+      			base_submit = obj.postData('sessions', d);
+      			assert(isfield(base_submit,'subject'),...
+        			'Submitted base session did not return appropriate values');
+      			
+      			%Now retrieve the sessions again
+      			sessions = obj.getData(['sessions?type=Base&subject=' subject]);
+    			elseif statusCode == 000
+      			% Failed to reach Alyx; making headless.  NB: Headless only within
+      			% scope of this method
+      			obj.Headless = true;
+      			sessions = struct('url', []); % FIXME: Post may fail
+    			end
+    			latest_base = sessions(end);
+    			
+    			%Now create a new SUBSESSION, using the same experiment number
+    			d = struct;
+    			d.subject = subject;
+    			d.procedures = {'Behavior training/tasks'};
+    			d.narrative = 'auto-generated session';
+    			d.start_time = expDate;
+    			if ~isempty(expVersion); d.task_protocol = expVersion; end
+    			d.type = 'Experiment';
+    			d.parent_session = latest_base.url;
+    			d.number = expSeq;
+    			d.users = {obj.User};
+    			d.json = ['{"parameters": ', jsonParams, '}'];
+    			
+    			try
+      			[subsession, statusCode] = obj.postData('sessions', d);
+      			url = subsession.url;
+    			catch ex
+      			if (isinteger(statusCode) && statusCode == 503) || obj.Headless % Unable to connect, or user is supressing errors
+        			warning(ex.identifier, 'Failed to create subsession file: %s.', ex.message)
+      			else % Probably fatal user error
+        			rethrow(ex)
+      			end
+    			end
+			end
+			
+			if ~strcmp(subject,'default') && ~(obj.Headless && ~obj.IsLoggedIn)
+  			obj.registerFile(files);
+			end
+			% If user not logged in and has suppressed prompts, print warning
+			if ~strcmp(subject,'default') && (obj.Headless && ~obj.IsLoggedIn)
+  			warning('Alyx:HeadlessLoginFail', 'Failed to register files; must be logged in');
+			end
+		end
+
+		% ===================================================================
 		function registerALF(me, alfDir, sessionURL)
 			%REGISTERALFTOALYX Register files contained within alfDir to Alyx
 			%   This function registers files contained within the alfDir to Alyx.
@@ -823,8 +1016,8 @@ classdef alyxManager < optickaCore
     	% ===================================================================
 		function set.baseURL(me, value)
 			% Drop trailing slash and ensure protocol defined
-			if isempty(value); me.BaseURL = ''; return; end % return on empty
-			if matches(value(1:4), 'http'); value = ['https://' value]; end
+			if isempty(value); me.baseURL = ''; return; end % return on empty
+			if ~matches(value(1:4), 'http'); value = ['https://' value]; end
 			if value(end)=='/'; me.baseURL = value(1:end-1); else; me.baseURL =  value; end
     	end
 

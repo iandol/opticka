@@ -42,7 +42,7 @@ classdef optickaCore < handle
 		%> storage of various paths
 		paths struct
 		%> version number
-		optickaVersion char		= '2.16.3'
+		optickaVersion char		= '2.16.5'
 	end
 
 	%--------------------DEPENDENT PROPERTIES----------%

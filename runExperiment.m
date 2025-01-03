@@ -39,12 +39,13 @@ classdef runExperiment < optickaCore
 % ========================================================================	
 	properties
 		sessionData struct		= struct( ...
-								'subjectName','Simulcra',...
-								'researcherName','Jane Doe', ...
-								'labName','lab', ...
-								'labLocation','',...
-								'sessionPrefix','session', ...
-								'alyxIP','');
+								'subjectName', 'Simulcra',...
+								'researcherName', 'Jane Doe', ...
+								'labName', 'lab', ...
+								'location', '', ...
+								'sessionPrefix', 'session', ...
+								'project', '', ...
+								'useAlyx', false);
 		%> a metaStimulus class instance holding our stimulus objects
 		stimuli metaStimulus
 		%> a taskSequence class instance determining our stimulus variables
@@ -156,6 +157,8 @@ classdef runExperiment < optickaCore
 		userFunctions
 		%> data connection
 		dC
+		%> ALYX Manager
+		alyx
 		%> state machine control cell array
 		stateInfo cell				= {}
 		%> general computer info retrieved using PTB Screen('computer')
@@ -788,15 +791,24 @@ classdef runExperiment < optickaCore
 
 				%================================initialise save file
 				% subject, sessionPrefix, lab, create
-				if tS.saveData
+
+				if me.sessionData.useAlyx
 					[me.paths.alfPath, sessionID, dateID] = me.getALF(me.sessionData.subjectName,...
-						me.sessionData.sessionPrefix, [], true);
+							me.sessionData.sessionPrefix, [], true);
 					me.name = [me.sessionData.subjectName '-' sessionID '-' dateID]; %give us a run name
+					me.initialiseAlyxSession();
 				else
-					[me.paths.alfPath, ~, dateID] = me.getALF(me.sessionData.subjectName,...
-						me.sessionData.sessionPrefix, [], false);
-					me.name = [me.sessionData.subjectName '-' dateID]; %give us a run name
+					if tS.saveData
+						[me.paths.alfPath, sessionID, dateID] = me.getALF(me.sessionData.subjectName,...
+							me.sessionData.sessionPrefix, [], true);
+						me.name = [me.sessionData.subjectName '-' sessionID '-' dateID]; %give us a run name
+					else
+						[me.paths.alfPath, ~, dateID] = me.getALF(me.sessionData.subjectName,...
+							me.sessionData.sessionPrefix, [], false);
+						me.name = [me.sessionData.subjectName '-' dateID]; %give us a run name
+					end
 				end
+
 				eT.paths.alfPath = me.paths.alfPath;
 				if matches(lower(me.eyetracker.device),'eyelink')
 					eT.saveFile	= [eT.paths.alfPath 'eyelink.raw.' me.name '.edf'];
@@ -1405,6 +1417,10 @@ classdef runExperiment < optickaCore
 			if isa(me.runLog,'timeLogger')
 				me.runLog.screenLog.prepTime=me.runLog.timer()-me.runLog.screenLog.construct;
 			end
+
+			if ~isa(me.alyx,'alyxManager') || isempty(me.alyx)
+				me.alyx = alyxManager;
+			end
 			
 		end
 		
@@ -1954,6 +1970,57 @@ classdef runExperiment < optickaCore
 		%> @param
 		% ===================================================================
 			me.screenVals = me.screen.prepareScreen();
+		end
+
+		% ===================================================================
+		function initialiseAlyxSession(me)
+		%> @fn initialiseAlyxSession
+		%> @brief initialise a new alyx session
+		%>
+		%> @param
+		% ===================================================================
+			if isempty(me.alyx) || ~isa(me.alyx, 'alyxManager')
+				me.alyx = alyxManager;
+			end
+
+			if ~me.alyx.loggedIn; me.alyx.login; end
+
+			subjects = me.alyx.listSubjects;
+			if ~contains(me.sessionData.subjectName,subjects)
+				error('You need to initialise SUBJECT %s in the ALYX database before you can proceed!',me.sessionData.subjectName);
+			end
+
+			[users,st] = me.alyx.getData('users');
+			if st ~= 200; error('Problem retrieving users from Alyx'); end
+			users = {users(:).username};
+			if ~contains(me.sessionData.researcherName, users)
+				error('You need to initialise USER %s in the ALYX database before you can proceed!',me.sessionData.researcherName);
+			end
+
+			[labs,st] = me.alyx.getData('labs');
+			if st ~= 200; error('Problem retrieving labs from Alyx'); end
+			labs = {labs(:).name};
+			if ~contains(me.sessionData.labName, labs)
+				error('You need to initialise LAB %s in the ALYX database before you can proceed!',me.sessionData.labName);
+			end
+
+			[pr,st] = me.alyx.getData('projects');
+			if st ~= 200; error('Problem retrieving projects from Alyx'); end
+			pr = {pr(:).name};
+			if ~contains(me.sessionData.project, pr)
+				error('You need to initialise PROJECT %s in the ALYX database before you can proceed!',me.sessionData.project);
+			end
+
+			[pr,st] = me.alyx.getData('locations');
+			if st ~= 200; error('Problem retrieving locations from Alyx'); end
+			pr = {pr(:).name};
+			if ~contains(me.sessionData.location, pr)
+				error('You need to initialise LOCATION %s in the ALYX database before you can proceed!',me.sessionData.location);
+			end
+
+
+
+
 		end
 
 
@@ -3187,7 +3254,7 @@ classdef runExperiment < optickaCore
 				try lobj.sessionData.subjectName = in.sessionData.subjectName; end
 				try lobj.sessionData.researcherName = in.sessionData.researcherName; end
 				try lobj.sessionData.labName = in.sessionData.labName; end
-				try lobj.sessionData.labLocation = in.sessionData.labLocation; end
+				try lobj.sessionData.location = in.sessionData.location; end
 				try lobj.sessionData.sessionPrefix = in.sessionData.sessionPrefix; end
 				try lobj.sessionData.alyxIP = in.sessionData.alyxIP; end
 				if isnumeric(in.dateStamp)

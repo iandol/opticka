@@ -56,8 +56,9 @@ classdef opticka < optickaCore
 		uiPrefsList cell = {'OKOmniplexIP','OKMonitorDistance','OKpixelsPerCm',...
 			'OKbackgroundColour','OKAntiAliasing','OKbitDepth','OKUseRetina',...
 			'OKHideFlash','OKlogFrames','OKlogStateTimers','OKUsePhotoDiode',...
+			'OKSaveFolder''OKSessionProtocol',...
 			'OKResearcher','OKSubject','OKLabName',...
-			'OKSessionPrefix','OKLabLocation','OKAlyxIP',...
+			'OKSessionPrefix','OKLabLocation','OKAlyxIP','OKAlyxUser','OKAlyxRequest',...
 			'OKaudioDevice','OKverbosityLevel',...
 			'OKarduinoPort','OKarduinoType',...
 			'OKrewardType','OKTTLPin','OKTTLTime',...
@@ -344,13 +345,26 @@ classdef opticka < optickaCore
 			me.r.reward.board = me.gv(me.ui.OKarduinoType);
 			
 			me.r.askForComments = me.gl(me.ui.OKAskComments);
-			
+
+			saveFolder = me.gv(me.ui.OKSaveFolder);
+			if ~isempty(saveFolder)
+				if ~exist(saveFolder,'dir'); warning('Saved Data folder doesn''t exist!');end
+				if ~contains(saveFolder,['OptickaFiles' filesep 'SavedData'])
+					me.paths.savedData = savedData;
+					me.r.paths.savedData = me.paths.savedData;
+				end
+			end
+
+			me.r.alyx.baseURL = me.gv(me.ui.OKAlyxIP);
+			me.r.alyx.user = me.gv(me.ui.OKAlyxUser);
+
 			me.r.sessionData.subjectName = me.gv(me.ui.OKSubject);
 			me.r.sessionData.researcherName = me.gv(me.ui.OKResearcher);
-			me.r.sessionData.alyxIP = me.gv(me.ui.OKAlyxIP);
 			me.r.sessionData.labName = me.gv(me.ui.OKLabName);
-			me.r.sessionData.labLocation = me.gv(me.ui.OKLabLocation);
+			me.r.sessionData.location = me.gv(me.ui.OKLabLocation);
 			me.r.sessionData.sessionPrefix = me.gv(me.ui.OKSessionPrefix);
+			me.r.sessionData.project = me.gv(me.ui.OKSessionProject);
+			me.r.sessionData.useAlyx = me.gv(me.ui.OKuseAlyx);
 		
 			me.r.audioDevice = me.gn(me.ui.OKaudioDevice);
 
@@ -953,7 +967,7 @@ classdef opticka < optickaCore
 		% ===================================================================
 		function loadPrefs(me)
 			if ~ispref('opticka'); return; end
-			anyLoaded = false; prefnames = '';
+			anyLoaded = false; prefnames = ''; a = 1;
 			for i = 1:length(me.uiPrefsList)
 				prfname = me.uiPrefsList{i};
 				if ispref('opticka',prfname) %pref exists
@@ -991,9 +1005,10 @@ classdef opticka < optickaCore
 									thisVal = prf;
 								end
 						end
-						prefnames = [prefnames ' ' prfname '«' thisVal '»'];
-						if ~mod(i,4);prefnames = [prefnames '\n']; end
+						prefnames = [prefnames ' ' prfname ' «' thisVal '»'];
+						if ~mod(a,4); prefnames = [prefnames '\n']; end
 						if ~anyLoaded; anyLoaded = true; end
+						a = a + 1;
 					end
 				end	
 			end
@@ -1009,7 +1024,7 @@ classdef opticka < optickaCore
 		function savePrefs(me)
 			if ispref('opticka'); rmpref('opticka'); end
 			if isempty(me.ui); return; end
-			anySaved = false; prefnames = '';
+			anySaved = false; prefnames = ''; a = 1;
 			for i = 1:length(me.uiPrefsList)
 				prf = [];
 				prfname = me.uiPrefsList{i};
@@ -1028,8 +1043,9 @@ classdef opticka < optickaCore
 					end
 					if ~isempty(prf) 
 						setpref('opticka', prfname, prf);
-						prefnames = [prefnames ' ' prfname '«' num2str(prf) '»'];
-						if ~mod(i,4);prefnames = [prefnames '\n']; end
+						prefnames = [prefnames ' ' prfname ' «' num2str(prf) '»'];
+						if ~mod(a,4); prefnames = [prefnames '\n']; end
+						a = a + 1;
 					end
 					if ~anySaved; anySaved = true; end
 				end
