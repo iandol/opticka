@@ -132,11 +132,9 @@ classdef optickaCore < handle
 			if ~exist('lab','var') || isempty(lab); lab = []; end
 			if ~exist('create','var') || isempty(create); create = false; end
 			
-			dateID = fix(clock); %#ok<*CLOCK> compatible with octave
-			dateID = num2str(dateID(1:6));
-			dateID = regexprep(dateID,' +','-');
+			dateID = char(datetime("now",'Format','uuuu-MM-dd-HH-mm-ss'));
 			
-			d = char(datetime("today"));
+			d = dateID(1:10);
 			if isempty(lab)
 				path = [me.paths.savedData filesep subject filesep d];
 			else

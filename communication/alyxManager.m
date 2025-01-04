@@ -1019,7 +1019,18 @@ classdef alyxManager < optickaCore
 			if isempty(value); me.baseURL = ''; return; end % return on empty
 			if ~matches(value(1:4), 'http'); value = ['https://' value]; end
 			if value(end)=='/'; me.baseURL = value(1:end-1); else; me.baseURL =  value; end
-    	end
+		end
+
+		% ===================================================================
+		function set.user(me, value)
+			
+			if ~matches(me.user,value)
+				if me.loggedIn; logout(me); end
+				me.pwd = '';
+				fprintf('--->>> User name change, remove old password!\n');
+			end
+			me.user = value;
+		end
 
 	end %---END PUBLIC METHODS---%
 

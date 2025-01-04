@@ -791,24 +791,22 @@ classdef runExperiment < optickaCore
 
 				%================================initialise save file
 				% subject, sessionPrefix, lab, create
-
 				if me.sessionData.useAlyx
 					[me.paths.alfPath, sessionID, dateID] = me.getALF(me.sessionData.subjectName,...
-							me.sessionData.sessionPrefix, [], true);
+							me.sessionData.sessionPrefix, me.sessionData.labName, true);
 					me.name = [me.sessionData.subjectName '-' sessionID '-' dateID]; %give us a run name
-					me.initialiseAlyxSession();
+					me.initialiseAlyxSession(me.paths.alfPath);
 				else
 					if tS.saveData
 						[me.paths.alfPath, sessionID, dateID] = me.getALF(me.sessionData.subjectName,...
-							me.sessionData.sessionPrefix, [], true);
+							me.sessionData.sessionPrefix, me.sessionData.labName, true);
 						me.name = [me.sessionData.subjectName '-' sessionID '-' dateID]; %give us a run name
 					else
 						[me.paths.alfPath, ~, dateID] = me.getALF(me.sessionData.subjectName,...
-							me.sessionData.sessionPrefix, [], false);
+							me.sessionData.sessionPrefix, me.sessionData.labName, false);
 						me.name = [me.sessionData.subjectName '-' dateID]; %give us a run name
 					end
 				end
-
 				eT.paths.alfPath = me.paths.alfPath;
 				if matches(lower(me.eyetracker.device),'eyelink')
 					eT.saveFile	= [eT.paths.alfPath 'eyelink.raw.' me.name '.edf'];
@@ -1973,7 +1971,7 @@ classdef runExperiment < optickaCore
 		end
 
 		% ===================================================================
-		function initialiseAlyxSession(me)
+		function initialiseAlyxSession(me, path)
 		%> @fn initialiseAlyxSession
 		%> @brief initialise a new alyx session
 		%>
@@ -1981,6 +1979,10 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 			if isempty(me.alyx) || ~isa(me.alyx, 'alyxManager')
 				me.alyx = alyxManager;
+			end
+
+			if ~exist('path','var') || isempty(path)
+				path = me.getALF(me.sessionData.subjectName, me.sessionData.sessionPrefix, me.sessionData.labName);
 			end
 
 			if ~me.alyx.loggedIn; me.alyx.login; end
@@ -2018,8 +2020,7 @@ classdef runExperiment < optickaCore
 				error('You need to initialise LOCATION %s in the ALYX database before you can proceed!',me.sessionData.location);
 			end
 
-
-
+			me.alyx.postData
 
 		end
 
