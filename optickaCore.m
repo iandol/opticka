@@ -120,7 +120,7 @@ classdef optickaCore < handle
 		end
 
 		% ===================================================================
-		function [path, sessionID, dateID] = getALF(me, subject, sessionPrefix, lab, create)
+		function [path, sessionID, dateID, sessionNumber] = getALF(me, subject, sessionPrefix, lab, create)
 		%> @fn initialiseSaveFile(me)
 		%> @brief Initialise Save prefix
 		%>
@@ -141,6 +141,7 @@ classdef optickaCore < handle
 				path = [me.paths.savedData filesep lab filesep 'subjects' filesep subject filesep d];
 			end
 			if ~exist(path,'dir')
+				sessionNumber = 1;
 				sessionID = [sessionPrefix '001'];
 				path = [path filesep sessionID filesep];
 				s = mkdir(path);
@@ -160,6 +161,7 @@ classdef optickaCore < handle
 						if nn > n; n = nn; end
 					end
 				end
+				sessionNumber = n;
 				if isMatch
 					if create
 						sessionID = [sessionPrefix sprintf('%0.3d',n+1)];
@@ -175,6 +177,7 @@ classdef optickaCore < handle
 						return
 					end
 				else
+					sessionNumber = 1;
 					sessionID = [sessionPrefix '001'];
 					path = [path filesep sessionID filesep];
 					s = mkdir(path);
@@ -183,6 +186,9 @@ classdef optickaCore < handle
 				end
 			end
 			me.paths.ALFPath = path;
+			me.paths.sessionNumber = sessionNumber;
+			me.paths.sessionID = sessionID;
+			me.paths.dateID = d;
 		end
 
 		% ===================================================================

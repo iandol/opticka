@@ -391,7 +391,105 @@ classdef alyxManager < optickaCore
 			end
 		end
 
-		function [expRef, expSeq, url] = newExp(obj, subject, expDate, expParams)
+		% ===================================================================
+		function narrative = updateNarrative(obj, comments, endpoint, subject)
+			%UPDATENARRATIVE Update an Alyx session or subject narrative
+			%   Update an Alyx narrative field with comments.  If an endpoint is
+			%   specified, the narrative for that record is updated, otherwise the last
+			%   subsession URL is used.  If the SessionURL property is empty and no
+			%   endpoint is specified, the narrative field of the subject's Alyx record
+			%   is updated.
+			%
+			%   NARRATIVE = UPDATENARRATIVE(OBJ)
+			%   If SessionURL is set, display comments dialog (unless Headless flag
+			%   set) and post input to that subsession narrative, otherwise it returns
+			%   an error.
+			%
+			%   NARRATIVE = UPDATENARRATIVE(OBJ, COMMENTS)
+			%   If SessionURL is set, posts COMMENTS to that subsession narrative,
+			%   otherwise it returns an error. If COMMENTS is empty and not a charector
+			%   array, prompts user for input (unless Headless flag set).
+			%
+			%   NARRATIVE = UPDATENARRATIVE(OBJ, COMMENTS, ENDPOINT)
+			%   Posts COMMENTS to ENDPOINT.  If COMMENTS is empty and not a charector
+			%   array, prompts user for input (unless Headless flag set).
+			%
+			%   NARRATIVE = UPDATENARRATIVE(OBJ, COMMENTS, ENDPOINT, SUBJECT)
+			%   Posts COMMENTS to ENDPOINT narrative.  If ENDPOINT is empty, posts
+			%   COMMENTS to SUBJECT description.
+			%   
+			%   See also ALYX, DAT.UPDATELOGENTRY, EUI.EXPPANEL/SAVELOGENTRY, PUTDATA
+	
+			% Validate inputs
+			if nargin < 2; comments = []; end
+			if nargin < 4; subject = []; end
+			
+			% If no specific endpoint is specified, use the last created subsession
+			if nargin < 3
+  				if ~isempty(obj.sessionURL)
+    				endpoint = obj.sessionURL;
+  				else % Nothing to go on, throw error
+    				error('No endpoint specified and no subsession URL set');
+  				end
+			end
+			
+			if isempty(comments) && ~isa(comments, 'char')
+  				if ~isempty(subject) && isempty(endpoint)
+    				titleStr = 'Update subject description';
+  				else
+    				titleStr = 'Update session narrative';
+  				end
+  				comments = inputdlg('Enter narrative:', titleStr, [10 60]);
+			end
+			
+			if ~isempty(subject)
+				% Assume post is intended for subject description
+				warning('Alyx:TODO', 'This feature is not yet implemented')
+				return
+  				% TODO: retreive subject narrative endpoint, requires endpoint to allow
+  				% PUT requests and /subject=%s option.  NB: subject's 'narrative' field
+  				% is called 'description'
+			else
+  				% Remove trailing whitespaces, and ensure string is 1D.  Replace newlines
+  				% with escape charecters
+  				narrative = deblank(strrep(mat2DStrTo1D(comments), newline, '\n'));
+  				if iscell(narrative); narrative = narrative{:}; end % Make sure not a cell
+  				try
+    				% Update the record
+    				data = obj.postData(endpoint, struct('narrative', narrative), 'patch');
+    				if ~isempty(data)
+        				narrative = strrep(data.narrative, '\n', newline);
+    				else
+        				error('Alyx:updateNarrative:FailedToUpdate',...
+            				'Failed to update narrative on Alyx')
+    				end
+  				catch ex
+    				rethrow(ex)
+  				end
+			end
+		end
+
+		% ===================================================================
+		function r = hasEntry(me, type, name)
+			[rt, st] = me.getData(type);
+			if st ~= 200; error('Problem retrieving %s from Alyx',type); end
+			switch type
+				case {'labs', 'locations', 'projects','data-repository'}
+					rt = {rt(:).name};
+				case {'users'}
+					rt = {rt(:).username};
+				case {'sessions'}
+					rt = {rt(:).id};
+			end
+			if contains(rt,name)
+				r = true;
+			else
+				r = false;
+			end
+		end
+
+		% ===================================================================
+		function [expRef, expSeq, url] = newExp(obj, path, subject, dateID, sessionNumber)
 			%ALYX.NEWEXP Create a new unique experiment in the database
 			%   [ref, seq] = ALYX.NEWEXP(subject, expDate, expParams)
 			%   Create a new experiment by creating the relevant folder tree in the
@@ -408,111 +506,18 @@ classdef alyxManager < optickaCore
 			%   registered with the sub-session.
 			%%% Validate the input, create the new expRef and create any nessessary
 			%%% experiment folders on the respository locations
-			if nargin < 3
-				% use today by default
-				expDate = now;
-			end
-			
-			if nargin < 4
-				% default parameters is empty variable
-				expParams = [];
-			end
-			
-			if ischar(expDate)
-				% if the passed expDate is a string, parse it into a datenum
-				expDate = datenum(expDate, 'yyyy-mm-dd');
+			if nargin < 2
+				error('Need to pass an ALF PATH')
 			end
 			
 			% check the subject exists in the database
-			subjectExists = any(strcmp(dat.listSubjects, subject));
+			subjectExists = hasEntry(me,'subjects',subject);
 			errMsg = sprintf('subject "%s" does not exist', subject);
 			assert(subjectExists, 'Alyx:newExp:subjectNotFound', errMsg);
 			
-			% retrieve list of experiments for subject
-			[~, dateList, seqList] = dat.listExps(subject);
-			
-			% filter the list by expdate
-			filterIdx = dateList == floor(expDate);
-			
-			% find the next sequence number
-			expSeq = max(seqList(filterIdx)) + 1;
-			if isempty(expSeq)
-  			% if none today, max will have returned [], so override this to 1
-  			expSeq = 1;
-			end
-			
 			files = []; % List of files to register
 			jsonParams = [];
-			
-			% Main repository is the reference location for which experiments exist
-			[expPath, expRef] = dat.expPath(subject, floor(expDate), expSeq, 'main');
-			% ensure nothing went wrong in making a "unique" ref and path to hold
-			present = file.exists(expPath);
-			assert(~any(present), 'Alyx:newExp:expFoldersAlreadyExist', ...
-  			'The following experiment folder(s) already exist(s) for "%s":\r\t%s', ...
-  			expRef, strjoin(expPath(present), '\n\t'))
-			
-			try
-  			% now make the folder(s) to hold the new experiment
-  			created = cellfun(@mkdir, expPath);
-  			assert(all(created))
-			catch
-  			% Delete any folders we just created and rethrow error
-  			cellfun(@rmdir, expPath(created));  
-  			error('Alyx:newExp:mkdirFailed', ...
-    			'Failed to create the following directories:\r\t%s', ...
-    			strjoin(expPath(~created), '\n\t'))
-			end
-			
-			%%% If the parameters had an experiment definition function, save a copy in
-			%%% the experiment's folder and register the file to Alyx
-			expVersion = [];
-			if isfield(expParams, 'defFunction')
-  			assert(file.exists(expParams.defFunction),...
-    			'Experiment definition function does not exist: %s', expParams.defFunction);
-  			assert(all(cellfun(@(p)copyfile(expParams.defFunction, p),...
-    			dat.expFilePath(expRef, 'expDefFun'))),...
-    			'Copying definition function to experiment folders failed');
-  			% Register the experiment definition file
-  			files = [files; {dat.expFilePath(expRef, 'expDefFun', 'master')}];
-  			% Generate a version tag for the defFunction
-  			[~, expDef] = fileparts(expParams.defFunction);
-  			modDate = datetime(getOr(dir(expParams.defFunction), 'date'));
-  			ver = datestr(dateshift(modDate, 'start', 'minute', 'nearest'), 'yy.mm.dd.HH:MM');
-  			expVersion = [expDef '_' ver];
-			elseif isfield(expParams, 'type')
-  			% Generate version tag for old experiment types
-  			if strcmp(expParams.type, 'ChoiceWorld')
-    			modDate = datetime(getOr(dir(which('exp.ChoiceWorld')), 'date'));
-    			ver = datestr(dateshift(modDate, 'start', 'minute', 'nearest'), 'yy.mm.dd.HH:MM');
-    			expVersion = ['ChoiceWorld_' ver];
-  			end
-			end
-			
-			%%% Now save the experiment parameters variable both locally and in the
-			%%% 'master' location
-			%%%TODO Make expFilePath an Alyx query?
-			superSave(dat.expFilePath(expRef, 'parameters'), struct('parameters', expParams));
-			
-			%%% Try to save a copy of the expParams as a JSON file, unpon failing that,
-			%%% save as a mat file instead.  Register the parameters to Alyx
-			try 
-  			% Generate JSON path and save
-  			jsonParams = obj2json(expParams);
-  			jsonPath = dat.expFilePath(expRef, 'parameters', 'master', 'json');
-  			fid = fopen(jsonPath, 'w'); fprintf(fid, '%s', jsonParams); fclose(fid);
-  			% Register our JSON parameter set to Alyx
-  			files = [files; {jsonPath}];
-			catch ex
-  			warning(ex.identifier, 'Failed to save paramters as JSON: %s', ex.message)
-			end
-			
-			%%% Here we create a new base session on Alyx if it doesn't already exist
-			%%% for this subject today.  Then we create a new subsession and save the
-			%%% URL in the Alyx object
-			url = []; % Clear any previous subsession URL
-			if ~strcmp(subject, 'default') && ~(obj.Headless && ~obj.IsLoggedIn) % Ignore fake subject
-  			% logged in, find or create BASE session
+	
   			expDate = obj.datestr(expDate); % date in Alyx format
   			% Ensure user is logged in
   			if ~obj.IsLoggedIn; obj = obj.login; end

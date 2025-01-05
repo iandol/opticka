@@ -1971,7 +1971,7 @@ classdef runExperiment < optickaCore
 		end
 
 		% ===================================================================
-		function initialiseAlyxSession(me, path)
+		function initialiseAlyxSession(me, path, sessionNumber)
 		%> @fn initialiseAlyxSession
 		%> @brief initialise a new alyx session
 		%>
@@ -1987,40 +1987,28 @@ classdef runExperiment < optickaCore
 
 			if ~me.alyx.loggedIn; me.alyx.login; end
 
-			subjects = me.alyx.listSubjects;
-			if ~contains(me.sessionData.subjectName,subjects)
-				error('You need to initialise SUBJECT %s in the ALYX database before you can proceed!',me.sessionData.subjectName);
+			if ~hasEntry(me.alyx,'subjects',me.sessionData.subjectName)
+				error('You need to initialise %s %s in the ALYX database before you can proceed!','SUBJECT',me.sessionData.subjectName);
 			end
 
-			[users,st] = me.alyx.getData('users');
-			if st ~= 200; error('Problem retrieving users from Alyx'); end
-			users = {users(:).username};
-			if ~contains(me.sessionData.researcherName, users)
-				error('You need to initialise USER %s in the ALYX database before you can proceed!',me.sessionData.researcherName);
+			if ~hasEntry(me.alyx,'users',me.sessionData.researcherName)
+				error('You need to initialise %s %s in the ALYX database before you can proceed!','USERS',me.sessionData.researcherName);
 			end
 
-			[labs,st] = me.alyx.getData('labs');
-			if st ~= 200; error('Problem retrieving labs from Alyx'); end
-			labs = {labs(:).name};
-			if ~contains(me.sessionData.labName, labs)
-				error('You need to initialise LAB %s in the ALYX database before you can proceed!',me.sessionData.labName);
+			if ~hasEntry(me.alyx,'labs',me.sessionData.labName)
+				error('You need to initialise %s %s in the ALYX database before you can proceed!','LABS',me.sessionData.labName);
 			end
 
-			[pr,st] = me.alyx.getData('projects');
-			if st ~= 200; error('Problem retrieving projects from Alyx'); end
-			pr = {pr(:).name};
-			if ~contains(me.sessionData.project, pr)
-				error('You need to initialise PROJECT %s in the ALYX database before you can proceed!',me.sessionData.project);
+			if ~hasEntry(me.alyx,'projects',me.sessionData.project)
+				error('You need to initialise %s %s in the ALYX database before you can proceed!','PROJECTS',me.sessionData.project);
 			end
 
-			[pr,st] = me.alyx.getData('locations');
-			if st ~= 200; error('Problem retrieving locations from Alyx'); end
-			pr = {pr(:).name};
-			if ~contains(me.sessionData.location, pr)
-				error('You need to initialise LOCATION %s in the ALYX database before you can proceed!',me.sessionData.location);
+			if ~hasEntry(me.alyx,'locations',me.sessionData.location)
+				error('You need to initialise %s %s in the ALYX database before you can proceed!','LOCATIONS',me.sessionData.location);
 			end
 
-			me.alyx.postData
+			[url] = me.alyx.newExp(me.sessionData.subjectName,me.paths.sessionNumber);
+			me.paths.sessionURL = url;
 
 		end
 
