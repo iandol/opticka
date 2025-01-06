@@ -3,20 +3,18 @@ classdef alyxManager < optickaCore
 %> @class alyxManager
 %> @brief manage connection to an Alyx database
 %>
-%>
 %> Copyright ©2014-2024 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
-
 
 	%--------------------PUBLIC PROPERTIES----------%
 	properties
 		baseURL	char			= 'http://172.16.102.30:8000'
 		user char				= 'admin'
 		queueDir char			= ''
+		lab	char				= 'CognitionPlatform'
+		subject	char			= 'TestSubject'
 		sessionURL				= []
 		pageLimit				= 100
-		lab						= 'CognitionPlatform'
-		subject					= 'TestSubject'
 		verbose					= false
 	end
 
@@ -30,11 +28,6 @@ classdef alyxManager < optickaCore
 		pwd						= ''
 	end
 	
-	%--------------------VISIBLE PROPERTIES-----------%
-	properties (SetAccess = protected, GetAccess = public)
-		alyx					= []
-	end
-	
 	%--------------------DEPENDENT PROTECTED PROPERTIES----------%
 	properties (GetAccess = public, Dependent = true)
 		loggedIn
@@ -43,11 +36,6 @@ classdef alyxManager < optickaCore
 	%--------------------TRANSIENT PROTECTED PROPERTIES----------%
 	properties (Access = protected, Transient = true)
 		token
-	end
-	
-	%--------------------PROTECTED PROPERTIES----------%
-	properties (Access = protected)
-		
 	end
 	
 	%--------------------PRIVATE PROPERTIES----------%
@@ -74,7 +62,6 @@ classdef alyxManager < optickaCore
 			me.parseArgs(varargin, me.allowedProperties);
 
 			me.queueDir = me.paths.parent;
-
 		end
 
 		% ===================================================================
@@ -156,6 +143,28 @@ classdef alyxManager < optickaCore
 					rethrow(ex)
     			end
   			end
+		end
+
+		% ===================================================================
+		function r = hasEntry(me, type, name)
+			%HASENTRY check if an item exists, e.g.
+			%  hasEntry('users','admin') checks if there is a user called
+			%  admin.
+			[rt, st] = me.getData(type);
+			if st ~= 200; error('Problem retrieving %s from Alyx',type); end
+			switch type
+				case {'labs', 'locations', 'projects','data-repository'}
+					rt = {rt(:).name};
+				case {'users'}
+					rt = {rt(:).username};
+				case {'sessions'}
+					rt = {rt(:).id};
+			end
+			if contains(rt,name)
+				r = true;
+			else
+				r = false;
+			end
 		end
 
 		% ===================================================================
@@ -470,25 +479,6 @@ classdef alyxManager < optickaCore
 		end
 
 		% ===================================================================
-		function r = hasEntry(me, type, name)
-			[rt, st] = me.getData(type);
-			if st ~= 200; error('Problem retrieving %s from Alyx',type); end
-			switch type
-				case {'labs', 'locations', 'projects','data-repository'}
-					rt = {rt(:).name};
-				case {'users'}
-					rt = {rt(:).username};
-				case {'sessions'}
-					rt = {rt(:).id};
-			end
-			if contains(rt,name)
-				r = true;
-			else
-				r = false;
-			end
-		end
-
-		% ===================================================================
 		function [expRef, expSeq, url] = newExp(obj, path, subject, dateID, sessionNumber)
 			%ALYX.NEWEXP Create a new unique experiment in the database
 			%   [ref, seq] = ALYX.NEWEXP(subject, expDate, expParams)
@@ -571,15 +561,14 @@ classdef alyxManager < optickaCore
       			else % Probably fatal user error
         			rethrow(ex)
       			end
-    			end
-			end
+    		end
 			
 			if ~strcmp(subject,'default') && ~(obj.Headless && ~obj.IsLoggedIn)
-  			obj.registerFile(files);
+				obj.registerFile(files);
 			end
 			% If user not logged in and has suppressed prompts, print warning
 			if ~strcmp(subject,'default') && (obj.Headless && ~obj.IsLoggedIn)
-  			warning('Alyx:HeadlessLoginFail', 'Failed to register files; must be logged in');
+				warning('Alyx:HeadlessLoginFail', 'Failed to register files; must be logged in');
 			end
 		end
 
@@ -1026,18 +1015,225 @@ classdef alyxManager < optickaCore
 			if value(end)=='/'; me.baseURL = value(1:end-1); else; me.baseURL =  value; end
 		end
 
-		% ===================================================================
+		% =========================end==========================================
 		function set.user(me, value)
-			
-			if ~matches(me.user,value)
+			if ~matches(me.user, value)
 				if me.loggedIn; logout(me); end
 				me.pwd = '';
-				fprintf('--->>> User name change, remove old password!\n');
+				fprintf('--->>> User name change, removed old password!\n');
 			end
 			me.user = value;
 		end
 
+	%=======================================================================
 	end %---END PUBLIC METHODS---%
+	%=======================================================================
+
+	%=======================================================================
+	methods ( Access = protected ) %-------PRIVATE (protected) METHODS-----%
+	%=======================================================================
+
+		% ===================================================================
+		function [me, statusCode] = getToken(me, username, password)
+			%GETTOKEN Acquire an authentication token for Alyx
+			%   Makes a request for an authentication token to an Alyx instance;
+			%   returns the token and status code.
+			%
+			% Example:
+			% statusCode = getToken('https://alyx.cortexlab.net', 'max', '123')
+			%
+			% See also ALYX, LOGIN
+			[statusCode, responseBody] = me.jsonPost('auth-token',...
+  			['{"username":"', username, '","password":"', password, '"}']);
+			if statusCode == 200
+  				me.token = responseBody.token;
+  				me.user = username;
+  				% Add the token to the authorization header field
+  				me.webOptions.HeaderFields = {'Authorization', ['Token ' me.token]};
+  				% Flush the local queue on successful login
+  				me.flushQueue();
+			elseif statusCode == 000
+  				error('Alyx:Login:FailedToConnect', responseBody)
+			elseif statusCode == 400 && isempty(password)
+				error('Alyx:Login:PasswordEmpty', 'Password may not be left blank')
+			else
+				error(responseBody)
+			end
+		end
+
+		% ===================================================================
+		function fullEndpoint = makeEndpoint(me, endpoint)
+			assert(~isempty(endpoint)...
+       			&& (ischar(endpoint) || isStringScalar(endpoint))...
+       			&& endpoint ~= "", ...
+       			'Alyx:makeEndpoint:invalidInput', 'Invalid endpoint');
+			if startsWith(endpoint, 'http')
+				% this is a full url already
+				fullEndpoint = endpoint;
+			else
+				fullEndpoint = [me.baseURL, '/', char(endpoint)];
+  				if isstring(endpoint)
+    				fullEndpoint = string(fullEndpoint);
+  				end
+			end
+			% drop trailing slash
+			fullEndpoint = strip(fullEndpoint, '/');
+		end
+
+		% ===================================================================
+		function [statusCode, responseBody] = jsonPost(me, endpoint, jsonData, requestMethod)
+			%JSONPOST Makes POST, PUT and PATCH requests to endpoint with a JSON request body
+			% Makes a POST request, with a JSON request body (`Content-Type: application/json`), 
+			% and asking for a JSON response (`Accept: application/json`).
+			%   
+			% Inputs:
+			%   endpoint      - REST API endpoint to make the request to
+			%   requestBody   - String to use as request body
+			%   requestMethod - String indicating HTTP request method, i.e. 'POST'
+			%                   (default), 'PUT', 'PATCH' or 'DELETE'
+			%
+			% Output:
+			%   statusCode - Integer response code
+			%   responseBody - String response body or data struct
+			%
+			% See also JSONGET, JSONPUT, JSONPATCH
+			
+			% Validate the inputs
+			endpoint = me.makeEndpoint(endpoint); % Ensure absolute URL
+			if nargin == 3; requestMethod = 'post'; end % Default request method
+			assert(any(strcmpi(requestMethod, {'post', 'put', 'patch', 'delete'})),...
+  			'%s not a valid HTTP request method', requestMethod)
+			% Set the HTTP request method in options
+			options = me.webOptions;
+			options.RequestMethod = lower(requestMethod);
+			
+			try % Post data
+				responseBody = webwrite(endpoint, jsonData, options);
+				if endsWith(endpoint,'auth-token'); statusCode = 200; else  statusCode = 201; end
+			catch ex
+				responseBody = ex.message;
+				switch ex.identifier
+    			case 'MATLAB:webservices:UnknownHost'
+					% Can't resolve URL
+					warning(ex.identifier, '%s Posting temporarily supressed', ex.message)
+					statusCode = 000;
+    			case {'MATLAB:webservices:CopyContentToDataStreamError'
+        			'MATLAB:webservices:SSLConnectionFailure'
+        			'MATLAB:webservices:Timeout'}
+      			% Connection refused or timed out, set as headless and continue on
+					warning(ex.identifier, '%s. Posting temporarily supressed', ex.message)
+					statusCode = 000;
+    			otherwise
+					response = regexp(ex.message, '(?:the status )(?<status>\d{3}).*"(?<message>.+)"', 'names');
+					if ~isempty(response)
+						statusCode = str2double(response.status);
+						responseBody = response.message;
+					else
+						statusCode = 000;
+						responseBody = ex.message;
+					end
+				end
+			end
+		end
+
+		% ===================================================================
+		function [data, statusCode] = flushQueue(me)
+			% FLUSHQUEUE Checks for and uploads queued data to Alyx
+			%   Checks all .post and .put files in me.QueueDir and tries to post/put
+			%   them to the database.  If the upload is successfull, the queued file is
+			%   deleted.  If an error is returned the queued file is also deleted,
+			%   unless it was a server error.
+			%
+			%   Status codes:
+			%     200: Upload success - delete from queue
+			%     300: Redirect - delete from queue
+			%     400: User error - delete from queue
+			%     403: Invalid token - delete from queue
+			%     500: Server error - save in queue
+			%
+			% See also ALYX, ALYX.JSONPOST
+			
+			% Get all currently queued posts, puts, etc.
+			alyxQueue = [dir([me.queueDir filesep '*.post']);...
+  			dir([me.queueDir filesep '*.put']);...
+  			dir([me.queueDir filesep '*.patch'])];
+			alyxQueueFiles = sort(cellfun(@(x) fullfile(me.queueDir, x), {alyxQueue.name}, 'uni', false));
+			
+			% Leave the function if there aren't any queued commands
+			if isempty(alyxQueueFiles); return; end
+			
+			% Loop through all files, attempt to put/post
+			statusCode = ones(1,length(alyxQueueFiles))*401; % Initialize with user error code
+			data = cell(1,length(alyxQueueFiles));
+			for curr_file = 1:length(alyxQueueFiles)
+				[~, ~, uploadType] = fileparts(alyxQueueFiles{curr_file});
+				fid = fopen(alyxQueueFiles{curr_file});
+				% First line is the endpoint
+				endpoint = fgetl(fid);
+				% Rest of the text is the JSON data
+				jsonData = fscanf(fid,'%c');
+				fclose(fid);
+  			
+  				try
+    				[statusCode(curr_file), responseBody] = me.jsonPost(endpoint, jsonData, uploadType(2:end));
+				%     [statusCode(curr_file), responseBody] = http.jsonPost(me.makeEndpoint(endpoint), jsonData, 'Authorization', ['Token ' me.Token]);
+    				switch floor(statusCode(curr_file)/100)
+      				case 2
+        				% Upload success - delete from queue
+        				data{curr_file} = responseBody;
+        				delete(alyxQueueFiles{curr_file});
+        				disp([int2str(statusCode(curr_file)) ' Success, uploaded to Alyx: ' jsonData])
+      				case 3
+        				% Redirect - delete from queue
+        				data{curr_file} = responseBody;
+        				delete(alyxQueueFiles{curr_file});
+        				disp([int2str(statusCode(curr_file)) ' Redirect, uploaded to Alyx: ' jsonData])
+      				case 4
+        				if statusCode(curr_file) == 403 % Invalid token
+          				me.logout; % delete token
+          				if ~me.headless % if user can see dialog...
+            				me.login; % prompt for login
+            				[data, statusCode] = me.flushQueue; % Retry
+          				else % otherwise - save in queue
+            				warning('Alyx:flushQueue:InvalidToken', '%s (%i): %s saved in queue',...
+              				responseBody, statusCode(curr_file), alyxQueue(curr_file).name)
+          				end
+        				else % User error - delete from queue
+							delete(alyxQueueFiles{curr_file});
+							warning('Alyx:flushQueue:BadUploadCommand', '%s (%i): %s',...
+            				responseBody, statusCode(curr_file), alyxQueue(curr_file).name)
+        				end
+      				case 5
+        				% Server error - save in queue
+        				warning('Alyx:flushQueue:InternalServerError', '%s (%i): %s saved in queue',...
+          				responseBody, statusCode(curr_file), alyxQueue(curr_file).name)
+    				end
+  				catch ex
+      				if strcmp(ex.identifier, 'MATLAB:weboptions:unrecognizedStringChoice')
+          				warning('Alyx:flushQueue:MethodNotSupported',...
+              				'%s method not supported', upper(uploadType(2:end)));
+      				else
+          				% If the JSON command failed (e.g. internet is down)
+          				warning('Alyx:flushQueue:NotConnected', 'Alyx upload failed - saved in queue');
+      				end
+  				end
+			end
+			data = me.cellflat(data(~cellfun('isempty',data))); % Remove empty cells
+			data = me.catStructs(data); % Convert cell array into struct
+		end
+
+		% ===================================================================
+		%> @fn Delete method
+		%>
+		%> @param me
+		%> @return
+		% ===================================================================
+		function delete(me)
+			if me.verbose; fprintf('--->>> Delete: %s\n',me.fullName); end
+		end
+	%=======================================================================	
+	end %---END PRIVATE METHODS---%	
+	%=======================================================================
 
 	%=======================================================================
 	methods ( Static ) %----------STATIC METHODS
@@ -1063,11 +1259,10 @@ classdef alyxManager < optickaCore
 		% ===================================================================
 		function passed = rmEmpty(A)
 			if iscell(A)
-  			empty = cellfun('isempty', A);
+				empty = cellfun('isempty', A);
 			else
-  			empty = arrayfun(@isempty, A);
+				empty = arrayfun(@isempty, A);
 			end
-			
 			passed = A(~empty);
 		end
 
@@ -1324,7 +1519,6 @@ classdef alyxManager < optickaCore
 			%   AlyxInstance should be an Alyx object.
 			%
 			% See also SAVEOBJ, LOADOBJ
-			
 			if nargin > 1 % in [ref, AlyxInstance]
 				ref = varargin{1}; % extract expRef
   				ai = varargin{2}; % extract AlyxInstance struct
@@ -1373,209 +1567,4 @@ classdef alyxManager < optickaCore
 		end
 
 	end%---END STATIC METHODS---%
-
-	%=======================================================================
-	methods ( Access = protected ) %-------PRIVATE (protected) METHODS-----%
-	%=======================================================================
-
-		% ===================================================================
-		function [me, statusCode] = getToken(me, username, password)
-			%GETTOKEN Acquire an authentication token for Alyx
-			%   Makes a request for an authentication token to an Alyx instance;
-			%   returns the token and status code.
-			%
-			% Example:
-			% statusCode = getToken('https://alyx.cortexlab.net', 'max', '123')
-			%
-			% See also ALYX, LOGIN
-			[statusCode, responseBody] = me.jsonPost('auth-token',...
-  			['{"username":"', username, '","password":"', password, '"}']);
-			if statusCode == 200
-  				me.token = responseBody.token;
-  				me.user = username;
-  				% Add the token to the authorization header field
-  				me.webOptions.HeaderFields = {'Authorization', ['Token ' me.token]};
-  				% Flush the local queue on successful login
-  				me.flushQueue();
-			elseif statusCode == 000
-  				error('Alyx:Login:FailedToConnect', responseBody)
-			elseif statusCode == 400 && isempty(password)
-				error('Alyx:Login:PasswordEmpty', 'Password may not be left blank')
-			else
-				error(responseBody)
-			end
-		end
-
-		% ===================================================================
-		function fullEndpoint = makeEndpoint(me, endpoint)
-			assert(~isempty(endpoint)...
-       			&& (ischar(endpoint) || isStringScalar(endpoint))...
-       			&& endpoint ~= "", ...
-       			'Alyx:makeEndpoint:invalidInput', 'Invalid endpoint');
-			if startsWith(endpoint, 'http')
-				% this is a full url already
-				fullEndpoint = endpoint;
-			else
-				fullEndpoint = [me.baseURL, '/', char(endpoint)];
-  				if isstring(endpoint)
-    				fullEndpoint = string(fullEndpoint);
-  				end
-			end
-			% drop trailing slash
-			fullEndpoint = strip(fullEndpoint, '/');
-		end
-
-		% ===================================================================
-		function [statusCode, responseBody] = jsonPost(me, endpoint, jsonData, requestMethod)
-			%JSONPOST Makes POST, PUT and PATCH requests to endpoint with a JSON request body
-			% Makes a POST request, with a JSON request body (`Content-Type: application/json`), 
-			% and asking for a JSON response (`Accept: application/json`).
-			%   
-			% Inputs:
-			%   endpoint      - REST API endpoint to make the request to
-			%   requestBody   - String to use as request body
-			%   requestMethod - String indicating HTTP request method, i.e. 'POST'
-			%                   (default), 'PUT', 'PATCH' or 'DELETE'
-			%
-			% Output:
-			%   statusCode - Integer response code
-			%   responseBody - String response body or data struct
-			%
-			% See also JSONGET, JSONPUT, JSONPATCH
-			
-			% Validate the inputs
-			endpoint = me.makeEndpoint(endpoint); % Ensure absolute URL
-			if nargin == 3; requestMethod = 'post'; end % Default request method
-			assert(any(strcmpi(requestMethod, {'post', 'put', 'patch', 'delete'})),...
-  			'%s not a valid HTTP request method', requestMethod)
-			% Set the HTTP request method in options
-			options = me.webOptions;
-			options.RequestMethod = lower(requestMethod);
-			
-			try % Post data
-				responseBody = webwrite(endpoint, jsonData, options);
-				if endsWith(endpoint,'auth-token'); statusCode = 200; else  statusCode = 201; end
-			catch ex
-				responseBody = ex.message;
-				switch ex.identifier
-    			case 'MATLAB:webservices:UnknownHost'
-					% Can't resolve URL
-					warning(ex.identifier, '%s Posting temporarily supressed', ex.message)
-					statusCode = 000;
-    			case {'MATLAB:webservices:CopyContentToDataStreamError'
-        			'MATLAB:webservices:SSLConnectionFailure'
-        			'MATLAB:webservices:Timeout'}
-      			% Connection refused or timed out, set as headless and continue on
-					warning(ex.identifier, '%s. Posting temporarily supressed', ex.message)
-					statusCode = 000;
-    			otherwise
-					response = regexp(ex.message, '(?:the status )(?<status>\d{3}).*"(?<message>.+)"', 'names');
-					if ~isempty(response)
-						statusCode = str2double(response.status);
-						responseBody = response.message;
-					else
-						statusCode = 000;
-						responseBody = ex.message;
-					end
-				end
-			end
-		end
-
-		% ===================================================================
-		function [data, statusCode] = flushQueue(me)
-			% FLUSHQUEUE Checks for and uploads queued data to Alyx
-			%   Checks all .post and .put files in me.QueueDir and tries to post/put
-			%   them to the database.  If the upload is successfull, the queued file is
-			%   deleted.  If an error is returned the queued file is also deleted,
-			%   unless it was a server error.
-			%
-			%   Status codes:
-			%     200: Upload success - delete from queue
-			%     300: Redirect - delete from queue
-			%     400: User error - delete from queue
-			%     403: Invalid token - delete from queue
-			%     500: Server error - save in queue
-			%
-			% See also ALYX, ALYX.JSONPOST
-			
-			% Get all currently queued posts, puts, etc.
-			alyxQueue = [dir([me.queueDir filesep '*.post']);...
-  			dir([me.queueDir filesep '*.put']);...
-  			dir([me.queueDir filesep '*.patch'])];
-			alyxQueueFiles = sort(cellfun(@(x) fullfile(me.queueDir, x), {alyxQueue.name}, 'uni', false));
-			
-			% Leave the function if there aren't any queued commands
-			if isempty(alyxQueueFiles); return; end
-			
-			% Loop through all files, attempt to put/post
-			statusCode = ones(1,length(alyxQueueFiles))*401; % Initialize with user error code
-			data = cell(1,length(alyxQueueFiles));
-			for curr_file = 1:length(alyxQueueFiles)
-				[~, ~, uploadType] = fileparts(alyxQueueFiles{curr_file});
-				fid = fopen(alyxQueueFiles{curr_file});
-				% First line is the endpoint
-				endpoint = fgetl(fid);
-				% Rest of the text is the JSON data
-				jsonData = fscanf(fid,'%c');
-				fclose(fid);
-  			
-  				try
-    				[statusCode(curr_file), responseBody] = me.jsonPost(endpoint, jsonData, uploadType(2:end));
-				%     [statusCode(curr_file), responseBody] = http.jsonPost(me.makeEndpoint(endpoint), jsonData, 'Authorization', ['Token ' me.Token]);
-    				switch floor(statusCode(curr_file)/100)
-      				case 2
-        				% Upload success - delete from queue
-        				data{curr_file} = responseBody;
-        				delete(alyxQueueFiles{curr_file});
-        				disp([int2str(statusCode(curr_file)) ' Success, uploaded to Alyx: ' jsonData])
-      				case 3
-        				% Redirect - delete from queue
-        				data{curr_file} = responseBody;
-        				delete(alyxQueueFiles{curr_file});
-        				disp([int2str(statusCode(curr_file)) ' Redirect, uploaded to Alyx: ' jsonData])
-      				case 4
-        				if statusCode(curr_file) == 403 % Invalid token
-          				me.logout; % delete token
-          				if ~me.headless % if user can see dialog...
-            				me.login; % prompt for login
-            				[data, statusCode] = me.flushQueue; % Retry
-          				else % otherwise - save in queue
-            				warning('Alyx:flushQueue:InvalidToken', '%s (%i): %s saved in queue',...
-              				responseBody, statusCode(curr_file), alyxQueue(curr_file).name)
-          				end
-        				else % User error - delete from queue
-							delete(alyxQueueFiles{curr_file});
-							warning('Alyx:flushQueue:BadUploadCommand', '%s (%i): %s',...
-            				responseBody, statusCode(curr_file), alyxQueue(curr_file).name)
-        				end
-      				case 5
-        				% Server error - save in queue
-        				warning('Alyx:flushQueue:InternalServerError', '%s (%i): %s saved in queue',...
-          				responseBody, statusCode(curr_file), alyxQueue(curr_file).name)
-    				end
-  				catch ex
-      				if strcmp(ex.identifier, 'MATLAB:weboptions:unrecognizedStringChoice')
-          				warning('Alyx:flushQueue:MethodNotSupported',...
-              				'%s method not supported', upper(uploadType(2:end)));
-      				else
-          				% If the JSON command failed (e.g. internet is down)
-          				warning('Alyx:flushQueue:NotConnected', 'Alyx upload failed - saved in queue');
-      				end
-  				end
-			end
-			data = me.cellflat(data(~cellfun('isempty',data))); % Remove empty cells
-			data = me.catStructs(data); % Convert cell array into struct
-		end
-
-		% ===================================================================
-		%> @fn Delete method
-		%>
-		%> @param me
-		%> @return
-		% ===================================================================
-		function delete(me)
-			if me.verbose; fprintf('--->>> Delete: %s\n',me.fullName); end
-		end
-		
-	end%---END PRIVATE METHODS---%
 end
