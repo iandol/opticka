@@ -162,10 +162,10 @@ if any(matches(lf,'Fira Code'))
 	MonoFont = 'Fira Code';
 end
 
-fontSize = 14;
-buttonFontSize = 16;
+fontSize = 8;
+buttonFontSize = 11;
 
-if IsLinux
+if IsLinux && isMATLABReleaseOlderThan('R2024b')
 	try
 		[~,d]=system('xrandr --screen 0 | grep -E ''\*\+''');
 		if any(contains(d,{'3840','4384','5120','5760','6144'}))
@@ -188,8 +188,8 @@ defOpt.checkboxFontSize       = fontSize;
 defOpt.sliderFontSize         = fontSize;
 defOpt.sliderStepsFraction    = [0.01,0.1];
 defOpt.okButtonLabel          = 'OK';
-defOpt.pixelHeigthUIcontrol   = 25;
-defOpt.pixelPaddingHeigth     = [8,   5]; % [bottom/top, between uicontrols]
+defOpt.pixelHeigthUIcontrol   = 30;
+defOpt.pixelPaddingHeigth     = [5,   5]; % [bottom/top, between uicontrols]
 defOpt.pixelPaddingWidth      = [6,   4]; % [bottom/top, between uicontrols]
 defOpt.InsteadOfPushUse       = 'p';      % p = popupmenu, r = radiobuttons
 defOpt.cancelButton           = true;
@@ -222,31 +222,31 @@ else
 end
 
 % Set up a large amount of padding options []:
-extentWidthUniversal          = 200;   % It is increased/decreased when necessary
-extentWidthUniversalMin       = 195;   % Minimum allowed width of uicontrols
+extentWidthUniversal          = 450;   % It is increased/decreased when necessary
+extentWidthUniversalMin       = 420;   % Minimum allowed width of uicontrols
 
-extentWidthSliderMin          = 100;
-extentHeigthTextInPadding     = 0;
-extentHeigthTextPadding       = 2;
+extentWidthSliderMin          = 200;
+extentHeigthTextInPadding     = 5;
+extentHeigthTextPadding       = 5;
 extentWidthTextInPadding      = 40;
 
 extentHeigthPushbuttonPadding    = 4;
-extentHeigthPushbuttonInPadding  = 2;
+extentHeigthPushbuttonInPadding  = 12;
 extentWidthPushbuttonInPadding   = 10;
 
 extentWidthPopupmenuInPadding = 12;
-extentHeightPopupmenuPadding  = 0;
+extentHeightPopupmenuPadding  = 10;
 
 extentHeigthCheckboxInPadding = 2;
-extentHeigthCheckboxPadding   = 1;
+extentHeigthCheckboxPadding   = 11;
 extentWidthCheckboxInPadding  = 20;
 
 extentHeigthRadiobuttonInPadding = 2;
-extentHeigthRadiobuttonPadding   = 1;
+extentHeigthRadiobuttonPadding   = 11;
 extentWidthRadiobuttonInPadding  = 20;
 
-extentWidthGroupPadding       = 15;
-extentHeightTitlePadding      = -Opt.pixelPaddingHeigth(2);
+extentWidthGroupPadding       = 10;
+extentHeightTitlePadding      = Opt.pixelPaddingHeigth(2);
 
 %% Check mTitle input:
 if ~iscell(mtitle)
@@ -263,7 +263,7 @@ end
 hFig           = figure('Name',mtitle{1},'Toolbar','none','Menubar','none','NumberTitle','off');
 
 % Set initial necessary width that all uicontrols must be [pixels]:
-tmpMinimumSize                = [extentWidthUniversalMin, 15];
+tmpMinimumSize                = [extentWidthUniversalMin, 24];
 
 % Assume that a OK button is necessary:
 flagMakeOkButton              = true;
@@ -301,7 +301,7 @@ tmpCurrentPosition  = [Opt.pixelPaddingWidth(1),  Opt.pixelPaddingHeigth(1)];
 
 %% Print OK & cancel button
 if flagMakeOkButton
-   tmpPosition   = [tmpCurrentPosition, tmpMinimumSize];
+   tmpPosition   = [tmpCurrentPosition, tmpMinimumSize(1)/2 tmpMinimumSize(2)];
    hOK            = uicontrol( ...
       'Style',       'Pushbutton',...
       'String',      Opt.okButtonLabel,...
@@ -313,7 +313,7 @@ if flagMakeOkButton
    tmpExtent = get(hOK,'extent');
    extentWidthUniversal   = max(extentWidthUniversal, ...
       tmpExtent(3)+extentWidthPushbuttonInPadding);
-   tmpNewSize  = [extentWidthUniversal, ...
+   tmpNewSize  = [extentWidthUniversal/2, ...
       tmpExtent(4) + extentHeigthPushbuttonInPadding];
    % Update size of uicontrol:
    set(hOK,'Position',[tmpCurrentPosition,tmpNewSize]);
@@ -334,7 +334,7 @@ if flagMakeOkButton
       tmpExtent = get(hCancel,'extent');
       extentWidthUniversal   = max(extentWidthUniversal, ...
          tmpExtent(3)+extentWidthPushbuttonInPadding);
-      tmpNewSize  = [extentWidthUniversal, ...
+      tmpNewSize  = [extentWidthUniversal/2, ...
          tmpExtent(4) + extentHeigthPushbuttonInPadding];
       % Update size of uicontrol:
       set(hCancel,'Position',[tmpCurrentPosition,tmpNewSize]);
@@ -345,7 +345,7 @@ if flagMakeOkButton
    tmpCurrentPosition(2) = tmpCurrentPosition(2) + tmpNewSize(2) + ...
       extentHeigthPushbuttonPadding + Opt.pixelPaddingHeigth(2);
 elseif flagMakeOnlyCancelButton && Opt.cancelButton
-   tmpPosition   = [tmpCurrentPosition, tmpMinimumSize];
+   tmpPosition   = [tmpCurrentPosition, tmpMinimumSize(1)/2 tmpMinimumSize(2)];
    hCancel            = uicontrol( ...
       'Style',       'Pushbutton',...
       'String',      Opt.cancelButtonLabel,...
@@ -548,9 +548,9 @@ for idxOptions = numOptionsGroups:-1:1
          tmpExtentWidthMaxChild   = max(tmpExtentWidthMaxChild, ...
             tmpExtent(3)+extentWidthRadiobuttonInPadding);
          tmpNewSize  = [tmpExtentWidthMaxChild, ...
-            tmpExtent(4) + extentHeigthRadiobuttonInPadding];
+            tmpExtent(4) + 10];
          % Update size of uicontrol:
-         set(hObjects{idxObjects},'Position',[tmpCurrentPositionChild,tmpNewSize]);
+         set(hObjects{idxObjects},'Position',[tmpCurrentPositionChild,410,24]);
          % Update current position Y coordinate:
          tmpCurrentPositionChild(2) = tmpCurrentPositionChild(2) + tmpNewSize(2) + ...
             extentHeigthRadiobuttonPadding + Opt.pixelPaddingHeigth(2);
@@ -657,9 +657,9 @@ for idxOptions = numOptionsGroups:-1:1
       tmpExtent = get(hOptions{idxOptions},'extent');
       extentWidthUniversal   = max(extentWidthUniversal, ...
          tmpExtent(3)+extentWidthPopupmenuInPadding);
-      tmpNewSize  = [extentWidthUniversal, tmpExtent(4)];
+      tmpNewSize  = [extentWidthUniversal, 22];
       % Update size of uicontrol:
-      set(hOptions{idxOptions},'Position',[tmpCurrentPosition,tmpNewSize]);
+      set(hOptions{idxOptions},'Position',[tmpCurrentPosition,extentWidthUniversal, 22]);
       % Update current position Y coordinate:
       tmpCurrentPosition(2) = tmpCurrentPosition(2) + tmpNewSize(2) + ...
          extentHeightPopupmenuPadding + Opt.pixelPaddingHeigth(2);

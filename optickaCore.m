@@ -42,7 +42,7 @@ classdef optickaCore < handle
 		%> storage of various paths
 		paths struct
 		%> version number
-		optickaVersion char		= '2.16.5'
+		optickaVersion char		= '2.17.0'
 	end
 
 	%--------------------DEPENDENT PROPERTIES----------%
@@ -120,15 +120,15 @@ classdef optickaCore < handle
 		end
 
 		% ===================================================================
-		function [path, sessionID, dateID, sessionNumber] = getALF(me, subject, sessionPrefix, lab, create)
-		%> @fn initialiseSaveFile(me)
-		%> @brief Initialise Save prefix
+		function [path, sessionID, dateID] = getALF(me, subject, lab, create)
+		%> @fn getALF(me)
+		%> @brief get the ALF path
 		%>
 		%> @return path - the path to use
-		%> @return dateid - YYYY-MM-DD-HH-MM-SS
+		%> @return sessionID - session number
+		%> @return dateID - YYYY-MM-DD-HH-MM-SS
 		% ===================================================================
 			if ~exist('subject','var') || isempty(subject); subject = 'unknown'; end
-			if ~exist('sessionPrefix','var') || isempty(sessionPrefix); sessionPrefix = ''; end
 			if ~exist('lab','var') || isempty(lab); lab = []; end
 			if ~exist('create','var') || isempty(create); create = false; end
 			
@@ -141,54 +141,55 @@ classdef optickaCore < handle
 				path = [me.paths.savedData filesep lab filesep 'subjects' filesep subject filesep d];
 			end
 			if ~exist(path,'dir')
-				sessionNumber = 1;
-				sessionID = [sessionPrefix '001'];
-				path = [path filesep sessionID filesep];
-				s = mkdir(path);
-				if s == 0; error('Cannot make Save File directory!!!'); end
-				fprintf('---> Path: %s created...\n',path);
-				return
+				sessionID = 1;
+				path = [path filesep sprintf('%0.3d',sessionID) filesep];
+				if create
+					s = mkdir(path);
+					if s == 0; error('Cannot make Save File directory!!!'); end
+					fprintf('---> Path: %s created...\n',path);
+				else
+					fprintf('---> No path created for: %s created...\n',path);
+				end
 			else
 				isMatch = false;
-				n = 0;
-				d = dir(path);
-				pattern = sessionPrefix + digitsPattern(3);
-				for jj = 1:length(d)
-					e = extract(d(jj).name, pattern);
+				sessionID = 0;
+				td = dir(path);
+				pattern = digitsPattern(1,6);
+				for jj = 1:length(td)
+					e = extract(td(jj).name, pattern);
 					if ~isempty(e)
 						isMatch = true;
-						nn = str2double(e{1}(end-2:end));
-						if nn > n; n = nn; end
+						nn = str2double(e{1});
+						if nn > sessionID; sessionID = nn; end
 					end
 				end
-				sessionNumber = n;
 				if isMatch
 					if create
-						sessionID = [sessionPrefix sprintf('%0.3d',n+1)];
-						path = [path filesep sessionID filesep];
+						sessionID = sessionID + 1;
+						path = [path filesep sprintf('%0.3d',sessionID) filesep];
 						s = mkdir(path);
 						if s == 0; error('Cannot make Save File directory!!!'); end
 						fprintf('---> Path: %s created...\n',path);
-						return
 					else
-						sessionID = [sessionPrefix sprintf('%0.3d',n)];
-						path = [path filesep sessionID filesep];
-						fprintf('---> Path: %s found...\n',path);
-						return
+						path = [path filesep sprintf('%0.3d',sessionID) filesep];
+						if exist(path,'dir')
+							fprintf('---> Path: %s found...\n',path);
+						else
+							warning('---> Path: %s should exist but doesn''t...\n',path);
+						end
 					end
 				else
-					sessionNumber = 1;
-					sessionID = [sessionPrefix '001'];
-					path = [path filesep sessionID filesep];
+					sessionID = 1;
+					path = [path filesep sprintf('%0.3d',sessionID) filesep];
 					s = mkdir(path);
 					if s == 0; error('Cannot make Save File directory!!!'); end
 					fprintf('---> Path: %s created...\n',path);
 				end
 			end
 			me.paths.ALFPath = path;
-			me.paths.sessionNumber = sessionNumber;
 			me.paths.sessionID = sessionID;
-			me.paths.dateID = d;
+			me.paths.dateID = dateID;
+			me.paths.dateIDShort = dateID(1:10);
 		end
 
 		% ===================================================================

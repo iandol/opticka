@@ -10,10 +10,11 @@ classdef alyxManager < optickaCore
 	properties
 		baseURL	char			= 'http://172.16.102.30:8000'
 		user char				= 'admin'
-		queueDir char			= ''
 		lab	char				= 'CognitionPlatform'
 		subject	char			= 'TestSubject'
+		queueDir char			= ''
 		sessionURL				= []
+		sessionParentURL		= []
 		pageLimit				= 100
 		verbose					= false
 	end
@@ -122,6 +123,8 @@ classdef alyxManager < optickaCore
     			me.getToken(username, passwd);
 				fprintf('\n--->>> alyxManager: user <<%s>> logged in to <<%s>> successfully...\n\n', me.user, me.baseURL);
 				success = me.loggedIn;
+				me.sessionURL = [];
+				me.sessionParentURL = [];
   			catch ex
     			products = ver;
     			toolboxes = matlab.addons.toolbox.installedToolboxes;
@@ -135,7 +138,8 @@ classdef alyxManager < optickaCore
 					warning('Alyx:LoginFail:FailedToConnect', 'Failed To Connect.')
 					return
     			elseif contains(ex.message, 'credentials')||strcmpi(ex.message, 'Bad Request')
-      				warning('Alyx:LoginFail:BadCredentials', 'Unable to log in with provided credentials.')
+      				warning('Alyx:LoginFail:BadCredentials', 'Unable to log in with provided credentials. Will reset password')
+					me.pwd = '';
         			return
     			elseif contains(ex.message, 'password')&&contains(ex.message, 'blank')
 					disp('Password may not be left blank')
@@ -153,14 +157,16 @@ classdef alyxManager < optickaCore
 			[rt, st] = me.getData(type);
 			if st ~= 200; error('Problem retrieving %s from Alyx',type); end
 			switch type
-				case {'labs', 'locations', 'projects','data-repository'}
+				case {'subjects'}
+					rt = {rt(:).nickname};
+				case {'tags','tasks','procedures','labs', 'locations', 'projects','data-repository'}
 					rt = {rt(:).name};
 				case {'users'}
 					rt = {rt(:).username};
 				case {'sessions'}
 					rt = {rt(:).id};
 			end
-			if contains(rt,name)
+			if iscell(rt) && any(contains(name, rt))
 				r = true;
 			else
 				r = false;
@@ -401,7 +407,7 @@ classdef alyxManager < optickaCore
 		end
 
 		% ===================================================================
-		function narrative = updateNarrative(obj, comments, endpoint, subject)
+		function narrative = updateNarrative(me, comments, endpoint, subject)
 			%UPDATENARRATIVE Update an Alyx session or subject narrative
 			%   Update an Alyx narrative field with comments.  If an endpoint is
 			%   specified, the narrative for that record is updated, otherwise the last
@@ -435,8 +441,8 @@ classdef alyxManager < optickaCore
 			
 			% If no specific endpoint is specified, use the last created subsession
 			if nargin < 3
-  				if ~isempty(obj.sessionURL)
-    				endpoint = obj.sessionURL;
+  				if ~isempty(me.sessionURL)
+    				endpoint = me.sessionURL;
   				else % Nothing to go on, throw error
     				error('No endpoint specified and no subsession URL set');
   				end
@@ -450,7 +456,20 @@ classdef alyxManager < optickaCore
   				end
   				comments = inputdlg('Enter narrative:', titleStr, [10 60]);
 			end
-			
+
+			session = me.getData(endpoint);
+			oldnarrative = session.narrative;
+			try
+				narrative = deblank(replace(comments, newline, "\n"));
+				narrative = strjoin(narrative,"\n");
+			catch
+				narrative = '';
+			end
+			if isempty(narrative); return; end
+			if ~isempty(oldnarrative)
+				narrative = strjoin([oldnarrative,narrative],"\n");
+			end
+
 			if ~isempty(subject)
 				% Assume post is intended for subject description
 				warning('Alyx:TODO', 'This feature is not yet implemented')
@@ -461,11 +480,11 @@ classdef alyxManager < optickaCore
 			else
   				% Remove trailing whitespaces, and ensure string is 1D.  Replace newlines
   				% with escape charecters
-  				narrative = deblank(strrep(mat2DStrTo1D(comments), newline, '\n'));
+  				
   				if iscell(narrative); narrative = narrative{:}; end % Make sure not a cell
   				try
     				% Update the record
-    				data = obj.postData(endpoint, struct('narrative', narrative), 'patch');
+    				data = me.postData(endpoint, struct('narrative', narrative), 'patch');
     				if ~isempty(data)
         				narrative = strrep(data.narrative, '\n', newline);
     				else
@@ -479,96 +498,121 @@ classdef alyxManager < optickaCore
 		end
 
 		% ===================================================================
-		function [expRef, expSeq, url] = newExp(obj, path, subject, dateID, sessionNumber)
-			%ALYX.NEWEXP Create a new unique experiment in the database
-			%   [ref, seq] = ALYX.NEWEXP(subject, expDate, expParams)
-			%   Create a new experiment by creating the relevant folder tree in the
-			%   local and main data repositories in the following format:
+		function [url, subsession] = newExp(me, path, sessionID, session)
+			%NEWEXP Create a new unique experiment in the database
+			%   [ref, seq] = NEWEXP(path, sessionID, session)
+			%   Create a new experiment:
 			%
 			%   subject/
 			%          |_ YYYY-MM-DD/
-			%                       |_ expSeq/
+			%                       |_ sessionID/
 			%
 			%   If experiment parameters are passed into the function, they are saved
 			%   here, as a mat and in JSON (if possible).  If a base session for the
 			%   experiment date is not found, one is created in the Alyx database. A
 			%   corresponding subsession is also created and the parameters file is
 			%   registered with the sub-session.
-			%%% Validate the input, create the new expRef and create any nessessary
-			%%% experiment folders on the respository locations
-			if nargin < 2
-				error('Need to pass an ALF PATH')
+
+			if nargin < 3; error('Need to pass an ALF PATH and subject'); end 
+			
+			% check items exists in the database
+			assert(me.hasEntry('subjects',session.subjectName), 'Alyx:newExp:subjectNotFound', sprintf('subject "%s" does not exist', session.subjectName));
+			assert(me.hasEntry('users',session.researcherName), 'Alyx:newExp:userNotFound', sprintf('user "%s" does not exist', session.researcherName));
+			assert(me.hasEntry('projects',session.project), 'Alyx:newExp:projectNotFound', sprintf('project "%s" does not exist', session.project));
+			assert(me.hasEntry('procedures',session.procedure), 'Alyx:newExp:procedureNotFound', sprintf('procedure "%s" does not exist', session.procedure));
+			assert(me.hasEntry('labs',session.labName), 'Alyx:newExp:labNotFound', sprintf('lab "%s" does not exist', session.labName));
+			assert(me.hasEntry('locations',session.location), 'Alyx:newExp:locationNotFound', sprintf('location "%s" does not exist', session.location));
+			
+			jsonParams = '[]';
+			me.sessionURL = '';
+			me.sessionParentURL = '';
+
+			expDate = char(datetime("now",'Format','yyyy-MM-dd''T''HH:mm:ss'));
+
+			% Ensure user is logged in
+  			if ~me.loggedIn; me.login; end
+
+			% Get (list of base sessions.  Sessions returned in descending date order
+			[sessions, statusCode] = me.getData(['sessions?type=Base&subject=' session.subjectName '&number=' num2str(sessionID)]);
+			
+			% If the date of this latest base session is not the same date as
+			% today, then create a new base session for today.
+			if statusCode ~= 000 && ...
+					( isempty(sessions) || ...
+					( ~strcmp(sessions(1).start_time(1:10), expDate(1:10)) ||...
+					  sessions(1).number ~= sessionID ) )
+  				d = struct;
+				d.users = {session.researcherName};
+  				d.subject = session.subjectName;
+				d.projects = {session.project};
+  				d.procedures = {session.procedure};
+				d.task_protocol = session.taskProtocol;
+				d.lab = session.labName;
+				d.location = session.location;
+  				d.narrative = ['opticka-generated session: ' path];
+				d.number = sessionID;
+  				d.start_time = expDate;
+  				d.type = 'Base';
+  				
+  				[base_submit, s] = me.postData('sessions', d, 'post');
+  				assert(isfield(base_submit,'subject'),...
+    				'Submitted base session did not return appropriate values');
+  				%Now retrieve the sessions again
+  				sessions = me.getData(['sessions?type=Base&subject=' session.subjectName '&number=' num2str(sessionID)]);
+			elseif statusCode == 000
+				url = [];
+  				sessions = struct('url', url); % FIXME: Post may fail
+				return
 			end
+			latest_base = sessions(1);
+			assert(strcmp(latest_base.start_time(1:10), expDate(1:10)),'Returned Parent Session is not from TODAY!');
+			me.sessionParentURL = latest_base.url;
+
+			%Now create a new SUBSESSION, using the same experiment number
+			subsession = [];
+			d = struct;
+			d.users = {session.researcherName};
+			d.subject = session.subjectName;
+			d.projects = {session.project};
+  			d.procedures = {session.procedure};
+			d.task_protocol = session.taskProtocol;
+			d.lab = session.labName;
+			d.location = session.location;
+  			d.narrative = ['opticka-generated session: ' path '; parent: ' latest_base.url];
+			d.number = sessionID;
+  			d.start_time = expDate;
+			d.type = 'Experiment';
+			d.parent_session = latest_base.url;
+			%d.json = ['{"parameters": ', jsonParams, '}'];
 			
-			% check the subject exists in the database
-			subjectExists = hasEntry(me,'subjects',subject);
-			errMsg = sprintf('subject "%s" does not exist', subject);
-			assert(subjectExists, 'Alyx:newExp:subjectNotFound', errMsg);
-			
-			files = []; % List of files to register
-			jsonParams = [];
-	
-  			expDate = obj.datestr(expDate); % date in Alyx format
-  			% Ensure user is logged in
-  			if ~obj.IsLoggedIn; obj = obj.login; end
-    			% Get list of base sessions.  Sessions returned in descending date order
-    			[sessions, statusCode] = obj.getData(['sessions?type=Base&subject=' subject]);
-    			
-    			% If the date of this latest base session is not the same date as
-    			% today, then create a new base session for today.
-    			if statusCode ~= 000 && (isempty(sessions) || ~strcmp(sessions(1).start_time(1:10), expDate(1:10)))
-      			d = struct;
-      			d.subject = subject;
-      			d.procedures = {'Behavior training/tasks'};
-      			d.narrative = 'auto-generated session';
-      			d.start_time = expDate;
-      			d.type = 'Base';
-      			d.users = {obj.User};
-      			
-      			base_submit = obj.postData('sessions', d);
-      			assert(isfield(base_submit,'subject'),...
-        			'Submitted base session did not return appropriate values');
-      			
-      			%Now retrieve the sessions again
-      			sessions = obj.getData(['sessions?type=Base&subject=' subject]);
-    			elseif statusCode == 000
-      			% Failed to reach Alyx; making headless.  NB: Headless only within
-      			% scope of this method
-      			obj.Headless = true;
-      			sessions = struct('url', []); % FIXME: Post may fail
-    			end
-    			latest_base = sessions(end);
-    			
-    			%Now create a new SUBSESSION, using the same experiment number
-    			d = struct;
-    			d.subject = subject;
-    			d.procedures = {'Behavior training/tasks'};
-    			d.narrative = 'auto-generated session';
-    			d.start_time = expDate;
-    			if ~isempty(expVersion); d.task_protocol = expVersion; end
-    			d.type = 'Experiment';
-    			d.parent_session = latest_base.url;
-    			d.number = expSeq;
-    			d.users = {obj.User};
-    			d.json = ['{"parameters": ', jsonParams, '}'];
-    			
-    			try
-      			[subsession, statusCode] = obj.postData('sessions', d);
-      			url = subsession.url;
-    			catch ex
-      			if (isinteger(statusCode) && statusCode == 503) || obj.Headless % Unable to connect, or user is supressing errors
-        			warning(ex.identifier, 'Failed to create subsession file: %s.', ex.message)
-      			else % Probably fatal user error
-        			rethrow(ex)
-      			end
-    		end
-			
-			if ~strcmp(subject,'default') && ~(obj.Headless && ~obj.IsLoggedIn)
-				obj.registerFile(files);
+			try
+				[subsession, statusCode] = me.postData('sessions', d, 'post');
+				url = subsession.url;
+				me.sessionURL = url;
+			catch ex
+  				if (isinteger(statusCode) && statusCode == 503) || me.Headless % Unable to connect, or user is supressing errors
+    				warning(ex.identifier, 'Failed to create subsession file: %s.', ex.message)
+  				else % Probably fatal user error
+    				rethrow(ex)
+  				end
 			end
-			% If user not logged in and has suppressed prompts, print warning
-			if ~strcmp(subject,'default') && (obj.Headless && ~obj.IsLoggedIn)
-				warning('Alyx:HeadlessLoginFail', 'Failed to register files; must be logged in');
+		end
+
+		% ===================================================================
+		function session = closeSession(me, narrative, QC)
+			if isempty(me.sessionURL); return; end
+			if ~exist('narrative','var'); narrative = []; end
+			if ~exist('QC','var') || isempty(QC); QC = 'NOT_SET'; end
+			
+			[session, s] = me.getData(me.sessionURL);
+
+			if ~isempty(session)
+				if ~isempty(narrative)
+					me.updateNarrative(narrative);
+				end
+				d.qc = QC;
+				d.end_time = char(datetime("now",'Format','yyyy-MM-dd''T''HH:mm:ss'));
+				session = me.postData(['sessions/' session.id],d,'patch');
 			end
 		end
 
@@ -846,153 +890,21 @@ classdef alyxManager < optickaCore
 			end
 		end
 
-		function [datasets, filerecords] = registerFile(me, filePath)
-			%REGISTERFILE Registers filepath(s) to Alyx. The file being registered should already be on the target server.
-			%   The repository being registered to will be automatically determined
-			%   from the filePath. Registration work first by creating a dataset (a
-			%   record of the dataset type, creation date), and then a filerecord (a
-			%   record of the relative path within the repository). The dataset is
-			%   associated with a session and a subject, which is inferred from the
-			%   path provided. 
-			%
-			%   The input filePath must be a full path to a directory or file, or a
-			%   cell array thereof.  For any directory paths provided, registerFile
-			%   attempts to register all files contained.  All file paths must include
-			%   an extension (if exists).  In order to be registered all files must
-			%   have an associated dataset type on Alyx.
-			%
-			%   All paths must conform to the following structure:
-			%   <dns>\<subject>\<yyyy-mm-dd>\<seq>\ where <dns> matches a valid data
-			%   repository domain name server entry on Alyx.
-			%
-			%   Examples:
-			%     datasets = me.registerFile({...
-			%       '\\zubjects.cortexlab.net\Subjects\ALK055\2017-07-17\1\2017-07-17_1_ALK055_Block.mat',...
-			%       '\\zubjects.cortexlab.net\Subjects\ALK055\2017-07-17\2'});
-			%
-			%   NB: The returned datasets may not be in the same order as the filePaths
-			%   list provided.
-			%
-			% See also ALYX, GETDATA, POSTDATA
+		% ===================================================================
+		function [datasets] = registerFile(me, repo, file, relativepath)
+			%REGISTERFILE Registers filepath(s) to Alyx.
 			
-			%%INPUT VALIDATION
-			filePath = me.ensureCell(filePath);
-			if size(filePath,1) < size(filePath,2)
-  			filePath = filePath';
-			end
-			
-			% Validate files/directories exist
-			exists = cellfun(@(p) exist(p,'file') || exist(p,'dir'), filePath);
-			if any(~exists)
-  			warning('Alyx:registerFile:InvalidPath',...
-    			'One or more files/directories not found')
-  			filePath = filePath(exists);
-			end
-			
-			% Remove redundant paths, i.e. those that point to specific files if a path
-			% to the same directory was also provided
-			dirs = cellfun(@(p)exist(p,'dir')~=0, filePath); % For 2017b and later, we can use @isfolder
-			filePath = [filePath(~dirs); me.cellflat(cellfun(@dirPlus, filePath(dirs), 'uni', 0))];
-			filePath = unique(filePath);
-			
-			% Get the DNS part of the file paths  FIXME: Generalize expression
-			hostname = me.cellflat(regexp(filePath,'.*(?:\\{2}|\/)(.[^\\|\/]*)', 'tokens'));
-			
-			% Retrieve information from Alyx for file validation
-			[dataFormats, statusCode(1)] = me.getData('data-formats');
-			[datasetTypes, statusCode(2)] = me.getData('dataset-types');
-			[repositories, statusCode(3)] = me.getData('data-repository');
-			
-			% When Alyx unreachable, i.e. server down or user is not
-			% logged in and object is headless, we can not validate posts
-			if any(statusCode==000)||(any(statusCode==403)&&me.Headless)
-  			warning('Alyx:registerFile:UnableToValidate',...
-    			'Unable to validate paths, some posts may fail')
-			else %%% FURTHER VALIDATION %%%
-  			% Ensure there are DNS fields on the database
-  			repo_dns = me.rmEmpty({repositories.hostname});
-  			if isempty(repo_dns)
-    			warning('Alyx:registerFile:EmptyDNSField',...
-    			'No valid DNS returned by database data repositories.')
-    			return
-  			end
-  			
-  			% Identify which repository the filePath is in
-  			valid = cellfun(@(p)~isempty(p)&&any(strcmp(p,repo_dns)), hostname);
-  			if ~all(valid)
-    			warning('Alyx:registerFile:InvalidRepoPath',...
-      			['The following file path(s) not valid repository path(s):\n%s\n',...
-      			'Check dns field of data repositories on Alyx'], strjoin(filePath(~valid), '\n'))
-    			filePath = filePath(valid);
-    			hostname = hostname(valid);
-  			end
-  			
-  			% Validate dataset format
-  			dataFormats(strcmp({dataFormats.name}, 'unknown')) = [];
-  			isValidFormat = @(p)any(cell2mat(regexp(p,...
-    			regexptranslate('wildcard', me.rmEmpty({dataFormats.file_extension})))));
-  			valid = cellfun(isValidFormat, filePath);
-  			if ~all(valid)
-    			[~,~,ext] = cellfun(@fileparts, filePath, 'uni', 0);
-    			warning('Alyx:registerFile:InvalidFileType',...
-      			'File extention(s) ''%s'' not found on Alyx', strjoin(unique(ext(~valid)),''', '''))
-    			filePath = filePath(valid);
-    			hostname = hostname(valid);
-  			end
-  			
-  			% Validate file name matching a dataset type
-  			datasetTypes(strcmp({datasetTypes.name}, 'unknown')) = [];
-  			isValidFileName = @(p)any(cell2mat(regexp(p,...
-    			regexptranslate('wildcard', rmEmpty({datasetTypes.filename_pattern})))));
-  			valid = cellfun(isValidFileName, filePath);
-  			if ~all(valid)
-    			warning('Alyx:registerFile:InvalidFileName',...
-      			'The following input file path(s) have invalid file name pattern(s):\n%s ',...
-      			strjoin(filePath(~valid), '\n'))
-    			filePath = filePath(valid);
-    			hostname = hostname(valid);
-  			end
-			end
-			
-			% Validate dataFormat supplied
-			% Remove leading slashes and replace back-slashes with forward ones
-			% filePaths = cellfun(@(s)strip(s,'\'), filePaths, 'uni', 0);
-			% filePaths = cellfun(@(s)strrep(s,'\','/'), filePaths, 'uni', 0);
-			
-			% Split filepaths into path and filenames
-			[filePath, filenames, ext] = cellfun(@fileparts, filePath, 'uni', 0);
-			filenames = strcat(filenames, ext);
-			[filePath,~,ic] = unique(filePath);
-			% Initialize datasets array
-			datasets = cell(1, numel(filePath));
-			filerecords = []; % Initialize in case unable to access server
-			
-			if isempty(filePath)
-  			warning('Alyx:registerFile:NoValidPaths', 'No file paths were registered')
-  			return
-			end
-			
-			% Regex pattern for the relative path
-			expr = ['\w+(\\|\/)\d{4}\-\d{2}\-\d{2}((?:(\\|\/))\d+)+(?=(\\|\/)\w+\.\w+)|',...
-  			'\w+(\\|\/)\d{4}\-\d{2}\-\d{2}((\\|\/)\w+)+'];
-			realtivePath = cellflat(regexp(filePath, expr, 'match'));
-			
-			% Register files
-			D = struct('created_by', me.User);
-			for i = 1:length(filePath)
-  			D.hostname = hostname{i};
-  			D.path = realtivePath{i};
-  			D.filenames = filenames(ic==i);
+			D = struct('created_by', me.user);
+			D.name = repo;
+  			D.hostname = '172.16.102.77';
+  			D.path = relativepath;
+  			D.filenames = {file};
   			[record, statusCode] = me.postData('register-file', D);
-  			if statusCode==000; continue; end % Cannot reach server
-  			assert(statusCode(end)==201, 'Failed to submit filerecord to Alyx');
-  			datasets{i} = record(end);
-			end
-			
-			if statusCode~=000 % Cannot reach server
-			datasets = catStructs(datasets);
-			filerecords = [datasets(:).file_records];
-			end
+  			
+			if statusCode ~= 201; warning('No registering'); end
+  				
+  			datasets = record;
+
 		end
 
 		% ===================================================================
@@ -1111,6 +1023,7 @@ classdef alyxManager < optickaCore
 				responseBody = webwrite(endpoint, jsonData, options);
 				if endsWith(endpoint,'auth-token'); statusCode = 200; else  statusCode = 201; end
 			catch ex
+				getReport(ex)
 				responseBody = ex.message;
 				switch ex.identifier
     			case 'MATLAB:webservices:UnknownHost'

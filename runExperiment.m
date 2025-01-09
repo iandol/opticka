@@ -43,8 +43,10 @@ classdef runExperiment < optickaCore
 								'researcherName', 'Jane Doe', ...
 								'labName', 'lab', ...
 								'location', '', ...
-								'sessionPrefix', 'session', ...
+								'sessionPrefix', '', ...
+								'procedure', '', ...
 								'project', '', ...
+								'taskProtocol','', ...
 								'useAlyx', false);
 		%> a metaStimulus class instance holding our stimulus objects
 		stimuli metaStimulus
@@ -294,9 +296,9 @@ classdef runExperiment < optickaCore
 
 				%================================INIT SAVE
 				% subject, sessionPrefix, lab, create
-				[me.paths.alfPath, sessionID, dateID] = me.getALF(me.sessionData.subjectName,...
-				me.sessionData.sessionPrefix,me.sessionData.labName, true);
-				me.name = [me.sessionData.subjectName '-' sessionID '-' dateID]; %give us a run name
+				[me.paths.ALFPath, sessionID, dateID] = me.getALF(...
+					me.sessionData.subjectName,me.sessionData.labName, true);
+				me.name = [me.sessionData.subjectName '-' dateID '-' sprintf('%0.3d',sessionID)]; %give us a run name
 			
 				%================================get pre-run comments for this data collection
 				prompt = '\bfCHECK Recording system! \itInitial Comment for this MOC Run?';
@@ -543,7 +545,7 @@ classdef runExperiment < optickaCore
 				s.comment = me.comment; io.comment = me.comment; tL.comment = me.comment; tS.comment = me.comment;
 
 				%================================SAVE the DATA
-				sname = [me.paths.alfPath filesep 'opticka.raw.' me.name '.mat'];
+				sname = [me.paths.ALFPath filesep 'opticka.raw.' me.name '.mat'];
 				rE = me;
 				save(sname,'rE','tS');
 				fprintf('\n\n#####################\n===>>> <strong>SAVED DATA to: %s</strong>\n#####################\n\n',sname)
@@ -669,6 +671,7 @@ classdef runExperiment < optickaCore
 			tS.errorSound				= [300, 1, 1]; %==freq,length,volume
 			tS.fixX						= 0;
 			tS.fixY						= 0;
+			tS.tmpFile					= '';
 	
 			%------initialise time logs for this run
 			me.taskLog = []; clear timeLogger;
@@ -789,32 +792,39 @@ classdef runExperiment < optickaCore
 				end
 				if isfield(tS,'rewardTime'); bR.rewardTime = tS.rewardTime; end
 
-				%================================initialise save file
-				% subject, sessionPrefix, lab, create
+				%================================initialise save file and ALYX
 				if me.sessionData.useAlyx
-					[me.paths.alfPath, sessionID, dateID] = me.getALF(me.sessionData.subjectName,...
-							me.sessionData.sessionPrefix, me.sessionData.labName, true);
-					me.name = [me.sessionData.subjectName '-' sessionID '-' dateID]; %give us a run name
-					me.initialiseAlyxSession(me.paths.alfPath);
+					[path, sessionID, dateID] = me.getALF(...
+						me.sessionData.subjectName,me.sessionData.labName, true);
+					me.name = [dateID '_' sprintf('%0.3d',sessionID) '_' me.sessionData.subjectName]; %give us a run name
+					me.initialiseAlyxSession(me.paths.ALFPath);
+					if isfield(me.screenSettings,'statusbar')
+						t = sprintf('ALYX Session opened: %s',me.alyx.sessionURL);
+						me.screenSettings.statusbar.Text = t;
+						me.screenSettings.statusbar.URL = me.alyx.sessionURL;
+						disp(t);
+					end
+					me.alyx.updateNarrative(me.comment);
 				else
 					if tS.saveData
-						[me.paths.alfPath, sessionID, dateID] = me.getALF(me.sessionData.subjectName,...
-							me.sessionData.sessionPrefix, me.sessionData.labName, true);
-						me.name = [me.sessionData.subjectName '-' sessionID '-' dateID]; %give us a run name
+						[me.paths.ALFPath, sessionID, dateID] = me.getALF(...
+							me.sessionData.subjectName,me.sessionData.labName, true);
+						me.name = [dateID '_' sprintf('%0.3d',sessionID) '_' me.sessionData.subjectName]; %give us a run name
 					else
-						[me.paths.alfPath, ~, dateID] = me.getALF(me.sessionData.subjectName,...
-							me.sessionData.sessionPrefix, me.sessionData.labName, false);
-						me.name = [me.sessionData.subjectName '-' dateID]; %give us a run name
+						[me.paths.ALFPath, sessionID, dateID] = me.getALF(...
+							me.sessionData.subjectName,me.sessionData.labName, false);
+						me.name = [dateID '_' me.sessionData.subjectName]; %give us a run name
 					end
 				end
-				eT.paths.alfPath = me.paths.alfPath;
 				if matches(lower(me.eyetracker.device),'eyelink')
-					eT.saveFile	= [eT.paths.alfPath 'eyelink.raw.' me.name '.edf'];
+					eT.saveFile	= [me.paths.ALFPath 'eyetracking.raw.eyelink.' me.name '.edf'];
+				elseif matches(lower(me.eyetracker.device),'tobii')
+					eT.saveFile	= [me.paths.ALFPath 'eyetracking.raw.tobii.' me.name '.mat'];
 				else
-					eT.saveFile	= [eT.paths.alfPath 'tobii.raw.' me.name '.mat'];
+					eT.saveFile	= [me.paths.ALFPath 'eyetracking.raw.irec.' me.name '.csv'];
 				end
 				fprintf('\n\n\n===>>>>>> START BEHAVIOURAL TASK: %s <<<<<<===',me.name);
-				fprintf('\tInitial Path: %s\n',me.paths.alfPath);
+				fprintf('\tInitial Path: %s\n',me.paths.ALFPath);
 				fprintf('\tInitial Comments: %s\n\n\n',me.comment);
 
 				%================================get pre-run comments for this data collection
@@ -1129,7 +1139,15 @@ classdef runExperiment < optickaCore
 						io.setDIO([0,0,0]); %we stop recording mode completely
 					end
 				end
+
+				%================================FINAL COMMENTS
+				prompt = '\bf Final Comments for this Run?';
+				Priority(0);ListenChar(0);RestrictKeysForKbCheck([]);
+				updateComments(me,prompt);
+				disp(me.comment);
+				bR.comment = me.comment; eT.comment = me.comment; sM.comment = me.comment; io.comment = me.comment; tL.comment = me.comment; tS.comment = me.comment;
 				
+				%================================CLOSE OBJECTS
 				try close(s); end %screen
 				try close(io); end % I/O system
 				try close(eT); end % eyetracker, should save the data for us we've already given it our name and folder
@@ -1150,21 +1168,16 @@ classdef runExperiment < optickaCore
 					tS.eO=[];
 				end
 				
-				% Final comments
-				prompt = '\bf Final Comments for this Run?';
-				Priority(0);ListenChar(0);RestrictKeysForKbCheck([]);
-				updateComments(me,prompt);
-				disp(me.comment);
-				bR.comment = me.comment; eT.comment = me.comment; sM.comment = me.comment; io.comment = me.comment; tL.comment = me.comment; tS.comment = me.comment;
-
 				removeEmptyValues(tL);
 				me.tS = tS; %store our tS structure for backup
 				
+				%================================
 				%================================SAVE the DATA
 				if tS.saveData
-					sname = [me.paths.alfPath filesep 'opticka.raw.' me.name '.mat'];
+					sname = [me.paths.ALFPath 'opticka.raw.' me.name '.mat'];
 					rE = me;
 					save(sname,'rE','tS');
+					me.paths.sname = sname;
 					fprintf('\n\n#####################\n===>>> <strong>SAVED DATA to: %s</strong>\n#####################\n\n',sname)
 					assignin('base', 'tS', tS); % assign tS in base for manual checking
 					if ~isempty(me.task.staircase) && isstruct(me.task.staircase)
@@ -1172,10 +1185,55 @@ classdef runExperiment < optickaCore
 					end
 				end
 				%================================SAVE the DATA
+				%================================
+				
 
-				%------disable diary logging 
+				%================================
+				%=================================END ALYX SESSION
+				if me.sessionData.useAlyx
+					fprintf('Closing ALYX Session: %s\n', me.alyx.sessionURL);
+					session = me.alyx.closeSession(me.comment, 'PASS');
+					if isfield(me.screenSettings,'statusbar')
+						t = sprintf('ALYX Session Closed: %s',me.alyx.sessionURL);
+						me.screenSettings.statusbar.Text = t;
+						me.screenSettings.statusbar.URL = me.alyx.sessionURL;
+					end
+					if tS.saveData
+						try
+							if isSecret("AWS_ID")
+								aws = awsManager(getSecret("AWS_ID"),getSecret("AWS_KEY"), "http://172.16.102.77:9000");
+								buckets = aws.list;
+								if ~contains(buckets,lower(me.sessionData.labName))
+									aws.createBucket(lower(me.sessionData.labName));
+								end
+								p = me.paths.ALFPath;
+								rp = [me.sessionData.subjectName '/' me.paths.dateIDShort '/' sprintf('%0.3d',me.paths.sessionID)];	
+								r = aws.copyFiles(p,lower(me.sessionData.labName));
+								d = dir(p);
+								for i = 3:length(d)
+									if r
+										dataset = me.alyx.registerFile(['Minio-' me.sessionData.labName], d(i).name, rp);
+										disp(dataset);
+									end
+									dataset = me.alyx.registerFile('Local-Files', sname, rp);
+									disp("Local: ")
+									disp(dataset);
+								end
+							else
+								warning("AWS ID and KEY are not present, cannot upload data to MINIO!!!");
+							end
+						catch
+							warning("COULD NOT UPLOAD FILES TO ALYX, do so manually!");
+						end
+					end
+				end
+				%=================================END ALYX SESSION
+				%================================
+				
+				%================================disable diary logging 
 				if me.diaryMode; diary off; end
 				
+				%================================final cleanup
 				me.stateInfo = [];
 				try
 					if isa(me.stateMachine,'stateMachine'); me.stateMachine.reset; end
@@ -1184,7 +1242,31 @@ classdef runExperiment < optickaCore
 				
 			catch ERR
 				me.isRunning = false;
-				fprintf('\n\n===!!! ERROR in runExperiment.runTask()\n');
+				removeALF = false;
+				getReport(ERR);
+				if me.sessionData.useAlyx && ~isempty(me.alyx.sessionURL)
+					fprintf('Closing ALYX Session: %s\n', me.alyx.sessionURL);
+					try
+						me.alyx.closeSession(['ERROR: ' ERR.message],'FAIL');
+						if isfield(me.screenSettings,'statusbar')
+							t = sprintf('ALYX Session Closed: %s',me.alyx.sessionURL);
+							me.screenSettings.statusbar.Text = t;
+							me.screenSettings.statusbar.URL = me.alyx.sessionURL;
+						end
+					end
+				elseif me.sessionData.useAlyx && isempty(me.alyx.sessionURL)
+					removeALF = true;
+				end
+				try 
+					if exist(tS.tmpFile,'file')
+						removeALF = false;
+						copyfile(tS.tmpFile,me.paths.ALFPath)
+						save([me.paths.ALFPath filesep 'error.mat'],"ERR");
+						fprintf('--->>Error, saved partial data to %s\n',me.paths.ALFPath);
+					end
+				end
+				if removeALF && exist(me.paths.ALFPath,'dir'); try rmdir(me.paths.ALFPath); end; end
+				fprintf('\n\n===!!! ERROR in runExperiment.runTask() %s\n',ERR.message);
                 try me.userFunctions = []; end %user functions
 				try reset(stims); end
 				try close(s); end
@@ -1205,7 +1287,6 @@ classdef runExperiment < optickaCore
 				me.eyeTracker = [];
 				me.behaviouralRecord = [];
 				me.strobeDevice = [];
-                getReport(ERR);
 				rethrow(ERR);
 			end
 
@@ -1971,7 +2052,7 @@ classdef runExperiment < optickaCore
 		end
 
 		% ===================================================================
-		function initialiseAlyxSession(me, path, sessionNumber)
+		function initialiseAlyxSession(me, path)
 		%> @fn initialiseAlyxSession
 		%> @brief initialise a new alyx session
 		%>
@@ -1982,7 +2063,7 @@ classdef runExperiment < optickaCore
 			end
 
 			if ~exist('path','var') || isempty(path)
-				path = me.getALF(me.sessionData.subjectName, me.sessionData.sessionPrefix, me.sessionData.labName);
+				path = me.getALF(me.sessionData.subjectName, me.sessionData.labName);
 			end
 
 			if ~me.alyx.loggedIn; me.alyx.login; end
@@ -2007,7 +2088,9 @@ classdef runExperiment < optickaCore
 				error('You need to initialise %s %s in the ALYX database before you can proceed!','LOCATIONS',me.sessionData.location);
 			end
 
-			[url] = me.alyx.newExp(me.sessionData.subjectName,me.paths.sessionNumber);
+			
+			[url] = me.alyx.newExp(me.paths.ALFPath, me.paths.sessionID, me.sessionData);
+
 			me.paths.sessionURL = url;
 
 		end
@@ -2551,7 +2634,7 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 		function comment = updateComments(me,prompt,tS)
 		%> @fn updateComments
-		%> @brief updates comment field
+		%> @brief updates comment field (STRING ARRAY)
 		%>
 		%> @param prompt
 		%> @param tS structure

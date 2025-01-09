@@ -202,9 +202,10 @@ classdef behaviouralRecord < optickaCore
 			else
 				return;
 			end	
-			if me.tick == 1
+			if isempty(me.tick) || me.tick == 1
 				reset(me);
 				me.startTime = datetime('now');
+				me.tick = 1;
 			end
 			if exist('sM','var')
 				if matches(sM.currentName, me.correctStateName)
@@ -223,7 +224,7 @@ classdef behaviouralRecord < optickaCore
 			end
 			if exist('eT','var')
 				me.rt2(me.tick) = eT.fixInitLength * 1e3;
-				if length(eT.fixation.radius) == 1
+				if isscalar(eT.fixation.radius)
 					me.radius(me.tick) = eT.fixation.radius;
 				elseif length(eT.fixation.radius) == 2
 					me.radius(me.tick) = sqrt(eT.fixation.radius(1)^2 + eT.fixation.radius(1)^2);
@@ -263,7 +264,6 @@ classdef behaviouralRecord < optickaCore
 			parfeval(backgroundPool,@me.plot,0,drawNow);
 		end
 		
-
 		% ===================================================================
 		%> @brief 
 		%> 

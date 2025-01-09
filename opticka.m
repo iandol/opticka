@@ -277,6 +277,8 @@ classdef opticka < optickaCore
 				getTaskVals(me);
 				loadCalibration(me);
 				me.ui.getEyetrackerSettings();
+
+				me.r.screenSettings.statusbar = me.ui.OKStatus;
 				
 				if exist([me.paths.root filesep 'DefaultStateInfo.m'],'file')
 					me.paths.stateInfoFile = [me.paths.root filesep 'DefaultStateInfo.m'];
@@ -349,8 +351,8 @@ classdef opticka < optickaCore
 			saveFolder = me.gv(me.ui.OKSaveFolder);
 			if ~isempty(saveFolder)
 				if ~exist(saveFolder,'dir'); warning('Saved Data folder doesn''t exist!');end
-				if ~contains(saveFolder,['OptickaFiles' filesep 'SavedData'])
-					me.paths.savedData = savedData;
+				if ~matches(saveFolder,'~/OptickaFiles/SavedData')
+					me.paths.savedData = saveFolder;
 					me.r.paths.savedData = me.paths.savedData;
 				end
 			end
@@ -362,8 +364,10 @@ classdef opticka < optickaCore
 			me.r.sessionData.researcherName = me.gv(me.ui.OKResearcher);
 			me.r.sessionData.labName = me.gv(me.ui.OKLabName);
 			me.r.sessionData.location = me.gv(me.ui.OKLabLocation);
-			me.r.sessionData.sessionPrefix = me.gv(me.ui.OKSessionPrefix);
-			me.r.sessionData.project = me.gv(me.ui.OKSessionProject);
+			me.r.sessionData.procedure = me.gv(me.ui.OKAlyxProcedure);
+			me.r.sessionData.project = me.gv(me.ui.OKAlyxProject);
+			me.r.sessionData.taskProtocol = me.gv(me.ui.OKAlyxTaskProtocol);
+			me.r.sessionData.brainRegion = me.gv(me.ui.OKAlyxBrainRegion);
 			me.r.sessionData.useAlyx = me.gv(me.ui.OKuseAlyx);
 		
 			me.r.audioDevice = me.gn(me.ui.OKaudioDevice);
@@ -549,7 +553,7 @@ classdef opticka < optickaCore
 						isRunning = false;
 						stims = metaStimulus;
 						me = runExperiment;
-						eT = eyelinkManager;
+						eT = iRecManager;
 						tsM = stateMachine;
 						run(met.r.stateInfoFile)
 						if exist('stateInfoTmp','var')
@@ -1185,12 +1189,12 @@ classdef opticka < optickaCore
 		function saveData(me)
 			me.paths.currentPath = pwd;
 			cd(me.paths.savedData);
-			[me.paths.alfPath, sessionID, dateID] = me.getALF(me.r.sessionData.subjectName,...
-				me.r.sessionData.sessionPrefix,me.r.sessionData.labName, false);
+			[me.paths.alfPath, sessionID, dateID] = me.getALF(...
+				me.r.sessionData.subjectName, me.r.sessionData.labName, false);
 			if ~isempty(me.r.name)
 				name = me.r.name;
 			else
-				name = [me.r.sessionData.subjectName '-' sessionID '-' dateID]; %give us a run name
+				name = [me.r.sessionData.subjectName '-' dateID '-' sprintf('%0.3d',sessionID)];
 			end
 			name = ['opticka.raw.' name '.mat'];
 			cd(me.paths.alfPath);
@@ -2055,6 +2059,10 @@ classdef opticka < optickaCore
 		%quick alias to get ui value
 			if isprop(inhandle,'Value')
 				outv = inhandle.Value;
+			elseif isprop(inhandle,'Text')
+				outv = inhandle.Text;
+			elseif isprop(inhandle,'String')
+				outv = inhandle.String;
 			else
 				outv = [];
 			end
