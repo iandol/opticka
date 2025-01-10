@@ -378,7 +378,7 @@ targetFixFn = {
 
 %as we exit stim presentation state
 stimExitFn = {
-	@()setStrobeValue(me,255);
+	@()setStrobeValue(me, me.strobe.stimOFFValue);
 	@()doStrobe(me,true);
 };
 

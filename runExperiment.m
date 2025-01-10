@@ -1022,15 +1022,14 @@ classdef runExperiment < optickaCore
 						% command for this screen flip needs to be sent
 						% PRIOR to the flip! Also remember DPP will be
 						% delayed by one flip.
-						if me.sendStrobe 
-							me.sendStrobe = false;
-							if strcmpi(me.strobe.device,'display++')
-								sendStrobe(io); me.sendStrobe = false;
-							elseif strcmpi(me.strobe.device,'datapixx')
-								triggerStrobe(io); me.sendStrobe = false;
-							end
-							addMessage(tL,[],[],'Sent Pre-flip strobe');
+						if me.sendStrobe && strcmpi(me.strobe.device,'display++')
+							sendStrobe(io); me.sendStrobe = false;
+							addMessage(tL,[],[],['Sent Pre-flip ++ strobe: ' num2str(me.strobeDevice.sendValue)]);
+						elseif me.sendStrobe && strcmpi(me.strobe.device,'datapixx')
+							triggerStrobe(io); me.sendStrobe = false;
+							addMessage(tL,[],[],['Sent Pre-flip pixx strobe: ' num2str(me.strobeDevice.sendValue)]);
 						end
+
 						%------ Do the actual Screen flip, save times if enabled.
 						nextvbl = tL.lastvbl + me.screenVals.halfisi;
 						if me.logFrames
@@ -1046,17 +1045,17 @@ classdef runExperiment < optickaCore
 						end
 
 						%----- LabJack/nirSmart: I/O needs to send strobe immediately after screen flip -----%
-						if me.sendStrobe && matches(me.strobe.device,{'labjackt','nirsmart','labjack'})
-							sendStrobe(io); 
+						if me.sendStrobe && ~any(strcmpi(me.strobe.device,{'display++','datapixx'}))
+							sendStrobe(io);
 							me.sendStrobe = false;
-							addMessage(tL,[],[],'Sent Post-flip strobe')
+							addMessage(tL,[],[],['Sent Post-flip strobe: ' num2str(me.strobeDevice.sendValue)]);
 						end
 
 						% %----- Send Eyetracker messages -----%
 						if ~eT.isOff && me.sendSyncTime % sends SYNCTIME message to eyetracker
 							syncTime(eT);
 							me.sendSyncTime = false;
-							addMessage(tL,[],[],'Sent Post-flip Sync to Eyetracker')
+							addMessage(tL,[],[],'Sent Post-flip Sync to Eyetracker');
 						end
 						 
 						% %------ Log stim / no stim + missed frame -----%
@@ -1088,7 +1087,6 @@ classdef runExperiment < optickaCore
 						elseif me.doTrackerFlip == 3 
 							trackerFlip(eT, 0, true);
 						elseif me.doTrackerFlip == 4
-							%fprintf('>>> ET FLIP 4\n');
 							trackerFlip(eT, 0, true);
 							me.doTrackerFlip = 1;
 						end
@@ -1725,9 +1723,16 @@ classdef runExperiment < optickaCore
 		%> Set strobe value
 		%>
 		%> @param value the value to set the I/O system
+		%>
+		%> @TODO check method speed for other devices. 
 		% ===================================================================
-			if value == Inf; value = me.strobe.stimOFFValue; end
-			prepareStrobe(me.strobeDevice, value);
+			if value == -Inf; value = me.strobe.stimOFFValue; end
+			if strcmpi(me.strobe.device,'labjackt')
+				setStrobeValue(me.strobeDevice, value); %faster?
+			else
+				prepareStrobe(me.strobeDevice, value);
+			end
+			
 		end
 		
 		% ===================================================================
@@ -1907,13 +1912,13 @@ classdef runExperiment < optickaCore
 			if ~exist('override','var') || isempty(override)
 				override = true;
 			end
-			if ~isempty(me.strobe.device)
-				if me.isTask && ~isempty(me.task.outIndex) && me.task.nVars > 0
-					setStrobeValue(me, me.task.outIndex(index));
-				else
-					setStrobeValue(me, index);
-				end
+			
+			if me.isTask && ~isempty(me.task.outIndex) && me.task.nVars > 0
+				setStrobeValue(me, me.task.outIndex(index));
+			else
+				setStrobeValue(me, index);
 			end
+			
 			if me.isTask && ((index > me.lastIndex) || override == true)
 				[thisBlock, thisRun, thisVar] = me.task.findRun(index);
 				stimIdx = []; 
@@ -1975,7 +1980,7 @@ classdef runExperiment < optickaCore
 										end
 									case {'yvar'}
 										if doXY && ~any(isnan(num)) && ~isempty(num) && length(value)==2
-											if length(num)==1; var = 0.5; else; var = num(2); end
+											if isscalar(num); var = 0.5; else; var = num(2); end
 											if rand < var
 												val = [value(1) value(2)-num(1)];
 											else
@@ -1984,7 +1989,7 @@ classdef runExperiment < optickaCore
 										end
 									case {'xvar'}
 										if doXY && ~any(isnan(num)) && ~isempty(num) && length(value)==2
-											if length(num)==1; var = 0.5; else; var = num(2); end
+											if isscalar(num); var = 0.5; else; var = num(2); end
 											if rand < var
 												val = [value(1)-num(1) value(2)];
 											else

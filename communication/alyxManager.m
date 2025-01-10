@@ -1045,7 +1045,7 @@ classdef alyxManager < optickaCore
 		end
 
 		% ===================================================================
-		function [data, statusCode] = flushQueue(me)
+		function [data, statusCode] = flushQueue(me, dontSend)
 			% FLUSHQUEUE Checks for and uploads queued data to Alyx
 			%   Checks all .post and .put files in me.QueueDir and tries to post/put
 			%   them to the database.  If the upload is successfull, the queued file is
@@ -1060,7 +1060,7 @@ classdef alyxManager < optickaCore
 			%     500: Server error - save in queue
 			%
 			% See also ALYX, ALYX.JSONPOST
-			
+			if ~exist('dontSend','var'); dontSend = false; end
 			% Get all currently queued posts, puts, etc.
 			alyxQueue = [dir([me.queueDir filesep '*.post']);...
   			dir([me.queueDir filesep '*.put']);...
@@ -1070,6 +1070,12 @@ classdef alyxManager < optickaCore
 			% Leave the function if there aren't any queued commands
 			if isempty(alyxQueueFiles); return; end
 			
+			if dontSend
+				for curr_file = 1:length(alyxQueueFiles)
+					delete(alyxQueueFiles{curr_file});
+				end
+				return
+			end
 			% Loop through all files, attempt to put/post
 			statusCode = ones(1,length(alyxQueueFiles))*401; % Initialize with user error code
 			data = cell(1,length(alyxQueueFiles));

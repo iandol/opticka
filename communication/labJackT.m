@@ -368,6 +368,9 @@ classdef labJackT < handle
 			calllib(me.libName, 'LJM_eWriteAddress', me.handle, me.RAMAddress, me.LJM_INT32, int32(value));
 			if me.verbose; fprintf('--->>> LabjackT:sendStrobe Sending strobe: %i\n',value); end
 		end
+		function setStrobeValue(me, value)
+			me.sendValue = value;
+		end
 
 		% ===================================================================
 		%> @brief 
