@@ -1023,15 +1023,17 @@ classdef runExperiment < optickaCore
 						% PRIOR to the flip! Also remember DPP will be
 						% delayed by one flip.
 						if me.sendStrobe 
+							me.sendStrobe = false;
 							if strcmpi(me.strobe.device,'display++')
 								sendStrobe(io); me.sendStrobe = false;
 							elseif strcmpi(me.strobe.device,'datapixx')
 								triggerStrobe(io); me.sendStrobe = false;
 							end
+							addMessage(tL,[],[],'Sent Pre-flip strobe');
 						end
 						%------ Do the actual Screen flip, save times if enabled.
 						nextvbl = tL.lastvbl + me.screenVals.halfisi;
-						if me.logFrames == true
+						if me.logFrames
 							[tL.t.vbl(tS.totalTicks),tL.t.show(tS.totalTicks),...
 							tL.t.flip(tS.totalTicks),tL.t.miss(tS.totalTicks)] ...
 							= Screen('Flip', s.win, nextvbl);
@@ -1045,13 +1047,16 @@ classdef runExperiment < optickaCore
 
 						%----- LabJack/nirSmart: I/O needs to send strobe immediately after screen flip -----%
 						if me.sendStrobe && matches(me.strobe.device,{'labjackt','nirsmart','labjack'})
-							sendStrobe(io); me.sendStrobe = false;
+							sendStrobe(io); 
+							me.sendStrobe = false;
+							addMessage(tL,[],[],'Sent Post-flip strobe')
 						end
 
 						% %----- Send Eyetracker messages -----%
 						if ~eT.isOff && me.sendSyncTime % sends SYNCTIME message to eyetracker
 							syncTime(eT);
 							me.sendSyncTime = false;
+							addMessage(tL,[],[],'Sent Post-flip Sync to Eyetracker')
 						end
 						 
 						% %------ Log stim / no stim + missed frame -----%

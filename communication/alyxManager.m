@@ -129,12 +129,7 @@ classdef alyxManager < optickaCore
     			products = ver;
     			toolboxes = matlab.addons.toolbox.installedToolboxes;
     			% Check the correct toolboxes are installed
-    			if numel(toolboxes) == 0 || (~any(contains({products.Name},'JSONlab')) &&...
-        			~any(contains({toolboxes.Name},'JSONlab')) && contains(ex.message, 'loadjson'))
-					% JSONlab not installed
-					error(ex.identifier, 'JSONLab Toolbox required.  Click <a href="matlab:web(''%s'',''-browser'')">here</a> to install.',...
-        			'https://uk.mathworks.com/matlabcentral/fileexchange/33381-jsonlab--a-toolbox-to-encode-decode-json-files')
-    			elseif strcmp(ex.identifier, 'Alyx:Login:FailedToConnect')
+    			if strcmp(ex.identifier, 'Alyx:Login:FailedToConnect')
 					warning('Alyx:LoginFail:FailedToConnect', 'Failed To Connect.')
 					return
     			elseif contains(ex.message, 'credentials')||strcmpi(ex.message, 'Bad Request')
