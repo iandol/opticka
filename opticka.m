@@ -1255,6 +1255,7 @@ classdef opticka < optickaCore
 			me.comment = ['Protocol: ' fileName];
 			me.store.protocolName = fileName;
 			me.store.protocolsPath = p;
+			me.ui.OKAlyxTaskProtocol.Value = fileName;
 
 			clearStimulusList(me);
 			clearVariableList(me);

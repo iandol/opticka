@@ -19,6 +19,7 @@ classdef awsManager < handle
 	end
 
 	methods
+		% ===================================================================
 		function me = awsManager(id,key,url)
 			[r, out] = system('which aws');
 			assert(~logical(r),"--->>> awsManager: AWS CLI tool is not installed or available on path!!! %s",out)
@@ -33,18 +34,21 @@ classdef awsManager < handle
 			updateENV(me);
 		end
 
+		% ===================================================================
 		function updateENV(me)
 			setenv("AWS_ACCESS_KEY_ID", me.AWS_ACCESS_KEY_ID)
 			setenv("AWS_SECRET_ACCESS_KEY", me.AWS_SECRET_ACCESS_KEY)
 			setenv("AWS_DEFAULT_REGION", me.AWS_DEFAULT_REGION)
 		end
 
+		% ===================================================================
 		function out = list(me)
 			cmdin = strjoin(["aws --endpoint-url " me.ENDPOINT " s3 ls"],"");
 			[~, out] = system(cmdin);
 			out = strtrim(out);
 		end
 
+		% ===================================================================
 		function success = createBucket(me, bucket)
 			if nargin < 2; error("--->>> awsManager: you must enter a bucket name"); end
 			cmdin = strjoin(["aws --endpoint-url " me.ENDPOINT " s3 mb s3://" bucket],"");
@@ -55,6 +59,7 @@ classdef awsManager < handle
 			end
 		end
 
+		% ===================================================================
 		function success = copyFiles(me, file, bucket)
 			if ~exist('file','var') || isempty(file) || ~exist(file); return; end
 			if ~exist('bucket','var') || isempty(bucket); return; end

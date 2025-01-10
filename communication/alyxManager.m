@@ -650,7 +650,7 @@ classdef alyxManager < optickaCore
 			assert(exist(alfDir,'dir') == 7 , 'alfDir %s does not exist', alfDir);
 			
 			% Validate alyxInstance, creating one if not supplied
-			if ~me.IsLoggedIn; me = me.login; end
+			if ~me.loggedIn; me = me.login; end
 			
 			%%Validate that the files within alfDir match a datasetType.
 			%1) Get all datasetTypes from the database, and list the filename patterns
