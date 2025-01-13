@@ -88,6 +88,9 @@ classdef stateMachine < optickaCore
 		waitFcn function_handle		= @WaitSecs
 		%> do we run timers for function evaluations?
 		fnTimers logical			= false
+		%> [optional] use a timeLogger class object to log transition times. This class will
+		%> usually be passed from runExperiment
+		externalLog							= []
 	end
 
 	properties (Hidden = true)
@@ -139,30 +142,32 @@ classdef stateMachine < optickaCore
 		nextTimeOut
 		%> Index with name and index number for each state
 		stateListIndex
-		%> run state information
+		%> internal state machine log
 		log
 	end
 	
 	properties (SetAccess = protected, GetAccess = protected)
+		%> use timeLogger log
+		useExternalLog				= false
 		%> number of states
 		nStates
 		%> current state number
 		thisN
 		%> should we run the finish function
-		isFinishing logical = false
+		isFinishing logical			= false
 		%> field names of allStates struct array, defining state behaviors
-		stateFields cell = { 'name', 'next', 'time', 'entryFcn', 'withinFcn', 'transitionFcn', 'exitFcn', 'skipExitFcn' }
+		stateFields cell			= { 'name', 'next', 'time', 'entryFcn', 'withinFcn', 'transitionFcn', 'exitFcn', 'skipExitFcn' }
 		%> default values of allStates struct array fields
-		stateDefaults cell = { '', '', 1, {}, {}, {}, {}, false }
+		stateDefaults cell			= { '', '', 1, {}, {}, {}, {}, false }
 		%> properties allowed during construction
-		allowedProperties = {'name','realTime','verbose','clockFcn','waitFcn'...
-			'timeDelta','skipExitStates','tempNextState'}
-		logFields = ["n","startTime","index","tnow","name","uuid",...
-			"tick","entryTime","nextTimeOut", "nextTickOut",...
-			"tempNextState","fevalEnter","fevalExit","fevalStore"]
-		logValues = {[],[],[],[],"","",...
-			[],[],[],[],...
-			"",[],[],[]}
+		allowedProperties			= {'name','realTime','verbose','clockFcn','waitFcn'...
+							'timeDelta','skipExitStates','tempNextState','log'}
+		logFields					= ["n","startTime","index","tnow","name","uuid",...
+							"tick","entryTime","nextTimeOut", "nextTickOut",...
+							"tempNextState","fevalEnter","fevalExit","fevalStore"]
+		logValues					= {[],[],[],[],"","",...
+							[],[],[],[],...
+							"",[],[],[]}
 	end
 	
 	%=======================================================================
@@ -501,6 +506,7 @@ classdef stateMachine < optickaCore
 			me.finalTick = [];
 			me.nextTickOut = [];
 			me.nextTimeOut = [];
+			me.useExternalLog = false;
 		end
 		
 		% ===================================================================
@@ -511,10 +517,13 @@ classdef stateMachine < optickaCore
 		function runDemo(me)
 			oldVerbose = me.verbose;
 			oldTimers = me.fnTimers;
+			oldUseLog = me.useExternalLog;
 			oldTimeDelta = me.timeDelta;
-			fprintf('===>>> StateMachine Demo: time delta = %.3g | Real time mode = %i\n\n',me.timeDelta,me.realTime);
 			me.verbose = true;
 			me.fnTimers = true;
+			me.timeDelta = 0.01;
+			me.useExternalLog = false;
+			fprintf('===>>> StateMachine Demo: time delta = %.3g | Real time mode = %i\n\n',me.timeDelta,me.realTime);
 			beginFcn = { @()fprintf('\t\t\t\tbegin state: Hello there!\n'); };
 			transitFcn = { @()fprintf('\t\t\t\ttransit state: Wait for it!\n'); };
 			endFcn = { @()fprintf('\t\t\t\tend state: See you!\n'); };
@@ -549,6 +558,7 @@ classdef stateMachine < optickaCore
 			me.verbose = oldVerbose; %reset verbose back to original value
 			me.timeDelta = oldTimeDelta;
 			me.fnTimers = oldTimers;
+			me.useExternalLog = oldUseLog;
 		end
 
 		% ===================================================================
@@ -559,8 +569,10 @@ classdef stateMachine < optickaCore
 		function warmUp(me)
 			oldVerbose = me.verbose;
 			oldTimers = me.fnTimers;
+			oldUseLog = me.useExternalLog;
 			me.verbose = false;
 			me.fnTimers = true;
+			me.useExternalLog = false;
 			beginFcn = { @()fprintf('begin state: stateMachine warmup... ') };
 			middleFcn = { @()fprintf('middle state: stateMachine warmup... ') };
 			endFcn = { @()fprintf('end state: stateMachine warmup... ') };
@@ -582,6 +594,7 @@ classdef stateMachine < optickaCore
 			reset(me);
 			me.verbose = oldVerbose;
 			me.fnTimers = oldTimers;
+			me.useExternalLog = oldUseLog;
 		end
 		
 		% ===================================================================
@@ -712,6 +725,9 @@ classdef stateMachine < optickaCore
 			if me.fnTimers
 				me.log.fevalStore(me.thisN)	= toc(tx)*1000;
 			end
+			if me.useExternalLog
+				me.externalLog.addMessage(0,me.currentEntryTime,['Enter State: ' me.currentName ' - ' me.currentUUID],'stateMachineTime');
+			end
 			
 			me.tempNextState = '';
 			
@@ -784,6 +800,11 @@ classdef stateMachine < optickaCore
 				else
 					me.log.(me.logFields(i)) = repmat("",1,n);
 				end
+			end
+			if isa(me.externalLog, 'timeLogger')
+				me.useExternalLog = true;
+			else
+				me.useExternalLog = false;
 			end
 		end
 

@@ -204,7 +204,7 @@ classdef behaviouralRecord < optickaCore
 			end	
 			if isempty(me.tick) || me.tick == 1
 				reset(me);
-				me.startTime = datetime('now');
+				me.startTime = datetime('now','Format','yyyy-MM-dd HH:mm:ss:SSSS');
 				me.tick = 1;
 			end
 			if exist('sM','var')
@@ -244,7 +244,7 @@ classdef behaviouralRecord < optickaCore
 			end
 			if ~isempty(me.response)
 				n = length(me.response);
-				me.trials(n).now = datetime('now');
+				me.trials(n).now = datetime('now','Format','yyyy-MM-dd HH:mm:ss:SSSS');
 				me.trials(n).info = me.info;
 				me.trials(n).tick = me.tick;
 				me.trials(n).comment = '';

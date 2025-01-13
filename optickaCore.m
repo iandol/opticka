@@ -945,6 +945,7 @@ classdef optickaCore < handle
 			if isdeployed
 				me.paths.deploypath = ctfroot;
 			end
+			me.paths.ALFPath = '';
 		end
 
 		% ===================================================================

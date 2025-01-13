@@ -679,7 +679,9 @@ classdef runExperiment < optickaCore
 			tL							= me.taskLog; %short handle to log
 			tL.name						= me.name;
 			if me.logFrames
-				tL.preAllocate(me.screenVals.fps*60*15);
+				tL.preAllocate(me.screenVals.fps*60*25, 1e4);
+			else
+				tL.preAllocate(1, 1e4);
 			end
 			
 			%-----behavioural record
@@ -738,7 +740,8 @@ classdef runExperiment < optickaCore
 				me.stateMachine		= [];
 				clear stateMachine; % this seems to improve performance with logging!!!
 				me.stateMachine		= stateMachine('verbose', me.verbose,...
-										'realTime', task.realTime, 'name', me.name);
+										'realTime', task.realTime, 'name', me.name, ...
+										'externalLog', me.taskLog);
 				sM					= me.stateMachine;
 				if task.realTime;	sM.timeDelta = 0; else; sM.timeDelta=s.screenVals.ifi; end
 				sM.fnTimers			= me.logStateTimers; %record fn evaluations?
@@ -1268,7 +1271,11 @@ classdef runExperiment < optickaCore
 						fprintf('--->>Error, saved partial data to %s\n',me.paths.ALFPath);
 					end
 				end
-				if removeALF && exist(me.paths.ALFPath,'dir'); try rmdir(me.paths.ALFPath); end; end
+				try 
+					if removeALF && isfield(me.paths,'ALFPath') && exist(me.paths.ALFPath,'dir')
+						rmdir(me.paths.ALFPath);
+					end
+				end
 				fprintf('\n\n===!!! ERROR in runExperiment.runTask() %s\n',ERR.message);
                 try me.userFunctions = []; end %user functions
 				try reset(stims); end

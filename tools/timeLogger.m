@@ -9,6 +9,8 @@ classdef timeLogger < optickaCore
 		stimStateNames	= {'stimulus','onestep','twostep'}
 		t				= struct('vbl',[],'show',[],'flip',[],...
 							'miss',[],'stimTime',[])
+		preallocateTimes = 1e6;
+		preallocateMessages = 1e4;
 		screenLog		= struct()
 		missvbls		= 0
 		tick			= 0
@@ -27,14 +29,15 @@ classdef timeLogger < optickaCore
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
-		messages struct	= struct('tick',[],'vbl',[],'message',{})
+		messages struct	= struct('vbl',[],'tick',[],'stimTime',[],'message',[],'type',[])
+		messageN		= 1
 		missImportant
 		nMissed
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> allowed properties passed to object upon construction
-		allowedProperties = {'stimStateNames','timer','verbose'}
+		allowedProperties = {'stimStateNames','timer','verbose','preallocateTimes','preallocateMessages'}
 	end
 	
 	%=======================================================================
@@ -63,7 +66,8 @@ classdef timeLogger < optickaCore
 		%> @param varargin
 		%> @return
 		% ===================================================================
-		function preAllocate(me,n)
+		function preAllocate(me,n,m)
+			if ~exist('m','var') || isempty(m); m = 1e4; end
 			if isprop(me,'t')
 				me.t.vbl = zeros(1,n);
 				me.t.show = me.vbl;
@@ -77,6 +81,14 @@ classdef timeLogger < optickaCore
 				me.miss = me.vbl;
 				me.stimTime = me.vbl;
 			end
+			try 
+				me.messages(1).vbl = nan(1,m);
+				me.messages.tick = me.messages.vbl;
+				me.messages.stimTime = me.messages.vbl;
+				me.messages.message = repmat("",1,m);
+				me.messages.type = me.messages.message;
+			end
+			me.messageN = 1;
 		end
 		
 		% ===================================================================
@@ -101,27 +113,32 @@ classdef timeLogger < optickaCore
 		% ===================================================================
 		%> @brief 
 		% ===================================================================
-		function addMessage(me, tick, vbl, message)
+		function addMessage(me, tick, vbl, message,type)
 			if ~exist('message','var'); return; end
 			if ~exist('tick','var') || isempty(tick); tick = me.tick; end
+			if ~exist('type','var') || isempty(type); type = "passed"; end
 			if (~exist('vbl','var') || isempty(vbl)) && ~isempty(me.lastvbl)
-				vbl = me.lastvbl; 
+				vbl = me.lastvbl;
+				type = "lastvbl";
 			else
 				vbl = GetSecs;
+				type = "getsecs";
 			end
-			if isempty(me.messages); N = 1; else; N = length(me.messages)+1; end
-			me.messages(N).tick = tick;
+			N = me.messageN;
+			me.messages(1).vbl(N) = vbl;
+			me.messages.tick(N) = tick;
 			if ~isempty(me.stimTime) && length(me.stimTime)<=tick
 				try 
-					me.messages(N).stimTime = me.stimTime(tick); 
+					me.messages.stimTime(N) = me.stimTime(tick); 
 				catch
-					me.messages(N).stimTime = NaN;
+					me.messages.stimTime(N) = NaN;
 				end
 			else
-				me.messages(N).stimTime = NaN;
+				me.messages.stimTime(N) = NaN;
 			end
-			me.messages(N).vbl = vbl;
-			me.messages(N).message = message;
+			me.messages.type(N) = type;
+			me.messages.message(N) = message;
+			me.messageN = me.messageN + 1;
 		end
 		
 		% ===================================================================
@@ -290,16 +307,26 @@ classdef timeLogger < optickaCore
 		%> @return
 		% ===================================================================
 		function tbl = messageTable(me)
+			removeEmptyValues(me);
 			tbl = [];
 			if isempty(me.messages); return; end
-			msgs = cell(length(me.messages),4);
-			for i = 1:length(me.messages)
-				msgs{i,1} = me.messages(i).tick;
-				msgs{i,2} = me.messages(i).vbl - me.startTime;
-				if isfield(me.messages,'stimeTime');msgs{i,3} = me.messages(i).stimTime;end
-				msgs{i,4} = me.messages(i).message;
+			if isfield(me.messages,'type');addType=true;else;addType=false;end
+			msgs = cell(length(me.messages.vbl)+1,6);
+			msgs{1,1} = toDateTime(me.startTime); msgs{1,2} = 0; msgs{1,3} = NaN; msgs{1,4} = NaN; msgs{1,5} = 'StartTime'; msgs{1,6} = 'PTBTime';
+			for i = 1:length(me.messages.vbl)
+				msgs{i+1,1} = toDateTime(me.messages.vbl(i));
+				msgs{i+1,2} = me.messages.vbl(i) - me.startTime;
+				msgs{i+1,3} = me.messages.tick(i);
+				if isfield(me.messages,'stimTime');msgs{i+1,4} = me.messages.stimTime(i);end
+				msgs{i+1,5} = me.messages.message(i);
+				if addType
+					msgs{i+1,6} = me.messages.type(i);
+				end
 			end
-			tbl = cell2table(msgs,'VariableNames',{'Tick','Time','Stimulus State','Message'});
+			tbl = cell2table(msgs,'VariableNames',{'Onset','Time','Tick','StimulusOn','Message','TimeType'});
+			function out = toDateTime(posixT)
+				out = datetime(posixT,'ConvertFrom','posixtime','TimeZone','local','Format','yyyy-MM-dd HH:mm:ss:SSSS');
+			end
 		end
 
 	end %---END PUBLIC METHODS---%
@@ -368,6 +395,13 @@ classdef timeLogger < optickaCore
 					me.stimTime=me.stimTime(1:idx);
 				end
 			end
+			% messages
+			idx = find(isnan(me.messages.vbl));
+			try me.messages.vbl(idx) = []; end
+			try	me.messages.tick(idx) = []; end
+			try	me.messages.stimTime(idx) = []; end
+			try	me.messages.message(idx) = []; end
+			try	me.messages.type(idx) = []; end
 		end
 	end
 

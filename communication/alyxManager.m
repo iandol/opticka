@@ -169,6 +169,24 @@ classdef alyxManager < optickaCore
 		end
 
 		% ===================================================================
+		function initDatabase(me)
+			% add datasets types and species to the database
+			[r, s] = getData(me,'dataset-types/opticka.raw');
+			if s ~= 200
+				d = struct;
+				d.name = 'opticka.raw';
+				d.created_by = me.user;
+				d.description = "Opticka raw mat file for single session";
+				d.filename_pattern = "opticka.raw.*.mat";
+				[r, s] = me.postData('dataset-types', d, 'post');
+				if s ~= 200
+					warning("Couldn't create opticka.raw dataset type");
+				end
+			end
+		end
+
+		
+		% ===================================================================
 		function [data, statusCode] = getData(me, endpoint, varargin)
 			%GETDATA Return a specific Alyx/REST read-only endpoint
 			%   Makes a request to an Alyx endpoint; returns the data as a MATLAB struct.
@@ -189,7 +207,9 @@ classdef alyxManager < optickaCore
 			try
   				while hasNext
     				assert(page < me.pageLimit, 'Maximum number of page requests reached')
-    				result = webread(fullEndpoint, varargin{:}, options);
+					
+					result = webread(fullEndpoint, varargin{:}, options);
+					
     				if ~isPaginated(result)
 						data = result;
 						break
@@ -217,8 +237,8 @@ classdef alyxManager < optickaCore
 							if me.loggedIn % If succeded
         						data = me.getData(fullEndpoint); % Retry
 							end
-      					else
-        					rethrow(ex)
+						else
+							warning(ex.identifier, '%s', ex.message);
       					end
   				end
 			end
