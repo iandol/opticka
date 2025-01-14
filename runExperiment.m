@@ -797,9 +797,9 @@ classdef runExperiment < optickaCore
 
 				%================================initialise save file and ALYX
 				if me.sessionData.useAlyx
-					[path, sessionID, dateID] = me.getALF(...
+					[~, ~, ~, name] = me.getALF(...
 						me.sessionData.subjectName,me.sessionData.labName, true);
-					me.name = [dateID '_' sprintf('%0.3d',sessionID) '_' me.sessionData.subjectName]; %give us a run name
+					me.name = name; %give us a run name
 					me.initialiseAlyxSession(me.paths.ALFPath);
 					if isfield(me.screenSettings,'statusbar')
 						t = sprintf('ALYX Session opened: %s',me.alyx.sessionURL);
@@ -810,11 +810,11 @@ classdef runExperiment < optickaCore
 					me.alyx.updateNarrative(me.comment);
 				else
 					if tS.saveData
-						[me.paths.ALFPath, sessionID, dateID] = me.getALF(...
+						[~, ~, ~, name] = me.getALF(...
 							me.sessionData.subjectName,me.sessionData.labName, true);
-						me.name = [dateID '_' sprintf('%0.3d',sessionID) '_' me.sessionData.subjectName]; %give us a run name
+						me.name = name; %give us a run name
 					else
-						[me.paths.ALFPath, sessionID, dateID] = me.getALF(...
+						[~, ~, dateID] = me.getALF(...
 							me.sessionData.subjectName,me.sessionData.labName, false);
 						me.name = [dateID '_' me.sessionData.subjectName]; %give us a run name
 					end
@@ -823,7 +823,7 @@ classdef runExperiment < optickaCore
 					eT.saveFile	= [me.paths.ALFPath 'eyetracking.raw.eyelink.' me.name '.edf'];
 				elseif matches(lower(me.eyetracker.device),'tobii')
 					eT.saveFile	= [me.paths.ALFPath 'eyetracking.raw.tobii.' me.name '.mat'];
-				else
+				elseif matches(lower(me.eyetracker.device),'irec')
 					eT.saveFile	= [me.paths.ALFPath 'eyetracking.raw.irec.' me.name '.csv'];
 				end
 				fprintf('\n\n\n===>>>>>> START BEHAVIOURAL TASK: %s <<<<<<===',me.name);
@@ -1124,7 +1124,7 @@ classdef runExperiment < optickaCore
 				end
 
 				try updatePlot(bR, me); end %update our behavioural plot for final state
-				try show(stims); end %make all stimuli visible again, useful for editing
+				try show(stims); end %make all stimuli visible again, useful for editing in GUI
 				try reset(stims); end %reset stims back to initial state
 				
 				%-----get our profiling report for our task loop
@@ -1179,23 +1179,40 @@ classdef runExperiment < optickaCore
 				
 				%================================
 				%================================SAVE the DATA
+				%================================
 				if tS.saveData
 					sname = [me.paths.ALFPath 'opticka.raw.' me.name '.mat'];
 					rE = me;
 					save(sname,'rE','tS');
 					me.paths.sname = sname;
-					fprintf('\n\n#####################\n===>>> <strong>SAVED DATA to: %s</strong>\n#####################\n\n',sname)
+					fprintf('\n\n#####################\n===>>> <strong>SAVED RAW DATA to: %s</strong>\n#####################\n',sname)
+
+					sname = [me.paths.ALFPath 'opticka.details.' me.name '.json'];
+					j = jsonencode(tS);
+					save(sname,'j');
+					fprintf('#####################\n===>>> <strong>SAVED JSON DATA to: %s</strong>\n#####################\n',sname)
+
+					sname = [me.paths.ALFPath 'event.table.' me.name '.csv'];
+					tbl = tL.messageTable(tL);
+					j = savetable(sname, tbl, 'FileType', 'text', 'Delimiter', '\t');
+					save(sname,'j');
+					sname2 = regexprep(sname,'\.csv$','.tsv');
+					movefile(sname,sname2);
+					fprintf('#####################\n===>>> <strong>SAVED EVENT DATA to: %s</strong>\n#####################\n\n',sname2)
+
 					assignin('base', 'tS', tS); % assign tS in base for manual checking
 					if ~isempty(me.task.staircase) && isstruct(me.task.staircase)
 						assignin('base', 'staircase', me.task.staircase); % assign tS in base for manual checking
 					end
 				end
+				%================================
 				%================================SAVE the DATA
 				%================================
 				
 
 				%================================
 				%=================================END ALYX SESSION
+				%================================
 				if me.sessionData.useAlyx
 					fprintf('Closing ALYX Session: %s\n', me.alyx.sessionURL);
 					session = me.alyx.closeSession(me.comment, 'PASS');
@@ -1221,9 +1238,7 @@ classdef runExperiment < optickaCore
 										dataset = me.alyx.registerFile(['Minio-' me.sessionData.labName], d(i).name, rp);
 										disp(dataset);
 									end
-									dataset = me.alyx.registerFile('Local-Files', sname, rp);
-									disp("Local: ")
-									disp(dataset);
+									%dataset = me.alyx.registerFile('Local-Files', sname, rp);
 								end
 							else
 								warning("AWS ID and KEY are not present, cannot upload data to MINIO!!!");
@@ -1233,6 +1248,7 @@ classdef runExperiment < optickaCore
 						end
 					end
 				end
+				%================================
 				%=================================END ALYX SESSION
 				%================================
 				

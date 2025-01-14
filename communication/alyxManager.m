@@ -169,24 +169,6 @@ classdef alyxManager < optickaCore
 		end
 
 		% ===================================================================
-		function initDatabase(me)
-			% add datasets types and species to the database
-			[r, s] = getData(me,'dataset-types/opticka.raw');
-			if s ~= 200
-				d = struct;
-				d.name = 'opticka.raw';
-				d.created_by = me.user;
-				d.description = "Opticka raw mat file for single session";
-				d.filename_pattern = "opticka.raw.*.mat";
-				[r, s] = me.postData('dataset-types', d, 'post');
-				if s ~= 200
-					warning("Couldn't create opticka.raw dataset type");
-				end
-			end
-		end
-
-		
-		% ===================================================================
 		function [data, statusCode] = getData(me, endpoint, varargin)
 			%GETDATA Return a specific Alyx/REST read-only endpoint
 			%   Makes a request to an Alyx endpoint; returns the data as a MATLAB struct.
@@ -920,6 +902,85 @@ classdef alyxManager < optickaCore
   				
   			datasets = record;
 
+		end
+
+		% ===================================================================
+		function initDatabase(me)
+			% add datasets types and species to the database
+			[r, s] = getData(me,'dataset-types/opticka.raw');
+			if s ~= 200
+				d = struct;
+				d.name = 'opticka.raw';
+				d.created_by = me.user;
+				d.description = "Opticka raw mat file for single session";
+				d.filename_pattern = "opticka.raw.*.mat";
+				[r, s] = me.postData('dataset-types', d, 'post');
+				if isempty(r)
+					warning("Couldn't create opticka.raw dataset type");
+				end
+			end
+			% add datasets types and species to the database
+			[r, s] = getData(me,'dataset-types/opticka.details');
+			if s ~= 200
+				d = struct;
+				d.name = 'opticka.details';
+				d.created_by = me.user;
+				d.description = "JSON of experiment details";
+				d.filename_pattern = "opticka.details.*.json";
+				[r, s] = me.postData('dataset-types', d, 'post');
+				if isempty(r)
+					warning("Couldn't create events.table dataset type");
+				end
+			end
+			% add datasets types and species to the database
+			[r, s] = getData(me,'dataset-types/events.table');
+			if s ~= 200
+				d = struct;
+				d.name = 'events.table';
+				d.created_by = me.user;
+				d.description = "Events table with HED tag mapping";
+				d.filename_pattern = "events.table.*.tsv";
+				[r, s] = me.postData('dataset-types', d, 'post');
+				if isempty(r)
+					warning("Couldn't create events.table dataset type");
+				end
+			end
+			[r, s] = getData(me,'dataset-types/eyetracking.raw.tobii');
+			if s ~= 200
+				d = struct;
+				d.name = 'eyetracking.raw.tobii';
+				d.created_by = me.user;
+				d.description = "Raw Tobii eyetracking data";
+				d.filename_pattern = "eyetracking.raw.tobii*.mat";
+				[r, s] = me.postData('dataset-types', d, 'post');
+				if isempty(r)
+					warning("Couldn't create eyetracking.raw.tobii*.mat dataset type");
+				end
+			end
+			[r, s] = getData(me,'dataset-types/eyetracking.raw.irec');
+			if s ~= 200
+				d = struct;
+				d.name = 'Raw iRec eyetracking data';
+				d.created_by = me.user;
+				d.description = "Raw iRec eyetracking data";
+				d.filename_pattern = "eyetracking.raw.irec*";
+				[r, s] = me.postData('dataset-types', d, 'post');
+				if isempty(r)
+					warning("Couldn't create eyetracking.raw.irec dataset type");
+				end
+			end
+			[r, s] = getData(me,'dataset-types/eyetracking.raw.eyelink');
+			if s ~= 200
+				d = struct;
+				d.name = 'Raw iRec eyetracking data';
+				d.created_by = me.user;
+				d.description = "Raw Eyelink EDF file";
+				d.filename_pattern = "eyetracking.raw.eyelink*.edf";
+				[r, s] = me.postData('dataset-types', d, 'post');
+				if isempty(r)
+					warning("Couldn't create eyetracking.raw.irec dataset type");
+				end
+			end
 		end
 
 		% ===================================================================

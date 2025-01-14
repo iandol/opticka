@@ -120,13 +120,14 @@ classdef optickaCore < handle
 		end
 
 		% ===================================================================
-		function [path, sessionID, dateID] = getALF(me, subject, lab, create)
+		function [path, sessionID, dateID, name] = getALF(me, subject, lab, create)
 		%> @fn getALF(me)
 		%> @brief get the ALF path
 		%>
 		%> @return path - the path to use
 		%> @return sessionID - session number
 		%> @return dateID - YYYY-MM-DD-HH-MM-SS
+		%> @return name - [date]-[id]-[subject]
 		% ===================================================================
 			if ~exist('subject','var') || isempty(subject); subject = 'unknown'; end
 			if ~exist('lab','var') || isempty(lab); lab = []; end
@@ -186,10 +187,12 @@ classdef optickaCore < handle
 					fprintf('---> Path: %s created...\n',path);
 				end
 			end
+			name = [dateID '_' sprintf('%0.3d',sessionID) '_' subject];
 			me.paths.ALFPath = path;
 			me.paths.sessionID = sessionID;
 			me.paths.dateID = dateID;
 			me.paths.dateIDShort = dateID(1:10);
+			me.paths.name = name;
 		end
 
 		% ===================================================================

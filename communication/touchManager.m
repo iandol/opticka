@@ -1,4 +1,4 @@
-+% ========================================================================
+% ========================================================================
 classdef touchManager < optickaCore
 %> @class touchManager
 %> @brief Manages touch screens (wraps the PTB TouchQueue* functions), and
@@ -8,7 +8,7 @@ classdef touchManager < optickaCore
 %> task. This class can handles touch windows, exclusion zones and more for
 %> multiple touch screens.
 %>
-%> Copyright ©2014-2024 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2025 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 
 	%--------------------PUBLIC PROPERTIES----------%
