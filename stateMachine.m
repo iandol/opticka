@@ -161,7 +161,7 @@ classdef stateMachine < optickaCore
 		stateDefaults cell			= { '', '', 1, {}, {}, {}, {}, false }
 		%> properties allowed during construction
 		allowedProperties			= {'name','realTime','verbose','clockFcn','waitFcn'...
-							'timeDelta','skipExitStates','tempNextState','log'}
+							'timeDelta','skipExitStates','tempNextState','fnTimers','externalLog'}
 		logFields					= ["n","startTime","index","tnow","name","uuid",...
 							"tick","entryTime","nextTimeOut", "nextTickOut",...
 							"tempNextState","fevalEnter","fevalExit","fevalStore"]
@@ -374,6 +374,7 @@ classdef stateMachine < optickaCore
 		function start(me)
 			if me.isRunning == false
 				initialiseLog(me);
+				if isa(me.externalLog,'timeLogger'); me.useExternalLog = true; else; me.useExternalLog = false; end
 				if me.timeDelta == 0; me.realTime = true; end %stops a divide by zero infinite loop
 				me.isRunning = true;
 				me.isFinishing = false;
@@ -726,7 +727,7 @@ classdef stateMachine < optickaCore
 				me.log.fevalStore(me.thisN)	= toc(tx)*1000;
 			end
 			if me.useExternalLog
-				me.externalLog.addMessage(0,me.currentEntryTime,['Enter State: ' me.currentName ' - ' me.currentUUID],'stateMachineTime');
+				me.externalLog.addMessage(0,me.currentEntryTime,me.currentTime,['State Details: ' me.currentName ' - ' me.currentUUID],'GetSecs');
 			end
 			
 			me.tempNextState = '';
@@ -749,15 +750,14 @@ classdef stateMachine < optickaCore
 			if me.thisN == 1; me.log.startTime = me.startTime; end
 			if me.nStates >= thisIndex
 				if me.fnTimers; tt = tic; end	%run our enter state functions
-				me.currentState = me.stateList(me.currentIndex);
 				me.currentEntryTime = feval(me.clockFcn);
+				me.currentState = me.stateList(me.currentIndex);
 				me.currentTick = 0;
 				me.currentName = me.currentState.name;
 				me.currentUUID = num2str(dec2hex(floor((now - floor(now))*1e10)));
 				me.currentEntryFcn = me.currentState.entryFcn;
 				me.currentWithinFcn = me.currentState.withinFcn;
 				me.currentTransitionFcn = me.currentState.transitionFcn;
-				me.currentState = me.currentState;
 				
 				if length(me.currentState.time) == 2
 					me.currentState.time = randi([me.currentState.time(1)*1e3, me.currentState.time(2)*1e3]) / 1e3;
@@ -774,9 +774,11 @@ classdef stateMachine < optickaCore
 				end
 				if me.fnTimers; me.log.fevalEnter(me.thisN) = toc(tt)*1000; end
 				
-				if me.verbose; me.salutation(['ENTER: ' me.currentName ...
+				if me.verbose
+					me.salutation(['ENTER: ' me.currentName ...
 						' @ ' num2str(me.currentEntryTime-me.startTime, ...
-						'%.2f') 's - ' num2str(me.totalTicks) ' ticks'],''); end
+						'%.2f') 's - ' num2str(me.totalTicks) ' ticks'],''); 
+				end
 			else
 				if me.verbose; me.salutation('enterStateAtIndex method', 'newIndex is greater than stateList length'); end
 				me.isFinishing = true;

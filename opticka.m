@@ -188,7 +188,7 @@ classdef opticka < optickaCore
 					if sendLog == false
 						if ~isempty(tLog);me.r.restoreRunLog(tLog);end
 					end
-					fprintf('>>>Opticka: It took %g seconds to write and send stimulus to Omniplex machine\n',toc(tt));
+					fprintf('≣≣≣≣⊱ Opticka: It took %g seconds to write and send stimulus to Omniplex machine\n',toc(tt));
 					loop = 1;
 				while loop < 10
 					in = me.oc.read(0);
@@ -293,7 +293,7 @@ classdef opticka < optickaCore
 					me.r.userFunctionsFile = [me.paths.whereami filesep 'userFunctions.m'];
 				end
 
-				fprintf('===>>> Opticka UI took %.2fsecs to initialise\n',toc(tt));
+				fprintf('≣≣≣≣⊱  Opticka UI took %.2fsecs to initialise\n',toc(tt));
 
 				try if ~isempty(me.ss); pause(0.1); delete(me.ss); me.ss = []; end; end
 			catch ME
@@ -926,7 +926,7 @@ classdef opticka < optickaCore
 			end
 			if max(ftime) > 0
 				[~,idx]=max(ftime);
-				disp(['===>>> Opticka has found a potential calibration file: ' [me.paths.calibration filesep d(idx).name]]);
+				disp(['≣≣≣≣⊱  Opticka has found a potential calibration file: ' [me.paths.calibration filesep d(idx).name]]);
 				%tmp = load([me.paths.calibration filesep d(idx).name]);
 				%if isstruct(tmp)
 				%	fn = fieldnames(tmp);
@@ -1017,7 +1017,7 @@ classdef opticka < optickaCore
 				end	
 			end
 			if anyLoaded
-				fprintf('\n===>>> Opticka Load Preferences:\n'); fprintf(prefnames); fprintf('\n');
+				fprintf('\n≣≣≣≣⊱  Opticka Load Preferences:\n'); fprintf(prefnames); fprintf('\n');
 			end
 		end
 		
@@ -1054,7 +1054,7 @@ classdef opticka < optickaCore
 					if ~anySaved; anySaved = true; end
 				end
 			end
-			if anySaved; fprintf('\n===>>> Opticka Save Preferences:\n'); fprintf(prefnames); fprintf('\n');end
+			if anySaved; fprintf('\n≣≣≣≣⊱ Opticka Save Preferences:\n'); fprintf(prefnames); fprintf('\n');end
 		end
 		
 	end
@@ -1160,14 +1160,14 @@ classdef opticka < optickaCore
 						end
 					end
 					save(f,'tmp');
-					fprintf('\n---> Saving Protocol %s as copy (with state file) to %s\n', f, pwd);
+					fprintf('\n≣≣≣≣⊱ Saving Protocol %s as copy (with state file) to %s\n', f, pwd);
 					if exist(tmp.r.stateInfoFile,'file')
 						fprintf('\tState file path: %s\n', me.r.stateInfoFile);
 					end
 					getStateInfo(me);
 				else
 					save(f,'tmp');
-					fprintf('\n---> Saving Protocol %s (without state file) to %s\n', f, pwd);
+					fprintf('\n≣≣≣≣⊱ Saving Protocol %s (without state file) to %s\n', f, pwd);
 				end
 				me.refreshStimulusList;
 				me.refreshVariableList;
@@ -1241,7 +1241,7 @@ classdef opticka < optickaCore
 			end
 			
 			if isempty(fileName) | fileName == 0
-				disp('--->>> Opticka loadProtocol: No file specified...')
+				disp('≣≣≣≣⊱ Opticka loadProtocol: No file specified...')
 				return
 			end
 			me.ui.OKOptickaVersion.Text = 'Loading Protocol, please wait...';
@@ -1262,7 +1262,7 @@ classdef opticka < optickaCore
 			
 			salutation(me,sprintf('Routing Protocol FROM %s TO %s',tmp.fullName,me.fullName),[],true);
 			
-			fprintf('---> Opticka Protocol loading:\n');
+			fprintf('≣≣≣≣⊱ Opticka Protocol loading:\n');
 
 			% stimuli
 			if optickaCore.hasKey(tmp.r,'stimuli')
@@ -1595,7 +1595,7 @@ classdef opticka < optickaCore
 			
 			me.ui.OKRoot.Pointer='arrow';
 			%figure(me.ui.OKRoot);
-			fprintf('---> Protocol load finished…\n');
+			fprintf('≣≣≣≣⊱ Protocol load finished…\n');
 		end
 
 
@@ -1834,7 +1834,7 @@ classdef opticka < optickaCore
 		%> @param 
 		% ===================================================================
 		function value = abortRunEvent(me,src,evtdata)
-			fprintf('---> Opticka: abortRun triggered!!!\n')
+			fprintf('≣≣≣≣⊱ Opticka: abortRun triggered!!!\n')
 			if isa(me.oc,'dataConnection') && me.oc.isOpen == 1
 				me.oc.write('--abort--');
 			end
@@ -1846,7 +1846,7 @@ classdef opticka < optickaCore
 		%> @param 
 		% ===================================================================
 		function value = endRunEvent(me,src,evtdata)
-			fprintf('---> Opticka: endRun triggered!!!\n')
+			fprintf('≣≣≣≣⊱ Opticka: endRun triggered!!!\n')
 		end
 		
 		% ===================================================================
@@ -1855,7 +1855,7 @@ classdef opticka < optickaCore
 		%> @param 
 		% ===================================================================
 		function value = runInfoEvent(me,src,evtdata)
-			fprintf('---> Opticka: runInfo triggered!!!\n')
+			fprintf('≣≣≣≣⊱ Opticka: runInfo triggered!!!\n')
 		end
 		
 		% ===================================================================
@@ -1913,11 +1913,11 @@ classdef opticka < optickaCore
 		% ===================================================================
 		function lobj=loadobj(in)
 			if isa(in,'opticka')
-				fprintf('---> opticka loadobj: Assigning object… ');
+				fprintf('≣≣≣≣⊱ opticka loadobj: Assigning object… ');
 				try fprintf('…previous object version: %s | dated: %s\n', in.optickaVersion, datestr(in.dateStamp)); end
 				lobj = in;
 			else
-				try fprintf('---> Opticka loadobj: Recreating object %s from structure…\n',in.fullName_); end
+				try fprintf('≣≣≣≣⊱ Opticka loadobj: Recreating object %s from structure…\n',in.fullName_); end
 				try fprintf('\t…previous object version: %s | dated: %s\n', in.optickaVersion, datestr(in.dateStamp)); end
 				lobj = opticka('initUI',false);
 				lobj.r = in.r;

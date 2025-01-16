@@ -8,14 +8,23 @@ classdef alyxManager < optickaCore
 
 	%--------------------PUBLIC PROPERTIES----------%
 	properties
+		%> the URL of the ALYX database
 		baseURL	char			= 'http://172.16.102.30:8000'
+		%> the user to login
 		user char				= 'admin'
-		lab	char				= 'CognitionPlatform'
+		%> the lab defined in the Alyx database
+		lab	char				= 'Lab'
+		%> the experimental subject
 		subject	char			= 'TestSubject'
+		%> where to save the temporary json files sent via REST
 		queueDir char			= ''
+		%> if we open a new session this is the URL
 		sessionURL				= []
+		%> if we open a new session this is the base session URL
 		sessionParentURL		= []
+		%> limit how many values returned
 		pageLimit				= 100
+		%> more logging for debugging
 		verbose					= false
 	end
 
@@ -42,7 +51,7 @@ classdef alyxManager < optickaCore
 	%--------------------PRIVATE PROPERTIES----------%
 	properties (Access = private)
 		%> properties allowed to be passed on construction
-		allowedProperties = {'baseURL','user','pageLimit','verbose'}
+		allowedProperties = {'baseURL','user','lab','subject','queueDir','pageLimit','verbose'}
 		alfMatch = '(?<date>^[0-9\-]+)_(?<seq>\d+)_(?<subject>\w+)'
 	end
 	
@@ -72,7 +81,7 @@ classdef alyxManager < optickaCore
 				me.sessionURL = [];
 				me.webOptions.HeaderFields = []; % Remove token from header field
 				if ~me.loggedIn
-					fprintf('\n--->>> alyxManager: user <<%s>> logged OUT of <<%s>> successfully...\n\n', me.user, me.baseURL);
+					fprintf('\n≣≣≣≣⊱ alyxManager: user <<%s>> logged OUT of <<%s>> successfully...\n\n', me.user, me.baseURL);
 				end
 			end
 		end
@@ -121,7 +130,7 @@ classdef alyxManager < optickaCore
   			
 			try
     			me.getToken(username, passwd);
-				fprintf('\n--->>> alyxManager: user <<%s>> logged in to <<%s>> successfully...\n\n', me.user, me.baseURL);
+				fprintf('\n≣≣≣≣ alyxManager: user <<%s>> logged in to <<%s>> successfully...\n\n', me.user, me.baseURL);
 				success = me.loggedIn;
 				me.sessionURL = [];
 				me.sessionParentURL = [];
@@ -220,7 +229,7 @@ classdef alyxManager < optickaCore
         						data = me.getData(fullEndpoint); % Retry
 							end
 						else
-							warning(ex.identifier, '%s', ex.message);
+							warning(['alyxManager.getData: ' ex.identifier], '%s', ex.message);
       					end
   				end
 			end
@@ -1008,7 +1017,7 @@ classdef alyxManager < optickaCore
 			if ~matches(me.user, value)
 				if me.loggedIn; logout(me); end
 				me.pwd = '';
-				fprintf('--->>> User name change, removed old password!\n');
+				fprintf('≣≣≣≣ User name change, removed old password!\n');
 			end
 			me.user = value;
 		end
@@ -1224,7 +1233,7 @@ classdef alyxManager < optickaCore
 		%> @return
 		% ===================================================================
 		function delete(me)
-			if me.verbose; fprintf('--->>> Delete: %s\n',me.fullName); end
+			if me.verbose; fprintf('≣≣≣≣ Delete: %s\n',me.fullName); end
 		end
 	%=======================================================================	
 	end %---END PRIVATE METHODS---%	

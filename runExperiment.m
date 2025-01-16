@@ -308,7 +308,7 @@ classdef runExperiment < optickaCore
 				%=============================Premptive save in case of crash or error: SAVES IN /TMP
 				rE = me;
 				tS.tmpFile = [tempdir filesep me.name '.mat'];
-				fprintf('===>>> Save initial state: %s\n',tS.tmpFile);
+				fprintf('≣≣≣≣⊱ Save initial state: %s\n',tS.tmpFile);
 				save(tS.tmpFile,'rE','tS');
 				
 				%================================open the PTB screen and setup stimuli
@@ -356,7 +356,7 @@ classdef runExperiment < optickaCore
 				% of stimuli/tasks used and this does appear to minimise
 				% some of the frames lost on first presentation for very complex
 				% stimuli using 32bit computation buffers...
-				fprintf('\n===>>> Warming up the GPU and I/O systems... <<<===\n')
+				fprintf('\n≣≣≣≣ Warming up the GPU and I/O systems... <<<===\n')
 				show(stims);
 				for i = 1:s.screenVals.fps*2
 					draw(stims);
@@ -548,7 +548,7 @@ classdef runExperiment < optickaCore
 				sname = [me.paths.ALFPath filesep 'opticka.raw.' me.name '.mat'];
 				rE = me;
 				save(sname,'rE','tS');
-				fprintf('\n\n#####################\n===>>> <strong>SAVED DATA to: %s</strong>\n#####################\n\n',sname)
+				fprintf('\n\n#####################\n≣≣≣≣ <strong>SAVED DATA to: %s</strong>\n#####################\n\n',sname)
 				assignin('base', 'tS', tS); % assign tS in base for manual checking
 				%================================SAVE the DATA
 
@@ -676,8 +676,8 @@ classdef runExperiment < optickaCore
 			%------initialise time logs for this run
 			me.taskLog = []; clear timeLogger;
 			me.taskLog					= timeLogger();
+			me.taskLog.name				= me.name;
 			tL							= me.taskLog; %short handle to log
-			tL.name						= me.name;
 			if me.logFrames
 				tL.preAllocate(me.screenVals.fps*60*25, 1e4);
 			else
@@ -754,7 +754,7 @@ classdef runExperiment < optickaCore
 				else
 					stateInfoTmp = [];
 					me.stateInfoFile	= regexprep(me.stateInfoFile,'\s+','\\ ');
-					disp(['======>>> Loading State File: ' me.stateInfoFile]);
+					disp(['===≣≣≣≣⊱ Loading State File: ' me.stateInfoFile]);
 					clear(me.stateInfoFile);
 					statetext = readlines(me.stateInfoFile,"EmptyLineRule","skip");
 					sM.raw = statetext;
@@ -807,7 +807,9 @@ classdef runExperiment < optickaCore
 						me.screenSettings.statusbar.URL = me.alyx.sessionURL;
 						disp(t);
 					end
-					me.alyx.updateNarrative(me.comment);
+					tS.ALFPath = me.paths.ALFPath;
+					tS.sessionURL = me.alyx.sessionURL;
+					tS.parentSessionURL = me.alyx.sessionParentURL;
 				else
 					if tS.saveData
 						[~, ~, ~, name] = me.getALF(...
@@ -826,7 +828,7 @@ classdef runExperiment < optickaCore
 				elseif matches(lower(me.eyetracker.device),'irec')
 					eT.saveFile	= [me.paths.ALFPath 'eyetracking.raw.irec.' me.name '.csv'];
 				end
-				fprintf('\n\n\n===>>>>>> START BEHAVIOURAL TASK: %s <<<<<<===',me.name);
+				fprintf('\n\n\n≣≣≣≣>>> START BEHAVIOURAL TASK: %s <<<≣≣≣≣',me.name);
 				fprintf('\tInitial Path: %s\n',me.paths.ALFPath);
 				fprintf('\tInitial Comments: %s\n\n\n',me.comment);
 
@@ -837,13 +839,13 @@ classdef runExperiment < optickaCore
 
 				%===========================set up our behavioural plot
 				if tS.showBehaviourPlot
-					fprintf('===>>> Creating Behavioural Record Plot Window...\n');
+					fprintf('≣≣≣≣⊱ Creating Behavioural Record Plot Window...\n');
 					createPlot(bR, eT); 
 					WaitSecs(0.01); drawnow; WaitSecs(0.01); drawnow;
 				end
 
 				%================================raise priority
-				fprintf('===>>> Increasing Priority...\n');
+				fprintf('≣≣≣≣⊱ Increasing Priority...\n');
 				op = Screen('Preference', 'Verbosity',4);
 				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
 				Screen('Preference', 'Verbosity',op);
@@ -852,7 +854,7 @@ classdef runExperiment < optickaCore
 				% lets draw ~1 seconds worth of the stimuli we will be using
 				% covered by a blank. This primes the GPU, eyetracker, IO
 				% and other components with the same stimuli/task code used later...
-				fprintf('\n===>>> Warming up the GPU, Eyetracker and I/O systems... <<<===\n')
+				fprintf('\n≣≣≣≣ Warming up the GPU, Eyetracker and I/O systems... <<<===\n')
 				t = GetSecs();
 				WaitSecs('UntilTime',t+0.01);
 				tSM = stateMachine();
@@ -891,16 +893,16 @@ classdef runExperiment < optickaCore
 				%=============================Preemptive save in case of crash or error: SAVES IN /TMP
 				rE = me;
 				tS.tmpFile = [tempdir filesep 'TEMP' me.name '.mat'];
-				fprintf('\n===>>> Save initial state in case of crash: %s ...\n',tS.tmpFile);
+				fprintf('\n≣≣≣≣ Save initial state in case of crash: %s ...\n',tS.tmpFile);
 				save(tS.tmpFile,'rE','tS');
 				fprintf('\t ... Saved!\n');
 
 				%=============================Ensure we open the reward manager
 				if matches(me.reward.device,'arduino') && isa(rM,'arduinoManager') && ~rM.isOpen
-					fprintf('===>>> Opening Arduino for sending reward TTLs\n');
+					fprintf('≣≣≣≣⊱ Opening Arduino for sending reward TTLs\n');
 					open(rM);
 				elseif matches(me.reward.device,'labjack') && isa(rM,'labJack')
-					fprintf('===>>> Opening LabJack for sending reward TTLs\n');
+					fprintf('≣≣≣≣⊱ Opening LabJack for sending reward TTLs\n');
 					open(rM);
 				end
 				
@@ -955,9 +957,9 @@ classdef runExperiment < optickaCore
 					if ~io.isHandleValid
 						io.close;
 						io.open;
-						disp('===>>> We reopened the labJackT to ensure a stable connection...');
+						disp('≣≣≣≣⊱ We reopened the labJackT to ensure a stable connection...');
 					end
-					assert(io.isServerRunning, true, '===>>> LabJack T Server Not Running!!!');
+					assert(io.isServerRunning, true, '≣≣≣≣⊱ LabJack T Server Not Running!!!');
 				end
 
 				%===========================take over the keyboard + max priority
@@ -988,14 +990,12 @@ classdef runExperiment < optickaCore
 				tL.screenLog.trackerStartOffset = getTimeOffset(eT);
 				
 				%==============================IGNITE the stateMachine!
-				fprintf('\n\n===>>> Igniting the State Machine... <<<===\n');
+				fprintf('\n\n≣≣≣≣⊱⊱⊱ Igniting the State Machine... ⊰⊰⊰≣≣≣≣\n');
 				start(sM);
 
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-				% Display + task loop
-				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+				% ≣≣≣≣⊱ DISPLAY + TASK LOOP ≣≣≣≣
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				while me.stopTask == false
@@ -1027,10 +1027,10 @@ classdef runExperiment < optickaCore
 						% delayed by one flip.
 						if me.sendStrobe && strcmpi(me.strobe.device,'display++')
 							sendStrobe(io); me.sendStrobe = false;
-							addMessage(tL,[],[],['Sent Pre-flip ++ strobe: ' num2str(me.strobeDevice.sendValue)]);
+							addMessage(tL,GetSecs,[],[],['Sent Pre-flip Display++ strobe command: ' num2str(me.strobeDevice.sendValue)]);
 						elseif me.sendStrobe && strcmpi(me.strobe.device,'datapixx')
 							triggerStrobe(io); me.sendStrobe = false;
-							addMessage(tL,[],[],['Sent Pre-flip pixx strobe: ' num2str(me.strobeDevice.sendValue)]);
+							addMessage(tL,GetSecs,[],[],['Sent Pre-flip Pixx strobe command: ' num2str(me.strobeDevice.sendValue)]);
 						end
 
 						%------ Do the actual Screen flip, save times if enabled.
@@ -1051,14 +1051,14 @@ classdef runExperiment < optickaCore
 						if me.sendStrobe && ~any(strcmpi(me.strobe.device,{'display++','datapixx'}))
 							sendStrobe(io);
 							me.sendStrobe = false;
-							addMessage(tL,[],[],['Sent Post-flip strobe: ' num2str(me.strobeDevice.sendValue)]);
+							addMessage(tL,GetSecs,[],[],['Sent Post-flip strobe: ' num2str(me.strobeDevice.sendValue)]);
 						end
 
 						% %----- Send Eyetracker messages -----%
 						if ~eT.isOff && me.sendSyncTime % sends SYNCTIME message to eyetracker
 							syncTime(eT);
 							me.sendSyncTime = false;
-							addMessage(tL,[],[],'Sent Post-flip Sync to Eyetracker');
+							addMessage(tL,GetSecs,[],[],'Sent Post-flip Sync to Eyetracker');
 						end
 						 
 						% %------ Log stim / no stim + missed frame -----%
@@ -1068,7 +1068,7 @@ classdef runExperiment < optickaCore
 
 						% %------ Debug: if we missed a frame record it somewhere -----%
 						if me.debug && thisN > 0 && length(tL.miss)==thisN && length(tL.stimTime)==thisN && tL.miss(thisN) > 0 && tL.stimTime(thisN) > 0
-							addMessage(tL,[],[],'We missed a frame during stimulus'); 
+							addMessage(tL,[],[],[],'We missed a frame during stimulus'); 
 						end
 						
 						%----- Increment our global tick counter -----%
@@ -1097,9 +1097,7 @@ classdef runExperiment < optickaCore
 					
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-				end %======================END OF TASK LOOP=========================
-				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+				end % ≣≣≣≣⊱ END OF TASK LOOP ≣≣≣≣
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				
@@ -1163,8 +1161,8 @@ classdef runExperiment < optickaCore
 				
 				WaitSecs(0.25);
 				try plotPerformance(bR); end
-				fprintf('\n\n======>>> Total ticks: %g | stateMachine ticks: %g\n', tS.totalTicks, sM.totalTicks);
-				fprintf('======>>> Tracker Time: %g | PTB time: %g | Drift Offset: %g\n', ...
+				fprintf('\n\n===≣≣≣≣⊱ Total ticks: %g | stateMachine ticks: %g\n', tS.totalTicks, sM.totalTicks);
+				fprintf('===≣≣≣≣⊱ Tracker Time: %g | PTB time: %g | Drift Offset: %g\n', ...
 					tL.screenLog.trackerEndTime-tL.screenLog.trackerStartTime, ...
 					tL.screenLog.afterDisplay-tL.screenLog.beforeDisplay, ...
 					tL.screenLog.trackerEndOffset-tL.screenLog.trackerStartOffset);
@@ -1185,24 +1183,24 @@ classdef runExperiment < optickaCore
 					rE = me;
 					save(sname,'rE','tS');
 					me.paths.sname = sname;
-					fprintf('\n\n#####################\n===>>> <strong>SAVED RAW DATA to: %s</strong>\n#####################\n',sname)
+					fprintf('\n\n#####################\n≣≣≣≣ <strong>SAVED RAW DATA to: %s</strong>\n#####################\n',sname)
 
-					sname = [me.paths.ALFPath 'opticka.details.' me.name '.json'];
-					j = jsonencode(tS);
-					save(sname,'j');
-					fprintf('#####################\n===>>> <strong>SAVED JSON DATA to: %s</strong>\n#####################\n',sname)
+					try 
+						sname = [me.paths.ALFPath 'opticka.details.' me.name '.json'];
+						j = jsonencode(tS);
+						writelines(j, sname);
+						fprintf('#####################\n≣≣≣≣ <strong>SAVED JSON DATA to: %s</strong>\n#####################\n',sname)
+					end
 
-					sname = [me.paths.ALFPath 'event.table.' me.name '.csv'];
-					tbl = tL.messageTable(tL);
-					j = savetable(sname, tbl, 'FileType', 'text', 'Delimiter', '\t');
-					save(sname,'j');
-					sname2 = regexprep(sname,'\.csv$','.tsv');
-					movefile(sname,sname2);
-					fprintf('#####################\n===>>> <strong>SAVED EVENT DATA to: %s</strong>\n#####################\n\n',sname2)
-
+					try
+						sname = [me.paths.ALFPath 'event.table.' me.name '.tsv'];
+						tbl = messageTable(tL);
+						writetable(tbl, sname, 'FileType', 'text', 'Delimiter', '\t');
+						fprintf('#####################\n≣≣≣≣ <strong>SAVED TIMED EVENT DATA to: %s</strong>\n#####################\n\n',sname)
+					end
 					assignin('base', 'tS', tS); % assign tS in base for manual checking
 					if ~isempty(me.task.staircase) && isstruct(me.task.staircase)
-						assignin('base', 'staircase', me.task.staircase); % assign tS in base for manual checking
+						assignin('base', 'staircase', me.task.staircase); % assign staircase in base for manual checking
 					end
 				end
 				%================================
@@ -1222,29 +1220,33 @@ classdef runExperiment < optickaCore
 						me.screenSettings.statusbar.URL = me.alyx.sessionURL;
 					end
 					if tS.saveData
-						try
-							if isSecret("AWS_ID")
-								aws = awsManager(getSecret("AWS_ID"),getSecret("AWS_KEY"), "http://172.16.102.77:9000");
-								buckets = aws.list;
-								if ~contains(buckets,lower(me.sessionData.labName))
-									aws.createBucket(lower(me.sessionData.labName));
-								end
-								p = me.paths.ALFPath;
-								rp = [me.sessionData.subjectName '/' me.paths.dateIDShort '/' sprintf('%0.3d',me.paths.sessionID)];	
+						if isSecret("AWS_ID")
+							aws = awsManager(getSecret("AWS_ID"),getSecret("AWS_KEY"), "http://172.16.102.77:9000");
+							buckets = aws.list;
+							if ~contains(buckets,lower(me.sessionData.labName))
+								aws.createBucket(lower(me.sessionData.labName));
+							end
+							p = me.paths.ALFPath;
+							rp = [me.sessionData.subjectName '/' me.paths.dateIDShort '/' sprintf('%0.3d',me.paths.sessionID)];
+							try
 								r = aws.copyFiles(p,lower(me.sessionData.labName));
-								d = dir(p);
-								for i = 3:length(d)
-									if r
+							catch
+								warning('aws.copyFiles FAILED!');
+							end
+							d = dir(p);
+							for i = 3:length(d)
+								if r
+									try
 										dataset = me.alyx.registerFile(['Minio-' me.sessionData.labName], d(i).name, rp);
 										disp(dataset);
+									catch
+										warning('Failed to upload %s to minio',d(i).name);
 									end
-									%dataset = me.alyx.registerFile('Local-Files', sname, rp);
 								end
-							else
-								warning("AWS ID and KEY are not present, cannot upload data to MINIO!!!");
+								%dataset = me.alyx.registerFile('Local-Files', sname, rp);
 							end
-						catch
-							warning("COULD NOT UPLOAD FILES TO ALYX, do so manually!");
+						else
+							warning("AWS ID and KEY are not present, cannot upload data to MINIO!!!");
 						end
 					end
 				end
@@ -1261,7 +1263,8 @@ classdef runExperiment < optickaCore
 					if isa(me.stateMachine,'stateMachine'); me.stateMachine.reset; end
 					if isa(me.stimuli,'metaStimulus'); me.stimuli.reset; end
 				end
-				
+			
+			%================================CATCH	
 			catch ERR
 				me.isRunning = false;
 				removeALF = false;
@@ -1314,7 +1317,7 @@ classdef runExperiment < optickaCore
 				me.behaviouralRecord = [];
 				me.strobeDevice = [];
 				rethrow(ERR);
-			end
+			end % ============END MAIN TRY LOOP
 
 		end
 
@@ -1341,12 +1344,12 @@ classdef runExperiment < optickaCore
 			s.windowed = [0 0 800 600];
 			s.font.TextSize = s.font.TextSize * 2;
 			s.open;
-			s.drawText('===>>> Opticka Testing...');
+			s.drawText('≣≣≣≣⊱ Opticka Testing...');
 			s.flip;
 
 			commandwindow; drawnow();
 
-			fprintf('\n\n=========================\nOPTICKA TESTING:\n\n');
+			fprintf('\n\n=========================\n≣≣≣≣⊱ OPTICKA TESTING:\n\n');
 
 			WaitSecs(0.25);
 
@@ -1843,13 +1846,13 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 			if me.isRunning
 				if ~exist('tag','var'); tag = '#'; end
-				t = sprintf('===>>> %s : %s', tag, infoText(me));
+				t = sprintf('≣≣≣≣⊱ %s : %s', tag, infoText(me));
 				fprintf('%s\n',t);
 				me.behaviouralRecord.info = t;
 				if me.isRunTask
-					me.taskLog.addMessage([],[],t);
+					me.taskLog.addMessage([],[],[],t);
 				else
-					me.runLog.addMessage([],[],t);
+					me.runLog.addMessage([],[],[],t);
 				end
 			end			
 		end
@@ -2343,7 +2346,7 @@ classdef runExperiment < optickaCore
 				io.verbose = false;
 				io.name = 'dummy';
 				me.strobe.device = '';
-				fprintf('\n===>>> No strobe output I/O...\n')
+				fprintf('\n≣≣≣≣ No strobe output I/O...\n')
 			end
 
 			if onlyIO; return; end
@@ -2459,7 +2462,7 @@ classdef runExperiment < optickaCore
 			
 			%--------------first run-----------------
 			if me.task.tick == 1
-				fprintf('\n===>>> START @%s\n\n', infoText(me));
+				fprintf('\n≣≣≣≣ START @%s\n\n', infoText(me));
 				me.stimShown		= false;
 				me.task.isBlank		= true;
 				me.task.startTime	= me.task.timeNow;
@@ -2553,7 +2556,7 @@ classdef runExperiment < optickaCore
 						setStrobeValue(me,me.task.outIndex(1)); %get the strobe word ready
 					end
 				end
-				fprintf('!!!===>>> %i@%.2f B:%i T:%.2f TK:%i \n',me.task.tick,me.task.timeNow-me.task.startTime,me.task.isBlank,me.task.switchTime,me.task.switchTick);
+				fprintf('!!!≣≣≣≣⊱ %i@%.2f B:%i T:%.2f TK:%i \n',me.task.tick,me.task.timeNow-me.task.startTime,me.task.isBlank,me.task.switchTime,me.task.switchTick);
 			end
 		end
 		
@@ -2730,7 +2733,7 @@ classdef runExperiment < optickaCore
 						end
 						var=me.stimuli.controlTable(me.stimuli.tableChoice).variable;
 						delta=me.stimuli.controlTable(me.stimuli.tableChoice).delta;
-						fprintf('======>>> Set Control table %g - %s : %g\n',me.stimuli.tableChoice,var,delta)
+						fprintf('===≣≣≣≣⊱ Set Control table %g - %s : %g\n',me.stimuli.tableChoice,var,delta)
 					end	
 
 				case {'DownArrow','down'}
@@ -2745,7 +2748,7 @@ classdef runExperiment < optickaCore
 						end
 						var=me.stimuli.controlTable(me.stimuli.tableChoice).variable;
 						delta=me.stimuli.controlTable(me.stimuli.tableChoice).delta;
-						fprintf('======>>> Set Control table %g - %s : %g\n',me.stimuli.tableChoice,var,delta)
+						fprintf('===≣≣≣≣⊱ Set Control table %g - %s : %g\n',me.stimuli.tableChoice,var,delta)
 					end
 						
 				case {'LeftArrow','left'} %previous variable 1 value
@@ -2781,7 +2784,7 @@ classdef runExperiment < optickaCore
 							end
 							me.stimuli{stims(i)}.([var 'Out']) = val;
 							me.stimuli{stims(i)}.update();
-							fprintf('======>>> Stimulus #%i -- %s: %.3f (was %.3f)\n',stims(i),var,val,oval)
+							fprintf('===≣≣≣≣⊱ Stimulus #%i -- %s: %.3f (was %.3f)\n',stims(i),var,val,oval)
 						end
 					end
 						
@@ -2818,7 +2821,7 @@ classdef runExperiment < optickaCore
 							end
 							me.stimuli{stims(i)}.([var 'Out']) = val;
 							me.stimuli{stims(i)}.update();
-							fprintf('======>>> Stimulus #%i -- %s: %.3f (%.3f)\n',stims(i),var,val,oval)
+							fprintf('===≣≣≣≣⊱ Stimulus #%i -- %s: %.3f (%.3f)\n',stims(i),var,val,oval)
 						end
 					end
 						
@@ -2831,7 +2834,7 @@ classdef runExperiment < optickaCore
 							me.stimuli.setChoice = length(me.stimuli.stimulusSets);
 						end
 						me.stimuli.showSet(me.stimuli.setChoice);
-						fprintf('======>>> Stimulus Set: #%g | Stimuli: %s\n',me.stimuli.setChoice, num2str(me.stimuli.stimulusSets{me.stimuli.setChoice}))
+						fprintf('===≣≣≣≣⊱ Stimulus Set: #%g | Stimuli: %s\n',me.stimuli.setChoice, num2str(me.stimuli.stimulusSets{me.stimuli.setChoice}))
 					end
 
 				case '.>'
@@ -2843,7 +2846,7 @@ classdef runExperiment < optickaCore
 							me.stimuli.setChoice = 1;
 						end
 						me.stimuli.showSet(me.stimuli.setChoice);
-						fprintf('======>>> Stimulus Set: #%g | Stimuli: %s\n',me.stimuli.setChoice, num2str(me.stimuli.stimulusSets{me.stimuli.setChoice}))
+						fprintf('===≣≣≣≣⊱ Stimulus Set: #%g | Stimuli: %s\n',me.stimuli.setChoice, num2str(me.stimuli.stimulusSets{me.stimuli.setChoice}))
 					end
 
 				case 'r'
@@ -2854,28 +2857,28 @@ classdef runExperiment < optickaCore
 	
 					if trainingSet
 						me.screen.screenXOffset = me.screen.screenXOffset + 1;
-						fprintf('======>>> Screen X Center: %g deg / %g pixels\n',me.screen.screenXOffset,me.screen.xCenter);
+						fprintf('===≣≣≣≣⊱ Screen X Center: %g deg / %g pixels\n',me.screen.screenXOffset,me.screen.xCenter);
 					end
 
 				case '-_'
 					
 					if trainingSet
 						me.screen.screenXOffset = me.screen.screenXOffset - 1;
-						fprintf('======>>> Screen X Center: %g deg / %g pixels\n',me.screen.screenXOffset,me.screen.xCenter);
+						fprintf('===≣≣≣≣⊱ Screen X Center: %g deg / %g pixels\n',me.screen.screenXOffset,me.screen.xCenter);
 					end
 
 				case '[{'
 
 					if trainingSet
 						me.screen.screenYOffset = me.screen.screenYOffset - 1;
-						fprintf('======>>> Screen Y Center: %g deg / %g pixels\n',me.screen.screenYOffset,me.screen.yCenter);
+						fprintf('===≣≣≣≣⊱ Screen Y Center: %g deg / %g pixels\n',me.screen.screenYOffset,me.screen.yCenter);
 					end
 
 				case ']}'
 
 					if trainingSet
 						me.screen.screenYOffset = me.screen.screenYOffset + 1;
-						fprintf('======>>> Screen Y Center: %g deg / %g pixels\n',me.screen.screenYOffset,me.screen.yCenter);
+						fprintf('===≣≣≣≣⊱ Screen Y Center: %g deg / %g pixels\n',me.screen.screenYOffset,me.screen.yCenter);
 					end	
 
 				case 'k'
@@ -2889,7 +2892,7 @@ classdef runExperiment < optickaCore
 								tout = t.time - 0.25;
 								if min(tout) >= 0.1
 									me.stateMachine.editStateByName(stateName,'time',tout);
-									fprintf('======>>> Decrease %s time: %g:%g\n',t.name, min(tout),max(tout));
+									fprintf('===≣≣≣≣⊱ Decrease %s time: %g:%g\n',t.name, min(tout),max(tout));
 								end
 							end
 						end
@@ -2905,7 +2908,7 @@ classdef runExperiment < optickaCore
 							if isfield(t,'time')
 								tout = t.time + 0.25;
 								me.stateMachine.editStateByName(stateName,'time',tout);
-								fprintf('======>>> Increase %s time: %g:%g\n',t.name, min(tout),max(tout));
+								fprintf('===≣≣≣≣⊱ Increase %s time: %g:%g\n',t.name, min(tout),max(tout));
 							end
 							
 						end
@@ -2913,45 +2916,45 @@ classdef runExperiment < optickaCore
 				
 				case 'y'
 					
-					fprintf('======>>> Calibrate ENGAGED!\n');
+					fprintf('===≣≣≣≣⊱ Calibrate ENGAGED!\n');
 					me.pauseToggle = me.pauseToggle + 1; %we go to pause after this so toggle this
 					forceTransition(me.stateMachine, 'calibrate');
 
 				case 'u'
 					
-					fprintf('======>>> Drift OFFSET ENGAGED!\n');
+					fprintf('===≣≣≣≣⊱ Drift OFFSET ENGAGED!\n');
 					me.pauseToggle = me.pauseToggle + 1; %we go to pause after this so toggle this
 					forceTransition(me.stateMachine, 'offset');
 
 				case 'i'
 					
-					fprintf('======>>> Drift CORRECT ENGAGED!\n');
+					fprintf('===≣≣≣≣⊱ Drift CORRECT ENGAGED!\n');
 					me.pauseToggle = me.pauseToggle + 1; %we go to pause after this so toggle this
 					forceTransition(me.stateMachine, 'drift');
 						
 				case 'f'
 					
-					fprintf('======>>> Flash ENGAGED!\n');
+					fprintf('===≣≣≣≣⊱ Flash ENGAGED!\n');
 					me.pauseToggle = me.pauseToggle + 1; %we go to pause after this so toggle this
 					forceTransition(me.stateMachine, 'flash');
 					
 				case 't'
 					
-					fprintf('======>>> MagStim ENGAGED!\n');
+					fprintf('===≣≣≣≣⊱ MagStim ENGAGED!\n');
 					me.pauseToggle = me.pauseToggle + 1; %we go to pause after this so toggle this
 					forceTransition(me.stateMachine, 'magstim');
 
 				case ';:'
 
 					if me.debug && ~isdeployed
-						fprintf('======>>> Override ENGAGED! This is a special DEBUG mode\n');
+						fprintf('===≣≣≣≣⊱ Override ENGAGED! This is a special DEBUG mode\n');
 						me.pauseToggle = me.pauseToggle + 1; %we go to pause after this so toggle this
 						forceTransition(me.stateMachine, 'override');
 					end
 						
 				case 'g'
 					
-					fprintf('======>>> grid ENGAGED!\n');
+					fprintf('===≣≣≣≣⊱ grid ENGAGED!\n');
 					me.pauseToggle = me.pauseToggle + 1; %we go to pause after this so toggle this
 					forceTransition(me.stateMachine, 'showgrid');
 						
@@ -2962,14 +2965,14 @@ classdef runExperiment < optickaCore
 						if me.eyeTracker.fixation.initTime < 0.01
 							me.eyeTracker.fixation.initTime = 0.01;
 						end
-						fprintf('======>>> FIXATION INIT TIME: %g\n',me.eyeTracker.fixation.initTime)
+						fprintf('===≣≣≣≣⊱ FIXATION INIT TIME: %g\n',me.eyeTracker.fixation.initTime)
 					end
 
 				case 'x'
 					
 					if trainingSet
 						me.eyeTracker.fixation.initTime = me.eyeTracker.fixation.initTime + 0.1;
-						fprintf('======>>> FIXATION INIT TIME: %g\n',me.eyeTracker.fixation.initTime)
+						fprintf('===≣≣≣≣⊱ FIXATION INIT TIME: %g\n',me.eyeTracker.fixation.initTime)
 					end
 
 				case 'c'
@@ -2979,14 +2982,14 @@ classdef runExperiment < optickaCore
 						if me.eyeTracker.fixation.time < 0.01
 							me.eyeTracker.fixation.time = 0.01;
 						end
-						fprintf('======>>> FIXATION TIME: %g\n',me.eyeTracker.fixation.time)
+						fprintf('===≣≣≣≣⊱ FIXATION TIME: %g\n',me.eyeTracker.fixation.time)
 					end
 
 				case 'v'
 
 					if trainingSet
 						me.eyeTracker.fixation.time = me.eyeTracker.fixation.time + 0.1;
-						fprintf('======>>> FIXATION TIME: %g\n',me.eyeTracker.fixation.time)
+						fprintf('===≣≣≣≣⊱ FIXATION TIME: %g\n',me.eyeTracker.fixation.time)
 					end
 
 				case 'b'
@@ -2996,24 +2999,24 @@ classdef runExperiment < optickaCore
 						if me.eyeTracker.fixation.radius < 0.1
 							me.eyeTracker.fixation.radius = 0.1;
 						end
-						fprintf('======>>> FIXATION RADIUS: %g\n',me.eyeTracker.fixation.radius)
+						fprintf('===≣≣≣≣⊱ FIXATION RADIUS: %g\n',me.eyeTracker.fixation.radius)
 					end
 
 				case 'n'
 					
 					if trainingSet
 						me.eyeTracker.fixation.radius = me.eyeTracker.fixation.radius + 0.1;
-						fprintf('======>>> FIXATION RADIUS: %g\n',me.eyeTracker.fixation.radius)
+						fprintf('===≣≣≣≣⊱ FIXATION RADIUS: %g\n',me.eyeTracker.fixation.radius)
 					end
 
 				case 's'
 					if isempty(curtoggle);curtoggle=true; end
 					curtoggle = ~curtoggle;
 					if curtoggle
-						fprintf('======>>> Show Cursor!\n');
+						fprintf('===≣≣≣≣⊱ Show Cursor!\n');
 						ShowCursor('CrossHair',me.screen.win);
 					else
-						fprintf('======>>> Hide Cursor!\n');
+						fprintf('===≣≣≣≣⊱ Hide Cursor!\n');
 						HideCursor(me.screen.win);
 					end
 					

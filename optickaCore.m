@@ -147,9 +147,9 @@ classdef optickaCore < handle
 				if create
 					s = mkdir(path);
 					if s == 0; error('Cannot make Save File directory!!!'); end
-					fprintf('---> Path: %s created...\n',path);
+					fprintf('≣≣≣≣⊱ Path: %s created...\n',path);
 				else
-					fprintf('---> No path created for: %s created...\n',path);
+					fprintf('≣≣≣≣⊱ No path created for: %s created...\n',path);
 				end
 			else
 				isMatch = false;
@@ -170,13 +170,13 @@ classdef optickaCore < handle
 						path = [path filesep sprintf('%0.3d',sessionID) filesep];
 						s = mkdir(path);
 						if s == 0; error('Cannot make Save File directory!!!'); end
-						fprintf('---> Path: %s created...\n',path);
+						fprintf('≣≣≣≣⊱ Path: %s created...\n',path);
 					else
 						path = [path filesep sprintf('%0.3d',sessionID) filesep];
 						if exist(path,'dir')
-							fprintf('---> Path: %s found...\n',path);
+							fprintf('≣≣≣≣⊱ Path: %s found...\n',path);
 						else
-							warning('---> Path: %s should exist but doesn''t...\n',path);
+							warning('≣≣≣≣⊱ Path: %s should exist but doesn''t...\n',path);
 						end
 					end
 				else
@@ -184,7 +184,7 @@ classdef optickaCore < handle
 					path = [path filesep sprintf('%0.3d',sessionID) filesep];
 					s = mkdir(path);
 					if s == 0; error('Cannot make Save File directory!!!'); end
-					fprintf('---> Path: %s created...\n',path);
+					fprintf('≣≣≣≣⊱ Path: %s created...\n',path);
 				end
 			end
 			name = [dateID '_' sprintf('%0.3d',sessionID) '_' subject];
@@ -774,7 +774,7 @@ classdef optickaCore < handle
 			elseif isstruct(args)
 				return
 			else
-				error('---> makeArgs: You need to pass name:value pairs / structure of name:value fields!');
+				error('≣≣≣≣⊱ makeArgs: You need to pass name:value pairs / structure of name:value fields!');
 			end
 		end
 
@@ -1034,15 +1034,13 @@ classdef optickaCore < handle
 			if ~exist('override','var');override = false;end
 			if me.verbose==true || override == true
 				if ~exist('message','var') || isempty(message)
-					fprintf(['---> ' me.fullName_ ': ' in '\n']);
+					fprintf(['≣≣≣≣⊱ ' me.fullName_ ': ' in '\n']);
 				else
-					fprintf(['---> ' me.fullName_ ': ' message ' | ' in '\n']);
+					fprintf(['≣≣≣≣⊱ ' me.fullName_ ': ' message ' | ' in '\n']);
 				end
 			end
 		end
-		function salutation(me, varargin)
-			logOutput(me, varargin{:});
-		end
+		function salutation(me, varargin); logOutput(me, varargin{:}); end
 		
 	end
 end

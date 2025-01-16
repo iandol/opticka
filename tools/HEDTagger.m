@@ -21,9 +21,9 @@ classdef HEDTagger < handle
 			try  pyrun("from hed import _version as vr; print(f'Using HEDTOOLS version: {str(vr.get_versions())}')"); end
 		end
 
-		function outputArg = makeHED(me, tL, bR, sM)
+		function outputArg = makeHED(me, tL, sM, bR)
 
-			if isa(tL,'timeLogger')
+			if exist('tL','var') && isa(tL,'timeLogger')
 				msgs = tL.messageTable();
 				for jj = 1:length(msgs)
 					data{jj,1} = msgs{jj,1};
@@ -45,6 +45,9 @@ classdef HEDTagger < handle
 					date{jj,7} = 'timeLog';
 				end
 			end	
+			if exist('sM','var') && isa(tL,'stateMachine')
+
+			end
 		end
 
 		
