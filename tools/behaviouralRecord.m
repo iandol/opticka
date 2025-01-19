@@ -12,16 +12,23 @@ classdef behaviouralRecord < optickaCore
 	properties
 		%> verbosity
 		verbose				= true
+		% response list
 		response			= []
 		rt1					= []
 		rt2					= []
 		date				= []
 		info				= ''
+		% a local copy of X position (eye or touch)
 		xAll				= []
+		% a local copy of Y position (eye or touch)
 		yAll				= []
+		% pupil size (eye only)
 		pupilAll			= []
+		% the name of the state which is equivalent to a "correct"
 		correctStateName	= "correct"
+		% the value to assign a correct
 		correctStateValue	= 1;
+		% the name of the states which are equivalent to "incorrect"
 		breakStateName		= ["breakfix", "incorrect"]
 		breakStateValue		= -1
 		rewardTime			= 300

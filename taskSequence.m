@@ -161,9 +161,9 @@ classdef taskSequence < optickaCore & dynamicprops
 		%> nVar template and default values
 		varTemplate struct = struct('name','','stimulus',[],'values',[],'offsetstimulus',[],'offsetvalue',[])
 		%> blockVar template and default values
-		blockTemplate struct = struct('values',{{'none'}},'probability',[1],'comment','block level factor')
+		blockTemplate struct = struct('values',{{'none'}},'probability',1,'comment','block level factor')
 		%> blockVar template and default values
-		trialTemplate struct = struct('values',{{'none'}},'probability',[1],'comment','trial level factor')
+		trialTemplate struct = struct('values',{{'none'}},'probability',1,'comment','trial level factor')
 		%> Set up the task structures needed
 		tProp cell = {'totalRuns',1,'thisBlock',1,'thisRun',1,'isBlank',false,...
 			'isTimeNow',1,'ibTimeNow',1,'response',[],'responseInfo',{},'tick',0,'blankTick',0,...

@@ -181,14 +181,14 @@ classdef touchManager < optickaCore
 		%>
 		%> @return
 		% ===================================================================
-			if me.isDummy; me.isOpen = false; return; end
+			if me.isDummy; me.isOpen = false; me.isQueue = false; return; end
 			TouchQueueStop(me.devices(me.device));
 			me.isOpen = false; me.isQueue = false;
 			if me.verbose; logOutput(me,'stop','Stopped queue...'); end
 		end
 
 		% ===================================================================
-		function close(me)
+		function close(me, choice)
 		%> @fn close(me, choice)
 		%>
 		%> @param choice which touch device to use, default uses me.device
