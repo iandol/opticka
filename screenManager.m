@@ -767,7 +767,7 @@ classdef screenManager < optickaCore
 				stim = dotsStimulus('mask',true,'size',10,'speed',2,...
 					'density',3,'dotSize',0.3);
 				open(me);
-				disp('--->>> screenManager running a quick demo...');
+				disp('≣≣≣≣⊱ screenManager running a quick demo...');
 				if me.stereoMode > 0
 					stim.mask = false;
 					stim.type='simple';
@@ -1692,7 +1692,7 @@ classdef screenManager < optickaCore
 			xPos = (mouseGlobalX - me.xCenter) / me.ppd_;
 			yPos = (mouseGlobalY - me.yCenter) / me.ppd_;
 			if verbose
-				fprintf('--->>> MOUSE POSITION: \tX = %+2.2f (%4.2f) \t\tY = %+2.2f (%4.2f)\n',xPos,mouseGlobalX,yPos,mouseGlobalY);
+				fprintf('≣≣≣≣⊱ MOUSE POSITION: \tX = %+2.2f (%4.2f) \t\tY = %+2.2f (%4.2f)\n',xPos,mouseGlobalX,yPos,mouseGlobalY);
 			end
 		end
 
