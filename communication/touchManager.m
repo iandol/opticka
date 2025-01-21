@@ -244,19 +244,19 @@ classdef touchManager < optickaCore
 				if any(b) && ~me.lastPressed
 					type = 2; motion = false; press = true;  
 					me.lastPressed = true;
-					fprintf('E:%i ',type);
+					%fprintf('E:%i ',type);
 				elseif any(b) && me.lastPressed
 					type = 3; motion = true; press = true;  
 					me.lastPressed = true;
-					fprintf('E:%i ',type);
+					%fprintf('E:%i ',type);
 				elseif ~any(b) && me.lastPressed
 					type = 4; motion = false; press = false; 
 					me.lastPressed = false;
-					fprintf('E:%i ',type);
+					%fprintf('E:%i ',type);
 				else
 					type = -1; motion = false; press = 0;  
 					me.lastPressed = false;
-					fprintf('E:%i ',type);
+					%fprintf('E:%i ',type);
 				end
 				if type > 0
 					event = struct('Type',type,'Time',GetSecs,...
@@ -361,10 +361,6 @@ classdef touchManager < optickaCore
 					end
 				end
 				me.event.result = result;
-			end
-			if me.verbose
-				fprintf('--->>> checkTouchWindows #:%i type:%i new:%i move:%i press:%i release:%i {%.1fX %.1fY} result:%i\n',...
-				me.eventID,event.Type,me.eventNew,me.eventMove,me.eventPressed,me.eventRelease,me.x,me.y,result);
 			end
 		end
 
@@ -505,7 +501,7 @@ classdef touchManager < optickaCore
 			me.isSearching = searching;
 			me.isReleased = release;
 			if me.verbose
-				fprintf('%s--->%i n:%i mv:%i p:%i r:%i {%.1fX %.1fY} tt:%.2f st:%.2f ht:%.2f rt:%.2f %i %i h:%i t:%i r:%i rl:%i s:%i f:%i N:%i\n',...
+				fprintf('≣≣≣≣⊱ isHold %s-%i new:%i mv:%i prs:%i rel:%i {%.1fX %.1fY} tt:%.2f st:%.2f ht:%.2f rt:%.2f %i %i h:%i t:%i r:%i rl:%i s:%i f:%i N:%i\n',...
 				st,me.eventID,me.eventNew,me.eventMove,me.eventPressed,me.eventRelease,me.x,me.y,...
 				me.hold.total,me.hold.search,me.hold.length,me.hold.release,...
 				me.hold.inWindow,me.hold.touched,...
