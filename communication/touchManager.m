@@ -424,7 +424,7 @@ classdef touchManager < optickaCore
 				me.wasNegation = true;
 				searching = false;
 				failed = true;
-				if me.verbose; fprintf('--->>> touchManager -100 NEGATION!\n'); end
+				if me.verbose; fprintf('≣≣≣≣⊱ touchManager -100 NEGATION!\n'); end
 				return
 			end
 
@@ -501,7 +501,7 @@ classdef touchManager < optickaCore
 			me.isSearching = searching;
 			me.isReleased = release;
 			if me.verbose
-				fprintf('≣≣≣≣⊱ isHold %s-%i new:%i mv:%i prs:%i rel:%i {%.1fX %.1fY} tt:%.2f st:%.2f ht:%.2f rt:%.2f %i %i h:%i t:%i r:%i rl:%i s:%i f:%i N:%i\n',...
+				fprintf('≣≣≣≣⊱ tM.isHold %s-%i new:%i mv:%i prs:%i rel:%i {%.1fX %.1fY} tt:%.2f st:%.2f ht:%.2f rt:%.2f %i %i h:%i t:%i r:%i rl:%i s:%i f:%i N:%i\n',...
 				st,me.eventID,me.eventNew,me.eventMove,me.eventPressed,me.eventRelease,me.x,me.y,...
 				me.hold.total,me.hold.search,me.hold.length,me.hold.release,...
 				me.hold.inWindow,me.hold.touched,...
@@ -584,7 +584,7 @@ classdef touchManager < optickaCore
 					me.window.radius = im.size/2;
 					update(im);
 					if useaudio;beep(a,1000,0.1,0.1);end
-					fprintf('\n\nTRIAL %i -- X = %i Y = %i R = %.2f\n',i,me.window.X,me.window.Y,me.window.radius);
+					fprintf('\n\nTouchManager Demo TRIAL %i -- X = %i Y = %i R = %.2f\n',i,me.window.X,me.window.Y,me.window.radius);
 					rect = toDegrees(sM, im.mvRect, 'rect');
 					reset(me);
 					flush(me); 	%===================!!! flush the queue
@@ -619,7 +619,7 @@ classdef touchManager < optickaCore
 					end
 					drawTextNow(sM, result);
 					tend = vbl - ts;
-					fprintf('RESULT: %s in %.2f \n',result,tend);
+					fprintf('≣≣≣≣⊱ TouchManager Demo RESULT: %s in %.2f \n',result,tend);
 					disp(me.hold);
 					WaitSecs(2);
 				end
@@ -683,7 +683,7 @@ classdef touchManager < optickaCore
 				end
 			end
 			% ---- circular test
-			if length(radius) == 1
+			if isscalar(radius)
 				r = sqrt((x - xWin).^2 + (y - yWin).^2); %fprintf('X: %.1f-%.1f Y: %.1f-%.1f R: %.1f-%.1f\n',x, xWin, me.y, yWin, r, radius);
 				window = find(r < radius);
 				windowneg = find(r < negradius);

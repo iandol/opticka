@@ -243,7 +243,7 @@ classdef animationManager < optickaCore
 				me.bodies(thisBody.idx) = thisBody;
 			end
 			if me.verbose
-				fprintf('---> addBody: %s:%s:%s -- X:%+0.2f Y:%+0.2f -- %s\n',thisBody.name,type,shape,stimulus.xPosition,stimulus.yPosition,tx);
+				fprintf('≣≣≣≣⊱ addBody: %s:%s:%s -- X:%+0.2f Y:%+0.2f -- %s\n',thisBody.name,type,shape,stimulus.xPosition,stimulus.yPosition,tx);
 			end
 			makeTrackIndex(me);
 		end
@@ -301,7 +301,7 @@ classdef animationManager < optickaCore
 				pos2 = body.getWorldCenter();
 				lv2 = body.getLinearVelocity();
 				a2 = body.getAngularVelocity();
-				fprintf('--->>> EDITBODY: x:%.1f->%.1f y:%.1f->%.1f vx:%.1f->%.1f vy:%.1f->%.1f a:%.1f->%.1f\n',...
+				fprintf('≣≣≣≣⊱ editBody: x:%.1f->%.1f y:%.1f->%.1f vx:%.1f->%.1f vy:%.1f->%.1f a:%.1f->%.1f\n',...
 					pos.x,pos2.x,pos.y,pos2.y,lv.x,lv2.x,lv.y,lv2.y,a,a2);
 			end
 		end
@@ -823,7 +823,7 @@ classdef animationManager < optickaCore
 			settings.setMinimumAtRestTime(0.2); %def = 0.5
 
 			setupBodies(me);
-			fprintf('--->>> RigidBody World with %.3fs step time created!\n',settings.getStepFrequency);
+			fprintf('≣≣≣≣⊱ RigidBody World with %.3fs step time created!\n',settings.getStepFrequency);
 			fprintf('\t Adding bodies: ');
 			for i = 1:me.nBodies
 				fprintf('%s  ',me.bodies(i).name);
@@ -912,6 +912,7 @@ classdef animationManager < optickaCore
 		%>
 		% ===================================================================
 		function delete(me)
+			reset(me);
 			me.salutation('DELETE Method','animationManager object Cleaning up...')
 		end
 		
