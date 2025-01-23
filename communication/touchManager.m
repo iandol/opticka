@@ -136,7 +136,7 @@ classdef touchManager < optickaCore
 			elseif isempty(me.devices)
 				me.comment = 'No Touch Screen are available, please check USB!';
 				fprintf('--->touchManager: %s\n',me.comment);
-			elseif length(me.devices)==1
+			elseif isscalar(me.devices)
 				me.comment = sprintf('found ONE Touch Screen: %s',me.names{1});
 				fprintf('--->touchManager: %s\n',me.comment);
 			elseif length(me.devices)==2
@@ -238,7 +238,7 @@ classdef touchManager < optickaCore
 		%> @param
 		%> @return event structure
 		% ===================================================================
-			event = []; mx = []; my = []; b = [];
+			event = []; 
 			if me.isDummy
 				[mx, my, b] = GetMouse(me.swin);
 				if any(b) && ~me.lastPressed
@@ -266,7 +266,6 @@ classdef touchManager < optickaCore
 					'Pressed',press,'Motion',motion,...
 					'Keycode',55);
 					event.xy = me.screen.toDegrees([event.MappedX event.MappedY],'xy');
-					me.event = event;
 					me.eventType	= event.Type;
 					me.x = event.xy(1); me.y = event.xy(2);
 				end
@@ -299,7 +298,7 @@ classdef touchManager < optickaCore
 				end
 				event.xy = me.screen.toDegrees([event.MappedX event.MappedY],'xy');
 				me.event = event;
-				me.x = event.xy(1); me.y = event.xy(2);
+				me.x = event.xy(1);  me.y = event.xy(2);
 			end
 		end
 
@@ -342,21 +341,21 @@ classdef touchManager < optickaCore
 			nWindows = max([1 size(windows,1)]);
 			result = false; win = 1; wasEvent = false; xy = [];
 
-			event = getEvent(me);
+			evt = getEvent(me);
 
-			while iscell(event) && ~isempty(event); event = event{1}; end
-			if isempty(event); return; end
+			while iscell(evt) && ~isempty(evt); evt = evt{1}; end
+			if isempty(evt); return; end
 
 			wasEvent = true;
 
-			if panelType == 2; event.MappedX = me.screenVals.width - event.MappedX; end
+			if panelType == 2; evt.MappedX = me.screenVals.width - evt.MappedX; end
 
-			if ~isempty(event.xy)
+			if ~isempty(evt.xy)
 				if isempty(windows)
-					result = calculateWindow(me, event.xy(1), event.xy(2));
+					result = calculateWindow(me, evt.xy(1), evt.xy(2));
 				else
 					for i = 1 : nWindows
-						result(i,1) = calculateWindow(me, event.xy(1), event.xy(2), windows(i,:));
+						result(i,1) = calculateWindow(me, evt.xy(1), evt.xy(2), windows(i,:));
 						if result(i,1); win = i; result = true; break;end
 					end
 				end
