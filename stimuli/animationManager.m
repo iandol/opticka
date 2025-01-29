@@ -56,15 +56,6 @@ classdef animationManager < optickaCore
 
 	properties (Hidden = true)
 		wallColour = [1 0.5 0 1];
-	end
-
-	properties (SetAccess = private, GetAccess = public)
-		%> tick updates +1 on each draw, resets on each update
-		tick double = 0
-		%> current time step in simulation
-		timeStep = 0
-		%> angle
-		angle = 0
 		%>
 		linearVelocity
 		%>
@@ -77,27 +68,39 @@ classdef animationManager < optickaCore
 		potentialEnergy
 		%>
 		torque
+	end
+
+	properties (SetAccess = private, GetAccess = public)
+		%> tick updates +1 on each draw, resets on each update
+		tick double		= 0
+		%> current time step in simulation
+		timeStep		= 0
+		%> angle
+		angle			= 0
 		%> computed X position 
-		x double = []
+		x double		= []
 		%> computed Y position
-		y double = []
+		y double		= []
 		%> X update 
 		dX double
 		%> Y update 
 		dY double
 		%> pixels per degree, inhereted from a screenManager
-		ppd double = 36
+		ppd double		= 36
 		%> did we hit left wall?
-		hitFloor = false
+		hitFloor		= false
 		%> did we hit left wall?
-		hitCeiling = false
+		hitCeiling		= false
 		%> did we hit left wall?
-		hitLeftWall = false
+		hitLeftWall		= false
 		%> did we hit left wall?
-		hitRightWall = false
+		hitRightWall	= false
 		%> world for rigidbody simulation
 		world = []
-		screenBounds = []
+		screenBounds	= []
+		%> types of bodies in dyn4j
+		massType		= struct('NORMAL',[],'INFINITE',[],'FIXED_ANGULAR_VELOCITY',[],'FIXED_LINEAR_VELOCITY',[])
+		
 	end
 	
 	properties (Access = protected)
@@ -108,7 +111,6 @@ classdef animationManager < optickaCore
 		isLeftWall		= false
 		isRightWall		= false
 		isCeiling		= false
-		massType		= struct('NORMAL',[],'INFINITE',[],'FIXED_ANGULAR_VELOCITY',[],'FIXED_LINEAR_VELOCITY',[])
 		bodyTemplate	= struct('idx',0,'hash',[],'name','','type','','body',[],...
 			'stimulus',[],'shape','Circle','radius',2,'density',1,'theta',0,...
 			'friction',0.2,'elasticity',0.75,'position',[0 0],'velocity',[0 0])
@@ -146,7 +148,7 @@ classdef animationManager < optickaCore
 		%>
 		%> @param stimulus -- the stimulus object
 		%> @param shape -- what shape to give it in the physics simulation
-		%> @param type -- normal (move & collide) | infinite (non-moveable, collidable) | sensor (non-moveable, non-collidable)
+		%> @param type -- normal|bullet (move & collide) | infinite (non-moveable, collidable) | sensor (non-moveable, non-collidable)
 		%> @param density -- 
 		%> @param friction --
 		%> @param elasticity --
@@ -219,7 +221,13 @@ classdef animationManager < optickaCore
 			thisBody.body.addFixture(thisShape);
 			thisBody.hash = thisBody.body.hashCode;
 			thisBody.name = stimulus.name;
-			thisBody.type = type;
+			if matches(type,'bullet')
+				thisBody.type = 'normal';
+				thisBody.body.setBullet(true);
+			else
+				thisBody.type = type;
+			end
+			thisBody.isBullet = thisBody.body.isBullet;
 			thisBody.stimulus = stimulus;
 			thisBody.shape = shape;
 			thisBody.density = density;
@@ -469,9 +477,10 @@ classdef animationManager < optickaCore
 		%> @brief return the first body matching name or hash
 		%>
 		% ===================================================================
-		function [body, trackidx, idx, stim] = getBody(me, id)
+		function [body, trackidx, idx, stim, hash] = getBody(me, id, bodyType)
 			body = []; idx = []; trackidx = []; stim = [];
 			if ~exist('id','var') || isempty(id); return; end
+			if ~exist('bodyType','var') || isempty(bodyType); bodyType = 'native'; end
 			if ischar(id)
 				names = string({me.bodies.name});
 				idx = find(matches(names,id));
@@ -480,7 +489,12 @@ classdef animationManager < optickaCore
 				idx = find(hashes == id);
 			end
 			if ~isempty(idx)
-				body = me.bodies(idx).body;
+				if matches(bodyType,'struct')
+					body = me.bodies(idx);
+				else
+					body = me.bodies(idx).body;
+				end
+				hash = me.bodies(idx).hash;
 				stim = me.bodies(idx).stimulus;
 				trackidx = find(me.trackIndex == idx);
 			end
@@ -494,13 +508,17 @@ classdef animationManager < optickaCore
 			fixture = [];
 			if ~exist('name','var') || isempty(name); return; end
 			if ~exist('num','var') || isempty(num); num = 0; end
-			isBody = false;
-			a = 1;
-			while a <= me.nBodies
-				if matches(name, me.bodies(a).name); isBody = true; break; end
-				a = a + 1;
-			end
-			if isBody; fixture = me.bodies(a).body.getFixture(num); end
+			body = me.getBody(name);
+			if ~isempty(body); fixture = body.getFixture(num); end
+		end
+
+		% ===================================================================
+		%> @brief 
+		%>
+		% ===================================================================
+		function setSensorState(me, name, state)
+			fixture = me.getFixture(name,0);
+			fixture.setSensor(state);
 		end
 
 		% ===================================================================
@@ -530,7 +548,7 @@ classdef animationManager < optickaCore
 		function value = get.nObstacles(me)
 			value = 0;
 			for jj = 1:me.nBodies
-				if ~matches(me.bodies(jj).type, 'normal')
+				if ~matches(me.bodies(jj).type, {'normal','sensor'})
 					value = value + 1;
 				end
 			end
@@ -559,7 +577,9 @@ classdef animationManager < optickaCore
 
 			% open a new PTB screen
 			s = screenManager;
-			if max(Screen('Screens')) == 0; s.windowed = [0 0 1200 800]; end
+			if max(Screen('Screens')) == 0
+				PsychDebugWindowConfiguration([],0.6);
+			end
 			sv = open(s);
 
 			% create a new animation manager
@@ -573,21 +593,37 @@ classdef animationManager < optickaCore
 			moon.name = 'moon';
 			moon.xPosition = sv.leftInDegrees+4;
 			moon.yPosition = -5;
-			moon.angle = 85;
-			moon.speed = 20;
+			moon.direction = 75;
+			moon.speed = 25;
+
+			moon2 = clone(moon);
+			moon2.xPosition = -moon2.xPosition;
+			moon2.speed = -5;
+			moon2.direction = -80;
+
+			moon3 = clone(moon);
+			moon3.xPosition = 0;
+			moon3.yPosition = sv.bottomInDegrees + 5;
+			moon3.speed = 25;
+			moon3.direction = -180;
 			
-			sensor = discStimulus('colour',[0.7 0.5 0.5 0.2],'size',8);
+			sensor = discStimulus('colour',[0.7 0.5 0.5 0.3],'size',8);
 			sensor.name = 'sensor';
 
 			% add the stimuli as physics bodies
 			% me.addBody(stimulus, shape, type, density, friction, elasticity, angular velocity)
 			a.addBody(sensor,'Circle','sensor');
 			a.addBody(moon, 'Circle', 'normal', 10, 0.2, 0.8, moon.speed);
+			a.addBody(moon2, 'Circle', 'normal', 10, 0.2, 0.8, moon2.speed);
+			a.addBody(moon3, 'Circle', 'normal', 10, 0.2, 0.8, moon3.speed);
 
 			% setup all stimuli with PTB screen
 			stims.stimuli{end+1} = sensor;
 			stims.stimuli{end+1} = moon;
+			stims.stimuli{end+1} = moon2;
+			stims.stimuli{end+1} = moon3;
 			stims.setup(s);
+			edit(stims, 1:4, 'colourOut', [0.7 0.3 0 1]);
 			
 			% setup animationmamager with PTB screen
 			a.setup(s);
@@ -651,8 +687,8 @@ classdef animationManager < optickaCore
 
 			Priority(0);
 			close(s)
-			reset(moon);
-			
+			reset(stims); 
+
 			figure;
 			tiledlayout(2,1);
 			nexttile;
@@ -829,6 +865,7 @@ classdef animationManager < optickaCore
 				fprintf('%s  ',me.bodies(i).name);
 				me.world.addBody(me.bodies(i).body);
 			end
+			fprintf('\n');
 			makeTrackIndex(me);
 		end
 
@@ -886,7 +923,6 @@ classdef animationManager < optickaCore
 		%>
 		% ===================================================================
 		function updateStimuli(me)
-			a = 0;
 			for ii = me.trackIndex
 				me.bodies(ii).stimulus.angleOut = rad2deg(me.bodies(ii).theta);
 				me.bodies(ii).stimulus.update();

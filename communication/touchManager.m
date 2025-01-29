@@ -70,6 +70,7 @@ classdef touchManager < optickaCore
 	end
 
 	properties (Access = private)
+		deferLog			= false
 		lastPressed			= false
 		pressed				= false
 		ppd					= 36
@@ -225,62 +226,55 @@ classdef touchManager < optickaCore
 			navail = 0;
 			if me.isDummy
 				[~, ~, b] = GetMouse;
-				if any(b); navail = 1; end
+				if any(b) || me.lastPressed; navail = 1; end
 			else
 				navail = TouchEventAvail(me.devices(me.device));
 			end
 		end
 
 		% ===================================================================
-		function event = getEvent(me)
+		function evt = getEvent(me)
 		%> @fn getEvent
 		%>
 		%> @param
 		%> @return event structure
 		% ===================================================================
-			event = []; 
+			evt = [];
 			if me.isDummy
 				[mx, my, b] = GetMouse(me.swin);
 				if any(b) && ~me.lastPressed
 					type = 2; motion = false; press = true;  
 					me.lastPressed = true;
-					%fprintf('E:%i ',type);
 				elseif any(b) && me.lastPressed
 					type = 3; motion = true; press = true;  
 					me.lastPressed = true;
-					%fprintf('E:%i ',type);
 				elseif ~any(b) && me.lastPressed
 					type = 4; motion = false; press = false; 
 					me.lastPressed = false;
-					%fprintf('E:%i ',type);
 				else
 					type = -1; motion = false; press = 0;  
 					me.lastPressed = false;
-					%fprintf('E:%i ',type);
 				end
 				if type > 0
-					event = struct('Type',type,'Time',GetSecs,...
+					evt = struct('Type',type,'Time',GetSecs,...
 					'X',mx,'Y',my,'ButtonStates',b,...
 					'NormX',mx/me.screenVals.width,'NormY',my/me.screenVals.height, ...
 					'MappedX',mx,'MappedY',my,...
 					'Pressed',press,'Motion',motion,...
 					'Keycode',55);
-					event.xy = me.screen.toDegrees([event.MappedX event.MappedY],'xy');
-					me.eventType	= event.Type;
-					me.x = event.xy(1); me.y = event.xy(2);
 				end
 			else
 				if me.drainEvents
-					while eventAvail(me); event = TouchEventGet(me.devices(me.device), me.swin, 0); end
+					while eventAvail(me); evt = TouchEventGet(me.devices(me.device), me.swin, 0); end
 				else
-					event = TouchEventGet(me.devices(me.device), me.swin, 0);
+					evt = TouchEventGet(me.devices(me.device), me.swin, 0);
 				end
 			end
 			me.eventNew = false; me.eventMove = false; me.eventRelease = false; me.eventPressed = false;
-			if ~isempty(event)
-				me.eventID		= event.Keycode;
-				me.eventType	= event.Type;
-				switch event.Type
+			if ~isempty(evt)
+				me.eventID		= evt.Keycode;
+				me.eventType	= evt.Type;
+				switch evt.Type
 					case 2 %NEW
 						me.eventNew = true;
 						me.eventPressed = true;
@@ -290,15 +284,16 @@ classdef touchManager < optickaCore
 					case 4 %RELEASE
 						me.eventRelease = true;
 					case 5 %ERROR
-						disp('Event lost!');
-						me.event = []; event = [];
+						warning('touchManager: Event lost!');
+						me.event = []; evt = [];
 						return
 					otherwise
 						
 				end
-				event.xy = me.screen.toDegrees([event.MappedX event.MappedY],'xy');
-				me.event = event;
-				me.x = event.xy(1);  me.y = event.xy(2);
+				if me.panelType == 2; evt.changeX = true; evt.MappedX = me.screenVals.width - evt.MappedX; end
+				evt.xy = me.screen.toDegrees([evt.MappedX evt.MappedY],'xy');
+				me.event = evt;
+				me.x = evt.xy(1); me.y = evt.xy(2);
 			end
 		end
 
@@ -328,38 +323,42 @@ classdef touchManager < optickaCore
 		end
 
 		% ===================================================================
-		function [result, win, wasEvent] = checkTouchWindows(me, windows, panelType)
-		%> @fn [result, win, wasEvent] = checkTouchWindows(me, windows, panelType)
+		function [result, win, wasEvent] = checkTouchWindows(me, windows)
+		%> @fn [result, win, wasEvent] = checkTouchWindows(me, windows)
+		%>
+		%> Simply get latest touch event and check if it is in the defined window
 		%>
 		%> @param windows: [optional] touch rects to test (default use window parameters)
-		%> @param panelType: [optional] 1 = front panel, 2 = back panel (need to reverse X)
 		%> @return result: -100 = negation, true / false otherwise
 		% ===================================================================
 			if ~exist('windows','var'); windows = []; end
-			if ~exist('panelType','var') || isempty(panelType); panelType = me.panelType; end
-
+			
 			nWindows = max([1 size(windows,1)]);
-			result = false; win = 1; wasEvent = false; xy = [];
+			result = false; win = 1; wasEvent = false;
 
 			evt = getEvent(me);
 
 			while iscell(evt) && ~isempty(evt); evt = evt{1}; end
+			
 			if isempty(evt); return; end
 
 			wasEvent = true;
 
-			if panelType == 2; evt.MappedX = me.screenVals.width - evt.MappedX; end
-
 			if ~isempty(evt.xy)
 				if isempty(windows)
-					result = calculateWindow(me, evt.xy(1), evt.xy(2));
+					[result, win] = calculateWindow(me, evt.xy(1), evt.xy(2));
 				else
 					for i = 1 : nWindows
-						result(i,1) = calculateWindow(me, evt.xy(1), evt.xy(2), windows(i,:));
+						[result(i,1), win] = calculateWindow(me, evt.xy(1), evt.xy(2), windows(i,:));
 						if result(i,1); win = i; result = true; break;end
 					end
 				end
 				me.event.result = result;
+			end
+			if me.verbose && ~me.deferLog
+				fprintf('≣checkWin⊱%i type:%i result:%i new:%i mv:%i prs:%i rel:%i {%.1fX %.1fY} win:%i\n',...
+				me.eventID, evt.Type, result,me.eventNew,me.eventMove,me.eventPressed,me.eventRelease,...
+				me.x,me.y,win);
 			end
 		end
 
@@ -395,8 +394,9 @@ classdef touchManager < optickaCore
 					me.hold.search = me.hold.total;
 				end
 			end
-
+			me.deferLog = true;
 			[held, ~, wasEvent] = checkTouchWindows(me);
+			me.deferLog = false;
 			if ~wasEvent % no touch
 				if me.hold.inWindow % but previous event was touch inside window
 					me.hold.length = me.hold.now - me.hold.init;
@@ -500,7 +500,7 @@ classdef touchManager < optickaCore
 			me.isSearching = searching;
 			me.isReleased = release;
 			if me.verbose
-				fprintf('≣≣≣≣⊱ tM.isHold %s-%i new:%i mv:%i prs:%i rel:%i {%.1fX %.1fY} tt:%.2f st:%.2f ht:%.2f rt:%.2f %i %i h:%i t:%i r:%i rl:%i s:%i f:%i N:%i\n',...
+				fprintf('≣isHold⊱%s:%i new:%i mv:%i prs:%i rel:%i {%.1fX %.1fY} tt:%.2f st:%.2f ht:%.2f rt:%.2f inWin:%i tchd:%i h:%i ht:%i r:%i rl:%i s:%i fail:%i N:%i\n',...
 				st,me.eventID,me.eventNew,me.eventMove,me.eventPressed,me.eventRelease,me.x,me.y,...
 				me.hold.total,me.hold.search,me.hold.length,me.hold.release,...
 				me.hold.inWindow,me.hold.touched,...
@@ -551,28 +551,28 @@ classdef touchManager < optickaCore
 			if ~exist('useaudio','var'); useaudio=false; end
 			if isempty(me.screen); me.screen = screenManager(); end
 			sM = me.screen;
-			windowed=[]; sf=[];
-			if max(Screen('Screens'))==0; windowed = [0 0 1600 800]; end
-			if ~isempty(windowed); sf = kPsychGUIWindow; end
-			sM.windowed = windowed; sM.specialFlags = sf;
+			if max(Screen('Screens'))==0 && me.verbose
+				PsychDebugWindowConfiguration; 
+			end
 			oldWin = me.window;
 			oldVerbose = me.verbose;
 			me.verbose = true;
 
 			if useaudio;a=audioManager();open(a);beep(a,3000,0.1,0.1);WaitSecs(0.2);beep(a,250,0.3,0.8);end
 
-			if ~sM.isOpen; open(sM); end
-			WaitSecs(2);
-			setup(me, sM); 		%===================!!! Run setup first
-			im = discStimulus('size', 5);
-			setup(im, sM);
-
-			quitKey = KbName('escape');
-			doQuit = false;
-			createQueue(me);	%===================!!! Create Queue
-			start(me); 			%===================!!! Start touch collection
 			try
-				for i = 1 : 5
+				if ~sM.isOpen; open(sM); end
+				WaitSecs(0.5);
+				setup(me, sM); 		%===================!!! Run setup first
+				im = discStimulus('size', 6);
+				setup(im, sM);
+	
+				quitKey = KbName('escape');
+				doQuit = false;
+				createQueue(me);	%===================!!! Create Queue
+				start(me); 			%===================!!! Start touch collection
+
+				for i = 1 : 6
 					if doQuit; break; end
 					tx = randi(20)-10;
 					ty = randi(20)-10;
@@ -581,34 +581,34 @@ classdef touchManager < optickaCore
 					me.window.X = tx;
 					me.window.Y = ty;
 					me.window.radius = im.size/2;
+					me.window.release = 2;
 					update(im);
 					if useaudio;beep(a,1000,0.1,0.1);end
 					fprintf('\n\nTouchManager Demo TRIAL %i -- X = %i Y = %i R = %.2f\n',i,me.window.X,me.window.Y,me.window.radius);
-					rect = toDegrees(sM, im.mvRect, 'rect');
+					t = sprintf('Negation buffer: %.2f | Init: %.2f s | Hold > time: %.2f s | Release < time %.2f s',...
+						me.window.negationBuffer, me.window.init, me.window.hold, me.window.release);
 					reset(me);
 					flush(me); 	%===================!!! flush the queue
-					txt = '';
 					vbl = flip(sM); ts = vbl;
 					result = 'timeout';
 					while vbl <= ts + 20
 						[r, hld, hldt, rel, reli, se, fl, tch] = testHoldRelease(me,'yes','no');
 						if hld
-							txt = sprintf('%s IN x = %.1f y = %.1f - h:%i ht:%i r:%i rl:%i s:%i f:%i touch:%i N:%i',...
-							r,me.x,me.y,hld,hldt,rel,reli,se,fl,tch,me.hold.N);
+							txt = sprintf('%s IN x = %.1f y = %.1f - h:%i ht:%i r:%i rl:%i s:%i f:%i touch:%i N:%i\n%s',...
+							r,me.x,me.y,hld,hldt,rel,reli,se,fl,tch,me.hold.N,t);
 						elseif ~isempty(me.x)
-							txt = sprintf('%s OUT x = %.1f y = %.1f - h:%i ht:%i r:%i rl:%i s:%i f:%i touch:%i N:%i',...
-							r,me.x,me.y,hld,hldt,rel,reli,se,fl,tch,me.hold.N);
+							txt = sprintf('%s OUT x = %.1f y = %.1f - h:%i ht:%i r:%i rl:%i s:%i f:%i touch:%i N:%i\n%s',...
+							r,me.x,me.y,hld,hldt,rel,reli,se,fl,tch,me.hold.N,t);
 						else
-							txt = sprintf('%s NO touch - h:%i ht:%i r:%i rl:%i s:%i f:%i touch:%i N:%i',...
-							r,hld,hldt,rel,reli,se,fl,tch,me.hold.N);
+							txt = sprintf('%s NO touch - h:%i ht:%i r:%i rl:%i s:%i f:%i touch:%i N:%i\n%s',...
+							r,hld,hldt,rel,reli,se,fl,tch,me.hold.N,t);
 						end
-						drawBackground(sM);
-						drawText(sM,txt); drawGrid(sM);
 						if ~me.wasHeld; draw(im); end
+						drawText(sM,txt); drawGrid(sM);
 						vbl = flip(sM);
 						if strcmp(r,'yes')
 							if useaudio;beep(a,3000,0.1,0.1);end
-							result = 'CORRECT!!!'; break;
+							result = sprintf('CORRECT!!!'); break;
 						elseif strcmp(r,'no')
 							if useaudio;beep(a,250,0.3,0.8);end
 							result = 'INCORRECT!!!'; break;
@@ -628,11 +628,83 @@ classdef touchManager < optickaCore
 				if useaudio; try reset(a); end; end
 				try reset(im); end
 				try close(sM); end
+				clear Screen
 			catch ME
 				getReport(ME);
 				try reset(im); end
 				try close(sM); end
 				try close(me); end
+				if useaudio; try reset(a); end; end
+				try me.window = oldWin; end
+				try me.verbose = oldVerbose; end
+				clear Screen
+				rethrow(ME);
+			end
+		end
+
+		% ===================================================================
+		function testEvents(me)
+		%> @fn test, test the touch event values
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+			if isempty(me.screen); me.screen = screenManager(); end
+			sM = me.screen;
+			if max(Screen('Screens'))==0 && me.verbose
+				PsychDebugWindowConfiguration; 
+			end
+			
+			oldWin = me.window;
+			oldVerbose = me.verbose;
+			me.verbose = true;
+
+			if ~sM.isOpen; open(sM); end
+			setup(me, sM); 		%===================!!! Run setup first
+
+			quitKey = KbName('escape');
+			doQuit = false;
+			createQueue(me);	%===================!!! Create Queue
+			start(me); 			%===================!!! Start touch collection
+			try
+				while ~doQuit
+					reset(me);
+					flush(me); 	%===================!!! flush the queue
+					me.window.X = 0;
+					me.window.Y = 0;
+					me.window.radius = 3;
+					me.window.release = 2;
+					vbl = flip(sM); ts = vbl;
+					while vbl <= ts + 30
+						[held, heldtime, release, releasing, searching, failed, touch] = isHold(me);
+						txt = sprintf('X: %.1f Y: %.1f - h:%i ht:%i r:%i rl:%i s:%i f:%i touch:%i N:%i - evtX:%.1f evtYvbn  ',...
+							me.x,me.y,held,heldtime,release,releasing,searching,failed,touch,me.hold.N);
+						if ~isempty(me.event) && isstruct(me.event)
+						txt = sprintf('%s\n type:%i evtX:%.1f evtY:%.1f nrmX: %.2f nrmY: %.2f mapX: %.1f mapY: %.1f press:%i motion:%i',...
+								txt, me.event.Type, me.event.X, me.event.Y, me.event.NormX, me.event.NormY,...
+								me.event.MappedX,me.event.MappedY,me.event.Pressed,me.event.Motion);
+						end
+						drawGreenSpot(sM, 6); drawTextWrapped(sM,txt); drawScreenCenter(sM);
+						drawGrid(sM);
+						vbl = flip(sM);
+						[keyDown,~,keys] = optickaCore.getKeys([]);
+						if keyDown && any(keys(quitKey)); doQuit = true; break; end
+					end
+					disp(me.hold);
+					WaitSecs(0.1);
+				end
+				stop(me); close(me); %===================!!! stop and close
+				me.window = oldWin;
+				me.verbose = oldVerbose;
+				try reset(im); end
+				try close(sM); end
+				clear Screen
+			catch ME
+				getReport(ME);
+				try reset(im); end
+				try close(sM); end
+				try close(me); end
+				clear Screen
 				rethrow(ME);
 			end
 		end
@@ -651,7 +723,7 @@ classdef touchManager < optickaCore
 
 		% ===================================================================
 		function [result, window] = calculateWindow(me, x, y, tempWindow)
-		%> @fn setup
+		%> @fn calculateWindow
 		%>
 		%> @param
 		%> @return

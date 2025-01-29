@@ -343,7 +343,7 @@ classdef screenManager < optickaCore
 					sv.heightMM	= sv.display.displayHeightMM;
 				end
 			end
-			
+
 			me.screenVals		= sv;
 			screenVals			= sv;
 

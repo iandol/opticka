@@ -504,8 +504,8 @@ classdef alyxManager < optickaCore
 		end
 
 		% ===================================================================
-		function [url, subsession] = newExp(me, path, sessionID, session)
-			%NEWEXP Create a new unique experiment in the database
+		function [url, subsession] = newExp(me, path, sessionID, session, sessionType)
+			%NEWEXP Create a new unique experimental session in the database
 			%   [ref, seq] = NEWEXP(path, sessionID, session)
 			%   Create a new experiment:
 			%
@@ -513,8 +513,7 @@ classdef alyxManager < optickaCore
 			%          |_ YYYY-MM-DD/
 			%                       |_ sessionID/
 			%
-			%   If experiment parameters are passed into the function, they are saved
-			%   here, as a mat and in JSON (if possible).  If a base session for the
+			%   If a base session for the
 			%   experiment date is not found, one is created in the Alyx database. A
 			%   corresponding subsession is also created and the parameters file is
 			%   registered with the sub-session.

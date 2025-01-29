@@ -1,5 +1,5 @@
 classdef awsManager < handle
-	% Use aws CLI from MATLAB
+	% Use aws CLI command from MATLAB
 	% Can install cross-platform with pixi:
 	%  > pixi global install awscli
 	%
