@@ -19,23 +19,23 @@ classdef touchManager < optickaCore
 		isDummy				= false
 		%> window is a touch window, X and Y are the screen postion
 		%> radius: circular when radius is 1 value, rectangular when radius = [width height])
-		%> doNegation: allows to return -100 (like exclusion) if touch is outside window.
+		%> doNegation: allows to return -100 (like exclusion) if touch is OUTSIDE window.
 		%> when using the testHold etc functions. negationBuffer is an area
-		%> around he window to allow some margin of error...
-		%> init: a timer that measures time to first touch
-		%> hold: a timer that determines how long to hold
-		%> release: a timer to determine the time after hold in which to release the window
+		%> around the window to allow some margin of error...
+		%> init: timer that tests time to first touch
+		%> hold: timer that determines how long to hold
+		%> release: timer to determine the time after hold in which window should be released
 		window				= struct('X', 0, 'Y', 0, 'radius', 2, 'doNegation', false,...
 								'negationBuffer', 2, 'strict', true,...
-								'init', 3, 'hold', 0.1, 'release', 1);
+								'init', 3, 'hold', 0.05, 'release', 1);
 		%> Use exclusion zones where no touch allowed: [left,top,right,bottom]
 		%> Add rows to generate multiple exclusion zones.
 		exclusionZone		= []
-		%> drain the events to only get the last one? This ensures lots of
+		%> drain the events to only get the latest? This ensures lots of
 		%> events don't pile up, often you only want the current event,
 		%> but potentially causes a longer delay each time getEvent is called...
 		drainEvents			= true;
-		%> panel type, 1 = front, 2 = back aka reverse X position
+		%> panel type, 1 = front, 2 = back (aka reverse X position)
 		panelType			= 1
 		%> verbosity
 		verbose				= false
@@ -47,22 +47,28 @@ classdef touchManager < optickaCore
 	end
 
 	properties (SetAccess=private, GetAccess=public)
+		% general touch info
 		x					= []
 		y					= []
-		win					= []
-		hold				= []
+		% touch event info from getEvent()
 		eventID				= []
-		eventType			= [];
+		eventType			= []
 		eventNew			= false
 		eventMove			= false
 		eventPressed		= false
 		eventRelease		= false
+		% window info from checkTouchWindows()
+		win					= []
+		wasInWindow			= false
+		% hold info from isHold()
+		hold				= []
 		wasHeld				= false
 		wasNegation			= false
 		isSearching			= false
 		isReleased			= false
 		isOpen				= false
 		isQueue				= false
+		% others
 		devices				= []
 		names				= []
 		allInfo				= []
@@ -212,6 +218,7 @@ classdef touchManager < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
+			reset(me);
 			if me.isDummy; return; end
 			TouchEventFlush(me.devices(me.device));
 		end
@@ -278,11 +285,14 @@ classdef touchManager < optickaCore
 					case 2 %NEW
 						me.eventNew = true;
 						me.eventPressed = true;
+						me.lastPressed = true;
 					case 3 %MOVE
 						me.eventMove = true;
 						me.eventPressed = true;
 					case 4 %RELEASE
-						me.eventRelease = true;
+						if me.lastPressed
+							me.eventRelease = true;
+						end
 					case 5 %ERROR
 						warning('touchManager: Event lost!');
 						me.event = []; evt = [];
@@ -309,6 +319,7 @@ classdef touchManager < optickaCore
 			me.x			= [];
 			me.y			= [];
 			me.win			= [];
+			me.wasInWindow	= false;
 			me.wasHeld		= false;
 			me.isReleased	= false;
 			me.wasNegation	= false;
@@ -354,10 +365,11 @@ classdef touchManager < optickaCore
 					end
 				end
 				me.event.result = result;
+				if any(result); me.wasInWindow = true; end
 			end
 			if me.verbose && ~me.deferLog
-				fprintf('≣checkWin⊱%i type:%i result:%i new:%i mv:%i prs:%i rel:%i {%.1fX %.1fY} win:%i\n',...
-				me.eventID, evt.Type, result,me.eventNew,me.eventMove,me.eventPressed,me.eventRelease,...
+				fprintf('≣checkWin%s⊱%i wasHeld:%i type:%i result:%i new:%i mv:%i prs:%i rel:%i {%.1fX %.1fY} win:%i\n',...
+				me.name, me.eventID, me.wasHeld, evt.Type, result,me.eventNew,me.eventMove,me.eventPressed,me.eventRelease,...
 				me.x,me.y,win);
 			end
 		end
@@ -500,8 +512,8 @@ classdef touchManager < optickaCore
 			me.isSearching = searching;
 			me.isReleased = release;
 			if me.verbose
-				fprintf('≣isHold⊱%s:%i new:%i mv:%i prs:%i rel:%i {%.1fX %.1fY} tt:%.2f st:%.2f ht:%.2f rt:%.2f inWin:%i tchd:%i h:%i ht:%i r:%i rl:%i s:%i fail:%i N:%i\n',...
-				st,me.eventID,me.eventNew,me.eventMove,me.eventPressed,me.eventRelease,me.x,me.y,...
+				fprintf('≣isHold%s⊱%s:%i new:%i mv:%i prs:%i rel:%i {%.1fX %.1fY} tt:%.2f st:%.2f ht:%.2f rt:%.2f inWin:%i tchd:%i h:%i ht:%i r:%i rl:%i s:%i fail:%i N:%i\n',...
+				me.name,st,me.eventID,me.eventNew,me.eventMove,me.eventPressed,me.eventRelease,me.x,me.y,...
 				me.hold.total,me.hold.search,me.hold.length,me.hold.release,...
 				me.hold.inWindow,me.hold.touched,...
 				held,heldtime,release,releasing,searching,failed,me.hold.N);

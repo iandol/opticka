@@ -64,7 +64,7 @@ classdef arduinoManager < optickaCore & rewardManager
 			args = optickaCore.addDefaults(varargin,struct('name','arduino manager'));
 			me=me@optickaCore(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
-			if isempty(me.port)
+			if ~me.silentMode && isempty(me.port)
 				checkPorts(me);
 				if ~isempty(me.ports)
 					fprintf('--->arduinoManager: Ports available:\n\t',me.ports);
@@ -99,7 +99,11 @@ classdef arduinoManager < optickaCore & rewardManager
 					me.silentMode = true;
 				end
 			end
-			if me.silentMode;disp('-->arduinoManager: In silent mode, try to reset() then open()!');me.isOpen=false;return;end
+			if me.silentMode
+				disp('-->arduinoManager: In silent mode, reset() & open() to connect!'); 
+				me.isOpen=false; 
+				return; 
+			end
 			if isempty(me.port)
 				warning('--->arduinoManager: Better specify the port to use; will try to select one from available ports!');
 				me.port = char(me.ports(end));
@@ -164,8 +168,9 @@ classdef arduinoManager < optickaCore & rewardManager
 			try me.deviceID = ''; end
 			try me.availablePins = ''; end
 			me.isOpen = false;
-			me.silentMode = false;
-			checkPorts(me);
+			if ~me.silentMode
+				checkPorts(me);
+			end
 		end
 
 		%===============RESET================%

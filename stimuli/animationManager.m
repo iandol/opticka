@@ -257,6 +257,33 @@ classdef animationManager < optickaCore
 		end
 
 		% ===================================================================
+		%> @brief return the first body matching name or hash
+		%>
+		% ===================================================================
+		function [body, trackidx, idx, stim, hash] = getBody(me, id, bodyType)
+			body = []; idx = []; trackidx = []; stim = [];
+			if ~exist('id','var') || isempty(id); return; end
+			if ~exist('bodyType','var') || isempty(bodyType); bodyType = 'native'; end
+			if ischar(id) || isstring(id)
+				names = string({me.bodies.name});
+				idx = find(matches(names,id));
+			else
+				hashes = [me.bodies.hash];
+				idx = find(hashes == id);
+			end
+			if ~isempty(idx)
+				if matches(bodyType,'struct')
+					body = me.bodies(idx);
+				else
+					body = me.bodies(idx).body;
+				end
+				hash = me.bodies(idx).hash;
+				stim = me.bodies(idx).stimulus;
+				trackidx = find(me.trackIndex == idx);
+			end
+		end
+
+		% ===================================================================
 		%> @brief 
 		%> NOTE: input y and vy are in opticka coordinates (-y = up) whereas
 		%> world has +y = up, make sure your Y input is in opticka format
@@ -309,8 +336,8 @@ classdef animationManager < optickaCore
 				pos2 = body.getWorldCenter();
 				lv2 = body.getLinearVelocity();
 				a2 = body.getAngularVelocity();
-				fprintf('≣≣≣≣⊱ editBody: x:%.1f->%.1f y:%.1f->%.1f vx:%.1f->%.1f vy:%.1f->%.1f a:%.1f->%.1f\n',...
-					pos.x,pos2.x,pos.y,pos2.y,lv.x,lv2.x,lv.y,lv2.y,a,a2);
+				fprintf('≣≣≣≣⊱ editBody %i: x:%.1f->%.1f y:%.1f->%.1f vx:%.1f->%.1f vy:%.1f->%.1f a:%.1f->%.1f\n',...
+					body.hashCode, pos.x,pos2.x,pos.y,pos2.y,lv.x,lv2.x,lv.y,lv2.y,a,a2);
 			end
 		end
 
@@ -339,6 +366,29 @@ classdef animationManager < optickaCore
 				me.bodies(ii).idx = ii;
 			end
 			makeTrackIndex(me);
+		end
+
+		% ===================================================================
+		%> @brief 
+		%>
+		% ===================================================================
+		function [collision, collisionBody] = isCollision(me, body)
+			if ~exist('body','var') || isempty(body); return; end
+			if isnumeric(body) 
+				body = me.bodies(body);
+			elseif ischar(body) || isstring(body)
+				body = getBody(me,body);
+			end
+			collision = false;
+			collisionBody = [];
+			if isa(body,'org.dyn4j.dynamics.Body')
+				c = me.world.getContacts(body);
+				if ~isempty(c) && c.size > 0
+					collision = true;
+					c2 = c.get(0);
+					collisionBody = c2.getOtherBody(body);
+				end
+			end
 		end
 
 		% ===================================================================
@@ -374,25 +424,6 @@ classdef animationManager < optickaCore
 				me.timeDelta = me.screen.screenVals.ifi;
 			end
 			setupWorld(me);
-		end
-
-		% ===================================================================
-		%> @brief 
-		%>
-		% ===================================================================
-		function [collision, collisionBody] = isCollision(me, body)
-			if ~exist('body','var') || isempty(body); return; end
-			collision = false;
-			collisionBody = [];
-			if ischar(body); body = me.getBody(body); end
-			if isa(body,'org.dyn4j.dynamics.Body')
-				c = me.world.getContacts(body);
-				if ~isempty(c) && c.size > 0
-					collision = true;
-					c2 = c.get(0);
-					collisionBody = c2.getOtherBody(body);
-				end
-			end
 		end
 
 		% ===================================================================
@@ -471,33 +502,6 @@ classdef animationManager < optickaCore
 			me.dX			= [];
 			me.dY			= [];
 			me.screenBounds	= [];
-		end
-
-		% ===================================================================
-		%> @brief return the first body matching name or hash
-		%>
-		% ===================================================================
-		function [body, trackidx, idx, stim, hash] = getBody(me, id, bodyType)
-			body = []; idx = []; trackidx = []; stim = [];
-			if ~exist('id','var') || isempty(id); return; end
-			if ~exist('bodyType','var') || isempty(bodyType); bodyType = 'native'; end
-			if ischar(id)
-				names = string({me.bodies.name});
-				idx = find(matches(names,id));
-			else
-				hashes = [me.bodies.hash];
-				idx = find(hashes == id);
-			end
-			if ~isempty(idx)
-				if matches(bodyType,'struct')
-					body = me.bodies(idx);
-				else
-					body = me.bodies(idx).body;
-				end
-				hash = me.bodies(idx).hash;
-				stim = me.bodies(idx).stimulus;
-				trackidx = find(me.trackIndex == idx);
-			end
 		end
 
 		% ===================================================================
