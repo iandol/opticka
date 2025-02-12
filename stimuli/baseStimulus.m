@@ -999,13 +999,15 @@ classdef baseStimulus < optickaCore & dynamicprops
 		function updateXY(me,x,y,useDegrees)
 		% updateXY(me, x, y, useDegrees)
 			if ~exist('useDegrees','var') || isempty(useDegrees); useDegrees = false; end
-			if length(x) > 1; x = x(1); end; if length(y) > 1; y = y(1); end
+			if ~isscalar(x); x = x(1); end; if ~isscalar(y); y = y(1); end
 			if useDegrees
 				if ~isempty(x); me.xFinal = me.sM.toPixels(x, 'x'); me.xFinalD = x; end
 				if ~isempty(y); me.yFinal = me.sM.toPixels(y, 'y'); me.yFinalD = y; end
+				me.xPositionOut = x; me.yPositionOut = y;
 			else
 				if ~isempty(x); me.xFinal = x; me.xFinalD = me.sM.toDegrees(x, 'x'); end
 				if ~isempty(y); me.yFinal = y; me.yFinalD = me.sM.toDegrees(y, 'y'); end
+				me.xPositionOut = me.xFinalD; me.yPositionOut = me.yFinalD;
 			end
 			if length(me.mvRect) == 4
 				me.mvRect=CenterRectOnPointd(me.mvRect, me.xFinal, me.yFinal);

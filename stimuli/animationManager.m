@@ -21,9 +21,10 @@
 %> end
 %> ```
 %>
-%> @TODO build the code for the different types of motion
+%> @TODO build the code for the different types of motion paths apart from rigid
+%> body 2D physics. These could be static methods.
 %>
-%> Copyright ©2014-2024 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2025 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================	
 classdef animationManager < optickaCore
 
@@ -31,7 +32,8 @@ classdef animationManager < optickaCore
 		%> type of animation path, rigid | linear | sinusoidal | brownian | circular
 		%> only rigid supported so far
 		type char ...
-			{mustBeMember(type,{'rigid','linear','sinusoidal','brownian','circular'})} = 'rigid'
+			{mustBeMember(type,{'rigid','linear','sinusoidal','brownian','circular'})} ...
+			= 'rigid'
 		%> bodyList
 		bodies = struct([])
 		%> parameters for each animation type
@@ -267,6 +269,8 @@ classdef animationManager < optickaCore
 			if ischar(id) || isstring(id)
 				names = string({me.bodies.name});
 				idx = find(matches(names,id));
+			elseif isnumeric(id) && id <= me.nBodies
+				idx = id;
 			else
 				hashes = [me.bodies.hash];
 				idx = find(hashes == id);
@@ -288,10 +292,15 @@ classdef animationManager < optickaCore
 		%> NOTE: input y and vy are in opticka coordinates (-y = up) whereas
 		%> world has +y = up, make sure your Y input is in opticka format
 		% ===================================================================
-		function editBody(me, body, x, y, vx, vy, av)
-			if ~exist('body','var') || isempty(body); return; end
-			
-			idx = getBodyIDX(me, body.hashCode);
+		function editBody(me, id, x, y, vx, vy, av, editStim)
+			if ~exist('id','var') || isempty(id); return; end
+			if ~exist('editStim','var') || isempty(editStim); editStim = false; end
+			if isjava(id)
+				[~, ~, ~, stim] = getBody(me, id.hashCode, 'native');
+				body = id;
+			else
+				[body, ~, ~, stim] = getBody(me, id, 'native');
+			end
 			pos = body.getWorldCenter();
 			lv = body.getLinearVelocity();
 			a = body.getAngularVelocity();
@@ -311,6 +320,9 @@ classdef animationManager < optickaCore
 				body.setAtRest(false);
 				body.translateToOrigin();
 				body.translate(thisX, thisY);
+				if editStim
+					stim.updateXY(thisX,thisY,true); 
+				end
 			end
 
 			changeV = false;
@@ -330,6 +342,9 @@ classdef animationManager < optickaCore
 
 			if exist('av','var') && ~isempty(av)
 				body.setAngularVelocity(av);
+				if editStim
+					
+				end
 			end
 
 			if me.verbose
@@ -471,6 +486,27 @@ classdef animationManager < optickaCore
 			switch me.type
 				case 'rigid'
 					rigidStep(me,varargin);
+			end
+		end
+
+		% ===================================================================
+		%> @brief 
+		%>
+		% ===================================================================
+		function updateBodyPositions(me)
+			a = 0;
+			for ii = me.trackIndex
+				a = a + 1;
+				pos = me.bodies(ii).body.getWorldCenter();
+				lv = me.bodies(ii).body.getLinearVelocity();
+				av = me.bodies(ii).body.getAngularVelocity();
+				me.x(a) = pos.x;
+				me.y(a) = -pos.y;
+				if lv.x > 0; av = abs(av); else; av = -abs(av); end
+				me.linearVelocity(a,:) = [lv.x lv.y];
+				me.angularVelocity(a) = av;
+				me.bodies(ii).stimulus.updateXY(me.x(a), me.y(a), true);
+				me.bodies(ii).stimulus.angleOut = me.bodies(ii).stimulus.angleOut + rad2deg(av) * me.timeDelta;
 			end
 		end
 
@@ -811,27 +847,6 @@ classdef animationManager < optickaCore
 
 			if updatePositions
 				updateBodyPositions(me);
-			end
-		end
-
-		% ===================================================================
-		%> @brief 
-		%>
-		% ===================================================================
-		function updateBodyPositions(me)
-			a = 0;
-			for ii = me.trackIndex
-				a = a + 1;
-				pos = me.bodies(ii).body.getWorldCenter();
-				lv = me.bodies(ii).body.getLinearVelocity();
-				av = me.bodies(ii).body.getAngularVelocity();
-				me.x(a) = pos.x;
-				me.y(a) = -pos.y;
-				if lv.x > 0; av = abs(av); else; av = -abs(av); end
-				me.linearVelocity(a,:) = [lv.x lv.y];
-				me.angularVelocity(a) = av;
-				me.bodies(ii).stimulus.updateXY(me.x(a), me.y(a), true);
-				me.bodies(ii).stimulus.angleOut = me.bodies(ii).stimulus.angleOut + rad2deg(av)*me.timeDelta;
 			end
 		end
 		
