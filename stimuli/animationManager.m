@@ -316,13 +316,13 @@ classdef animationManager < optickaCore
 			else
 				thisY = pos.y;
 			end
+			if editStim
+				stim.updateXY(thisX,thisY,true); 
+			end
 			if changePos
 				body.setAtRest(false);
 				body.translateToOrigin();
 				body.translate(thisX, thisY);
-				if editStim
-					stim.updateXY(thisX,thisY,true); 
-				end
 			end
 
 			changeV = false;
@@ -544,7 +544,7 @@ classdef animationManager < optickaCore
 		%> @brief 
 		%>
 		% ===================================================================
-		function fixture = getFixture(me, name, num)
+		function [fixture, body] = getFixture(me, name, num)
 			fixture = [];
 			if ~exist('name','var') || isempty(name); return; end
 			if ~exist('num','var') || isempty(num); num = 0; end
@@ -557,8 +557,14 @@ classdef animationManager < optickaCore
 		%>
 		% ===================================================================
 		function setSensorState(me, name, state)
+			[body, ~, idx] = me.getBody(name);
 			fixture = me.getFixture(name,0);
 			fixture.setSensor(state);
+			if state == true
+				body.setMass(me.massType.INFINITE);
+			else
+				updateMassType(me, me.bodies(idx));
+			end
 		end
 
 		% ===================================================================
@@ -905,7 +911,6 @@ classdef animationManager < optickaCore
 		% ===================================================================
 		function setupBody(me, thisBody)
 			if isempty(thisBody.theta); thisBody.theta = 0; end
-			[cx,cy] = pol2cart(thisBody.theta, thisBody.stimulus.speed);
 			thisBody.position = [thisBody.stimulus.xPosition -thisBody.stimulus.yPosition];
 			
 			fixture = thisBody.body.getFixture(0);
@@ -913,11 +918,30 @@ classdef animationManager < optickaCore
 			fixture.setFriction(thisBody.friction);
 			fixture.setRestitution(thisBody.elasticity); % set coefficient of restitution
 
+			av = updateMassType(me, thisBody);
+	
+			if isempty(thisBody.velocity); thisBody.velocity = [0 0]; end
+			thisBody.body.translateToOrigin();
+			thisBody.body.translate(thisBody.position(1), thisBody.position(2));
+			thisBody.body.setLinearVelocity(javaObject('org.dyn4j.geometry.Vector2', thisBody.velocity(1), thisBody.velocity(2)));
+			thisBody.body.setAngularVelocity(av);
+			thisBody.body.setLinearDamping(me.rigidParams.linearDamping);
+			thisBody.body.setAngularDamping(me.rigidParams.angularDamping);
+		end
+
+		% ===================================================================
+		%> @brief 
+		%>
+		% ===================================================================
+		function av = updateMassType(me, thisBody, type)
+			if ~exist('type','var') || isempty(type); type = 'normal'; end
 			if matches(lower(thisBody.type),'normal')
+				[cx,cy] = pol2cart(thisBody.theta, thisBody.stimulus.speed);
 				thisBody.body.setMass(me.massType.NORMAL);
 				thisBody.velocity = [cx -cy];
 				av = cx/2;
 			elseif matches(lower(thisBody.type),'sensor')
+				fixture = thisBody.body.getFixture(0);
 				fixture.setSensor(true);
 				thisBody.velocity = [0 0];
 				thisBody.body.setMass(me.massType.INFINITE);
@@ -927,13 +951,6 @@ classdef animationManager < optickaCore
 				thisBody.body.setMass(me.massType.INFINITE);
 				av = 0;
 			end
-			if isempty(thisBody.velocity); thisBody.velocity = [0 0]; end
-			thisBody.body.translateToOrigin();
-			thisBody.body.translate(thisBody.position(1), thisBody.position(2));
-			thisBody.body.setLinearVelocity(javaObject('org.dyn4j.geometry.Vector2', thisBody.velocity(1), thisBody.velocity(2)));
-			thisBody.body.setAngularVelocity(av);
-			thisBody.body.setLinearDamping(me.rigidParams.linearDamping);
-			thisBody.body.setAngularDamping(me.rigidParams.angularDamping);
 			thisBody.body.updateMass();
 		end
 
