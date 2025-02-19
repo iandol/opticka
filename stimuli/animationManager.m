@@ -113,9 +113,9 @@ classdef animationManager < optickaCore
 		isLeftWall		= false
 		isRightWall		= false
 		isCeiling		= false
-		bodyTemplate	= struct('idx',0,'hash',[],'name','','type','','body',[],...
-			'stimulus',[],'shape','Circle','radius',2,'density',1,'theta',0,...
-			'friction',0.2,'elasticity',0.75,'position',[0 0],'velocity',[0 0])
+		bodyTemplate	= struct('name','','idx',0,'hash',[],'type','','body',[],...
+			'stimulus',[],'shape','Circle','radius',2,'density',1,'angle',0,'theta',0,...
+			'friction',0.2,'elasticity',0.75,'position',[0 0],'updatedPosition',[],'velocity',[0 0])
 		%> what properties are allowed to be passed on construction
 		allowedProperties = ["type","bodies","rigidParams","brownianParams","timeDelta","verbose"]
 	end
@@ -236,12 +236,14 @@ classdef animationManager < optickaCore
 			thisBody.friction = friction;
 			thisBody.elasticity = elasticity;
 			thisBody.radius = r;
+			thisBody.position = [thisX thisY];
+			thisBody.updatedPosition = thisBody.position;
+			thisBody.angle = deg2rad(stimulus.getP('angle'));
 			if isprop(stimulus,'direction')
-				theta = deg2rad(stimulus.getP('direction'));
+				thisBody.theta = deg2rad(stimulus.getP('direction'));
 			else
-				theta = deg2rad(stimulus.getP('angle'));
+				thisBody.theta = thisBody.angle;
 			end
-			thisBody.theta = theta;
 			
 			setupBody(me, thisBody);
 
@@ -296,63 +298,66 @@ classdef animationManager < optickaCore
 			if ~exist('id','var') || isempty(id); return; end
 			if ~exist('editStim','var') || isempty(editStim); editStim = false; end
 			if isjava(id)
-				[~, ~, ~, stim] = getBody(me, id.hashCode, 'native');
+				item = getBody(me, id.hashCode, 'struct');
 				body = id;
 			else
-				[body, ~, ~, stim] = getBody(me, id, 'native');
+				item = getBody(me, id, 'struct');
+				body = item.body;
 			end
 			pos = body.getWorldCenter();
 			lv = body.getLinearVelocity();
 			a = body.getAngularVelocity();
 
 			changePos = false;
-			if exist('x','var') && ~isempty(x)
+			if exist('x','var') && ~isempty(x) && x ~= pos.x
 				thisX = x; changePos = true;
 			else
 				thisX = pos.x;
 			end
-			if exist('y','var') && ~isempty(y)
-				thisY = -y; changePos = true;
+			if exist('y','var') && ~isempty(y) && y ~= pos.y
+				thisY = -y; changePos = true; % thisY is now in dyn4j Y coordinates
 			else
 				thisY = pos.y;
 			end
-			if editStim
-				stim.updateXY(thisX,thisY,true); 
-			end
 			if changePos
+				item.updatedPosition = [thisX -thisY];
 				body.setAtRest(false);
 				body.translateToOrigin();
 				body.translate(thisX, thisY);
 			end
+			if editStim % force the visual stimulus to change too, Y is opticka format
+				item.stimulus.updateXY(thisX, -thisY, true); 
+			end
 
 			changeV = false;
-			if exist('vx','var') && ~isempty(vx)
+			if exist('vx','var') && ~isempty(vx) && vx ~= lv.x
 				thisVX = vx; changeV = true;
 			else
 				thisVX = lv.x;
 			end
-			if exist('vy','var') && ~isempty(vy)
+			if exist('vy','var') && ~isempty(vy) && vy ~= -lv.y
 				thisVY = -vy; changeV = true;
 			else
 				thisVY = lv.y;
 			end
 			if changeV
+				item.velocity = [thisVX thisVY];
 				body.setLinearVelocity(thisVX, thisVY);
 			end
 
-			if exist('av','var') && ~isempty(av)
+			if exist('av','var') && ~isempty(av) && av ~= a
 				body.setAngularVelocity(av);
-				if editStim
-					
-				end
 			end
+
+			body.updateMass();
 
 			if me.verbose
 				pos2 = body.getWorldCenter();
 				lv2 = body.getLinearVelocity();
 				a2 = body.getAngularVelocity();
-				fprintf('≣≣≣≣⊱ editBody %i: x:%.1f->%.1f y:%.1f->%.1f vx:%.1f->%.1f vy:%.1f->%.1f a:%.1f->%.1f\n',...
-					body.hashCode, pos.x,pos2.x,pos.y,pos2.y,lv.x,lv2.x,lv.y,lv2.y,a,a2);
+				fprintf('≣≣≣≣⊱ editBody %i: x:%.1f->%.1f y:%.1f->%.1f vx:%.1f->%.1f vy:%.1f->%.1f a:%.1f->%.1f STIM: %.1fx %.1fy\n',...
+					body.hashCode, pos.x, pos2.x, pos.y, pos2.y, ...
+					lv.x, lv2.x, lv.y, lv2.y, a, a2, item.stimulus.xFinalD, item.stimulus.yFinalD);
 			end
 		end
 
@@ -381,6 +386,60 @@ classdef animationManager < optickaCore
 				me.bodies(ii).idx = ii;
 			end
 			makeTrackIndex(me);
+		end
+
+		% ===================================================================
+		%> @brief 
+		%>
+		% ===================================================================
+		function setEnabled(me, id, state)
+			if ~exist('id','var') || isempty(id); return; end
+			if ~exist('state','var') || isempty(state); state = true; end
+			if isjava(id)
+				body = id;
+			else
+				body = getBody(me, id, 'native');
+			end
+			body.setEnabled(state);
+			if me.verbose
+				fprintf('≣≣≣≣⊱ setEnabled: %i is enabled: %i\n',body.hashCode,body.isEnabled());
+			end
+		end
+
+		% ===================================================================
+		%> @brief modifies the physics body and opticka stimulus
+		%>
+		% ===================================================================
+		function show(me, id)
+			if ~exist('id','var') || isempty(id); return; end
+			if isjava(id)
+				body =  getBody(me, id.hashCode, 'struct');
+			else
+				body = getBody(me, id, 'struct');
+			end
+			body.body.setEnabled(true);
+			show(body.stimulus);
+			if me.verbose
+				fprintf('≣≣≣≣⊱ show: %s is shown\n',body.name);
+			end
+		end
+
+		% ===================================================================
+		%> @brief 
+		%>
+		% ===================================================================
+		function hide(me, id)
+			if ~exist('id','var') || isempty(id); return; end
+			if isjava(id)
+				body =  getBody(me, id.hashCode, 'struct');
+			else
+				body = getBody(me, id, 'struct');
+			end
+			body.body.setEnabled(false);
+			hide(body.stimulus);
+			if me.verbose
+				fprintf('≣≣≣≣⊱ hide: %s is hidden\n',body.name);
+			end
 		end
 
 		% ===================================================================
@@ -912,7 +971,8 @@ classdef animationManager < optickaCore
 		function setupBody(me, thisBody)
 			if isempty(thisBody.theta); thisBody.theta = 0; end
 			thisBody.position = [thisBody.stimulus.xPosition -thisBody.stimulus.yPosition];
-			
+			if isempty(thisBody.velocity); thisBody.velocity = [0 0]; end
+
 			fixture = thisBody.body.getFixture(0);
 			fixture.setDensity(thisBody.density);
 			fixture.setFriction(thisBody.friction);
@@ -920,7 +980,6 @@ classdef animationManager < optickaCore
 
 			av = updateMassType(me, thisBody);
 	
-			if isempty(thisBody.velocity); thisBody.velocity = [0 0]; end
 			thisBody.body.translateToOrigin();
 			thisBody.body.translate(thisBody.position(1), thisBody.position(2));
 			thisBody.body.setLinearVelocity(javaObject('org.dyn4j.geometry.Vector2', thisBody.velocity(1), thisBody.velocity(2)));
@@ -952,17 +1011,6 @@ classdef animationManager < optickaCore
 				av = 0;
 			end
 			thisBody.body.updateMass();
-		end
-
-		% ===================================================================
-		%> @brief 
-		%>
-		% ===================================================================
-		function updateStimuli(me)
-			for ii = me.trackIndex
-				me.bodies(ii).stimulus.angleOut = rad2deg(me.bodies(ii).theta);
-				me.bodies(ii).stimulus.update();
-			end
 		end
 
 		% ===================================================================
