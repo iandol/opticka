@@ -23,8 +23,8 @@ classdef arduinoManager < optickaCore & rewardManager
 		%> output logging info
 		verbose					= false
 		%> parameters for use when giving rewards via fluid or food
-		%> actuator, type = TTL / fluid / food / rpi
-		reward					= struct('type', 'TTL', 'pin', 2, 'time', 300)
+		%> actuator, type = TTL / fluidpump / food / rpi
+		reward					= struct('type', 'TTL', 'pin', 2, 'time', 300, 'rotation', 60)
 		%> specify the available pins to use; 2-13 is the default for an Uno
 		%> 0-10 for the xiao (though xiao pins 11-14 can control LEDS)
 		availablePins			= {}
@@ -239,11 +239,11 @@ classdef arduinoManager < optickaCore & rewardManager
 
 		%===============REWARD SELECTION================%
 		function giveReward(me, type, varargin)
-			if ~exist('type','var'); type = 'simple'; end
+			if ~exist('type','var'); type = me.reward.type; end
 			switch type
-				case 'simple'
+				case 'TTL'
 					timedTTL(me, me.reward.pin, me.reward.time);
-				case 'fluid'
+				case 'fluidpump'
 					rwdByDCmotor(me, me.reward.time);
 				case 'rpi'
 					try
@@ -251,7 +251,7 @@ classdef arduinoManager < optickaCore & rewardManager
 						WaitSecs(me.reward.time);
 						system('raspi-gpio set 27 dl');
 					end
-				otherwise
+                case 'food'
 					stepper(me, varargin);
 			end
 		end
@@ -286,6 +286,7 @@ classdef arduinoManager < optickaCore & rewardManager
 
 		%==================DRIVE STEPPER MOTOR============%
 		function stepper(me, ndegree)
+            if ~exist("ndegree","var") || isempty(ndegree); ndegree = me.reward.rotation; end
 			ncycle      = floor(ndegree/(1.8*4));
 			nstep       = round((rem(ndegree,(1.8*4))/7.2)*4);
 			switch me.shield
