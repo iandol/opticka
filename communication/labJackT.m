@@ -5,10 +5,12 @@
 %>
 %> Example:
 %>
-%> ```
+%> ```matlab
 %> l = labJackT('openNow', true);
-%> l.sendStrobe(128); % sends 128 : 0-2047 controls EIO0-8 & CIO0-3 - 2048 TTLs CIO-4
-%> 
+%> l.sendStrobe(128); % sends value 128 : 0-2047 controls EIO0-8 & CIO0-3 11bit word - 2048 TTLs CIO-4 for 10ms
+%> v = l.getAIN(1); % get a voltage
+%> l.startStream() % start data streaming mode
+%> l.stopStream(); % stop data streaming mode
 %> l.close;
 %> ```
 %>
