@@ -734,7 +734,7 @@ classdef animationManager < optickaCore
 			a.setup(s);
 
 			RestrictKeysForKbCheck([KbName('LeftArrow') KbName('RightArrow') KbName('UpArrow') KbName('DownArrow') ...
-				KbName('1!') KbName('2@') KbName('3#') KbName('space') KbName('ESCAPE')]);
+				KbName('1!') KbName('2@') KbName('3#') KbName('space') KbName('ESCAPE') KbName('F1')]);
 			Priority(1);
 
 			body = getBody(a,'moon');
@@ -758,6 +758,8 @@ classdef animationManager < optickaCore
 				if isKey
 					if strcmpi(KbName(keyCode),'escape')
 						break;
+					elseif strcmpi(KbName(keyCode),'F1')
+						captureScreen(s);
 					elseif strcmpi(KbName(keyCode),'LeftArrow')
 						body.setAtRest(false);
 						body.applyImpulse(a.vector2(-40,0));
@@ -795,7 +797,7 @@ classdef animationManager < optickaCore
 			reset(stims); 
 
 			figure;
-			tiledlayout(2,1);
+			tiledlayout(1,1);
 			nexttile;
 			plot(t,x);
 			hold on;
@@ -804,14 +806,14 @@ classdef animationManager < optickaCore
 			legend({'X','Y'})
 			xlabel('Time (s)')
 			ylabel('X|Y Position')
-			nexttile;
-			plot(t,ke);
-			hold on;
-			plot(t,pe);
-			box on; grid on;
-			xlabel('Time (s)')
-			ylabel('Kinetic|Potential Energy')
-			legend({'KE','PE'})
+			% nexttile;
+			% plot(t,ke);
+			% hold on;
+			% plot(t,pe);
+			% box on; grid on;
+			% xlabel('Time (s)')
+			% ylabel('Kinetic|Potential Energy')
+			% legend({'KE','PE'})
 		end
 
 		% ===================================================================
