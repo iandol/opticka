@@ -4,26 +4,34 @@
 %> also support sinusoidal, brownian, circular etc.
 %> 
 %> ```matlab
-%> s = screenManager();
-%> b = imageStimulus('size',4,'filePath','moon.png','name','moon');
-%> b.speed = 25; % will define velocity
-%> b.angle = -45; % will define velocity
-%> a = animationManager();
-%> sv = open(s); % open screen
-%> setup(b, s); % initialise stimulus with open screen
-%> addScreenBoundaries(a, sv); % add floor, ceiling and walls based on the screen
-%> addBody(a, b); % add stimulus as a rigidbody to animationManager
-%> setup(a); % initialise the simulation.
-%> for i = 1:60
-%> 	draw(b); % draw the stimulus
-%> 	flip(s); % flip the screen
-%> 	step(a); % step the simulation
+%> screen = screenManager(); % create a screen object
+%> ball = imageStimulus('size',4,'filePath','moon.png','name','moon');
+%> ball.speed = 25; % will define velocity
+%> ball.angle = -45; % will define velocity
+%> world = animationManager('timeDelta', 0.016);
+%> screenParamaters = open(screen); % open screen
+%> % initialise stimulus with PTB screen parameters
+%> setup(ball, screen);
+%> addScreenBoundaries(world, screenParamaters); % add floor,ceiling and walls based on the screen
+%> addBody(world, ball); % add stimulus as a rigidbody to animationManager
+%> % initialise the simulation and pass the PTB
+%> % screen so that the world can be related 
+%> % to the PTB dimensions. 
+%> % The mapping is 1° visual angle = 1 meter.
+%> setup(world, screen); 
+%> for i = 1:120 % run for 120 frames
+%> 	draw(ball); % draw the stimulus
+%> 	flip(screen); % flip the screen
+%> 	% step the simulation one step (0.016s) forwards
+%> 	% true flag will update the ball stimulus at the new position
+%> 	step(world, 1, true); 
 %> end
 %> ```
 %>
 %> @TODO build the code for the different types of motion paths apart from rigid
 %> body 2D physics. These could be static methods.
 %>
+%> Contributions: Heting Zhang
 %> Copyright ©2014-2025 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================	
 classdef animationManager < optickaCore

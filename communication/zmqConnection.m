@@ -5,26 +5,25 @@ classdef zmqConnection < optickaCore
 		type			= 'REP'
 		%> the port to open
 		port			= 5555
-		%> the address to open
-		address		= '127.0.0.1'
-		%> do we log to the command window?
-		verbose		= 0
-		%> default read timeout
-		readTimeOut		= 0
-		%> default write timeout
-		writeTimeOut	= 0
+		%> the address to open, use * for a server to bind to all interfaces
+		address			= 'localhost'
+		%> transport for the socket, tcp | ipc | inproc
+		transport		= 'tcp'
 		%> default size of chunk to read for tcp
 		frameSize		= 2^20
+		%> do we log to the command window?
+		verbose		= 0
+		%> default read timeout, -1 is block
+		readTimeOut		= -1
+		%> default write timeout, -1 is block
+		writeTimeOut	= -1
 		%> sometimes we shouldn't cleanup connections on delete, e.g. when we pass this
 		%> object to another matlab instance as we will close the wrong connections!!!
 		cleanup			= true
 	end
-	
-	properties (SetAccess = private, GetAccess = public)
-		%> data received
-		dataIn			= []
-		%> length of data in bytes
-		dataLength
+
+	properties (Dependent = true)
+		endpoint
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Transient = true)
@@ -54,11 +53,16 @@ classdef zmqConnection < optickaCore
 
 		function open(me)
 			if me.isOpen; me.close; end
-			me.context = zmqContext();
-			me.socket = zmqSocket(me.context, me.type);
-			me.socket.setsockopt('ZMQ_RCVTIMEO', me.readTimeOut);
-			me.socket.setsockopt('ZMQ_SNDTIMEO', me.writeTimeOut);
-			me.socket.connect(sprintf('tcp://%s:%i',me.address,me.port));
+			me.context = zmq.Context();
+			me.socket = me.context.socket(me.type);
+			%me.socket.setsockopt('ZMQ_RCVTIMEO', me.readTimeOut);
+			%me.socket.setsockopt('ZMQ_SNDTIMEO', me.writeTimeOut);
+			switch me.type 
+				case {'REP','PUB','PUSH'}
+					me.socket.bind(me.endpoint);
+				otherwise
+					me.socket.connect(me.endpoint);
+			end
 			me.isOpen = true;
 		end
 
@@ -68,6 +72,10 @@ classdef zmqConnection < optickaCore
 				me.context.close();
 				me.isOpen = false;
 			end
+		end
+
+		function endpoint = get.endpoint(me)
+			endpoint = sprintf('$s://%s:%i',me.transport,me.address,me.port);
 		end
 
 		
