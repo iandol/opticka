@@ -1,8 +1,10 @@
 classdef zmqConnection < optickaCore
-	% zmqConnection is a class to handle ØMQ connections
+	%> zmqConnection is a class to handle ØMQ connections for opticka class
+	%> communication
+
 	properties
 		%> ØMQ connection type, e.g. 'REQ', 'REP', 'PUB', 'SUB', 'PUSH', 'PULL'
-		type			= 'REP'
+		type			= 'REQ'
 		%> the port to open
 		port			= 5555
 		%> the address to open, use * for a server to bind to all interfaces
@@ -23,11 +25,14 @@ classdef zmqConnection < optickaCore
 	end
 
 	properties (Dependent = true)
+		%> connection endpoint
 		endpoint
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Transient = true)
+		%> zmq.Context()
 		context			= []
+		%> zmq.Socket()
 		socket			= []
 		%> is this connection open?
 		isOpen			= false
@@ -41,17 +46,23 @@ classdef zmqConnection < optickaCore
 	methods
 
 		% ===================================================================
+		function me = zmqConnection(varargin)
 		%> @brief CONSTRUCTOR
 		%>
 		%> Configures input structure to assign properties
 		% ===================================================================
-		function me = zmqConnection(varargin)
 			args = optickaCore.addDefaults(varargin,struct('name','zmqConnection'));
 			me = me@optickaCore(args); %superclass constructor
 			me.parseArgs(args, me.allowedProperties);
 		end
 
+		
+		% ===================================================================
 		function open(me)
+		%> @brief open
+		%>
+		%> 
+		% ===================================================================
 			if me.isOpen; me.close; end
 			me.context = zmq.Context();
 			me.socket = me.context.socket(me.type);
@@ -66,18 +77,84 @@ classdef zmqConnection < optickaCore
 			me.isOpen = true;
 		end
 
+		% ===================================================================
+		function sendCommand(me, command, data)
+		%> @brief open
+		%>
+		%> 
+		% ===================================================================
+			
+		end
+
+		% ===================================================================
+		function [command, data] = receiveCommand(me)
+		%> @brief open
+		%>
+		%> 
+		% ===================================================================
+
+		end
+
+		% ===================================================================
+		function open(me)
+		%> @brief open
+		%>
+		%> 
+		% ===================================================================
+
+		end
+
+		% ===================================================================
+		function open(me)
+		%> @brief open
+		%>
+		%> 
+		% ===================================================================
+
+		end
+
+		% ===================================================================
+		function open(me)
+		%> @brief open
+		%>
+		%> 
+		% ===================================================================
+
+		end
+
+		% ===================================================================
+		function open(me)
+		%> @brief open
+		%>
+		%> 
+		% ===================================================================
+
+		end
+
+		% ===================================================================
 		function close(me)
+		%> @brief close
+		%>
+		%> 
+		% ===================================================================
 			if me.isOpen
-				me.socket.close();
-				me.context.close();
+				try me.socket.close(); end %#ok<*TRYNC>
+				try me.context.close(); end
 				me.isOpen = false;
 			end
 		end
-
-		function endpoint = get.endpoint(me)
-			endpoint = sprintf('$s://%s:%i',me.transport,me.address,me.port);
+		function delete(me)
+			close(me);
 		end
 
-		
+		% ===================================================================
+		function endpoint = get.endpoint(me)
+		%> @brief get endpoint
+		%>
+		%> 
+		% ===================================================================
+			endpoint = sprintf('%s://%s:%i',me.transport,me.address,me.port);
+		end
+
 	end
 end
