@@ -1,7 +1,7 @@
 function addOptickaToPath()
 % adds opticka to path, ignoring at least some of the unneeded folders
 
-t				= tic;
+tt				= tic;
 mpath			= path;
 mpath			= strsplit(mpath, pathsep);
 opath			= fileparts(mfilename('fullpath'));
@@ -17,9 +17,9 @@ end
 opaths			= genpath(opath); 
 opaths			= strsplit(opaths,pathsep);
 sep 			= regexptranslate('escape',filesep);
-pathExceptions	= [sep '\.git|' sep 'adio|' sep 'arduino|' sep 'photodiode|' ...
-	sep '+uix|' sep '+uiextras|' sep 'legacy|' sep 'html|' sep 'doc|' sep '.vscode'];
-qAdd 			= cellfun(@isempty,regexpi(opaths,pathExceptions)); % true where regexp _didn't_ match
-addpath(opaths{qAdd}); savepath;
+pathExceptions	= [".git" "adio" "arduino" "photodiode" "+uix" ...
+	"+zmq" "+uiextras" "legacy" "html" "doc" ".vscode"];
+qAdd 			= contains(opaths,pathExceptions); % true where regexp _didn't_ match
+addpath(opaths{~qAdd}); savepath;
 
-fprintf('--->>> Added opticka to the MATLAB path in %.1f ms...\n',toc(t)*1000);
+fprintf('--->>> Added opticka to the MATLAB path in %.1f ms...\n',toc(tt)*1000);
