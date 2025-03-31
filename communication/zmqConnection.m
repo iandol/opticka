@@ -14,32 +14,30 @@ classdef zmqConnection < optickaCore
 		%> default size of chunk to read for tcp
 		frameSize		= 2^20
 		%> do we log to the command window?
-		verbose		= 0
-		%> default read timeout, -1 is block
-		readTimeOut		= -1
-		%> default write timeout, -1 is block
-		writeTimeOut	= -1
-		%> sometimes we shouldn't cleanup connections on delete, e.g. when we pass this
-		%> object to another matlab instance as we will close the wrong connections!!!
-		cleanup			= true
+		verbose			= 0
+		%> default read timeout, -1 is blocking
+		readTimeOut		= 10000
+		%> default write timeout, -1 is blocking
+		writeTimeOut	= 10000
+	end
+	
+	properties (SetAccess = private, GetAccess = public, Transient = true)
+		%> is this connection open?
+		isOpen			= false
+		%> zmq.Context()
+		context			= []
+		%> zmq.Socket()
+		socket			= []
 	end
 
 	properties (Dependent = true)
 		%> connection endpoint
 		endpoint
-		%> 
-	end
-	
-	properties (SetAccess = private, GetAccess = public, Transient = true)
-		%> zmq.Context()
-		context			= []
-		%> zmq.Socket()
-		socket			= []
-		%> is this connection open?
-		isOpen			= false
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		sendState			= false
+		recState			= false
 		allowedProperties = {'type','protocol','port','address', ...
 			'verbose','readTimeOut','writeTimeOut','frameSize','cleanup'};
 	end
@@ -70,11 +68,12 @@ classdef zmqConnection < optickaCore
 			end
 			me.socket = me.context.socket(me.type);
 			if me.readTimeOut ~= -1
-				me.socket.setsockopt('ZMQ_RCVTIMEO', me.readTimeOut);
+				me.set('RCVTIMEO', me.readTimeOut);
 			end
 			if me.writeTimeOut ~= -1
-				me.socket.setsockopt('ZMQ_SNDTIMEO', me.writeTimeOut);
+				me.set('SNDTIMEO', me.writeTimeOut);
 			end
+			me.set('LINGER', 1000);
 			switch me.type 
 				case {'REP','PUB','PUSH'}
 					me.socket.bind(me.endpoint);
@@ -85,17 +84,29 @@ classdef zmqConnection < optickaCore
 		end
 
 		% ===================================================================
-		function rep = sendCommand(me, command, data)
+		function [rep, dataOut, status] = sendCommand(me, command, data)
 		%> @brief 
 		%>
 		%> 
 		% ===================================================================
-			me.sendObject(command,data);
-			[rep, ~] = me.receiveObject();
-			if ~strcmpi(rep,'ok')
-				fprintf('Send was OK\n');
+			rep = ''; dataOut = []; status = -1;
+			try
+				[status, ~, msg] = sendObject(me, command, data);
+				if status == -1
+					me.sendState = false; me.recState = false;
+					warning(msg);
+				else
+					me.sendState = true; me.recState = false;
+				end
+			catch ME
+				fprintf('Receive status %i did not return any command: %s - %s...\n', status, ME.identifier, ME.message);
+				me.sendState = false; me.receiveState = false;
 			end
-
+			if status == 0
+				[rep, dataOut] = receiveObject(me);
+				fprintf('Reply was: %s\n', rep);disp(dataOut);
+				me.sendState = false; me.recState = true;
+			end
 		end
 
 		% ===================================================================
@@ -105,11 +116,26 @@ classdef zmqConnection < optickaCore
 		%> 
 		% ===================================================================
 			command = ''; data = [];
-			[command, data] = me.receiveObject();
+			try
+				[command, data, msg] = receiveObject(me);
+				me.sendState = false; me.recState = true;
+				if isempty(command)
+					fprintf(msg);
+				end
+			catch ME
+				fprintf('Receive did not return any command: %s - %s...\n', ME.identifier, ME.message);
+				return
+			end
 			if ~isempty(command)
-				fprintf('Received: %s\n',command);
+				fprintf('Received: «%s»\n',command);
 				disp(data);
-				me.send('ok');
+				status = sendObject(me, 'ok', {''});
+				if status ~= 0
+					warning('Reply failed');
+					me.sendState = false;
+				else
+					me.sendState = true; me.recState = false;
+				end
 			end
 		end
 
@@ -120,19 +146,30 @@ classdef zmqConnection < optickaCore
 		%> 
 		% ===================================================================
 			stop = false;
+			fprintf('Will loop receiving commands...\n');
 			while ~stop
-				command = ''; data = [];
-				[command, data] = me.receiveObject();
-				if ~isempty(command)
-					fprintf('Received %s\n',command);
-					disp(data);
-					if strcmpi(command,'exit')
-						stop = true;
+				[command, ~] = receiveCommand(me);
+				if matches(command,{'exit','quit'})
+					stop = true;
+				else 
+					WaitSecs('YieldSecs', 0.1);
+				end
+			end
+		end
+
+		% ===================================================================
+		function flush(me)
+			try
+				me.set('RCVTIMEO', 0);
+				loop = true;
+				while loop
+					[~, status] = receive(me);
+					if status == -1
+						loop = false;
 					end
 				end
-				me.socket.send_string('ok');
-				WaitSecs('YieldSecs', 0.1);
 			end
+			me.set('RCVTIMEO', me.readTimeOut);
 		end
 
 		% ===================================================================
@@ -152,6 +189,7 @@ classdef zmqConnection < optickaCore
 		%> 
 		% ===================================================================
 			if ~exist('option','var'); warning('No option given...'); return; end
+			if ~exist('value','var'); warning('No value given...'); return; end
 			status = me.socket.set(option, value);
 		end
 
@@ -162,6 +200,7 @@ classdef zmqConnection < optickaCore
 		%> 
 		% ===================================================================
 			try
+				status = 0;
 				if ischar(data) || isstring(data)
 					me.socket.send_string(data);
 				elseif isa(data,'uint8')
@@ -169,16 +208,31 @@ classdef zmqConnection < optickaCore
 				else
 					sendObject(me, data);
 				end
+				me.sendState = true; me.recState = false;
 			catch ME
-				warning('Couldn''t send, perhaps need to receive first');
+				status = -1;
+				fprintf('Couldn''t send, perhaps need to receive first: %s - %s\n', ME.identifier, ME.message);
 			end
-			
-			try
-				me.socket.r
-			catch ME
-				
-			end
+		end
 
+		% ===================================================================
+		function [data, status] = receive(me)
+		%> @brief send
+		%>
+		%> 
+		% ===================================================================
+			data = [];
+			try
+				data = me.socket.recv_multipart();
+				if iscell(data) && isscalar(data)
+					data = data{:};
+				end
+				me.sendState = false; me.recState = true;
+			catch ME
+				fprintf('No data received: %s - %s...\n', ME.identifier, ME.message);
+				me.sendState = false; me.recState = false;
+				status = -1;
+			end
 		end
 
 		% ===================================================================
@@ -213,18 +267,21 @@ classdef zmqConnection < optickaCore
 
 	methods (Access = private)
 		% ===================================================================
-		function sendObject(me, command, data, options)
+		function [status, nbytes, msg] = sendObject(me, command, data, options)
 		%> @brief send a text command with serialized MATLAB object
 		%>
 		%> 
 		% ===================================================================
+			
+			status = -1; nbytes = 0; msg = '';
+		
 			% Check if the socket is open
 			if ~me.isOpen
 				error('Socket is not open. Please open the socket before sending data.');
 			end
 
 			% Check if the command is a string
-			if ~ischar(command) && ~isstring(command)
+			if ~exist('command','var') || ~ischar(command) && ~isstring(command)
 				error('Command must be a string or character array.');
 			end
 
@@ -238,30 +295,35 @@ classdef zmqConnection < optickaCore
 			
 			% Serialize the object if it's not empty
 			if ~isempty(data)
-				serializedObj = getByteStreamFromArray(data);
+				serialData = getByteStreamFromArray(data);
 			else
 				% If no data, just send an empty array
-				serializedObj = uint8([]);
+				serialData = uint8([]);
 			end
-			
-			% Send command part with SNDMORE flag if we have both command and data
-			if ~isempty(command) && ~isempty(serializedObj)
-				me.socket.send(uint8(command), 'sndmore');
-				me.socket.send(serializedObj, options{:});
-			elseif ~isempty(command)
-				% Just send text
-				me.socket.send(uint8(command), options{:});
-			elseif ~isempty(serializedObj)
-				% Just send data
-				me.socket.send(serializedObj, options{:});
-			else
-				% Send empty message
-				me.socket.send(uint8(''), options{:});
+			try
+				if ~isempty(command) && ~isempty(serialData)
+					n1 = me.socket.send(uint8(command), 'sndmore');
+					n2 = me.socket.send(serialData, options{:});
+					nbytes = n1 + n2;
+				elseif ~isempty(command)
+					% Just send text
+					nbytes = me.socket.send(uint8(command), options{:});
+				elseif ~isempty(serialData)
+					% Just send data
+					nbytes = me.socket.send(serialData, options{:});
+				else
+					% Send empty message
+					nbytes = me.socket.send(uint8(''), options{:});
+				end
+				status = 0;
+			catch ME
+				status = -1;
+				msg = [ME.identifier, ME.message];
 			end
 		end
 		
 		% ===================================================================
-		function [command, data] = receiveObject(me, options)
+		function [command, data, msg] = receiveObject(me, options)
 		%> @brief Receive a command with serialized MATLAB object
 		%>
 		%> 
@@ -274,24 +336,35 @@ classdef zmqConnection < optickaCore
 			if nargin < 2
 				options = {};
 			end
+
+			command = ''; data = []; msg = '';
 			
 			% Receive the first part (command/text)
-			message = me.socket.recv(options{:});
-			command = char(message);
+			[command, len] = me.socket.recv(options{:});
+			if command == -1 
+				msg = 'No data received...';
+				command = '';
+				return
+			end
+			command = char(command);
 			
 			% Check if there's more parts (the object)
 			hasMoreParts = me.socket.get('rcvmore');
 			
 			if hasMoreParts
 				% Receive the serialized object
-				serializedObj = me.socket.recv(options{:});
-				
+				serialData = [];
+				data = me.socket.recv_multipart(options{:});
+				if iscell(data)
+					serialData = [data{:}];
+				end
 				% Deserialize the object if it's not empty
-				if ~isempty(serializedObj)
+				if ~isempty(serialData)
 					try
-						data = getArrayFromByteStream(serializedObj);
+						data = getArrayFromByteStream(serialData);
 					catch ME
-						warning('Failed to deserialize object: %s', ME.message);
+						msg = sprintf('Failed to deserialize object: %s - %s', ME.identifier, ME.message);
+						warning(msg);
 						data = [];
 					end
 				else
