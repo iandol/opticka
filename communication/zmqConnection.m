@@ -1,6 +1,7 @@
 classdef zmqConnection < optickaCore
 	%> zmqConnection is a class to handle ØMQ connections for opticka class
-	%> communication
+	%> communication. We use matlab-zmq (a basic libzmq binding), 
+	%> and a REQ-REP pattern for main communication.
 
 	properties
 		%> ØMQ connection type, e.g. 'REQ', 'REP', 'PUB', 'SUB', 'PUSH', 'PULL'
@@ -47,11 +48,14 @@ classdef zmqConnection < optickaCore
 		% ===================================================================
 		function me = zmqConnection(varargin)
 		%> @brief Class constructor for zmqConnection.
+		%>
 		%> @details Initializes a zmqConnection object, setting up default
 		%>   properties and parsing any provided arguments using the optickaCore
 		%>   superclass constructor and argument parsing.
+		%>
 		%> @param varargin Optional name-value pairs to override default properties.
 		%>   Allowed properties are defined in `me.allowedProperties`.
+		%>
 		%> @return me An instance of the zmqConnection class.
 		% ===================================================================
 			args = optickaCore.addDefaults(varargin,struct('name','zmqConnection'));
@@ -94,11 +98,14 @@ classdef zmqConnection < optickaCore
 		% ===================================================================
 		function [rep, dataOut, status] = sendCommand(me, command, data)
 		%> @brief Sends a command and optional data, then waits for a reply.
-		%> @details Primarily for REQ/REP patterns. Uses `sendObject` to send the
+		%> 
+		% %> @details Primarily for REQ/REP patterns. Uses `sendObject` to send the
 		%>   command string and serialized data. If successful, it then calls
 		%>   `receiveObject` to wait for and receive the reply command and data.
+		%>
 		%> @param command The command string to send.
 		%> @param data (Optional) MATLAB data to serialize and send along with the command. Defaults to empty.
+		%> 
 		%> @return rep The reply command string received from the peer.
 		%> @return dataOut The deserialized MATLAB data received in the reply.
 		%> @return status 0 on success (send and receive completed), -1 on failure (send or receive failed).

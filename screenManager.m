@@ -2077,8 +2077,8 @@ classdef screenManager < optickaCore
 			oldv = Screen('Preference', 'VisualDebugLevel', 0);
 			wins = [];
 			a = 1;
-			for i = screens
-				x = i*100;
+			for i = fliplr(screens)
+				x = i*100 + (i*5);
 				wins(a) = PsychImaging('OpenWindow', i, 0.5, [x 0 x+100 100]);
 				os=Screen('TextSize', wins(a),  50);
 				Screen('DrawText',wins(a),['W:' num2str(i)], 5, 30,[0.25 1 1]);
