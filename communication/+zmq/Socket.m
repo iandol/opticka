@@ -170,8 +170,9 @@ classdef Socket < handle
 				part = obj.recv(buffLen, options{:});
 				if isscalar(part) && part == -1 && isa(part,'int32')
 					warning('Receive got a -1, proabably a timeout...');
+				else
+					message = [message {part}];
 				end
-				message = [message {part}];
 				keepReceiving = obj.get('ZMQ_RCVMORE');
 			end
 		end
@@ -211,12 +212,12 @@ classdef Socket < handle
 			%
 			%   Inputs:
 			%       obj      - A Socket object.
-			%       message  - cell array / int8 array containing the message parts to send.
+			%       message  - cell array / uint8 array containing the message parts to send.
 			%       varargin - Optional arguments for sending the message.
 			[buffLen, ~] = obj.normalize_msg_options(varargin{:});
 			nbytes = 0;
 			offset = 1;
-			if iscell(message)
+			if iscell(message) %assume correctly prechunked
 				for m = 1:length(message)-1
 					try
 						n = obj.send(message{m}, 'sndmore');

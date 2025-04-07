@@ -17,9 +17,9 @@ classdef zmqConnection < optickaCore
 		%> do we log to the command window?
 		verbose			= 0
 		%> default read timeout, -1 is blocking
-		readTimeOut		= 10000
+		readTimeOut		= -1
 		%> default write timeout, -1 is blocking
-		writeTimeOut	= 10000
+		writeTimeOut	= -1
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Transient = true)
@@ -113,7 +113,7 @@ classdef zmqConnection < optickaCore
 		% ===================================================================
 			rep = ''; dataOut = []; status = -1;
 			try
-				[status, ~, msg] = sendObject(me, command, data);
+				[status, nbytes, msg] = sendObject(me, command, data);
 				if status == -1
 					me.sendState = false; me.recState = false;
 					warning(msg);
@@ -270,10 +270,10 @@ classdef zmqConnection < optickaCore
 		%>   messages in the socket's incoming queue.
 		% ===================================================================
 			try
-				me.set('RCVTIMEO', 0);
+				me.set('RCVTIMEO', 10);
 				loop = true;
 				while loop
-					WaitSecs('YieldSecs',0.005);
+					WaitSecs('YieldSecs',0.0010);
 					[~, status] = receive(me);
 					if status == -1
 						loop = false;
@@ -348,19 +348,18 @@ classdef zmqConnection < optickaCore
 		%> @return status 0 on success (implied, not explicitly returned on success),
 		%>   -1 on failure (e.g., timeout).
 		%> @note Updates `sendState` and `recState`. Logs errors to the console.
-		%>   The `@brief` comment incorrectly says "send".
 		% ===================================================================
-			data = [];
+			data = []; status = -1;
 			try
 				data = me.socket.recv_multipart();
 				if iscell(data) && isscalar(data)
 					data = data{:};
 				end
+				status = 0;
 				me.sendState = false; me.recState = true;
 			catch ME
 				fprintf('No data received: %s - %s...\n', ME.identifier, ME.message);
 				me.sendState = false; me.recState = false;
-				status = -1;
 			end
 		end
 
@@ -497,10 +496,16 @@ classdef zmqConnection < optickaCore
 				options = {};
 			end
 
-			command = ''; data = []; msg = '';
-			
-			% Receive the first part (command/text)
-			[command, len] = me.socket.recv(options{:});
+			command = ''; data = []; msg = ''; frames = {};
+
+			try
+				frames = me.socket.recv_multipart(options{:});
+			catch ME
+				warning('Failed to get object: %s - %s', ME.identifier, ME.message);
+			end
+			if isempty(frames); return; end
+
+			command = frames{1};
 			if command == -1 
 				msg = 'No data received...';
 				command = '';
@@ -508,13 +513,9 @@ classdef zmqConnection < optickaCore
 			end
 			command = char(command);
 			
-			% Check if there's more parts (the object)
-			hasMoreParts = me.socket.get('rcvmore');
-			
-			if hasMoreParts
-				% Receive the serialized object
+			if length(frames) > 1
 				serialData = [];
-				data = me.socket.recv_multipart(options{:});
+				data = frames{2:end};
 				if iscell(data)
 					serialData = [data{:}];
 				end
