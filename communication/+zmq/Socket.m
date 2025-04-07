@@ -57,7 +57,12 @@ classdef Socket < handle
 			%   Inputs:
 			%       obj      - A Socket object.
 			%       endpoint - The network endpoint to bind to (e.g., 'tcp://*:5555').
-			status = zmq.core.bind(obj.socketPointer, endpoint);
+			try
+				status = zmq.core.bind(obj.socketPointer, endpoint);
+			catch ME
+				getReport(ME)
+				status = -1;
+			end
 			if (status == 0)
 				% Add endpoint to the tracked bindings
 				% this is important to the cleanup process
@@ -65,15 +70,41 @@ classdef Socket < handle
 			end
 		end
 
-		function connect(obj, endpoint)
-			%connect  Connects the socket to a network endpoint.
+		function status = unbind(obj, endpoint)
+			%unbind  Unbinds the socket from a network endpoint.
+			%   unbind(obj, endpoint) unbinds the ZeroMQ socket from the specified
+			%   endpoint.
+			%
+			%   Inputs:
+			%       obj      - A Socket object.
+			%       endpoint - The network endpoint to unbind from.
+			status = -1;
+			try
+				status = zmq.core.unbind(obj.socketPointer, endpoint);
+			catch ME
+				fprintf('Unbind: %i - %s -- %s - %s\n',obj.socketPointer, endpoint,ME.identifier,ME.message);
+			end
+			if (status == 0)
+				index = find(strcmp(obj.bindings, endpoint));
+				obj.bindings(index) = [];
+				if isempty(obj.bindings); obj.bindings = {}; end
+			end
+		end
+
+	function status = connect(obj, endpoint)
+		%connect  Connects the socket to a network endpoint.
 			%   connect(obj, endpoint) connects the ZeroMQ socket to the specified
 			%   endpoint.
 			%
 			%   Inputs:
 			%       obj      - A Socket object.
 			%       endpoint - The network endpoint to connect to (e.g., 'tcp://localhost:5555').
-			status = zmq.core.connect(obj.socketPointer, endpoint);
+			try
+				status = zmq.core.connect(obj.socketPointer, endpoint);
+			catch ME
+				getReport(ME)
+				status = -1;
+			end
 			if (status == 0)
 				% Add endpoint to the tracked connections
 				% this is important to the cleanup process
@@ -81,7 +112,7 @@ classdef Socket < handle
 			end
 		end
 
-		function disconnect(obj, endpoint)
+		function status = disconnect(obj, endpoint)
 			%disconnect  Disconnects the socket from a network endpoint.
 			%   disconnect(obj, endpoint) disconnects the ZeroMQ socket from the specified
 			%   endpoint.
@@ -89,7 +120,12 @@ classdef Socket < handle
 			%   Inputs:
 			%       obj      - A Socket object.
 			%       endpoint - The network endpoint to disconnect from.
-			status = zmq.core.disconnect(obj.socketPointer, endpoint);
+			status = -1;
+			try
+				status = zmq.core.disconnect(obj.socketPointer, endpoint);
+			catch ME
+				fprintf('Disconnect: %i - %s -- %s - %s\n',obj.socketPointer, endpoint, ME.identifier, ME.message);
+			end
 			if (status == 0)
 				% Remove endpoint from the tracked connections
 				% to avoid double cleaning
@@ -242,6 +278,7 @@ classdef Socket < handle
 			%       obj   - A Socket object.
 			%       name  - The name of the socket option (e.g., 'RCVTIMEO').
 			%       value - The value to set for the option.
+			if obj.socketPointer == 0; warning('Socket not open...'); return; end
 			optName = obj.normalize_const_name(name);
 			status = zmq.core.setsockopt(obj.socketPointer, optName, value);
 			if status ~= 0
@@ -249,24 +286,7 @@ classdef Socket < handle
 			end
 		end
 
-		function unbind(obj, endpoint)
-			%unbind  Unbinds the socket from a network endpoint.
-			%   unbind(obj, endpoint) unbinds the ZeroMQ socket from the specified
-			%   endpoint.
-			%
-			%   Inputs:
-			%       obj      - A Socket object.
-			%       endpoint - The network endpoint to unbind from.
-			status = zmq.core.unbind(obj.socketPointer, endpoint);
-			if (status == 0)
-				% Remove endpoint from the tracked bindings
-				% to avoid double cleaning
-				index = find(strcmp(obj.bindings, endpoint));
-				obj.bindings(index) = [];
-			end
-		end
-
-		function close(obj)
+		function status = close(obj)
 			%close  Closes the socket.
 			%   close(obj) closes the ZeroMQ socket.
 			%
@@ -276,13 +296,15 @@ classdef Socket < handle
 				% Disconnect/Unbind all the endpoints
 				cellfun(@(b) obj.unbind(b), obj.bindings, 'UniformOutput', false);
 				cellfun(@(c) obj.disconnect(c), obj.connections, 'UniformOutput', false);
-				% Avoid linger time
-				obj.set('linger', 0);
+				try
+					obj.set('linger', 0);
+					status = zmq.core.close(obj.socketPointer);
+				catch ME
+					getReport(ME)
+					status = -1;
+				end
 			end
-			status = zmq.core.close(obj.socketPointer);
-			if (status == 0)
-				obj.socketPointer = 0; % ensure NULL pointer
-			end
+			obj.socketPointer = 0; % ensure NULL pointer
 		end
 
 		function delete(obj)

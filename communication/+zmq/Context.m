@@ -78,21 +78,23 @@ classdef Context < handle
 		end
 
 		function close(obj)
-			% close  Closes the context and all associated sockets.
-			%   obj.close() closes the context and all sockets spawned from it.
-			%   This method should be called when the context is no longer needed.
+			% close  Closes all associated sockets.
+			%   obj.close() closes all sockets spawned from it.
+			%   This method should be called when the sockets are no longer needed.
 			%
 			%   Example:
 			%       ctx.close();
 			if obj.contextPointer ~= 0
-				for n = 1:length(obj.spawnedSockets)
-					socketObj = obj.spawnedSockets{n};
+				for n = length(obj.spawnedSockets):-1:1
+					skt = obj.spawnedSockets{n};
 					try %#ok<*TRYNC>
-						socketObj.cleanup();
+						skt.close();
+					catch ME
+						getReport(ME)
 					end
+					obj.spawnedSockets(n) = [];
 				end
-				try zmq.core.ctx_term(obj.contextPointer); end
-				obj.contextPointer = 0;
+				obj.spawnedSockets = {};
 			end
 		end
 
@@ -117,6 +119,7 @@ classdef Context < handle
 			%   Example:
 			%       delete(ctx);
 			close(obj);
+			term(obj);
 		end
 
 	end
