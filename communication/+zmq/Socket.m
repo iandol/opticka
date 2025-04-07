@@ -4,26 +4,28 @@ classdef Socket < handle
 	%   ZeroMQ sockets in MATLAB. It handles socket creation, binding,
 	%   connection, message sending and receiving, and socket closure.
 
-	properties (Access = public)
-		%bindings  Cell array of endpoints the socket is bound to.
-		%   This property stores the endpoints that the socket is currently
-		%   bound to. It is used for cleanup when the socket is closed.
-		bindings
-		%connections  Cell array of endpoints the socket is connected to.
-		%   This property stores the endpoints that the socket is currently
-		%   connected to. It is used for cleanup when the socket is closed.
-		connections
-		%defaultBufferLength  Default buffer length for receiving messages.
-		%   This property specifies the default buffer length used when
-		%   receiving messages from the socket.
-		defaultBufferLength
-	end
-
 	properties (GetAccess = public, SetAccess = private)
 		%socketPointer  Pointer to the underlying ZeroMQ socket.
 		%   This pointer is used by the core functions to interact with the
 		%   ZeroMQ library.
-		socketPointer = 0
+		socketPointer
+		%
+		date
+	end
+
+	properties (Access = public)
+		%bindings  Cell array of endpoints the socket is bound to.
+		%   This property stores the endpoints that the socket is currently
+		%   bound to. It is used for cleanup when the socket is closed.
+		bindings = {}
+		%connections  Cell array of endpoints the socket is connected to.
+		%   This property stores the endpoints that the socket is currently
+		%   connected to. It is used for cleanup when the socket is closed.
+		connections = {}
+		%defaultBufferLength  Default buffer length for receiving messages.
+		%   This property specifies the default buffer length used when
+		%   receiving messages from the socket.
+		defaultBufferLength = 2^19
 	end
 
 	methods
@@ -38,13 +40,13 @@ classdef Socket < handle
 			%
 			%   Outputs:
 			%       obj          - A Socket object.
+			obj.date = datetime;
 			socketType = obj.normalize_const_name(socketType);
 			% Core API
 			obj.socketPointer = zmq.core.socket(contextPointer, socketType);
-			% Init properties
-			obj.bindings = {};
-			obj.connections = {};
-			obj.defaultBufferLength = 255*12;
+			if (obj.socketPointer == 0)
+				error('zmq:Socket:socketCreationFailed', 'Socket creation failed.');
+			end
 		end
 
 		function bind(obj, endpoint)
@@ -124,14 +126,17 @@ classdef Socket < handle
 			%       message  - A cell array containing the message parts.
 			[buffLen, options] = obj.normalize_msg_options(varargin{:});
 		
-			message = [];
+			message = {};
 		
 			keepReceiving = 1;
 		
 			while keepReceiving > 0
 				part = obj.recv(buffLen, options{:});
-				message = [message part];
-				keepReceiving = obj.get('rcvmore');
+				if isscalar(part) && part == -1 && isa(part,'int32')
+					warning('Receive got a -1, proabably a timeout...');
+				end
+				message = [message {part}];
+				keepReceiving = obj.get('ZMQ_RCVMORE');
 			end
 		end
 
@@ -149,7 +154,7 @@ classdef Socket < handle
 			message = char(obj.recv_multipart(varargin{:}));
 		end
 
-		function out = recv(obj, varargin)
+		function data = recv(obj, varargin)
 			%recv  Receives a message.
 			%   message = recv(obj, varargin) receives a message from the socket.
 			%
@@ -160,45 +165,48 @@ classdef Socket < handle
 			%   Outputs:
 			%       message  - The received message.
 			[buffLen, options] = obj.normalize_msg_options(varargin{:});
-			out = zmq.core.recv(obj.socketPointer, buffLen, options{:});
+			data = zmq.core.recv(obj.socketPointer, buffLen, options{:});
 		end
 
-		function send_multipart(obj, message, varargin)
+		function nbytes = send_multipart(obj, message, varargin)
 			%send_multipart  Sends a multipart message.
 			%   send_multipart(obj, message, varargin) sends a multipart message
 			%   through the socket.
 			%
 			%   Inputs:
 			%       obj      - A Socket object.
-			%       message  - A cell array containing the message parts to send.
+			%       message  - cell array / int8 array containing the message parts to send.
 			%       varargin - Optional arguments for sending the message.
-			[buffLen, options] = obj.normalize_msg_options(varargin{:});
+			[buffLen, ~] = obj.normalize_msg_options(varargin{:});
+			nbytes = 0;
+			offset = 1;
 			if iscell(message)
-				for i = 1:length(message)
-					if i < length(message)
-						obj.send(message{i}, 'sndmore');
-					else
-						socket.send(message{i});
+				for m = 1:length(message)-1
+					try
+						n = obj.send(message{m}, 'sndmore');
+						nbytes = nbytes + n;
+					catch
+						
 					end
 				end
+				n = obj.send(message{end});
+				nbytes = nbytes + n;
 			else
-				offset = 1;
-			
 				L = length(message);  % length of original message
 				N = floor(L/buffLen); % number of multipart messages
-			
 				for m = 1:N
 					part = message(offset:(offset+buffLen-1));
 					offset = offset+buffLen;
-					obj.send(part, 'sndmore');
+					n = obj.send(part, 'sndmore');
+					nbytes = nbytes + n;
 				end
-			
 				part = message(offset:end);
-				obj.send(part);
+				n = obj.send(part);
+				nbytes = nbytes + n;
 			end
 		end
 
-		function send_string(obj, message, varargin)
+		function nbytes = send_string(obj, message, varargin)
 			%send_string  Sends a string message.
 			%   send_string(obj, message, varargin) sends a string message
 			%   through the socket.
@@ -207,7 +215,7 @@ classdef Socket < handle
 			%       obj      - A Socket object.
 			%       message  - The string to send.
 			%       varargin - Optional arguments for sending the message.
-			obj.send_multipart(uint8(message), varargin{:});
+			nbytes = obj.send_multipart(uint8(message), varargin{:});
 		end
 
 		function nbytes = send(obj, data, varargin)
