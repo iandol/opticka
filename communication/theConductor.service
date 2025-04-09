@@ -1,0 +1,13 @@
+[Unit]
+Description=Opticka ØMQ Conductor Service
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=exec
+ExecStart=/usr/local/MATLAB/R2025a/bin/matlab -nodesktop -nosplash -r "c = theConductor('port',6666); c.run();"
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

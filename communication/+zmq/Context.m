@@ -1,11 +1,11 @@
 classdef Context < handle
-	% Context  Encapsulates a ZeroMQ context.
+	% Context  Encapsulates a ØMQ context.
 	%   A context is the container for all sockets in a single process,
 	%   and acts as the transport for messages between sockets.
 
 	properties (GetAccess = public, SetAccess = private)
-		% contextPointer  Pointer to the underlying ZeroMQ context.
-		contextPointer
+		% pointer  Pointer to the underlying ØMQ context.
+		pointer
 		% spawnedSockets  Cell array of sockets spawned from this context.
 		spawnedSockets
 		% date  Date and time when the context was created.
@@ -14,8 +14,8 @@ classdef Context < handle
 
 	methods
 		function obj = Context(varargin)
-			% Context  Constructs a ZeroMQ context.
-			%   obj = zmq.Context() creates a new ZeroMQ context.
+			% Context  Constructs a ØMQ context.
+			%   obj = zmq.Context() creates a new ØMQ context.
 			%
 			%   Example:
 			%       ctx = zmq.Context();
@@ -24,19 +24,9 @@ classdef Context < handle
 			end
 			obj.date = datetime;
 			% Core API
-			obj.contextPointer = zmq.core.ctx_new();
+			obj.pointer = zmq.core.ctx_new();
 			% Initi properties
 			obj.spawnedSockets = {};
-		end
-
-		% This exposes the underlying context pointer.
-		function ptr = get_ptr(obj)
-			% get_ptr  Returns the pointer to the underlying ZeroMQ context.
-			%   ptr = obj.get_ptr() returns the pointer to the underlying ZeroMQ context.
-			%
-			%   Example:
-			%       ptr = ctx.get_ptr();
-			ptr = obj.contextPointer;
 		end
 
 		function option = get(obj, name)
@@ -47,7 +37,7 @@ classdef Context < handle
 			%   Example:
 			%       threads = ctx.get('IO_THREADS');
 			optName = obj.normalize_const_name(name);
-			option = zmq.core.ctx_get(obj.contextPointer, optName);
+			option = zmq.core.ctx_get(obj.pointer, optName);
 		end
 
 		function set(obj, name, value)
@@ -59,7 +49,7 @@ classdef Context < handle
 			%   Example:
 			%       ctx.set('IO_THREADS', 4);
 			optName = obj.normalize_const_name(name);
-			zmq.core.ctx_set(obj.contextPointer, optName, value);
+			zmq.core.ctx_set(obj.pointer, optName, value);
 		end
 
 		function newSocket = socket(obj, socketType)
@@ -71,10 +61,20 @@ classdef Context < handle
 			%   Example:
 			%       socket = ctx.socket('ZMQ_PUB');
 			% Spawns a socket from the context
-			newSocket = zmq.Socket(obj.contextPointer, socketType);
+			newSocket = zmq.Socket(obj.pointer, socketType);
 			% Keep tracking of spawned sockets
 			% this is important to the cleanup process
 			obj.spawnedSockets{end+1} = newSocket;
+		end
+
+		% This exposes the underlying context pointer.
+		function ptr = getPointer(obj)
+			% getPointer  Returns the pointer to the underlying ØMQ context.
+			%   ptr = obj.getPointer() returns the pointer to the underlying ØMQ context.
+			%
+			%   Example:
+			%       ptr = ctx.getPointer();
+			ptr = obj.pointer;
 		end
 
 		function close(obj)
@@ -84,7 +84,7 @@ classdef Context < handle
 			%
 			%   Example:
 			%       ctx.close();
-			if obj.contextPointer ~= 0
+			if obj.pointer ~= 0
 				for n = length(obj.spawnedSockets):-1:1
 					skt = obj.spawnedSockets{n};
 					try %#ok<*TRYNC>
@@ -105,9 +105,9 @@ classdef Context < handle
 			%
 			%   Example:
 			%       ctx.term();
-			if (obj.contextPointer ~= 0)
-				try zmq.core.ctx_term(obj.contextPointer); end
-				obj.contextPointer = 0;  % ensure NULL pointer
+			if (obj.pointer ~= 0)
+				try zmq.core.ctx_term(obj.pointer); end
+				obj.pointer = 0;  % ensure NULL pointer
 			end
 		end
 
@@ -129,7 +129,7 @@ classdef Context < handle
 			% normalize_const_name  Normalizes a constant name.
 			%   normalized = obj.normalize_const_name(name) normalizes the constant name by converting it to uppercase,
 			%   removing the 'ZMQ_' prefix (if present), and adding the 'ZMQ_' prefix back.
-			%   This ensures that the constant name is in the correct format for use with the ZeroMQ API.
+			%   This ensures that the constant name is in the correct format for use with the ØMQ API.
 			%
 			%   Example:
 			%       normalizedName = obj.normalize_const_name('io_threads');

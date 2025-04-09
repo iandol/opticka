@@ -6,20 +6,28 @@ classdef zmqConnection < optickaCore
 	properties
 		%> ØMQ connection type, e.g. 'REQ', 'REP', 'PUB', 'SUB', 'PUSH', 'PULL'
 		type			= 'REQ'
-		%> the port to open
-		port			= 5555
-		%> the address to open, use * for a server to bind to all interfaces
-		address			= 'localhost'
 		%> transport for the socket, tcp | ipc | inproc
 		transport		= 'tcp'
-		%> default size of chunk to read for tcp
+		%> the address to open, use * for a server to bind to all interfaces
+		address			= 'localhost'
+		%> the port to open
+		port			= 6666
+		%> default size of chunk to read/write for tcp
 		frameSize		= 2^20
+		%> default read timeout in ms, -1 is blocking
+		readTimeOut		= 3e4
+		%> default write timeout in ms, -1 is blocking
+		writeTimeOut	= 3e4
 		%> do we log to the command window?
-		verbose			= 0
-		%> default read timeout, -1 is blocking
-		readTimeOut		= -1
-		%> default write timeout, -1 is blocking
-		writeTimeOut	= -1
+		verbose			= false
+		%> 
+		alwaysPoll		= false
+		
+	end
+
+	properties (Dependent = true)
+		%> connection endpoint
+		endpoint
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Transient = true)
@@ -29,11 +37,6 @@ classdef zmqConnection < optickaCore
 		context			= []
 		%> zmq.Socket()
 		socket			= []
-	end
-
-	properties (Dependent = true)
-		%> connection endpoint
-		endpoint
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -65,7 +68,7 @@ classdef zmqConnection < optickaCore
 
 		
 		% ===================================================================
-		function open(me)
+		function status = open(me)
 		%> @brief Opens the ØMQ socket connection.
 		%> @details Creates the ØMQ context if it doesn't exist, creates the
 		%>   socket based on the `type` property, sets socket options like
@@ -74,11 +77,15 @@ classdef zmqConnection < optickaCore
 		%>   to the specified `endpoint`. Sets the `isOpen` flag to true.
 		%> @note Does nothing if the connection `isOpen` is already true.
 		% ===================================================================
+			status = -1;
 			if me.isOpen; return; end
 			if ~isa(me.context, 'zmq.Context')
 				me.context = zmq.Context();
+			else
+				me.context.close;
 			end
 			me.socket = me.context.socket(me.type);
+			me.socket.defaultBufferLength = me.frameSize;
 			if me.readTimeOut ~= -1
 				me.set('RCVTIMEO', me.readTimeOut);
 			end
@@ -86,20 +93,40 @@ classdef zmqConnection < optickaCore
 				me.set('SNDTIMEO', me.writeTimeOut);
 			end
 			me.set('LINGER', 1000);
+			me.set('RCVBUF', me.frameSize);
 			switch me.type 
 				case {'REP','PUB','PUSH'}
-					me.socket.bind(me.endpoint);
+					status = me.socket.bind(me.endpoint);
 				otherwise
-					me.socket.connect(me.endpoint);
+					status = me.socket.connect(me.endpoint);
 			end
-			me.isOpen = true;
+			if status == 0
+				me.isOpen = true;
+			else
+				try me.socket.close(); end
+				error('Socket failed to bind/connect!!!');
+			end
 		end
 
 		% ===================================================================
-		function [rep, dataOut, status] = sendCommand(me, command, data)
+		function revents = poll(me, events, time)
+		%> @brief poll socket to identify whether we can send ('out') or receive ('in')
+		%>
+		%> @param events string 'in' 'out' or 'both'
+		%> @param time in ms, 0 = no wait, -1 = block until response
+		% ===================================================================
+			revents = 0;
+			if ~exist('events','var') || isempty(events); events = 'both'; end
+			if ~exist('time','var') || isempty(time); time = 0; end
+			if ~me.isOpen; return; end
+			revents = me.socket.poll(events,time);
+		end
+
+		% ===================================================================
+		function [rep, dataOut, status, nbytes, msg] = sendCommand(me, command, data, getReply)
 		%> @brief Sends a command and optional data, then waits for a reply.
 		%> 
-		% %> @details Primarily for REQ/REP patterns. Uses `sendObject` to send the
+		%> @details Primarily for REQ/REP patterns. Uses `sendObject` to send the
 		%>   command string and serialized data. If successful, it then calls
 		%>   `receiveObject` to wait for and receive the reply command and data.
 		%>
@@ -112,7 +139,10 @@ classdef zmqConnection < optickaCore
 		%> @note Updates `sendState` and `recState` properties. Logs reply if verbose.
 		% ===================================================================
 			rep = ''; dataOut = []; status = -1;
+			if ~me.isOpen; return; end
+			if ~exist('getReply','var') || isempty(getReply); getReply = true; end
 			try
+				if ~verifyEvent(me,'out'); warning('Cannot Send'); return; end
 				[status, nbytes, msg] = sendObject(me, command, data);
 				if status == -1
 					me.sendState = false; me.recState = false;
@@ -124,15 +154,17 @@ classdef zmqConnection < optickaCore
 				fprintf('Receive status %i did not return any command: %s - %s...\n', status, ME.identifier, ME.message);
 				me.sendState = false; me.receiveState = false;
 			end
-			if status == 0
+			if status == 0 && getReply
+				if ~verifyEvent(me,'in'); warning('Cannot receive'); return; end
 				[rep, dataOut] = receiveObject(me);
-				fprintf('Reply was: %s\n', rep);disp(dataOut);
+				fprintf('\n=== Reply was: %s ===\n', rep);
+				disp(dataOut);
 				me.sendState = false; me.recState = true;
 			end
 		end
 
 		% ===================================================================
-		function [command, data] = receiveCommand(me, sendReply)
+		function [command, data, msg] = receiveCommand(me, sendReply)
 		%> @brief Receives a command and associated data, optionally sending an 'ok' reply.
 		%> @details Calls `receiveObject` to get the command string and any
 		%>   serialized data. If `sendReply` is true (default) and a command was
@@ -144,12 +176,13 @@ classdef zmqConnection < optickaCore
 		%> @return data The deserialized MATLAB data received with the command. Empty if no data part or on error.
 		%> @note Updates `sendState` and `recState` properties. Logs received command/data if verbose.
 		% ===================================================================
+			command = ''; data = []; msg = '';
+			if ~me.isOpen; return; end
 			if nargin < 2
 				sendReply = true; % Default behavior: send 'ok' reply
 			end
-			
-			command = ''; data = [];
 			try
+				if ~verifyEvent(me,'in'); warning('Cannot receive'); return; end
 				[command, data, msg] = receiveObject(me);
 				me.sendState = false; me.recState = true; % Update state after successful receive attempt
 				if isempty(command) && ~isempty(msg)
@@ -157,7 +190,7 @@ classdef zmqConnection < optickaCore
 					me.recState = false; % Indicate receive wasn't fully successful
 				elseif ~isempty(command) && me.verbose > 0
 					fprintf('Received command: «%s»\n', command);
-					if ~isempty(data) && me.verbose > 1
+					if ~isempty(data) && me.verbose
 						disp('Received data:');
 						disp(data);
 					end
@@ -171,6 +204,7 @@ classdef zmqConnection < optickaCore
 			
 			% Send 'ok' reply only if requested and a command was actually received
 			if sendReply && ~isempty(command) && me.recState
+				if ~verifyEvent(me,'out'); warning('Cannot Send'); return; end
 				status = sendObject(me, 'ok', {''});
 				if status ~= 0
 					warning('Default "ok" reply failed for command "%s"', command);
@@ -183,82 +217,6 @@ classdef zmqConnection < optickaCore
 				% The state remains sendState=false, recState=true.
 			end
 		end
-		% ===================================================================
-		function receiveCommands(me)
-		%> @brief Enters a loop to continuously receive and process commands.
-		%> @details This method runs a `while` loop that repeatedly calls
-		%>   `receiveCommand(me, false)` to wait for incoming commands without
-		%>   sending an automatic 'ok'. Based on the received `command`, it
-		%>   performs specific actions (e.g., echo, gettime) and sends an
-		%>   appropriate reply using `sendObject`. The loop terminates upon
-		%>   receiving an 'exit' or 'quit' command.
-		%> @note This is typically used for server-like roles (e.g., REP sockets)
-		%>   that need to handle various client requests. Includes short pauses
-		%>   using `WaitSecs` to prevent busy-waiting.
-		% ===================================================================
-			stop = false;
-			fprintf('Starting command receive loop...\n');
-			while ~stop
-				% Call receiveCommand, but tell it NOT to send the default 'ok' reply
-				[command, data] = receiveCommand(me, false);
-
-				if isempty(command) || ~me.recState % Check if receive failed or timed out
-					WaitSecs('YieldSecs', 0.01); % Short pause before trying again
-					continue;
-				end
-
-				% Command was received successfully (recState is true).
-				% Now determine the reply and send it.
-				replyCommand = 'ok'; % Default reply command if not overridden
-				replyData = {''};    % Default reply data if not overridden
-
-				switch lower(command)
-					case {'exit', 'quit'}
-						fprintf('Received exit command. Shutting down loop.\n');
-						stop = true;
-						replyCommand = 'bye';
-						replyData = {'Shutting down'};
-					
-					case 'echo'
-						if me.verbose > 0; fprintf('Echoing received data.\n'); end
-						replyCommand = 'echo_reply';
-						replyData = data; % Send back the data we received
-
-					case 'gettime'
-						currentTime = datetime('now', 'Format', 'yyyy-MM-dd HH:mm:ss.SSS');
-						if me.verbose > 0; fprintf('Replying with current time: %s\n', currentTime); end
-						replyCommand = 'time_reply';
-						replyData = char(currentTime);
-
-					case 'syncbuffer'
-						% Placeholder for syncBuffer logic
-						if me.verbose > 0; fprintf('Processing syncBuffer command (placeholder).\n'); end
-						% me.flush(); % Example: maybe flush the input buffer?
-						replyCommand = 'sync_ack';
-						replyData = {'buffer synced'};
-
-					otherwise
-						fprintf('Received unknown command: «%s»\n', command);
-						replyCommand = 'error';
-						replyData = {'unknown command'};
-				end
-
-				% Send the determined reply
-				[sendStatus, ~, msg] = sendObject(me, replyCommand, replyData);
-				if sendStatus ~= 0
-					warning('Reply failed for command "%s": %s', command, msg);
-					me.sendState = false; % Update state on send failure
-				else
-					me.sendState = true; me.recState = false; % Update state on send success
-				end
-
-				% Small pause to prevent busy-waiting if no commands arrive quickly
-				if ~stop
-					WaitSecs('YieldSecs', 0.01);
-				end
-			end
-			fprintf('Command receive loop finished.\n');
-		end
 
 		% ===================================================================
 		function flush(me)
@@ -270,15 +228,17 @@ classdef zmqConnection < optickaCore
 		%>   messages in the socket's incoming queue.
 		% ===================================================================
 			try
-				me.set('RCVTIMEO', 10);
+				me.set('RCVTIMEO', 5);
 				loop = true;
 				while loop
-					WaitSecs('YieldSecs',0.0010);
+					WaitSecs('YieldSecs',0.005);
 					[~, status] = receive(me);
 					if status == -1
 						loop = false;
 					end
 				end
+			catch ME
+				if me.verbose; fprintf('Flush error: %s %s', ME.identifier, ME.message); end
 			end
 			me.set('RCVTIMEO', me.readTimeOut);
 		end
@@ -401,9 +361,6 @@ classdef zmqConnection < optickaCore
 			endpoint = sprintf('%s://%s:%i',me.transport,me.address,me.port);
 		end
 
-	end
-
-	methods (Access = private)
 		% ===================================================================
 		function [status, nbytes, msg] = sendObject(me, command, data, options)
 		%> @brief (Private) Sends a command string and optional serialized MATLAB data.
@@ -502,6 +459,11 @@ classdef zmqConnection < optickaCore
 				frames = me.socket.recv_multipart(options{:});
 			catch ME
 				warning('Failed to get object: %s - %s', ME.identifier, ME.message);
+				if matches(ME.identifier,'zmq:core:recv:EFSM')
+					fprintf('EFSM error, let''s try to flush and send');
+					me.flush;
+					me.sendObject('error',{''});
+				end
 			end
 			if isempty(frames); return; end
 
@@ -514,15 +476,14 @@ classdef zmqConnection < optickaCore
 			command = char(command);
 			
 			if length(frames) > 1
-				serialData = [];
 				data = frames{2:end};
 				if iscell(data)
-					serialData = [data{:}];
+					data = [data{:}];
 				end
 				% Deserialize the object if it's not empty
-				if ~isempty(serialData)
+				if ~isempty(data)
 					try
-						data = getArrayFromByteStream(serialData);
+						data = getArrayFromByteStream(data);
 					catch ME
 						msg = sprintf('Failed to deserialize object: %s - %s', ME.identifier, ME.message);
 						warning(msg);
@@ -535,6 +496,22 @@ classdef zmqConnection < optickaCore
 				% No object part in the message
 				data = [];
 			end
+		end
+	end
+
+	methods (Access = private)
+		
+		function out = verifyEvent(me, events)
+			if ~me.alwaysPoll; out = true; return; end
+			out = false;
+			r = poll(me,'both',0);
+			switch events
+				case 'in'
+					if matches(r,{'in','both'}); out = true; end
+				case 'out'
+					if strcmpi(r,{'out','both'}); out = true; end
+			end
+
 		end
 	end
 	
