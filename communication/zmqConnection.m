@@ -20,7 +20,7 @@ classdef zmqConnection < optickaCore
 		writeTimeOut	= 3e4
 		%> do we log to the command window?
 		verbose			= false
-		%> 
+		%> for sendCommand and receiveCommand use zmq.core.poll?
 		alwaysPoll		= false
 		
 	end
@@ -42,7 +42,7 @@ classdef zmqConnection < optickaCore
 	properties (SetAccess = private, GetAccess = private)
 		sendState			= false
 		recState			= false
-		allowedProperties = {'type','protocol','port','address', ...
+		allowedProperties = {'type','protocol','port','address', 'alwaysPoll',...
 			'verbose','readTimeOut','writeTimeOut','frameSize','cleanup'};
 	end
 	
@@ -142,9 +142,8 @@ classdef zmqConnection < optickaCore
 			if ~me.isOpen; return; end
 			if ~exist('getReply','var') || isempty(getReply); getReply = true; end
 			try
-				if ~verifyEvent(me,'out'); warning('Cannot Send'); return; end
 				[status, nbytes, msg] = sendObject(me, command, data);
-				if status == -1
+				if status ~= 0
 					me.sendState = false; me.recState = false;
 					warning(msg);
 				else
@@ -152,10 +151,9 @@ classdef zmqConnection < optickaCore
 				end
 			catch ME
 				fprintf('Receive status %i did not return any command: %s - %s...\n', status, ME.identifier, ME.message);
-				me.sendState = false; me.receiveState = false;
+				me.sendState = false; me.recState = false;
 			end
 			if status == 0 && getReply
-				if ~verifyEvent(me,'in'); warning('Cannot receive'); return; end
 				[rep, dataOut] = receiveObject(me);
 				fprintf('\n=== Reply was: %s ===\n', rep);
 				disp(dataOut);
@@ -182,11 +180,10 @@ classdef zmqConnection < optickaCore
 				sendReply = true; % Default behavior: send 'ok' reply
 			end
 			try
-				if ~verifyEvent(me,'in'); warning('Cannot receive'); return; end
 				[command, data, msg] = receiveObject(me);
 				me.sendState = false; me.recState = true; % Update state after successful receive attempt
 				if isempty(command) && ~isempty(msg)
-					fprintf('Receive issue: %s\n', msg); % Log if receiveObject reported an issue
+					fprintf('Receive problem: %s\n', msg); % Log if receiveObject reported an issue
 					me.recState = false; % Indicate receive wasn't fully successful
 				elseif ~isempty(command) && me.verbose > 0
 					fprintf('Received command: «%s»\n', command);
@@ -204,8 +201,7 @@ classdef zmqConnection < optickaCore
 			
 			% Send 'ok' reply only if requested and a command was actually received
 			if sendReply && ~isempty(command) && me.recState
-				if ~verifyEvent(me,'out'); warning('Cannot Send'); return; end
-				status = sendObject(me, 'ok', {''});
+				status = sendObject(me, 'ok', {});
 				if status ~= 0
 					warning('Default "ok" reply failed for command "%s"', command);
 					me.sendState = false; % Update state on send failure
@@ -228,14 +224,12 @@ classdef zmqConnection < optickaCore
 		%>   messages in the socket's incoming queue.
 		% ===================================================================
 			try
-				me.set('RCVTIMEO', 5);
-				loop = true;
-				while loop
-					WaitSecs('YieldSecs',0.005);
-					[~, status] = receive(me);
-					if status == -1
-						loop = false;
-					end
+				me.set('RCVTIMEO', 0);
+				N = 1000;
+				while N > 0
+					status = 0;
+					if verifyEvent('in'); [~, status] = receive(me); end
+					if status == -1; N = 0; end
 				end
 			catch ME
 				if me.verbose; fprintf('Flush error: %s %s', ME.identifier, ME.message); end
@@ -269,6 +263,9 @@ classdef zmqConnection < optickaCore
 			if ~exist('option','var'); warning('No option given...'); return; end
 			if ~exist('value','var'); warning('No value given...'); return; end
 			status = me.socket.set(option, value);
+			if status ~= 0
+				warning('zmqConnection:set:failure','Failed to set %s', option)
+			end
 		end
 
 		% ===================================================================
@@ -335,13 +332,12 @@ classdef zmqConnection < optickaCore
 		%> @note Uses `try...end` blocks to suppress errors during closure.
 		% ===================================================================
 			if ~exist('keepContext','var'); keepContext = false; end
-			if me.isOpen
-				try me.socket.close(); end %#ok<*TRYNC>
-				if ~keepContext
-					try me.context.close(); end
-				end
-				me.isOpen = false;
+			try me.socket.close(); end %#ok<*TRYNC>
+			try me.context.close(); end
+			if ~keepContext
+				try me.context.term(); end
 			end
+			me.isOpen = false;
 		end
 		function delete(me)
 		%> @brief Class destructor.
@@ -507,12 +503,20 @@ classdef zmqConnection < optickaCore
 			r = poll(me,'both',0);
 			switch events
 				case 'in'
-					if matches(r,{'in','both'}); out = true; end
+					if matches(r,{'in','both'}) 
+						out = true; 
+					end
 				case 'out'
-					if strcmpi(r,{'out','both'}); out = true; end
+					if matches(r,{'out','both'})
+						out = true; 
+					end
+				case 'none'
+					if matches(r,'none')
+						out = true;
+					end
 			end
-
 		end
+		
 	end
 	
 end

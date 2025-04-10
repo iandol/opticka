@@ -24,8 +24,8 @@ classdef Context < handle
 			end
 			obj.date = datetime;
 			% Core API
-			obj.pointer = zmq.core.ctx_new();
-			% Initi properties
+			makeContext(obj);
+			% Init properties
 			obj.spawnedSockets = {};
 		end
 
@@ -61,6 +61,7 @@ classdef Context < handle
 			%   Example:
 			%       socket = ctx.socket('ZMQ_PUB');
 			% Spawns a socket from the context
+			makeContext(obj);
 			newSocket = zmq.Socket(obj.pointer, socketType);
 			% Keep tracking of spawned sockets
 			% this is important to the cleanup process
@@ -101,30 +102,39 @@ classdef Context < handle
 		function term(obj)
 			% term  Terminates the context.
 			%   obj.term() terminates the context, releasing any resources held by it.
-			%   This method is similar to close(), but does not close the associated sockets.
+			%   This method does not cleanup the associated sockets.
 			%
 			%   Example:
 			%       ctx.term();
 			if (obj.pointer ~= 0)
-				try zmq.core.ctx_term(obj.pointer); end
-				obj.pointer = 0;  % ensure NULL pointer
+				try 
+					close(obj);
+					zmq.core.ctx_term(obj.pointer); 
+					obj.pointer = 0; 
+				end
 			end
 		end
 
 		function delete(obj)
 			% delete  Destructor for the Context class.
-			%   delete(obj) is the destructor for the Context class.  It calls the close() method
+			%   delete(obj) is the destructor for the Context class.  It calls the term() method
 			%   to ensure that the context and all associated sockets are properly closed.
 			%
 			%   Example:
 			%       delete(ctx);
-			close(obj);
 			term(obj);
 		end
 
 	end
 
 	methods (Access = protected)
+
+		function makeContext(obj)
+			if isempty(obj.pointer) || obj.pointer == 0
+				obj.pointer = zmq.core.ctx_new();
+			end
+		end
+
 		function normalized = normalize_const_name(~, name)
 			% normalize_const_name  Normalizes a constant name.
 			%   normalized = obj.normalize_const_name(name) normalizes the constant name by converting it to uppercase,
