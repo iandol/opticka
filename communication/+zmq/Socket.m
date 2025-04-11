@@ -50,10 +50,12 @@ classdef Socket < handle
 			obj.date = datetime;
 			socketType = obj.normalize_const_name(socketType);
 			% Core API
-			obj.pointer = zmq.core.socket(contextPointer, socketType);
-			obj.items.socket = obj.pointer;
-			if (obj.pointer == 0)
-				error('zmq:Socket:socketCreationFailed', 'Socket creation failed.');
+			try %#ok<*TRYNC>
+				obj.pointer = zmq.core.socket(contextPointer, socketType);
+				obj.items.socket = obj.pointer;
+				if isempty(obj.pointer) || obj.pointer == 0
+					error('zmq:Socket:socketCreationFailed', 'Socket creation failed.');
+				end
 			end
 		end
 
@@ -66,11 +68,11 @@ classdef Socket < handle
 			%   Inputs:
 			%       obj      - A Socket object.
 			%       endpoint - The network endpoint to bind to (e.g., 'tcp://*:5555').
+			status = -1;
 			try
 				status = zmq.core.bind(obj.pointer, endpoint);
 			catch ME
-				getReport(ME)
-				status = -1;
+				warning('zmq:Socket:bindFail', 'Unbind fail: %i - %s -- %s - %s\n',obj.pointer, endpoint,ME.identifier,ME.message);
 			end
 			if (status == 0)
 				% Add endpoint to the tracked bindings
@@ -92,7 +94,7 @@ classdef Socket < handle
 			try
 				status = zmq.core.unbind(obj.pointer, endpoint);
 			catch ME
-				fprintf('Unbind: %i - %s -- %s - %s\n',obj.pointer, endpoint,ME.identifier,ME.message);
+				warning('zmq:Socket:unbindFail', 'Unbind fail: %i - %s -- %s - %s\n',obj.pointer, endpoint,ME.identifier,ME.message);
 			end
 			if (status == 0)
 				index = find(strcmp(obj.bindings, endpoint));
@@ -110,11 +112,11 @@ classdef Socket < handle
 			%   Inputs:
 			%       obj      - A Socket object.
 			%       endpoint - The network endpoint to connect to (e.g., 'tcp://localhost:5555').
+			status = -1;
 			try
 				status = zmq.core.connect(obj.pointer, endpoint);
 			catch ME
-				getReport(ME)
-				status = -1;
+				warning('zmq:Socket:connectFail', 'Connect fail: %i - %s -- %s - %s\n',obj.pointer, endpoint,ME.identifier,ME.message);
 			end
 			if (status == 0)
 				% Add endpoint to the tracked connections
@@ -136,7 +138,7 @@ classdef Socket < handle
 			try
 				status = zmq.core.disconnect(obj.pointer, endpoint);
 			catch ME
-				fprintf('Disconnect: %i - %s -- %s - %s\n',obj.pointer, endpoint, ME.identifier, ME.message);
+				warning('zmq:Socket:disconnectFail', 'Disconnect fail: %i - %s -- %s - %s\n',obj.pointer, endpoint,ME.identifier,ME.message);
 			end
 			if (status == 0)
 				% Remove endpoint from the tracked connections
@@ -236,7 +238,6 @@ classdef Socket < handle
 				keepReceiving = obj.get('ZMQ_RCVMORE');
 			end
 		end
-
 
 		% ===================================================================
 		function message = recv_string(obj, varargin)

@@ -193,7 +193,7 @@ classdef zmqConnection < optickaCore
 					end
 				end
 			catch ME
-				fprintf('Error during receiveCommand: %s - %s\n', ME.identifier, ME.message);
+				fprintf('Error during receiveCommand: cmd: %s msg: %s err: %s - %s\n', command, msg, ME.identifier, ME.message);
 				me.sendState = false; me.recState = false; % Reset state on error
 				command = ''; data = []; % Ensure empty return on error
 				return % Exit function on critical error
