@@ -251,16 +251,12 @@ classdef touchManager < optickaCore
 				[mx, my, b] = GetMouse(me.swin);
 				if any(b) && ~me.lastPressed
 					type = 2; motion = false; press = true;  
-					me.lastPressed = true;
 				elseif any(b) && me.lastPressed
 					type = 3; motion = true; press = true;  
-					me.lastPressed = true;
 				elseif ~any(b) && me.lastPressed
 					type = 4; motion = false; press = false; 
-					me.lastPressed = false;
 				else
 					type = -1; motion = false; press = 0;  
-					me.lastPressed = false;
 				end
 				if type > 0
 					evt = struct('Type',type,'Time',GetSecs,...
@@ -290,12 +286,14 @@ classdef touchManager < optickaCore
 						me.eventMove = true;
 						me.eventPressed = true;
 					case 4 %RELEASE
-						if me.lastPressed
+						if me.lastPressed || me.isDummy
 							me.eventRelease = true;
+							me.lastPressed = false;
 						end
 					case 5 %ERROR
 						warning('touchManager: Event lost!');
 						me.event = []; evt = [];
+						me.lastPressed = false;
 						return
 					otherwise
 						
@@ -512,7 +510,7 @@ classdef touchManager < optickaCore
 			me.isSearching = searching;
 			me.isReleased = release;
 			if me.verbose
-				fprintf('≣isHold%s⊱%s:%i new:%i mv:%i prs:%i rel:%i {%.1fX %.1fY} tt:%.2f st:%.2f ht:%.2f rt:%.2f inWin:%i tchd:%i h:%i ht:%i r:%i rl:%i s:%i fail:%i N:%i\n',...
+				fprintf('≣isHold⊱%s⊱%s:%i new:%i mv:%i prs:%i rel:%i {%.1fX %.1fY} tt:%.2f st:%.2f ht:%.2f rt:%.2f inWin:%i tchd:%i h:%i ht:%i r:%i rl:%i s:%i fail:%i N:%i\n',...
 				me.name,st,me.eventID,me.eventNew,me.eventMove,me.eventPressed,me.eventRelease,me.x,me.y,...
 				me.hold.total,me.hold.search,me.hold.length,me.hold.release,...
 				me.hold.inWindow,me.hold.touched,...
@@ -535,6 +533,9 @@ classdef touchManager < optickaCore
 			elseif heldtime
 				out = yesString;
 			end
+			if me.verbose && ~isempty(out)
+				fprintf('≣testHoldRelease = %s > held:%i heldtime:%i rel:%i reling:%i ser:%i fail:%i touch:%i\n', out, held, heldtime, release, releasing, searching, failed, touch)
+			end
 		end
 
 		% ===================================================================
@@ -550,6 +551,9 @@ classdef touchManager < optickaCore
 				out = noString;
 			elseif me.wasHeld && release
 				out = yesString;
+			end
+			if me.verbose && ~isempty(out)
+				fprintf('≣testHoldRelease = %s > held:%i time:%.3f rel:%i rel:%i ser:%i fail:%i touch:%i\n', out, held, heldtime, release, releasing, searching, failed, touch)
 			end
 		end
 
