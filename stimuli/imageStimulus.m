@@ -55,6 +55,8 @@ classdef imageStimulus < baseStimulus
 		crop						= 'none'
 		%> direction for motion of the image, different to angle
 		direction					= []
+		%> add a circular mask on the movie? need to set crop to square
+		circularMask				 = false
 	end
 
 	properties (SetAccess = protected, GetAccess = public, Transient = true)
@@ -95,11 +97,15 @@ classdef imageStimulus < baseStimulus
 	end
 
 	properties (Access = protected)
+		%> mask texture
+		masktex
 		%> allowed properties passed to object upon construction
 		allowedProperties = {'type', 'filePath', 'selection', 'contrast', ...
-			'precision','filter','crop','specialFlags'}
+			'randomiseSelection','precision','filter','crop','specialFlags',...
+			'direction','circularMask'}
 		%>properties to not create transient copies of during setup phase
-		ignoreProperties = {'type', 'scale', 'filePath','nImages','chosenImages'}
+		ignoreProperties = {'type', 'scale', 'filePath','nImages','chosenImages',...
+			'randomiseSelection','circularMask'}
 	end
 
 	%=======================================================================
@@ -187,6 +193,11 @@ classdef imageStimulus < baseStimulus
 				setup(me.animator, me);
 			end
 			setRect(me);
+
+			if me.circularMask
+				sz = max([me.width me.height]);
+				me.masktex = CreateProceduralSmoothedDisc(me.sM.win, sz, sz, [], ceil(sz/2), ceil(sz/15), true, 2);
+			end
 
 			function set_xPositionOut(me, value)
 				me.xPositionOut = value * me.ppd;
@@ -360,6 +371,10 @@ classdef imageStimulus < baseStimulus
 				% [, filterMode] [, globalAlpha] [, modulateColor] [, textureShader] [, specialFlags] [, auxParameters]);
 				Screen('DrawTexture', win, me.texture, [], me.mvRect,...
 					me.angleOut, me.filter, me.alphaOut, me.colourOut);
+				if me.circularMask
+					Screen('DrawTexture', win, me.masktex,   [], me.mvRect,...
+						[], [], 1, me.sM.backgroundColour);
+				end
 				me.drawTick = me.drawTick + 1;
 			end
 			if me.isVisible; me.tick = me.tick + 1; end
@@ -394,6 +409,10 @@ classdef imageStimulus < baseStimulus
 		function reset(me)
 			if ~isempty(me.texture) && me.texture > 0 && Screen(me.texture,'WindowKind') == -1
 				try Screen('Close',me.texture); end %#ok<*TRYNC>
+			end
+			if ~isempty(me.masktex) && me.masktex > 0 && Screen(me.masktex,'WindowKind') == -1
+				try Screen('Close',me.masktex); end %#ok<*TRYNC>
+				me.masktex = [];
 			end
 			if isprop(me,'doAnimator') && me.doAnimator; reset(me.animator); end
 			resetTicks(me);

@@ -35,6 +35,7 @@ classdef touchManager < optickaCore
 		%> events don't pile up, often you only want the current event,
 		%> but potentially causes a longer delay each time getEvent is called...
 		drainEvents			= true;
+		%>
 		%> panel type, 1 = front, 2 = back (aka reverse X position)
 		panelType			= 1
 		%> verbosity
@@ -50,6 +51,10 @@ classdef touchManager < optickaCore
 		% general touch info
 		x					= []
 		y					= []
+		%> All X position in degrees
+		xAll				= []
+		%> All Y position in degrees
+		yAll				= []
 		% touch event info from getEvent()
 		eventID				= []
 		eventType			= []
@@ -78,6 +83,7 @@ classdef touchManager < optickaCore
 	properties (Access = private)
 		deferLog			= false
 		lastPressed			= false
+		currentID			= []
 		pressed				= false
 		ppd					= 36
 		screen				= []
@@ -221,6 +227,8 @@ classdef touchManager < optickaCore
 			reset(me);
 			if me.isDummy; return; end
 			TouchEventFlush(me.devices(me.device));
+			me.xAll = [];
+			me.yAll = [];
 		end
 
 		% ===================================================================
@@ -247,7 +255,7 @@ classdef touchManager < optickaCore
 		%> @return event structure
 		% ===================================================================
 			evt = [];
-			if me.isDummy
+			if me.isDummy % use mouse to simulate touch
 				[mx, my, b] = GetMouse(me.swin);
 				if any(b) && ~me.lastPressed
 					type = 2; motion = false; press = true;  
@@ -267,11 +275,7 @@ classdef touchManager < optickaCore
 					'Keycode',55);
 				end
 			else
-				if me.drainEvents
-					while eventAvail(me); evt = TouchEventGet(me.devices(me.device), me.swin, 0); end
-				else
-					evt = TouchEventGet(me.devices(me.device), me.swin, 0);
-				end
+				evt = getEvent(me);
 			end
 			me.eventNew = false; me.eventMove = false; me.eventRelease = false; me.eventPressed = false;
 			if ~isempty(evt)
@@ -316,6 +320,8 @@ classdef touchManager < optickaCore
 			me.hold			= me.holdTemplate;
 			me.x			= [];
 			me.y			= [];
+			me.xAll			= [];
+			me.yAll			= [];
 			me.win			= [];
 			me.wasInWindow	= false;
 			me.wasHeld		= false;
@@ -737,6 +743,16 @@ classdef touchManager < optickaCore
 	methods (Access = protected) %------------------PROTECTED METHODS
 	%=======================================================================
 
+		function getEvents(me)
+			if me.drainEvents
+				while eventAvail(me) 
+					evt = TouchEventGet(me.devices(me.device), me.swin, 0); 
+				end
+			else
+				evt = TouchEventGet(me.devices(me.device), me.swin, 0);
+			end
+	
+		end
 		% ===================================================================
 		function [result, window] = calculateWindow(me, x, y, tempWindow)
 		%> @fn calculateWindow
