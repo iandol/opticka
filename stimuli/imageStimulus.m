@@ -55,8 +55,10 @@ classdef imageStimulus < baseStimulus
 		crop						= 'none'
 		%> direction for motion of the image, different to angle
 		direction					= []
-		%> add a circular mask on the movie? need to set crop to square
-		circularMask				 = false
+		%> add a circular mask on the movie? 
+		circularMask				= false
+		%> mask sigma in pixels
+		sigma						= 30
 	end
 
 	properties (SetAccess = protected, GetAccess = public, Transient = true)
@@ -98,7 +100,7 @@ classdef imageStimulus < baseStimulus
 
 	properties (Access = protected)
 		%> mask texture
-		masktex
+		maskshader
 		%> allowed properties passed to object upon construction
 		allowedProperties = {'type', 'filePath', 'selection', 'contrast', ...
 			'randomiseSelection','precision','filter','crop','specialFlags',...
@@ -193,11 +195,6 @@ classdef imageStimulus < baseStimulus
 				setup(me.animator, me);
 			end
 			setRect(me);
-
-			if me.circularMask
-				sz = max([me.width me.height]);
-				me.masktex = CreateProceduralSmoothedDisc(me.sM.win, sz, sz, [], ceil(sz/2), ceil(sz/15), true, 2);
-			end
 
 			function set_xPositionOut(me, value)
 				me.xPositionOut = value * me.ppd;
@@ -321,10 +318,14 @@ classdef imageStimulus < baseStimulus
 				end
 			end
 
+			makeMaskShader(me);
+
 			if isempty(me.specialFlags) && isinteger(me.matrix(1))
 				me.specialFlags = 4; %4 is optimization for uint8 textures. 0 is default
 			end
 			if ~isempty(me.sM) && me.sM.isOpen == true
+				% textureIndex=Screen('MakeTexture', WindowIndex, imageMatrix [, optimizeForDrawAngle=0] 
+				%   [, specialFlags=0] [, floatprecision] [, textureOrientation=0] [, textureShader=0]);
 				me.texture = Screen('MakeTexture', me.sM.win, me.matrix, 1, me.specialFlags, me.precision);
 			end
 			me.logOutput('loadImage',['Load: ' regexprep(me.currentFile,'\\','/') 'in ' num2str(toc(tt)) ' secs']);
@@ -369,12 +370,8 @@ classdef imageStimulus < baseStimulus
 				if ~exist('win','var');win = me.sM.win; end
 				% Screen('DrawTexture', windowPointer, texturePointer [,sourceRect] [,destinationRect] [,rotationAngle]
 				% [, filterMode] [, globalAlpha] [, modulateColor] [, textureShader] [, specialFlags] [, auxParameters]);
-				Screen('DrawTexture', win, me.texture, [], me.mvRect,...
-					me.angleOut, me.filter, me.alphaOut, me.colourOut);
-				if me.circularMask
-					Screen('DrawTexture', win, me.masktex,   [], me.mvRect,...
-						[], [], 1, me.sM.backgroundColour);
-				end
+				Screen('DrawTexture', win, me.texture, [], me.mvRect, me.angleOut,...
+					me.filter, me.alphaOut, me.colourOut, me.maskshader);
 				me.drawTick = me.drawTick + 1;
 			end
 			if me.isVisible; me.tick = me.tick + 1; end
@@ -410,10 +407,7 @@ classdef imageStimulus < baseStimulus
 			if ~isempty(me.texture) && me.texture > 0 && Screen(me.texture,'WindowKind') == -1
 				try Screen('Close',me.texture); end %#ok<*TRYNC>
 			end
-			if ~isempty(me.masktex) && me.masktex > 0 && Screen(me.masktex,'WindowKind') == -1
-				try Screen('Close',me.masktex); end %#ok<*TRYNC>
-				me.masktex = [];
-			end
+			me.maskshader = [];
 			if isprop(me,'doAnimator') && me.doAnimator; reset(me.animator); end
 			resetTicks(me);
 			me.texture=[];
@@ -475,6 +469,27 @@ classdef imageStimulus < baseStimulus
 	%=======================================================================
 
 		% ===================================================================
+		%> @brief makeMaskShader
+		%>  
+		% ===================================================================
+		function makeMaskShader(me)
+			if me.circularMask
+				w = me.width;
+				h = me.height;
+				shader = LoadGLSLProgramFromFiles(which('circularMask.frag'), 1);
+				glUseProgram(shader);
+    			glUniform1i(glGetUniformLocation(shader, 'Image'), 0);
+    			glUniform2f(glGetUniformLocation(shader, 'Center'), w/2, h/2);
+				glUniform1f(glGetUniformLocation(shader, 'Radius'), floor(min([w h])/2));
+				glUniform1f(glGetUniformLocation(shader, 'Sigma'), me.sigma);
+    			glUseProgram(0);
+				me.maskshader = shader;
+			else
+				me.maskshader = [];
+			end
+		end
+
+		% ===================================================================
 		%> @brief setRect
 		%>  setRect makes the PsychRect based on the texture and screen values
 		%>  This is overridden from parent class so we can scale texture
@@ -484,7 +499,7 @@ classdef imageStimulus < baseStimulus
 			if ~isempty(me.texture)
 				%setRect@baseStimulus(me) %call our superclass version first
 				me.dstRect=Screen('Rect',me.texture);
-				me.dstRect = ScaleRect(me.dstRect, me.scale, me.scale);
+				if me.scale ~= 1; me.dstRect = ScaleRect(me.dstRect, me.scale, me.scale); end
 				if me.mouseOverride && me.mouseValid
 					me.dstRect = CenterRectOnPointd(me.dstRect, me.mouseX, me.mouseY);
 				else
@@ -495,7 +510,7 @@ classdef imageStimulus < baseStimulus
 						me.dstRect(1), me.dstRect(2),me.dstRect(3),me.dstRect(4),...
 						me.dstRect(3)-me.dstRect(1),me.dstRect(4)-me.dstRect(2));
 				end
-				me.szPx = RectWidth(me.dstRect);
+				me.szPx = min([RectWidth(me.dstRect) RectHeight(me.dstRect)]);
 				me.mvRect = me.dstRect;
 			end
 		end

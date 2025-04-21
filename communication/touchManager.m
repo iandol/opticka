@@ -35,7 +35,10 @@ classdef touchManager < optickaCore
 		%> events don't pile up, often you only want the current event,
 		%> but potentially causes a longer delay each time getEvent is called...
 		drainEvents			= true;
-		%>
+		%> there can be up to 10 touch events, do we record all of them
+		trackID				= false
+		%> which id to track as the main one
+		mainID				= 1
 		%> panel type, 1 = front, 2 = back (aka reverse X position)
 		panelType			= 1
 		%> verbosity
@@ -55,7 +58,10 @@ classdef touchManager < optickaCore
 		xAll				= []
 		%> All Y position in degrees
 		yAll				= []
+		% most recent touch events
+		evts				= []
 		% touch event info from getEvent()
+		event				= []
 		eventID				= []
 		eventType			= []
 		eventNew			= false
@@ -77,7 +83,6 @@ classdef touchManager < optickaCore
 		devices				= []
 		names				= []
 		allInfo				= []
-		event				= []
 	end
 
 	properties (Access = private)
@@ -89,6 +94,7 @@ classdef touchManager < optickaCore
 		screen				= []
 		swin				= []
 		screenVals			= []
+		evtsTemplate		= struct('id', [], 'type', [], 'x', [], 'y', [])
 		allowedProperties	= {'isDummy','device','verbose','window','nSlots',...
 							'panelType','drainEvents','exclusionZone'}
 		holdTemplate		= struct('N',0,'inWindow',false,'touched',false,...
@@ -117,6 +123,7 @@ classdef touchManager < optickaCore
 
 			try [me.devices,me.names,me.allInfo] = GetTouchDeviceIndices([], 1); end %#ok<*TRYNC>
 			me.hold = me.holdTemplate;
+			me.evts = me.evtsTemplate;
 			try
 				if IsLinux
 					[~,r] = system('xinput');
@@ -227,8 +234,6 @@ classdef touchManager < optickaCore
 			reset(me);
 			if me.isDummy; return; end
 			TouchEventFlush(me.devices(me.device));
-			me.xAll = [];
-			me.yAll = [];
 		end
 
 		% ===================================================================
@@ -318,6 +323,7 @@ classdef touchManager < optickaCore
 		% ===================================================================
 			me.lastPressed 	= false;
 			me.hold			= me.holdTemplate;
+			me.evts			= me.evtsTemplate;
 			me.x			= [];
 			me.y			= [];
 			me.xAll			= [];
@@ -743,10 +749,12 @@ classdef touchManager < optickaCore
 	methods (Access = protected) %------------------PROTECTED METHODS
 	%=======================================================================
 
-		function getEvents(me)
+		function evt = getEvents(me)
+
 			if me.drainEvents
 				while eventAvail(me) 
 					evt = TouchEventGet(me.devices(me.device), me.swin, 0); 
+
 				end
 			else
 				evt = TouchEventGet(me.devices(me.device), me.swin, 0);
