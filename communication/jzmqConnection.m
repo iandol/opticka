@@ -1,27 +1,27 @@
-classdef zmqConnection < optickaCore
-	%> zmqConnection is a class to handle ØMQ connections for opticka class
-	%> communication. We use matlab-zmq (a basic libzmq binding), 
-	%> and a REQ-REP pattern for main communication.
-
+classdef jzmqConnection < optickaCore
+	%> jzmqConnection is a class to handle ØMQ connections for opticka class
+	%> communication. We use JeroMQ wrapper jzmq, a pure Java implementation of
+	%> ØMQ.
+	
 	properties
-		%> ØMQ connection type, e.g. 'REQ', 'REP', 'PUB', 'SUB', 'PUSH', 'PULL'
-		type			= 'REQ'
+		%> ØMQ connection type, e.g. 'REQ', 'REP', 'PUB', 'SUB', etc.
+		type jzmq.SocketType = "REQ"
 		%> transport for the socket, tcp | ipc | inproc
-		transport		= 'tcp'
+		transport			= 'tcp'
 		%> the address to open, use * for a server to bind to all interfaces
-		address			= 'localhost'
+		address				= 'localhost'
 		%> the port to open
-		port			= 6666
+		port				= 6666
 		%> default size of chunk to read/write for tcp
-		frameSize		= 2^20
+		frameSize			= []
 		%> default read timeout in ms, -1 is blocking
-		readTimeOut		= 3e4
+		readTimeOut			= -1
 		%> default write timeout in ms, -1 is blocking
-		writeTimeOut	= 3e4
+		writeTimeOut		= -1
 		%> do we log to the command window?
-		verbose			= false
+		verbose				= false
 		%> for sendCommand and receiveCommand use zmq.core.poll?
-		alwaysPoll		= false
+		alwaysPoll			= false
 		
 	end
 
@@ -32,18 +32,18 @@ classdef zmqConnection < optickaCore
 	
 	properties (SetAccess = private, GetAccess = public, Transient = true)
 		%> is this connection open?
-		isOpen			= false
-		%> zmq.Context()
-		context			= []
-		%> zmq.Socket()
-		socket			= []
+		isOpen				= false
+		%> Context()
+		context				= []
+		%> Socket()
+		socket				= []
+		%> poller
+		poller				= []
 		%> last message
-		messages		= []
+		messages			= []
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		sendState			= false
-		recState			= false
 		allowedProperties = {'type','protocol','port','address', 'alwaysPoll',...
 			'verbose','readTimeOut','writeTimeOut','frameSize','cleanup'};
 	end
@@ -51,10 +51,10 @@ classdef zmqConnection < optickaCore
 	methods
 
 		% ===================================================================
-		function me = zmqConnection(varargin)
-		%> @brief Class constructor for zmqConnection.
+		function me = jzmqConnection(varargin)
+		%> @brief Class constructor for jzmqConnection.
 		%>
-		%> @details Initializes a zmqConnection object, setting up default
+		%> @details Initializes a jzmqConnection object, setting up default
 		%>   properties and parsing any provided arguments using the optickaCore
 		%>   superclass constructor and argument parsing.
 		%>
@@ -63,14 +63,18 @@ classdef zmqConnection < optickaCore
 		%>
 		%> @return me An instance of the zmqConnection class.
 		% ===================================================================
-			args = optickaCore.addDefaults(varargin,struct('name','zmqConnection'));
+			args = optickaCore.addDefaults(varargin,struct('name','jzmqConnection'));
 			me = me@optickaCore(args); %superclass constructor
 			me.parseArgs(args, me.allowedProperties);
+			if ~any(contains(javaclasspath, 'jeromq-0.6.0.jar'))
+				javaaddpath([fileparts(which('jzmq.ZContext')) filesep 'jeromq-0.6.0.jar'],'-begin');
+				fprintf('Added JeroMQ jar to javaclasspath.\n');
+			end
 		end
 
 		
 		% ===================================================================
-		function status = open(me)
+		function status = open(me, context)
 		%> @brief Opens the ØMQ socket connection.
 		%> @details Creates the ØMQ context if it doesn't exist, creates the
 		%>   socket based on the `type` property, sets socket options like
@@ -79,36 +83,53 @@ classdef zmqConnection < optickaCore
 		%>   to the specified `endpoint`. Sets the `isOpen` flag to true.
 		%> @note Does nothing if the connection `isOpen` is already true.
 		% ===================================================================
+			arguments (Input)
+				me
+				context = []
+			end
 			status = -1;
 			if me.isOpen; return; end
-			if ~isa(me.context, 'zmq.Context')
-				me.context = zmq.Context();
+			
+			if ~isempty(context) && isa(context, 'jzmq.ZContext')
+				me.context = context;
+			elseif isempty(me.context)
+				me.context = jzmq.ZContext();
 			else
 				me.context.close;
 			end
-			me.socket = me.context.socket(me.type);
-			me.socket.defaultBufferLength = me.frameSize;
+
+			me.socket = me.context.createSocket(me.type);
+			if ~isempty(me.frameSize)
+				me.socket.pointer.setReceiveBufferSize(me.frameSize);
+			end
 			if me.readTimeOut ~= -1
-				me.set('RCVTIMEO', me.readTimeOut);
+				me.socket.pointer.setReceiveTimeOut(me.readTimeOut);
 			end
 			if me.writeTimeOut ~= -1
-				me.set('SNDTIMEO', me.writeTimeOut);
+				me.socket.pointer.setSendTimeOut(me.readTimeOut);
 			end
-			me.set('LINGER', 1000);
-			me.set('RCVBUF', me.frameSize);
-			switch me.type 
-				case {'REP','PUB','PUSH'}
+			me.socket.pointer.setLinger(1000);
+			switch string(me.type)
+				case {"REP","PUB","PUSH"}
 					status = me.socket.bind(me.endpoint);
 				otherwise
 					status = me.socket.connect(me.endpoint);
 			end
-			if status == 0
+			if ~status; warning('bind/connect failed...'); end
+
+			me.poller = me.context.createPoller();
+
+			if status
 				me.isOpen = true;
 				me.addMessage('Socket is opened');
 			else
 				me.addMessage('Socket failed to bind/connect!!!')
 				try me.socket.close(); end
-				error(me.messages(end));
+				if ~isnan(me.messages) || ~isempty(me.messages)
+					error(me.messages(end));
+				else
+					error('Problem opening...')
+				end
 			end
 		end
 
@@ -150,10 +171,7 @@ classdef zmqConnection < optickaCore
 			try
 				[status, nbytes, msg] = sendObject(me, command, data, true);
 				if status ~= 0
-					me.sendState = false; me.recState = false;
 					warning(msg);
-				else
-					me.sendState = true; me.recState = false;
 				end
 			catch ME
 				t = sprintf('Receive status %i did not return any command: %s - %s...\n', status, ME.identifier, ME.message);
@@ -163,7 +181,6 @@ classdef zmqConnection < optickaCore
 			end
 			if status == 0 && getReply
 				[rep, dataOut] = receiveObject(me);
-
 				me.addMessage(t);
 				if me.verbose
 					disp(t);
@@ -193,15 +210,13 @@ classdef zmqConnection < optickaCore
 			end
 			try
 				[command, data, msg] = receiveObject(me, true);
-				me.sendState = false; me.recState = true; % Update state after successful receive attempt
 				if isempty(command) && ~isempty(msg)
 					msg = sprintf('Receive problem: %s', msg); % Log if receiveObject reported an issue
 					me.addMessage(msg);
 					warning(msg)
 					me.recState = false; % Indicate receive wasn't fully successful
 				elseif ~isempty(command)
-					
-					if me.verbose > 0
+					if me.verbose 
 						fprintf('Received command: «%s»\n', command);
 						if ~isempty(data)
 							disp('Received data:');
@@ -211,7 +226,6 @@ classdef zmqConnection < optickaCore
 				end
 			catch ME
 				fprintf('Error during receiveCommand: cmd: %s msg: %s err: %s - %s\n', command, msg, ME.identifier, ME.message);
-				me.sendState = false; me.recState = false; % Reset state on error
 				command = ''; data = []; % Ensure empty return on error
 				return % Exit function on critical error
 			end
@@ -299,15 +313,15 @@ classdef zmqConnection < optickaCore
 		%> @note Updates `sendState` and `recState`. Logs errors to the console.
 		% ===================================================================
 			try
-				status = 0;
+				status = [];
 				if ischar(data) || isstring(data)
-					me.socket.send_string(data);
+					result = me.socket.send(uint8(data));
 				elseif isa(data,'uint8')
-					me.socket.send(data);
+					result = me.socket.send(data);
 				else
-					sendObject(me, data);
+					result = sendObject(me, data);
 				end
-				me.sendState = true; me.recState = false;
+				if result; status = 0; end
 			catch ME
 				status = -1;
 				t = sprintf('Couldn''t send, perhaps need to receive first: %s - %s', ME.identifier, ME.message);
@@ -329,14 +343,12 @@ classdef zmqConnection < optickaCore
 		% ===================================================================
 			data = []; status = -1;
 			try
-				data = me.socket.recv_multipart();
+				data = me.receiveMultipart();
 				if iscell(data) && isscalar(data)
 					data = data{:};
 				end
 				status = 0;
-				me.sendState = false; me.recState = true;
 			catch ME
-				me.sendState = false; me.recState = false;
 				t = sprintf('No data received: %s - %s...\n', ME.identifier, ME.message);
 				me.addMessage(t);
 				if me.verbose; disp(t); end
@@ -359,7 +371,9 @@ classdef zmqConnection < optickaCore
 			try me.context.close(); end
 			if ~keepContext
 				try me.context.term(); end
+				me.context = [];
 			end
+			me.socket = [];
 			me.isOpen = false;
 		end
 		function delete(me)
@@ -381,7 +395,28 @@ classdef zmqConnection < optickaCore
 		end
 
 		% ===================================================================
-		function [status, nbytes, msg] = sendObject(me, command, data, useJSON, options)
+		function set.type(me, value)
+		%> @brief Sets the socket type.
+		%> @details Validates the socket type against a list of allowed types
+		%>   and sets the `type` property. Throws an error if the type is invalid.
+		%> @param value The socket type to set (e.g., 'REQ', 'REP', 'PUB', 'SUB').
+		%> @note Uses SocketType enum, defaults to 'REQ'.
+		% ===================================================================
+			arguments
+				me jzmqConnection
+				value (1,1) jzmq.SocketType
+			end
+
+			try
+				me.type = value;
+			catch
+				me.type = 'REQ';
+				warning('Invalid socket type. Defaulting to REQ.');
+			end
+		end
+
+		% ===================================================================
+		function [status, nbytes, msg] = sendObject(me, command, data, useJSON)
 		%> @brief (Private) Sends a command string and optional serialized MATLAB data.
 		%> @details This is the core sending method used by public methods like
 		%>   `sendCommand` and `receiveCommand` (for replies). It checks if the
@@ -391,13 +426,13 @@ classdef zmqConnection < optickaCore
 		%>   the 'sndmore' flag if both parts exist. Handles sending only command,
 		%>   only data, or an empty message if both are empty.
 		%> @param command The command string to send. Must be char or string.
+		%> 
 		%> @param data (Optional) MATLAB data to serialize and send.
 		%> @param useJSON (optional) wrap command and data with JSON
-		%> @param options (Optional) Cell array of additional flags for the final `send` call (e.g., {'ZMQ_DONTWAIT'}).
+		%>
 		%> @return status 0 on success, -1 on failure.
 		%> @return nbytes The total number of bytes sent across all parts.
 		%> @return msg An error message string if `status` is -1.
-		%> @note This is a private method. Throws errors for invalid input or unopened socket.
 		% ===================================================================
 			
 			status = -1; nbytes = 0; msg = '';
@@ -488,7 +523,7 @@ classdef zmqConnection < optickaCore
 			command = ''; data = []; msg = ''; frames = {};
 
 			try
-				frames = me.socket.recv_multipart(options{:});
+				frames = me.receiveMultipart();
 			catch ME
 				warning('Failed to get object: %s - %s', ME.identifier, ME.message);
 				if matches(ME.identifier,'zmq:core:recv:EFSM')
@@ -555,6 +590,18 @@ classdef zmqConnection < optickaCore
 	end
 
 	methods (Access = private)
+
+		function data = receiveMultipart(me)
+			data = {};
+			data{1} = me.socket.recv();
+			a = 2;
+			while me.socket.hasReceiveMore()
+				data{a} = me.socket.recv();
+			end
+			if iscell(data) && isscalar(data)
+				data = data{:};
+			end
+		end
 
 		function addMessage(me, msg)
 			if nargin < 2; return; end

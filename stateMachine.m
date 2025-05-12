@@ -866,7 +866,9 @@ classdef stateMachine < optickaCore
 				tout = [tin ' : ' num2str(logN) ' states'];
 			end
 			try
-				f = figure('Position',[0 0 1500 1000],'Name','State Machine Time Logs','Tag','opticka');
+				f = figure('Position',[0 0 1500 1000],'Name','State Machine Time Logs',...
+					'Tag','opticka');
+				if ~isMATLABReleaseOlderThan("R2025a"); theme(f,'light'); end
 				tl = tiledlayout(f,'flow','TileSpacing','tight','Padding','compact');
 				tl.Title.String = tout;
 				tl.Title.FontWeight = 'bold';

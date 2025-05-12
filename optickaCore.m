@@ -265,8 +265,30 @@ classdef optickaCore < handle
 					if isa(me.stateMachine,'stateMachine') && ~isempty(me.stateMachine)
 						me.stateMachine.makeReport(rpt);
 					end
+					if isa(me.taskLog,'timeLogger') && ~isempty(me.taskLog)
+						me.taskLog.makeReport(rpt);
+					end
 					fprintf('=== makeReport: runExperiment end @%.2f secs\n',toc(tt));
 
+				case 'timeLogger'
+					fprintf('=== makeReport: timeLog start\n');
+					ch = Chapter('timeLogger Object'); 
+					sec = Section('Details'); 
+					append(sec,Paragraph('The timeLogger store timestamps like PTB flips and message logs them'))
+					append(sec,Paragraph(' There is also an indepedent blockVar and trialVar.'))
+					me.printRunLog();
+					f = gcf;
+					if strcmpi(f.Tag,'opticka')
+						fr = Figure(f);
+						%fr.Scaling = 'none';
+						%fr.Snapshot.ScaleToFit = true;
+						append(sec,Paragraph('Time (VBL) Plots for each frame'))
+						append(sec,fr);
+					end
+					close(f);
+					append(ch,sec);
+					append(rpt,ch);
+					fprintf('=== makeReport: timeLogger end @%.2f secs\n',toc(tt));
 
 				case 'taskSequence'
 					fprintf('=== makeReport: taskSequence start\n');

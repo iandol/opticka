@@ -12,7 +12,7 @@
 %> @todo expose maskStimulus settings in the optickaGUI
 %> @todo more flexible tweaking of arduino settings
 %>
-%> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2025 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ======================================================================
 classdef opticka < optickaCore
 	

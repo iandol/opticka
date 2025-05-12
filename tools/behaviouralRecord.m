@@ -149,6 +149,7 @@ classdef behaviouralRecord < optickaCore
 			me.SansFont = SansFont;
 			
 			me.h.root = uifigure('Name',me.fullName,'Tag','opticka');
+			if ~isMATLABReleaseOlderThan("R2025a"); theme(me.h.root,'light'); end
 			me.h.root.Units = 'normalized';
 			me.h.root.Position = [0.6 0 0.4 1];
 			me.h.grid = uigridlayout(me.h.root,[2 1]);

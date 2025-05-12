@@ -2,7 +2,18 @@
 
 Note only changes which may affect your use of Opticka will be detailed here, starting with V2.16.x
 
-## V2.17.0
+## unreleased V2.17.0
+
+* Add support for ØMQ for communication using `jzmqConnection` class. This is much more robust than raw TCP/UDP used in `dataConnection` and we are using it for communication across [CageLab devices](https://github.com/cogplatform/CageLab). Currently this adds a dependency on <https://github.com/cogplatform/matlab-jzmq>, a MATLAB wrapper for JeroMQ.
+* Major update to the opticka UI for Alyx integration. There is an Alyx panel where you can connect to your Alyx instance to retrieve data from the server. Opticka can create a new Alyx session, and will upload the task data as a copy to the Alyx server. The data is sent to an AWS compatible data store linked to the Alyx session. The data is stored in a folder structure that matches the [International Brain Lab ONE Protocol](https://int-brain-lab.github.io/ONE/alf_intro.html) (see "A modular architecture for organizing, processing and sharing neurophysiology data," The International Brain Laboratory et al., 2023 Nat. Methods, [DOI](https://doi.org/10.1038/s41592-022-01742-6)).
+* Add **awsManager** to support AWS S3 storage. This is used to upload the task data to the AWS compatible data store linked to the Alyx session. This relies on the awscli command line tool to upload the data. You will need to install the AWS CLI and configure it with your AWS credentials. See [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) for more information.
+* **HED Tagging** -- we now support HED tagging of the session data. This is used to tag parameters with metadata that can be used for search / analysis. The tags are stored in a TSV file in the same folder as the raw session data. See `tools/HEDTags.m` and `tools/HEDTagger.m`. The HED tags are generated from the task sequence and the task parameters. We want to support better data sharing and Alyx / ONE protocol do not have any task metadata so we chose HED from the EEGLab / BIDS projects. See <https://www.hedtags.org>.
+* runExperiment -- big improvements to the logging system. Previously task events were stored in several places, but for Alyx / HED we need to centralise the event data. This is used to generate the HED tags and the Alyx session data. 
+* Add **joystickManaer** — we have built our own HID compatible joystick and this manager interfaces with this hardware.
+* labJackT — we now send an 11bit strobed word rather than 8bit. In theory this is backwards compatible, but you need to update your Lua server code to use the 11bit word. 0-2047 controls EIO0-8 & CIO0-3.
+* Tobii eyetrackers — update Titta interface to support the new adaptive monkey calibration. See Niehorster, D. C., Whitham, W., Lake, B. R., Schapiro, S. J., Andolina, I. M., & Yorzinski, J. L. (2024). Enhancing eye tracking for nonhuman primates and other subjects unable to follow instructions: Adaptive calibration and validation of Tobii eye trackers with the Titta toolbox. Behavior Research Methods, 57(1), 0. https://doi.org/10.3758/s13428-024-02540-y for details.
+* **makeReport** — a new method in optickaCore thus available to all opticka objects. Uses the MATLAB report generator to make a PDF report of the data and property values contained in the core opticka classes (runExperiment, taskSequence, stateMachine, behaviouralRecord, tobii/eyelink/irec). Useful when analysing an experiment to get an overview of all experiment parameters for that session.
+* **circularMask Shader** — add a simple texture shader that provides a circular mask for any texture stimulus (like an image). This is better than using a separate disc shader. Used in imageStimulus.
 
 
 

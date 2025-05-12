@@ -107,7 +107,7 @@ classdef imageStimulus < baseStimulus
 			'direction','circularMask'}
 		%>properties to not create transient copies of during setup phase
 		ignoreProperties = {'type', 'scale', 'filePath','nImages','chosenImages',...
-			'randomiseSelection','circularMask'}
+			'randomiseSelection','circularMask','currentFile'}
 	end
 
 	%=======================================================================
@@ -320,12 +320,9 @@ classdef imageStimulus < baseStimulus
 
 			makeMaskShader(me);
 
-			if isempty(me.specialFlags) && isinteger(me.matrix(1))
-				me.specialFlags = 4; %4 is optimization for uint8 textures. 0 is default
-			end
 			if ~isempty(me.sM) && me.sM.isOpen == true
-				% textureIndex=Screen('MakeTexture', WindowIndex, imageMatrix [, optimizeForDrawAngle=0] 
-				%   [, specialFlags=0] [, floatprecision] [, textureOrientation=0] [, textureShader=0]);
+				% 'MakeTexture', WindowIndex, imageMatrix [, optimizeForDrawAngle=0] 
+				% [, specialFlags=0] [, floatprecision] [, textureOrientation=0] [, textureShader=0];
 				me.texture = Screen('MakeTexture', me.sM.win, me.matrix, 1, me.specialFlags, me.precision);
 			end
 			me.logOutput('loadImage',['Load: ' regexprep(me.currentFile,'\\','/') 'in ' num2str(toc(tt)) ' secs']);
@@ -368,7 +365,7 @@ classdef imageStimulus < baseStimulus
 		function draw(me, win)
 			if me.isVisible && me.tick >= me.delayTicks && me.tick < me.offTicks
 				if ~exist('win','var');win = me.sM.win; end
-				% Screen('DrawTexture', windowPointer, texturePointer [,sourceRect] [,destinationRect] [,rotationAngle]
+				% 'DrawTexture', windowPointer, texturePointer [,sourceRect] [,destinationRect] [,rotationAngle]
 				% [, filterMode] [, globalAlpha] [, modulateColor] [, textureShader] [, specialFlags] [, auxParameters]);
 				Screen('DrawTexture', win, me.texture, [], me.mvRect, me.angleOut,...
 					me.filter, me.alphaOut, me.colourOut, me.maskshader);
@@ -452,12 +449,13 @@ classdef imageStimulus < baseStimulus
 				me.selection = 1;
 			end
 			if exist(me.filePath,'file') ~= 2 && exist(me.filePath,'file') ~= 7
+				tf = me.filePath;
 				p = mfilename('fullpath');
 				p = fileparts(p);
 				me.filePath = [p filesep 'Bosch.jpeg'];
 				me.filePaths{1} = me.filePath;
 				me.selection = 1;
-				warning('--->>> imageStimulus couldn''t find correct image, reverted to default!')
+				warning('--->>> imageStimulus couldn''t find correct image %s, reverted to default!',tf)
 			end
 			me.currentFile = me.filePaths{me.selection};
 		end

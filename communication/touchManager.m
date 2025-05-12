@@ -37,17 +37,19 @@ classdef touchManager < optickaCore
 		drainEvents			= true;
 		%> there can be up to 10 touch events, do we record all of them
 		trackID				= false
-		%> which id to track as the main one
+		%> which id to track as the main one (1 = first event)
 		mainID				= 1
-		%> panel type, 1 = front, 2 = back (aka reverse X position)
+		%> panel type, 1 = front, 2 = back (reverses X position)
 		panelType			= 1
-		%> verbosity
+		%> verbose
 		verbose				= false
 	end
 
 	properties (Hidden = true)
 		%> number of slots for touch events
 		nSlots				= 1e5
+		%> functions return immediately
+		silentMode			= false
 	end
 
 	properties (SetAccess=private, GetAccess=public)

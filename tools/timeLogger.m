@@ -27,10 +27,10 @@ classdef timeLogger < optickaCore
 		miss			= 0
 		stimTime		= 0
 	end
-	
+
 	properties (SetAccess = private, GetAccess = public)
 		messages struct	= struct('time',[],'exitTime',[],'tick',[],'stimTime',[],'message',[],'type',[])
-		messageN		= 1
+		messageN = 1
 		missImportant
 		nMissed
 	end
@@ -180,8 +180,9 @@ classdef timeLogger < optickaCore
 			calculateMisses(me,miss,stimTime)
 			
 			ssz = get(0,'ScreenSize');
-			h = figure('Name',me.name,'NumberTitle','off','Color',[1 1 1],...
+			h = figure('Name',me.name,'NumberTitle','off','tag','opticka',...
 				'Position', [10 1 round(ssz(3)/2.5) ssz(4)]);
+			if ~isMATLABReleaseOlderThan("R2025a"); theme(h,'light'); end
 			tl = tiledlayout(4,1,'TileSpacing','compact','Padding','compact');
 
 			ax1 = nexttile;
@@ -289,6 +290,7 @@ classdef timeLogger < optickaCore
 					'NumberTitle', 'off', ...
 					'Color', [0.94 0.94 0.94], ...
 					'Resize', 'on');
+				if ~isMATLABReleaseOlderThan("R2025a"); theme(h.figure1,'light'); end
 				h.uitable1 = uitable( ...
 					'Parent', h.figure1, ...
 					'Tag', 'msglogtable', ...
@@ -449,7 +451,7 @@ classdef timeLogger < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function [avg,err] = stderr(me,data)
+		function [avg,err] = stderr(me, data)
 			avg=mean(data);
 			err=std(data);
 			err=sqrt(err.^2/length(data));
