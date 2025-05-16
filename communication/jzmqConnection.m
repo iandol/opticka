@@ -78,7 +78,7 @@ classdef jzmqConnection < optickaCore
 		%> @brief Opens the ØMQ socket connection.
 		%> @details Creates the ØMQ context if it doesn't exist, creates the
 		%>   socket based on the `type` property, sets socket options like
-		%>   `RCVTIMEO`, `SNDTIMEO`, and `LINGER`, and then either binds (for
+		%>   `ReceiveTimeOut`, `SNDTIMEO`, and `LINGER`, and then either binds (for
 		%>   server types like REP, PUB, PUSH) or connects (for client types)
 		%>   to the specified `endpoint`. Sets the `isOpen` flag to true.
 		%> @note Does nothing if the connection `isOpen` is already true.
@@ -118,6 +118,7 @@ classdef jzmqConnection < optickaCore
 			if ~status; warning('bind/connect failed...'); end
 
 			me.poller = me.context.createPoller();
+			me.poller.register(me.socket,jzmq.ZMQ.PollerEvent.POLLIN);
 
 			if status
 				me.isOpen = true;
@@ -140,11 +141,24 @@ classdef jzmqConnection < optickaCore
 		%> @param events string 'in' 'out' or 'both'
 		%> @param time in ms, 0 = no wait, -1 = block until response
 		% ===================================================================
-			revents = 0;
-			if ~me.isOpen; return; end
-			if nargin < 3 || isempty(time); time = 0; end
-			if nargin < 2 || isempty(events); events = 'both'; end
-			revents = me.socket.poll(events,time);
+			arguments (Input)
+                me
+                events string {mustBeMember(events,...
+					["in","out","both"])} = "in"
+				time (1,1) double = 0
+			end
+			arguments (Output)
+                revents logical
+			end
+			switch events
+				case 'in'
+					revents = me.poller.pollin(time);
+				case 'out'
+					revents = me.poller.pollout(time);
+				case 'both'
+					revents(1) = me.poller.pollin(time);
+					revents(2) = me.poller.pollout(time);
+			end
 		end
 
 		% ===================================================================
@@ -250,14 +264,14 @@ classdef jzmqConnection < optickaCore
 		% ===================================================================
 		function flush(me)
 		%> @brief Flushes the receive buffer of the socket.
-		%> @details Temporarily sets the receive timeout (`RCVTIMEO`) to 0 (non-blocking)
+		%> @details Temporarily sets the receive timeout (`ReceiveTimeOut`) to 0 (non-blocking)
 		%>   and enters a loop calling `receive` until it returns a status of -1
 		%>   (indicating no more messages or an error). It then restores the
 		%>   original `readTimeOut`. This is useful for discarding any pending
 		%>   messages in the socket's incoming queue.
 		% ===================================================================
 			try
-				me.set('RCVTIMEO', 0);
+				me.set('ReceiveTimeOut', 0);
 				N = 1000;
 				while N > 0
 					status = 0;
@@ -267,36 +281,56 @@ classdef jzmqConnection < optickaCore
 			catch ME
 				if me.verbose; fprintf('Flush error: %s %s', ME.identifier, ME.message); end
 			end
-			me.set('RCVTIMEO', me.readTimeOut);
+			me.set('ReceiveTimeOut', me.readTimeOut);
 		end
 
 		% ===================================================================
 		function value = get(me, option)
 		%> @brief Gets the value of a ØMQ socket option.
 		%> @details A wrapper around the `zmq.Socket.get` method.
-		%> @param option The name of the socket option to retrieve (e.g., 'RCVTIMEO', 'SNDHWM').
+		%> @param option The name of the socket option to retrieve (e.g., 'Linger', 'ReceiveTimeOut').
 		%>   Case-insensitive, 'ZMQ_' prefix is optional.
 		%> @return value The current value of the specified socket option.
 		%> @warning Issues a warning if `option` is not provided.
 		% ===================================================================
-			if ~exist('option','var'); warning('No option given...'); return; end
-			value = me.socket.get(option);
+			arguments (Input)
+                me
+                option string {mustBeMember(option,...
+					["Linger","ReceiveBufferSize",...
+					"SendBufferSize","HWM",...
+					"ReceiveTimeOut","SendTimeOut",...
+					"SocketType","Type","Ctx"])}
+			end
+			arguments (Output)
+                value
+			end
+			value = me.socket.pointer.("get" + option);
 		end
 
 		% ===================================================================
 		function status = set(me, option, value)
 		%> @brief Sets the value of a ØMQ socket option.
 		%> @details A wrapper around the `zmq.Socket.set` method.
-		%> @param option The name of the socket option to set (e.g., 'RCVTIMEO', 'LINGER').
+		%> @param option The name of the socket option to set (e.g., 'ReceiveTimeOut', 'LINGER').
 		%>   Case-insensitive, 'ZMQ_' prefix is optional.
 		%> @param value The value to assign to the socket option.
 		%> @return status 0 on success, non-zero on failure.
 		%> @warning Issues warnings if `option` or `value` are not provided.
 		% ===================================================================
-			if ~exist('option','var'); warning('No option given...'); return; end
-			if ~exist('value','var'); warning('No value given...'); return; end
-			status = me.socket.set(option, value);
-			if status ~= 0
+			arguments (Input)
+                me
+                option string {mustBeMember(option,...
+					["Linger","ReceiveBufferSize",...
+					"SendBufferSize","HWM",...
+					"ReceiveTimeOut","SendTimeOut",...
+					"SocketType","Type","Ctx"])}
+				value
+			end
+			arguments (Output)
+                status
+			end
+			status = me.socket.pointer.("set" + option)(value);
+			if ~status
 				warning('zmqConnection:set:failure','Failed to set %s', option)
 			end
 		end
@@ -367,13 +401,13 @@ classdef jzmqConnection < optickaCore
 		%> @note Uses `try...end` blocks to suppress errors during closure.
 		% ===================================================================
 			if ~exist('keepContext','var'); keepContext = false; end
-			try me.socket.close(); end %#ok<*TRYNC>
-			try me.context.close(); end
+			
+			try me.socket.close(); me.socket = []; end %#ok<*TRYNC>
+
 			if ~keepContext
-				try me.context.term(); end
 				me.context = [];
 			end
-			me.socket = [];
+	
 			me.isOpen = false;
 		end
 		function delete(me)
@@ -474,7 +508,7 @@ classdef jzmqConnection < optickaCore
 					j.data = serialData;
 					j = jsonencode(j);
 					b = matlab.net.base64encode(j);
-					nbytes = me.socket.send_multipart(uint8(b), options{:});
+					nbytes = me.socket.send(uint8(b), options{:});
 				elseif ~isempty(command) && ~isempty(serialData)
 					n1 = me.socket.send(uint8(command), 'sndmore');
 					n2 = me.socket.send(serialData, options{:});
