@@ -10,6 +10,8 @@ classdef behaviouralRecord < optickaCore
 	
 	%--------------------PUBLIC PROPERTIES----------%
 	properties
+		%> silent mode which disables the plotting
+		silentMode			= false
 		%> verbosity
 		verbose				= true
 		% response list
@@ -103,6 +105,7 @@ classdef behaviouralRecord < optickaCore
 		%> 
 		% ===================================================================
 		function createPlot(me, eL)
+			if me.silentMode; return; end
 			if ~me.plotOnly
 				me.date = datetime('now');
 			end
@@ -278,6 +281,7 @@ classdef behaviouralRecord < optickaCore
 		%> 
 		% ===================================================================
 		function plot(me, drawNow)
+			if me.silentMode; return; end
 			if isempty(me.response); warning('No data available'); return; end
 			if ~me.isOpen || ~isfield(me.h,'root'); me.createPlot; me.plotOnly = true; end
 			if ~exist('drawNow','var'); drawNow = true; end
