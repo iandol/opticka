@@ -531,7 +531,7 @@ classdef jzmqConnection < optickaCore
 		end
 		
 		% ===================================================================
-		function [command, data, msg] = receiveObject(me, useJSON, options)
+		function [command, data, raw, msg] = receiveObject(me, useJSON, options)
 		%> @brief (Private) Receives a command string and optional serialized MATLAB data.
 		%> @details This is the core receiving method. It calls `zmq.Socket.recv`
 		%>   to get the first part (expected to be the command string). It checks
@@ -542,6 +542,7 @@ classdef jzmqConnection < optickaCore
 		%> @param options (Optional) Cell array of flags for the initial `recv` call (e.g., {'ZMQ_DONTWAIT'}).
 		%> @return command The received command string. Empty on failure or timeout.
 		%> @return data The deserialized MATLAB data. Empty if no data part, deserialization fails, or on error.
+		%> @return raw the original structure
 		%> @return msg An error message string if receiving the command failed or deserialization failed.
 		%> @note This is a private method. Throws an error if the socket is not open. Logs deserialization errors.
 		% ===================================================================
@@ -554,7 +555,7 @@ classdef jzmqConnection < optickaCore
 
 			if nargin < 2 || isempty(useJSON); useJSON = true; end
 
-			command = ''; data = []; msg = ''; frames = {};
+			command = ''; data = []; msg = ''; raw = []; frames = {};
 
 			try
 				frames = me.receiveMultipart();
@@ -573,15 +574,17 @@ classdef jzmqConnection < optickaCore
 
 			if useJSON
 				try
-					b = char([frames{1:end}]);
-					j = char(matlab.net.base64decode(b));
-					src = jsondecode(j);
+					b = native2unicode([frames{1:end}], 'UTF-8');
+					%b = char([frames{1:end}]);
+					%j = char(matlab.net.base64decode(b));
+					src = jsondecode(b);
 					if isstruct(src)
 						command = src.command;
 						if isfield(src,'data') && ~isempty(src.data)
 							data = getArrayFromByteStream(uint8(src.data));
 						end
 					end
+					raw = src;
 				catch ME
 					msg = 'Cannot parse JSON...';
 					me.addMessage(msg);
