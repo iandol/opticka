@@ -282,7 +282,7 @@ classdef touchManager < optickaCore
 					'Keycode',55);
 				end
 			else
-				evt = getEvent(me);
+				evt = getEvents(me);
 			end
 			me.eventNew = false; me.eventMove = false; me.eventRelease = false; me.eventPressed = false;
 			if ~isempty(evt)
@@ -751,18 +751,23 @@ classdef touchManager < optickaCore
 	methods (Access = protected) %------------------PROTECTED METHODS
 	%=======================================================================
 
+		% ===================================================================
 		function evt = getEvents(me)
-
+		%> @fn getEvents
+		%>
+		%> @param
+		%> @return
+		% ===================================================================	
+			evt = [];
 			if me.drainEvents
 				while eventAvail(me) 
 					evt = TouchEventGet(me.devices(me.device), me.swin, 0); 
-
 				end
 			else
 				evt = TouchEventGet(me.devices(me.device), me.swin, 0);
 			end
-	
 		end
+
 		% ===================================================================
 		function [result, window] = calculateWindow(me, x, y, tempWindow)
 		%> @fn calculateWindow

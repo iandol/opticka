@@ -360,7 +360,7 @@ classdef jzmqConnection < optickaCore
 				status = -1;
 				t = sprintf('Couldn''t send, perhaps need to receive first: %s - %s', ME.identifier, ME.message);
 				me.addMessage(t);
-				if me.verbose; disp(t); end
+				warning(t);
 			end
 		end
 
@@ -403,6 +403,7 @@ classdef jzmqConnection < optickaCore
 			if ~exist('keepContext','var'); keepContext = false; end
 			
 			try me.socket.close(); me.socket = []; end %#ok<*TRYNC>
+			try me.poller.close(); me.poller = []; end %#ok<*TRYNC>
 
 			if ~keepContext
 				me.context = [];
