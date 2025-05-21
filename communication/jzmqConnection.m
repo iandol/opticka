@@ -143,13 +143,13 @@ classdef jzmqConnection < optickaCore
 		%> @param time in ms, 0 = no wait, -1 = block until response
 		% ===================================================================
 			arguments (Input)
-                me
-                events string {mustBeMember(events,...
+				me
+				events string {mustBeMember(events,...
 					["in","out","both"])} = "in"
 				time (1,1) double = 0
 			end
 			arguments (Output)
-                revents logical
+				revents logical
 			end
 			switch events
 				case 'in'
@@ -287,15 +287,15 @@ classdef jzmqConnection < optickaCore
 		%> @warning Issues a warning if `option` is not provided.
 		% ===================================================================
 			arguments (Input)
-                me
-                option string {mustBeMember(option,...
+				me
+				option string {mustBeMember(option,...
 					["Linger","ReceiveBufferSize",...
 					"SendBufferSize","HWM",...
 					"ReceiveTimeOut","SendTimeOut",...
 					"SocketType","Type","Ctx"])}
 			end
 			arguments (Output)
-                value
+				value
 			end
 			value = me.socket.pointer.("get" + option);
 		end
@@ -311,8 +311,8 @@ classdef jzmqConnection < optickaCore
 		%> @warning Issues warnings if `option` or `value` are not provided.
 		% ===================================================================
 			arguments (Input)
-                me
-                option string {mustBeMember(option,...
+				me
+				option string {mustBeMember(option,...
 					["Linger","ReceiveBufferSize",...
 					"SendBufferSize","HWM",...
 					"ReceiveTimeOut","SendTimeOut",...
@@ -320,7 +320,7 @@ classdef jzmqConnection < optickaCore
 				value
 			end
 			arguments (Output)
-                status
+				status
 			end
 			status = me.socket.pointer.("set" + option)(value);
 			if ~status
@@ -636,16 +636,16 @@ classdef jzmqConnection < optickaCore
 			data = getByteStreamFromArray(data);
 			dataStruct = struct('command',command,'dataType','byteStream','data', data);
 			try
-        		response = webwrite(me.httpProxy, dataStruct, opts);
-        		fprintf('send "%s" - respone: \n%s\n', command, jsonencode(response));
+				response = webwrite(me.httpProxy, dataStruct, opts);
+				fprintf('send "%s" - respone: \n%s\n', command, jsonencode(response));
 				if isstruct(response) && isfield(response,'dataType') && matches(response.dataType,'byteStream')
 					data = getArrayFromByteStream(uint8(response.data));
 					disp(data);
 				else 
 					data = [];
 				end
-    		catch ME
-        		warning('sendViaProxy: "%s" failed - error: %s -  %s\n', command, ME.identifier, ME.message);
+			catch ME
+				warning('sendViaProxy: "%s" failed - error: %s -  %s\n', command, ME.identifier, ME.message);
 			end
 		end
 		
@@ -653,6 +653,14 @@ classdef jzmqConnection < optickaCore
 
 	methods (Access = private)
 
+		% ===================================================================
+		%> @brief Receives all parts of a multipart message from the socket.
+		%> @details Calls `recv` on the socket to get the first part, then
+		%>   continues calling `recv` while `hasReceiveMore` is true, collecting
+		%>   all parts into a cell array. If only one part is received, returns
+		%>   it directly.
+		%> @return data Cell array of message parts, or the single part if only one.
+		% ===================================================================
 		function data = receiveMultipart(me)
 			data = {};
 			data{1} = me.socket.recv();
@@ -665,6 +673,13 @@ classdef jzmqConnection < optickaCore
 			end
 		end
 
+		% ===================================================================
+		%> @brief Adds a message to the object's message log.
+		%> @details Converts the input `msg` to a string if necessary, then
+		%>   appends it to the `messages` property. Handles struct, object,
+		%>   char, and string types. If `msg` is empty or not provided, does nothing.
+		%> @param msg The message to add (struct, object, char, string, or array).
+		% ===================================================================
 		function addMessage(me, msg)
 			if nargin < 2; return; end
 			if isstruct(msg) || isobject(msg)
@@ -683,6 +698,14 @@ classdef jzmqConnection < optickaCore
 			end
 		end
 		
+		% ===================================================================
+		%> @brief Checks if the socket is ready for the specified event(s).
+		%> @details Uses polling to determine if the socket can send ('out'),
+		%>   receive ('in'), or neither ('none'). If `alwaysPoll` is false,
+		%>   always returns true.
+		%> @param events String: 'in', 'out', or 'none'.
+		%> @return out Logical true if the event is ready, false otherwise.
+		% ===================================================================
 		function out = verifyEvent(me, events)
 			if ~me.alwaysPoll; out = true; return; end
 			out = false;
@@ -702,7 +725,5 @@ classdef jzmqConnection < optickaCore
 					end
 			end
 		end
-		
 	end
-	
 end
