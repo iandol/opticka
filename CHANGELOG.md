@@ -14,8 +14,7 @@ Note only changes which may affect your use of Opticka will be detailed here, st
 * Tobii eyetrackers — update Titta interface to support the new adaptive monkey calibration. See Niehorster, D. C., Whitham, W., Lake, B. R., Schapiro, S. J., Andolina, I. M., & Yorzinski, J. L. (2024). Enhancing eye tracking for nonhuman primates and other subjects unable to follow instructions: Adaptive calibration and validation of Tobii eye trackers with the Titta toolbox. Behavior Research Methods, 57(1), 0. https://doi.org/10.3758/s13428-024-02540-y for details.
 * **makeReport** — a new method in optickaCore thus available to all opticka objects. Uses the MATLAB report generator to make a PDF report of the data and property values contained in the core opticka classes (runExperiment, taskSequence, stateMachine, behaviouralRecord, tobii/eyelink/irec). Useful when analysing an experiment to get an overview of all experiment parameters for that session.
 * **circularMask Shader** — add a simple texture shader that provides a circular mask for any texture stimulus (like an image). This is better than using a separate disc shader. Used in imageStimulus.
-
-
+*   **`alyxManager`**: Added `communication/alyxManager.m`, the core class for interacting with Alyx databases. This manager handles login, data retrieval (sessions, subjects, etc.), and data submission (new experiments, narratives, file registration) forming the backbone of the Alyx integration.
 
 ## V2.16.1 -- 106 files changed
 
