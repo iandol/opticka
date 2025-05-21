@@ -22,7 +22,8 @@ classdef jzmqConnection < optickaCore
 		verbose				= false
 		%> for sendCommand and receiveCommand use zmq.core.poll?
 		alwaysPoll			= false
-		
+		%> use a http proxy to send message
+		httpProxy			= 'http://localhost:9012/cmds/proxies/matlab'
 	end
 
 	properties (Dependent = true)
@@ -175,7 +176,6 @@ classdef jzmqConnection < optickaCore
 		%> @return rep The reply command string received from the peer.
 		%> @return dataOut The deserialized MATLAB data received in the reply.
 		%> @return status 0 on success (send and receive completed), -1 on failure (send or receive failed).
-		%> @note Updates `sendState` and `recState` properties. Logs reply if verbose.
 		% ===================================================================
 			rep = ''; dataOut = []; status = -1;
 			if ~me.isOpen; return; end
@@ -191,16 +191,14 @@ classdef jzmqConnection < optickaCore
 				t = sprintf('Receive status %i did not return any command: %s - %s...\n', status, ME.identifier, ME.message);
 				me.addMessage(t);
 				disp(t);
-				me.sendState = false; me.recState = false;
 			end
 			if status == 0 && getReply
-				[rep, dataOut] = receiveObject(me);
-				me.addMessage(t);
+				[rep, dataOut, ~, t] = receiveObject(me);
+				if ~isempty(t); me.addMessage(t); end
 				if me.verbose
 					disp(t);
 					disp(dataOut);
 				end
-				me.sendState = false; me.recState = true;
 			end
 		end
 
@@ -215,7 +213,6 @@ classdef jzmqConnection < optickaCore
 		%>   is sent by this function. Defaults to true.
 		%> @return command The received command string. Empty if receive failed or timed out.
 		%> @return data The deserialized MATLAB data received with the command. Empty if no data part or on error.
-		%> @note Updates `sendState` and `recState` properties. Logs received command/data if verbose.
 		% ===================================================================
 			command = ''; data = []; msg = '';
 			if ~me.isOpen; return; end
@@ -228,7 +225,6 @@ classdef jzmqConnection < optickaCore
 					msg = sprintf('Receive problem: %s', msg); % Log if receiveObject reported an issue
 					me.addMessage(msg);
 					warning(msg)
-					me.recState = false; % Indicate receive wasn't fully successful
 				elseif ~isempty(command)
 					if me.verbose 
 						fprintf('Received command: «%s»\n', command);
@@ -245,19 +241,16 @@ classdef jzmqConnection < optickaCore
 			end
 			
 			% Send 'ok' reply only if requested and a command was actually received
-			if sendReply && ~isempty(command) && me.recState
+			if sendReply && ~isempty(command)
 				status = sendObject(me, 'ok', {});
 				if status ~= 0
 					msg = sprintf('Default "ok" reply failed to be sent for command "%s"', command);
 					me.addMessage(msg);
 					warning(msg);
 					me.sendState = false; % Update state on send failure
-				else
-					me.sendState = true; me.recState = false; % Update state on send success
 				end
-			elseif ~isempty(command) && me.recState
+			elseif ~isempty(command)
 				% If reply is not sent here, the caller is responsible.
-				% The state remains sendState=false, recState=true.
 			end
 		end
 
@@ -344,7 +337,6 @@ classdef jzmqConnection < optickaCore
 		%>   private `sendObject` method (which might not be intended for raw data).
 		%> @param data The data to send. Can be a character array, string, or uint8 array.
 		%> @return status 0 on success, -1 on failure (e.g., timeout, incorrect socket state).
-		%> @note Updates `sendState` and `recState`. Logs errors to the console.
 		% ===================================================================
 			try
 				status = [];
@@ -373,7 +365,6 @@ classdef jzmqConnection < optickaCore
 		%>   a cell array for true multipart messages. Empty on failure or timeout.
 		%> @return status 0 on success (implied, not explicitly returned on success),
 		%>   -1 on failure (e.g., timeout).
-		%> @note Updates `sendState` and `recState`. Logs errors to the console.
 		% ===================================================================
 			data = []; status = -1;
 			try
@@ -508,7 +499,7 @@ classdef jzmqConnection < optickaCore
 					j.dataType = 'byteStream';
 					j.data = serialData;
 					j = jsonencode(j);
-					b = matlab.net.base64encode(j);
+					b = unicode2native(j, 'UTF-8');
 					nbytes = me.socket.send(uint8(b), options{:});
 				elseif ~isempty(command) && ~isempty(serialData)
 					n1 = me.socket.send(uint8(command), 'sndmore');
@@ -572,13 +563,14 @@ classdef jzmqConnection < optickaCore
 			end
 			if isempty(frames); return; end
 
-
 			if useJSON
 				try
-					b = native2unicode([frames{1:end}], 'UTF-8');
-					%b = char([frames{1:end}]);
-					%j = char(matlab.net.base64decode(b));
-					src = jsondecode(b);
+					if iscell(frames)
+						str = native2unicode([frames{1:end}], 'UTF-8');
+					else
+						str = native2unicode(frames, 'UTF-8');
+					end
+					src = jsondecode(str);
 					if isstruct(src)
 						command = src.command;
 						if isfield(src,'data') && ~isempty(src.data)
@@ -625,6 +617,38 @@ classdef jzmqConnection < optickaCore
 				end
 			end
 		end
+
+
+		% ===================================================================
+		function [response, data] = sendViaProxy(me, command, data)
+		%> @brief sendViaProxy - Sends data to a specified URL via a proxy
+		%>
+		%> This function sends the provided data to the specified URL using
+		%> a proxy server and returns the server's response.
+		%>
+		%> @param command   A string specifying the command to be sent
+		%> @param data  A MATLAB object containing the data to be sent in the request.
+		%>
+		%> @return response  The response from the server after sending the data.
+		% ===================================================================
+			response = [];
+			opts = weboptions('MediaType', 'application/json', 'ContentType', 'json', 'CharacterEncoding', 'UTF-8');
+			data = getByteStreamFromArray(data);
+			dataStruct = struct('command',command,'dataType','byteStream','data', data);
+			try
+        		response = webwrite(me.httpProxy, dataStruct, opts);
+        		fprintf('send "%s" - respone: \n%s\n', command, jsonencode(response));
+				if isstruct(response) && isfield(response,'dataType') && matches(response.dataType,'byteStream')
+					data = getArrayFromByteStream(uint8(response.data));
+					disp(data);
+				else 
+					data = [];
+				end
+    		catch ME
+        		warning('sendViaProxy: "%s" failed - error: %s -  %s\n', command, ME.identifier, ME.message);
+			end
+		end
+		
 	end
 
 	methods (Access = private)
