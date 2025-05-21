@@ -18,6 +18,8 @@ classdef movieStimulus < baseStimulus
 		filePath char = ''
 		%> add a circular mask on the movie?
 		circularMask logical = false
+		%> sigma for circular mask smoothing in pixels
+		sigma double            = 30
 		%> selection if nVideos > 0
 		selection double		= 0
 		%> autoShuffle: time in secs to shuffle to a new video, 0 disables
@@ -72,10 +74,6 @@ classdef movieStimulus < baseStimulus
 	properties (Hidden = true)
 		%> async setting for OpenMovie, 4 may help performance, see OpenMovie help
 		async				= []
-		%> initial settings for circular mask
-		circularMaskSize	= 500
-		circularMaskRadius	= 250
-		circularMaskSmoothing = 60
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -109,7 +107,9 @@ classdef movieStimulus < baseStimulus
 		%> circular mask texture
 		masktex			= []
 		%> shader for masking
-		shader
+		colorMaskShader
+		%> circular mask shader
+		maskshader
 		%> 
 		shuffleTime		= inf
 	end
@@ -126,9 +126,9 @@ classdef movieStimulus < baseStimulus
 		%> allowed properties passed to object upon construction
 		allowedProperties = {'filePath', 'blocking', 'pixelFormat', 'preloadSecs', ...
 			'specialFlagsOpen', 'specialFlagsFrame', 'specialFlags2Frame', 'loopStrategy', ...
-			'mask', 'maskTolerance', 'enforceBlending', 'direction','selection','circularMask'}
+			'mask', 'maskTolerance', 'enforceBlending', 'direction','selection','circularMask', 'sigma'}
 		%> properties to not create transient copies of during setup phase
-		ignoreProperties = {'masktex','circularMask','buffertex', 'shader', 'screenVals', 'movie', 'duration', ...
+		ignoreProperties = {'masktex','circularMask','buffertex', 'colorMaskShader', 'maskshader', 'screenVals', 'movie', 'duration', ...
 			'fps', 'width', 'height', 'count', 'scale', 'filePath', 'pixelFormat', ...
 			'preloadSecs', 'specialFlagsOpen', 'specialFlagsFrame', 'specialFlags2Frame', ...
 			'loopStrategy','needPlayMovie'}
@@ -211,13 +211,9 @@ classdef movieStimulus < baseStimulus
 			
 			addRuntimeProperties(me);
 			
-			me.shader = [];
+			me.colorMaskShader = [];
 			if ~isempty(me.mask)
-				me.shader = CreateSinglePassImageProcessingShader(me.sM.win, 'BackgroundMaskOut', me.mask, me.maskTolerance);
-			end
-
-			if me.circularMask
-				me.masktex = CreateProceduralSmoothedDisc(me.sM.win, me.circularMaskSize, me.circularMaskSize, [], me.circularMaskRadius, me.circularMaskSmoothing, true, 2);
+				me.colorMaskShader = CreateSinglePassImageProcessingShader(me.sM.win, 'BackgroundMaskOut', me.mask, me.maskTolerance);
 			end
 
 			if me.autoShuffle > 0
@@ -228,6 +224,7 @@ classdef movieStimulus < baseStimulus
 			loadMovie(me);
 			computePosition(me)
 			setRect(me);
+			makeMaskShader(me);
 
 			function set_xPositionOut(me, value)
 				me.xPositionOut = value * me.ppd;
@@ -274,6 +271,71 @@ classdef movieStimulus < baseStimulus
 				me.mvRect=CenterRectOnPointd(me.mvRect, me.xFinal, me.yFinal);
 			end
 		end
+
+		% ===================================================================
+		%> @brief makeMaskShader
+		%> Create and configure the shader for applying a circular mask.
+		% ===================================================================
+		function makeMaskShader(me)
+			if me.circularMask
+				if isempty(me.width) || isempty(me.height) || me.width == 0 || me.height == 0
+					% Movie dimensions are not yet known, cannot create shader.
+					% This can happen if makeMaskShader is called before a movie is loaded.
+					% Consider logging a warning if verbose logging is enabled.
+					if me.verbose; fprintf('~~~ movieStimulus:makeMaskShader: Movie dimensions not available, skipping shader creation.\n'); end
+					me.maskshader = [];
+					return;
+				end
+				
+				% Ensure previous shader is cleared if it exists
+				if ~isempty(me.maskshader) && me.maskshader > 0
+					try
+						glDeleteProgram(me.maskshader);
+					catch ME
+						% Suppress errors if shader handle is invalid, e.g., context lost
+						if me.verbose; fprintf('~~~ movieStimulus:makeMaskShader: Error deleting old shader: %s\n', ME.message); end
+					end
+					me.maskshader = [];
+				end
+
+				try
+					shaderPath = which('circularMask.frag');
+					if isempty(shaderPath)
+						error('movieStimulus:makeMaskShader: circularMask.frag not found on MATLAB path.');
+					end
+					% Assuming circularMask.frag is a fragment shader only and PTB's default vertex shader is okay.
+					% If it requires a specific vertex shader, LoadGLSLProgramFromFiles would take two arguments.
+					me.maskshader = LoadGLSLProgramFromFiles(shaderPath, 1); % The '1' flag indicates to only log errors
+					
+					if me.maskshader == 0 % Shader compilation/linking failed
+						error('movieStimulus:makeMaskShader: Failed to load or compile circularMask.frag.');
+					end
+
+					glUseProgram(me.maskshader);
+					glUniform1i(glGetUniformLocation(me.maskshader, 'Image'), 0); % Texture unit 0
+					glUniform2f(glGetUniformLocation(me.maskshader, 'Center'), me.width/2, me.height/2);
+					glUniform1f(glGetUniformLocation(me.maskshader, 'Radius'), floor(min([me.width me.height])/2));
+					glUniform1f(glGetUniformLocation(me.maskshader, 'Sigma'), me.sigma);
+					glUseProgram(0); % Unbind shader
+					
+					if me.verbose; fprintf('~~~ movieStimulus:makeMaskShader: Circular mask shader created and configured.\n'); end
+
+				catch ME
+					warning('movieStimulus:makeMaskShader: Failed to create circular mask shader: %s', ME.message);
+					me.maskshader = [];
+				end
+			else
+				% If circularMask is false, ensure any existing shader is cleared.
+				if ~isempty(me.maskshader) && me.maskshader > 0
+					try
+						glDeleteProgram(me.maskshader);
+					catch ME
+						if me.verbose; fprintf('~~~ movieStimulus:makeMaskShader: Error deleting old shader (mask disabled): %s\n', ME.message); end
+					end
+				end
+				me.maskshader = [];
+			end
+		end
 		
 		% ===================================================================
 		%> @brief Draw this stimulus object
@@ -291,6 +353,11 @@ classdef movieStimulus < baseStimulus
 
 				if me.enforceBlending; Screen('BlendFunction', me.sM.win, me.msrcMode, me.mdstMode); end
 				
+				activeShader = me.colorMaskShader; % Default to colorMaskShader
+				if me.circularMask && ~isempty(me.maskshader)
+					activeShader = me.maskshader;
+				end
+
 				me.texture = Screen('GetMovieImage', me.sM.win, me.movie, me.blocking, [], me.specialFlagsFrame, me.specialFlags2Frame);
 				if ~isempty(me.texture) && me.texture > 0
 					if ~isempty(me.buffertex) && me.buffertex > 0 ...
@@ -298,17 +365,12 @@ classdef movieStimulus < baseStimulus
 						Screen('Close', me.buffertex);
 					end
 					Screen('DrawTexture', me.sM.win, me.texture, [], me.mvRect,...
-						angle,[],[],[],me.shader);
+						angle,[],[],[],activeShader);
 					me.buffertex = me.texture; %copy new texture to buffer
 					me.texture = [];
 				elseif ~isempty(me.buffertex) && me.buffertex > 0
 					Screen('DrawTexture', me.sM.win, me.buffertex, [], me.mvRect,...
-						angle,[],[],[],me.shader)
-				end
-
-				if me.circularMask
-					Screen('DrawTexture', me.sM.win, me.masktex,   [], me.mvRect,...
-						[], [], 1, me.sM.backgroundColour);
+						angle,[],[],[],activeShader)
 				end
 
 				if me.enforceBlending; Screen('BlendFunction', me.sM.win, me.sM.srcMode, me.sM.dstMode); end
@@ -368,13 +430,31 @@ classdef movieStimulus < baseStimulus
 				fprintf('---> Number of dropped movie frames: %i\n',ndrop)
 				try Screen('CloseMovie', me.movie); end
 			end
-			if ~isempty(me.masktex) && me.masktex > 0 && Screen(me.masktex,'WindowKind') == -1
-				try Screen('Close',me.masktex); end %#ok<*TRYNC>
-				me.masktex = [];
-			end
 			me.shuffleTime = inf;
 			me.needPlayMovie = false;
-			me.shader = [];
+
+			% Clear the color mask shader (previously me.shader)
+			if ~isempty(me.colorMaskShader) && me.colorMaskShader > 0
+				try
+					glDeleteProgram(me.colorMaskShader); 
+				catch ME
+					% Suppress errors, e.g., if GL context is already gone
+					if me.verbose; fprintf('~~~ movieStimulus:reset: Error deleting colorMaskShader: %s\n', ME.message); end
+				end
+				me.colorMaskShader = []; % Ensure it's reset
+			end
+
+			% Clear the circular mask shader
+			if ~isempty(me.maskshader) && me.maskshader > 0
+				try
+					glDeleteProgram(me.maskshader);
+				catch ME
+					% Suppress errors
+					if me.verbose; fprintf('~~~ movieStimulus:reset: Error deleting maskshader: %s\n', ME.message); end
+				end
+				me.maskshader = []; % Ensure it's reset
+			end
+			
 			me.movie = [];
 			me.duration = [];
 			me.fps = [];
@@ -451,10 +531,12 @@ classdef movieStimulus < baseStimulus
 			fprintf('\tBlocking: %i | Loop: %i | Preloadsecs: %i | Pixelformat: %i | Flags: %i\n', me.blocking, ...
 				me.loopStrategy, me.preloadSecs, me.pixelFormat, me.specialFlagsOpen);
 			
+			makeMaskShader(me); % Call the new method here
+
 			if ~isempty(me.movie)
 				me.needPlayMovie = true; 
 			else
-				me.needPlay = false; 
+				me.needPlayMovie = false; % Corrected typo
 			end
 		end
 
