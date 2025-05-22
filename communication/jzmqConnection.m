@@ -620,7 +620,7 @@ classdef jzmqConnection < optickaCore
 
 
 		% ===================================================================
-		function [response, data] = sendViaProxy(me, command, data)
+		function [response, dataOut] = sendViaProxy(me, command, data, proxy)
 		%> @brief sendViaProxy - Sends data to a specified URL via a proxy
 		%>
 		%> This function sends the provided data to the specified URL using
@@ -631,20 +631,30 @@ classdef jzmqConnection < optickaCore
 		%>
 		%> @return response  The response from the server after sending the data.
 		% ===================================================================
-			response = [];
+			arguments(Input)
+				me jzmqConnection
+				command string = 'echo'
+				data = []
+				proxy string = me.httpProxy
+			end
+			arguments(Output)
+				response struct
+				dataOut
+			end
+			response = []; dataOut = [];
 			opts = weboptions('MediaType', 'application/json', 'ContentType', 'json', 'CharacterEncoding', 'UTF-8');
 			data = getByteStreamFromArray(data);
 			dataStruct = struct('command',command,'dataType','byteStream','data', data);
 			try
-				response = webwrite(me.httpProxy, dataStruct, opts);
+				response = webwrite(proxy, dataStruct, opts);
 				fprintf('send "%s" - respone: \n%s\n', command, jsonencode(response));
 				if isstruct(response) && isfield(response,'dataType') && matches(response.dataType,'byteStream')
-					data = getArrayFromByteStream(uint8(response.data));
-					disp(data);
-				else 
-					data = [];
+					dataOut = getArrayFromByteStream(uint8(response.data));
+					disp(dataOut);
 				end
 			catch ME
+				response = struct('error',string(ME.identifier));
+				dataOut = struct('error',string(ME.identifier),'data', ME.message,'cause','Ensure cogmoteGO and theConductor are running!!!');
 				warning('sendViaProxy: "%s" failed - error: %s -  %s\n', command, ME.identifier, ME.message);
 			end
 		end
