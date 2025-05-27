@@ -14,9 +14,11 @@ classdef touchManager < optickaCore
 	%--------------------PUBLIC PROPERTIES----------%
 	properties
 		%> which touch device to connect to?
-		device				= 1
+		device double			= 1
+		%>
+		name string				= ''
 		%> use the mouse instead of the touch screen for debugging
-		isDummy				= false
+		isDummy	logical			= false
 		%> window is a touch window, X and Y are the screen postion
 		%> radius: circular when radius is 1 value, rectangular when radius = [width height])
 		%> doNegation: allows to return -100 (like exclusion) if touch is OUTSIDE window.
@@ -25,7 +27,7 @@ classdef touchManager < optickaCore
 		%> init: timer that tests time to first touch
 		%> hold: timer that determines how long to hold
 		%> release: timer to determine the time after hold in which window should be released
-		window				= struct('X', 0, 'Y', 0, 'radius', 2, 'doNegation', false,...
+		window struct			= struct('X', 0, 'Y', 0, 'radius', 2, 'doNegation', false,...
 								'negationBuffer', 2, 'strict', true,...
 								'init', 3, 'hold', 0.05, 'release', 1);
 		%> Use exclusion zones where no touch allowed: [left,top,right,bottom]
@@ -34,22 +36,22 @@ classdef touchManager < optickaCore
 		%> drain the events to only get the latest? This ensures lots of
 		%> events don't pile up, often you only want the current event,
 		%> but potentially causes a longer delay each time getEvent is called...
-		drainEvents			= true;
+		drainEvents logical	= true;
 		%> there can be up to 10 touch events, do we record all of them
-		trackID				= false
+		trackID	logical		= false
 		%> which id to track as the main one (1 = first event)
-		mainID				= 1
+		mainID double		= 1
 		%> panel type, 1 = front, 2 = back (reverses X position)
-		panelType			= 1
+		panelType double	= 1
 		%> verbose
-		verbose				= false
+		verbose logical		= false
 	end
 
 	properties (Hidden = true)
 		%> number of slots for touch events
-		nSlots				= 1e5
+		nSlots double		= 1e5
 		%> functions return immediately
-		silentMode			= false
+		silentMode logical	= false
 	end
 
 	properties (SetAccess=private, GetAccess=public)
@@ -123,16 +125,32 @@ classdef touchManager < optickaCore
 			me = me@optickaCore(args); %superclass constructor
 			me.parseArgs(args, me.allowedProperties);
 
+			% on linux we can use xinput to list and enable/disable touch
+			% interfaces, here we ensure the named touch interface is
+			% explicitly enabled
+			if IsLinux
+				try
+					[~,r] = system('xinput list');
+					disp('Input Device List:');
+					disp(r);
+					if ~isempty(me.name)
+						pattern = sprintf('(?<name>%s)\\s+id=(?<id>\\d+)', me.name);
+						r = strsplit(string(r), newline);
+						for ii = 1:length(r)
+							tokens = regexp(line, pattern, 'names');
+							if ~isempty(tokens)
+								[~,rr] = system(['xinput enable ' tokens.id]);
+								break
+							end
+						end
+					end
+				end
+			end
+
+			% PTB finds touch interfaces from all inputs.
 			try [me.devices,me.names,me.allInfo] = GetTouchDeviceIndices([], 1); end %#ok<*TRYNC>
 			me.hold = me.holdTemplate;
 			me.evts = me.evtsTemplate;
-			try
-				if IsLinux
-					[~,r] = system('xinput');
-					disp('Input Device List:');
-					disp(r);
-				end
-			end
 		end
 
 		% ===================================================================SETUP
