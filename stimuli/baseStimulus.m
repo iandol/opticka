@@ -997,7 +997,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> @param useDegrees where the input is in degrees (true) ot pixels (false)
 		% ===================================================================
 		function updateXY(me,x,y,useDegrees)
-		% updateXY(me, x, y, useDegrees)
+		% updateXY(me, x, y, useDegrees[false])
 			if ~exist('useDegrees','var') || isempty(useDegrees); useDegrees = false; end
 			if ~isempty(x) && ~isscalar(x); x = x(1); end; if ~isempty(y) && ~isscalar(y); y = y(1); end
 			if useDegrees

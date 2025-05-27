@@ -334,7 +334,7 @@ classdef imageStimulus < baseStimulus
 		% ===================================================================
 		function update(me)
 			if me.randomiseSelection
-				im = randi(length(me.filePaths));
+				im = randi(me.nImages);
 			else 
 				im = me.getP('selection');
 			end

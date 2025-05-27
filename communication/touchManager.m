@@ -15,8 +15,9 @@ classdef touchManager < optickaCore
 	properties
 		%> which touch device to connect to?
 		device double			= 1
-		%>
-		name string				= ''
+		%> touch device name, useful to enable it at the OS level before
+		%> PTB searches for the touch device
+		deviceName string		= ''
 		%> use the mouse instead of the touch screen for debugging
 		isDummy	logical			= false
 		%> window is a touch window, X and Y are the screen postion
@@ -44,7 +45,7 @@ classdef touchManager < optickaCore
 		%> panel type, 1 = front, 2 = back (reverses X position)
 		panelType double	= 1
 		%> verbose
-		verbose logical		= false
+		verbose				= false
 	end
 
 	properties (Hidden = true)
@@ -99,7 +100,7 @@ classdef touchManager < optickaCore
 		swin				= []
 		screenVals			= []
 		evtsTemplate		= struct('id', [], 'type', [], 'x', [], 'y', [])
-		allowedProperties	= {'isDummy','device','verbose','window','nSlots',...
+		allowedProperties	= {'isDummy','device','deviceName','verbose','window','nSlots',...
 							'panelType','drainEvents','exclusionZone'}
 		holdTemplate		= struct('N',0,'inWindow',false,'touched',false,...
 							'start',0,'now',0,'total',0,'search',0,'init',0,'releaseinit',0,...
@@ -133,13 +134,13 @@ classdef touchManager < optickaCore
 					[~,r] = system('xinput list');
 					disp('Input Device List:');
 					disp(r);
-					if ~isempty(me.name)
-						pattern = sprintf('(?<name>%s)\\s+id=(?<id>\\d+)', me.name);
+					if ~isempty(me.deviceName)
+						pattern = sprintf('(?<name>%s)\\s+id=(?<id>\\d+)', me.deviceName);
 						r = strsplit(string(r), newline);
 						for ii = 1:length(r)
-							tokens = regexp(line, pattern, 'names');
+							tokens = regexp(r(ii), pattern, 'names');
 							if ~isempty(tokens)
-								[~,rr] = system(['xinput enable ' tokens.id]);
+								system(['xinput enable ' tokens.id]);
 								break
 							end
 						end
@@ -401,6 +402,27 @@ classdef touchManager < optickaCore
 				fprintf('≣checkWin%s⊱%i wasHeld:%i type:%i result:%i new:%i mv:%i prs:%i rel:%i {%.1fX %.1fY} win:%i\n',...
 				me.name, me.eventID, me.wasHeld, evt.Type, result,me.eventNew,me.eventMove,me.eventPressed,me.eventRelease,...
 				me.x,me.y,win);
+			end
+		end
+
+		% ===================================================================
+		%> @fn isTouch
+		%>
+		%> Simply checks for touch event irrespective of position
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function touch = isTouch(me)
+			touch = false;
+			evt = getEvent(me);
+			while iscell(evt) && ~isempty(evt); evt = evt{1}; end
+			if isempty(evt)
+				return
+			else
+				if evt.Type == 2 || evt.Type == 3
+					touch = true;
+				end
 			end
 		end
 
