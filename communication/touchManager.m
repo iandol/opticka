@@ -397,7 +397,7 @@ classdef touchManager < optickaCore
 			if ~exist('getEvt','var'); getEvt = true; end
 
 			nWindows = max([1 size(windows,1)]);
-			result = false; win = 1; wasEvent = false;
+			result = false; win = 1; wasEvent = false; wasTouch = false;
 
 			if getEvt
 				evt = getEvent(me);
@@ -410,6 +410,7 @@ classdef touchManager < optickaCore
 			if isempty(evt); return; end
 
 			wasEvent = true;
+			wasTouch = me.eventPressed;
 
 			if ~isempty(evt.xy)
 				if isempty(windows)
@@ -424,9 +425,13 @@ classdef touchManager < optickaCore
 				if any(result); me.wasInWindow = true; end
 			end
 			if me.verbose && ~me.deferLog
-				fprintf('≣checkWin%s⊱%i wasHeld:%i type:%i result:%i new:%i mv:%i prs:%i rel:%i {%.1fX %.1fY} win:%i\n',...
-				me.name, me.eventID, me.wasHeld, evt.Type, result,me.eventNew,me.eventMove,me.eventPressed,me.eventRelease,...
-				me.x,me.y,win);
+				winres = win;
+				if winres == 0
+					winres = 1; 
+				end
+				fprintf('≣checkWin%s⊱%i wasHeld:%i type:%i result:%i new:%i mv:%i prs:%i rel:%i {%.1fX %.1fY} win:%i [%.1fX %.1fY]\n',...
+				me.name, me.eventID, me.wasHeld, evt.Type, result, me.eventNew, me.eventMove, me.eventPressed, me.eventRelease,...
+				me.x, me.y, win, me.window(winres).X, me.window(winres).Y);
 			end
 		end
 
