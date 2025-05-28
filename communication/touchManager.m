@@ -274,6 +274,35 @@ classdef touchManager < optickaCore
 		end
 
 		% ===================================================================
+		function reset(me)
+		%> @fn reset
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+			me.lastPressed 	= false;
+			me.hold			= me.holdTemplate;
+			me.evts			= me.evtsTemplate;
+			me.x			= [];
+			me.y			= [];
+			me.xAll			= [];
+			me.yAll			= [];
+			me.win			= [];
+			me.wasInWindow	= false;
+			me.wasHeld		= false;
+			me.isReleased	= false;
+			me.wasNegation	= false;
+			me.isSearching	= false;
+			me.eventNew		= false;
+			me.eventMove	= false;
+			me.eventPressed	= false;
+			me.eventRelease	= false;
+			me.eventID 		= [];
+			me.eventType	= [];
+			me.event		= [];
+		end
+
+		% ===================================================================
 		function evt = getEvent(me)
 		%> @fn getEvent
 		%>
@@ -336,49 +365,45 @@ classdef touchManager < optickaCore
 		end
 
 		% ===================================================================
-		function reset(me)
-		%> @fn reset
+		%> @fn isTouch
+		%>
+		%> Simply checks for touch event irrespective of position
 		%>
 		%> @param
 		%> @return
 		% ===================================================================
-			me.lastPressed 	= false;
-			me.hold			= me.holdTemplate;
-			me.evts			= me.evtsTemplate;
-			me.x			= [];
-			me.y			= [];
-			me.xAll			= [];
-			me.yAll			= [];
-			me.win			= [];
-			me.wasInWindow	= false;
-			me.wasHeld		= false;
-			me.isReleased	= false;
-			me.wasNegation	= false;
-			me.isSearching	= false;
-			me.eventNew		= false;
-			me.eventMove	= false;
-			me.eventPressed	= false;
-			me.eventRelease	= false;
-			me.eventID 		= [];
-			me.eventType	= [];
-			me.event		= [];
+		function [touch, evt] = isTouch(me)
+			touch = false;
+			evt = getEvent(me);
+			while iscell(evt) && ~isempty(evt); evt = evt{1}; end
+			if isempty(evt)
+				return
+			else
+				touch = me.eventPressed;
+			end
 		end
 
 		% ===================================================================
-		function [result, win, wasEvent] = checkTouchWindows(me, windows)
+		function [result, win, wasEvent, wasTouch] = checkTouchWindows(me, windows, getEvt)
 		%> @fn [result, win, wasEvent] = checkTouchWindows(me, windows)
 		%>
 		%> Simply get latest touch event and check if it is in the defined window
 		%>
 		%> @param windows: [optional] touch rects to test (default use window parameters)
+		%> @param getEvent: [optional] do we get event or use the existing one?
 		%> @return result: -100 = negation, true / false otherwise
 		% ===================================================================
 			if ~exist('windows','var'); windows = []; end
-			
+			if ~exist('getEvt','var'); getEvt = true; end
+
 			nWindows = max([1 size(windows,1)]);
 			result = false; win = 1; wasEvent = false;
 
-			evt = getEvent(me);
+			if getEvt
+				evt = getEvent(me);
+			else
+				evt = me.event;
+			end
 
 			while iscell(evt) && ~isempty(evt); evt = evt{1}; end
 			
@@ -402,27 +427,6 @@ classdef touchManager < optickaCore
 				fprintf('≣checkWin%s⊱%i wasHeld:%i type:%i result:%i new:%i mv:%i prs:%i rel:%i {%.1fX %.1fY} win:%i\n',...
 				me.name, me.eventID, me.wasHeld, evt.Type, result,me.eventNew,me.eventMove,me.eventPressed,me.eventRelease,...
 				me.x,me.y,win);
-			end
-		end
-
-		% ===================================================================
-		%> @fn isTouch
-		%>
-		%> Simply checks for touch event irrespective of position
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function touch = isTouch(me)
-			touch = false;
-			evt = getEvent(me);
-			while iscell(evt) && ~isempty(evt); evt = evt{1}; end
-			if isempty(evt)
-				return
-			else
-				if evt.Type == 2 || evt.Type == 3
-					touch = true;
-				end
 			end
 		end
 
