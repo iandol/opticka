@@ -649,8 +649,10 @@ classdef jzmqConnection < optickaCore
 				response = webwrite(proxy, dataStruct, opts);
 				fprintf('send "%s" - respone: \n%s\n', command, jsonencode(response));
 				if isstruct(response) && isfield(response,'dataType') && matches(response.dataType,'byteStream')
-					dataOut = getArrayFromByteStream(uint8(response.data));
-					disp(dataOut);
+					try dataOut = getArrayFromByteStream(uint8(response.data)); end
+					if ~isempty(dataOut)
+						disp(dataOut);
+					end
 				end
 			catch ME
 				response = struct('error',string(ME.identifier));
