@@ -126,27 +126,7 @@ classdef touchManager < optickaCore
 			me = me@optickaCore(args); %superclass constructor
 			me.parseArgs(args, me.allowedProperties);
 
-			% on linux we can use xinput to list and enable/disable touch
-			% interfaces, here we ensure the named touch interface is
-			% explicitly enabled
-			if IsLinux
-				try
-					[~,r] = system('xinput list');
-					disp('Input Device List:');
-					disp(r);
-					if ~isempty(me.deviceName)
-						pattern = sprintf('(?<name>%s)\\s+id=(?<id>\\d+)', me.deviceName);
-						r = strsplit(string(r), newline);
-						for ii = 1:length(r)
-							tokens = regexp(r(ii), pattern, 'names');
-							if ~isempty(tokens)
-								system(['xinput enable ' tokens.id]);
-								break
-							end
-						end
-					end
-				end
-			end
+			checkXInput(me);
 
 			% PTB finds touch interfaces from all inputs.
 			try [me.devices,me.names,me.allInfo] = GetTouchDeviceIndices([], 1); end %#ok<*TRYNC>
@@ -170,6 +150,7 @@ classdef touchManager < optickaCore
 			else
 				error('Need to pass an open screenManager object!');
 			end
+			checkXInput(me);
 			try [me.devices,me.names,me.allInfo] = GetTouchDeviceIndices([], 1); end
 			if me.isDummy
 				me.comment = 'Dummy Mode Active';
@@ -873,6 +854,31 @@ classdef touchManager < optickaCore
 			if any(windowneg); resultneg = true; end
 			if me.window.doNegation && resultneg == false
 				result = -100;
+			end
+		end
+
+		function checkXInput(me)
+			% on linux we can use xinput to list and enable/disable touch
+			% interfaces, here we ensure the named touch interface is
+			% explicitly enabled
+			if isempty(me.deviceName); return; end
+			if IsLinux
+				try
+					[~,r] = system("xinput list");
+					disp('Input Device List:');
+					disp(r);
+					if ~isempty(me.deviceName)
+						pattern = sprintf('(?<name>%s)\\s+id=(?<id>\\d+)', me.deviceName);
+						r = strsplit(string(r), newline);
+						for ii = 1:length(r)
+							tokens = regexp(r(ii), pattern, 'names');
+							if ~isempty(tokens)
+								system("xinput enable "+tokens.id);
+								break
+							end
+						end
+					end
+				end
 			end
 		end
 	end
