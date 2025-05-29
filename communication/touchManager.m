@@ -17,7 +17,7 @@ classdef touchManager < optickaCore
 		device double			= 1
 		%> touch device name, useful to enable it at the OS level before
 		%> PTB searches for the touch device
-		deviceName string		= ''
+		deviceName string		= ""
 		%> use the mouse instead of the touch screen for debugging
 		isDummy	logical			= false
 		%> window is a touch window, X and Y are the screen postion
@@ -126,7 +126,7 @@ classdef touchManager < optickaCore
 			me = me@optickaCore(args); %superclass constructor
 			me.parseArgs(args, me.allowedProperties);
 
-			checkXInput(me);
+			touchManager.xinput(me.deviceName, true);
 
 			% PTB finds touch interfaces from all inputs.
 			try [me.devices,me.names,me.allInfo] = GetTouchDeviceIndices([], 1); end %#ok<*TRYNC>
@@ -150,7 +150,7 @@ classdef touchManager < optickaCore
 			else
 				error('Need to pass an open screenManager object!');
 			end
-			checkXInput(me);
+			touchManager.xinput(me.deviceName, true);
 			try [me.devices,me.names,me.allInfo] = GetTouchDeviceIndices([], 1); end
 			if me.isDummy
 				me.comment = 'Dummy Mode Active';
@@ -578,7 +578,7 @@ classdef touchManager < optickaCore
 				out = yesString;
 			end
 			if me.verbose && ~isempty(out)
-				fprintf('≣testHoldRelease = %s > held:%i heldtime:%i rel:%i reling:%i ser:%i fail:%i touch:%i\n', out, held, heldtime, release, releasing, searching, failed, touch)
+				fprintf('≣testHold = %s > held:%i heldtime:%i rel:%i reling:%i ser:%i fail:%i touch:%i\n', out, held, heldtime, release, releasing, searching, failed, touch)
 			end
 		end
 
@@ -774,6 +774,39 @@ classdef touchManager < optickaCore
 	%=======================================================================
 	methods (Static = true) %------------------STATIC METHODS
 	%=======================================================================
+		
+		function xinput(deviceName, enable)
+			% on linux we can use xinput to list and enable/disable touch
+			% interfaces, here we ensure the named touch interface is
+			% explicitly enabled
+			arguments(Input)
+				deviceName string = ""
+				enable logical = true
+			end
+			if isempty(deviceName); return; end
+			if ~IsLinux; return; end
+			
+			if enable
+				cmd = "enable";
+			else
+				cmd = "disable";
+			end
+
+			try
+				[~,r] = system("xinput list");
+				disp('Input Device List:');
+				disp(r);
+				pattern = sprintf('(?<name>%s)\\s+id=(?<id>\\d+)', me.deviceName);
+				r = strsplit(string(r), newline);
+				for ii = 1:length(r)
+					tokens = regexp(r(ii), pattern, 'names');
+					if ~isempty(tokens)
+						system("xinput " + cmd + " " + tokens.id);
+						break
+					end
+				end
+			end
+		end
 
 	end
 
@@ -857,29 +890,7 @@ classdef touchManager < optickaCore
 			end
 		end
 
-		function checkXInput(me)
-			% on linux we can use xinput to list and enable/disable touch
-			% interfaces, here we ensure the named touch interface is
-			% explicitly enabled
-			if isempty(me.deviceName); return; end
-			if IsLinux
-				try
-					[~,r] = system("xinput list");
-					disp('Input Device List:');
-					disp(r);
-					if ~isempty(me.deviceName)
-						pattern = sprintf('(?<name>%s)\\s+id=(?<id>\\d+)', me.deviceName);
-						r = strsplit(string(r), newline);
-						for ii = 1:length(r)
-							tokens = regexp(r(ii), pattern, 'names');
-							if ~isempty(tokens)
-								system("xinput enable "+tokens.id);
-								break
-							end
-						end
-					end
-				end
-			end
-		end
+		
+
 	end
 end
