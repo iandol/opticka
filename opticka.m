@@ -989,6 +989,9 @@ classdef opticka < optickaCore
 									myhandle.Value = num2str(prf); 
 									thisVal = myhandle.Value;
 								end
+							case 'uinumericeditfield'
+								myhandle.Value = prf;
+								thisVal = num2str(prf);
 							case 'uicheckbox'
 								if islogical(prf) || isnumeric(prf)
 									myhandle.Value = prf;
@@ -1037,7 +1040,7 @@ classdef opticka < optickaCore
 					myhandle = me.ui.(prfname);
 					uiType = myhandle.Type;
 					switch uiType
-						case {'uieditfield','uidropdown','uirockerswitch'}
+						case {'uinumericeditfield','uieditfield','uidropdown','uirockerswitch'}
 							prf = myhandle.Value;
 						case 'uicheckbox'
 							prf = myhandle.Value;

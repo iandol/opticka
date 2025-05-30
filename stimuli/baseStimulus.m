@@ -574,9 +574,9 @@ classdef baseStimulus < optickaCore & dynamicprops
 				'FontSize', fmed,...
 				'FontAngle', 'italic',...
 				'BackgroundColor', [0.94 0.94 0.94]);
-			handles.grid = uigridlayout(handles.root,[1 3]);
-			handles.grid1 = uigridlayout(handles.grid,'Padding',[5 5 5 5],'BackgroundColor',bgcolor);
-			handles.grid2 = uigridlayout(handles.grid,'Padding',[5 5 5 5],'BackgroundColor',bgcolor);
+			handles.grid = uigridlayout(handles.root,[1 3],'ColumnSpacing',2,'RowSpacing',2,'Padding',[2 2 2 2],'BackgroundColor',bgcolor);
+			handles.grid1 = uigridlayout(handles.grid,'ColumnSpacing',2,'RowSpacing',2,'Padding',[2 2 2 2],'BackgroundColor',bgcolor);
+			handles.grid2 = uigridlayout(handles.grid,'ColumnSpacing',2,'RowSpacing',2,'Padding',[2 2 2 2],'BackgroundColor',bgcolor);
 			handles.grid.ColumnWidth = {'1x','1x',130};
 			handles.grid1.ColumnWidth = {'2x','1x'};
 			handles.grid2.ColumnWidth = {'2x','1x'};
