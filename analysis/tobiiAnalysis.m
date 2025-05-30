@@ -5,7 +5,7 @@
 %> can also manually find microsaccades, and perform ROI/TOI filtering on the eye
 %> movements.
 %>
-%> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2024 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef tobiiAnalysis < analysisCore
 	% eyelinkAnalysis offers a set of methods to load, parse & plot raw tobii files.
@@ -79,6 +79,8 @@ classdef tobiiAnalysis < analysisCore
 	end
 
 	properties (SetAccess = private, GetAccess = public)
+		xmod										= 25
+		ymod										= 15
 		%> have we parsed the MAT yet?
 		isParsed logical							= false
 		%> sample rate
@@ -135,7 +137,7 @@ classdef tobiiAnalysis < analysisCore
 			'rtEndMessage', 'trialOverride', 'rtDivision', 'rtLimits', 'tS', 'ROI', 'TOI', 'VFAC', 'MINDUR',...
 			'baselineWindow','measureRange','plotRange'}
 		trialsTemplate = {'variable','variableMessageName','idx','correctedIndex','time',...
-			'times','gx','gy','hx','hy','pa','valid',...
+			'times','gx','gy','hx','hy','pa','valid','validRatio',...
 			'rt','rtoverride','fixations','nfix','saccades','nsacc','saccadeTimes',...
 			'firstSaccade','uuid','result','invalid','correct','breakFix','incorrect','unknown',...
 			'messages','sttime','entime','totaltime','startsampletime','endsampletime',...
@@ -158,7 +160,7 @@ classdef tobiiAnalysis < analysisCore
 	
 			if isempty(me.fileName)
 				[f,d] = uigetfile('*.mat','Select Opticka Data MAT File:');
-				if ~isnumeric(f); me.fileName = [d filesep f]; end
+				if ~isnumeric(f); me.fileName = [d f]; end
 			end
 		end
 
@@ -189,7 +191,12 @@ classdef tobiiAnalysis < analysisCore
 					fprintf('<strong>...</strong> runExperiment (Opticka file) found\n');
 					me.distance = exp.rE.screen.distance;
 					me.pixelsPerCm = exp.rE.screen.pixelsPerCm;
+					me.resolution = [exp.rE.screen.screenVals.width exp.rE.screen.screenVals.height];
+					me.xmod = (exp.rE.screen.screenVals.width) / exp.rE.screen.ppd;
+					me.ymod = (exp.rE.screen.screenVals.height) / exp.rE.screen.ppd;
 					me.sampleRate = exp.rE.eyeTracker.sampleRate;
+					fprintf('Screen = distance: %.2f ppc: %.2f W: %i [%.2f] H: %i [%.2f], SampleRate: %i \n',...
+						me.distance,me.pixelsPerCm,me.resolution(1),me.xmod,me.resolution(2),me.ymod,me.sampleRate);
 					if isa(exp.rE.eyeTracker,'tobiiManager')
 						me.raw = exp.rE.eyeTracker.data;
 						me.exp = exp;
@@ -200,7 +207,9 @@ classdef tobiiAnalysis < analysisCore
 						return;
 					end
 				else
-					warning('This is not an Opticka file, choose another file!!!');
+					warning('This is not an Opticka:runExperiment file, choose another file!!!');
+					disp(exp);
+					if isfield(exp,'tobii'); disp(exp.tobii); end
 					me.raw = [];
 					me.exp = [];
 					return;
@@ -238,6 +247,11 @@ classdef tobiiAnalysis < analysisCore
 			me.isParsed = false;
 			tmain = tic;
 			parseEvents(me);
+			if isempty(me.trials) || ~isfield(me.trials,'gx')
+				warning('Event parsing returned no trials! Check raw data...');
+				fprintf('\tTook <strong>%g ms</strong>\n',round(toc(tmain)*1000));
+				return
+			end
 			parseAsVars(me);
 			me.isParsed = true;
 			fprintf('\tOverall Simple Parsing of EDF Trials took <strong>%g ms</strong>\n',round(toc(tmain)*1000));
@@ -254,6 +268,11 @@ classdef tobiiAnalysis < analysisCore
 			me.isParsed = false;
 			tmain = tic;
 			parseEvents(me);
+			if isempty(me.trials) || ~isfield(me.trials,'gx')
+				warning('Event parsing returned no trials! Check obj.raw.messages for all Tobii messages!...');
+				fprintf('Took <strong>%g ms</strong>\n',round(toc(tmain)*1000));
+				return
+			end
 			if ~isempty(me.trialsToPrune)
 				me.pruneTrials(me.trialsToPrune);
 			end
@@ -448,8 +467,9 @@ classdef tobiiAnalysis < analysisCore
 
 			if isempty(handle)
 				h1=figure('Name',name,'Color',[1 1 1],'NumberTitle','off',...
-					'Papertype','a4','PaperUnits','centimeters',...
-					'PaperOrientation','landscape','Renderer','painters');
+					'PaperPositionMode','auto','Papertype','a4','PaperUnits','centimeters',...
+					'PaperOrientation','portrait','Renderer','painters',...
+					'Tag','opticka');
 				figpos(1,[0.6 0.9],1,'%');
 			else
 				figure(handle)
@@ -554,7 +574,7 @@ classdef tobiiAnalysis < analysisCore
 				yp = ya(ip);
 				pupilPlot = pupilAll(ip);
 				if ~isempty(ib) && me.baselinePupil
-					pb = nanmean(pupilAll(ib));
+					pb = mean(pupilAll(ib),'omitnan');
 					if isnumeric(pb) 
 						pupilPlot = pupilPlot - pb;
 					end
@@ -1070,6 +1090,9 @@ classdef tobiiAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function plotNH(me, trial, handle)
+			if length(me.trials) < 1; return; end
+			if ~isfield(me.trials,'data'); warning('Need to parse NH data first'); return; end
+			if ~exist('trial','var'); trial = 1; end
 			if ~me.isParsed;return;end
 			if ~exist('handle','var'); handle=[]; end
 			try
@@ -1378,22 +1401,31 @@ classdef tobiiAnalysis < analysisCore
 
 			trialDef = getTrialDef(me);
 
-			t1 = inf;
-			t2 = -inf;
-
-			if ~isempty(me.exp.rE.screen.screenVals)
-				sV = me.exp.rE.screen.screenVals;
-			else
-				sV = me.exp.rE.screenVals;
+			t1 = inf; t2 = -inf;
+			x1 = inf; x2 = -inf;
+			y1 = inf; y2 = -inf;
+			
+			if isprop(me,'exp') && isfield (me.exp,'rE')
+				if ~isempty(me.exp.rE.screen) && ~isempty(me.exp.rE.screen.screenVals)
+					sV = me.exp.rE.screen.screenVals;
+					sV.ppd = me.exp.rE.screen.ppd;
+				else
+					sV = me.exp.rE.screenVals;
+				end
 			end
-			if isfield(sV,'bottomInDegrees')
-				xmod = sV.rightInDegrees;
-				ymod = sV.bottomInDegrees;
+			if isempty(sV)
+				warning('NO SCREEN PROPORTIONS, X and Y positions will be inaccurate!!!');
 			else
-				xmod = 0;
-				ymod = 0;
+				if isfield(sV,'widthInDegrees')
+					me.xmod = sV.widthInDegrees;
+					me.xmod = sV.heightInDegrees;
+				else
+					me.xmod = sV.width / sV.ppd;
+					me.ymod = sV.height / sV.ppd;
+				end
+				fprintf('\n\n--->>> Using X = %.2f deg and Y = %.2f deg converting gx and gy from Tobii...\n\n', me.xmod, me.ymod);
 			end
-			times = double(me.raw.data.gaze.systemTimeStamp) /1e3;
+			times = double(me.raw.data.gaze.systemTimeStamp) / 1e3;
 			nMessages = size(me.raw.messages,1);
 			pb = textprogressbar(nMessages, 'startmsg', 'Parsing Tobii Experiment Events: ',...
 				'showactualnum', true,'updatestep', round(nMessages/(nMessages/20)));
@@ -1510,6 +1542,8 @@ classdef tobiiAnalysis < analysisCore
 							thisTrial.incorrect = true;
 						elseif thisTrial.result == me.breakFixValue
 							thisTrial.breakFix = true;
+						else
+							thisTrial.unknown = true;
 						end
 						sT=[];
 						thisTrial.deltaT = thisTrial.entime - thisTrial.sttime;
@@ -1525,13 +1559,18 @@ classdef tobiiAnalysis < analysisCore
 								thisTrial.times = thisTrial.times - thisTrial.rtstarttime;
 								thisTrial.timeRange = [thisTrial.times(1) thisTrial.times(end)];
 								thisTrial.gx = me.raw.data.gaze.left.gazePoint.onDisplayArea(1,idx);
-								thisTrial.gx = (thisTrial.gx * (xmod*2)) - xmod;
+								thisTrial.gx = (thisTrial.gx * me.xmod) - me.xmod;
 								thisTrial.gy = me.raw.data.gaze.left.gazePoint.onDisplayArea(2,idx);
-								thisTrial.gy = (thisTrial.gy * (ymod*2)) - ymod;
+								thisTrial.gy = (thisTrial.gy * me.xmod) - me.ymod;
+								if min(thisTrial.gx) < x1; x1 = min(thisTrial.gx); end
+								if max(thisTrial.gx) > x2; x2 = max(thisTrial.gx); end
+								if min(thisTrial.gy) < y1; y1 = min(thisTrial.gy); end
+								if max(thisTrial.gy) > y2; y2 = max(thisTrial.gy); end
 								thisTrial.hx = me.raw.data.gaze.left.gazePoint.inUserCoords(1,idx);
 								thisTrial.hy = me.raw.data.gaze.left.gazePoint.inUserCoords(2,idx);
 								thisTrial.pa = me.raw.data.gaze.left.pupil.diameter(idx);
 								thisTrial.valid = me.raw.data.gaze.left.pupil.valid(idx);
+								thisTrial.validRatio = length(thisTrial.valid) / sum(thisTrial.valid);
 								if thisTrial.times(1) < t1; t1 = thisTrial.times(1); end
 								if thisTrial.times(end) > t2; t2 = thisTrial.times(end); end
 							else
@@ -1548,25 +1587,28 @@ classdef tobiiAnalysis < analysisCore
 						clear thisTrial;
 						tri = tri + 1;
 						continue
-					end
+					end % END trial END
 				end % END isTrial
 				pb(i);
 			end % END FOR
 			pb(i);
 
 			me.plotRange = [t1/1e3 t2/1e3];
+			fprintf('\n\n--->>> Tobii Time range: %.3f to %.3f\n', me.plotRange(1), me.plotRange(2));
+			fprintf('--->>> GX Data range: %.3f to %.3f\n', x1, x2);
+			fprintf('--->>> GY Data range: %.3f to %.3f\n\n', y1, y2);
 
 			me.otherinfo = this;
 			
-			if isempty(me.trials)
+			if isempty(me.trials) || ~isfield(me.trials,'correct')
 				warning('---> eyelinkAnalysis.parseEvents: No trials could be parsed in this data!')
 				return
 			end
 
-			%prune the end trial if invalid
 			me.correct.idx = find([me.trials.correct] == true);
 			me.breakFix.idx = find([me.trials.breakFix] == true);
 			me.incorrect.idx = find([me.trials.incorrect] == true);
+			me.unknown.idx = find([me.trials.unknown] == true);
 			
 			fprintf('<strong>:#:</strong> Parsing Tobii Events into %i Trials took <strong>%.2f secs</strong> | min-t = %.2f max-t = %.2f\n',length(me.trials),toc(tmain), t1/1e3, t2/1e3);
 		
@@ -1579,17 +1621,21 @@ classdef tobiiAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function parseAsVars(me)
-			if isempty(me.exp)
+			if isempty(me.exp) || ~isfield(me.exp,'rE')
 				uniqueVars = sort(unique([me.trials.variable]));
 				labels = [];
 				warning('---> Vars are being parsed from trials directly...')
 			else
-				uniqueVars = [me.exp.rE.task.varList{:,1}];
-				labels = me.exp.rE.task.varLabels;
-
+				if me.exp.rE.task.nVars == 0
+					uniqueVars = 1;
+					labels = {'1'};
+				else
+					uniqueVars = [me.exp.rE.task.varList{:,1}];
+					labels = me.exp.rE.task.varLabels;
+				end
 			end
 			nVars = length(uniqueVars);
-			if isempty(me.trials)
+			if isempty(me.trials)  || ~isfield(me.trials,'correct')
 				warning('---> eyelinkAnalysis.parseAsVars: No trials and therefore cannot extract variables!')
 				return
 			end
@@ -1607,6 +1653,7 @@ classdef tobiiAnalysis < analysisCore
 			me.vars(nVars).sTime = [];
 			me.vars(nVars).sT = [];
 			me.vars(nVars).uuid = {};
+			me.vars(nVars).varWarning = [];
 
 			for i=uniqueVars
 				if i <= length(labels); me.vars(i).name = labels{i}; end
@@ -1620,6 +1667,10 @@ classdef tobiiAnalysis < analysisCore
 					continue
 				end
 				idx = find(uniqueVars==var);
+				if var == 101010 || isempty(idx)
+					idx = 1;
+					me.vars(idx).varWarning = [me.vars(idx).varWarning i];
+				end
 				if ~isempty(labels) && idx <= length(labels)
 					me.vars(idx).name = labels{idx};
 				else

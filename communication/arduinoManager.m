@@ -7,7 +7,7 @@
 %>
 %> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
-classdef arduinoManager < optickaCore
+classdef arduinoManager < optickaCore & rewardManager
 	% ARDUINOMANAGER Connects and manages arduino communication. By default it
 	% connects using arduinoIOPort and the adio.ino arduino sketch (the legacy
 	% arduino interface by Mathworks), which provide much better performance
@@ -23,8 +23,8 @@ classdef arduinoManager < optickaCore
 		%> output logging info
 		verbose					= false
 		%> parameters for use when giving rewards via fluid or food
-		%> actuator, type = TTL / fluid / food / rpi
-		reward					= struct('type', 'TTL', 'pin', 2, 'time', 300)
+		%> actuator, type = TTL / fluidpump / food / rpi
+		reward					= struct('type', 'TTL', 'pin', 2, 'time', 300, 'rotation', 60)
 		%> specify the available pins to use; 2-13 is the default for an Uno
 		%> 0-10 for the xiao (though xiao pins 11-14 can control LEDS)
 		availablePins			= {}
@@ -64,11 +64,16 @@ classdef arduinoManager < optickaCore
 			args = optickaCore.addDefaults(varargin,struct('name','arduino manager'));
 			me=me@optickaCore(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
-			if isempty(me.port)
+			if ~me.silentMode && isempty(me.port)
 				checkPorts(me);
 				if ~isempty(me.ports)
-					fprintf('--->arduinoManager: Ports available: %s\n',me.ports);
-					if isempty(me.port); me.port = char(me.ports{end}); end
+					fprintf('--->arduinoManager: Ports available:\n\t',me.ports);
+					for ii=1:length(me.ports)
+						fprintf('%s ',me.ports(ii));
+						if mod(ii,5)==0; fprintf('\n\t'); end
+					end
+					fprintf('\n');
+					if isempty(me.port); me.port = char(me.ports{1}); end
 				else
 					me.comment = 'No Serial Ports are available, going into silent mode';
 					fprintf('--->arduinoManager: %s\n',me.comment);
@@ -94,7 +99,11 @@ classdef arduinoManager < optickaCore
 					me.silentMode = true;
 				end
 			end
-			if me.silentMode;disp('-->arduinoManager: In silent mode, try to reset() then open()!');me.isOpen=false;return;end
+			if me.silentMode
+				disp('-->arduinoManager: In silent mode, reset() & open() to connect!'); 
+				me.isOpen=false; 
+				return; 
+			end
 			if isempty(me.port)
 				warning('--->arduinoManager: Better specify the port to use; will try to select one from available ports!');
 				me.port = char(me.ports(end));
@@ -159,14 +168,16 @@ classdef arduinoManager < optickaCore
 			try me.deviceID = ''; end
 			try me.availablePins = ''; end
 			me.isOpen = false;
-			me.silentMode = false;
-			checkPorts(me);
+			if ~me.silentMode
+				checkPorts(me);
+			end
 		end
 
 		%===============RESET================%
-		function reset(me)
+		function reset(me,hard)
+			if ~exist('hard','var');hard=false;end
 			try close(me); end
-			me.silentMode = false;
+			if hard; me.silentMode = false; end
 			notinlist = true;
 			if ~isempty(me.ports)
 				for i = 1:length(me.ports)
@@ -228,11 +239,11 @@ classdef arduinoManager < optickaCore
 
 		%===============REWARD SELECTION================%
 		function giveReward(me, type, varargin)
-			if ~exist('type','var'); type = 'simple'; end
+			if ~exist('type','var'); type = me.reward.type; end
 			switch type
-				case 'simple'
+				case 'TTL'
 					timedTTL(me, me.reward.pin, me.reward.time);
-				case 'fluid'
+				case 'fluidpump'
 					rwdByDCmotor(me, me.reward.time);
 				case 'rpi'
 					try
@@ -240,7 +251,7 @@ classdef arduinoManager < optickaCore
 						WaitSecs(me.reward.time);
 						system('raspi-gpio set 27 dl');
 					end
-				otherwise
+                case 'food'
 					stepper(me, varargin);
 			end
 		end
@@ -275,6 +286,7 @@ classdef arduinoManager < optickaCore
 
 		%==================DRIVE STEPPER MOTOR============%
 		function stepper(me, ndegree)
+            if ~exist("ndegree","var") || isempty(ndegree); ndegree = me.reward.rotation; end
 			ncycle      = floor(ndegree/(1.8*4));
 			nstep       = round((rem(ndegree,(1.8*4))/7.2)*4);
 			switch me.shield
@@ -354,15 +366,15 @@ classdef arduinoManager < optickaCore
 			if IsOctave
 				if ~exist('serialportlist','file'); try pkg load instrument-control; end; end
 				if ~verLessThan('instrument-control','0.7')
-					me.ports = serialportlist('available');
+					me.ports = sort(serialportlist('available'));
 				else
 					me.ports = [];
 				end
 			else
 				if ~verLessThan('matlab','9.7')	% use the nice serialport list command
-					me.ports = serialportlist('available');
+					me.ports = sort(serialportlist('available'));
 				else
-					me.ports = seriallist; %#ok<SERLL>
+					me.ports = sort(seriallist); %#ok<SERLL>
 				end
 			end
 		end

@@ -41,6 +41,8 @@ classdef optickaCore < handle
 		uuid char
 		%> storage of various paths
 		paths struct
+		%> version number
+		optickaVersion char		= '2.17.0'
 	end
 
 	%--------------------DEPENDENT PROPERTIES----------%
@@ -118,71 +120,296 @@ classdef optickaCore < handle
 		end
 
 		% ===================================================================
-		function [path, sessionID, dateID] = getALF(me, subject, sessionPrefix, lab, create)
-		%> @fn initialiseSaveFile(me)
-		%> @brief Initialise Save prefix
+		function [path, sessionID, dateID, name] = getALF(me, subject, lab, create)
+		%> @fn getALF(me)
+		%> @brief get the ALF path
 		%>
 		%> @return path - the path to use
-		%> @return dateid - YYYY-MM-DD-HH-MM-SS
+		%> @return sessionID - session number
+		%> @return dateID - YYYY-MM-DD-HH-MM-SS
+		%> @return name - [date]-[id]-[subject]
 		% ===================================================================
 			if ~exist('subject','var') || isempty(subject); subject = 'unknown'; end
-			if ~exist('sessionPrefix','var') || isempty(sessionPrefix); sessionPrefix = ''; end
 			if ~exist('lab','var') || isempty(lab); lab = []; end
 			if ~exist('create','var') || isempty(create); create = false; end
 			
-			dateID = fix(clock); %#ok<*CLOCK> compatible with octave
-			dateID = num2str(dateID(1:6));
-			dateID = regexprep(dateID,' +','-');
+			dateID = char(datetime("now",'Format','uuuu-MM-dd-HH-mm-ss'));
 			
-			d = char(datetime("today"));
+			d = dateID(1:10);
 			if isempty(lab)
 				path = [me.paths.savedData filesep subject filesep d];
 			else
 				path = [me.paths.savedData filesep lab filesep 'subjects' filesep subject filesep d];
 			end
 			if ~exist(path,'dir')
-				sessionID = [sessionPrefix '001'];
-				path = [path filesep sessionID filesep];
-				s = mkdir(path);
-				if s == 0; error('Cannot make Save File directory!!!'); end
-				fprintf('---> Path: %s created...\n',path);
-				return
+				sessionID = 1;
+				path = [path filesep sprintf('%0.3d',sessionID) filesep];
+				if create
+					s = mkdir(path);
+					if s == 0; error('Cannot make Save File directory!!!'); end
+					fprintf('≣≣≣≣⊱ Path: %s created...\n',path);
+				else
+					fprintf('≣≣≣≣⊱ No path created for: %s created...\n',path);
+				end
 			else
 				isMatch = false;
-				n = 0;
-				d = dir(path);
-				pattern = sessionPrefix + digitsPattern(3);
-				for jj = 1:length(d)
-					e = extract(d(jj).name, pattern);
+				sessionID = 0;
+				td = dir(path);
+				pattern = digitsPattern(1,6);
+				for jj = 1:length(td)
+					e = extract(td(jj).name, pattern);
 					if ~isempty(e)
 						isMatch = true;
-						nn = str2double(e{1}(end-2:end));
-						if nn > n; n = nn; end
+						nn = str2double(e{1});
+						if nn > sessionID; sessionID = nn; end
 					end
 				end
 				if isMatch
 					if create
-						sessionID = [sessionPrefix sprintf('%0.3d',n+1)];
-						path = [path filesep sessionID filesep];
+						sessionID = sessionID + 1;
+						path = [path filesep sprintf('%0.3d',sessionID) filesep];
 						s = mkdir(path);
 						if s == 0; error('Cannot make Save File directory!!!'); end
-						fprintf('---> Path: %s created...\n',path);
-						return
+						fprintf('≣≣≣≣⊱ Path: %s created...\n',path);
 					else
-						sessionID = [sessionPrefix sprintf('%0.3d',n)];
-						path = [path filesep sessionID filesep];
-						fprintf('---> Path: %s found...\n',path);
-						return
+						path = [path filesep sprintf('%0.3d',sessionID) filesep];
+						if exist(path,'dir')
+							fprintf('≣≣≣≣⊱ Path: %s found...\n',path);
+						else
+							warning('≣≣≣≣⊱ Path: %s should exist but doesn''t...\n',path);
+						end
 					end
 				else
-					sessionID = [sessionPrefix '001'];
-					path = [path filesep sessionID filesep];
+					sessionID = 1;
+					path = [path filesep sprintf('%0.3d',sessionID) filesep];
 					s = mkdir(path);
 					if s == 0; error('Cannot make Save File directory!!!'); end
-					fprintf('---> Path: %s created...\n',path);
+					fprintf('≣≣≣≣⊱ Path: %s created...\n',path);
 				end
 			end
+			name = [dateID '_' sprintf('%0.3d',sessionID) '_' subject];
 			me.paths.ALFPath = path;
+			me.paths.sessionID = sessionID;
+			me.paths.dateID = dateID;
+			me.paths.dateIDShort = dateID(1:10);
+			me.paths.name = name;
+		end
+
+		% ===================================================================
+		function makeReport(me, rpt)
+			try
+				import mlreportgen.report.* %#ok<*SIMPT>
+				import mlreportgen.dom.* 
+			catch
+				warning('Report Generator Toolbox not installed...');
+			end
+
+			if ~exist('rpt','var') || isempty(rpt) 
+				fullReport = true; 
+			else
+				fullReport = false; 
+			end
+
+			persistent tt
+			
+			if fullReport
+				warning off
+				tt = tic;
+				name = me.name;
+				name = regexprep(name,'\s*','-');
+				name = [me.paths.parent filesep name '--' me.uuid];
+				rpt = Report(name,'HTML');
+				fprintf('=== makeReport: initialise %s...\n',name);
+	
+				tp = TitlePage; 
+				tp.Title = 'Opticka Object Report'; 
+				tp.Subtitle = sprintf('Name: %s',me.fullName); 
+				tp.Publisher = 'Opticka';
+				tp.Image = [me.paths.root filesep 'ui' filesep 'images' filesep 'opticka-clear.png'];
+				tp.Author = me.comment; 
+				append(rpt,tp); 
+				append(rpt,TableOfContents);
+				fprintf('=== makeReport: initialise @%.2f secs\n',toc(tt));
+			end
+
+			parnote = {Color('#8b008b'),Bold(true),FontSize('14pt')};
+
+			switch class(me)
+
+				case 'opticka'
+					fprintf('=== makeReport: opticka start\n');
+					ch = Chapter('opticka Object'); 
+					sec = Section('General Information'); 
+					append(sec,Paragraph('opticka Object:'))
+					append(sec, MATLABVariable('Variable', me, 'MaxCols', 2, 'DepthLimit', 0, 'ObjectLimit', 1));
+					append(ch,sec);
+					append(rpt,ch);
+					me.r.makeReport(rpt);
+					fprintf('=== makeReport: opticka end @%.2f secs\n',toc(tt));
+
+				case 'runExperiment'
+					fprintf('=== makeReport: runExperiment\n');
+					ch = Chapter('runExperiment Object'); 
+					sec = Section('General Information'); 
+					append(sec,Paragraph('runExperiment is the main object that manages a task. It contains multiple other managers: screenManager, taskSequence, stateMachine, eyeTracker'))
+					append(sec,Paragraph('runExperiment Object:'))
+					append(sec, MATLABVariable('Variable', me, 'MaxCols', 2, 'DepthLimit', 0, 'ObjectLimit', 1));
+					append(ch,sec);
+					append(rpt,ch);
+					if isa(me.task,'taskSequence') && ~isempty(me.task)
+						me.task.makeReport(rpt);
+					end
+					if isa(me.behaviouralRecord,'behaviouralRecord') && ~isempty(me.behaviouralRecord)
+						me.behaviouralRecord.makeReport(rpt);
+					end
+					if isa(me.stateMachine,'stateMachine') && ~isempty(me.stateMachine)
+						me.stateMachine.makeReport(rpt);
+					end
+					if isa(me.taskLog,'timeLogger') && ~isempty(me.taskLog)
+						me.taskLog.makeReport(rpt);
+					end
+					fprintf('=== makeReport: runExperiment end @%.2f secs\n',toc(tt));
+
+				case 'timeLogger'
+					fprintf('=== makeReport: timeLog start\n');
+					ch = Chapter('timeLogger Object'); 
+					sec = Section('Details'); 
+					append(sec,Paragraph('The timeLogger store timestamps like PTB flips and message logs them'))
+					append(sec,Paragraph(' There is also an indepedent blockVar and trialVar.'))
+					me.printRunLog();
+					f = gcf;
+					if strcmpi(f.Tag,'opticka')
+						fr = Figure(f);
+						%fr.Scaling = 'none';
+						%fr.Snapshot.ScaleToFit = true;
+						append(sec,Paragraph('Time (VBL) Plots for each frame'))
+						append(sec,fr);
+					end
+					close(f);
+					append(ch,sec);
+					append(rpt,ch);
+					fprintf('=== makeReport: timeLogger end @%.2f secs\n',toc(tt));
+
+				case 'taskSequence'
+					fprintf('=== makeReport: taskSequence start\n');
+					ch = Chapter('taskSequence Object'); 
+					sec = Section('Details'); 
+					append(sec,Paragraph('The taskSequence manages variable randomisation, you pass it a list of variables and their values and the number of repeat blocks and it will generate a balanced table. There is also an indepedent blockVar and trialVar.'))
+					append(sec,Paragraph(' There is also an indepedent blockVar and trialVar.'))
+					append(sec,Paragraph('taskSequence Object:'))
+					append(sec, MATLABVariable('Variable', me, 'MaxCols', 2, 'DepthLimit', 0, 'ObjectLimit', 1));
+					append(ch,sec);
+					append(rpt,ch);
+					fprintf('=== makeReport: taskSequence end @%.2f secs\n',toc(tt));
+
+				case 'stateMachine'
+					fprintf('=== makeReport: stateMachine start\n');
+					ch = Chapter('stateMachine Object'); 
+					sec = Section('Details'); 
+					i = me.stateList;
+					append(sec, MATLABVariable('Title','stateList','Variable', i, 'MaxCols', 2, 'DepthLimit', 0, 'ObjectLimit', 1));
+					%t = me.showTable();
+					%append(sec, MATLABVariable('Title','State Table','Variable', t));
+					sec2 = Section('Plots'); 
+					me.showLog();
+					f = gcf;
+					if strcmpi(f.Tag,'opticka')
+						fr = Figure(f);
+						fr.Scaling = 'none';
+						fr.Snapshot.ScaleToFit = true;
+						append(sec2,Paragraph('All State Events (from the stateMachine.log property):'))
+						append(sec2,fr);
+					end
+					close(f);
+					try append(ch,sec); end
+					try append(ch,sec2); end
+					try append(rpt,ch); end
+					fprintf('=== makeReport: stateMachine end @%.2f secs\n',toc(tt));
+
+				case 'behaviouralRecord'
+					fprintf('=== makeReport: behaviouralRecord start\n');
+					ch = Chapter('behaviouralRecord Object'); 
+					sec = Section('Plots'); 
+					me.plotPerformance;
+					if isgraphics(me.h.root)
+						tmpf = [tempname '.png'];
+						exportapp(me.h.root, tmpf);
+						if exist(tmpf,'file')
+							img = Image(tmpf);
+							img.Style = {ScaleToFit};
+							append(sec,img);
+							try delete tmpf; end
+						end
+						try close(me.h.root); end
+						try me.clearHandles; end
+					end
+					append(ch,sec);
+					append(rpt,ch);
+					fprintf('=== makeReport: behaviouralRecord end @%.2f secs\n',toc(tt));
+					
+				case {'tobiiAnalysis','eyelinkAnalysis','iRecAnalysis'}
+					fprintf('=== makeReport: eyeTracker start\n');
+					ch = Chapter('Eyetracker Object'); 
+					sec = Section('General Information'); 
+					
+					t = me.fileName;
+					append(sec, MATLABVariable('Title','File','Variable', t));
+					t = me.comment;
+					append(sec, MATLABVariable('Title','Comment','Variable', t));
+					p = Paragraph("We will try to load the data...");
+					p.Style = parnote;
+					append(sec,p)
+					r = evalc('me.load(true)');
+					append(sec,Preformatted(r));
+					append(ch,sec); append(rpt,ch);
+
+					if isprop(me, 'exp') && ~isempty(me.exp) && isfield(me.exp,'rE')
+						rE = me.exp.rE;
+						rE.makeReport(rpt);
+					end
+					
+					ch = Chapter('Eyetracker Data'); 
+					sec = Section('General Information'); 
+					append(sec,Paragraph('Tobii Messages'))
+					try
+						m = me.raw.messages;
+						append(sec, MATLABVariable('Variable', m));
+					catch
+						append(sec,Paragraph('No Tobii messages found!!!'))
+					end
+					p = Paragraph('We will try to parse the data and plot it now...');
+					p.Style = parnote;
+					append(sec,p)
+					try
+						r = evalc('me.parse');
+						append(sec,Preformatted(r));
+						plot(me);
+						f = gcf;
+						if strcmpi(f.Tag,'opticka')
+							fr = Figure(f);
+							%fr.Scaling = 'none';
+							%fr.Snapshot.ScaleToFit = true;
+							append(sec,fr);
+						end
+						close(f);
+					catch ME
+						append(sec,Paragraph('Parsing / plotting failed'))
+						append(sec, MATLABVariable('Title','ERROR','Variable', ME));
+					end
+					try append(ch,sec); catch; disp('Cannot add Section'); end
+					try append(rpt,ch); catch; disp('Cannot add Chapter'); end
+					fprintf('=== makeReport: eyeTracker finish @%.2f secs\n',toc(tt));
+			end
+
+			if fullReport
+				fprintf('=== makeReport: writing report starting @%.2f secs\n',toc(tt));
+				close(rpt);
+				rptview(rpt);
+				fprintf('=== makeReport: finished report @%.2f secs\n',toc(tt));
+				tt = [];
+				warning on
+			end
+		
 		end
 		
 		% ===================================================================
@@ -313,6 +540,7 @@ classdef optickaCore < handle
 			list = cl_array(1:ii);
 		end
 
+		% ===================================================================
 		% TODO 
 		function value = findPropertyDefault(me,propName)
 			value = [];
@@ -404,48 +632,7 @@ classdef optickaCore < handle
 			if isprop(me,property)
 				me.(property) = value;
 			end
-		end
-
-		% ===================================================================
-		function [rM, aM] = initialiseGlobals(me, doReset, doOpen)
-		%> @fn [rM, aM] = initialiseGlobals(me)
-		%> @brief in general we try NOT to use globals but for reward and audio, due to
-		%> e.g. eyelink we can't avoid it. This initialises and returns the globals
-		%> rM (rewardManager) and aM (audioManager). Run this to get the
-		%> reward/audio manager objects in any child class...
-		%>
-		%> @param doReset - try to reset the object? [false]
-		%> @param doOpen  - try to open the objects if they are not yet
-		%>					open? [false]
-		% ===================================================================
-			global rM aM
-				
-			if ~exist('doReset','var'); doReset = false; end
-			if ~exist('doOpen','var'); doOpen = false; end
-
-			%------initialise the rewardManager global object
-			if ~isa(rM,'arduinoManager'); rM = arduinoManager(); end
-			if rM.isOpen && doReset
-				try rM.close; rM.reset; end
-			end
-			if doOpen && ~rM.isOpen; open(rM); end
-			
-			%------initialise an audioManager for beeps,playing sounds etc.
-			if ~isa(aM,'audioManager'); aM = audioManager(); end
-			if doReset
-				try
-					aM.silentMode = false;
-					reset(aM);
-				catch
-					warning('Could not reset audio manager!');
-					aM.silentMode = true;
-				end
-			end
-			if doOpen && ~aM.isOpen && ~aM.silentMode && (isempty(aM.device) || aM.device > -1)
-				open(aM);
-				aM.beep(2000,0.1,0.1);
-			end
-		end
+        end
 		
 	end
 
@@ -545,6 +732,47 @@ classdef optickaCore < handle
 	methods ( Static = true ) %-------STATIC METHODS-----%
 	%=======================================================================
 
+        % ===================================================================
+		function [rM, aM] = initialiseGlobals(doReset, doOpen)
+		%> @fn [rM, aM] = initialiseGlobals(doReset,doOpen)
+		%> @brief in general we try NOT to use globals but for reward and audio, 
+        %> due to e.g. eyelink and other devices we can't avoid it. This 
+        %> initialises and returns the single-instance globals
+		%> rM (rewardManager) and aM (audioManager). Run this to get the
+		%> reward/audio manager objects in any child class...
+		%>
+		%> @param doReset - try to reset the objects? [false]
+		%> @param doOpen  - try to open objects if not yet open? [false]
+		% ===================================================================
+			global rM aM %#ok<GVMIS>
+				
+			if ~exist('doReset','var'); doReset = false; end
+			if ~exist('doOpen','var'); doOpen = false; end
+
+			%------initialise the rewardManager global object
+			if ~isa(rM,'arduinoManager'); rM = arduinoManager(); end
+			if rM.isOpen && doReset
+				try rM.close; rM.reset; end
+			end
+			if doOpen && ~rM.isOpen; open(rM); end
+			
+			%------initialise an audioManager for beeps,playing sounds etc.
+			if ~isa(aM,'audioManager'); aM = audioManager(); end
+			if doReset
+				try
+					aM.silentMode = false;
+					reset(aM);
+				catch
+					warning('Could not reset audio manager!');
+					aM.silentMode = true;
+				end
+			end
+			if doOpen && ~aM.isOpen && ~aM.silentMode && (isempty(aM.device) || aM.device > -1)
+				open(aM);
+				aM.beep(2000,0.1,0.1);
+			end
+        end
+
 		% ===================================================================
 		function args = makeArgs(args)
 		%> @fn makeArgs
@@ -568,7 +796,7 @@ classdef optickaCore < handle
 			elseif isstruct(args)
 				return
 			else
-				error('---> makeArgs: You need to pass name:value pairs / structure of name:value fields!');
+				error('≣≣≣≣⊱ makeArgs: You need to pass name:value pairs / structure of name:value fields!');
 			end
 		end
 
@@ -708,6 +936,9 @@ classdef optickaCore < handle
 			me.paths(1).whatami = me.className;
 			me.paths.root = fileparts(which(mfilename));
 			me.paths.whereami = me.paths.root;
+			me.paths.PTBroot = PsychtoolboxRoot;
+			me.paths.PTBconfig = PsychtoolboxConfigDir;
+			try v = splitlines(PsychtoolboxVersion); me.paths.PTBversion = v{1};end
 			if ~isfield(me.paths, 'stateInfoFile')
 				me.paths.stateInfoFile = '';
 			end
@@ -739,6 +970,7 @@ classdef optickaCore < handle
 			if isdeployed
 				me.paths.deploypath = ctfroot;
 			end
+			me.paths.ALFPath = '';
 		end
 
 		% ===================================================================
@@ -824,15 +1056,13 @@ classdef optickaCore < handle
 			if ~exist('override','var');override = false;end
 			if me.verbose==true || override == true
 				if ~exist('message','var') || isempty(message)
-					fprintf(['---> ' me.fullName_ ': ' in '\n']);
+					fprintf(['≣≣≣≣⊱ ' me.fullName_ ': ' in '\n']);
 				else
-					fprintf(['---> ' me.fullName_ ': ' message ' | ' in '\n']);
+					fprintf(['≣≣≣≣⊱ ' me.fullName_ ': ' message ' | ' in '\n']);
 				end
 			end
 		end
-		function salutation(me, varargin)
-			logOutput(me, varargin{:});
-		end
+		function salutation(me, varargin); logOutput(me, varargin{:}); end
 		
 	end
 end

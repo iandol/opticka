@@ -6,9 +6,9 @@
 %> called. It assumes there are TWO stimuli in the stims object, the first
 %> (stims{1}) is any type of visual stimulus and the second is a fixation cross
 %> (stims{2}). For this task most state transitions are deterministic, but for
-%> [fixate] there is a transitionFcn that checks if the subject initiates fixation
-%> [inFixFcn], and for [stimulus] there is a check if the subject maintains
-%> fixation for an additional time [maintainFixFcn].
+%> [fixate] there is a transitionFn that checks if the subject initiates fixation
+%> [inFixFn], and for [stimulus] there is a check if the subject maintains
+%> fixation for an additional time [maintainFixFn].
 %>
 %>                                                       ┌───────────────────┐
 %>                                                       │      prefix       │
@@ -16,18 +16,18 @@
 %>  │                                                    └───────────────────┘  │
 %>  │                                                      │                    │
 %>  │                                                      ▼                    │
-%>  │                         ┌───────────┐  inFixFcn:   ┌───────────────────┐  │
-%>  │                         │ breakfix  │  breakfix   │      fixate       │  │
+%>  │                         ┌───────────┐  inFixFn:    ┌───────────────────┐  │
+%>  │                         │ breakfix  │  breakfix    │      fixate       │  │
 %>  │                         │           │ ◀─────────── │   show(stims,2)   │  │
 %>  │                         └───────────┘              └───────────────────┘  │
-%>  │                           │                          │ inFixFcn:          │
+%>  │                           │                          │ inFixFn:           │
 %>  │ reward!                   │                          │ stimulus           │
 %>  │                           │                          ▼                    │
-%>┌─────────┐  maintainFixFcn:  │                        ┌───────────────────┐  │
+%>┌─────────┐  maintainFixFn:   │                        ┌───────────────────┐  │
 %>│ correct │  correct          │                        │     stimulus      │  │
 %>│         │ ◀─────────────────┼─────────────────────── │ show(stims,[1 2]) │  │
 %>└─────────┘                   │                        └───────────────────┘  │
-%>                              │                          │ maintainFixFcn:    │
+%>                              │                          │ maintainFixFn:     │
 %>                              │                          │ incorrect          │
 %>                              │                          ▼                    │
 %>                              │                        ┌───────────────────┐  │
@@ -89,7 +89,7 @@ tS.errorSound				= [300, 1, 1];		%==freq,length,volume
 %rM.reward.pin				= 2;		%==Output pin, 2 by default with Arduino.
 
 %==================================================================
-%------------ ----DEBUG LOGGING to command window------------------
+%-----------------DEBUG LOGGING to command window------------------
 % uncomment each line to get specific verbose logging from each of these
 % components; you can also set verbose in the opticka GUI to enable all of
 % these…
@@ -197,9 +197,9 @@ stims.fixationChoice		= 1;
 %------------------State Machine Task Functions---------------------
 % Each cell {array} holds a set of anonymous function handles which are
 % executed by the state machine to control the experiment. The state
-% machine can run sets at entry ['entryFcn'], during ['withinFcn'], to
-% trigger a transition jump to another state ['transitionFcn'], and at exit
-% ['exitFcn'. Remember these {sets} need to access the objects that are
+% machine can run sets at entry ['entryFn'], during ['withinFn'], to
+% trigger a transition jump to another state ['transitionFn'], and at exit
+% ['exitFn'. Remember these {sets} need to access the objects that are
 % available within the runExperiment context (see top of file). You can
 % also add global variables/objects then use these. The values entered here
 % are set on load, if you want up-to-date values then you need to use
@@ -211,13 +211,13 @@ stims.fixationChoice		= 1;
 %==============================================================
 
 %--------------------pause entry
-pauseEntryFcn = {
+pauseEntryFn = {
 	@()hide(stims); % hide all stimuli
 	@()drawBackground(s); % blank the subject display
 	@()drawPhotoDiodeSquare(s,[0 0 0]); % draw black photodiode
 	@()drawTextNow(s,'PAUSED, press [p] to resume...');
 	@()disp('PAUSED, press [p] to resume...');
-	@()trackerDrawStatus(eT,'PAUSED, press [p] to resume', stims.stimulusPositions);
+	@()trackerDrawStatus(eT,'PAUSED, press [p] to resume', [], 0, false);
 	@()trackerMessage(eT,'TRIAL_RESULT -100'); %store message in EDF
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()stopRecording(eT, true); %stop recording eye position data, true=both eyelink & tobii
@@ -226,7 +226,7 @@ pauseEntryFcn = {
 };
 
 %--------------------pause exit
-pauseExitFcn = {
+pauseExitFn = {
 	%start recording eye position data again, note true is required here as
 	%the eyelink is started and stopped on each trial, but the tobii runs
 	%continuously, so @()startRecording(eT) only affects eyelink but
@@ -238,8 +238,8 @@ pauseExitFcn = {
 %====================================================PRE-FIXATION
 %==============================================================
 %--------------------prefixate entry
-prefixEntryFcn = { 
-	@()needFlip(me, true, 1); % enable the screen and trackerscreen flip
+prefixEntryFn = { 
+	@()needFlip(me, true, 4); % enable the screen and trackerscreen flip
 	@()needEyeSample(me, true); % make sure we start measuring eye position
 	@()getStimulusPositions(stims); % make a struct eT can use for drawing stim positions
 	@()hide(stims); % hide all stimuli
@@ -254,34 +254,34 @@ prefixEntryFcn = {
 };
 
 %--------------------prefixate within
-prefixFcn = {
+prefixFn = {
 	@()drawPhotoDiodeSquare(s,[0 0 0]);
 };
 
 %--------------------prefixate exit
-prefixExitFcn = {
+prefixExitFn = {
 	@()logRun(me,'INITFIX');
 	@()trackerMessage(eT,'MSG:Start Fix');
-	@()trackerDrawStatus(eT,'Start trial...', stims.stimulusPositions,0);
+	@()trackerDrawStatus(eT,'Start trial...', stims.stimulusPositions, 0, false);
 };
 
 %==============================================================
 %====================================================FIXATION
 %==============================================================
 %--------------------fixate entry
-fixEntryFcn = { 
+fixEntryFn = { 
 	@()show(stims{tS.nStims}); % show last stim which is usually fixation cross
 };
 
 %--------------------fix within
-fixFcn = {
+fixFn = {
 	@()draw(stims); %draw stimuli
 	@()drawPhotoDiodeSquare(s,[0 0 0]);
 	@()animate(stims); % animate stimuli for subsequent draw
 };
 
 %--------------------test we are fixated for a certain length of time
-inFixFcn = {
+inFixFn = {
 	% this command performs the logic to search and then maintain fixation
 	% inside the fixation window. The eyetracker parameters are defined above.
 	% If the subject does initiate and then maintain fixation, then 'correct'
@@ -293,7 +293,7 @@ inFixFcn = {
 };
 
 %--------------------exit fixation phase
-fixExitFcn = { 
+fixExitFn = { 
 	% reset fixation timers to maintain fixation for tS.stimulusFixTime seconds
 	@()updateFixationValues(eT,[],[],[],tS.stimulusFixTime); 
 	@()show(stims); % show all stims
@@ -304,7 +304,7 @@ fixExitFcn = {
 %========================================================STIMULUS
 %========================================================
 
-stimEntryFcn = {
+stimEntryFn = {
 	% send an eyeTracker sync message (reset relative time to 0 after next flip)
 	@()doSyncTime(me);
 	% send stimulus value strobe (value alreadyset by updateVariables(me) function)
@@ -312,14 +312,14 @@ stimEntryFcn = {
 };
 
 %--------------------what to run when we are showing stimuli
-stimFcn =  {
+stimFn =  {
 	@()draw(stims);
 	@()drawPhotoDiodeSquare(s,[1 1 1]);
 	@()animate(stims); % animate stimuli for subsequent draw
 };
 
 %-----------------------test we are maintaining fixation
-maintainFixFcn = {
+maintainFixFn = {
 	% this command performs the logic to search and then maintain fixation
 	% inside the fixation window. The eyetracker parameters are defined above.
 	% If the subject does initiate and then maintain fixation, then 'correct'
@@ -331,7 +331,7 @@ maintainFixFcn = {
 };
 
 %as we exit stim presentation state
-stimExitFcn = {
+stimExitFn = {
 	@()setStrobeValue(me, 255); % 255 indicates stimulus OFF
 	@()doStrobe(me, true);
 };
@@ -342,24 +342,23 @@ stimExitFcn = {
 
 %========================================================CORRECT
 %--------------------if the subject is correct (small reward)
-correctEntryFcn = {
+correctEntryFn = {
 	@()trackerTrialEnd(eT, tS.CORRECT); % send the end trial messages and other cleanup
 	@()needEyeSample(me,false); % no need to collect eye data until we start the next trial
 	@()hide(stims); % hide all stims
 };
 
 %--------------------correct stimulus
-correctFcn = {
+correctFn = {
 	@()drawPhotoDiodeSquare(s,[0 0 0]);
 };
 
 %--------------------when we exit the correct state
-correctExitFcn = {
+correctExitFn = {
 	@()giveReward(rM); % send a reward
 	@()beep(aM, tS.correctSound); % correct beep
 	@()logRun(me,'CORRECT'); % print current trial info
-	@()trackerDrawStatus(eT, 'CORRECT! :-)');
-	@()needFlipTracker(me, 0); %for operator screen stop flip
+	@()trackerDrawStatus(eT, 'CORRECT! :-)', stims.stimulusPositions, 0, false);
 	@()updatePlot(bR, me); % must run before updateTask
 	@()updateTask(me, tS.CORRECT); % make sure our taskSequence is moved to the next trial
 	@()updateVariables(me); % randomise our stimuli, and set strobe value too
@@ -369,25 +368,25 @@ correctExitFcn = {
 
 %========================================================INCORRECT/BREAKFIX
 %--------------------incorrect entry
-incEntryFcn = {
+incEntryFn = {
 	@()trackerTrialEnd(eT, tS.INCORRECT); % send the end trial messages and other cleanup
 	@()needEyeSample(me,false);
 	@()hide(stims);
 };
 %--------------------break entry
-breakEntryFcn = {
+breakEntryFn = {
 	@()trackerTrialEnd(eT, tS.BREAKFIX); % send the end trial messages and other cleanup
 	@()needEyeSample(me,false);
 	@()hide(stims);
 };
 
 %--------------------our incorrect/breakfix stimulus
-incFcn = {
+incFn = {
 	@()drawPhotoDiodeSquare(s,[0 0 0]);
 };
 
 %--------------------generic exit
-exitFcn = {
+exitFn = {
 	% tS.includeErrors will prepend some code here...
 	@()beep(aM, tS.errorSound);
 	@()needFlipTracker(me, 0); %for operator screen stop flip
@@ -408,43 +407,43 @@ exitFcn = {
 %            subject to guess based on previous failed trial.
 % checkTaskEnded = see if taskSequence has finished
 if tS.includeErrors % we want to update our task even if there were errors
-	incExitFcn = [ {
+	incExitFn = [ {
 		@()logRun(me,'INCORRECT');
-		@()trackerDrawStatus(eT,'INCORRECT! :-(', stims.stimulusPositions, 0);
+		@()trackerDrawStatus(eT,'INCORRECT! :-(', stims.stimulusPositions, 0, false);
 		@()updatePlot(bR, me); 
 		@()updateTask(me,tS.INCORRECT)}; 
-		exitFcn ]; %update our taskSequence 
-	breakExitFcn = [ {
+		exitFn ]; %update our taskSequence 
+	breakExitFn = [ {
 		@()logRun(me,'BREAK_FIX'); 
-		@()trackerDrawStatus(eT,'BREAK_FIX! :-(', stims.stimulusPositions, 0);
+		@()trackerDrawStatus(eT,'BREAK_FIX! :-(', stims.stimulusPositions, 0, false);
 		@()updatePlot(bR, me); 
 		@()updateTask(me,tS.BREAKFIX)}; 
-		exitFcn ]; %update our taskSequence 
+		exitFn ]; %update our taskSequence 
 else
-	incExitFcn = [ {
+	incExitFn = [ {
 		@()logRun(me,'INCORRECT'); 
-		@()trackerDrawStatus(eT,'INCORRECT! :-(', stims.stimulusPositions, 0);
+		@()trackerDrawStatus(eT,'INCORRECT! :-(', stims.stimulusPositions, 0, false);
 		@()updatePlot(bR, me); 
 		@()resetRun(task)}; 
-		exitFcn ]; 
-	breakExitFcn = [ {
+		exitFn ]; 
+	breakExitFn = [ {
 		@()logRun(me,'BREAK_FIX'); 
-		@()trackerDrawStatus(eT,'BREAK_FIX! :-(', stims.stimulusPositions, 0);
+		@()trackerDrawStatus(eT,'BREAK_FIX! :-(', stims.stimulusPositions, 0, false);
 		@()updatePlot(bR, me); 
 		@()resetRun(task)}; 
-		exitFcn ];
+		exitFn ];
 end
 if tS.useTask || task.nBlocks > 0
-	correctExitFcn = [ correctExitFcn; {@()checkTaskEnded(me)} ];
-	incExitFcn = [ incExitFcn; {@()checkTaskEnded(me)} ];
-	breakExitFcn = [ breakExitFcn; {@()checkTaskEnded(me)} ];
+	correctExitFn = [ correctExitFn; {@()checkTaskEnded(me)} ];
+	incExitFn = [ incExitFn; {@()checkTaskEnded(me)} ];
+	breakExitFn = [ breakExitFn; {@()checkTaskEnded(me)} ];
 end
 
 %========================================================
 %========================================================EYETRACKER
 %========================================================
 %--------------------calibration function
-calibrateFcn = {
+calibrateFn = {
 	@()drawBackground(s); %blank the display
 	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
@@ -452,13 +451,13 @@ calibrateFcn = {
 };
 
 %--------------------drift correction function
-driftFcn = {
+driftFn = {
 	@()drawBackground(s); %blank the display
 	@()stopRecording(eT); % stop recording in eyelink [others ignores this]
 	@()setOffline(eT); % set eyelink offline [others ignores this]
 	@()driftCorrection(eT) % enter drift correct (only eyelink)
 };
-offsetFcn = {
+offsetFn = {
 	@()drawBackground(s); %blank the display
 	@()stopRecording(eT); % stop recording in eyelink [tobii ignores this]
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
@@ -469,13 +468,13 @@ offsetFcn = {
 %========================================================GENERAL
 %========================================================
 %--------------------DEBUGGER override
-overrideFcn = { @()keyOverride(me) }; %a special mode which enters a matlab debug state so we can manually edit object values
+overrideFn = { @()keyOverride(me) }; %a special mode which enters a matlab debug state so we can manually edit object values
 
 %--------------------screenflash
-flashFcn = { @()flashScreen(s, 0.2) }; % fullscreen flash mode for visual background activity detection
+flashFn = { @()flashScreen(s, 0.2) }; % fullscreen flash mode for visual background activity detection
 
 %--------------------show 1deg size grid
-gridFcn = { @()drawGrid(s) };
+gridFn = { @()drawGrid(s) };
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %------------------------------------------------------------------------%
@@ -487,25 +486,25 @@ gridFcn = { @()drawGrid(s) };
 %--------------------------State Machine Table-----------------------------
 % specify our cell array that is read by the stateMachine
 stateInfoTmp = {
-'name'		'next'		'time'	'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn';
+'name'		'next'		'time'	'entryFn'		'withinFn'		'transitionFn'	'exitFn';
 %---------------------------------------------------------------------------------------------
-'pause'		'prefix'	inf		pauseEntryFcn	{}				{}				pauseExitFcn;
+'pause'		'prefix'	inf		pauseEntryFn	{}				{}				pauseExitFn;
 %---------------------------------------------------------------------------------------------
-'prefix'	'fixate'	0.75	prefixEntryFcn	prefixFcn		{}				{};
-'fixate'	'breakfix'	10		fixEntryFcn		fixFcn			inFixFcn		fixExitFcn;
-'stimulus'	'incorrect'	10		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn;
-'correct'	'prefix'	0.1		correctEntryFcn	correctFcn		{}				correctExitFcn;
-'incorrect'	'timeout'	0.1		incEntryFcn		incFcn			{}				incExitFcn;
-'breakfix'	'timeout'	0.1		breakEntryFcn	incFcn			{}				breakExitFcn;
-'timeout'	'prefix'	tS.timeOut	{}				incFcn			{}				{};
+'prefix'	'fixate'	0.75	prefixEntryFn	prefixFn		{}				{};
+'fixate'	'breakfix'	10		fixEntryFn		fixFn			inFixFn			fixExitFn;
+'stimulus'	'incorrect'	10		stimEntryFn		stimFn			maintainFixFn	stimExitFn;
+'correct'	'prefix'	0.1		correctEntryFn	correctFn		{}				correctExitFn;
+'incorrect'	'timeout'	0.1		incEntryFn		incFn			{}				incExitFn;
+'breakfix'	'timeout'	0.1		breakEntryFn	incFn			{}				breakExitFn;
+'timeout'	'prefix'	tS.timeOut	{}			incFn			{}				{};
 %---------------------------------------------------------------------------------------------
-'calibrate'	'pause'		0.5		calibrateFcn	{}				{}				{};
-'drift'		'pause'		0.5		driftFcn		{}				{}				{};
-'offset'	'pause'		0.5		offsetFcn		{}				{}				{};
+'calibrate'	'pause'		0.5		calibrateFn		{}				{}				{};
+'drift'		'pause'		0.5		driftFn			{}				{}				{};
+'offset'	'pause'		0.5		offsetFn		{}				{}				{};
 %---------------------------------------------------------------------------------------------
-'override'	'pause'		0.5		overrideFcn		{}				{}				{};
-'flash'		'pause'		0.5		flashFcn		{}				{}				{};
-'showgrid'	'pause'		10		{}				gridFcn			{}				{};
+'override'	'pause'		0.5		overrideFn		{}				{}				{};
+'flash'		'pause'		0.5		flashFn			{}				{}				{};
+'showgrid'	'pause'		10		{}				gridFn			{}				{};
 };
 %--------------------------State Machine Table-----------------------------
 %==========================================================================
@@ -513,4 +512,4 @@ stateInfoTmp = {
 disp('=================>> Built state info file <<==================')
 disp(stateInfoTmp)
 disp('=================>> Built state info file <<=================')
-clearvars -regexp '.+Fcn$' % clear the cell array Fcns in the current workspace
+clearvars -regexp '.+Fn$' % clear the cell array Fns in the current workspace

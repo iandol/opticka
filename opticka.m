@@ -12,13 +12,11 @@
 %> @todo expose maskStimulus settings in the optickaGUI
 %> @todo more flexible tweaking of arduino settings
 %>
-%> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2025 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ======================================================================
 classdef opticka < optickaCore
 	
 	properties (SetAccess = protected, GetAccess = public)
-		%> version number
-		optickaVersion char		= '2.16.1'
 		%> is this a remote instance?
 		remote					= false
 	end
@@ -58,19 +56,23 @@ classdef opticka < optickaCore
 		uiPrefsList cell = {'OKOmniplexIP','OKMonitorDistance','OKpixelsPerCm',...
 			'OKbackgroundColour','OKAntiAliasing','OKbitDepth','OKUseRetina',...
 			'OKHideFlash','OKlogFrames','OKlogStateTimers','OKUsePhotoDiode',...
+			'OKSaveFolder''OKSessionProtocol',...
 			'OKResearcher','OKSubject','OKLabName',...
-			'OKSessionPrefix','OKLabLocation','OKAlyxIP',...
+			'OKSessionPrefix','OKLabLocation','OKAlyxIP','OKAlyxUser','OKAlyxRequest',...
 			'OKaudioDevice','OKverbosityLevel',...
 			'OKarduinoPort','OKarduinoType',...
 			'OKrewardType','OKTTLPin','OKTTLTime',...
 			'OKOpenGLBlending','OKWindowSize',...
+			'OKuseIRec2HS','OKuseTobii','OKuseEyelink','OKusePupilCore',...
+			'OKuseLabJackTStrobe','OKuseLabJackStrobe','OKuseDataPixx','OKuseDisplayPP',...
+			'OKUseNirSmart','OKuseArduino','OKuseLabJackReward',...
 			'OKUseDummy','OKINTANPort', 'OKstrobeOFF',...
 			'OKELCalibProp','OKELCalibDevice','OKELManualMode','OKELCalibBeep',...
 			'OKTobiiCal','OKTobiiVal','OKTobiiAddress',...
 			'OKTobiiManualMode', 'OKTobiiTrackingMode','OKTobiiCalStimulus',...
-			'OKTobiiTracker','OKTobiiOperatorScreen',...
+			'OKTobiiTracker','OKTobiiOperatorScreen','OKTobiiManualStyle'...
 			'OKiRecCal','OKiRecVal','OKiRecAddress','OKiRecTCP','OKiRecUDP',...
-			'OKiRecCalStim','OKiRecSize','OKiRecMovie'}
+			'OKiRecCalStim','OKiRecSize','OKiRecFilePath','OKiRecSize'}
 	end
 	
 	%=======================================================================
@@ -186,7 +188,7 @@ classdef opticka < optickaCore
 					if sendLog == false
 						if ~isempty(tLog);me.r.restoreRunLog(tLog);end
 					end
-					fprintf('>>>Opticka: It took %g seconds to write and send stimulus to Omniplex machine\n',toc(tt));
+					fprintf('≣≣≣≣⊱ Opticka: It took %g seconds to write and send stimulus to Omniplex machine\n',toc(tt));
 					loop = 1;
 				while loop < 10
 					in = me.oc.read(0);
@@ -275,6 +277,8 @@ classdef opticka < optickaCore
 				getTaskVals(me);
 				loadCalibration(me);
 				me.ui.getEyetrackerSettings();
+
+				me.r.screenSettings.statusbar = me.ui.OKStatus;
 				
 				if exist([me.paths.root filesep 'DefaultStateInfo.m'],'file')
 					me.paths.stateInfoFile = [me.paths.root filesep 'DefaultStateInfo.m'];
@@ -289,7 +293,7 @@ classdef opticka < optickaCore
 					me.r.userFunctionsFile = [me.paths.whereami filesep 'userFunctions.m'];
 				end
 
-				fprintf('===>>> Opticka UI took %.2fsecs to initialise\n',toc(tt));
+				fprintf('≣≣≣≣⊱  Opticka UI took %.2fsecs to initialise\n',toc(tt));
 
 				try if ~isempty(me.ss); pause(0.1); delete(me.ss); me.ss = []; end; end
 			catch ME
@@ -309,7 +313,7 @@ classdef opticka < optickaCore
 		%> Gets the settings from the UI and updates our runExperiment
 		%> object.
 		% ===================================================================
-			rM = initialiseGlobals(me);
+			rM = optickaCore.initialiseGlobals();
 
 			if isempty(me.r)
 				if ~isdeployed || ~ismcc
@@ -325,8 +329,8 @@ classdef opticka < optickaCore
 					s{i+1} = num2str(i);
 				end
 				if (~isdeployed || ~ismcc) && ~isempty(s)
-					me.ui.OKSelectScreen.Items = s;
-					me.ui.OKSelectScreen.Value = s{end};
+					me.ui.OKScreen.Items = s;
+					me.ui.OKScreen.Value = s{end};
 					clear s;
 					me.ui.OKOptickaVersion.Text = olds; 
 				end
@@ -343,17 +347,32 @@ classdef opticka < optickaCore
 			me.r.reward.board = me.gv(me.ui.OKarduinoType);
 			
 			me.r.askForComments = me.gl(me.ui.OKAskComments);
-			
+
+			saveFolder = me.gv(me.ui.OKSaveFolder);
+			if ~isempty(saveFolder)
+				if ~exist(saveFolder,'dir'); warning('Saved Data folder doesn''t exist!');end
+				if ~matches(saveFolder,'~/OptickaFiles/SavedData')
+					me.paths.savedData = saveFolder;
+					me.r.paths.savedData = me.paths.savedData;
+				end
+			end
+
+			me.r.alyx.baseURL = me.gv(me.ui.OKAlyxIP);
+			me.r.alyx.user = me.gv(me.ui.OKAlyxUser);
+
 			me.r.sessionData.subjectName = me.gv(me.ui.OKSubject);
 			me.r.sessionData.researcherName = me.gv(me.ui.OKResearcher);
-			me.r.sessionData.alyxIP = me.gv(me.ui.OKAlyxIP);
 			me.r.sessionData.labName = me.gv(me.ui.OKLabName);
-			me.r.sessionData.labLocation = me.gv(me.ui.OKLabLocation);
-			me.r.sessionData.sessionPrefix = me.gv(me.ui.OKSessionPrefix);
+			me.r.sessionData.location = me.gv(me.ui.OKLabLocation);
+			me.r.sessionData.procedure = me.gv(me.ui.OKAlyxProcedure);
+			me.r.sessionData.project = me.gv(me.ui.OKAlyxProject);
+			me.r.sessionData.taskProtocol = me.gv(me.ui.OKAlyxTaskProtocol);
+			me.r.sessionData.brainRegion = me.gv(me.ui.OKAlyxBrainRegion);
+			me.r.sessionData.useAlyx = me.gv(me.ui.OKuseAlyx);
 		
 			me.r.audioDevice = me.gn(me.ui.OKaudioDevice);
 
-			me.r.screen.screen = me.gd(me.ui.OKSelectScreen);
+			me.r.screen.screen = me.gd(me.ui.OKScreen);
 			
 			me.r.screen.distance = me.gd(me.ui.OKMonitorDistance);
 			me.r.screen.pixelsPerCm = me.gd(me.ui.OKpixelsPerCm);
@@ -384,7 +403,6 @@ classdef opticka < optickaCore
 			
 			me.r.logFrames = me.gl(me.ui.OKlogFrames);
 			me.r.logStateTimers = me.gl(me.ui.OKlogStateTimers);
-			me.r.benchmark = me.gl(me.ui.OKbenchmark);
 			me.r.screen.hideFlash = me.gl(me.ui.OKHideFlash);
 			me.r.screen.useRetina = me.gl(me.ui.OKUseRetina);
 			if strcmpi(me.r.screen.bitDepth,'8bit')
@@ -532,17 +550,27 @@ classdef opticka < optickaCore
 					set(met.ui.OKTrainingFileName,'Text',['State-File:  ' met.r.stateInfoFile]);
 
 					try
+						isRunning = false;
 						stims = metaStimulus;
 						me = runExperiment;
-						eT = eyelinkManager;
+						eT = iRecManager;
+						tsM = stateMachine;
 						run(met.r.stateInfoFile)
 						if exist('stateInfoTmp','var')
-							stateInfoTmp{1,1} = 'STATE';
-							met.ui.OKStateTable.ColumnName = stateInfoTmp(1,:); %#ok<*USENS>
-							met.ui.OKStateTable.Data = cell2table(stateInfoTmp(2:end,:));
+							addStates(tsM, stateInfoTmp);
+							tbl = tsM.showTable;
+							if ~isempty(tbl)
+								disp(tbl)
+								met.ui.OKStateTable.ColumnName = tbl.Properties.VariableNames;
+								met.ui.OKStateTable.Data = tbl;
+							else
+								met.ui.OKStateTable.ColumnName = stateInfoTmp(1,:); %#ok<*USENS>
+								met.ui.OKStateTable.Data = cell2table(stateInfoTmp(2:end,:));
+							end
+							
 							met.ui.OKStateFcnView.Value = {''};
 						end
-						clear me stims eT
+						clear me stims eT tsM
 					catch ME
 						getReport(ME);
 						met.ui.OKStateTable.ColumnName = {'STATE','Next','time','entry','within','transition','exit'}; %#ok<*USENS>
@@ -898,7 +926,7 @@ classdef opticka < optickaCore
 			end
 			if max(ftime) > 0
 				[~,idx]=max(ftime);
-				disp(['===>>> Opticka has found a potential calibration file: ' [me.paths.calibration filesep d(idx).name]]);
+				disp(['≣≣≣≣⊱  Opticka has found a potential calibration file: ' [me.paths.calibration filesep d(idx).name]]);
 				%tmp = load([me.paths.calibration filesep d(idx).name]);
 				%if isstruct(tmp)
 				%	fn = fieldnames(tmp);
@@ -943,7 +971,7 @@ classdef opticka < optickaCore
 		% ===================================================================
 		function loadPrefs(me)
 			if ~ispref('opticka'); return; end
-			anyLoaded = false; prefnames = '';
+			anyLoaded = false; prefnames = ''; a = 1;
 			for i = 1:length(me.uiPrefsList)
 				prfname = me.uiPrefsList{i};
 				if ispref('opticka',prfname) %pref exists
@@ -961,6 +989,9 @@ classdef opticka < optickaCore
 									myhandle.Value = num2str(prf); 
 									thisVal = myhandle.Value;
 								end
+							case 'uinumericeditfield'
+								myhandle.Value = prf;
+								thisVal = num2str(prf);
 							case 'uicheckbox'
 								if islogical(prf) || isnumeric(prf)
 									myhandle.Value = prf;
@@ -981,14 +1012,15 @@ classdef opticka < optickaCore
 									thisVal = prf;
 								end
 						end
-						prefnames = [prefnames ' ' prfname '«' thisVal '»'];
-						if ~mod(i,4);prefnames = [prefnames '\n']; end
+						prefnames = [prefnames ' ' prfname ' «' thisVal '»'];
+						if ~mod(a,4); prefnames = [prefnames '\n']; end
 						if ~anyLoaded; anyLoaded = true; end
+						a = a + 1;
 					end
 				end	
 			end
 			if anyLoaded
-				fprintf('\n===>>> Opticka Load Preferences:\n'); fprintf(prefnames); fprintf('\n');
+				fprintf('\n≣≣≣≣⊱  Opticka Load Preferences:\n'); fprintf(prefnames); fprintf('\n');
 			end
 		end
 		
@@ -999,7 +1031,7 @@ classdef opticka < optickaCore
 		function savePrefs(me)
 			if ispref('opticka'); rmpref('opticka'); end
 			if isempty(me.ui); return; end
-			anySaved = false; prefnames = '';
+			anySaved = false; prefnames = ''; a = 1;
 			for i = 1:length(me.uiPrefsList)
 				prf = [];
 				prfname = me.uiPrefsList{i};
@@ -1008,7 +1040,7 @@ classdef opticka < optickaCore
 					myhandle = me.ui.(prfname);
 					uiType = myhandle.Type;
 					switch uiType
-						case {'uieditfield','uidropdown','uirockerswitch'}
+						case {'uinumericeditfield','uieditfield','uidropdown','uirockerswitch'}
 							prf = myhandle.Value;
 						case 'uicheckbox'
 							prf = myhandle.Value;
@@ -1018,13 +1050,14 @@ classdef opticka < optickaCore
 					end
 					if ~isempty(prf) 
 						setpref('opticka', prfname, prf);
-						prefnames = [prefnames ' ' prfname '«' num2str(prf) '»'];
-						if ~mod(i,4);prefnames = [prefnames '\n']; end
+						prefnames = [prefnames ' ' prfname ' «' num2str(prf) '»'];
+						if ~mod(a,4); prefnames = [prefnames '\n']; end
+						a = a + 1;
 					end
 					if ~anySaved; anySaved = true; end
 				end
 			end
-			if anySaved; fprintf('\n===>>> Opticka Save Preferences:\n'); fprintf(prefnames); fprintf('\n');end
+			if anySaved; fprintf('\n≣≣≣≣⊱ Opticka Save Preferences:\n'); fprintf(prefnames); fprintf('\n');end
 		end
 		
 	end
@@ -1130,14 +1163,14 @@ classdef opticka < optickaCore
 						end
 					end
 					save(f,'tmp');
-					fprintf('\n---> Saving Protocol %s as copy (with state file) to %s\n', f, pwd);
+					fprintf('\n≣≣≣≣⊱ Saving Protocol %s as copy (with state file) to %s\n', f, pwd);
 					if exist(tmp.r.stateInfoFile,'file')
 						fprintf('\tState file path: %s\n', me.r.stateInfoFile);
 					end
 					getStateInfo(me);
 				else
 					save(f,'tmp');
-					fprintf('\n---> Saving Protocol %s (without state file) to %s\n', f, pwd);
+					fprintf('\n≣≣≣≣⊱ Saving Protocol %s (without state file) to %s\n', f, pwd);
 				end
 				me.refreshStimulusList;
 				me.refreshVariableList;
@@ -1159,12 +1192,12 @@ classdef opticka < optickaCore
 		function saveData(me)
 			me.paths.currentPath = pwd;
 			cd(me.paths.savedData);
-			[me.paths.alfPath, sessionID, dateID] = me.getALF(me.r.sessionData.subjectName,...
-				me.r.sessionData.sessionPrefix,me.r.sessionData.labName, false);
+			[me.paths.alfPath, sessionID, dateID] = me.getALF(...
+				me.r.sessionData.subjectName, me.r.sessionData.labName, false);
 			if ~isempty(me.r.name)
 				name = me.r.name;
 			else
-				name = [me.r.sessionData.subjectName '-' sessionID '-' dateID]; %give us a run name
+				name = [me.r.sessionData.subjectName '-' dateID '-' sprintf('%0.3d',sessionID)];
 			end
 			name = ['opticka.raw.' name '.mat'];
 			cd(me.paths.alfPath);
@@ -1211,7 +1244,7 @@ classdef opticka < optickaCore
 			end
 			
 			if isempty(fileName) | fileName == 0
-				disp('--->>> Opticka loadProtocol: No file specified...')
+				disp('≣≣≣≣⊱ Opticka loadProtocol: No file specified...')
 				return
 			end
 			me.ui.OKOptickaVersion.Text = 'Loading Protocol, please wait...';
@@ -1225,13 +1258,14 @@ classdef opticka < optickaCore
 			me.comment = ['Protocol: ' fileName];
 			me.store.protocolName = fileName;
 			me.store.protocolsPath = p;
+			me.ui.OKAlyxTaskProtocol.Value = fileName;
 
 			clearStimulusList(me);
 			clearVariableList(me);
 			
 			salutation(me,sprintf('Routing Protocol FROM %s TO %s',tmp.fullName,me.fullName),[],true);
 			
-			fprintf('---> Opticka Protocol loading:\n');
+			fprintf('≣≣≣≣⊱ Opticka Protocol loading:\n');
 
 			% stimuli
 			if optickaCore.hasKey(tmp.r,'stimuli')
@@ -1564,7 +1598,7 @@ classdef opticka < optickaCore
 			
 			me.ui.OKRoot.Pointer='arrow';
 			%figure(me.ui.OKRoot);
-			fprintf('---> Protocol load finished…\n');
+			fprintf('≣≣≣≣⊱ Protocol load finished…\n');
 		end
 
 
@@ -1803,7 +1837,7 @@ classdef opticka < optickaCore
 		%> @param 
 		% ===================================================================
 		function value = abortRunEvent(me,src,evtdata)
-			fprintf('---> Opticka: abortRun triggered!!!\n')
+			fprintf('≣≣≣≣⊱ Opticka: abortRun triggered!!!\n')
 			if isa(me.oc,'dataConnection') && me.oc.isOpen == 1
 				me.oc.write('--abort--');
 			end
@@ -1815,7 +1849,7 @@ classdef opticka < optickaCore
 		%> @param 
 		% ===================================================================
 		function value = endRunEvent(me,src,evtdata)
-			fprintf('---> Opticka: endRun triggered!!!\n')
+			fprintf('≣≣≣≣⊱ Opticka: endRun triggered!!!\n')
 		end
 		
 		% ===================================================================
@@ -1824,7 +1858,7 @@ classdef opticka < optickaCore
 		%> @param 
 		% ===================================================================
 		function value = runInfoEvent(me,src,evtdata)
-			fprintf('---> Opticka: runInfo triggered!!!\n')
+			fprintf('≣≣≣≣⊱ Opticka: runInfo triggered!!!\n')
 		end
 		
 		% ===================================================================
@@ -1882,11 +1916,11 @@ classdef opticka < optickaCore
 		% ===================================================================
 		function lobj=loadobj(in)
 			if isa(in,'opticka')
-				fprintf('---> opticka loadobj: Assigning object… ');
+				fprintf('≣≣≣≣⊱ opticka loadobj: Assigning object… ');
 				try fprintf('…previous object version: %s | dated: %s\n', in.optickaVersion, datestr(in.dateStamp)); end
 				lobj = in;
 			else
-				try fprintf('---> Opticka loadobj: Recreating object %s from structure…\n',in.fullName_); end
+				try fprintf('≣≣≣≣⊱ Opticka loadobj: Recreating object %s from structure…\n',in.fullName_); end
 				try fprintf('\t…previous object version: %s | dated: %s\n', in.optickaVersion, datestr(in.dateStamp)); end
 				lobj = opticka('initUI',false);
 				lobj.r = in.r;
@@ -2029,6 +2063,10 @@ classdef opticka < optickaCore
 		%quick alias to get ui value
 			if isprop(inhandle,'Value')
 				outv = inhandle.Value;
+			elseif isprop(inhandle,'Text')
+				outv = inhandle.Text;
+			elseif isprop(inhandle,'String')
+				outv = inhandle.String;
 			else
 				outv = [];
 			end

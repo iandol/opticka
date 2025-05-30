@@ -62,8 +62,8 @@ classdef screenManager < optickaCore
 		%> 'EnableBits++Mono++Output', 'EnableBits++Mono++OutputWithOverlay'
 		%> or 'EnableBits++Color++Output' 'EnableDataPixxM16Output',
 		%> 'EnableDataPixxC48Output'
-		bitDepth char {mustBeMember(bitDepth,{'FloatingPoint32BitIfPossible';...
-			'FloatingPoint32Bit'; '8bit'; 'HDR'; 'PseudoGray'; 'Native10Bit';...
+		bitDepth char {mustBeMember(bitDepth,{'FloatingPoint32BitIfPossible'; ...
+			'FloatingPoint32Bit'; '8Bit'; '8bit'; 'HDR'; 'EnableHDR'; 'PseudoGray'; 'Native10Bit'; ...
 			'Native11Bit'; 'Native16Bit'; 'Native16BitFloat';...
 			'EnableNative10BitFrameBuffer'; 'EnableNative11BitFrameBuffer';...
 			'EnableNative16BitFrameBuffer'; 'FixedPoint16Bit'; 'FloatingPoint16Bit';...
@@ -71,8 +71,8 @@ classdef screenManager < optickaCore
 			'Bits++Bits++Output'; 'Bits++Mono++Output'; 'Bits++Color++Output';...
 			'EnableBits++Bits++Output'; 'EnableBits++Color++Output';...
 			'EnableBits++Mono++Output';'EnableBits++Mono++OutputWithOverlay';...
-			'EnableDataPixxM16Output';...
-			'EnableDataPixxC48Output'})} = '8bit'
+			'EnableDataPixxM16Output';'EnableDataPixxC48Output';...
+			'DataPixxM16';'DataPixxC48'})}	= '8Bit'
 		%> timestamping mode 1=beamposition,kernel fallback | 2=beamposition
 		%> crossvalidate with kernel
 		timestampingMode double				= 1
@@ -147,15 +147,16 @@ classdef screenManager < optickaCore
 
 	properties (Constant)
 		%> possible bitDepth or display modes
-		bitDepths cell = {'FloatingPoint32BitIfPossible'; 'FloatingPoint32Bit'; '8bit';...
-			'HDR'; 'PseudoGray'; 'Native10Bit'; 'Native11Bit'; 'Native16Bit'; 'Native16BitFloat';...
+		bitDepths cell = {'FloatingPoint32BitIfPossible'; 'FloatingPoint32Bit'; '8Bit';...
+			'HDR'; 'EnableHDR'; 'PseudoGray'; 'Native10Bit'; 'Native11Bit'; 'Native16Bit'; 'Native16BitFloat';...
 			'EnableNative10BitFrameBuffer'; 'EnableNative11BitFrameBuffer';...
 			'EnableNative16BitFrameBuffer'; 'FixedPoint16Bit'; 'FloatingPoint16Bit';...
 			'Bits++Bits++'; 'Bits++Mono++'; 'Bits++Color++';...
 			'Bits++Bits++Output'; 'Bits++Mono++Output'; 'Bits++Color++Output';...
 			'EnableBits++Bits++Output'; 'EnableBits++Color++Output';...
 			'EnableBits++Mono++Output';'EnableBits++Mono++OutputWithOverlay';...
-			'EnableDataPixxM16Output';'EnableDataPixxC48Output'}
+			'EnableDataPixxM16Output';'EnableDataPixxC48Output';...
+			'DataPixxM16';'DataPixxC48'}
 		%> possible OpenGL blend modes (src or dst)
 		blendModes cell = {'GL_ZERO'; 'GL_ONE'; 'GL_DST_COLOR'; 'GL_ONE_MINUS_DST_COLOR';...
 			'GL_SRC_ALPHA'; 'GL_ONE_MINUS_SRC_ALPHA'; 'GL_DST_ALPHA';...
@@ -399,7 +400,7 @@ classdef screenManager < optickaCore
 					debug = true;
 				end
 
-				if debug == true || (length(me.windowed)==1 && me.windowed ~= 0)
+				if debug == true || (isscalar(me.windowed) && me.windowed ~= 0)
 					fprintf('\n---> screenManager: Skipping Sync Tests etc. - ONLY FOR DEVELOPMENT!\n');
 					Screen('Preference','SyncTestSettings', 0.002); %up to 2ms variability
 					Screen('Preference', 'SkipSyncTests', 2);
@@ -734,7 +735,7 @@ classdef screenManager < optickaCore
 				sv.white = WhiteIndex(me.screen);
 				sv.black = BlackIndex(me.screen);
 				sv.gray = GrayIndex(me.screen);
-
+				sv.ppd = me.ppd;
 				me.screenVals = sv;
 			catch ME
 				getReport(ME);
@@ -766,7 +767,7 @@ classdef screenManager < optickaCore
 				stim = dotsStimulus('mask',true,'size',10,'speed',2,...
 					'density',3,'dotSize',0.3);
 				open(me);
-				disp('--->>> screenManager running a quick demo...');
+				disp('≣≣≣≣⊱ screenManager running a quick demo...');
 				if me.stereoMode > 0
 					stim.mask = false;
 					stim.type='simple';
@@ -1691,7 +1692,7 @@ classdef screenManager < optickaCore
 			xPos = (mouseGlobalX - me.xCenter) / me.ppd_;
 			yPos = (mouseGlobalY - me.yCenter) / me.ppd_;
 			if verbose
-				fprintf('--->>> MOUSE POSITION: \tX = %+2.2f (%4.2f) \t\tY = %+2.2f (%4.2f)\n',xPos,mouseGlobalX,yPos,mouseGlobalY);
+				fprintf('≣≣≣≣⊱ MOUSE POSITION: \tX = %+2.2f (%4.2f) \t\tY = %+2.2f (%4.2f)\n',xPos,mouseGlobalX,yPos,mouseGlobalY);
 			end
 		end
 
@@ -1742,7 +1743,7 @@ classdef screenManager < optickaCore
 				if ~exist([me.paths.parent filesep 'Movie' filesep],'dir')
 					try mkdir([me.paths.parent filesep 'Movie' filesep]); end
 				end
-				me.movieSettings.moviePath = [me.paths.parent filesep 'Movie' filesep];
+				me.movieSettings.moviePath = [me.paths.parent filesep 'Movie-' filesep];
 				switch me.movieSettings.type
 					case {'movie',1}
 						if isempty(me.movieSettings.codec)
@@ -2076,8 +2077,8 @@ classdef screenManager < optickaCore
 			oldv = Screen('Preference', 'VisualDebugLevel', 0);
 			wins = [];
 			a = 1;
-			for i = screens
-				x = i*100;
+			for i = fliplr(screens)
+				x = i*100 + (i*5);
 				wins(a) = PsychImaging('OpenWindow', i, 0.5, [x 0 x+100 100]);
 				os=Screen('TextSize', wins(a),  50);
 				Screen('DrawText',wins(a),['W:' num2str(i)], 5, 30,[0.25 1 1]);
@@ -2157,8 +2158,10 @@ classdef screenManager < optickaCore
 				sv.height = sv.screenHeight;
 				me.winRect = Screen('Rect',swin);
 			end
+			sv.diagonal = ceil(sqrt(sv.width^2 + sv.height^2));
 			sv.widthInDegrees = sv.width / me.ppd;
 			sv.heightInDegrees = sv.height / me.ppd;
+			sv.diagonalInDegrees = sqrt(sv.widthInDegrees^2 + sv.heightInDegrees^2);
 			updateCenter(me);
 			sv.xCenter = me.xCenter;
 			sv.yCenter = me.yCenter;

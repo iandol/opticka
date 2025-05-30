@@ -574,9 +574,9 @@ classdef baseStimulus < optickaCore & dynamicprops
 				'FontSize', fmed,...
 				'FontAngle', 'italic',...
 				'BackgroundColor', [0.94 0.94 0.94]);
-			handles.grid = uigridlayout(handles.root,[1 3]);
-			handles.grid1 = uigridlayout(handles.grid,'Padding',[5 5 5 5],'BackgroundColor',bgcolor);
-			handles.grid2 = uigridlayout(handles.grid,'Padding',[5 5 5 5],'BackgroundColor',bgcolor);
+			handles.grid = uigridlayout(handles.root,[1 3],'ColumnSpacing',2,'RowSpacing',2,'Padding',[2 2 2 2],'BackgroundColor',bgcolor);
+			handles.grid1 = uigridlayout(handles.grid,'ColumnSpacing',2,'RowSpacing',2,'Padding',[2 2 2 2],'BackgroundColor',bgcolor);
+			handles.grid2 = uigridlayout(handles.grid,'ColumnSpacing',2,'RowSpacing',2,'Padding',[2 2 2 2],'BackgroundColor',bgcolor);
 			handles.grid.ColumnWidth = {'1x','1x',130};
 			handles.grid1.ColumnWidth = {'2x','1x'};
 			handles.grid2.ColumnWidth = {'2x','1x'};
@@ -997,16 +997,17 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> @param useDegrees where the input is in degrees (true) ot pixels (false)
 		% ===================================================================
 		function updateXY(me,x,y,useDegrees)
-		% updateXY(me, x, y, useDegrees)
+		% updateXY(me, x, y, useDegrees[false])
 			if ~exist('useDegrees','var') || isempty(useDegrees); useDegrees = false; end
+			if ~isempty(x) && ~isscalar(x); x = x(1); end; if ~isempty(y) && ~isscalar(y); y = y(1); end
 			if useDegrees
-				if ~isempty(x); me.xFinal = me.sM.toPixels(x, 'x'); me.xFinalD = x; end
-				if ~isempty(y); me.yFinal = me.sM.toPixels(y, 'y'); me.yFinalD = y; end
+				if ~isempty(x); me.xFinal = me.sM.toPixels(x, 'x'); me.xFinalD = x; me.xPositionOut = x; end
+				if ~isempty(y); me.yFinal = me.sM.toPixels(y, 'y'); me.yFinalD = y; me.yPositionOut = y; end
 			else
-				if ~isempty(x); me.xFinal = x; me.xFinalD = me.sM.toDegrees(x, 'x'); end
-				if ~isempty(y); me.yFinal = y; me.yFinalD = me.sM.toDegrees(y, 'y'); end
+				if ~isempty(x); me.xFinal = x; me.xFinalD = me.sM.toDegrees(x, 'x'); me.xPositionOut = me.xFinalD; end
+				if ~isempty(y); me.yFinal = y; me.yFinalD = me.sM.toDegrees(y, 'y'); me.yPositionOut = me.yFinalD; end
 			end
-			if length(me.mvRect) == 4
+			if me.isRect && length(me.mvRect) == 4
 				me.mvRect=CenterRectOnPointd(me.mvRect, me.xFinal, me.yFinal);
 			end
 		end
@@ -1016,6 +1017,14 @@ classdef baseStimulus < optickaCore & dynamicprops
 	%=======================================================================
 	methods ( Static ) %----------STATIC METHODS
 	%=======================================================================
+
+		% ===================================================================
+		%> @brief linear interpolation between two colour arrays based on a contrast
+		%>
+		% ===================================================================
+		function out = mixColour(c1, c2, contrast)
+			out = c1(1:3) * (1 - contrast) + c2(1:3) * contrast;
+		end
 
 		% ===================================================================
 		%> @brief degrees2radians

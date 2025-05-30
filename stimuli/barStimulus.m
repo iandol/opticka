@@ -19,7 +19,8 @@ classdef barStimulus < baseStimulus
 		%> sf in cycles per degree for checkerboard textures
 		sf double               = 1
 		%> texture interpolation: 'nearest','linear','spline','cubic'
-		interpMethod char		= 'nearest'
+		interpMethod char {mustBeMember(interpMethod,{'nearest','linear',...
+			'spline','cubic'})}	= 'nearest'
 		%> For checkerboard, allow timed phase reversal every N seconds
 		phaseReverseTime double	= 0
 		%> update() method also regenerates the texture, this can be slow, but 
@@ -204,6 +205,7 @@ classdef barStimulus < baseStimulus
 				end
 			end
 			function set_scaleTextureOut(me,value)
+				if strcmpi(me.type,'solid');return;end
 				if value < 1; value = 1; end
 				me.scaleTextureOut = round(value);
 			end
@@ -444,7 +446,7 @@ classdef barStimulus < baseStimulus
 				end
 				
 	
-				if ~strcmpi(me.type,'checkerboard')
+				if ~strcmpi(me.type,'checkerboard') && ~strcmpi(me.type,'solid')
 					if rem(bwpixels,2);bwpixels=bwpixels+1;end
 					if rem(blpixels,2);blpixels=blpixels+1;end
 					% some scales cause rounding errors so find the next
@@ -456,6 +458,9 @@ classdef barStimulus < baseStimulus
 					blscale = round(blpixels/scale)+1;
 					rmat = ones(blscale,bwscale);
 					tmat = repmat(rmat,1,1,3); 
+				else
+					bwscale = bwpixels;
+					blscale = blpixels;
 				end
 				
 				switch me.type
@@ -516,7 +521,7 @@ classdef barStimulus < baseStimulus
 									idx2 = tmp == u(2);
 									tmp(idx1) = u(2);
 									tmp(idx2) = u(1);
-								elseif length(u) == 1 %only 1 colour, probably low sf
+								elseif isscalar(u) %only 1 colour, probably low sf
 									tmp(tmp == u(1)) = c2(i);
 								end
 								out(:,:,i) = tmp;

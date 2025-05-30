@@ -69,6 +69,10 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 	end
 
 	properties (SetAccess = protected, GetAccess = protected)
+        %> reward provider for Titta
+        rewardProvider  = []
+        %> advanced calibration controller
+        calController
 		%> tracker time stamp
 		systemTime		= 0
 		calibData
@@ -168,10 +172,10 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 			end
 			
 			me.settings								= Titta.getDefaults(me.calibration.model);
-			if ~contains(me.calibration.model,{'Tobii 4C','IS4_Large_Peripheral'})
+            if ~contains(me.calibration.model,{'Tobii 4C','IS4_Large_Peripheral'})
 				me.settings.freq					= me.sampleRate;
 				me.settings.trackingMode			= me.calibration.mode;
-			end
+            end
 			me.settings.calibrateEye				= me.calibration.eyeUsed;
 			me.settings.cal.bgColor					= floor(me.screen.backgroundColour*255);
 			me.settings.UI.setup.bgColor			= me.settings.cal.bgColor;
@@ -186,18 +190,26 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 			me.settings.UI.val.avg.text.font		= me.monoFont;
 			me.settings.UI.val.hover.text.font		= me.monoFont;
 			me.settings.UI.val.menu.text.font		= me.monoFont;
+
+			me.settings.UI.advcal.showHead			= true;
+			me.settings.UI.advcal.headScale			= .20;
+			me.settings.UI.advcal.headPos			= [.6 .1];
+
 			if strcmpi(me.calibration.stimulus,'movie') || strcmpi(me.calibration.manualMode,'Smart')
-				me.calStim							= tittaAdvMovieStimulus(me.screen);
-				me.calStim.bgColor					= me.settings.cal.bgColor;
-				me.calStim.blinkCount				= 3;
+				calStim							= tittaAdvMovieStimulus();
+				calStim.bgColor					= me.settings.cal.bgColor;
+				calStim.videoSize				= [me.calibration.size*me.screen.ppd me.calibration.size*me.screen.ppd];
 				if ~isempty(me.calibration.filePath); fp = me.calibration.filePath; else; fp = me.calibration.movie; end
-				m									= movieStimulus('size', me.calibration.size,'filePath', fp);
-				reset(m); setup(m, me.screen);
-				me.calStim.setVideoPlayer(m);
-				me.settings.cal.drawFunction		= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);
+				vids = FileFromFolder(fp, [], 'mp4');
+				vids = arrayfun(@(x) fullfile(x.folder,x.name), vids, 'uni', false);
+				vp = VideoPlayer(me.screen.win,vids);
+				vp.start();
+				calStim.setVideoPlayer(vp);
+				me.settings.cal.drawFunction		= @(a,b,c,d,e,f) calStim.doDraw(a,b,c,d,e,f);
 				if me.calibration.manual
-					me.settings.advcal.drawFunction	= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);
+					me.settings.advcal.drawFunction	= @calStim.doDraw;
 				end
+				me.calStim = calStim;
 			elseif strcmpi(me.calibration.stimulus,'image')
 				me.calStim							= tittaAdvImageStimulus(me.screen);
 				me.calStim.bgColor					= me.settings.cal.bgColor;
@@ -269,12 +281,50 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 				me.settings.advcal.val.pointPos				= me.calibration.valPositions;
 				me.settings.advcal.cal.pointNotifyFunction	= @tittaCalCallback;
 				me.settings.advcal.val.pointNotifyFunction	= @tittaCalCallback;
-			end
+			    me.settings.UI.advcal.gazeHistoryDuration	= 0.5;
+            end
+            if strcmpi(me.calibration.manualMode,'Smart')
+                me.rewardProvider = tittaRewardProvider();
+                
+				
+				calCtrl = tittaAdvancedController([],me.calStim,[],me.rewardProvider);
+                me.settings.advcal.cal.pointNotifyFunction = @calCtrl.receiveUpdate;
+                me.settings.advcal.val.pointNotifyFunction = @calCtrl.receiveUpdate;
+                me.settings.advcal.cal.useExtendedNotify = true;
+                me.settings.advcal.val.useExtendedNotify = true;
+				cp = me.settings.cal.pointPos;
+				vp = me.settings.cal.pointPos;
+				switch size(cp,1)
+					case 1
+						calCtrl.setCalPoints(1,cp);
+					case 2
+						calCtrl.setCalPoints(2,cp);
+					case 3
+						calCtrl.setCalPoints(1,cp(2,:));
+					case 4
+						calCtrl.setCalPoints(2:3,cp(2:3,:));
+						calCtrl.calAfterFirstCollected = true;
+					case 5
+						calCtrl.setCalPoints([1 3 5],cp([1 3 5],:));
+					case 6
+						calCtrl.setCalPoints(3:4,cp(3:4,:));
+						calCtrl.calAfterFirstCollected = true;
+					otherwise
+						calCtrl.setCalPoints(1:size(cp,1),cp);
+				end
+				calCtrl.setValPoints(1:size(vp,1),vp);
+				calCtrl.forceRewardButton  = 'j';
+				calCtrl.skipTrainingButton = 'x';
+				me.calController = calCtrl;
+            end
 
 			if ~isa(me.tobii, 'Titta') || isempty(me.tobii); initTracker(me); end
 			assert(isa(me.tobii,'Titta'),'TOBIIMANAGER:INIT-ERROR','Cannot Initialise...')
 			if me.isDummy; me.tobii = me.tobii.setDummyMode(); end
 			
+            if strcmpi(me.calibration.manualMode,'Smart')
+                me.calController.EThndl = me.tobii;
+            end
 			if isempty(me.address) || me.isDummy
 				me.tobii.init();
 			else
@@ -354,14 +404,13 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 			
 			oldr = RestrictKeysForKbCheck([]);
 			ListenChar(-1);
+            %======================================================MANUAL
 			if me.calibration.manual
 				if strcmpi(me.calibration.manualMode,'standard')
 					ctrl = [];
-				else
-					[rM, aM] = initialiseGlobals(me, false, true);
-					ctrl = tempController(me.tobii, me.calStim);
-					ctrl.rewardProvider = rM;
-					ctrl.audioProvider = aM;
+                else
+                    ctrl = me.calController;
+					ctrl.scrRes = me.screen.winRect(3:4);
 				end
 				if ~isempty(incal) && isstruct(incal)...
 					&& (isfield(incal,'type') && contains(incal.type,'advanced'))...
@@ -370,6 +419,7 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 					incal = [];
 				end
 				cal = me.tobii.calibrateAdvanced([me.screen.win me.operatorScreen.win], incal, ctrl); 
+			%======================================================AUTO
 			else
 				if ~isempty(incal) && isstruct(incal)...
 						&& (isfield(incal,'type') && contains(incal.type,'standard'))...
@@ -559,7 +609,7 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 					xy			= toPixels(me, xy,'','relative');
 					sample.gx	= xy(1);
 					sample.gy	= xy(2);
-					sample.pa	= nanmean(td.left.pupil.diameter);
+					sample.pa	= mean(td.left.pupil.diameter,'omitnan');
 					xyd	= me.toDegrees(xy);
 					me.x = xyd(1); me.y = xyd(2);
 					me.pupil	= sample.pa;

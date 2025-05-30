@@ -228,12 +228,12 @@ classdef getDensity < handle
 				
 				[xcol,ycol,casesLocal,xouttext,youttext] = obj.removeOutliers(xcol,ycol,casesLocal,xouttext,youttext);
 				
-				xmean=nanmean(xcol);
-				xmedian=nanmedian(xcol);
-				ymean=nanmean(ycol);
-				ymedian=nanmedian(ycol);
-				xstd=nanstd(xcol);
-				ystd=nanstd(ycol);
+				xmean=mean(xcol, 'omitnan');
+				xmedian=median(xcol, 'omitnan');
+				ymean=mean(ycol, 'omitnan');
+				ymedian=median(ycol, 'omitnan');
+				xstd=std(xcol, 'omitnan');
+				ystd=std(ycol, 'omitnan');
 				xstderr=obj.stderr(xcol,'SE',1);
 				ystderr=obj.stderr(ycol,'SE',1);
 				
@@ -1627,7 +1627,7 @@ classdef getDensity < handle
 		%> @return out the structure
 		% ===================================================================
 		function [avg,error] = stderr(obj,data,type,onlyerror)
-			avg=nanmean(data);
+			avg=mean(data, 'omitnan');
 			if nargin<4
 				onlyerror=0;
 			end

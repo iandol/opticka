@@ -121,7 +121,7 @@ classdef pupilCoreManager < eyetrackerCore & eyetrackerSmooth
 		%>  none is provided a default will be made.
 		% ===================================================================
 			
-			[rM, aM] = initialiseGlobals(me, false, true);
+			[rM, aM] = optickaCore.initialiseGlobals();
 
 			if ~exist('sM','var') || isempty(sM)
 				if isempty(me.screen) || ~isa(me.screen,'screenManager')
@@ -193,7 +193,7 @@ classdef pupilCoreManager < eyetrackerCore & eyetrackerSmooth
 		%> @brief calibration + validation
 		%>
 		% ===================================================================
-            [rM, aM] = initialiseGlobals(me);
+            [rM, aM] = optickaCore.initialiseGlobals();
 
 			cal = [];
 			if ~me.isConnected && ~me.isDummy

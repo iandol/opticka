@@ -161,9 +161,9 @@ classdef taskSequence < optickaCore & dynamicprops
 		%> nVar template and default values
 		varTemplate struct = struct('name','','stimulus',[],'values',[],'offsetstimulus',[],'offsetvalue',[])
 		%> blockVar template and default values
-		blockTemplate struct = struct('values',{{'none'}},'probability',[1],'comment','block level factor')
+		blockTemplate struct = struct('values',{{'none'}},'probability',1,'comment','block level factor')
 		%> blockVar template and default values
-		trialTemplate struct = struct('values',{{'none'}},'probability',[1],'comment','trial level factor')
+		trialTemplate struct = struct('values',{{'none'}},'probability',1,'comment','trial level factor')
 		%> Set up the task structures needed
 		tProp cell = {'totalRuns',1,'thisBlock',1,'thisRun',1,'isBlank',false,...
 			'isTimeNow',1,'ibTimeNow',1,'response',[],'responseInfo',{},'tick',0,'blankTick',0,...
@@ -425,7 +425,7 @@ classdef taskSequence < optickaCore & dynamicprops
 		%>
 		%> @param randomise [default=false] do we force randomiseTask to be run
 		% ===================================================================
-			if ~exist('randomise','var'); randomise = false; end
+			if ~exist('randomise','var'); randomise = me.randomise; end
 			resetTask(me);
 			if randomise || isempty(me.outIndex); randomiseTask(me); end
 			t = me.tProp;
@@ -788,6 +788,7 @@ classdef taskSequence < optickaCore & dynamicprops
 					'NumberTitle', 'off', ...
 					'Color', [0.94 0.94 0.94], ...
 					'Resize', 'on');
+				if ~isMATLABReleaseOlderThan("R2025a"); theme(me.h.figure1,'light'); end
 				me.h.uitable1 = uitable( ...
 					'Parent', me.h.figure1, ...
 					'Tag', 'uitable1', ...
@@ -937,6 +938,11 @@ classdef taskSequence < optickaCore & dynamicprops
 		% ===================================================================
 		if isempty(me.outIndex); return; end
 			varIndex = sort(unique(me.outIndex));
+			if me.nVars == 0 
+				me.varLabels = {'1'};
+				me.varList = { 1 };
+				return
+			end
 			list = cell(length(varIndex),me.nVars+2);
 			for i = 1:length(varIndex)
 				st = '';

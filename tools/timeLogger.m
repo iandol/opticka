@@ -9,6 +9,8 @@ classdef timeLogger < optickaCore
 		stimStateNames	= {'stimulus','onestep','twostep'}
 		t				= struct('vbl',[],'show',[],'flip',[],...
 							'miss',[],'stimTime',[])
+		preallocateTimes = 1e5;
+		preallocateMessages = 1e4;
 		screenLog		= struct()
 		missvbls		= 0
 		tick			= 0
@@ -25,16 +27,17 @@ classdef timeLogger < optickaCore
 		miss			= 0
 		stimTime		= 0
 	end
-	
+
 	properties (SetAccess = private, GetAccess = public)
-		messages struct	= struct('tick',[],'vbl',[],'message',{})
+		messages struct	= struct('time',[],'exitTime',[],'tick',[],'stimTime',[],'message',[],'type',[])
+		messageN = 1
 		missImportant
 		nMissed
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> allowed properties passed to object upon construction
-		allowedProperties = {'stimStateNames','timer','verbose'}
+		allowedProperties = {'stimStateNames','timer','verbose','preallocateTimes','preallocateMessages'}
 	end
 	
 	%=======================================================================
@@ -63,13 +66,15 @@ classdef timeLogger < optickaCore
 		%> @param varargin
 		%> @return
 		% ===================================================================
-		function preAllocate(me,n)
+		function preAllocate(me,n,m)
+			if ~exist('n','var') || isempty(n); n = me.preallocateTimes; end
+			if ~exist('m','var') || isempty(m); m = me.preallocateMessages; end
 			if isprop(me,'t')
 				me.t.vbl = zeros(1,n);
-				me.t.show = me.vbl;
-				me.t.flip = me.vbl;
-				me.t.miss = me.vbl;
-				me.t.stimTime = me.vbl;
+				me.t.show = me.t.vbl;
+				me.t.flip = me.t.vbl;
+				me.t.miss = me.t.vbl;
+				me.t.stimTime = me.t.vbl;
 			else
 				me.vbl = zeros(1,n);
 				me.show = me.vbl;
@@ -77,51 +82,15 @@ classdef timeLogger < optickaCore
 				me.miss = me.vbl;
 				me.stimTime = me.vbl;
 			end
-		end
-		
-		% ===================================================================
-		%> @brief if we preallocated, remove empty 0 values
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function removeEmptyValues(me)
-			if isprop(me,'t')
-				if isempty(me.t.vbl);return;end
-				if me.tick > 1
-					try
-						me.t.vbl = me.t.vbl(1:me.tick-1);
-						me.t.show = me.t.show(1:me.tick-1);
-						me.t.flip = me.t.flip(1:me.tick-1);
-						me.t.miss = me.t.miss(1:me.tick-1);
-						me.t.stimTime = me.t.stimTime(1:me.tick-1);
-					end
-				end
-				idx=min([length(me.t.vbl) length(me.t.flip) length(me.t.show) length(me.t.stimTime)]);
-				try %#ok<*TRYNC> 
-					me.t.vbl=me.t.vbl(1:idx);
-					me.t.show=me.t.show(1:idx);
-					me.t.flip=me.t.flip(1:idx);
-					me.t.miss=me.t.miss(1:idx);
-					me.t.stimTime=me.t.stimTime(1:idx);
-				end
-			else
-				vbl = me.vbl;
-				idx = find(vbl == 0);
-				me.vbl(idx) = [];
-				me.show(idx) = [];
-				me.flip(idx) = [];
-				me.miss(idx) = [];
-				me.stimTime(idx) = [];
-				idx=min([length(me.vbl) length(me.flip) length(me.show) length(me.stimTime)]);
-				try %#ok<*TRYNC> 
-					me.vbl=me.vbl(1:idx);
-					me.show=me.show(1:idx);
-					me.flip=me.flip(1:idx);
-					me.miss=me.miss(1:idx);
-					me.stimTime=me.stimTime(1:idx);
-				end
+			try 
+				me.messages(1).time = nan(1,m);
+				me.messages.exitTime = me.messages.time;
+				me.messages.tick = me.messages.time;
+				me.messages.stimTime = me.messages.time;
+				me.messages.message = repmat("",1,m);
+				me.messages.type = me.messages.message;
 			end
+			me.messageN = 1;
 		end
 		
 		% ===================================================================
@@ -144,29 +113,36 @@ classdef timeLogger < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief add message with timestamp to message list
 		% ===================================================================
-		function addMessage(me, tick, vbl, message)
+		function addMessage(me, tick, startTime, exitTime, message, timeType)
 			if ~exist('message','var'); return; end
 			if ~exist('tick','var') || isempty(tick); tick = me.tick; end
-			if (~exist('vbl','var') || isempty(vbl)) && ~isempty(me.lastvbl)
-				vbl = me.lastvbl; 
-			else
-				vbl = GetSecs;
+			if (~exist('startTime','var') || isempty(startTime)) && ~isempty(me.lastvbl)
+				startTime = me.lastvbl;
+				timeType = "lastvbl";
+			elseif isempty(startTime)
+				startTime = GetSecs;
+				timeType = "getsecs";
 			end
-			if isempty(me.messages); N = 1; else; N = length(me.messages)+1; end
-			me.messages(N).tick = tick;
+			if ~exist('timeType','var') || isempty(timeType); timeType = 'passed'; end
+			if ~exist('exitTime','var') || isempty(exitTime); exitTime = NaN; end
+			N = me.messageN;
+			me.messages(1).time(N) = startTime;
+			me.messages.exitTime(N) = exitTime;
+			me.messages.tick(N) = tick;
 			if ~isempty(me.stimTime) && length(me.stimTime)<=tick
 				try 
-					me.messages(N).stimTime = me.stimTime(tick); 
+					me.messages.stimTime(N) = me.stimTime(tick); 
 				catch
-					me.messages(N).stimTime = NaN;
+					me.messages.stimTime(N) = NaN;
 				end
 			else
-				me.messages(N).stimTime = NaN;
+				me.messages.stimTime(N) = NaN;
 			end
-			me.messages(N).vbl = vbl;
-			me.messages(N).message = message;
+			me.messages.type(N) = timeType;
+			me.messages.message(N) = message;
+			me.messageN = me.messageN + 1;
 		end
 		
 		% ===================================================================
@@ -175,14 +151,12 @@ classdef timeLogger < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function printRunLog(me)
-			if length(me.t.vbl) <= 5
-				disp('No timing data available...')
-				return
-			end
-			
+		function h = printRunLog(me)
+			h = [];
 			removeEmptyValues(me)
-			
+			if isempty(me.t.vbl) || max(me.t.vbl) == 0 || length(me.t.vbl) <= 5
+				disp('timeLogger: No VBL timing data available...'); return
+			end
 			if isprop(me,'t')
 				vbl=me.t.vbl.*1e3; %#ok<*PROP>
 				show=me.t.show.*1e3;
@@ -206,10 +180,11 @@ classdef timeLogger < optickaCore
 			calculateMisses(me,miss,stimTime)
 			
 			ssz = get(0,'ScreenSize');
-			figure('Name',me.name,'NumberTitle','off','Color',[1 1 1],...
+			h = figure('Name',me.name,'NumberTitle','off','tag','opticka',...
 				'Position', [10 1 round(ssz(3)/2.5) ssz(4)]);
+			if ~isMATLABReleaseOlderThan("R2025a"); theme(h,'light'); end
 			tl = tiledlayout(4,1,'TileSpacing','compact','Padding','compact');
-			
+
 			ax1 = nexttile;
 			hold on
 			plot(x,vbl-vbl(1),'r-','MarkerFaceColor',[1 0 0]);
@@ -296,17 +271,9 @@ classdef timeLogger < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function plotMessages(me)
-			if isempty(me.messages);return;end
-
-			msgs = cell(length(me.messages),4);
-			for i = 1:length(me.messages)
-				msgs{i,1} = me.messages(i).tick;
-				msgs{i,2} = me.messages(i).vbl - me.startTime;
-				if isfield(me.messages,'stimeTime');msgs{i,3} = me.messages(i).stimTime;end
-				msgs{i,4} = me.messages(i).message;
-			end
-			msgs = cell2table(msgs,'VariableNames',{'Tick','Time','Stimulus State','Message'});
+		function h = plotMessages(me)
+			msgs = messageTable(me);
+			if isempty(msgs); h = []; return; end
 
 			h = build_gui();
 			
@@ -323,6 +290,7 @@ classdef timeLogger < optickaCore
 					'NumberTitle', 'off', ...
 					'Color', [0.94 0.94 0.94], ...
 					'Resize', 'on');
+				if ~isMATLABReleaseOlderThan("R2025a"); theme(h.figure1,'light'); end
 				h.uitable1 = uitable( ...
 					'Parent', h.figure1, ...
 					'Tag', 'msglogtable', ...
@@ -337,6 +305,55 @@ classdef timeLogger < optickaCore
 					'ColumnWidth', {'fit','fit','fit','4x'});
 			end
 		end
+
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function tbl = messageTable(me)
+			removeEmptyValues(me);
+			tbl = [];
+			if isempty(me.messages); return; end
+			if isfield(me.messages,'type'); addType=true; else; addType=false; end
+			msgs = cell(length(me.messages.time)+1,8);
+			msgs{1,1} = toDateTime(me.startTime); msgs{1,2} = NaT; msgs{1,3} = 0;
+			msgs{1,4} = NaT; msgs{1,5} = NaN; msgs{1,6} = NaN; msgs{1,7} = 'Session Start Time'; 
+			msgs{1,8} = 'GetSecs';
+			for i = 1:length(me.messages.time)
+				msgs{i+1,1} = toDateTime(me.messages.time(i));
+				if isfield(me.messages,'exitTime'); msgs{i+1,2} = toDateTime(me.messages.exitTime(i)); end
+				msgs{i+1,3} = me.messages.time(i) - me.startTime;
+				if ~isfield(me.messages,'exitTime') || isempty(me.messages.exitTime(i)) || ismissing(me.messages.exitTime(i))
+					msgs{i+1,4} = NaT;
+				else
+					msgs{i+1,4} = seconds(msgs{i+1,2} - msgs{i+1,1});
+				end
+				msgs{i+1,5} = me.messages.tick(i);
+				if isfield(me.messages,'stimTime'); msgs{i+1,6} = me.messages.stimTime(i); end
+				if isfield(me.messages,'message');  msgs{i+1,7} = me.messages.message(i);  end
+				if addType && isfield(me.messages,'type') && length(me.messages.type) >= i
+					msgs{i+1,8} = me.messages.type(i);
+				else
+					msgs{i+1,8} = 'undefined';
+				end
+			end
+			tbl = cell2table(msgs,'VariableNames',{'Onset','Exit','Time','Duration','Tick','StimulusOn','Message','TimeType'});
+			tblt = table2timetable(tbl);
+			tblt = sortrows(tblt);
+			tbl = timetable2table(tblt);
+			function out = toDateTime(posixT)
+				if isempty(posixT); out = []; return; end
+				out = datetime(posixT,'ConvertFrom','posixtime','TimeZone','local','Format','yyyy-MM-dd HH:mm:ss:SSSS');
+			end
+		end
+
+	end %---END PUBLIC METHODS---%
+
+	%=======================================================================
+	methods ( Hidden = true ) %-------HIDDEN METHODS-----%
+	%=======================================================================
 		
 		% ===================================================================
 		%> @brief calculate genuine missed stim frames
@@ -354,19 +371,87 @@ classdef timeLogger < optickaCore
 			me.missImportant(1) = -inf; %ignore first frame
 			me.nMissed = length(find(me.missImportant > 0));
 		end
-	end %---END PUBLIC METHODS---%
-	
+
+		% ===================================================================
+		%> @brief if we preallocated, remove empty 0 values
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function removeEmptyValues(me)
+			if isprop(me,'t')
+				if isempty(me.t.vbl);return;end
+				if me.tick > 1
+					try
+						me.t.vbl = me.t.vbl(1:me.tick-1);
+						me.t.show = me.t.show(1:me.tick-1);
+						me.t.flip = me.t.flip(1:me.tick-1);
+						me.t.miss = me.t.miss(1:me.tick-1);
+						me.t.stimTime = me.t.stimTime(1:me.tick-1);
+					end
+				end
+				idx=min([length(me.t.vbl) length(me.t.flip) length(me.t.show) length(me.t.stimTime)]);
+				try %#ok<*TRYNC> 
+					me.t.vbl=me.t.vbl(1:idx);
+					me.t.show=me.t.show(1:idx);
+					me.t.flip=me.t.flip(1:idx);
+					me.t.miss=me.t.miss(1:idx);
+					me.t.stimTime=me.t.stimTime(1:idx);
+				end
+			else
+				vbl = me.vbl;
+				idx = find(vbl == 0);
+				me.vbl(idx) = [];
+				me.show(idx) = [];
+				me.flip(idx) = [];
+				me.miss(idx) = [];
+				me.stimTime(idx) = [];
+				idx=min([length(me.vbl) length(me.flip) length(me.show) length(me.stimTime)]);
+				try %#ok<*TRYNC> 
+					me.vbl=me.vbl(1:idx);
+					me.show=me.show(1:idx);
+					me.flip=me.flip(1:idx);
+					me.miss=me.miss(1:idx);
+					me.stimTime=me.stimTime(1:idx);
+				end
+			end
+			% messages
+			if isstruct(me.messages) && length(me.messages) > 1 % old format was struct(N), convert to struct.item(N)
+				m = me.messages;
+				mm = struct('time',[],'tick',[],'message',"",'type',"");
+				for ii = 1:length(m)
+					if isfield(m,'vbl'); mm(1).time(ii) = m(ii).vbl;
+					elseif isfield(m,'time'); mm(1).time(ii) = m(ii).time; end
+					if isfield(m,'tick'); mm.tick(ii) = m(ii).tick; end
+					if isfield(m,'type'); mm.type(ii) = m(ii).type; end
+					if isfield(m,'message'); mm.message(ii) = string(strip(m(ii).message)); end
+				end
+				me.messages = mm;
+			end
+			if isfield(me.messages,'vbl'); me.messages.time = me.messages.vbl; end
+			idx = find(ismissing(me.messages.time));
+			try me.messages.time(idx) = []; end
+			if ~isfield(me.messages,'exitTime'); me.messages.exitTime = nan(size(me.messages.time)); end
+			try me.messages.exitTime(idx) = []; end
+			try	me.messages.tick(idx) = []; end
+			try	me.messages.stimTime(idx) = []; end
+			try	me.messages.message(idx) = []; end
+			if ~isfield(me.messages,'type'); me.messages.type = string(size(me.messages.time)); end
+			try	me.messages.type(idx) = []; end
+		end
+	end
+
 	%=======================================================================
 	methods ( Access = private ) %-------PRIVATE METHODS-----%
 	%=======================================================================
-		
+
 		% ===================================================================
 		%> @brief 
 		%>
 		%> @param
 		%> @return
 		% ===================================================================
-		function [avg,err] = stderr(me,data)
+		function [avg,err] = stderr(me, data)
 			avg=mean(data);
 			err=std(data);
 			err=sqrt(err.^2/length(data));

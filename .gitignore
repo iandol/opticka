@@ -11,3 +11,4 @@ Junk
 .bzrignore
 .vscode
 doxygen.log
+resources/

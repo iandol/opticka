@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--Generator: Apple Native CoreSVG 326-->
+
+<svg
+   version="1.1"
+   viewBox="0 0 298.83 298.98"
+   id="svg2"
+   sodipodi:docname="send.svg"
+   inkscape:version="1.4 (e7c3feb1, 2024-10-09)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs2" />
+  <sodipodi:namedview
+     id="namedview2"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="0.96710509"
+     inkscape:cx="149.41499"
+     inkscape:cy="149.41499"
+     inkscape:current-layer="svg2" />
+  <g
+     fill-opacity=".54122"
+     id="g2"
+     style="fill:#757575;fill-opacity:1">
+    <rect
+       width="298.83"
+       height="298.98"
+       opacity="0"
+       id="rect1"
+       style="fill:#757575;fill-opacity:1" />
+    <path
+       d="m149.41 298.83c82.471 0 149.41-66.943 149.41-149.41 0-82.471-66.943-149.41-149.41-149.41-82.471 0-149.41 66.943-149.41 149.41 0 82.471 66.943 149.41 149.41 149.41zm0-24.902c-68.848 0-124.51-55.664-124.51-124.51 0-68.848 55.664-124.51 124.51-124.51 68.848 0 124.51 55.664 124.51 124.51 0 68.848-55.664 124.51-124.51 124.51z"
+       id="path1"
+       style="fill:#757575;fill-opacity:1" />
+    <path
+       d="m152.2 241.99c5.86 0 10.108-4.98 13.037-12.744l53.614-140.19c1.464-3.8086 2.197-7.0313 2.197-9.8145 0-5.2734-3.076-8.3496-8.35-8.3496-2.783 0-6.006 0.7325-9.814 2.1973l-140.92 53.906c-6.7383 2.49-12.012 6.738-12.012 12.598 0 7.47 5.5664 9.961 13.476 12.451l44.384 13.33c5.274 1.758 8.204 1.611 11.719-1.611l89.502-83.936c1.026-1.0254 2.197-0.7324 3.076 0 1.026 0.7324 1.026 2.0508 0 3.0762l-83.496 89.942c-3.222 3.369-3.515 6.005-2.051 11.572l13.184 43.213c2.637 8.349 4.834 14.355 12.451 14.355z"
+       id="path2"
+       style="fill:#757575;fill-opacity:1" />
+  </g>
+</svg>

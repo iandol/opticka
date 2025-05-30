@@ -658,7 +658,7 @@ classdef analysisCore < optickaCore
 		% ===================================================================
 		function [avg,error] = stderr(data,type,onlyerror,alpha,dim,avgfn)
 			if nargin==0;disp('[avg,error]=stderr(data,type,onlyerror,alpha,dim)');return;end
-			if nargin<6 || isempty(avgfn); avgfn = @nanmean; end
+			if nargin<6 || isempty(avgfn); avgfn = @mean; end
 			if nargin<5 || isempty(dim); dim = 1; end
 			if nargin<4 || isempty(alpha); alpha=0.05; end
 			if nargin<3 || isempty(onlyerror); onlyerror=false; end
@@ -679,57 +679,63 @@ classdef analysisCore < optickaCore
 				warning('Bootstrap will fails with such a small sample, switching to 2*SD')
 				type = '2SD';
 			end
-			avg=avgfn(data,dim);
+			try 
+				avg=avgfn(data,dim, 'omitnan');
+			catch
+				avg=avgfn(data,dim, 'omitnan');
+			end
 			if istable; avg = avg.Variables; end
 			switch(type)
 				case 'SE'
-					err=nanstd(data,0,dim);
+					err=std(data, 0, dim, 'omitnan');
 					if istable; err = err.Variables; end
 					error=sqrt(err.^2/nvals);
 				case '2SE'
-					err=nanstd(data,0,dim);
+					err=std(data, 0, dim, 'omitnan');
 					if istable; err = err.Variables; end
 					error=sqrt(err.^2/nvals);
 					error = error*2;
 				case 'CIMEAN'
 					if dim == 2;data = data';end
-					[error, raw] = bootci(1000,{@nanmean,data},'alpha',alpha);
-					avg = nanmean(raw);
+					data(isnan(data))=[];
+					[error, raw] = bootci(1000,{@mean,data},'alpha',alpha);
+					avg = mean(raw);
 				case 'CIMEDIAN'
 					if dim == 2;data = data';end
-					[error, raw] = bootci(1000,{@nanmedian,data},'alpha',alpha);
-					avg = nanmedian(raw);
+					data(isnan(data))=[];
+					[error, raw] = bootci(1000,{@median,data},'alpha',alpha);
+					avg = median(raw);
 				case 'SD'
-					error=nanstd(data,0,dim);
+					error=std(data, 0, dim, 'omitnan');
 					if istable; err = err.Variables; end
 				case '2SD'
-					error=(nanstd(data,0,dim))*2;
+					error=(std(data, 0, dim, 'omitnan'))*2;
 					if istable; err = err.Variables; end
 				case '3SD'
-					error=(nanstd(data,0,dim))*3;
+					error=(std(data, 0, dim, 'omitnan'))*3;
 					if istable; err = err.Variables; end
 				case 'V'
-					error=nanstd(data,0,dim).^2;
+					error=std(data, 0, dim, 'omitnan').^2;
 					if istable; err = err.Variables; end
 				case 'F'
 					if max(data)==0
 						error=0;
 					else
-						error=nanvar(data,0,dim)/nanmean(data,dim);
+						error=var(data, 0, dim, 'omitnan')/mean(data, dim, 'omitnan');
 					end
 					if istable; err = err.Variables; end
 				case 'C'
 					if max(data)==0
 						error=0;
 					else
-						error=nanstd(data,0,dim)/nanmean(data,dim);
+						error=std(data,0,dim, 'omitnan')/mean(data,dim, 'omitnan');
 					end
 					if istable; err = err.Variables; end
 				case 'A'
 					if max(data)==0
 						error=0;
 					else
-						error=nanvar(diff(data),0,dim)/(2*nanmean(data,dim));
+						error=var(diff(data),0,dim, 'omitnan')/(2*mean(data,dim, 'omitnan'));
 					end
 					if istable; err = err.Variables; end
 			end

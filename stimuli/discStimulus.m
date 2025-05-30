@@ -1,6 +1,8 @@
 % ========================================================================
-%> @brief single disc stimulus, inherits from baseStimulus
-%> DISCSTIMULUS single disc stimulus, inherits from baseStimulus
+%> @brief procedural disc stimulus, inherits from baseStimulus
+%> DISCSTIMULUS procedural disc stimulus, inherits from baseStimulus
+%>
+%> See CreateProceduralSmoothedDisc for the stimulus details
 %>
 %> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================

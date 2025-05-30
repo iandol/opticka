@@ -10,18 +10,27 @@ classdef behaviouralRecord < optickaCore
 	
 	%--------------------PUBLIC PROPERTIES----------%
 	properties
+		%> silent mode which disables the plotting
+		silentMode			= false
 		%> verbosity
 		verbose				= true
+		% response list
 		response			= []
 		rt1					= []
 		rt2					= []
 		date				= []
 		info				= ''
+		% a local copy of X position (eye or touch)
 		xAll				= []
+		% a local copy of Y position (eye or touch)
 		yAll				= []
+		% pupil size (eye only)
 		pupilAll			= []
+		% the name of the state which is equivalent to a "correct"
 		correctStateName	= "correct"
+		% the value to assign a correct
 		correctStateValue	= 1;
+		% the name of the states which are equivalent to "incorrect"
 		breakStateName		= ["breakfix", "incorrect"]
 		breakStateValue		= -1
 		rewardTime			= 300
@@ -79,13 +88,15 @@ classdef behaviouralRecord < optickaCore
 		%> 
 		% ===================================================================
 		function plotPerformance(me)
+			if isempty(me.response); warning('No data available'); return; end
+			op = me.plotOnly;
 			me.plotOnly = true;
 			if isempty(me.h) || ~(isfield(me.h,'root') && isgraphics(me.h.root))
 				createPlot(me);
 			end
 			updatePlot(me);
 			plot(me);
-			me.plotOnly = false;
+			me.plotOnly = op;
 		end
 		
 		% ===================================================================
@@ -94,8 +105,8 @@ classdef behaviouralRecord < optickaCore
 		%> 
 		% ===================================================================
 		function createPlot(me, eL)
+			if me.silentMode; return; end
 			if ~me.plotOnly
-				reset(me);
 				me.date = datetime('now');
 			end
 			if isfield(me.h,'root') && ~isempty(findobj(me.h.root))
@@ -140,7 +151,8 @@ classdef behaviouralRecord < optickaCore
 			me.lf = lf;
 			me.SansFont = SansFont;
 			
-			me.h.root = uifigure('Name',me.fullName);
+			me.h.root = uifigure('Name',me.fullName,'Tag','opticka');
+			if ~isMATLABReleaseOlderThan("R2025a"); theme(me.h.root,'light'); end
 			me.h.root.Units = 'normalized';
 			me.h.root.Position = [0.6 0 0.4 1];
 			me.h.grid = uigridlayout(me.h.root,[2 1]);
@@ -201,9 +213,10 @@ classdef behaviouralRecord < optickaCore
 			else
 				return;
 			end	
-			if me.tick == 1
+			if isempty(me.tick) || me.tick == 1
 				reset(me);
-				me.startTime = datetime('now');
+				me.startTime = datetime('now','Format','yyyy-MM-dd HH:mm:ss:SSSS');
+				me.tick = 1;
 			end
 			if exist('sM','var')
 				if matches(sM.currentName, me.correctStateName)
@@ -222,7 +235,7 @@ classdef behaviouralRecord < optickaCore
 			end
 			if exist('eT','var')
 				me.rt2(me.tick) = eT.fixInitLength * 1e3;
-				if length(eT.fixation.radius) == 1
+				if isscalar(eT.fixation.radius)
 					me.radius(me.tick) = eT.fixation.radius;
 				elseif length(eT.fixation.radius) == 2
 					me.radius(me.tick) = sqrt(eT.fixation.radius(1)^2 + eT.fixation.radius(1)^2);
@@ -242,7 +255,7 @@ classdef behaviouralRecord < optickaCore
 			end
 			if ~isempty(me.response)
 				n = length(me.response);
-				me.trials(n).now = datetime('now');
+				me.trials(n).now = datetime('now','Format','yyyy-MM-dd HH:mm:ss:SSSS');
 				me.trials(n).info = me.info;
 				me.trials(n).tick = me.tick;
 				me.trials(n).comment = '';
@@ -262,14 +275,15 @@ classdef behaviouralRecord < optickaCore
 			parfeval(backgroundPool,@me.plot,0,drawNow);
 		end
 		
-
 		% ===================================================================
 		%> @brief 
 		%> 
 		%> 
 		% ===================================================================
 		function plot(me, drawNow)
-			if ~me.isOpen; return; end
+			if me.silentMode; return; end
+			if isempty(me.response); warning('No data available'); return; end
+			if ~me.isOpen || ~isfield(me.h,'root'); me.createPlot; me.plotOnly = true; end
 			if ~exist('drawNow','var'); drawNow = true; end
 			hitn = length( me.response(me.response > 0) );
 			breakn = length( me.response(me.response < 0) );
@@ -455,6 +469,9 @@ classdef behaviouralRecord < optickaCore
 		%> 
 		% ===================================================================
 		function clearHandles(me)
+			if isfield(me.h,'root') && isgraphics(me.h.root)
+				try close(me.h.root); end
+			end
 			me.h = [];
 		end
 		
@@ -482,12 +499,16 @@ classdef behaviouralRecord < optickaCore
 					end
 				end
 			end
-			if contains(in.correctStateName,'correct')
-				in.correctStateName = "correct";
+			
+			if contains(lobj.correctStateName,'correct')
+				lobj.correctStateName = "correct";
 			end
-			if contains(in.breakStateName,'breakfix')
-				in.breakStateName = ["breakfix" "incorrect"];
+			if contains(lobj.breakStateName,'breakfix')
+				lobj.breakStateName = ["breakfix" "incorrect"];
 			end
+			lobj.h = [];
+			lobj.isOpen = false;
+			lobj.plotOnly = true;
 		end
 	end
 	

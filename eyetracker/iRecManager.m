@@ -46,7 +46,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 						'tcpport', 35001,... % used to send commands
 						'stimulus','animated',... % calibration stimulus can be animated, movie, image, pupilcore
 						'size', 2,... % size of calibration target in degrees
-						'movie', [],... % if movie optionally pass a filename 
+						'movie', [],... % if movie optionally pass a filename
 						'filePath', [],...
 						'audioFeedback', true, ...
 						'calPositions', [-12 0; 0 -12; 0 0; 0 12; 12 0],...
@@ -116,7 +116,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 			success = false;
 			if me.isOff; me.isConnected = false; success = true; return; end
 
-			[rM, aM] = initialiseGlobals(me, false, true);
+			[rM, aM] = optickaCore.initialiseGlobals();
 
 			if ~exist('sM','var') || isempty(sM)
 				if isempty(me.screen) || ~isa(me.screen,'screenManager')
@@ -152,6 +152,11 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 			if strcmpi(me.calibration.stimulus,'movie')
 				if isempty(me.calStim) || ~isa(me.calStim,'movieStimulus')
 					me.calStim = movieStimulus('size',me.calibration.size,'filePath',me.calibration.filePath);
+					me.calStim.specialFlagsOpen = 2; % don't load sound
+					me.calStim.circularMask = true;
+					if me.calStim.nVideos > 1
+						me.calStim.autoShuffle = 5;
+					end
 				else
 					if ~isempty(me.calStim) && isa(me.calStim,'movieStimulus'); try me.calStim.reset; end; end
 					me.calStim.size = me.calibration.size;
@@ -243,10 +248,10 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		%>
 		% ===================================================================
 			if me.isOff; return; end
-            [rM, aM] = initialiseGlobals(me);
+			
+            [rM, aM] = optickaCore.initialiseGlobals();
 
-			if ~rM.isOpen; open(rM); end
-			if me.calibration.audioFeedback; open(aM); beep(aM,1000,0.1,0.1); end
+			if me.calibration.audioFeedback; open(aM); beep(aM,2000,0.1,0.1); end
 
 			cal = [];
 			if ~me.isConnected && ~me.isDummy
@@ -308,25 +313,26 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 
 					case 'menu'
 						cloop = true;
-						resetAll(me);
+						resetFixation(me, true);
 						while cloop
 							a = a + 1;
 							getSample(me);
-							s.drawText('MENU: q = exit | c = calibrate | v = validate | d = drift offset | s = sample | F1 = screenshot');
-							flip(s);
 							if me.useOperatorScreen
 								s2.drawText('MENU: q = exit | c = calibrate | v = validate | d = drift offset | s = sample | F1 = screenshot');
 								if ~isempty(me.x)
 									s2.drawSpot(0.75,[0 1 0.25 0.2],me.x,me.y);
 								end
 								drawValidationResults(me, vn);
+								drawDriftOffset(me);
 								if mod(a,ref) == 0
 									trackerFlip(me,0,true);
 								else
 									trackerFlip(me,1);
 								end
+							else
+								s.drawText('MENU: q = exit | c = calibrate | v = validate | d = drift offset | s = sample | F1 = screenshot');
 							end
-
+							flip(s);
 							[pressed,~,keys, shift] = optickaCore.getKeys();
 							if pressed
 								if keys(quit) && shift
@@ -458,23 +464,23 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 
 						vn = length(me.validationData);
 
-						resetFixationHistory(me);
+						resetFixation(me, true);
 						nPositions = size(vpos,1);
 						while cloop
 							a = a + 1;
 							me.getSample();
 							draw(f);
 							animate(f);
-							% if me.useOperatorScreen
-							% 	s2.drawText('VALIDATE: lshift = exit | rshift = sample | # = point');
-							% 	if ~isempty(me.x); s2.drawSpot(0.75,[0 1 0.25 0.25],me.x,me.y); end
-							% 	drawValidationResults(me, vn);
-							% 	if mod(a,ref) == 0
-								% 	trackerFlip(me, 0, true);
-							% 	else
-								% 	trackerFlip(me, 1);
-							% 	end
-							% end
+							if me.useOperatorScreen
+								s2.drawText('VALIDATE: lshift = exit | rshift = sample | # = point');
+								if ~isempty(me.x); s2.drawSpot(0.75,[0 1 0.25 0.25],me.x,me.y); end
+								drawValidationResults(me, vn);
+								if mod(a,ref) == 0
+									trackerFlip(me, 0, true);
+								else
+									trackerFlip(me, 1);
+								end
+							end
 							flip(s);
 
 							[pressed,name,keys] = optickaCore.getKeys();
@@ -596,7 +602,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 			s2.drawText('Calibration finished...')
 			s.flip(); s2.flip(); s2.drawBackground; s2.flip();
 			reset(f);
-			resetAll(me);
+			resetFixation(me, true);
 			RestrictKeysForKbCheck(oldr);
 			stopRecording(me);
 			WaitSecs(0.25);

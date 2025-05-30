@@ -55,6 +55,10 @@ classdef imageStimulus < baseStimulus
 		crop						= 'none'
 		%> direction for motion of the image, different to angle
 		direction					= []
+		%> add a circular mask on the movie? 
+		circularMask				= false
+		%> mask sigma in pixels
+		sigma						= 30
 	end
 
 	properties (SetAccess = protected, GetAccess = public, Transient = true)
@@ -95,11 +99,15 @@ classdef imageStimulus < baseStimulus
 	end
 
 	properties (Access = protected)
+		%> mask texture
+		maskshader
 		%> allowed properties passed to object upon construction
 		allowedProperties = {'type', 'filePath', 'selection', 'contrast', ...
-			'precision','filter','crop','specialFlags'}
+			'randomiseSelection','precision','filter','crop','specialFlags',...
+			'direction','circularMask'}
 		%>properties to not create transient copies of during setup phase
-		ignoreProperties = {'type', 'scale', 'filePath','nImages','chosenImages'}
+		ignoreProperties = {'type', 'scale', 'filePath','nImages','chosenImages',...
+			'randomiseSelection','circularMask','currentFile'}
 	end
 
 	%=======================================================================
@@ -171,6 +179,7 @@ classdef imageStimulus < baseStimulus
 					p = me.addprop([fn{j} 'Out']);
 					if strcmp(fn{j},'xPosition'); p.SetMethod = @set_xPositionOut; end
 					if strcmp(fn{j},'yPosition'); p.SetMethod = @set_yPositionOut; end
+					if strcmp(fn{j},'alpha'); p.SetMethod = @set_alphaOut; end
 					me.([fn{j} 'Out']) = me.(fn{j}); %copy our property value to our tempory copy
 				end
 			end
@@ -192,6 +201,10 @@ classdef imageStimulus < baseStimulus
 			end
 			function set_yPositionOut(me,value)
 				me.yPositionOut = value * me.ppd; 
+			end
+			function set_alphaOut(me,value)
+				me.alphaOut = value; 
+				if isprop(me,'colourOut'); me.colourOut(4) = value; end
 			end
 			
 		end
@@ -305,10 +318,11 @@ classdef imageStimulus < baseStimulus
 				end
 			end
 
-			if isempty(me.specialFlags) && isinteger(me.matrix(1))
-				me.specialFlags = 4; %4 is optimization for uint8 textures. 0 is default
-			end
+			makeMaskShader(me);
+
 			if ~isempty(me.sM) && me.sM.isOpen == true
+				% 'MakeTexture', WindowIndex, imageMatrix [, optimizeForDrawAngle=0] 
+				% [, specialFlags=0] [, floatprecision] [, textureOrientation=0] [, textureShader=0];
 				me.texture = Screen('MakeTexture', me.sM.win, me.matrix, 1, me.specialFlags, me.precision);
 			end
 			me.logOutput('loadImage',['Load: ' regexprep(me.currentFile,'\\','/') 'in ' num2str(toc(tt)) ' secs']);
@@ -320,7 +334,7 @@ classdef imageStimulus < baseStimulus
 		% ===================================================================
 		function update(me)
 			if me.randomiseSelection
-				im = randi(length(me.filePaths));
+				im = randi(me.nImages);
 			else 
 				im = me.getP('selection');
 			end
@@ -351,10 +365,10 @@ classdef imageStimulus < baseStimulus
 		function draw(me, win)
 			if me.isVisible && me.tick >= me.delayTicks && me.tick < me.offTicks
 				if ~exist('win','var');win = me.sM.win; end
-				% Screen('DrawTexture', windowPointer, texturePointer [,sourceRect] [,destinationRect] [,rotationAngle]
+				% 'DrawTexture', windowPointer, texturePointer [,sourceRect] [,destinationRect] [,rotationAngle]
 				% [, filterMode] [, globalAlpha] [, modulateColor] [, textureShader] [, specialFlags] [, auxParameters]);
-				Screen('DrawTexture', win, me.texture, [], me.mvRect,...
-					me.angleOut, me.filter, me.alphaOut, me.colourOut);
+				Screen('DrawTexture', win, me.texture, [], me.mvRect, me.angleOut,...
+					me.filter, me.alphaOut, me.colourOut, me.maskshader);
 				me.drawTick = me.drawTick + 1;
 			end
 			if me.isVisible; me.tick = me.tick + 1; end
@@ -390,6 +404,7 @@ classdef imageStimulus < baseStimulus
 			if ~isempty(me.texture) && me.texture > 0 && Screen(me.texture,'WindowKind') == -1
 				try Screen('Close',me.texture); end %#ok<*TRYNC>
 			end
+			me.maskshader = [];
 			if isprop(me,'doAnimator') && me.doAnimator; reset(me.animator); end
 			resetTicks(me);
 			me.texture=[];
@@ -434,12 +449,13 @@ classdef imageStimulus < baseStimulus
 				me.selection = 1;
 			end
 			if exist(me.filePath,'file') ~= 2 && exist(me.filePath,'file') ~= 7
+				tf = me.filePath;
 				p = mfilename('fullpath');
 				p = fileparts(p);
 				me.filePath = [p filesep 'Bosch.jpeg'];
 				me.filePaths{1} = me.filePath;
 				me.selection = 1;
-				warning('--->>> imageStimulus couldn''t find correct image, reverted to default!')
+				warning('--->>> imageStimulus couldn''t find correct image %s, reverted to default!',tf)
 			end
 			me.currentFile = me.filePaths{me.selection};
 		end
@@ -451,6 +467,27 @@ classdef imageStimulus < baseStimulus
 	%=======================================================================
 
 		% ===================================================================
+		%> @brief makeMaskShader
+		%>  
+		% ===================================================================
+		function makeMaskShader(me)
+			if me.circularMask
+				w = me.width;
+				h = me.height;
+				shader = LoadGLSLProgramFromFiles(which('circularMask.frag'), 1);
+				glUseProgram(shader);
+    			glUniform1i(glGetUniformLocation(shader, 'Image'), 0);
+    			glUniform2f(glGetUniformLocation(shader, 'Center'), w/2, h/2);
+				glUniform1f(glGetUniformLocation(shader, 'Radius'), floor(min([w h])/2));
+				glUniform1f(glGetUniformLocation(shader, 'Sigma'), me.sigma);
+    			glUseProgram(0);
+				me.maskshader = shader;
+			else
+				me.maskshader = [];
+			end
+		end
+
+		% ===================================================================
 		%> @brief setRect
 		%>  setRect makes the PsychRect based on the texture and screen values
 		%>  This is overridden from parent class so we can scale texture
@@ -460,7 +497,7 @@ classdef imageStimulus < baseStimulus
 			if ~isempty(me.texture)
 				%setRect@baseStimulus(me) %call our superclass version first
 				me.dstRect=Screen('Rect',me.texture);
-				me.dstRect = ScaleRect(me.dstRect, me.scale, me.scale);
+				if me.scale ~= 1; me.dstRect = ScaleRect(me.dstRect, me.scale, me.scale); end
 				if me.mouseOverride && me.mouseValid
 					me.dstRect = CenterRectOnPointd(me.dstRect, me.mouseX, me.mouseY);
 				else
@@ -471,7 +508,7 @@ classdef imageStimulus < baseStimulus
 						me.dstRect(1), me.dstRect(2),me.dstRect(3),me.dstRect(4),...
 						me.dstRect(3)-me.dstRect(1),me.dstRect(4)-me.dstRect(2));
 				end
-				me.szPx = RectWidth(me.dstRect);
+				me.szPx = min([RectWidth(me.dstRect) RectHeight(me.dstRect)]);
 				me.mvRect = me.dstRect;
 			end
 		end

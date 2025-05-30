@@ -5,9 +5,12 @@
 %>
 %> Example:
 %>
-%> ```
+%> ```matlab
 %> l = labJackT('openNow', true);
-%> l.sendStrobe(128); % sends 128 via EIO 8 bits
+%> l.sendStrobe(128); % sends value 128 : 0-2047 controls EIO0-8 & CIO0-3 11bit word - 2048 TTLs CIO-4 for 10ms
+%> v = l.getAIN(1); % get a voltage
+%> l.startStream() % start data streaming mode
+%> l.stopStream(); % stop data streaming mode
 %> l.close;
 %> ```
 %>
@@ -16,7 +19,7 @@
 classdef labJackT < handle
 	
 	properties
-		%> friendly object name, setting this to 'null' will force silentMode=1
+		%> friendly object name, setting this to 'null' will force silentMode = true
 		name char				= 'labJackT'
 		%> what LabJack device to use; 4 = T4, 7 = T7
 		deviceID double			= 4
@@ -25,21 +28,21 @@ classdef labJackT < handle
 		%> Connection type: ANY, USB, TCP, ETHERNET, WIFI
 		connectType char		= 'ANY'
 		%> IP address if using network
-		IP char					= ''
+		IP char				= ''
 		%> strobeTime is time of strobe in ms; max = 100ms
 		strobeTime uint32		= 5
 		%> streamChannels which channels to stream
-		streamChannels double	= 0
+		streamChannels double		= 0
 		%> stream sample rate (Hz)
-		streamSampleRate double = 2000;
+		streamSampleRate double 	= 2000;
 		%> number of stream samples to collect in each read
-		streamSamples double	= 500;
+		streamSamples double		= 500;
 		%> resolution of the stream 0-5 for T4, 0 is default (=1), 5 being best/slowest
-		streamResolution double = 0
+		streamResolution double 	= 0
 		%> timeout for communication in ms
 		timeOut	double			= 500
 		%> header needed by loadlib
-		header char				= '/usr/local/include/LabJackM.h'
+		header char			= '/usr/local/include/LabJackM.h'
 		%> the library itself
 		library char			= '/usr/local/lib/libLabJackM'
 		%> do we log everything to the command window?
@@ -53,8 +56,8 @@ classdef labJackT < handle
 	end
 	
 	properties (Hidden = true)
-		winLibrary				= 'C:\Windows\System32\LabJackM'
-		winHeader				= 'C:\Program Files (x86)\LabJack\Drivers\LabJackM.h'
+		winLibrary			= 'C:\Windows\System32\LabJackM'
+		winHeader			= 'C:\Program Files (x86)\LabJack\Drivers\LabJackM.h'
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -107,13 +110,13 @@ classdef labJackT < handle
 		LJM_ctANY int32			= 0 
 		LJM_ctUSB int32			= 1
 		LJM_ctTCP int32			= 2
-		LJM_ctETHERNET int32	= 3
+		LJM_ctETHERNET int32		= 3
 		LJM_ctWIFI int32		= 4
 		LJM_UINT16 int32		= 0
 		LJM_UINT32 int32		= 1
 		LJM_INT32 int32			= 2
 		LJM_FLOAT32 int32		= 3
-		LJM_TESTRESULT uint32	= 1122867
+		LJM_TESTRESULT uint32		= 1122867
 		%> RAM address for communication
 		RAMAddress uint32		= 46080
 		%> minimal lua server to allow fast asynchronous strobing of EIO & CIO
@@ -158,7 +161,7 @@ classdef labJackT < handle
 			me.uuid = num2str(dec2hex(floor((now - floor(now))*1e10)));
 			if strcmpi(me.name, 'null') %we were deliberately passed null, means go into silent mode
 				me.silentMode	= true;
-				me.openNow		= false;
+				me.openNow	= false;
 				me.salutation('CONSTRUCTOR Method','labJack running in silent mode...')
 			end
 			if IsWin
@@ -368,6 +371,9 @@ classdef labJackT < handle
 			calllib(me.libName, 'LJM_eWriteAddress', me.handle, me.RAMAddress, me.LJM_INT32, int32(value));
 			if me.verbose; fprintf('--->>> LabjackT:sendStrobe Sending strobe: %i\n',value); end
 		end
+		function setStrobeValue(me, value)
+			me.sendValue = value;
+		end
 
 		% ===================================================================
 		%> @brief 
@@ -404,10 +410,10 @@ classdef labJackT < handle
 		end
 		
 		% ===================================================================
-		%> @brief setAIO
-		%>	setAIO sets the value for FIO, 
+		%> @brief getAIN
+		%>	getAIN gets the value from FIO, 
 		%>	@param channels AIN channels 0-3
-		%>  @return out voltages
+		%> @return out voltages
 		% ===================================================================
 		function out = getAIN(me,channels)
 			if me.silentMode || isempty(me.handle); return; end

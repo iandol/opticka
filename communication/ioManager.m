@@ -1,5 +1,6 @@
 % ======================================================================
-%> @brief Input Output manager, currently just a dummy class
+%> @brief Input Output manager, a dummy class to allow task to run without
+%> strobe hardware 
 %>
 %> 
 %>
@@ -40,10 +41,10 @@ classdef ioManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function obj = ioManager(varargin)
+		function me = ioManager(varargin)
 			if nargin == 0; varargin.name = 'IO Manager'; end
-			obj=obj@optickaCore(varargin); %superclass constructor
-			if nargin > 0; obj.parseArgs(varargin,obj.allowedProperties); end
+			me=me@optickaCore(varargin); %superclass constructor
+			if nargin > 0; me.parseArgs(varargin,me.allowedProperties); end
 		end
 
 		% ===================================================================
@@ -51,9 +52,9 @@ classdef ioManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function open(obj,varargin)
-			obj.silentMode = true;
-			obj.isOpen = false;
+		function open(me, varargin)
+			me.silentMode = true;
+			me.isOpen = false;
 		end
 		
 		% ===================================================================
@@ -61,16 +62,7 @@ classdef ioManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function close(obj,varargin)
-
-		end
-		
-		% ===================================================================
-		%> @brief 
-		%> 
-		%> @param 
-		% ===================================================================
-		function resetStrobe(obj,varargin)
+		function close(me,varargin)
 
 		end
 		
@@ -79,7 +71,7 @@ classdef ioManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function triggerStrobe(obj,varargin)
+		function resetStrobe(me,varargin)
 
 		end
 		
@@ -88,37 +80,7 @@ classdef ioManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function prepareStrobe(obj,value)
-			obj.lastValue = obj.sendValue;
-			obj.sendValue = value;
-		end
-		
-		% ===================================================================
-		%> @brief 
-		%> 
-		%> @param 
-		% ===================================================================
-		function sendStrobe(obj,value)
-			obj.lastValue = obj.sendValue;
-			obj.sendValue = value;
-		end
-
-		% ===================================================================
-		%> @brief 
-		%> 
-		%> @param 
-		% ===================================================================
-		function strobeServer(obj,value)
-			obj.lastValue = obj.sendValue;
-			obj.sendValue = value;
-		end
-
-		% ===================================================================
-		%> @brief 
-		%> 
-		%> @param 
-		% ===================================================================
-		function sendTTL(obj,value)
+		function triggerStrobe(me,varargin)
 
 		end
 		
@@ -127,7 +89,40 @@ classdef ioManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function startRecording(obj,value)
+		function prepareStrobe(me,value)
+			if ~exist('value','var'); return; end
+			me.lastValue = me.sendValue;
+			me.sendValue = value;
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
+		% ===================================================================
+		function sendStrobe(me, value)
+			if ~exist('value','var'); return; end
+			me.lastValue = me.sendValue;
+			me.sendValue = value;
+		end
+
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
+		% ===================================================================
+		function strobeServer(me,value)
+			if ~exist('value','var'); return; end
+			me.lastValue = me.sendValue;
+			me.sendValue = value;
+		end
+
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
+		% ===================================================================
+		function sendTTL(me,value)
 
 		end
 		
@@ -136,7 +131,7 @@ classdef ioManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function resumeRecording(obj,value)
+		function startRecording(me,value)
 
 		end
 		
@@ -145,7 +140,7 @@ classdef ioManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function pauseRecording(obj,value)
+		function resumeRecording(me,value)
 
 		end
 		
@@ -154,7 +149,7 @@ classdef ioManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function stopRecording(obj,value)
+		function pauseRecording(me,value)
 
 		end
 		
@@ -163,7 +158,16 @@ classdef ioManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function startFixation(obj)
+		function stopRecording(me,value)
+
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
+		% ===================================================================
+		function startFixation(me)
 			
 		end
 		
@@ -172,7 +176,7 @@ classdef ioManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function correct(obj)
+		function correct(me)
 			
 		end
 		
@@ -181,7 +185,7 @@ classdef ioManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function incorrect(obj)
+		function incorrect(me)
 			
 		end
 		
@@ -190,7 +194,7 @@ classdef ioManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function breakFixation(obj)
+		function breakFixation(me)
 			
 		end
 		
@@ -199,7 +203,7 @@ classdef ioManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function rstart(obj,varargin)
+		function rstart(me,varargin)
 
 		end
 		
@@ -209,7 +213,7 @@ classdef ioManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function rstop(obj,varargin)
+		function rstop(me,varargin)
 
 		end
 		
@@ -218,7 +222,7 @@ classdef ioManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function timedTTL(obj,varargin)
+		function timedTTL(me,varargin)
 
 		end
 		
@@ -227,19 +231,19 @@ classdef ioManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function type = get.type(obj)
-			if isempty(obj.io)
+		function type = get.type(me)
+			if isempty(me.io)
 				type = 'undefined';
 			else
-				if isa(obj.io,'plusplusManager')
+				if isa(me.io,'plusplusManager')
 					type = 'Display++';
-				elseif isa(obj.io,'labJackT')
+				elseif isa(me.io,'labJackT')
 					type = 'LabJack T4/T7';
-				elseif isa(obj.io,'labJack')
+				elseif isa(me.io,'labJack')
 					type = 'LabJack U3/U6';
-				elseif isa(obj.io,'dPixxManager')
+				elseif isa(me.io,'dPixxManager')
 					type = 'DataPixx';
-				elseif isa(obj.io,'arduinoManager')
+				elseif isa(me.io,'arduinoManager')
 					type = 'Arduino';
 				end
 			end
@@ -249,10 +253,10 @@ classdef ioManager < optickaCore
 		%> @brief Delete method, closes gracefully
 		%>
 		% ===================================================================
-		function delete(obj)
+		function delete(me)
 			try
-				if ~isempty(obj.io)
-					close(obj);
+				if ~isempty(me.io)
+					close(me);
 				end
 			catch
 				warning('IO Manager Couldn''t close hardware')

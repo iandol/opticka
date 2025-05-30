@@ -3,6 +3,7 @@ classdef touchData < optickaCore
 	properties
 		subject
 		data
+		verbose = true
 	end
 
 	properties (GetAccess = public, SetAccess = protected)

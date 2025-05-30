@@ -22,7 +22,7 @@ classdef nirSmartManager < optickaCore
 	
 	properties (SetAccess = private, GetAccess = public, Dependent = true)
 		%> hardware class
-		type char
+		%type char
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -33,7 +33,7 @@ classdef nirSmartManager < optickaCore
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> properties allowed to be modified during construction
-		allowedProperties = {'ip','port','io','silentMode','verbose'}
+		allowedProperties = {'ip','port','io','silentMode','stimOFFValue','verbose'}
 	end
 	
 	methods
@@ -55,6 +55,7 @@ classdef nirSmartManager < optickaCore
 		%> @param 
 		% ===================================================================
 		function open(me,varargin)
+			if me.silentMode; me.isOpen = true; return; end
 			if isempty(me.io)
 				me.io = dataConnection('rAddress', me.ip, 'rPort', me.port);
 			end
@@ -83,7 +84,7 @@ classdef nirSmartManager < optickaCore
 		%> @param 
 		% ===================================================================
 		function close(me,varargin)
-			try close(me.io); end
+			try close(me.io); end %#ok<*TRYNC>
 			me.isOpen = false;
 		end
 
@@ -93,7 +94,7 @@ classdef nirSmartManager < optickaCore
 		%> @param 
 		% ===================================================================
 		function prepareStrobe(me,value)
-			if ~me.isOpen; return; end
+			if ~me.isOpen || me.silentMode; return; end
 			me.lastValue = me.sendValue;
 			me.sendValue = value;
 		end
@@ -104,7 +105,7 @@ classdef nirSmartManager < optickaCore
 		%> @param 
 		% ===================================================================
 		function sendStrobe(me, value)
-			if ~me.isOpen; return; end
+			if ~me.isOpen || me.silentMode; return; end
 			if ~exist('value','var') || isempty(value)
 				if ~isempty(me.sendValue)
 					value = me.sendValue; 
@@ -124,7 +125,7 @@ classdef nirSmartManager < optickaCore
 		%> @param 
 		% ===================================================================
 		function resetStrobe(me,varargin)
-			if ~me.isOpen; return; end
+			if ~me.isOpen || me.silentMode; return; end
 			me.sendValue = 0;
 		end
 		
@@ -134,7 +135,7 @@ classdef nirSmartManager < optickaCore
 		%> @param 
 		% ===================================================================
 		function triggerStrobe(me,varargin)
-			if ~me.isOpen; return; end
+			if ~me.isOpen || me.silentMode; return; end
 			if isempty(me.sendValue); warning('--->>> nirSmartManager No strobe value set, trigger failed!'); return; end
 			sendString = [250,252,251,253,3,me.sendValue,252,253,250,251];
 			write(me.io, uint8(sendString));
@@ -158,7 +159,7 @@ classdef nirSmartManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function sendTTL(me,value)
+		function sendTTL(me,value) %#ok<*INUSD>
 
 		end
 		
