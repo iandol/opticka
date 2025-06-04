@@ -157,7 +157,7 @@ classdef touchManager < optickaCore
 				fprintf('--->touchManager: %s\n',me.comment);
 			elseif isempty(me.devices)
 				me.comment = 'No Touch Screen are available, please check USB!';
-				fprintf('--->touchManager: %s\n',me.comment);
+				warning('--->touchManager: %s\n',me.comment);
 			elseif isscalar(me.devices)
 				me.comment = sprintf('found ONE Touch Screen: %s',me.names{1});
 				fprintf('--->touchManager: %s\n',me.comment);
@@ -175,6 +175,9 @@ classdef touchManager < optickaCore
 		%> @return
 		% ===================================================================
 			if me.isDummy; me.isQueue = true; return; end
+			if isempty(me.devices) || isempty(me.device) || me.device <= 0
+				error('--->touchManager: no available devices!!!')
+			end
 			try
 				TouchQueueCreate(me.swin, me.devices(me.device), me.nSlots);
 			catch
@@ -192,6 +195,7 @@ classdef touchManager < optickaCore
 		% ===================================================================
 			if me.isDummy; me.isOpen = true; return; end
 			if ~me.isQueue; createQueue(me); end
+			if isempty(me.devices(me.device)); error("--->touchManager: no device available!!!"); end
 			TouchQueueStart(me.devices(me.device));
 			me.isOpen = true;
 			if me.verbose; logOutput(me,'start','Started queue...'); end
@@ -783,7 +787,7 @@ classdef touchManager < optickaCore
 				deviceName string = ""
 				enable logical = true
 			end
-			if isempty(deviceName); return; end
+			
 			if ~IsLinux; return; end
 			
 			if enable
@@ -794,14 +798,16 @@ classdef touchManager < optickaCore
 
 			try
 				[~,r] = system("xinput list");
-				disp('Input Device List:');
+				disp('XInput Device List:');
 				disp(r);
-				pattern = sprintf('(?<name>%s)\\s+id=(?<id>\\d+)', me.deviceName);
+				if isempty(deviceName); return; end
+				pattern = sprintf('(?<name>%s)\\s+id=(?<id>\\d+)', deviceName);
 				r = strsplit(string(r), newline);
 				for ii = 1:length(r)
 					tokens = regexp(r(ii), pattern, 'names');
 					if ~isempty(tokens)
 						system("xinput " + cmd + " " + tokens.id);
+						fprintf('Run "xinput <%s>" command on %s\n\n',cmd,deviceName);
 						break
 					end
 				end
