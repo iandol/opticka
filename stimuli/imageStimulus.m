@@ -428,6 +428,7 @@ classdef imageStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function checkfilePath(me)
+			try me.filePath = regexprep(me.filePath,'^\~',getenv('HOME')); end
 			if isempty(me.filePath) || (me.selection==0 && exist(me.filePath,'file') ~= 2 && exist(me.filePath,'file') ~= 7)%use our default
 				p = mfilename('fullpath');
 				p = fileparts(p);
@@ -443,7 +444,6 @@ classdef imageStimulus < baseStimulus
 					if ~exist(me.filePaths{i},'file');warning('Image %s not available!',me.filePaths{i});end
 				end
 			elseif exist(me.filePath,'file') == 2
-				me.filePath = regexprep(me.filePath,'\~',getenv('HOME'));
 				me.filePaths = {};
 				me.filePaths{1} = me.filePath;
 				me.selection = 1;

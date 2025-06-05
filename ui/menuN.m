@@ -162,13 +162,15 @@ if any(matches(lf,'Fira Code'))
 	MonoFont = 'Fira Code';
 end
 
-fontSize = 8;
-buttonFontSize = 11;
+fontSize = 9;
+buttonFontSize = 10;
+hidpi = false;
 
 if IsLinux && isMATLABReleaseOlderThan('R2024b')
 	try
-		[~,d]=system('xrandr --screen 0 | grep -E ''\*\+''');
-		if any(contains(d,{'3840','4384','5120','5760','6144'}))
+		[~,xr]=system('xrandr --screen 0 | grep -E ''\*''');
+		if any(contains(xr,{'3840','4384','5120','5760','6144'}))
+			hidpi = true;
 			fontSize = 22;
 			buttonFontSize = 24;
 		end
@@ -222,8 +224,13 @@ else
 end
 
 % Set up a large amount of padding options []:
-extentWidthUniversal          = 450;   % It is increased/decreased when necessary
-extentWidthUniversalMin       = 420;   % Minimum allowed width of uicontrols
+if hidpi
+	extentWidthUniversal          = 900;   % It is increased/decreased when necessary
+	extentWidthUniversalMin       = 840;   % Minimum allowed width of uicontrols
+else
+	extentWidthUniversal          = 450;   % It is increased/decreased when necessary
+	extentWidthUniversalMin       = 420;   % Minimum allowed width of uicontrols
+end
 
 extentWidthSliderMin          = 200;
 extentHeigthTextInPadding     = 5;
@@ -908,6 +915,9 @@ end
 screenSize           = get(0,'ScreenSize');
 figureSize           = [extentWidthUniversal + 2*Opt.pixelPaddingWidth(1),...
    tmpCurrentPosition(2) + Opt.pixelPaddingHeigth(1) + extentHeightTitlePadding];
+if screenSize(3) > 2200
+	figureSize = figureSize*2.5;
+end
 figurePosition       = 0.5*screenSize([3,4]) - 0.5*figureSize;
 set(hFig,'Position',[figurePosition,figureSize]);
 
