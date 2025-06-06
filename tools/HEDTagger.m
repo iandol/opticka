@@ -33,7 +33,7 @@ classdef HEDTagger < handle
 						date{jj,2} = HEDTags.Creation_date.name;
 					elseif contains(m,regexpPattern('^===>>>'))
 						date{jj,2} = HEDTags.Data_marker.name;
-					elseif contains(m, regexpPattern('-post flip: \d+')
+					elseif contains(m, regexpPattern('-post flip: \d+'))
 						n = NaN;
 						num = regexp(m,'flip strobe: (?<number>\d+)$','names');
 						if ~isempty(num); n = num.number; end

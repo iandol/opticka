@@ -70,27 +70,34 @@ classdef touchData < optickaCore
 			else
 				time = in.data.time - in.data.time(1);
 			end
-			f = figure;
-			tiledlayout
+			[~,f,e] = fileparts(in.name);
+			tit = [f e];
+			f = figure("Name",tit);
+			tiledlayout(f,"vertical");
 			nexttile;
 			plot(in.data.trials,in.data.result,'ko-','MarkerFaceColor',[0 0 0]);
 			ylim([-0.2 1.2]);
+			yticks([0 1]);
+			yticklabels({'incorrect','correct'});
+			ytickangle(45);
 			xlim([0 max(in.data.trials)]);
-			title(in.fullName);
+			title("Performance");
 			xlabel('Trial Number');
-			ylabel('Correct (1) / Incorrect (0)');
+			ylabel('Response');
 			nexttile;
 			plot(in.data.trials,in.data.rt,'ko-','MarkerFaceColor',[0 0 0]);
 			xlim([0 max(in.data.trials)]);
 			xlabel('Trial Number');
 			ylabel('Reaction Time (s)');
 			title('Reaction Time');
-			nexttile;
-			plot(time,in.data.phase,'ko-','MarkerFaceColor',[0 0 0]);
-			ylim([0 max(in.data.phase)+1]);
-			xlim([0 max(time)]);
-			xlabel('Task Time (s)');
-			ylabel('Task Phase / Step');
+			if length(unique(in.data.phase)) > 1
+				nexttile;
+				plot(time,in.data.phase,'ko-','MarkerFaceColor',[0 0 0]);
+				ylim([0 max(in.data.phase)+1]);
+				xlim([0 max(time)]);
+				xlabel('Task Time (s)');
+				ylabel('Task Phase / Step');
+			end
 		end
 	end
 
