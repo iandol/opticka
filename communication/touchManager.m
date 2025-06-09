@@ -150,7 +150,7 @@ classdef touchManager < optickaCore
 			else
 				error('Need to pass an open screenManager object!');
 			end
-			touchManager.xinput(me.deviceName, true);
+			try touchManager.xinput(me.deviceName, true); end
 			try [me.devices,me.names,me.allInfo] = GetTouchDeviceIndices([], 1); end
 			if me.isDummy
 				me.comment = 'Dummy Mode Active';
@@ -788,7 +788,7 @@ classdef touchManager < optickaCore
 				enable logical = true
 			end
 			
-			if ~IsLinux; return; end
+			if ~IsLinux || isempty(deviceName); return; end
 			
 			if enable
 				cmd = "enable";
@@ -807,7 +807,11 @@ classdef touchManager < optickaCore
 					tokens = regexp(r(ii), pattern, 'names');
 					if ~isempty(tokens)
 						system("xinput " + cmd + " " + tokens.id);
-						fprintf('Run "xinput <%s>" command on %s\n\n',cmd,deviceName);
+						fprintf('===>>> XInput: Run "xinput <%s> <%i>" command on %s\n\n',cmd,tokens.id,deviceName);
+						WaitSecs('yieldSecs',1);
+						[~,r] = system("xinput list");
+						disp('XInput Device List:');
+						disp(r);
 						break
 					end
 				end

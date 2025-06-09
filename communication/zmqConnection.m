@@ -186,11 +186,18 @@ classdef zmqConnection < optickaCore
 		%> @return data The deserialized MATLAB data received with the command. Empty if no data part or on error.
 		%> @note Updates `sendState` and `recState` properties. Logs received command/data if verbose.
 		% ===================================================================
-			command = ''; data = []; msg = '';
-			if ~me.isOpen; return; end
-			if nargin < 2
-				sendReply = true; % Default behavior: send 'ok' reply
+			arguments(Input)
+				me
+				sendReply logical = true;
 			end
+			arguments(Output)
+				command string
+				data
+				msg string
+			end
+			command = ""; data = []; msg = "";
+			if ~me.isOpen; return; end
+			
 			try
 				[command, data, msg] = receiveObject(me, true);
 				me.sendState = false; me.recState = true; % Update state after successful receive attempt
