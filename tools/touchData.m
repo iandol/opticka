@@ -3,6 +3,7 @@ classdef touchData < optickaCore
 	properties
 		subject
 		data struct
+		info struct
 		verbose = true
 	end
 
@@ -48,8 +49,8 @@ classdef touchData < optickaCore
 			if exist('rt','var'); me.data.rt(n) = rt; end
 			if exist('stimulus','var'); me.data.stimulus(n) = stimulus; end
 			if exist('info','var'); me.data.info{n} = info; end
-			if exist('xAll','var'); me.data.xAll{n} = info; end
-			if exist('yAll','var'); me.data.info{n} = info; end
+			if exist('xAll','var'); me.data.xAll{n} = xAll; end
+			if exist('yAll','var'); me.data.yAll{n} = yAll; end
 			if exist('yAll','var'); me.data.value(n) = value; end
 			me.nData = n;
 		end

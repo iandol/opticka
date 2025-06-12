@@ -47,7 +47,10 @@ classdef audioManager < optickaCore
 			if ~isValid
 				me.salutation('constructor','Please ensure valid file/dir name');
 			end
-			if ~isempty(me.device) && me.device < 0; me.silentMode = true; end
+			if ischar(me.device); me.device = eval(me.device); end
+			if ~isempty(me.device) 
+				if me.device < 0 || isnan(me.device); me.silentMode = true; end
+			end
 			try
 				PsychPortAudio('Close');
 				InitializePsychSound(me.lowLatency);
