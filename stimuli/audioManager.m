@@ -55,6 +55,9 @@ classdef audioManager < optickaCore
 				PsychPortAudio('Close');
 				InitializePsychSound(me.lowLatency);
 				me.devices = PsychPortAudio('GetDevices');
+				if ~isempty(me.device) && me.verbose
+					try disp(me.devices(me.device-1)); end
+				end
 			catch
 				warning('audioManager: Could not initialise audio devices!!!')
 			end
@@ -139,7 +142,7 @@ classdef audioManager < optickaCore
 			if ~exist('when','var'); when = []; end
 			if ~me.isSetup; setup(me);end
 			if ~me.isSample; loadSamples(me);end
-			if me.isSetup && me.isSample
+			if me.isSetup && me.isSample && me.isValid
 				PsychPortAudio('Start', me.aHandle, [], when);
 			end
 		end
@@ -215,13 +218,12 @@ classdef audioManager < optickaCore
 			try 
 				if ~isempty(me.aHandle)
 					PsychPortAudio('Stop', me.aHandle, 0, 1); 
-				end
-				try PsychPortAudio('DeleteBuffer'); end %#ok<*TRYNC> 
-				try 
+					try PsychPortAudio('DeleteBuffer'); end %#ok<*TRYNC> 
 					PsychPortAudio('Close',me.aHandle); 
-				catch
+				else
+					try PsychPortAudio('DeleteBuffer'); end %#ok<*TRYNC> 
 					PsychPortAudio('Close');
-				end 
+				end
 				if isnan(me.device); me.device = []; end
 				me.aHandle = [];
 				me.status = [];
@@ -229,11 +231,12 @@ classdef audioManager < optickaCore
 				me.isSetup = false; me.isOpen = false; me.isSample = false;
 				me.silentMode = false;
 			catch ME
+				try PsychPortAudio('Close'); end
 				me.aHandle = [];
 				me.status = [];
 				me.frequency = [];
 				me.isSetup = false; me.isOpen = false; me.isSample = false;
-				getReport(ME)
+				warning('audioManager:reset','%s',ME.message);
 			end
 			try InitializePsychSound(me.lowLatency); end
 		end
@@ -269,8 +272,8 @@ classdef audioManager < optickaCore
 			if isempty(me.fileName) || ~exist(me.fileName,'file')
 				p = mfilename('fullpath');
 				p = fileparts(p);
-				me.fileName = [p filesep 'Coo2.wav'];
-				me.fileNames{1} = me.fileName;
+				%me.fileName = [p filesep 'Coo2.wav'];
+				%me.fileNames{1} = me.fileName;
 			elseif exist(me.fileName,'dir') == 7
 				findFiles(me);
 			end

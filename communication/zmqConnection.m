@@ -146,7 +146,7 @@ classdef zmqConnection < optickaCore
 			if ~me.isOpen; return; end
 			if nargin < 4 || isempty(getReply); getReply = true; end
 			if nargin < 3 || isempty(data); data = {}; end
-			if nargin < 2 || isempty(command); error('You must pass a command!'); end
+			if nargin < 2 || isempty(command); error('---> zmq: You must pass a command!'); end
 			try
 				[status, nbytes, msg] = sendObject(me, command, data, true);
 				if status ~= 0
@@ -156,7 +156,7 @@ classdef zmqConnection < optickaCore
 					me.sendState = true; me.recState = false;
 				end
 			catch ME
-				t = sprintf('Receive status %i did not return any command: %s - %s...\n', status, ME.identifier, ME.message);
+				t = sprintf('---> zmq: Receive status %i did not return any command: %s - %s...\n', status, ME.identifier, ME.message);
 				me.addMessage(t);
 				disp(t);
 				me.sendState = false; me.recState = false;
@@ -209,7 +209,7 @@ classdef zmqConnection < optickaCore
 				elseif ~isempty(command)
 					
 					if me.verbose > 0
-						fprintf('Received command: «%s»\n', command);
+						fprintf('---> zmq: Received command: «%s»\n', command);
 						if ~isempty(data)
 							disp('Received data:');
 							disp(data);
@@ -217,7 +217,7 @@ classdef zmqConnection < optickaCore
 					end
 				end
 			catch ME
-				fprintf('Error during receiveCommand: cmd: %s msg: %s err: %s - %s\n', command, msg, ME.identifier, ME.message);
+				fprintf('---> zmq: Error during receiveCommand: cmd: %s msg: %s err: %s - %s\n', command, msg, ME.identifier, ME.message);
 				me.sendState = false; me.recState = false; % Reset state on error
 				command = ''; data = []; % Ensure empty return on error
 				return % Exit function on critical error
@@ -227,7 +227,7 @@ classdef zmqConnection < optickaCore
 			if sendReply && ~isempty(command) && me.recState
 				status = sendObject(me, 'ok', {});
 				if status ~= 0
-					msg = sprintf('Default "ok" reply failed to be sent for command "%s"', command);
+					msg = sprintf('---> zmq: Default "ok" reply failed to be sent for command "%s"', command);
 					me.addMessage(msg);
 					warning(msg);
 					me.sendState = false; % Update state on send failure
@@ -258,7 +258,7 @@ classdef zmqConnection < optickaCore
 					if status == -1; N = 0; end
 				end
 			catch ME
-				if me.verbose; fprintf('Flush error: %s %s', ME.identifier, ME.message); end
+				if me.verbose; fprintf('---> zmq: Flush error: %s %s', ME.identifier, ME.message); end
 			end
 			me.set('RCVTIMEO', me.readTimeOut);
 		end
@@ -272,7 +272,7 @@ classdef zmqConnection < optickaCore
 		%> @return value The current value of the specified socket option.
 		%> @warning Issues a warning if `option` is not provided.
 		% ===================================================================
-			if ~exist('option','var'); warning('No option given...'); return; end
+			if ~exist('option','var'); warning('---> zmq: No option given...'); return; end
 			value = me.socket.get(option);
 		end
 
@@ -286,11 +286,11 @@ classdef zmqConnection < optickaCore
 		%> @return status 0 on success, non-zero on failure.
 		%> @warning Issues warnings if `option` or `value` are not provided.
 		% ===================================================================
-			if ~exist('option','var'); warning('No option given...'); return; end
-			if ~exist('value','var'); warning('No value given...'); return; end
+			if ~exist('option','var'); warning('---> zmq: No option given...'); return; end
+			if ~exist('value','var'); warning('---> zmq: No value given...'); return; end
 			status = me.socket.set(option, value);
 			if status ~= 0
-				warning('zmqConnection:set:failure','Failed to set %s', option)
+				warning('zmqConnection:set:failure','---> zmq: Failed to set %s', option)
 			end
 		end
 
@@ -317,7 +317,7 @@ classdef zmqConnection < optickaCore
 				me.sendState = true; me.recState = false;
 			catch ME
 				status = -1;
-				t = sprintf('Couldn''t send, perhaps need to receive first: %s - %s', ME.identifier, ME.message);
+				t = sprintf('---> zmq: Couldn''t send, perhaps need to receive first: %s - %s', ME.identifier, ME.message);
 				me.addMessage(t);
 				if me.verbose; disp(t); end
 			end
@@ -344,7 +344,7 @@ classdef zmqConnection < optickaCore
 				me.sendState = false; me.recState = true;
 			catch ME
 				me.sendState = false; me.recState = false;
-				t = sprintf('No data received: %s - %s...\n', ME.identifier, ME.message);
+				t = sprintf('---> zmq: No data received: %s - %s...\n', ME.identifier, ME.message);
 				me.addMessage(t);
 				if me.verbose; disp(t); end
 			end
@@ -411,12 +411,12 @@ classdef zmqConnection < optickaCore
 		
 			% Check if the socket is open
 			if ~me.isOpen
-				error('Socket is not open. Please open the socket before sending data.');
+				error('---> zmq: Socket is not open. Please open the socket before sending data.');
 			end
 
 			% Check if the command is a string
 			if ~exist('command','var') || ~ischar(command) && ~isstring(command)
-				error('Command must be a string or character array.');
+				error('---> zmq: Command must be a string or character array.');
 			end
 
 			if nargin < 5
@@ -485,7 +485,7 @@ classdef zmqConnection < optickaCore
 		% ===================================================================
 			% Check if the socket is open
 			if ~me.isOpen
-				error('Socket is not open. Please open the socket before sending data.');
+				error('---> zmq: Socket is not open. Please open the socket before sending data.');
 			end
 
 			if nargin < 3; options = {}; end
@@ -497,9 +497,9 @@ classdef zmqConnection < optickaCore
 			try
 				frames = me.socket.recv_multipart(options{:});
 			catch ME
-				warning('Failed to get object: %s - %s', ME.identifier, ME.message);
+				warning('---> zmq: Failed to get object: %s - %s', ME.identifier, ME.message);
 				if matches(ME.identifier,'zmq:core:recv:EFSM')
-					t = sprintf('EFSM error, let''s try to flush and send');
+					t = sprintf('---> zmq: EFSM error, let''s try to flush and send');
 					me.addMessage(t);
 					if me.verbose; disp(t); end
 					me.flush;
@@ -521,7 +521,7 @@ classdef zmqConnection < optickaCore
 						end
 					end
 				catch ME
-					msg = 'Cannot parse JSON...';
+					msg = '---> zmq: Cannot parse JSON...';
 					me.addMessage(msg);
 					getReport(ME)
 					return
@@ -529,7 +529,7 @@ classdef zmqConnection < optickaCore
 			else
 				command = frames{1};
 				if command == -1 
-					msg = 'No data received...';
+					msg = '---> zmq: No data received...';
 					me.addMessage(msg);
 					command = '';
 					return
@@ -545,7 +545,7 @@ classdef zmqConnection < optickaCore
 						try
 							data = getArrayFromByteStream(data);
 						catch ME
-							msg = sprintf('Failed to deserialize object: %s - %s', ME.identifier, ME.message);
+							msg = sprintf('---> zmq: Failed to deserialize object: %s - %s', ME.identifier, ME.message);
 							me.addMessage(msg);
 							warning(msg);
 							data = [];
