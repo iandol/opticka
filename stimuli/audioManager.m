@@ -256,6 +256,13 @@ classdef audioManager < optickaCore
 		function delete(me)			
 			reset(me);
 		end
+
+		function showDevices(me)
+			for ii=1:length(me.devices)
+				disp(['===========================Loop: ' num2str(ii)]);
+				disp(me.devices(ii));
+			end
+		end
 		
 	end %---END PUBLIC METHODS---%
 	
