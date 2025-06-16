@@ -1,6 +1,7 @@
 classdef audioManager < optickaCore
 	% AUDIOMANAGER Connects and manages audio playback, set as global aM from runExperiment.runTask()
 	properties
+		%> device ID as returned from PsychAudio
 		device				= []
 		fileName char		= ''
 		numChannels double	= 2
@@ -11,7 +12,7 @@ classdef audioManager < optickaCore
 		silentMode logical	= false 
 		%> chain snd() function to use psychportaudio?
 		chainSnd			= false 
-		verbose				= true
+		verbose				= false
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -54,9 +55,10 @@ classdef audioManager < optickaCore
 			try
 				PsychPortAudio('Close');
 				InitializePsychSound(me.lowLatency);
-				me.devices = PsychPortAudio('GetDevices');
 				if ~isempty(me.device) && me.verbose
-					try disp(me.devices(me.device-1)); end
+					try disp(me.devices(getDevice(me))); end
+				else
+					me.devices = PsychPortAudio('GetDevices');
 				end
 			catch
 				warning('audioManager: Could not initialise audio devices!!!')
@@ -82,17 +84,20 @@ classdef audioManager < optickaCore
 			if me.silentMode || me.isOpen; return; end
 			isValid = checkFiles(me);
 			if ~isValid
-				warning('NO valid file/dir name');
+				%warning('NO valid file/dir name');
 			end
 
 			InitializePsychSound(me.lowLatency);
 			try PsychPortAudio('Close'); end
-			me.devices = PsychPortAudio('GetDevices');
-
-			if me.device > length(me.devices)
+			idx = getDeviceIndex(me);
+			
+			if ~isempty(idx) && (idx < 1 || idx > length(me.devices))
 				fprintf('You have specified a non-existant device, trying first available device!\n');
-				me.device = me.devices(1).DeviceIndex;
-				fprintf('Using device %i: %s\n',me.device,me.devices(1).DeviceName);
+				me.device = [];
+				fprintf('Using default device %i\n',me.device);
+			else
+				fprintf('Using selected device %i with DeviceIndex = %i:\n',idx, me.device);
+				disp(me.devices(idx));
 			end
 			try
 				PsychPortAudio('Close');
@@ -307,6 +312,21 @@ classdef audioManager < optickaCore
 				end
 			end
 			if ~isempty(me.fileNames); me.isFiles = true; end
+		end
+
+		% ===================================================================
+		%> @brief getDeviceIndex
+		%>  
+		% ===================================================================
+		function idx = getDeviceIndex(me)
+			idx = [];
+			me.devices = PsychPortAudio('GetDevices');
+			idxs = [me.devices.DeviceIndex];
+			if isempty(me.device) || me.device < min(idxs) || me.device > max(idxs)
+				return; 
+			end
+			idx = find(idxs == me.device);
+			if isempty(idxs); warning('Couldn''t find device ID %i...', me.device);end
 		end
 		
 	end %---END PROTECTED METHODS---%
