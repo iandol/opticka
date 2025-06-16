@@ -788,7 +788,7 @@ classdef touchManager < optickaCore
 				enable string = "enable"
 			end
 			
-			if ~IsLinux || isempty(deviceName); warning('Need Linux and a valid device name');return; end
+			if ~IsLinux || matches(deviceName,""); return; end
 			
 			enable = lower(enable);
 			
@@ -812,12 +812,11 @@ classdef touchManager < optickaCore
 					if ~isempty(tokens)
 						attempt = true;
 						[ret,msg] = system("xinput " + cmd + " " + tokens.id);
-						fprintf('===>>> XInput: Run "xinput <%s> <%i>" command on %s\n\n',cmd,tokens.id,deviceName);
-						WaitSecs('yieldSecs',1);
+						fprintf('===>>> XInput: Run [xinput <%s> <%i>] on %s\n\n',cmd,tokens.id,deviceName);
 						[~,r] = system("xinput list");
+						WaitSecs('YieldSecs',1);
 						disp('XInput Device List:');
 						disp(r);
-						
 						break
 					end
 				end
