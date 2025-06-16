@@ -126,7 +126,7 @@ classdef touchManager < optickaCore
 			me = me@optickaCore(args); %superclass constructor
 			me.parseArgs(args, me.allowedProperties);
 
-			touchManager.xinput(me.deviceName, true);
+			touchManager.enableTouchDevice(me.deviceName, "enable");
 
 			% PTB finds touch interfaces from all inputs.
 			try [me.devices,me.names,me.allInfo] = GetTouchDeviceIndices([], 1); end %#ok<*TRYNC>
@@ -150,7 +150,7 @@ classdef touchManager < optickaCore
 			else
 				error('Need to pass an open screenManager object!');
 			end
-			try touchManager.xinput(me.deviceName, true); end
+			try touchManager.enableTouchDevice(me.deviceName, "enable"); end
 			try [me.devices,me.names,me.allInfo] = GetTouchDeviceIndices([], 1); end
 			if me.isDummy
 				me.comment = 'Dummy Mode Active';
@@ -779,22 +779,26 @@ classdef touchManager < optickaCore
 	methods (Static = true) %------------------STATIC METHODS
 	%=======================================================================
 		
-		function xinput(deviceName, enable)
-			% on linux we can use xinput to list and enable/disable touch
-			% interfaces, here we ensure the named touch interface is
-			% explicitly enabled
+		function enableTouchDevice(deviceName, enable)
+			%> On linux we can use xinput to list and enable/disable touch
+			%> interfaces, here we try to make the named touch interface
+			%> enabled or disabled.
 			arguments(Input)
 				deviceName string = ""
-				enable logical = true
+				enable string = "enable"
 			end
 			
-			if ~IsLinux || isempty(deviceName); return; end
+			if ~IsLinux || isempty(deviceName); warning('Need Linux and a valid device name');return; end
 			
-			if enable
+			enable = lower(enable);
+			
+			if matches(enable,["on","yes","true","enable"])
 				cmd = "enable";
 			else
 				cmd = "disable";
 			end
+
+			ret = 0; msg = ''; attempt = false;
 
 			try
 				[~,r] = system("xinput list");
@@ -806,14 +810,21 @@ classdef touchManager < optickaCore
 				for ii = 1:length(r)
 					tokens = regexp(r(ii), pattern, 'names');
 					if ~isempty(tokens)
-						system("xinput " + cmd + " " + tokens.id);
+						attempt = true;
+						[ret,msg] = system("xinput " + cmd + " " + tokens.id);
 						fprintf('===>>> XInput: Run "xinput <%s> <%i>" command on %s\n\n',cmd,tokens.id,deviceName);
 						WaitSecs('yieldSecs',1);
 						[~,r] = system("xinput list");
 						disp('XInput Device List:');
 						disp(r);
+						
 						break
 					end
+				end
+				if attempt == true && ret == 1
+					warning('touchManager.enableTouchDevice failed: %s',msg);
+				elseif attempt == false
+					warning('touchManager.enableTouchDevice device not found: %s',deviceName);
 				end
 			end
 		end
