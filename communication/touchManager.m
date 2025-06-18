@@ -148,22 +148,22 @@ classdef touchManager < optickaCore
 				me.ppd = sM.ppd;
 				me.screenVals = sM.screenVals;
 			else
-				error('Need to pass an open screenManager object!');
+				error('≣≣≣≣⊱touchManager:Need to pass an open screenManager object!');
 			end
 			try touchManager.enableTouchDevice(me.deviceName, "enable"); end
 			try [me.devices,me.names,me.allInfo] = GetTouchDeviceIndices([], 1); end
 			if me.isDummy
 				me.comment = 'Dummy Mode Active';
-				fprintf('--->touchManager: %s\n',me.comment);
+				fprintf('≣≣≣≣⊱touchManager: %s\n',me.comment);
 			elseif isempty(me.devices)
 				me.comment = 'No Touch Screen are available, please check USB!';
-				warning('--->touchManager: %s\n',me.comment);
+				warning('≣≣≣≣⊱touchManager: %s\n',me.comment);
 			elseif isscalar(me.devices)
 				me.comment = sprintf('found ONE Touch Screen: %s',me.names{1});
-				fprintf('--->touchManager: %s\n',me.comment);
+				fprintf('≣≣≣≣⊱touchManager: %s\n',me.comment);
 			elseif length(me.devices)==2
 				me.comment = sprintf('found TWO Touch Screens plugged %s %s',me.names{1},me.names{2});
-				fprintf('--->touchManager: %s\n',me.comment);
+				fprintf('≣≣≣≣⊱touchManager: %s\n',me.comment);
 			end
 		end
 
@@ -176,12 +176,12 @@ classdef touchManager < optickaCore
 		% ===================================================================
 			if me.isDummy; me.isQueue = true; return; end
 			if isempty(me.devices) || isempty(me.device) || me.device <= 0
-				error('--->touchManager: no available devices!!!')
+				error('≣≣≣≣⊱touchManager: no available devices!!!')
 			end
 			try
 				TouchQueueCreate(me.swin, me.devices(me.device), me.nSlots);
 			catch
-				warning('touchManager: Cannot create touch queue!');
+				warning('≣≣≣≣⊱touchManager: Cannot create touch queue!');
 			end
 			me.isQueue = true;
 			if me.verbose; logOutput(me,'createQueue','Created...'); end
@@ -255,6 +255,43 @@ classdef touchManager < optickaCore
 				if any(b) || me.lastPressed; navail = 1; end
 			else
 				navail = TouchEventAvail(me.devices(me.device));
+			end
+		end
+
+		% ===================================================================
+		function updateWindow(me,X,Y,radius,doNegation,negationBuffer,strict,init,hold,release)
+		%> @fn updateWindow
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+			arguments(Input)
+				me
+				X = []
+				Y = []
+				radius = []
+				doNegation = []
+				negationBuffer = []
+				strict = []
+				init = []
+				hold = []
+				release = []
+			end
+			if ~isempty(X); me.window.X = X; end
+			if ~isempty(Y); me.window.Y = Y; end
+			if ~isempty(radius); me.window.radius = radius; end
+			if ~isempty(doNegation); me.window.doNegation = doNegation; end
+			if ~isempty(negationBuffer); me.window.negationBuffer = negationBuffer; end
+			if ~isempty(strict); me.window.strict = strict; end
+			if ~isempty(init); me.window.init = init; end
+			if ~isempty(hold); me.window.hold = hold; end
+			if ~isempty(release); me.window.release = release; end
+			if me.verbose
+				fprintf('≣updateWindow⊱ X:%s Y:%s R:%s Neg:%i Buf:%.1f Strict:%i Init:%.1f Hold:%.1f Rel: %.1f',...
+				num2str(me.window().X,'%.1f'), num2str(me.window().X,'%.1f'),...
+				num2str(me.window.radius,'%.1f'),me.window.doNegation,...
+				me.window.negationBuffer,me.window.strict,...
+				me.window.init,me.window.hold,me.window.release);
 			end
 		end
 
@@ -481,7 +518,7 @@ classdef touchManager < optickaCore
 				me.wasNegation = true;
 				searching = false;
 				failed = true;
-				if me.verbose; fprintf('≣≣≣≣⊱ touchManager -100 NEGATION!\n'); end
+				if me.verbose; fprintf('≣isHold⊱ touchManager -100 NEGATION!\n'); end
 				return
 			end
 
@@ -558,8 +595,9 @@ classdef touchManager < optickaCore
 			me.isSearching = searching;
 			me.isReleased = release;
 			if me.verbose
-				fprintf('≣isHold⊱%s⊱%s:%i new:%i mv:%i prs:%i rel:%i {%.1fX %.1fY} tt:%.2f st:%.2f ht:%.2f rt:%.2f inWin:%i tchd:%i h:%i ht:%i r:%i rl:%i s:%i fail:%i N:%i\n',...
-				me.name,st,me.eventID,me.eventNew,me.eventMove,me.eventPressed,me.eventRelease,me.x,me.y,...
+				fprintf('≣isHold⊱%s⊱%s:%i new:%i mv:%i prs:%i rel:%i {%.1fX %.1fY - %.1f %.1f} tt:%.2f st:%.2f ht:%.2f rt:%.2f inWin:%i tchd:%i h:%i ht:%i r:%i rl:%i s:%i fail:%i N:%i\n',...
+				me.name,st,me.eventID,me.eventNew,me.eventMove,me.eventPressed,me.eventRelease,...
+				me.x,me.y,me.window.X,me.window.Y,...
 				me.hold.total,me.hold.search,me.hold.length,me.hold.release,...
 				me.hold.inWindow,me.hold.touched,...
 				held,heldtime,release,releasing,searching,failed,me.hold.N);
@@ -582,7 +620,9 @@ classdef touchManager < optickaCore
 				out = yesString;
 			end
 			if me.verbose && ~isempty(out)
-				fprintf('≣testHold = %s > held:%i heldtime:%i rel:%i reling:%i ser:%i fail:%i touch:%i\n', out, held, heldtime, release, releasing, searching, failed, touch)
+				fprintf('≣testHold⊱ %s held:%i heldtime:%i rel:%i reling:%i ser:%i fail:%i touch:%i x:%.1f [%.1f] y:%.1f [%.1f]\n',...
+					out, held, heldtime, release, releasing, searching, failed, touch,...
+					me.x, me.y, me.window.X, me.window.Y)
 			end
 		end
 
@@ -601,7 +641,7 @@ classdef touchManager < optickaCore
 				out = yesString;
 			end
 			if me.verbose && ~isempty(out)
-				fprintf('≣testHoldRelease = %s > held:%i time:%.3f rel:%i rel:%i ser:%i fail:%i touch:%i\n', out, held, heldtime, release, releasing, searching, failed, touch)
+				fprintf('≣testHoldRelease⊱ %s held:%i time:%.3f rel:%i rel:%i ser:%i fail:%i touch:%i\n', out, held, heldtime, release, releasing, searching, failed, touch)
 			end
 		end
 

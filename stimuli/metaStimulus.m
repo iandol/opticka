@@ -33,8 +33,9 @@ classdef metaStimulus < optickaCore
 		%> do we draw the mask stimuli instead?
 		showMask logical	= false
 		%> sets of stimuli, e.g. [[1 2 3], [2 3], [1 3]]
+		%> you can quickly switch sets with showSet()
 		stimulusSets		= []
-		%> which set of stimuli to display when calling showSet()
+		%> default set of stimuli to display when calling showSet()
 		setChoice			= 0;
 		%> which stimuli should getFixationPositions() return the positions for?
 		fixationChoice		= []
