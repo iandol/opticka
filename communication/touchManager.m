@@ -195,7 +195,7 @@ classdef touchManager < optickaCore
 		% ===================================================================
 			if me.isDummy; me.isOpen = true; return; end
 			if ~me.isQueue; createQueue(me); end
-			if isempty(me.devices(me.device)); error("--->touchManager: no device available!!!"); end
+			if isempty(me.devices(me.device)); error("≣≣≣≣⊱touchManager: no device available!!!"); end
 			TouchQueueStart(me.devices(me.device));
 			me.isOpen = true;
 			if me.verbose; logOutput(me,'start','Started queue...'); end
@@ -287,7 +287,7 @@ classdef touchManager < optickaCore
 			if ~isempty(hold); me.window.hold = hold; end
 			if ~isempty(release); me.window.release = release; end
 			if me.verbose
-				fprintf('≣updateWindow⊱ X:%s Y:%s R:%s Neg:%i Buf:%.1f Strict:%i Init:%.1f Hold:%.1f Rel: %.1f',...
+				fprintf('≣updateWindow⊱ X:%s Y:%s R:%s Neg:%i Buf:%.1f Strict:%i Init:%.1f Hold:%.1f Rel: %.1f\n',...
 				num2str(me.window().X,'%.1f'), num2str(me.window().X,'%.1f'),...
 				num2str(me.window.radius,'%.1f'),me.window.doNegation,...
 				me.window.negationBuffer,me.window.strict,...
@@ -372,7 +372,7 @@ classdef touchManager < optickaCore
 							me.lastPressed = false;
 						end
 					case 5 %ERROR
-						warning('touchManager: Event lost!');
+						warning('≣≣≣≣⊱touchManager: Event lost!');
 						me.event = []; evt = [];
 						me.lastPressed = false;
 						return

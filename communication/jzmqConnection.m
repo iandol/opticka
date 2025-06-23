@@ -23,7 +23,7 @@ classdef jzmqConnection < optickaCore
 		%> for sendCommand and receiveCommand use zmq.core.poll?
 		alwaysPoll			= false
 		%> use a http proxy to send message
-		httpProxy			= 'http://localhost:9012/cmds/proxies/matlab'
+		httpProxy			= 'http://localhost:9012/api/cmds/proxies/matlab'
 	end
 
 	properties (Dependent = true)
@@ -647,7 +647,7 @@ classdef jzmqConnection < optickaCore
 			dataStruct = struct('command',command,'dataType','byteStream','data', data);
 			try
 				response = webwrite(proxy, dataStruct, opts);
-				fprintf('send "%s" - respone: \n%s\n', command, jsonencode(response));
+				fprintf('sendViaProxy send: "%s" - respone: \n%s\n', command, jsonencode(response));
 				if isstruct(response) && isfield(response,'dataType') && matches(response.dataType,'byteStream')
 					try dataOut = getArrayFromByteStream(uint8(response.data)); end
 					if ~isempty(dataOut)
