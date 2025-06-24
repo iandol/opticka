@@ -231,15 +231,17 @@ classdef touchManager < optickaCore
 		end
 
 		% ===================================================================
-		function flush(me)
+		function n = flush(me)
 		%> @fn flush(me)
 		%>
 		%> @param
-		%> @return
+		%> @return n number of flushed events
 		% ===================================================================
 			reset(me);
+			n = 0;
 			if me.isDummy; return; end
-			TouchEventFlush(me.devices(me.device));
+			n = TouchEventFlush(me.devices(me.device));
+			if me.verbose; fprintf('≣Flush⊱ Touch queue flushed %i events...\n',n); end
 		end
 
 		% ===================================================================
@@ -247,7 +249,7 @@ classdef touchManager < optickaCore
 		%> @fn eventAvail(me)
 		%>
 		%> @param
-		%> @return nAvail number of available events
+		%> @return navail number of available events
 		% ===================================================================
 			navail = 0;
 			if me.isDummy
@@ -260,7 +262,7 @@ classdef touchManager < optickaCore
 
 		% ===================================================================
 		function updateWindow(me,X,Y,radius,doNegation,negationBuffer,strict,init,hold,release)
-		%> @fn updateWindow
+		%> @fn updateWindow update the touch ewindow parameters
 		%>
 		%> @param
 		%> @return
@@ -354,31 +356,41 @@ classdef touchManager < optickaCore
 			else
 				evt = getEvents(me);
 			end
-			me.eventNew = false; me.eventMove = false; me.eventRelease = false; me.eventPressed = false;
 			if ~isempty(evt)
+				me.eventNew = false; me.eventMove = false; me.eventRelease = false; me.eventPressed = false;
+				for ii = 1:length(evt)
+					switch evt(ii).Type
+						case 2 %NEW
+							me.eventNew = true;
+							me.eventPressed = true;
+							me.lastPressed = true;
+							me.eventMove = false;
+						case 3 %MOVE
+							me.eventNew = false;
+							me.eventMove = true;
+							me.eventPressed = true;
+						case 4 %RELEASE
+							if me.lastPressed || me.isDummy
+								me.eventNew = false;
+								me.eventMove = false;
+								me.eventRelease = true;
+								me.lastPressed = false;
+							end
+						case 5 %ERROR
+							warning('≣≣≣≣⊱touchManager: Event lost!');
+							me.event = []; evt = [];
+							me.lastPressed = false;
+							return
+					end
+					if evt(ii).Type == 2 || evt(ii).Type == 3
+						evt(ii).xy = me.screen.toDegrees([evt(ii).MappedX evt(ii).MappedY],'xy');
+						me.xAll = [me.xAll evt(ii).xy(1)];
+						me.yAll = [me.yAll evt(ii).xy(2)];
+					end
+				end
+				evt = evt(end);
 				me.eventID		= evt.Keycode;
 				me.eventType	= evt.Type;
-				switch evt.Type
-					case 2 %NEW
-						me.eventNew = true;
-						me.eventPressed = true;
-						me.lastPressed = true;
-					case 3 %MOVE
-						me.eventMove = true;
-						me.eventPressed = true;
-					case 4 %RELEASE
-						if me.lastPressed || me.isDummy
-							me.eventRelease = true;
-							me.lastPressed = false;
-						end
-					case 5 %ERROR
-						warning('≣≣≣≣⊱touchManager: Event lost!');
-						me.event = []; evt = [];
-						me.lastPressed = false;
-						return
-					otherwise
-						
-				end
 				if me.panelType == 2; evt.changeX = true; evt.MappedX = me.screenVals.width - evt.MappedX; end
 				evt.xy = me.screen.toDegrees([evt.MappedX evt.MappedY],'xy');
 				me.event = evt;
@@ -396,13 +408,8 @@ classdef touchManager < optickaCore
 		% ===================================================================
 		function [touch, evt] = isTouch(me)
 			touch = false;
-			evt = getEvent(me);
-			while iscell(evt) && ~isempty(evt); evt = evt{1}; end
-			if isempty(evt)
-				return
-			else
-				touch = me.eventPressed;
-			end
+			getEvent(me);
+			touch = logical(me.lastPressed);
 		end
 
 		% ===================================================================
@@ -446,13 +453,13 @@ classdef touchManager < optickaCore
 				me.event.result = result;
 				if any(result); me.wasInWindow = true; end
 			end
-			if me.verbose && ~me.deferLog
+			if me.verbose
 				winres = win;
 				if winres == 0
 					winres = 1; 
 				end
-				fprintf('≣checkWin%s⊱%i wasHeld:%i type:%i result:%i new:%i mv:%i prs:%i rel:%i {%.1fX %.1fY} win:%i [%.1fX %.1fY]\n',...
-				me.name, me.eventID, me.wasHeld, evt.Type, result, me.eventNew, me.eventMove, me.eventPressed, me.eventRelease,...
+				fprintf('≣checkWin%s⊱%i wasHeld:%i type:%i result:%i new:%i mv:%i prs:%i lastprs: %i rel:%i {%.1fX %.1fY}\n\twin:%i [%.1fX %.1fY]\n',...
+				me.name, me.eventID, me.wasHeld, evt.Type, result, me.eventNew, me.eventMove, me.eventPressed, me.lastPressed, me.eventRelease,...
 				me.x, me.y, win, me.window(winres).X, me.window(winres).Y);
 			end
 		end
@@ -755,6 +762,9 @@ classdef touchManager < optickaCore
 		% ===================================================================
 			if isempty(me.screen); me.screen = screenManager(); end
 			sM = me.screen;
+			sM.screen = 0;
+			sM.disableSyncTests = true;
+			sM.font.TextSize = 22;
 			if max(Screen('Screens'))==0 && me.verbose
 				PsychDebugWindowConfiguration; 
 			end
@@ -763,7 +773,7 @@ classdef touchManager < optickaCore
 			oldVerbose = me.verbose;
 			me.verbose = true;
 
-			if ~sM.isOpen; open(sM); end
+			if ~sM.isOpen; sv = open(sM); end
 			setup(me, sM); 		%===================!!! Run setup first
 
 			quitKey = KbName('escape');
@@ -774,19 +784,18 @@ classdef touchManager < optickaCore
 				while ~doQuit
 					reset(me);
 					flush(me); 	%===================!!! flush the queue
-					me.window.X = 0;
-					me.window.Y = 0;
-					me.window.radius = 3;
-					me.window.release = 2;
+					me.updateWindow(0,0,3,true,2,true,5,1,1);
 					vbl = flip(sM); ts = vbl;
 					while vbl <= ts + 30
 						[held, heldtime, release, releasing, searching, failed, touch] = isHold(me);
 						txt = sprintf('X: %.1f Y: %.1f - h:%i ht:%i r:%i rl:%i s:%i f:%i touch:%i N:%i - evtX:%.1f evtYvbn  ',...
 							me.x,me.y,held,heldtime,release,releasing,searching,failed,touch,me.hold.N);
 						if ~isempty(me.event) && isstruct(me.event)
-						txt = sprintf('%s\n type:%i evtX:%.1f evtY:%.1f nrmX: %.2f nrmY: %.2f mapX: %.1f mapY: %.1f press:%i motion:%i',...
-								txt, me.event.Type, me.event.X, me.event.Y, me.event.NormX, me.event.NormY,...
+							txt = sprintf('%s\n ID: %i type:%i evtX:%.1f evtY:%.1f nrmX: %.2f nrmY: %.2f mapX: %.1f mapY: %.1f press:%i motion:%i',...
+								txt, me.event.Keycode, me.event.Type, me.event.X, me.event.Y, me.event.NormX, me.event.NormY,...
 								me.event.MappedX,me.event.MappedY,me.event.Pressed,me.event.Motion);
+							txt = sprintf('%s\n new: %i pressed: %i lastpressed: %i move: %i release: %i',...
+								txt, me.eventNew, me.eventPressed, me.lastPressed, me.eventMove, me.eventRelease);
 						end
 						drawGreenSpot(sM, 6); drawTextWrapped(sM,txt); drawScreenCenter(sM);
 						drawGrid(sM);
@@ -803,6 +812,15 @@ classdef touchManager < optickaCore
 				try reset(im); end
 				try close(sM); end
 				clear Screen
+				if ~isempty(me.xAll)
+					figure;
+					plot(me.xAll, me.yAll);
+					xlim([sv.leftInDegrees sv.rightInDegrees]);
+					ylim([sv.topInDegrees sv.bottomInDegrees]);
+					set(gca,'YDir','reverse');
+					xlabel('X Position (deg)');
+					xlabel('Y Position (deg)');
+				end
 			catch ME
 				getReport(ME);
 				try reset(im); end
@@ -842,7 +860,7 @@ classdef touchManager < optickaCore
 
 			try
 				[~,r] = system("xinput list");
-				disp('XInput Device List:');
+				disp('XInput Initial Device List:');
 				disp(r);
 				if isempty(deviceName); return; end
 				pattern = sprintf('(?<name>%s)\\s+id=(?<id>\\d+)', deviceName);
@@ -853,10 +871,11 @@ classdef touchManager < optickaCore
 						attempt = true;
 						[ret,msg] = system("xinput " + cmd + " " + tokens.id);
 						fprintf('===>>> XInput: Run [xinput <%s> <%i>] on %s\n\n',cmd,tokens.id,deviceName);
+						WaitSecs('YieldSecs',1.5);
 						[~,r] = system("xinput list");
-						WaitSecs('YieldSecs',1);
-						disp('XInput Device List:');
+						disp('XInput Final Device List:');
 						disp(r);
+						fprintf('\n\n');
 						break
 					end
 				end
@@ -875,20 +894,19 @@ classdef touchManager < optickaCore
 	%=======================================================================
 
 		% ===================================================================
-		function evt = getEvents(me)
+		function [evt, n] = getEvents(me)
 		%> @fn getEvents
 		%>
 		%> @param
 		%> @return
 		% ===================================================================	
-			evt = [];
-			if me.drainEvents
-				while eventAvail(me) 
-					evt = TouchEventGet(me.devices(me.device), me.swin, 0); 
-				end
-			else
-				evt = TouchEventGet(me.devices(me.device), me.swin, 0);
+			n = 0;
+			while eventAvail(me) > 0
+				n = n + 1;
+				evt(n) = TouchEventGet(me.devices(me.device), me.swin, 0);
 			end
+			if n == 0; evt = []; return; end
+			if me.drainEvents; evt = evt(end); end
 		end
 
 		% ===================================================================
@@ -949,8 +967,5 @@ classdef touchManager < optickaCore
 				result = -100;
 			end
 		end
-
-		
-
 	end
 end
