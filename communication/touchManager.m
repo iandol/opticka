@@ -901,11 +901,29 @@ classdef touchManager < optickaCore
 		%> @return
 		% ===================================================================	
 			n = 0;
+			raw_events = [];
 			while eventAvail(me) > 0
-				n = n + 1;
-				evt(n) = TouchEventGet(me.devices(me.device), me.swin, 0);
+				raw_events = [raw_events, TouchEventGet(me.devices(me.device), me.swin, 0)]; %#ok<AGROW>
 			end
+
+			if isempty(raw_events); evt = []; return; end
+
+			if me.trackID
+				filtered_events = [];
+				for i = 1:length(raw_events)
+					if isstruct(raw_events(i)) && isfield(raw_events(i), 'Keycode') && raw_events(i).Keycode == me.mainID
+						filtered_events = [filtered_events, raw_events(i)]; %#ok<AGROW>
+					end
+				end
+				if isempty(filtered_events); evt = []; return; end
+				evt = filtered_events;
+			else
+				evt = raw_events;
+			end
+
+			n = length(evt);
 			if n == 0; evt = []; return; end
+
 			if me.drainEvents; evt = evt(end); end
 		end
 
