@@ -1,12 +1,20 @@
 % ========================================================================
 classdef touchManager < optickaCore
-%> @class touchManager
-%> @brief Manages touch screens (wraps the PTB TouchQueue* functions), and
-%> provides touch area management methods
+%> @class touchManager @brief Manages touch screens (wraps the PTB
+%> TouchQueue* functions), and provides touch area management methods.
 %>
 %> TOUCHMANAGER -- call this and setup with screen manager, then run your
-%> task. This class can handles touch windows, exclusion zones and more for
-%> multiple touch screens.
+%> task. This class can handles touch windows (circular or rectangular),
+%> exclusion zones and more for multiple touch screens. NOTE: touch
+%> interfaces do not keep state, so if you touch but do not move your finger
+%> then there are no events, so touchManager ensures that the state is
+%> handled for you. The touch queue is also asynchronous to the main PTB
+%> task and so must be handled specifically. The default here is to drop all
+%> but the latest event (drainEvent = true), when false all events are
+%> processed which may take more time. Touchscreens can also cause unwanted
+%> events, especially before/after the task runs (a subject can press
+%> buttons, enter text etc.), so on Linux we also enable / disable the touch
+%> screen when deviceName is passed to try to mitigate this problem.
 %>
 %> Copyright ©2014-2025 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
@@ -22,49 +30,51 @@ classdef touchManager < optickaCore
 		isDummy	logical			= false
 		%> window is a touch window, X and Y are the screen postion
 		%> radius: circular when radius is 1 value, rectangular when radius = [width height])
-		%> doNegation: allows to return -100 (like exclusion) if touch is OUTSIDE window.
-		%> when using the testHold etc functions. negationBuffer is an area
-		%> around the window to allow some margin of error...
 		%> init: timer that tests time to first touch
 		%> hold: timer that determines how long to hold
 		%> release: timer to determine the time after hold in which window should be released
-		window struct			= struct('X', 0, 'Y', 0, 'radius', 2, 'doNegation', false,...
-								'negationBuffer', 2, 'strict', true,...
-								'init', 3, 'hold', 0.05, 'release', 1);
-		%> Use exclusion zones where no touch allowed: [left,top,right,bottom]
-		%> Add rows to generate multiple exclusion zones.
+		%> doNegation: allows to return -100 (like exclusion) if touch is OUTSIDE window.
+		%> when using the testHold etc functions. 
+		%> negationBuffer: is an area around the window to allow some margin of error...
+		window struct			= struct('X', 0, 'Y', 0, 'radius', 2, ...
+								'init', 3, 'hold', 0.05, 'release', 1, ...
+								'doNegation', false, 'negationBuffer', 2, 'strict', true);
+		%> Use exclusion zones where no touch allowed:
+		%> [left,top,right,bottom] Add rows to generate multiple exclusion
+		%> zones. These are checked before the touch windows are.
 		exclusionZone		= []
 		%> drain the events to only get the latest? This ensures lots of
-		%> events don't pile up, often you only want the current event,
-		%> but potentially causes a longer delay each time getEvent is called...
-		drainEvents logical	= true;
-		%> there can be up to 10 touch events, do we record all of them
-		trackID	logical		= false
-		%> which id to track as the main one (1 = first event)
+		%> events don't pile up, often you only want the current event, but
+		%> potentially causes a longer delay each time getEvent is called.
+		%> In theory you may miss specific events like NEW touch so ensure
+		%> this works with your paradigm.
+		drainEvents logical	= true
+		%> there can be up to 10 touch events, do we check if the touch ID matches?
+		trackID	logical		= true
+		%> which id to track as the main one (1 = first event). 
+		%> Note this is different from the event keycode, which increments
+		%> with each event, this is the order of the touch event
 		mainID double		= 1
-		%> panel type, 1 = front, 2 = back (reverses X position)
+		%> panel type, 1 = "front", 2 = "back" (reverses X position)
 		panelType double	= 1
-		%> verbose
+		%> verbose, log more info to command window
+		%> useful for debugging.
 		verbose				= false
 	end
 
-	properties (Hidden = true)
-		%> number of slots for touch events
-		nSlots double		= 1e5
-		%> functions return immediately
-		silentMode logical	= false
-	end
-
 	properties (SetAccess=private, GetAccess=public)
-		% general touch info
+		% general touch info, latest x and y position
 		x					= []
 		y					= []
-		%> All X position in degrees
+		%> Accumulated X position in degrees since last flush
 		xAll				= []
-		%> All Y position in degrees
+		%> Accumulated Y position in degrees since last flush
 		yAll				= []
-		% most recent touch events
-		evts				= []
+		%> times the xAll and yAll coordinates were recorded, see queueTime
+		%> which is the time of the last flush or a sync event to get relative times
+		tAll				= []
+		%> time of last flush or syncTime method call, useful for getting relative times
+		queueTime			= 0
 		% touch event info from getEvent()
 		event				= []
 		eventID				= []
@@ -90,6 +100,13 @@ classdef touchManager < optickaCore
 		allInfo				= []
 	end
 
+	properties (Hidden = true)
+		%> number of slots for touch events
+		nSlots double		= 1e5
+		%> functions return immediately, useful for mocking
+		silentMode logical	= false
+	end
+
 	properties (Access = private)
 		deferLog			= false
 		lastPressed			= false
@@ -99,7 +116,6 @@ classdef touchManager < optickaCore
 		screen				= []
 		swin				= []
 		screenVals			= []
-		evtsTemplate		= struct('id', [], 'type', [], 'x', [], 'y', [])
 		allowedProperties	= {'isDummy','device','deviceName','verbose','window','nSlots',...
 							'panelType','drainEvents','exclusionZone'}
 		holdTemplate		= struct('N',0,'inWindow',false,'touched',false,...
@@ -126,12 +142,12 @@ classdef touchManager < optickaCore
 			me = me@optickaCore(args); %superclass constructor
 			me.parseArgs(args, me.allowedProperties);
 
+			% try to ensure the named touch device is enabled using xinput in Linux-only
 			touchManager.enableTouchDevice(me.deviceName, "enable");
 
-			% PTB finds touch interfaces from all inputs.
+			% PTB: find touch interfaces
 			try [me.devices,me.names,me.allInfo] = GetTouchDeviceIndices([], 1); end %#ok<*TRYNC>
 			me.hold = me.holdTemplate;
-			me.evts = me.evtsTemplate;
 		end
 
 		% ===================================================================SETUP
@@ -183,6 +199,7 @@ classdef touchManager < optickaCore
 			catch
 				warning('≣≣≣≣⊱touchManager: Cannot create touch queue!');
 			end
+			syncTime(me);
 			me.isQueue = true;
 			if me.verbose; logOutput(me,'createQueue','Created...'); end
 		end
@@ -220,6 +237,7 @@ classdef touchManager < optickaCore
 		%> @param choice which touch device to use, default uses me.device
 		%> @return
 		% ===================================================================
+			flush(me);
 			me.isOpen = false;
 			me.isQueue = false;
 			if me.isDummy; return; end
@@ -239,9 +257,20 @@ classdef touchManager < optickaCore
 		% ===================================================================
 			reset(me);
 			n = 0;
+			syncTime(me);
 			if me.isDummy; return; end
 			n = TouchEventFlush(me.devices(me.device));
 			if me.verbose; fprintf('≣Flush⊱ Touch queue flushed %i events...\n',n); end
+		end
+
+		% ===================================================================
+		function syncTime(me)
+		%> @fn syncTime(me) Set the time of the touch queue to the current
+		%> time. We can use this function to set the 0 time, for example
+		%> stimulus onset etc. which can be used for evt.Time and tAll data.
+		%> @return
+		% ===================================================================
+			me.queueTime = GetSecs;
 		end
 
 		% ===================================================================
@@ -306,7 +335,6 @@ classdef touchManager < optickaCore
 		% ===================================================================
 			me.lastPressed 	= false;
 			me.hold			= me.holdTemplate;
-			me.evts			= me.evtsTemplate;
 			me.x			= [];
 			me.y			= [];
 			me.xAll			= [];
@@ -324,6 +352,8 @@ classdef touchManager < optickaCore
 			me.eventID 		= [];
 			me.eventType	= [];
 			me.event		= [];
+			me.currentID	= [];
+			me.queueTime	= GetSecs;
 		end
 
 		% ===================================================================
@@ -359,12 +389,18 @@ classdef touchManager < optickaCore
 			if ~isempty(evt)
 				me.eventNew = false; me.eventMove = false; me.eventRelease = false; me.eventPressed = false;
 				for ii = 1:length(evt)
+					if me.trackID && me.currentID ~= evt(ii).Keycode
+						continue;
+					end
 					switch evt(ii).Type
 						case 2 %NEW
 							me.eventNew = true;
 							me.eventPressed = true;
 							me.lastPressed = true;
 							me.eventMove = false;
+							if isempty(me.currentID) && me.trackID
+								me.currentID = evt(ii).Keycode;
+							end
 						case 3 %MOVE
 							me.eventNew = false;
 							me.eventMove = true;
@@ -376,16 +412,19 @@ classdef touchManager < optickaCore
 								me.eventRelease = true;
 								me.lastPressed = false;
 							end
+							me.currentID = [];
 						case 5 %ERROR
 							warning('≣≣≣≣⊱touchManager: Event lost!');
 							me.event = []; evt = [];
 							me.lastPressed = false;
+							me.currentID = [];
 							return
 					end
 					if evt(ii).Type == 2 || evt(ii).Type == 3
 						evt(ii).xy = me.screen.toDegrees([evt(ii).MappedX evt(ii).MappedY],'xy');
 						me.xAll = [me.xAll evt(ii).xy(1)];
 						me.yAll = [me.yAll evt(ii).xy(2)];
+						me.tAll = [me.tAll evt(ii).Time];
 					end
 				end
 				evt = evt(end);
@@ -406,7 +445,7 @@ classdef touchManager < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function [touch, evt] = isTouch(me)
+		function touch = isTouch(me)
 			touch = false;
 			getEvent(me);
 			touch = logical(me.lastPressed);
