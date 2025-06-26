@@ -15,7 +15,7 @@ classdef touchData < optickaCore
 	properties (Access = protected)
 		dataTemplate = struct('date',[],'startTime',NaN,'comment',[],'phase',[],'time',[],...
 			'trials',[],'value',[],'result',[],'rt',[],'stimulus',[],'timeOut',[],'random',0,'rewards',0,...
-			'info',{},'xAll',{},'yAll',{},'xLast',[],'yLast',[]);
+			'info',{},'xAll',{},'yAll',{},'tAll',{},'xLast',[],'yLast',[]);
 		allowedProperties = {'subject','verbose'}
 	end
 
@@ -33,25 +33,27 @@ classdef touchData < optickaCore
 
 		end
 
-		function update(me,result,phase,trials,rt,stimulus,info,xAll,yAll,value)
+		function update(me,result,phase,trials,rt,stimulus,info,xAll,yAll,tAll,value)
 			if ~exist('result','var'); return; end
 			if me.nData == 0
 				if isempty(me.data); me.data = me.dataTemplate; end
 				me.data(1).date = clock;
+				me.data(1).time = GetSecs;
 				n = 1;
 			else
 				n = me.nData + 1;
 			end
 			me.data.time(n) = GetSecs;
 			me.data.result(n) = result;
-			if exist('phase','var'); me.data.phase(n) = phase; end
-			if exist('trials','var'); me.data.trials(n) = trials; end
-			if exist('rt','var'); me.data.rt(n) = rt; end
-			if exist('stimulus','var'); me.data.stimulus(n) = stimulus; end
-			if exist('info','var'); me.data.info{n} = info; end
-			if exist('xAll','var'); me.data.xAll{n} = xAll; end
-			if exist('yAll','var'); me.data.yAll{n} = yAll; end
-			if exist('yAll','var'); me.data.value(n) = value; end
+			if exist('phase','var') && ~isempty(phase); me.data.phase(n) = phase; end
+			if exist('trials','var') && ~isempty(trials); me.data.trials(n) = trials; end
+			if exist('rt','var') && ~isempty(rt); me.data.rt(n) = rt; end
+			if exist('stimulus','var') && ~isempty(stimulus); me.data.stimulus(n) = stimulus; end
+			if exist('info','var') && ~isempty(info); me.data.info{n} = info; end
+			if exist('xAll','var') && ~isempty(xAll); me.data.xAll{n} = xAll; end
+			if exist('yAll','var') && ~isempty(yAll); me.data.yAll{n} = yAll; end
+			if exist('yAll','var') && ~isempty(tAll); me.data.tAll{n} = tAll; end
+			if exist('value','var') && ~isempty(value); me.data.value(n) = value; end
 			me.nData = n;
 		end
 
@@ -74,7 +76,7 @@ classdef touchData < optickaCore
 			[~,f,e] = fileparts(in.name);
 			tit = [f e];
 			f = figure("Name",tit);
-			tiledlayout(f,"vertical");
+			tiledlayout(f);
 			nexttile;
 			plot(in.data.trials,in.data.result,'ko-','MarkerFaceColor',[0 0 0]);
 			ylim([-0.2 1.2]);
@@ -98,6 +100,18 @@ classdef touchData < optickaCore
 				xlim([0 max(time)]);
 				xlabel('Task Time (s)');
 				ylabel('Task Phase / Step');
+			end
+			if ~isempty(me.xAll)
+				nexttile
+				hold on
+				for ii = 1:length(me.xAll)
+					plot(me.xAll,me.yAll)
+				end
+				xlabel('X Position');
+				ylabel('Y Position');
+				title('Touch Positions');
+				axis equal;
+				hold off
 			end
 		end
 	end
