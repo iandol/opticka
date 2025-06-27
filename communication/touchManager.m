@@ -264,13 +264,14 @@ classdef touchManager < optickaCore
 		end
 
 		% ===================================================================
-		function syncTime(me)
+		function syncTime(me, timestamp)
 		%> @fn syncTime(me) Set the time of the touch queue to the current
 		%> time. We can use this function to set the 0 time, for example
 		%> stimulus onset etc. which can be used for evt.Time and tAll data.
 		%> @return
 		% ===================================================================
-			me.queueTime = GetSecs;
+			if ~exist('timestamp','var');timestamp = GetSecs; end
+			me.queueTime = timestamp;
 		end
 
 		% ===================================================================
@@ -339,6 +340,7 @@ classdef touchManager < optickaCore
 			me.y			= [];
 			me.xAll			= [];
 			me.yAll			= [];
+			me.tAll			= [];
 			me.win			= [];
 			me.wasInWindow	= false;
 			me.wasHeld		= false;
@@ -389,7 +391,7 @@ classdef touchManager < optickaCore
 			if ~isempty(evt)
 				me.eventNew = false; me.eventMove = false; me.eventRelease = false; me.eventPressed = false;
 				for ii = 1:length(evt)
-					if me.trackID && me.currentID ~= evt(ii).Keycode
+					if me.trackID && ~isempty(me.currentID) && me.currentID ~= evt(ii).Keycode
 						continue;
 					end
 					switch evt(ii).Type
@@ -398,9 +400,6 @@ classdef touchManager < optickaCore
 							me.eventPressed = true;
 							me.lastPressed = true;
 							me.eventMove = false;
-							if isempty(me.currentID) && me.trackID
-								me.currentID = evt(ii).Keycode;
-							end
 						case 3 %MOVE
 							me.eventNew = false;
 							me.eventMove = true;
@@ -422,9 +421,11 @@ classdef touchManager < optickaCore
 					end
 					if evt(ii).Type == 2 || evt(ii).Type == 3
 						evt(ii).xy = me.screen.toDegrees([evt(ii).MappedX evt(ii).MappedY],'xy');
-						me.xAll = [me.xAll evt(ii).xy(1)];
-						me.yAll = [me.yAll evt(ii).xy(2)];
-						me.tAll = [me.tAll evt(ii).Time];
+						if ~isempty(evt(ii).xy) && length(evt(ii).xy)==2
+							me.xAll = [me.xAll evt(ii).xy(1)];
+							me.yAll = [me.yAll evt(ii).xy(2)];
+							me.tAll = [me.tAll evt(ii).Time];
+						end
 					end
 				end
 				evt = evt(end);

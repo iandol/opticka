@@ -76,7 +76,7 @@ classdef touchData < optickaCore
 			[~,f,e] = fileparts(in.name);
 			tit = [f e];
 			f = figure("Name",tit);
-			tiledlayout(f);
+			tl = tiledlayout(f);
 			nexttile;
 			plot(in.data.trials,in.data.result,'ko-','MarkerFaceColor',[0 0 0]);
 			ylim([-0.2 1.2]);
@@ -87,12 +87,15 @@ classdef touchData < optickaCore
 			title("Performance");
 			xlabel('Trial Number');
 			ylabel('Response');
+			box on; grid on;
 			nexttile;
 			plot(in.data.trials,in.data.rt,'ko-','MarkerFaceColor',[0 0 0]);
 			xlim([0 max(in.data.trials)]);
 			xlabel('Trial Number');
 			ylabel('Reaction Time (s)');
 			title('Reaction Time');
+			box on; grid on;
+
 			if length(unique(in.data.phase)) > 1
 				nexttile;
 				plot(time,in.data.phase,'ko-','MarkerFaceColor',[0 0 0]);
@@ -100,17 +103,26 @@ classdef touchData < optickaCore
 				xlim([0 max(time)]);
 				xlabel('Task Time (s)');
 				ylabel('Task Phase / Step');
+				box on; grid on;
 			end
-			if ~isempty(me.xAll)
+
+			if ~isempty(in.data.xAll) && iscell(in.data.xAll)
 				nexttile
 				hold on
-				for ii = 1:length(me.xAll)
-					plot(me.xAll,me.yAll)
+				for ii = 1:length(in.data.xAll)
+					x = in.data.xAll{ii};
+					y = in.data.yAll{ii};
+					z = in.data.tAll{ii};
+					if ~isempty(x) && ~isempty(y) && ~isempty(z)
+						scatter3(x,y,z,'filled');
+					end
 				end
-				xlabel('X Position');
-				ylabel('Y Position');
-				title('Touch Positions');
-				axis equal;
+				xlabel('X Position (deg)');
+				ylabel('Y Position (deg)');
+				zlabel('Time (s)');
+				view(30,30)
+				title('Touch Positions (color=trial)');
+				box on; grid on; axis square
 				hold off
 			end
 		end
