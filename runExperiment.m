@@ -3217,6 +3217,7 @@ classdef runExperiment < optickaCore
 						lobj.stateInfoFile = in.paths.stateInfoFile;
 					end
 					if ~exist(lobj.stateInfoFile,'file')
+						warning('The previous stateInfoFile %s is not valid on this machine, look at previousInfo for original data...',lobj.stateInfoFile)
 						tp = lobj.stateInfoFile;
 						tp = regexprep(tp,'(^/\w+/\w+)',lobj.paths.home);
 						if exist(tp,'file')
@@ -3344,6 +3345,9 @@ classdef runExperiment < optickaCore
 				end
 				if ~isObjectLoaded
 					try lobj.previousInfo.all	= in; end
+					try lobj.previousInfo.paths	= in.paths; end
+					try lobj.previousInfo.optickaVersion = in.optickaVersion; end
+					try lobj.previousInfo.userFunctions	= in.userFunctions; end
 					try lobj.stateMachine		= in.stateMachine; end
 					try lobj.eyeTracker			= in.eyeTracker; end
 					try lobj.behaviouralRecord	= in.behaviouralRecord; end

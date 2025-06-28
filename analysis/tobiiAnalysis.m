@@ -467,24 +467,16 @@ classdef tobiiAnalysis < analysisCore
 
 			if isempty(handle)
 				h1=figure('Name',name,'Color',[1 1 1],'NumberTitle','off',...
-					'PaperPositionMode','auto','Papertype','a4','PaperUnits','centimeters',...
-					'PaperOrientation','portrait','Renderer','painters',...
+					'PaperPositionMode','auto','Papertype','a4',...
+					'PaperUnits','centimeters',...
+					'PaperOrientation','portrait',...
 					'Tag','opticka');
 				figpos(1,[0.6 0.9],1,'%');
 			else
 				figure(handle)
 				h1=handle;
 			end
-			p = panel(h1);
-			p.fontsize = 12;
-			p.margin = [10 10 10 20]; %left bottom right top
-			p.pack('v',{2/3, []});
-			q = p(1);
-			q.margin = [20 20 10 25]; %left bottom right top
-			q.pack(2,2);
-			qq = p(2);
-			qq.margin = [20 20 10 25]; %left bottom right top
-			qq.pack(1,2);
+			tl = tiledlayout(h1,3,2,'TileSpacing','tight','Padding','tight');
 			a = 1;
 			stdex = [];
 			meanx = [];
@@ -563,8 +555,8 @@ classdef tobiiAnalysis < analysisCore
 				ya = thisTrial.gy;
 				pupilAll = thisTrial.pa;
 				lim = 50; %max degrees in data
-				xa(xa < -lim) = -lim; xa(xa > lim) = lim; 
-				ya(ya < -lim) = -lim; ya(ya > lim) = lim;
+				xa(xa < -lim) = NaN; xa(xa > lim) = NaN; 
+				ya(ya < -lim) = NaN; ya(ya > lim) = NaN;
 				
 				x = xa(ix);
 				y = ya(ix);
@@ -584,35 +576,34 @@ classdef tobiiAnalysis < analysisCore
 					pupilPlot = smooth(pupilPlot);
 				end
 
-				q(1,1).select();
-				q(1,1).hold('on')
+				nexttile(1);
 				plot(xp, yp,'k-','Color',c,'LineWidth',1,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
 				if isfield(thisTrial,'microSaccades') & ~isnan(thisTrial.microSaccades) & ~isempty(thisTrial.microSaccades)
+					hold on
 					for jj = 1: length(thisTrial.microSaccades)
 						if thisTrial.microSaccades(jj) >= me.plotRange(1) && thisTrial.microSaccades(jj) <= me.plotRange(2)
 							midx = me.findNearest(tp,thisTrial.microSaccades(jj));
-							plot(xp(midx),yp(midx),'ko','Color',c,'MarkerSize',6,'MarkerEdgeColor',[0 0 0],...
+							plot(xp(midx),yp(midx),'^','Color',c,'MarkerSize',6,'MarkerEdgeColor',[1 1 0],...
 								'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable thisTrial.microSaccades(jj)],'ButtonDownFcn', @clickMe);
 						end
 					end
 				end
 				
-				q(1,2).select();
-				q(1,2).hold('on');
-				plot(tp,abs(xp),'k-','Color',c,'MarkerSize',3,'MarkerEdgeColor',c,...
+				nexttile(2);
+				hold on
+				plot(tp,abs(xp),'-','Color',c,'MarkerSize',3,'MarkerEdgeColor',c,...
 					'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
-				plot(tp,abs(yp),'k.-','Color',c,'MarkerSize',3,'MarkerEdgeColor',c,...
+				plot(tp,abs(yp),':','Color',c,'MarkerSize',3,'MarkerEdgeColor',c,...
 					'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
 				maxv = max([maxv, max(abs(xp)), max(abs(yp))]) + 0.1;
 				if isfield(thisTrial,'microSaccades') & ~isnan(thisTrial.microSaccades) & ~isempty(thisTrial.microSaccades)
 					if any(thisTrial.microSaccades >= me.plotRange(1) & thisTrial.microSaccades <= me.plotRange(2))
-						plot(thisTrial.microSaccades,-0.1,'ko','Color',c,'MarkerSize',4,'MarkerEdgeColor',[0 0 0],...
+						plot(thisTrial.microSaccades,-0.1,'^','Color',c,'MarkerSize',4,'MarkerEdgeColor',[1 1 0],...
 							'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
 					end
 				end
 				
-				qq(1,2).select();
-				qq(1,2).hold('on')
+				nexttile(5,[1 2])
 				plot(tp,pupilPlot,'Color',c, 'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
 				
 				idxt = find(t >= t1 & t <= t2);
@@ -631,81 +622,82 @@ classdef tobiiAnalysis < analysisCore
 				stdey = [stdey std(ya(idxt))];
 
 				udt = [thisTrial.idx thisTrial.correctedIndex thisTrial.variable];
-				q(2,1).select();
-				q(2,1).hold('on');
+				nexttile(3);
 				plot(meanx(end), meany(end),'ko','Color',c,'MarkerSize',6,'MarkerEdgeColor',[0 0 0],...
 					'MarkerFaceColor',c,'UserData', udt,'ButtonDownFcn', @clickMe);
 
-				q(2,2).select();
-				q(2,2).hold('on');
+				nexttile(4)
 				plot3(meanx(end), meany(end),a,'ko','Color',c,'MarkerSize',6,'MarkerEdgeColor',[0 0 0],...
 					'MarkerFaceColor',c,'UserData', udt,'ButtonDownFcn', @clickMe);
 				a = a + 1;
 
 			end
 
-			q(1,1).select();
-			ah = gca; ah.ButtonDownFcn = @spawnMe;
+			%q(1,1).select();
+			ah = nexttile(1); ah.FontSize = 6;
+			ah.ButtonDownFcn = @spawnMe;
 			ah.DataAspectRatio = [1 1 1];
-			axis ij; axis equal;
+			axis ij; 
+			axis tight;
+			axis equal;
 			grid on;
 			box on;
 			%axis(round([-display(1)/2 display(1)/2 -display(2)/2 display(2)/2]));
-			title(q(1,1),[thisVarName upper(type) ': X vs. Y Eye Position']);
-			xlabel(q(1,1),'X Deg');
-			ylabel(q(1,1),'Y Deg');
+			title(ah,[thisVarName upper(type) ': X vs. Y Eye Position'],'FontSize',6);
+			xlabel(ah,'X Deg');
+			ylabel(ah,'Y Deg');
 
-			q(1,2).select();
-			ah = gca; ah.ButtonDownFcn = @spawnMe;
+			%q(1,2).select();
+			ah = nexttile(2); ah.FontSize = 6;
+			ah.ButtonDownFcn = @spawnMe;
 			grid on;
 			box on;
 			axis tight;
-			axis([me.plotRange(1) me.plotRange(2) -0.2 maxv])
+			%axis([me.plotRange(1) me.plotRange(2) -0.2 maxv])
 			ti=sprintf('ABS Mean/SD %g - %g s: X=%.2g / %.2g | Y=%.2g / %.2g', t1,t2,...
 				mean(abs(meanx)), mean(abs(stdex)), ...
 				mean(abs(meany)), mean(abs(stdey)));
 			ti2 = sprintf('ABS Median/SD %g - %g s: X=%.2g / %.2g | Y=%.2g / %.2g', t1,t2,median(abs(medx)), median(abs(stdex)), ...
 				median(abs(medy)), median(abs(stdey)));
-			h=title(sprintf('X & Y(dot) Position vs. Time\n%s\n%s', ti,ti2));
-			set(h,'BackgroundColor',[1 1 1]);
-			xlabel(q(1,2),'Time (s)');
-			ylabel(q(1,2),'Degrees');
+			title(sprintf('X & Y(dot) Position vs. Time\n%s\n%s', ti,ti2),'FontSize',6);
+			xlabel(ah,'Time (s)');
+			ylabel(ah,'Degrees');
 
 			
-			qq(1,2).select();
-			ah = gca; ah.ButtonDownFcn = @spawnMe;
+			ah = nexttile(5); ah.FontSize = 6;
+			ah.ButtonDownFcn = @spawnMe;
 			axis([me.plotRange(1) me.plotRange(2) -inf inf]);
 			grid on;
-			box on;
-			title(qq(1,2),[thisVarName upper(type) ': Pupil Diameter']);
-			xlabel(qq(1,2),'Time (s)');
-			ylabel(qq(1,2),'Diameter');
+			box on; axis tight;
+			title(ah,[thisVarName upper(type) ': Pupil Diameter'],'FontSize',6);
+			xlabel(ah,'Time (s)');
+			ylabel(ah,'Diameter');
 
-			q(2,1).select();
+			ah = nexttile(3); ah.FontSize = 6;
 			ah = gca; ah.ButtonDownFcn = @spawnMe;
 			axis ij;
 			grid on;
 			box on;
-			axis tight;
-			axis([-1 1 -1 1])
-			h=title(sprintf('X & Y %g-%gs MD/MN/STD: \nX : %.2g / %.2g / %.2g | Y : %.2g / %.2g / %.2g', ...
-				t1,t2,mean(meanx), median(medx),mean(stdex),mean(meany),median(medy),mean(stdey)));
-			set(h,'BackgroundColor',[1 1 1]);
-			xlabel(q(2,1),'X Degrees');
-			ylabel(q(2,1),'Y Degrees');
+			%axis tight;
+			%axis([-1 1 -1 1])
+			title(sprintf('X & Y %g-%gs MD/MN/STD: \nX : %.2g / %.2g / %.2g | Y : %.2g / %.2g / %.2g', ...
+				t1,t2,mean(meanx), median(medx),mean(stdex),mean(meany),median(medy),mean(stdey)),...
+				'FontSize',6);
+			xlabel(ah,'X Degrees');
+			ylabel(ah,'Y Degrees');
 
-			q(2,2).select();
-			ah = gca; ah.ButtonDownFcn = @spawnMe;
+			ah = nexttile(4); ah.FontSize = 6;
+			ah.ButtonDownFcn = @spawnMe;
 			grid on;
 			box on;
-			axis tight;
-			axis([-1 1 -1 1]);
+			%axis tight;
+			%axis([-1 1 -1 1]);
 			%axis square
 			view(47,15);
-			title(sprintf('%s %s Mean X & Y Pos %g-%g-s over time',thisVarName,upper(type),t1,t2));
-			xlabel(q(2,2),'X Degrees');
-			ylabel(q(2,2),'Y Degrees');
-			zlabel(q(2,2),'Trial');
+			title(sprintf('%s %s Mean X & Y Pos %g-%g-s over time',thisVarName,upper(type),t1,t2),'FontSize',6);
+			xlabel(ah,'X Degrees');
+			ylabel(ah,'Y Degrees');
+			zlabel(ah,'Trial');
 
 			assignin('base','xvals',xvals);
 			assignin('base','yvals',yvals);
@@ -731,6 +723,54 @@ classdef tobiiAnalysis < analysisCore
 				fnew = figure('Color',[1 1 1]);
 				na = copyobj(src,fnew);
 				na.Position = [0.1 0.1 0.8 0.8];
+			end
+		end
+
+		% ===================================================================
+		%> @brief print messages
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function h = plotMessages(me)
+			if isempty(me.raw) || isempty(me.raw.messages) || ~iscell(me.raw.messages)
+				h = [];
+				return
+			end
+
+			msgs = cell2table(me.raw.messages);
+			msgs.Properties.VariableNames = {'Tobii_Timestamp', 'Message'};
+			msgs.Tobii_Timestamp = msgs.Tobii_Timestamp - msgs.Tobii_Timestamp(1);
+			msgs.Tobii_Timestamp = double(msgs.Tobii_Timestamp) / 1e6;
+
+			h = build_gui();
+			
+			set(h.uitable1,'Data',msgs);
+
+			function h = build_gui()
+				fsmall = 12;
+				h.figure1 = uifigure( ...
+					'Tag', 'msglog', ...
+					'Units', 'normalized', ...
+					'Position', [0.6 0 0.4 0.6], ...
+					'Name', ['Log: ' me.fullName], ...
+					'MenuBar', 'none', ...
+					'NumberTitle', 'off', ...
+					'Color', [0.94 0.94 0.94], ...
+					'Resize', 'on');
+				if ~isMATLABReleaseOlderThan("R2025a"); theme(h.figure1,'light'); end
+				h.uitable1 = uitable( ...
+					'Parent', h.figure1, ...
+					'Tag', 'msglogtable', ...
+					'Units', 'normalized', ...
+					'Position', [0 0 1 1], ...
+					'FontName', me.monoFont, ...
+					'FontSize', fsmall, ...
+					'RowName', 'numbered',...
+					'BackgroundColor', [1 1 1;0.95 0.95 0.95], ...
+					'RowStriping','on', ...
+					'ColumnEditable', [], ...
+					'ColumnWidth', {'fit','4x'});
 			end
 		end
 		% ===================================================================
