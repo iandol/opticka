@@ -1599,9 +1599,9 @@ classdef tobiiAnalysis < analysisCore
 								thisTrial.times = thisTrial.times - thisTrial.rtstarttime;
 								thisTrial.timeRange = [thisTrial.times(1) thisTrial.times(end)];
 								thisTrial.gx = me.raw.data.gaze.left.gazePoint.onDisplayArea(1,idx);
-								thisTrial.gx = (thisTrial.gx * me.xmod) - me.xmod;
+								thisTrial.gx = (thisTrial.gx * me.xmod) - (me.xmod / 2);
 								thisTrial.gy = me.raw.data.gaze.left.gazePoint.onDisplayArea(2,idx);
-								thisTrial.gy = (thisTrial.gy * me.xmod) - me.ymod;
+								thisTrial.gy = (thisTrial.gy * me.ymod) - (me.ymod / 2);
 								if min(thisTrial.gx) < x1; x1 = min(thisTrial.gx); end
 								if max(thisTrial.gx) > x2; x2 = max(thisTrial.gx); end
 								if min(thisTrial.gy) < y1; y1 = min(thisTrial.gy); end
