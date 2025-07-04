@@ -268,7 +268,8 @@ classdef touchManager < optickaCore
 		%> @fn syncTime(me) Set the time of the touch queue to the current
 		%> time. We can use this function to set the 0 time, for example
 		%> stimulus onset etc. which can be used for evt.Time and tAll data.
-		%> @return
+		%>
+		%> @param timestamp: [optional] time to set the queue time to, default is GetSecs
 		% ===================================================================
 			if ~exist('timestamp','var');timestamp = GetSecs; end
 			me.queueTime = timestamp;

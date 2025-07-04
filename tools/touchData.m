@@ -96,7 +96,9 @@ classdef touchData < optickaCore
 			title('Reaction Time');
 			box on; grid on;
 
+			plotPhase = false;
 			if length(unique(in.data.phase)) > 1
+				plotPhase = true;
 				nexttile;
 				plot(time,in.data.phase,'ko-','MarkerFaceColor',[0 0 0]);
 				ylim([0 max(in.data.phase)+1]);
@@ -107,7 +109,11 @@ classdef touchData < optickaCore
 			end
 
 			if ~isempty(in.data.xAll) && iscell(in.data.xAll)
-				nexttile
+				if plotPhase
+					nexttile;
+				else
+					nexttile(3,[1 2]);
+				end
 				hold on
 				for ii = 1:length(in.data.xAll)
 					x = in.data.xAll{ii};
@@ -121,8 +127,8 @@ classdef touchData < optickaCore
 				ylabel('Y Position (deg)');
 				zlabel('Time (s)');
 				view(30,30)
-				title('Touch Positions (color=trial)');
-				box on; grid on; axis square
+				title('Touch Positions (color = trial)');
+				box on; grid on; axis equal
 				hold off
 			end
 		end
