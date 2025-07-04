@@ -1144,7 +1144,7 @@ classdef tobiiAnalysis < analysisCore
 				end
 				figure(handle);
 				data = me.trials(trial).data;
-				me.ETparams.screen.rect = struct('deg', [-5 -5 5 5]);
+				me.ETparams.screen.rect = struct('deg', [-30 -30 30 30]);
 				plotClassification(data,'deg','vel',me.ETparams.samplingFreq,...
 					me.ETparams.glissade.searchWindow,me.ETparams.screen.rect,...
 					'title','Test','showSacInScan',true); 
@@ -1160,50 +1160,51 @@ classdef tobiiAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function explore(me, close)
-			persistent ww hh fig figA figB N
+			persistent fig figA figB Nexp
 
 			if exist('close','var') && close == true
 				try delete(figB); end
 				try delete(figA); end
 				try delete(fig.f); end
-				fig = []; figA = []; figB = [];
+				try delete(gcf); end
+				fig = []; figA = []; figB = []; Nexp = 0;
 				return;
 			end
-			if isempty(N); N = 1; end
-			if isempty(fig); fig.f = figure('Units','Normalized','Position',[0 0.8 0.05 0.2],'CloseRequestFcn',@exploreClose); end
-			if isempty(figA); figA = figure('Units','Normalized','Position',[0.05 0 0.45 1],'CloseRequestFcn',@exploreClose); end
+			if isempty(Nexp); Nexp = 0; end
+			if isempty(fig); fig.f = figure('Units','Normalized','Position',[0 0.8 0.1 0.2],'CloseRequestFcn',@exploreClose); end
+			if isempty(figA); figA = figure('Units','Normalized','Position',[0.1 0 0.49 1],'CloseRequestFcn',@exploreClose); end
 			if isempty(figB); figB = figure('Units','Normalized','Position',[0.5 0 0.5 1],'CloseRequestFcn',@exploreClose); end
 
 			if isempty(fig.f.Children)|| ~ishandle(fig.f)
 				fig.b0 = uicontrol('Parent',fig.f,'Units','Normalized',...
-					'Style','text','String',['TRIAL: ' num2str(N)],'Position',[0.1 0.8 0.8 0.1]);
+					'Style','text','String',['TRIAL: ' num2str(Nexp)],'Position',[0.1 0.8 0.8 0.1]);
 				fig.b1 = uicontrol('Parent',fig.f,'Units','Normalized',...
-					'String','Next','Position',[0.1 0.1 0.8 0.3],...
+					'String','->','Position',[0.1 0.1 0.8 0.3],...
 					'Callback', @exploreNext);
 				fig.b2 = uicontrol('Parent',fig.f,'Units','Normalized',...
-					'String','Previous','Position',[0.1 0.5 0.8 0.3],...
+					'String','<-','Position',[0.1 0.5 0.8 0.3],...
 					'Callback', @explorePrevious);
 			end
 
 			if isempty(figA.Children) ; N = 0; exploreNext(); end
 
-			function exploreNext(src, ~)
-				N = N + 1;
-				if N > length(me.trials); N = 1; end
+			function exploreNext(~)
+				Nexp = Nexp + 1;
+				if Nexp > length(me.trials); Nexp = 1; end
+				clf(figA); clf(figB);
+				plotNH(me,Nexp,figB);
+				plot(me,Nexp,[],[],[],figA);
+				fig.b0.String = ['TRIAL: ' num2str(Nexp)];
+			end
+			function explorePrevious(~)
+				Nexp = Nexp - 1;
+				if Nexp < 1; Nexp = length(me.trials); end
 				clf(figA); clf(figB);
 				plotNH(me,N,figB);
 				plot(me,N,[],[],[],figA);
-				fig.b0.String = ['TRIAL: ' num2str(N)];
+				fig.b0.String = ['TRIAL: ' num2str(Nexp)];
 			end
-			function explorePrevious(src, ~)
-				N = N - 1;
-				if N < 1; N = length(me.trials); end
-				clf(figA); clf(figB);
-				plotNH(me,N,figB);
-				plot(me,N,[],[],[],figA);
-				fig.b0.String = ['TRIAL: ' num2str(N)];
-			end
-			function exploreClose(src, ~)
+			function exploreClose(~)
 				me.explore(true);
 			end
 
