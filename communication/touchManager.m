@@ -901,7 +901,7 @@ classdef touchManager < optickaCore
 
 			try
 				[~,r] = system("xinput list");
-				disp('XInput Initial Device List:');
+				disp('===>>> XInput Initial Device List:');
 				disp(r);
 				if isempty(deviceName); return; end
 				pattern = sprintf('(?<name>%s)\\s+id=(?<id>\\d+)', deviceName);
@@ -911,10 +911,10 @@ classdef touchManager < optickaCore
 					if ~isempty(tokens)
 						attempt = true;
 						[ret,msg] = system("xinput " + cmd + " " + tokens.id);
-						fprintf('===>>> XInput: Run [xinput <%s> <%i>] on %s\n\n',cmd,tokens.id,deviceName);
-						WaitSecs('YieldSecs',1.5);
+						fprintf('===>>> XInput: Run <xinput %s %s> on %s\n', cmd, tokens.id, deviceName);
+						WaitSecs('YieldSecs',1);
 						[~,r] = system("xinput list");
-						disp('XInput Final Device List:');
+						disp('===>>>XInput Final Device List:');
 						disp(r);
 						fprintf('\n\n');
 						break
