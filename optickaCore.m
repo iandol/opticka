@@ -10,7 +10,7 @@ classdef optickaCore < handle
 %> clone the object, parse arguments safely on construction and add default
 %> properties such as paths, dateStamp, uuid and name/comment management.
 %>
-%> Copyright ©2014-2024 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2025 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 
 	%--------------------PUBLIC PROPERTIES----------%
@@ -42,7 +42,7 @@ classdef optickaCore < handle
 		%> storage of various paths
 		paths struct
 		%> version number
-		optickaVersion char		= '2.17.0'
+		optickaVersion char		= '2.17.1'
 	end
 
 	%--------------------DEPENDENT PROPERTIES----------%
@@ -632,7 +632,7 @@ classdef optickaCore < handle
 			if isprop(me,property)
 				me.(property) = value;
 			end
-        end
+		end
 		
 	end
 
@@ -641,7 +641,7 @@ classdef optickaCore < handle
 	%=======================================================================
 
 		% ===================================================================
-		function ID = initialiseSaveFile(me)
+		function ID = initialiseSaveFile(me, varargin)
 		%> @fn initialiseSaveFile
 		%> @brief just get date fragment
 		%>
@@ -732,12 +732,12 @@ classdef optickaCore < handle
 	methods ( Static = true ) %-------STATIC METHODS-----%
 	%=======================================================================
 
-        % ===================================================================
+		% ===================================================================
 		function [rM, aM] = initialiseGlobals(doReset, doOpen)
 		%> @fn [rM, aM] = initialiseGlobals(doReset,doOpen)
 		%> @brief in general we try NOT to use globals but for reward and audio, 
-        %> due to e.g. eyelink and other devices we can't avoid it. This 
-        %> initialises and returns the single-instance globals
+		%> due to e.g. eyelink and other devices we can't avoid it. This 
+		%> initialises and returns the single-instance globals
 		%> rM (rewardManager) and aM (audioManager). Run this to get the
 		%> reward/audio manager objects in any child class...
 		%>
@@ -771,7 +771,7 @@ classdef optickaCore < handle
 				open(aM);
 				aM.beep(2000,0.1,0.1);
 			end
-        end
+		end
 
 		% ===================================================================
 		function args = makeArgs(args)

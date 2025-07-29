@@ -3,7 +3,7 @@ classdef alyxManager < optickaCore
 %> @class alyxManager
 %> @brief manage connection to an Alyx database
 %>
-%> Copyright ©2014-2024 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2025 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 
 	%--------------------PUBLIC PROPERTIES----------%
@@ -135,8 +135,8 @@ classdef alyxManager < optickaCore
 				me.sessionURL = [];
 				me.sessionParentURL = [];
   			catch ex
-    			products = ver;
-    			toolboxes = matlab.addons.toolbox.installedToolboxes;
+    			%products = ver;
+    			%toolboxes = matlab.addons.toolbox.installedToolboxes;
     			% Check the correct toolboxes are installed
     			if strcmp(ex.identifier, 'Alyx:Login:FailedToConnect')
 					warning('Alyx:LoginFail:FailedToConnect', 'Failed To Connect.')
@@ -349,7 +349,7 @@ classdef alyxManager < optickaCore
 			function value = processValue(name)
     			if contains(name,'date')
       				if isnumeric(p.Results.(name))
-        				value = me.iff(numel(p.Results.(name))==1, repmat(p.Results.(name),1,2), p.Results.(name));
+        				value = me.iff(isscalar(p.Results.(name)), repmat(p.Results.(name),1,2), p.Results.(name));
         				value = string(datestr(value, 'yyyy-mm-dd'));
       				elseif isscalar(string(p.Results.(name))) && ~any(p.Results.(name)==',')
         				value = repmat(string(p.Results.(name)),2,1);
@@ -521,11 +521,11 @@ classdef alyxManager < optickaCore
 			if nargin < 3; error('Need to pass an ALF PATH and subject'); end 
 			
 			% check items exists in the database
+			assert(me.hasEntry('labs',session.labName), 'Alyx:newExp:labNotFound', sprintf('lab "%s" does not exist', session.labName));
 			assert(me.hasEntry('subjects',session.subjectName), 'Alyx:newExp:subjectNotFound', sprintf('subject "%s" does not exist', session.subjectName));
 			assert(me.hasEntry('users',session.researcherName), 'Alyx:newExp:userNotFound', sprintf('user "%s" does not exist', session.researcherName));
 			assert(me.hasEntry('projects',session.project), 'Alyx:newExp:projectNotFound', sprintf('project "%s" does not exist', session.project));
 			assert(me.hasEntry('procedures',session.procedure), 'Alyx:newExp:procedureNotFound', sprintf('procedure "%s" does not exist', session.procedure));
-			assert(me.hasEntry('labs',session.labName), 'Alyx:newExp:labNotFound', sprintf('lab "%s" does not exist', session.labName));
 			assert(me.hasEntry('locations',session.location), 'Alyx:newExp:locationNotFound', sprintf('location "%s" does not exist', session.location));
 			
 			jsonParams = '[]';
@@ -574,7 +574,7 @@ classdef alyxManager < optickaCore
 			me.sessionParentURL = latest_base.url;
 
 			%Now create a new SUBSESSION, using the same experiment number
-			subsession = [];
+			subsession = []; url = [];
 			d = struct;
 			d.users = {session.researcherName};
 			d.subject = session.subjectName;
@@ -699,7 +699,7 @@ classdef alyxManager < optickaCore
     			datasetTypes_filemasks(contains(datasetTypes_filemasks,'*.*')) = []; % Remove parant datasets from search
     			matchIdx = regexp(alfFiles(file).name, regexptranslate('wildcard', datasetTypes_filemasks));
     			matchIdx = find(~cellfun(@isempty, matchIdx));
-    			assert(numel(matchIdx)==1, 'Insufficient/Too many matches of datasetType for file %s', alfFiles(file).name);
+    			assert(isscalar(matchIdx), 'Insufficient/Too many matches of datasetType for file %s', alfFiles(file).name);
     			datasetType = datasetTypes(matchIdx).name;
     			
     			me.registerFile(fullPath, fileFormat, sessionURL, datasetType, parentDataset);
@@ -888,7 +888,7 @@ classdef alyxManager < optickaCore
 			fileID = {fileRecords.id};
 			
 			% If only one record was returned, don't return a cell array
-			if numel(fullpath)==1
+			if isscalar(fullpath)
   				fullpath = fullpath{1};
   				filename = filename{1};
   				fileID = fileID{1};

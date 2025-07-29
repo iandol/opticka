@@ -612,12 +612,6 @@ classdef runExperiment < optickaCore
 				error('There is no working PTB available!')
 			end
 
-			%------enable diary logging if requested
-			if me.diaryMode
-				diary off
-				diary([me.paths.parent filesep 'log.text.' me.name '.log']);
-			end
-
 			%------make sure we reset any state machine functions to not cause
 			% problems when they are reassigned below. For example, io interfaces
 			% can be reset unless we clear this before we open the io.
@@ -696,6 +690,14 @@ classdef runExperiment < optickaCore
 			%------initialise task
 			task						= me.task;
 			initialise(task, true);
+
+			%------enable diary logging if requested
+			[tS.ALFPath, tS.sessionID, tS.dateID, me.name] = me.getALF(me.sessionData.subjectName,me.sessionData.labName, tS.saveData);
+			if ~tS.saveData; me.name = [tS.dateID '_' me.sessionData.subjectName]; end
+			if me.diaryMode
+				diary off
+				diary([me.paths.ALFPath filesep 'log.text.' me.name '.log']);
+			end
 			
 			%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 			try %================This is our main TASK setup=====================
@@ -797,29 +799,17 @@ classdef runExperiment < optickaCore
 
 				%================================initialise save file and ALYX
 				if me.sessionData.useAlyx
-					[~, ~, ~, name] = me.getALF(...
-						me.sessionData.subjectName,me.sessionData.labName, true);
-					me.name = name; %give us a run name
-					me.initialiseAlyxSession(me.paths.ALFPath);
+					initialiseAlyxSession(me);
 					if isfield(me.screenSettings,'statusbar')
 						t = sprintf('ALYX Session opened: %s',me.alyx.sessionURL);
 						me.screenSettings.statusbar.Text = t;
 						me.screenSettings.statusbar.URL = me.alyx.sessionURL;
 						disp(t);
 					end
-					tS.ALFPath = me.paths.ALFPath;
 					tS.sessionURL = me.alyx.sessionURL;
 					tS.parentSessionURL = me.alyx.sessionParentURL;
 				else
-					if tS.saveData
-						[~, ~, ~, name] = me.getALF(...
-							me.sessionData.subjectName,me.sessionData.labName, true);
-						me.name = name; %give us a run name
-					else
-						[~, ~, dateID] = me.getALF(...
-							me.sessionData.subjectName,me.sessionData.labName, false);
-						me.name = [dateID '_' me.sessionData.subjectName]; %give us a run name
-					end
+					
 				end
 				if matches(lower(me.eyetracker.device),'eyelink')
 					eT.saveFile	= [me.paths.ALFPath 'eyetracking.raw.eyelink.' me.name '.edf'];
@@ -1172,7 +1162,7 @@ classdef runExperiment < optickaCore
 					tS.eO=[];
 				end
 				
-				removeEmptyValues(tL);
+				try removeEmptyValues(tL); end
 				me.tS = tS; %store our tS structure for backup
 				
 				%================================
@@ -1207,51 +1197,12 @@ classdef runExperiment < optickaCore
 				%================================SAVE the DATA
 				%================================
 				
-
 				%================================
-				%=================================END ALYX SESSION
+				%================================END ALYX SESSION
 				%================================
-				if me.sessionData.useAlyx
-					fprintf('Closing ALYX Session: %s\n', me.alyx.sessionURL);
-					session = me.alyx.closeSession(me.comment, 'PASS');
-					if isfield(me.screenSettings,'statusbar')
-						t = sprintf('ALYX Session Closed: %s',me.alyx.sessionURL);
-						me.screenSettings.statusbar.Text = t;
-						me.screenSettings.statusbar.URL = me.alyx.sessionURL;
-					end
-					if tS.saveData
-						if isSecret("AWS_ID")
-							aws = awsManager(getSecret("AWS_ID"),getSecret("AWS_KEY"), "http://172.16.102.77:9000");
-							buckets = aws.list;
-							if ~contains(buckets,lower(me.sessionData.labName))
-								aws.createBucket(lower(me.sessionData.labName));
-							end
-							p = me.paths.ALFPath;
-							rp = [me.sessionData.subjectName '/' me.paths.dateIDShort '/' sprintf('%0.3d',me.paths.sessionID)];
-							try
-								r = aws.copyFiles(p,lower(me.sessionData.labName));
-							catch
-								warning('aws.copyFiles FAILED!');
-							end
-							d = dir(p);
-							for i = 3:length(d)
-								if r
-									try
-										dataset = me.alyx.registerFile(['Minio-' me.sessionData.labName], d(i).name, rp);
-										disp(dataset);
-									catch
-										warning('Failed to upload %s to minio',d(i).name);
-									end
-								end
-								%dataset = me.alyx.registerFile('Local-Files', sname, rp);
-							end
-						else
-							warning("AWS ID and KEY are not present, cannot upload data to MINIO!!!");
-						end
-					end
-				end
+				endAlyxSession(me, 'PASS')
 				%================================
-				%=================================END ALYX SESSION
+				%================================END ALYX SESSION
 				%================================
 				
 				%================================disable diary logging 
@@ -1268,7 +1219,7 @@ classdef runExperiment < optickaCore
 			catch ERR
 				me.isRunning = false;
 				removeALF = false;
-				getReport(ERR);
+				getReport(ERR)
 				if me.sessionData.useAlyx && ~isempty(me.alyx.sessionURL)
 					fprintf('Closing ALYX Session: %s\n', me.alyx.sessionURL);
 					try
@@ -2087,51 +2038,6 @@ classdef runExperiment < optickaCore
 			me.screenVals = me.screen.prepareScreen();
 		end
 
-		% ===================================================================
-		function initialiseAlyxSession(me, path)
-		%> @fn initialiseAlyxSession
-		%> @brief initialise a new alyx session
-		%>
-		%> @param
-		% ===================================================================
-			if isempty(me.alyx) || ~isa(me.alyx, 'alyxManager')
-				me.alyx = alyxManager;
-			end
-
-			if ~exist('path','var') || isempty(path)
-				path = me.getALF(me.sessionData.subjectName, me.sessionData.labName);
-			end
-
-			if ~me.alyx.loggedIn; me.alyx.login; end
-
-			if ~hasEntry(me.alyx,'subjects',me.sessionData.subjectName)
-				error('You need to initialise %s %s in the ALYX database before you can proceed!','SUBJECT',me.sessionData.subjectName);
-			end
-
-			if ~hasEntry(me.alyx,'users',me.sessionData.researcherName)
-				error('You need to initialise %s %s in the ALYX database before you can proceed!','USERS',me.sessionData.researcherName);
-			end
-
-			if ~hasEntry(me.alyx,'labs',me.sessionData.labName)
-				error('You need to initialise %s %s in the ALYX database before you can proceed!','LABS',me.sessionData.labName);
-			end
-
-			if ~hasEntry(me.alyx,'projects',me.sessionData.project)
-				error('You need to initialise %s %s in the ALYX database before you can proceed!','PROJECTS',me.sessionData.project);
-			end
-
-			if ~hasEntry(me.alyx,'locations',me.sessionData.location)
-				error('You need to initialise %s %s in the ALYX database before you can proceed!','LOCATIONS',me.sessionData.location);
-			end
-
-			
-			[url] = me.alyx.newExp(me.paths.ALFPath, me.paths.sessionID, me.sessionData);
-
-			me.paths.sessionURL = url;
-
-		end
-
-
 	end%-------------------------END PUBLIC METHODS--------------------------------%
 
 	%=======================================================================
@@ -2181,8 +2087,8 @@ classdef runExperiment < optickaCore
 
 		% ===================================================================
 		function configureTouchScreen(me, s)
-		%> @fn configureEyetracker
-		%> Configures (calibration etc.) the eyetracker.
+		%> @fn configureTouchScreen
+		%> Configures the touch screen.
 		%> @param s screen object
 		% ===================================================================
 			
@@ -2249,6 +2155,75 @@ classdef runExperiment < optickaCore
 	%=======================================================================
 	methods (Access = private) %------------------PRIVATE METHODS
 	%=======================================================================
+
+		% ===================================================================
+		function url = initialiseAlyxSession(me)
+		%> @fn initialiseAlyxSession
+		%> @brief initialise a new alyx session
+		%>
+		%> @param
+		% ===================================================================
+			if isempty(me.alyx) || ~isa(me.alyx, 'alyxManager')
+				me.alyx = alyxManager;
+			end
+
+			if ~isfield(me.paths,'ALFPath') || isempty(me.paths.ALFPath)
+				[path,id,dateID,name] = me.getALF(me.sessionData.subjectName, me.sessionData.labName);
+			end
+
+			if ~me.alyx.loggedIn; me.alyx.login; end
+
+			[url] = me.alyx.newExp(me.paths.ALFPath, me.paths.sessionID, me.sessionData);
+			me.paths.sessionURL = url;
+			fprintf('≣≣≣≣⊱ Alyx File Path Path: %s \n\t  Alyx URL: %s...\n',me.paths.ALFPath, me.paths.sessionURL);
+		end
+
+		% ===================================================================
+		function endAlyxSession(me, result)
+		%> @fn endAlyxSession
+		%> @brief end an alyx session
+		%>
+		%> @param
+		% ===================================================================
+			if ~me.sessionData.useAlyx; return; end
+			fprintf('Closing ALYX Session: %s\n', me.alyx.sessionURL);
+			session = me.alyx.closeSession(me.comment, result);
+			if isfield(me.screenSettings,'statusbar')
+				t = sprintf('ALYX Session Closed: %s',me.alyx.sessionURL);
+				me.screenSettings.statusbar.Text = t;
+				me.screenSettings.statusbar.URL = me.alyx.sessionURL;
+			end
+			if tS.saveData
+				if isSecret("AWS_ID")
+					aws = awsManager(getSecret("AWS_ID"),getSecret("AWS_KEY"), "http://172.16.102.77:9000");
+					buckets = aws.list;
+					if ~contains(buckets,lower(me.sessionData.labName))
+						aws.createBucket(lower(me.sessionData.labName));
+					end
+					p = me.paths.ALFPath;
+					rp = [me.sessionData.subjectName '/' me.paths.dateIDShort '/' sprintf('%0.3d',me.paths.sessionID)];
+					try
+						r = aws.copyFiles(p,lower(me.sessionData.labName));
+					catch
+						warning('aws.copyFiles FAILED!');
+					end
+					d = dir(p);
+					for i = 3:length(d)
+						if r
+							try
+								dataset = me.alyx.registerFile(['Minio-' me.sessionData.labName], d(i).name, rp);
+								disp(dataset);
+							catch
+								warning('Failed to upload %s to minio',d(i).name);
+							end
+						end
+						%dataset = me.alyx.registerFile('Local-Files', sname, rp);
+					end
+				else
+					warning("AWS ID and KEY are not present, cannot upload data to MINIO!!!");
+				end
+			end
+		end
 
 		% ===================================================================
 		function io = configureIO(me, onlyIO)

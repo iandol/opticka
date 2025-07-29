@@ -14,7 +14,7 @@
 %> drawing commands like grids, text, spots or other basic things that would
 %> be overkill for aa dedicated stimulus class.
 %>
-%> Copyright ©2014-2024 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2025 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef screenManager < optickaCore
 
@@ -254,10 +254,10 @@ classdef screenManager < optickaCore
 			try
 				AssertOpenGL;
 				me.isPTB = true;
-				salutation(me,'PTB + OpenGL supported!')
+				logOutput(me,'PTB + OpenGL supported!');
 			catch %#ok<*CTCH>
 				me.isPTB = false;
-				salutation(me,'CONSTRUCTOR','OpenGL support needed for PTB!!!',true)
+				logOutput(me, 'CONSTRUCTOR','OpenGL support needed for PTB!!!',true);
 			end
 
 			me.font.FontName = me.monoFont;
@@ -1217,7 +1217,7 @@ classdef screenManager < optickaCore
 		%> @param alpha2 alpha for the disc
 		%> @return
 		% ===================================================================
-			% drawCross(me, size,colour,x,y,lineWidth,showDisk,alpha,alpha2)
+			% drawCross(me, size, colour, x, y, lineWidth, showDisk, alpha, alpha2)
 			if nargin < 9 || isempty(alpha2); alpha2 = 1; end
 			if nargin < 8 || isempty(alpha); alpha = 1; end
 			if nargin < 7 || isempty(showDisk); showDisk = true; end
@@ -1852,7 +1852,7 @@ classdef screenManager < optickaCore
 					clear mimg;
 				end
 			else
-				salutation(me,'playMovie method','Playing failed!',true);
+				logOutput(me,'playMovie method','Playing failed!',true);
 			end
 		end
 

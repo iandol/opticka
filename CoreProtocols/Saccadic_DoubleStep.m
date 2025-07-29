@@ -18,9 +18,6 @@ tS.name						= 'Saccadic DoubleStep'; %==name of this protocol
 % we use a up/down staircase to control the TSD (delay in seconds)
 assert(exist('PAL_AMUD_setupUD','file'),'MUST Install Palamedes Toolbox: https://www.palamedestoolbox.org')
 
-
-
-
 % See Palamedes toolbox for the PAL_AM methods. 
 % 1up / 1down staircase starts at 225ms and steps at 34ms between 100 and
 % 600ms
@@ -158,7 +155,7 @@ pauseExitFcn = {
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %====================================================PRE-FIXATION
-pfEntryFn = {
+pfEntryFcn = {
 	@()needFlip(me, true, 1); % start PTB screen flips, and tracker screen flip
 	@()needEyeSample(me, true); % make sure we start measuring eye position
 	@()getStimulusPositions(stims,true); %make a struct the eT can use for drawing stim positions
@@ -171,12 +168,12 @@ pfEntryFn = {
 	% e.g. @()trackerMessage(eT,['MSG:ANGLE' num2str(stims{1}.angleOut)]) etc.
 };
 
-prefixFcn = {
+pfFcn = {
 	@()trackerDrawFixation(eT);
 	@()drawPhotoDiodeSquare(s,[0 0 0]);
 };
 
-pfExitFn = {
+pfExitFcn = {
 	@()logRun(me,'INITFIX');
 	@()trackerDrawStatus(eT,'Start trial...', stims.stimulusPositions, 0, 1);
 };
@@ -428,7 +425,7 @@ stateInfoTmp = {
 'name'      'next'		'time'  'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn';
 %---------------------------------------------------------------------------------------------
 'pause'		'prefix'	inf		pauseEntryFcn	{}				{}				pauseExitFcn;
-'prefix'	'breakfix'	0.5		prefixEntryFcn	prefixFcn		{}				prefixExitFcn;
+'prefix'	'breakfix'	0.5		pfEntryFcn		pfFcn			{}				pfExitFcn;
 %---------------------------------------------------------------------------------------------
 'nostepfix'	'breakfix'	5	 	nsfEntryFcn		nsfFcn			nsfTestFcn		nsfExitFcn;
 'nostep'	'breakfix'	5	 	nsEntryFcn		nsFcn			nsTestFcn		nsExitFcn;

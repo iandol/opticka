@@ -55,7 +55,7 @@ classdef imageStimulus < baseStimulus
 		crop						= 'none'
 		%> direction for motion of the image, different to angle
 		direction					= []
-		%> add a circular mask on the movie? 
+		%> add a circular mask on the image? 
 		circularMask				= false
 		%> mask sigma in pixels
 		sigma						= 30
