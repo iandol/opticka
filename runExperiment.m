@@ -690,14 +690,6 @@ classdef runExperiment < optickaCore
 			%------initialise task
 			task						= me.task;
 			initialise(task, true);
-
-			%------enable diary logging if requested
-			[tS.ALFPath, tS.sessionID, tS.dateID, me.name] = me.getALF(me.sessionData.subjectName,me.sessionData.labName, tS.saveData);
-			if ~tS.saveData; me.name = [tS.dateID '_' me.sessionData.subjectName]; end
-			if me.diaryMode
-				diary off
-				diary([me.paths.ALFPath filesep 'log.text.' me.name '.log']);
-			end
 			
 			%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 			try %================This is our main TASK setup=====================
@@ -797,6 +789,14 @@ classdef runExperiment < optickaCore
 				end
 				if isfield(tS,'rewardTime'); bR.rewardTime = tS.rewardTime; end
 
+				%------initialise save location and enable diary logging if requested
+				[tS.ALFPath, tS.sessionID, tS.dateID, me.name] = me.getALF(me.sessionData.subjectName ,me.sessionData.labName, true);
+				if ~tS.saveData; me.name = [tS.dateID '_' me.sessionData.subjectName]; end
+				if me.diaryMode
+					diary off
+					diary([me.paths.ALFPath filesep 'log.text.' me.name '.log']);
+				end
+
 				%================================initialise save file and ALYX
 				if me.sessionData.useAlyx
 					initialiseAlyxSession(me);
@@ -808,15 +808,13 @@ classdef runExperiment < optickaCore
 					end
 					tS.sessionURL = me.alyx.sessionURL;
 					tS.parentSessionURL = me.alyx.sessionParentURL;
-				else
-					
 				end
 				if matches(lower(me.eyetracker.device),'eyelink')
-					eT.saveFile	= [me.paths.ALFPath 'eyetracking.raw.eyelink.' me.name '.edf'];
+					eT.saveFile	= [me.paths.ALFPath filesep 'eyetracking.raw.eyelink.' me.name '.edf'];
 				elseif matches(lower(me.eyetracker.device),'tobii')
-					eT.saveFile	= [me.paths.ALFPath 'eyetracking.raw.tobii.' me.name '.mat'];
+					eT.saveFile	= [me.paths.ALFPath filesep 'eyetracking.raw.tobii.' me.name '.mat'];
 				elseif matches(lower(me.eyetracker.device),'irec')
-					eT.saveFile	= [me.paths.ALFPath 'eyetracking.raw.irec.' me.name '.csv'];
+					eT.saveFile	= [me.paths.ALFPath filesep 'eyetracking.raw.irec.' me.name '.csv'];
 				end
 				fprintf('\n\n\n≣≣≣≣>>> START BEHAVIOURAL TASK: %s <<<≣≣≣≣',me.name);
 				fprintf('\tInitial Path: %s\n',me.paths.ALFPath);
@@ -1169,21 +1167,22 @@ classdef runExperiment < optickaCore
 				%================================SAVE the DATA
 				%================================
 				if tS.saveData
-					sname = [me.paths.ALFPath 'opticka.raw.' me.name '.mat'];
+					if ~exist(me.paths.ALFPath,'dir'); mkdir(me.paths.ALFPath); end
+					sname = [me.paths.ALFPath filesep 'opticka.raw.' me.name '.mat'];
 					rE = me;
 					save(sname,'rE','tS');
 					me.paths.sname = sname;
 					fprintf('\n\n#####################\n≣≣≣≣ <strong>SAVED RAW DATA to: %s</strong>\n#####################\n',sname)
 
 					try 
-						sname = [me.paths.ALFPath 'opticka.details.' me.name '.json'];
+						sname = [me.paths.ALFPath filesep 'opticka.details.' me.name '.json'];
 						j = jsonencode(tS);
 						writelines(j, sname);
 						fprintf('#####################\n≣≣≣≣ <strong>SAVED JSON DATA to: %s</strong>\n#####################\n',sname)
 					end
 
 					try
-						sname = [me.paths.ALFPath 'event.table.' me.name '.tsv'];
+						sname = [me.paths.ALFPath filesep 'events.table.' me.name '.tsv'];
 						tbl = messageTable(tL);
 						writetable(tbl, sname, 'FileType', 'text', 'Delimiter', '\t');
 						fprintf('#####################\n≣≣≣≣ <strong>SAVED TIMED EVENT DATA to: %s</strong>\n#####################\n\n',sname)
@@ -1200,7 +1199,7 @@ classdef runExperiment < optickaCore
 				%================================
 				%================================END ALYX SESSION
 				%================================
-				endAlyxSession(me, 'PASS')
+				endAlyxSession(me, 'PASS', tS.saveData)
 				%================================
 				%================================END ALYX SESSION
 				%================================
@@ -1243,7 +1242,10 @@ classdef runExperiment < optickaCore
 				end
 				try 
 					if removeALF && isfield(me.paths,'ALFPath') && exist(me.paths.ALFPath,'dir')
-						rmdir(me.paths.ALFPath);
+						% if we rm dir then the alyx database and the ALF
+						% sesssion number go out of sync. If we remove
+						% the alyx session then uncomment rmdir...
+						%rmdir(me.paths.ALFPath);
 					end
 				end
 				fprintf('\n\n===!!! ERROR in runExperiment.runTask() %s\n',ERR.message);
@@ -2167,11 +2169,23 @@ classdef runExperiment < optickaCore
 				me.alyx = alyxManager;
 			end
 
-			if ~isfield(me.paths,'ALFPath') || isempty(me.paths.ALFPath)
-				[path,id,dateID,name] = me.getALF(me.sessionData.subjectName, me.sessionData.labName);
+			if ~me.alyx.loggedIn; me.alyx.login; end
+
+			me.alyx.lab = me.sessionData.labName;
+			me.alyx.subject = me.sessionData.subjectName;
+
+			dtypes = ["opticka.raw" "opticka.details" "events.table"];
+			for d = dtypes 
+				res = me.alyx.getData("dataset-types/" + d);
+				if isempty(res)
+					warning('%s not present in ALYX',d);
+				end
 			end
 
-			if ~me.alyx.loggedIn; me.alyx.login; end
+			if ~isfield(me.paths,'ALFPath') || isempty(me.paths.ALFPath)
+				[path,id,dateID,name] = me.getALF(me.sessionData.subjectName, me.sessionData.labName, true);
+				fprintf('≣≣≣≣⊱ Alyx Path created: %s %s %s %s\n',path,id,dateID,name);
+			end
 
 			[url] = me.alyx.newExp(me.paths.ALFPath, me.paths.sessionID, me.sessionData);
 			me.paths.sessionURL = url;
@@ -2179,48 +2193,65 @@ classdef runExperiment < optickaCore
 		end
 
 		% ===================================================================
-		function endAlyxSession(me, result)
+		function endAlyxSession(me, result, saveData)
 		%> @fn endAlyxSession
 		%> @brief end an alyx session
 		%>
 		%> @param
 		% ===================================================================
 			if ~me.sessionData.useAlyx; return; end
-			fprintf('Closing ALYX Session: %s\n', me.alyx.sessionURL);
+			if ~exist('saveData','var') || isempty(saveData); saveData = false; end
+
+			%% close the session
+			fprintf('≣≣≣≣⊱ Closing ALYX Session: %s\n', me.alyx.sessionURL);
 			session = me.alyx.closeSession(me.comment, result);
 			if isfield(me.screenSettings,'statusbar')
 				t = sprintf('ALYX Session Closed: %s',me.alyx.sessionURL);
 				me.screenSettings.statusbar.Text = t;
 				me.screenSettings.statusbar.URL = me.alyx.sessionURL;
 			end
-			if tS.saveData
-				if isSecret("AWS_ID")
-					aws = awsManager(getSecret("AWS_ID"),getSecret("AWS_KEY"), "http://172.16.102.77:9000");
-					buckets = aws.list;
-					if ~contains(buckets,lower(me.sessionData.labName))
-						aws.createBucket(lower(me.sessionData.labName));
-					end
-					p = me.paths.ALFPath;
-					rp = [me.sessionData.subjectName '/' me.paths.dateIDShort '/' sprintf('%0.3d',me.paths.sessionID)];
-					try
-						r = aws.copyFiles(p,lower(me.sessionData.labName));
-					catch
-						warning('aws.copyFiles FAILED!');
-					end
-					d = dir(p);
-					for i = 3:length(d)
-						if r
-							try
-								dataset = me.alyx.registerFile(['Minio-' me.sessionData.labName], d(i).name, rp);
-								disp(dataset);
-							catch
-								warning('Failed to upload %s to minio',d(i).name);
+
+			%% upload the data
+			if saveData
+				try
+					%% register the files to ALYX
+					[datasets, filenames] = me.alyx.registerALFFiles(me.paths, me.sessionData);
+					fprintf('≣≣≣≣⊱ Added Files to ALYX Session: %s\n', me.alyx.sessionURL);
+					try arrayfun(@(ss)disp([ss.name ' - bytes: ' num2str(ss.file_size)]),datasets); end
+					
+					%% get the ALYX UUID for each file registered
+					uuids = {};
+					if length(datasets) == length(filenames)
+						for ii = 1:length(filenames)
+							if contains(filenames{ii},datasets(ii).name)
+								uuids{ii} = datasets(ii).id;
+							else
+								uuids{ii} = '';
 							end
 						end
-						%dataset = me.alyx.registerFile('Local-Files', sname, rp);
 					end
-				else
-					warning("AWS ID and KEY are not present, cannot upload data to MINIO!!!");
+
+					%% upload the files to MINIO AWS server
+					if isSecret("AWS_ID")
+						aws = awsManager(getSecret("AWS_ID"),getSecret("AWS_KEY"), me.sessionData.dataRepo);
+						bucket = lower(me.sessionData.labName);
+						aws.checkBucket(bucket);
+						for ii = 1:length(filenames)
+							[~,f,e] = fileparts(filenames{ii});
+							if ~isempty(uuids) && ~isempty(uuids{ii})
+								% append the uuid to the filename, seems to
+								% be required by ONE protocol
+								key = [me.paths.ALFKeyShort filesep f '.' uuids{ii} e];
+							else
+								key = [me.paths.ALFKeyShort filesep f e];
+							end
+							aws.copyFiles(filenames{ii}, bucket, key);
+						end
+					else
+						warning('To upload Alyx files you need to set setSecrets: AWS_ID and AWS_KEY!!!'); 
+					end
+				catch ME
+					getReport(ME)
 				end
 			end
 		end

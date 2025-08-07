@@ -72,10 +72,12 @@ classdef alyxManager < optickaCore
 			me.parseArgs(varargin, me.allowedProperties);
 
 			me.queueDir = me.paths.parent;
+			flushQueue(me,true);
 		end
 
 		% ===================================================================
 		function logout(me)
+		% ===================================================================
 			if me.loggedIn
 				me.token = [];
 				me.sessionURL = [];
@@ -88,6 +90,7 @@ classdef alyxManager < optickaCore
 
 		% ===================================================================
 		function success = login(me)
+		% ===================================================================
 			success = false;
 			if me.loggedIn; warning('Already Logged in...'); end
 			noDisplay = usejava('jvm') && ~feature('ShowFigureWindows');
@@ -117,7 +120,7 @@ classdef alyxManager < optickaCore
   			if isempty(me.pwd)
     			if noDisplay
 					diaryState = get(0, 'Diary');
-					diary('off'); % At minimum we can keep out of dairy log file
+					diary('off'); % At minimum we can keep out of diary log file
 					passwd = input('Alyx password <strong>**INSECURE**</strong>: ', 's');
 					diary(diaryState);
     			else
@@ -134,6 +137,7 @@ classdef alyxManager < optickaCore
 				success = me.loggedIn;
 				me.sessionURL = [];
 				me.sessionParentURL = [];
+				flushQueue(me, true);
   			catch ex
     			%products = ver;
     			%toolboxes = matlab.addons.toolbox.installedToolboxes;
@@ -163,7 +167,7 @@ classdef alyxManager < optickaCore
 			switch type
 				case {'subjects'}
 					rt = {rt(:).nickname};
-				case {'tags','tasks','procedures','labs', 'locations', 'projects','data-repository'}
+				case {'tags','tasks','procedures','labs', 'locations', 'projects','data-repository','dataset-types'}
 					rt = {rt(:).name};
 				case {'users'}
 					rt = {rt(:).username};
@@ -214,24 +218,24 @@ classdef alyxManager < optickaCore
   				return
 			catch ex
   				switch ex.identifier
-    				case {'MATLAB:webservices:UnknownHost', 'MATLAB:webservices:Timeout', ...
-        				'MATLAB:webservices:CopyContentToDataStreamError'}
+					case {'MATLAB:webservices:UnknownHost', 'MATLAB:webservices:Timeout', ...
+    					'MATLAB:webservices:CopyContentToDataStreamError'}
 						warning(ex.identifier, '%s', ex.message)
 						statusCode = 000;
-    				otherwise
-      					response = regexp(ex.message, '(?:the status )(\d{3})', 'tokens');
-      					statusCode = str2double(me.cellflat(response));
-      					if statusCode == 403 % Invalid token
-        					warning('Alyx:getData:InvalidToken', 'Invalid token, please re-login')
-        					me.logout; % Delete token
-        					me.login; % Re-login
+					otherwise
+  						response = regexp(ex.message, '(?:the status )(\d{3})', 'tokens');
+  						statusCode = str2double(me.cellflat(response));
+  						if statusCode == 403 % Invalid token
+    						warning('Alyx:getData:InvalidToken', 'Invalid token, please re-login')
+    						me.logout; % Delete token
+    						me.login; % Re-login
 							if me.loggedIn % If succeded
-        						data = me.getData(fullEndpoint); % Retry
+    							data = me.getData(fullEndpoint); % Retry
 							end
 						else
 							warning(['alyxManager.getData: ' ex.identifier], '%s', ex.message);
-      					end
-  				end
+  						end
+  					end
 			end
 		end
 
@@ -269,9 +273,9 @@ classdef alyxManager < optickaCore
 				[data, statusCode] = me.flushQueue();
 				% Return only relevent data
 				if numel(statusCode) > 1; statusCode = statusCode(end); end
-  				if floor(statusCode/100) == 2 && ~isempty(data)
-    				data = data(end);
-  				end
+  				%if floor(statusCode/100) == 2 && ~isempty(data)
+    			%	data = data(end);
+  				%end
 			else
 				statusCode = 000;
 				data = [];
@@ -504,21 +508,21 @@ classdef alyxManager < optickaCore
 		end
 
 		% ===================================================================
-		function [url, subsession] = newExp(me, path, sessionID, session, sessionType)
+		function [url, newSession] = newExp(me, path, sessionID, session, jsonData)
 			%NEWEXP Create a new unique experimental session in the database
-			%   [ref, seq] = NEWEXP(path, sessionID, session)
+			%   [ref, seq] = NEWEXP(path, sessionID, session, jsonData)
 			%   Create a new experiment:
 			%
 			%   subject/
 			%          |_ YYYY-MM-DD/
 			%                       |_ sessionID/
 			%
-			%   If a base session for the
-			%   experiment date is not found, one is created in the Alyx database. A
-			%   corresponding subsession is also created and the parameters file is
-			%   registered with the sub-session.
+			
+			if nargin < 3; error('Need to pass an ALF PATH, sessionID and session info'); end 
+			if ~exist('jsonData','var'); jsonData = '[]'; end
 
-			if nargin < 3; error('Need to pass an ALF PATH and subject'); end 
+			% Ensure user is logged in
+  			if ~me.loggedIn; me.login; end
 			
 			% check items exists in the database
 			assert(me.hasEntry('labs',session.labName), 'Alyx:newExp:labNotFound', sprintf('lab "%s" does not exist', session.labName));
@@ -528,53 +532,22 @@ classdef alyxManager < optickaCore
 			assert(me.hasEntry('procedures',session.procedure), 'Alyx:newExp:procedureNotFound', sprintf('procedure "%s" does not exist', session.procedure));
 			assert(me.hasEntry('locations',session.location), 'Alyx:newExp:locationNotFound', sprintf('location "%s" does not exist', session.location));
 			
-			jsonParams = '[]';
 			me.sessionURL = '';
 			me.sessionParentURL = '';
 
 			expDate = char(datetime("now",'Format','yyyy-MM-dd''T''HH:mm:ss'));
+			dayDate = expDate(1:10);
 
-			% Ensure user is logged in
-  			if ~me.loggedIn; me.login; end
-
-			% Get (list of base sessions.  Sessions returned in descending date order
-			[sessions, statusCode] = me.getData(['sessions?type=Base&subject=' session.subjectName '&number=' num2str(sessionID)]);
+			% make sure the session is new
+			request = ['sessions?date_range=' dayDate ',' dayDate '&subject=' session.subjectName '&number=' num2str(sessionID)];
+			[sessions, statusCode] = me.getData(request);
 			
-			% If the date of this latest base session is not the same date as
-			% today, then create a new base session for today.
-			if statusCode ~= 000 && ...
-					( isempty(sessions) || ...
-					( ~strcmp(sessions(1).start_time(1:10), expDate(1:10)) ||...
-					  sessions(1).number ~= sessionID ) )
-  				d = struct;
-				d.users = {session.researcherName};
-  				d.subject = session.subjectName;
-				d.projects = {session.project};
-  				d.procedures = {session.procedure};
-				d.task_protocol = session.taskProtocol;
-				d.lab = session.labName;
-				d.location = session.location;
-  				d.narrative = ['opticka-generated session: ' path];
-				d.number = sessionID;
-  				d.start_time = expDate;
-  				d.type = 'Base';
-  				
-  				[base_submit, s] = me.postData('sessions', d, 'post');
-  				assert(isfield(base_submit,'subject'),...
-    				'Submitted base session did not return appropriate values');
-  				%Now retrieve the sessions again
-  				sessions = me.getData(['sessions?type=Base&subject=' session.subjectName '&number=' num2str(sessionID)]);
-			elseif statusCode == 000
-				url = [];
-  				sessions = struct('url', url); % FIXME: Post may fail
-				return
+			if statusCode == 200 && ~isempty(sessions)
+				error("There is an existing session for ID = %i!!!", sessionID);
 			end
-			latest_base = sessions(1);
-			assert(strcmp(latest_base.start_time(1:10), expDate(1:10)),'Returned Parent Session is not from TODAY!');
-			me.sessionParentURL = latest_base.url;
 
-			%Now create a new SUBSESSION, using the same experiment number
-			subsession = []; url = [];
+			%Now create a new SESSION, using the experiment number
+			newSession = []; url = [];
 			d = struct;
 			d.users = {session.researcherName};
 			d.subject = session.subjectName;
@@ -583,22 +556,21 @@ classdef alyxManager < optickaCore
 			d.task_protocol = session.taskProtocol;
 			d.lab = session.labName;
 			d.location = session.location;
-  			d.narrative = ['opticka-generated session: ' path '; parent: ' latest_base.url];
+  			d.narrative = ['opticka-generated session: ' path];
 			d.number = sessionID;
   			d.start_time = expDate;
 			d.type = 'Experiment';
-			d.parent_session = latest_base.url;
-			%d.json = ['{"parameters": ', jsonParams, '}'];
+			d.json = ['{ "parameters": ' jsonData ' }'];
 			
 			try
-				[subsession, statusCode] = me.postData('sessions', d, 'post');
-				url = subsession.url;
+				[newSession, statusCode] = me.postData('sessions', d, 'post');
+				url = newSession.url;
 				me.sessionURL = url;
-			catch ex
+			catch ME
   				if (isinteger(statusCode) && statusCode == 503) || me.Headless % Unable to connect, or user is supressing errors
-    				warning(ex.identifier, 'Failed to create subsession file: %s.', ex.message)
+    				warning(ME.identifier, 'Failed to create session file for %i: %s.', sessionID, ME.message)
   				else % Probably fatal user error
-    				rethrow(ex)
+    				rethrow(ME)
   				end
 			end
 		end
@@ -896,19 +868,67 @@ classdef alyxManager < optickaCore
 		end
 
 		% ===================================================================
-		function [datasets] = registerFile(me, repo, file, relativepath)
-			%REGISTERFILE Registers filepath(s) to Alyx.
-			
-			D = struct('created_by', me.user);
-			D.name = repo;
-  			D.hostname = '172.16.102.77';
-  			D.path = relativepath;
-  			D.filenames = {file};
-  			[record, statusCode] = me.postData('register-file', D);
+		function [datasets] = registerFile(me, rFiles)
+			%REGISTERFILE Registers filepath(s) to Alyx. data is a struct
+			%that follows https://openalyx.internationalbrainlab.org/docs/#register-file
+			%
+			% name = alyx repository
+			% filenames = 1+ file names as a cell array 
+			% path = subject/date/number
+			% created_by = user
+			% hashes = SHA1 hashes
+			% bytes = bytes
+
+			arguments(Input)
+				me
+				rFiles struct
+			end
+
+			if isempty(fieldnames(rFiles)); warning('alyxManager.register file incorrect input'); end
+
+  			[datasets, statusCode] = me.postData('register-file', rFiles);
   			
-			if statusCode ~= 201; warning('No registering'); end
-  				
-  			datasets = record;
+			if statusCode ~= 201
+				warning('HTTP Error %i -- No file registering, return %s', statusCode, datasets)
+			end
+
+		end
+
+		% ===================================================================
+		function [datasets, filenames] = registerALFFiles(me, paths, session)
+		%> @fn registerALFFiles
+		%>
+		%> registers all files in an ALF path to Alyx
+		%>
+		%> @param
+		% ===================================================================
+			arguments(Input)
+				me
+				paths struct
+				session struct
+			end
+			arguments(Output)
+				datasets struct
+				filenames cell
+			end
+
+			sFiles = dir(paths.ALFPath);
+			sFiles = sFiles(~[sFiles(:).isdir]);
+			for ii = 1:length(sFiles)
+				filenames{ii} = fullfile(sFiles(ii).folder, sFiles(ii).name);
+				bytes(ii) = sFiles(ii).bytes;
+				hashes{ii} = DataHash(filenames{ii},'file','sha1');
+			end
+
+			rf = struct('created_by',session.researcherName);
+			rf.name = session.dataBucket;
+			rf.path = paths.ALFKeyShort;
+			rf.filenames = filenames;
+			rf.hashes = hashes;
+			rf.bytes = bytes;
+			rf.labs = session.labName;
+
+			datasets = me.alyx.registerFile(rf);
 
 		end
 
@@ -1105,8 +1125,14 @@ classdef alyxManager < optickaCore
 			
 			try % Post data
 				responseBody = webwrite(endpoint, jsonData, options);
-				if endsWith(endpoint,'auth-token'); statusCode = 200; else  statusCode = 201; end
+				if endsWith(endpoint,'auth-token')
+					statusCode = 200; 
+				else
+					statusCode = 201; 
+				end
 			catch ex
+				disp("=== Response Body:")
+				disp(responseBody)
 				getReport(ex)
 				responseBody = ex.message;
 				switch ex.identifier
@@ -1234,6 +1260,7 @@ classdef alyxManager < optickaCore
 		function delete(me)
 			if me.verbose; fprintf('≣≣≣≣ Delete: %s\n',me.fullName); end
 		end
+
 	%=======================================================================	
 	end %---END PRIVATE METHODS---%	
 	%=======================================================================

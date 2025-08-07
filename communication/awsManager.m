@@ -49,6 +49,14 @@ classdef awsManager < handle
 		end
 
 		% ===================================================================
+		function checkBucket(me, bucket)
+			buckets = list(me);
+			if ~contains(buckets,lower(bucket))
+				createBucket(me, lower(bucket));
+			end
+		end
+
+		% ===================================================================
 		function success = createBucket(me, bucket)
 			if nargin < 2; error("--->>> awsManager: you must enter a bucket name"); end
 			cmdin = strjoin(["aws --endpoint-url " me.ENDPOINT " s3 mb s3://" bucket],"");
@@ -60,9 +68,10 @@ classdef awsManager < handle
 		end
 
 		% ===================================================================
-		function success = copyFiles(me, file, bucket)
-			if ~exist('file','var') || isempty(file) || ~exist(file); return; end
+		function success = copyFiles(me, file, bucket, key)
+			if ~exist('file','var') || isempty(file); return; end
 			if ~exist('bucket','var') || isempty(bucket); return; end
+			if ~exist('key','var') || isempty(key); return; end
 
 			if exist(file) == 7
 				rec = "--recursive ";
@@ -70,13 +79,13 @@ classdef awsManager < handle
 				rec = "";
 			end
 
-			cmdin = strjoin(["aws " rec "--endpoint-url " me.ENDPOINT " s3 cp '" file "' s3://" bucket],"");
+			cmdin = strjoin(["aws --no-progress " rec "--endpoint-url " me.ENDPOINT " s3 cp '" file "' s3://" bucket "/" key],"");
 			[r, out] = system(cmdin);
 			success = ~logical(r);
 			if ~success
-				warning("Problem making bucket: %s", out);
+				warning("!!! Problem making bucket: %s - %s", cmdin, out);
 			else
-				disp('--->>> awsManager: Copy Details')
+				fprintf('--->>> awsManager: Copy Details using %s\n',cmdin)
 				disp(out)
 			end
 		end

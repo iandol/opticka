@@ -120,41 +120,48 @@ classdef optickaCore < handle
 		end
 
 		% ===================================================================
-		function [path, sessionID, dateID, name] = getALF(me, subject, lab, create)
+		function [alfpath, sessionID, dateID, name, key] = getALF(me, subject, lab, create)
 		%> @fn getALF(me)
 		%> @brief get the ALF path
 		%>
 		%> @return path - the path to use
 		%> @return sessionID - session number
-		%> @return dateID - YYYY-MM-DD-HH-MM-SS
+		%> @return dateID - YYYY-MM-DD-HH-MM-SS,
 		%> @return name - [date]-[id]-[subject]
+		%> @return key - [lab]/subjects/[subject]/[date]/[sessionID]/
 		% ===================================================================
-			if ~exist('subject','var') || isempty(subject); subject = 'unknown'; end
-			if ~exist('lab','var') || isempty(lab); lab = []; end
-			if ~exist('create','var') || isempty(create); create = false; end
+			arguments(Input)
+				me 
+				subject char = 'unknown'
+				lab char = ''
+				create logical = false
+			end
 			
 			dateID = char(datetime("now",'Format','uuuu-MM-dd-HH-mm-ss'));
-			
 			d = dateID(1:10);
 			if isempty(lab)
-				path = [me.paths.savedData filesep subject filesep d];
+				key = fullfile(subject, d);
+				alfpath = fullfile(me.paths.savedData, key);
 			else
-				path = [me.paths.savedData filesep lab filesep 'subjects' filesep subject filesep d];
+				key = fullfile(lab, 'subjects', subject, d); 
+				alfpath = fullfile(me.paths.savedData, key);
 			end
-			if ~exist(path,'dir')
+
+			if ~exist(alfpath,'dir')
 				sessionID = 1;
-				path = [path filesep sprintf('%0.3d',sessionID) filesep];
+				key = fullfile(key, sprintf('%0.3d',sessionID));
+				alfpath = fullfile(alfpath, sprintf('%0.3d',sessionID));
 				if create
-					s = mkdir(path);
+					s = mkdir(alfpath);
 					if s == 0; error('Cannot make Save File directory!!!'); end
-					fprintf('≣≣≣≣⊱ Path: %s created...\n',path);
+					fprintf('≣≣≣≣⊱ Path: %s created...\n',alfpath);
 				else
-					fprintf('≣≣≣≣⊱ No path created for: %s created...\n',path);
+					fprintf('≣≣≣≣⊱ No path created for: %s created...\n',alfpath);
 				end
 			else
 				isMatch = false;
 				sessionID = 0;
-				td = dir(path);
+				td = dir(alfpath);
 				pattern = digitsPattern(1,6);
 				for jj = 1:length(td)
 					e = extract(td(jj).name, pattern);
@@ -167,28 +174,33 @@ classdef optickaCore < handle
 				if isMatch
 					if create
 						sessionID = sessionID + 1;
-						path = [path filesep sprintf('%0.3d',sessionID) filesep];
-						s = mkdir(path);
+						key = fullfile(key, sprintf('%0.3d',sessionID));
+						alfpath = fullfile(alfpath, sprintf('%0.3d',sessionID));
+						s = mkdir(alfpath);
 						if s == 0; error('Cannot make Save File directory!!!'); end
-						fprintf('≣≣≣≣⊱ Path: %s created...\n',path);
+						fprintf('≣≣≣≣⊱ Path: %s created...\n',alfpath);
 					else
-						path = [path filesep sprintf('%0.3d',sessionID) filesep];
-						if exist(path,'dir')
-							fprintf('≣≣≣≣⊱ Path: %s found...\n',path);
+						key = fullfile(key, sprintf('%0.3d',sessionID));
+						alfpath = fullfile(alfpath, sprintf('%0.3d',sessionID));
+						if exist(alfpath,'dir')
+							fprintf('≣≣≣≣⊱ Path: %s found...\n',alfpath);
 						else
-							warning('≣≣≣≣⊱ Path: %s should exist but doesn''t...\n',path);
+							warning('≣≣≣≣⊱ Path: %s should exist but doesn''t...\n',alfpath);
 						end
 					end
 				else
 					sessionID = 1;
-					path = [path filesep sprintf('%0.3d',sessionID) filesep];
-					s = mkdir(path);
+					key = fullfile(key, sprintf('%0.3d',sessionID));
+					alfpath = fullfile(alfpath, sprintf('%0.3d',sessionID));
+					s = mkdir(alfpath);
 					if s == 0; error('Cannot make Save File directory!!!'); end
-					fprintf('≣≣≣≣⊱ Path: %s created...\n',path);
+					fprintf('≣≣≣≣⊱ Path: %s created...\n',alfpath);
 				end
 			end
 			name = [dateID '_' sprintf('%0.3d',sessionID) '_' subject];
-			me.paths.ALFPath = path;
+			me.paths.ALFKey = key;
+			me.paths.ALFKeyShort = fullfile(subject, dateID(1:10), sprintf('%0.3d',sessionID));
+			me.paths.ALFPath = alfpath;
 			me.paths.sessionID = sessionID;
 			me.paths.dateID = dateID;
 			me.paths.dateIDShort = dateID(1:10);

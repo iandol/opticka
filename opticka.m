@@ -369,6 +369,8 @@ classdef opticka < optickaCore
 			me.r.sessionData.taskProtocol = me.gv(me.ui.OKAlyxTaskProtocol);
 			me.r.sessionData.brainRegion = me.gv(me.ui.OKAlyxBrainRegion);
 			me.r.sessionData.useAlyx = me.gv(me.ui.OKuseAlyx);
+			me.r.sessionData.dataRepo = me.gv(me.ui.OKDataRepo);
+			me.r.sessionData.dataBucket = me.gv(me.ui.OKDataBucket);
 		
 			me.r.audioDevice = me.gn(me.ui.OKaudioDevice);
 

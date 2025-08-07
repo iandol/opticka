@@ -44,6 +44,7 @@ classdef joystickManager < optickaCore
 		end
 
 		function open(me)
+			if me.silentMode; me.id = 0; return; end
 			reset(me)
 			testConnected(me);
 			if me.id > 0
@@ -111,6 +112,7 @@ classdef joystickManager < optickaCore
 
 	methods
 		function testConnected(me)
+			if me.silentMode; me.id = 0; return; end
 			n = Gamepad('GetNumGamepads');
 			me.names = Gamepad('GetGamepadNamesFromIndices', 1:n);
 			tmpid = Gamepad('GetGamepadIndicesFromNames', me.joystickName);
