@@ -32,11 +32,6 @@ classdef alyxManager < optickaCore
 	properties (Transient = true)
 		webOptions				= weboptions('MediaType','application/json','Timeout',10);
 	end
-
-	%--------------------HIDDEN PROPERTIES-----------%
-	properties(Transient = true, Hidden = true)
-		pwd						= ''
-	end
 	
 	%--------------------DEPENDENT PROTECTED PROPERTIES----------%
 	properties (GetAccess = public, Dependent = true)
@@ -45,7 +40,11 @@ classdef alyxManager < optickaCore
 	
 	%--------------------TRANSIENT PROTECTED PROPERTIES----------%
 	properties (Access = protected, Transient = true)
-		token
+		token char		= ''
+		password char	= ''
+		assignedUser char	= ''
+		AWS_KEY char	= ''
+		AWS_ID char		= ''
 	end
 	
 	%--------------------PRIVATE PROPERTIES----------%
@@ -73,6 +72,37 @@ classdef alyxManager < optickaCore
 
 			me.queueDir = me.paths.parent;
 			flushQueue(me,true);
+		end
+
+
+		% ===================================================================
+		function setSecrets(me, password, AWS_ID, AWS_KEY)
+		% ===================================================================
+			arguments
+				me alyxManager
+				password char = ''
+				AWS_ID char = ''
+				AWS_KEY char = ''
+			end
+
+			me.assignedUser = me.user;
+
+			if isempty(password) && isempty(me.password)
+				try password = getSecret('AlyxPassword'); end %#ok<*TRYNC>
+			end
+			if isempty(AWS_ID)
+				try AWS_ID = getSecret('AWS_ID'); end
+			end
+			if isempty(AWS_KEY)
+				try AWS_KEY = getSecret('AWS_KEY'); end
+			end	
+
+			txt = "";
+			if ~isempty(password); me.password = password; txt=txt+"password"; end
+			if ~isempty(AWS_ID); me.AWS_ID = AWS_ID; txt=txt+" AWS_ID";end
+			if ~isempty(AWS_KEY); me.AWS_KEY = AWS_KEY; txt=txt+" AWS_KEY";end
+			fprintf('\n≣≣≣≣⊱ alyxManager: set these secrets: %s\n', txt);
+
 		end
 
 		% ===================================================================
@@ -109,31 +139,28 @@ classdef alyxManager < optickaCore
     			if isempty(answer)|| (iscell(answer) && isempty(answer{1})); return; end
     			
     			if iscell(answer)
-					username = answer{1};
+					me.user = answer{1};
     			else
-					username = answer;
-    			end
-  			else
-    			username = me.user;
+					me.user = answer;
+				end
   			end
   			
-  			if isempty(me.pwd)
-    			if noDisplay
+  			if isempty(me.password)
+				if noDisplay
 					diaryState = get(0, 'Diary');
 					diary('off'); % At minimum we can keep out of diary log file
 					passwd = input('Alyx password <strong>**INSECURE**</strong>: ', 's');
+					me.password = passwd;
 					diary(diaryState);
     			else
 					passwd = passwordUI();
-					me.pwd = passwd;
-    			end
-  			else
-    			passwd = me.pwd;
+					me.password = passwd;
+				end
   			end
   			
 			try
-    			me.getToken(username, passwd);
-				fprintf('\n≣≣≣≣ alyxManager: user <<%s>> logged in to <<%s>> successfully...\n\n', me.user, me.baseURL);
+    			me.getToken(me.user, me.password);
+				fprintf('\n≣≣≣≣⊱ alyxManager: user <<%s>> logged in to <<%s>> successfully...\n\n', me.user, me.baseURL);
 				success = me.loggedIn;
 				me.sessionURL = [];
 				me.sessionParentURL = [];
@@ -159,6 +186,7 @@ classdef alyxManager < optickaCore
 
 		% ===================================================================
 		function r = hasEntry(me, type, name)
+		% ===================================================================
 			%HASENTRY check if an item exists, e.g.
 			%  hasEntry('users','admin') checks if there is a user called
 			%  admin.
@@ -183,6 +211,7 @@ classdef alyxManager < optickaCore
 
 		% ===================================================================
 		function [data, statusCode] = getData(me, endpoint, varargin)
+		% ===================================================================
 			%GETDATA Return a specific Alyx/REST read-only endpoint
 			%   Makes a request to an Alyx endpoint; returns the data as a MATLAB struct.
 			%
@@ -241,6 +270,7 @@ classdef alyxManager < optickaCore
 
 		% ===================================================================
 		function [data, statusCode] = postData(me, endpoint, data, requestMethod)
+		% ===================================================================
 			%POSTDATA Post any new data to an Alyx/REST endpoint
 			%   Description: Makes a request to an Alyx endpoint with new data as a
 			%   MATLAB struct; returns the JSON response data as a MATLAB struct.
@@ -285,6 +315,7 @@ classdef alyxManager < optickaCore
 
 		% ===================================================================
 		function [sessions, eids] = getSessions(me, varargin)
+		% ===================================================================
 			% GETSESSIONS Return sessions and eids for a given search query
 			%   Returns Alyx records for specific refs (eid and/or expRef strings)
 			%   and/or those matching search queries.  Values may be char arrays,
@@ -369,6 +400,7 @@ classdef alyxManager < optickaCore
 
 		% ===================================================================
 		function subjects = listSubjects(me, stock, alive, sortByUser)
+		% ===================================================================
 			%ALYX.LISTSUBJECTS Lists recorded subjects
 			%   subjects = ALYX.LISTSUBJECTS([stock, alive, sortByUser]) Lists the
 			%   experimental subjects present in main repository.  If logged in,
@@ -418,6 +450,7 @@ classdef alyxManager < optickaCore
 
 		% ===================================================================
 		function narrative = updateNarrative(me, comments, endpoint, subject)
+		% ===================================================================
 			%UPDATENARRATIVE Update an Alyx session or subject narrative
 			%   Update an Alyx narrative field with comments.  If an endpoint is
 			%   specified, the narrative for that record is updated, otherwise the last
@@ -509,6 +542,7 @@ classdef alyxManager < optickaCore
 
 		% ===================================================================
 		function [url, newSession] = newExp(me, path, sessionID, session, jsonData)
+		% ===================================================================
 			%NEWEXP Create a new unique experimental session in the database
 			%   [ref, seq] = NEWEXP(path, sessionID, session, jsonData)
 			%   Create a new experiment:
@@ -595,6 +629,7 @@ classdef alyxManager < optickaCore
 
 		% ===================================================================
 		function registerALF(me, alfDir, sessionURL)
+		% ===================================================================
 			%REGISTERALFTOALYX Register files contained within alfDir to Alyx
 			%   This function registers files contained within the alfDir to Alyx.
 			%   Files are only registered if their filenames match a datasetType's
@@ -710,6 +745,7 @@ classdef alyxManager < optickaCore
 
 		% ===================================================================
 		function [fullpath, filename, fileID, records] = expFilePath(me, varargin)
+		% ===================================================================
 			%EXPFILEPATH Full path for file pertaining to designated experiment
 			%   Returns the path(s) that a particular type of experiment file should be
 			%   located at for a specific experiment. NB: Unlike dat.expFilePath, this
@@ -869,6 +905,7 @@ classdef alyxManager < optickaCore
 
 		% ===================================================================
 		function [datasets] = registerFile(me, rFiles)
+		% ===================================================================
 			%REGISTERFILE Registers filepath(s) to Alyx. data is a struct
 			%that follows https://openalyx.internationalbrainlab.org/docs/#register-file
 			%
@@ -934,6 +971,7 @@ classdef alyxManager < optickaCore
 
 		% ===================================================================
 		function initDatabase(me)
+		% ===================================================================
 			% add datasets types and species to the database
 			[r, s] = getData(me,'dataset-types/opticka.raw');
 			if s ~= 200
@@ -1013,11 +1051,13 @@ classdef alyxManager < optickaCore
 
 		% ===================================================================
 		function bool = get.loggedIn(me)
+		% ===================================================================
 			bool = ~isempty(me.user) && ~isempty(me.token);
 		end
 
 		% ===================================================================
 		function set.queueDir(me, qDir)
+		% ===================================================================
 			%SET.QUEUEDIR Ensure directory exists
 			if ~exist(qDir, 'dir'); mkdir(qDir); end
 			me.queueDir = qDir;
@@ -1025,6 +1065,7 @@ classdef alyxManager < optickaCore
     	
     	% ===================================================================
 		function set.baseURL(me, value)
+		% ===================================================================
 			% Drop trailing slash and ensure protocol defined
 			if isempty(value); me.baseURL = ''; return; end % return on empty
 			if ~matches(value(1:4), 'http'); value = ['https://' value]; end
@@ -1033,10 +1074,11 @@ classdef alyxManager < optickaCore
 
 		% =========================end==========================================
 		function set.user(me, value)
+		% ===================================================================
 			if ~matches(me.user, value)
 				if me.loggedIn; logout(me); end
-				me.pwd = '';
-				fprintf('≣≣≣≣ User name change, removed old password!\n');
+				me.password = '';
+				fprintf('≣≣≣≣⊱ User name change, removed old password!\n');
 			end
 			me.user = value;
 		end
@@ -1064,21 +1106,29 @@ classdef alyxManager < optickaCore
 			if statusCode == 200
   				me.token = responseBody.token;
   				me.user = username;
+				me.assignedUser = me.user;
   				% Add the token to the authorization header field
   				me.webOptions.HeaderFields = {'Authorization', ['Token ' me.token]};
   				% Flush the local queue on successful login
   				me.flushQueue();
 			elseif statusCode == 000
+				me.assignedUser = '';
+				me.token = '';
   				error('Alyx:Login:FailedToConnect', responseBody)
 			elseif statusCode == 400 && isempty(password)
+				me.assignedUser = '';
+				me.token = '';
 				error('Alyx:Login:PasswordEmpty', 'Password may not be left blank')
 			else
+				me.assignedUser = '';
+				me.token = '';
 				error(responseBody)
 			end
 		end
 
 		% ===================================================================
 		function fullEndpoint = makeEndpoint(me, endpoint)
+		% ===================================================================
 			assert(~isempty(endpoint)...
        			&& (ischar(endpoint) || isStringScalar(endpoint))...
        			&& endpoint ~= "", ...
@@ -1098,6 +1148,7 @@ classdef alyxManager < optickaCore
 
 		% ===================================================================
 		function [statusCode, responseBody] = jsonPost(me, endpoint, jsonData, requestMethod)
+		% ===================================================================
 			%JSONPOST Makes POST, PUT and PATCH requests to endpoint with a JSON request body
 			% Makes a POST request, with a JSON request body (`Content-Type: application/json`), 
 			% and asking for a JSON response (`Accept: application/json`).
@@ -1161,6 +1212,7 @@ classdef alyxManager < optickaCore
 
 		% ===================================================================
 		function [data, statusCode] = flushQueue(me, dontSend)
+		% ===================================================================
 			% FLUSHQUEUE Checks for and uploads queued data to Alyx
 			%   Checks all .post and .put files in me.QueueDir and tries to post/put
 			%   them to the database.  If the upload is successfull, the queued file is
@@ -1258,7 +1310,7 @@ classdef alyxManager < optickaCore
 		%> @return
 		% ===================================================================
 		function delete(me)
-			if me.verbose; fprintf('≣≣≣≣ Delete: %s\n',me.fullName); end
+			if me.verbose; fprintf('≣≣≣≣⊱ Delete: %s\n',me.fullName); end
 		end
 
 	%=======================================================================	
@@ -1271,12 +1323,14 @@ classdef alyxManager < optickaCore
     
 		% ===================================================================
 		function [a, wrapped] = ensureCell(a)
+		% ===================================================================
 			%ENSURECELL If arg not already a cell array, wrap it in one
 			if ~iscell(a);a = {a};wrapped = true; else; wrapped = false;end
 		end
 
 		% ===================================================================
 		function flat = cellflat(c)
+		% ===================================================================
 			flat = {};
 			for i = 1:numel(c)
   				elem = c{i};
@@ -1288,6 +1342,7 @@ classdef alyxManager < optickaCore
 
 		% ===================================================================
 		function passed = rmEmpty(A)
+		% ===================================================================
 			if iscell(A)
 				empty = cellfun('isempty', A);
 			else
@@ -1298,6 +1353,7 @@ classdef alyxManager < optickaCore
 
 		% ===================================================================
 		function [C1, varargout] = mapToCell(f, varargin)
+		% ===================================================================
 			%MAPTOCELL Like cellfun and arrayfun, but always returns a cell array
 			%   [C1, ...] = MAPTOCELL(FUN, A1, ...) applies the function FUN to
 			%   each element of the variable number of arrays A1, A2, etc, passed in. The
@@ -1339,6 +1395,7 @@ classdef alyxManager < optickaCore
 
 		% ===================================================================
 		function s = catStructs(cellOfStructs, missingValue)
+		% ===================================================================
 			%CATSTRUCTS Concatenates different structures into one structure array
 			%   s = catStructs(cellOfStructs, [missingValue])
 			%   Returns a non-scalar structure made from concatinating the structures
@@ -1359,6 +1416,7 @@ classdef alyxManager < optickaCore
 
 		% ===================================================================
 		function v = pick(from, key, varargin)
+		% ===================================================================
 			%PICK Retrieves indexed elements from a data structure
 			%   Encapsulates different MATLAB syntax for retreival from data structures
 			%
@@ -1497,6 +1555,7 @@ classdef alyxManager < optickaCore
 
 		% ===================================================================
 		function [present, value, idx] = namedArg(args, name)
+		% ===================================================================
 			%NAMEDARG Returns value from name,value argument pairs
 			%   [present, value, idx] = NAMEDARG(args, name) returns flag for presence
 			%   and value of the argument 'name' in a list potentially containing
@@ -1514,6 +1573,7 @@ classdef alyxManager < optickaCore
 		
 		% ===================================================================
 		function eid = url2eid(url)
+		% ===================================================================
 			% URL2EID Return eid portion of Alyx URL
 			%   Provided a url (or array thereof) returns the eid portion.
 			%
@@ -1542,6 +1602,7 @@ classdef alyxManager < optickaCore
 
 		% ===================================================================
 		function [ref, AlyxInstance] = parseAlyxInstance(varargin)
+		% ===================================================================
 			%PARSEALYXINSTANCE Converts input to string for UDP message and back
 			%   [UDP_string] = ALYX.PARSEALYXINSTANCE(ref, AlyxInstance)
 			%   [ref, AlyxInstance] = ALYX.PARSEALYXINSTANCE(UDP_string)
@@ -1569,6 +1630,7 @@ classdef alyxManager < optickaCore
 
 		% ===================================================================
 		function [varargout] = iff(cond, evalTrue, evalFalse)
+		% ===================================================================
 			%IFF 'if' expression implementation
 			%   v = IFF(cond, evalTrue, evalFalse) returns 'evalTrue' if 'cond' is true,
 			%   otherwise returns 'evalFalse'. 

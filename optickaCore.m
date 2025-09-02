@@ -153,7 +153,7 @@ classdef optickaCore < handle
 				alfpath = fullfile(alfpath, sprintf('%0.3d',sessionID));
 				if create
 					s = mkdir(alfpath);
-					if s == 0; error('Cannot make Save File directory!!!'); end
+					if s == 0; error('Cannot make %s Save File directory!!!',alfpath); end
 					fprintf('≣≣≣≣⊱ Path: %s created...\n',alfpath);
 				else
 					fprintf('≣≣≣≣⊱ No path created for: %s created...\n',alfpath);
@@ -672,8 +672,8 @@ classdef optickaCore < handle
 			newhome = getenv('HOME');
 			if ~matches(newhome,oldhome)
 				fn = fieldnames(me.paths);
-				for ii = 1:length(fieldnames(me.paths))
-					if contains(me.paths.(fn{ii}),oldhome)
+				for ii = 1:length(fn)
+					if ischar(me.paths.(fn{ii})) && contains(me.paths.(fn{ii}),oldhome)
 						me.paths.(fn{ii}) = regexprep(me.paths.(fn{ii}),oldhome,newhome);
 					end
 				end
