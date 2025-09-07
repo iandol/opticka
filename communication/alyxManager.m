@@ -41,14 +41,14 @@ classdef alyxManager < optickaCore
 	%--------------------TRANSIENT PROTECTED PROPERTIES----------%
 	properties (Access = protected, Transient = true)
 		token char		= ''
-		password char	= ''
-		assignedUser char	= ''
-		AWS_KEY char	= ''
-		AWS_ID char		= ''
 	end
 	
 	%--------------------PRIVATE PROPERTIES----------%
 	properties (Access = private)
+		password char	= ''
+		assignedUser char	= ''
+		AWS_KEY char	= ''
+		AWS_ID char		= ''
 		%> properties allowed to be passed on construction
 		allowedProperties = {'baseURL','user','lab','subject','queueDir','pageLimit','verbose'}
 		alfMatch = '(?<date>^[0-9\-]+)_(?<seq>\d+)_(?<subject>\w+)'
@@ -70,7 +70,6 @@ classdef alyxManager < optickaCore
 			me=me@optickaCore(varargin); %superclass constructor
 			me.parseArgs(varargin, me.allowedProperties);
 
-			me.queueDir = me.paths.parent;
 			flushQueue(me,true);
 		end
 
@@ -124,64 +123,64 @@ classdef alyxManager < optickaCore
 			success = false;
 			if me.loggedIn; warning('Already Logged in...'); end
 			noDisplay = usejava('jvm') && ~feature('ShowFigureWindows');
-  			if isempty(me.user)
-    			prompt = {'Alyx Username:'};
-    			if noDisplay
+			if isempty(me.user)
+				prompt = {'Alyx Username:'};
+				if noDisplay
 					% use text-based alternative
 					answer = strip(input([prompt{:} ' '], 's'));
-    			else
-      				% use GUI dialog
-      				dlg_title = 'Alyx Login';
-      				num_lines = 1;
-      				defaultans = {'',''};
-      				answer = inputdlg(prompt, dlg_title, num_lines, defaultans);
-    			end
-    			if isempty(answer)|| (iscell(answer) && isempty(answer{1})); return; end
-    			
-    			if iscell(answer)
+				else
+					% use GUI dialog
+					dlg_title = 'Alyx Login';
+					num_lines = 1;
+					defaultans = {'',''};
+					answer = inputdlg(prompt, dlg_title, num_lines, defaultans);
+				end
+				if isempty(answer)|| (iscell(answer) && isempty(answer{1})); return; end
+				
+				if iscell(answer)
 					me.user = answer{1};
-    			else
+				else
 					me.user = answer;
 				end
-  			end
-  			
-  			if isempty(me.password)
+			end
+			
+			if isempty(me.password)
 				if noDisplay
 					diaryState = get(0, 'Diary');
 					diary('off'); % At minimum we can keep out of diary log file
 					passwd = input('Alyx password <strong>**INSECURE**</strong>: ', 's');
 					me.password = passwd;
 					diary(diaryState);
-    			else
+				else
 					passwd = passwordUI();
 					me.password = passwd;
 				end
-  			end
-  			
+			end
+			
 			try
-    			me.getToken(me.user, me.password);
+				me.getToken(me.user, me.password);
 				fprintf('\n≣≣≣≣⊱ alyxManager: user <<%s>> logged in to <<%s>> successfully...\n\n', me.user, me.baseURL);
 				success = me.loggedIn;
 				me.sessionURL = [];
 				me.sessionParentURL = [];
 				flushQueue(me, true);
-  			catch ex
-    			%products = ver;
-    			%toolboxes = matlab.addons.toolbox.installedToolboxes;
-    			% Check the correct toolboxes are installed
-    			if strcmp(ex.identifier, 'Alyx:Login:FailedToConnect')
+			catch ex
+				%products = ver;
+				%toolboxes = matlab.addons.toolbox.installedToolboxes;
+				% Check the correct toolboxes are installed
+				if strcmp(ex.identifier, 'Alyx:Login:FailedToConnect')
 					warning('Alyx:LoginFail:FailedToConnect', 'Failed To Connect.')
 					return
-    			elseif contains(ex.message, 'credentials')||strcmpi(ex.message, 'Bad Request')
-      				warning('Alyx:LoginFail:BadCredentials', 'Unable to log in with provided credentials. Will reset password')
+				elseif contains(ex.message, 'credentials')||strcmpi(ex.message, 'Bad Request')
+					warning('Alyx:LoginFail:BadCredentials', 'Unable to log in with provided credentials. Will reset password')
 					me.pwd = '';
-        			return
-    			elseif contains(ex.message, 'password')&&contains(ex.message, 'blank')
+					return
+				elseif contains(ex.message, 'password')&&contains(ex.message, 'blank')
 					disp('Password may not be left blank')
-    			else % Another error altogether
+				else % Another error altogether
 					rethrow(ex)
-    			end
-  			end
+				end
+			end
 		end
 
 		% ===================================================================
@@ -229,42 +228,42 @@ classdef alyxManager < optickaCore
 			options = me.webOptions;
 			options.MediaType = 'application/x-www-form-urlencoded';
 			try
-  				while hasNext
-    				assert(page < me.pageLimit, 'Maximum number of page requests reached')
+				while hasNext
+					assert(page < me.pageLimit, 'Maximum number of page requests reached')
 					
 					result = webread(fullEndpoint, varargin{:}, options);
 					
-    				if ~isPaginated(result)
+					if ~isPaginated(result)
 						data = result;
 						break
-    				end
-    				data = [data, result.results']; %#ok<AGROW>
-    				hasNext = ~isempty(result.next);
-    				fullEndpoint = result.next;
-    				page = page + 1;
-  				end
-  				statusCode = 200; % Success
-  				return
+					end
+					data = [data, result.results']; %#ok<AGROW>
+					hasNext = ~isempty(result.next);
+					fullEndpoint = result.next;
+					page = page + 1;
+				end
+				statusCode = 200; % Success
+				return
 			catch ex
-  				switch ex.identifier
+				switch ex.identifier
 					case {'MATLAB:webservices:UnknownHost', 'MATLAB:webservices:Timeout', ...
-    					'MATLAB:webservices:CopyContentToDataStreamError'}
+						'MATLAB:webservices:CopyContentToDataStreamError'}
 						warning(ex.identifier, '%s', ex.message)
 						statusCode = 000;
 					otherwise
-  						response = regexp(ex.message, '(?:the status )(\d{3})', 'tokens');
-  						statusCode = str2double(me.cellflat(response));
-  						if statusCode == 403 % Invalid token
-    						warning('Alyx:getData:InvalidToken', 'Invalid token, please re-login')
-    						me.logout; % Delete token
-    						me.login; % Re-login
+						response = regexp(ex.message, '(?:the status )(\d{3})', 'tokens');
+						statusCode = str2double(me.cellflat(response));
+						if statusCode == 403 % Invalid token
+							warning('Alyx:getData:InvalidToken', 'Invalid token, please re-login')
+							me.logout; % Delete token
+							me.login; % Re-login
 							if me.loggedIn % If succeded
-    							data = me.getData(fullEndpoint); % Retry
+								data = me.getData(fullEndpoint); % Retry
 							end
 						else
 							warning(['alyxManager.getData: ' ex.identifier], '%s', ex.message);
-  						end
-  					end
+						end
+					end
 			end
 		end
 
@@ -282,7 +281,7 @@ classdef alyxManager < optickaCore
 			% See also ALYX, JSONPOST, FLUSHQUEUE, REGISTERFILE, GETDATA
 			if nargin == 3; requestMethod = 'post'; end % Default request method
 			assert(any(strcmpi(requestMethod, {'post', 'put', 'patch', 'delete'})),...
-  			'%s not a valid HTTP request method', requestMethod)
+			'%s not a valid HTTP request method', requestMethod)
 			
 			% Create the JSON command
 			jsonData = jsonencode(data);
@@ -291,7 +290,10 @@ classdef alyxManager < optickaCore
 			queueFilename = [datestr(now, 'yyyy-mm-dd-HH-MM-SS-FFF') '.' lower(requestMethod)];
 			queueFullfile = fullfile(me.queueDir, queueFilename);
 			% If local Alyx queue directory doesn't exist, create one
-			if ~exist(me.queueDir, 'dir'); mkdir(me.queueDir); end
+			if ~exist(me.queueDir, 'dir')
+				me.queueDir = me.paths.parent;
+				mkdir(me.queueDir);
+			end
 			
 			% Save the endpoint and json locally
 			fid = fopen(queueFullfile, 'w');
@@ -303,9 +305,9 @@ classdef alyxManager < optickaCore
 				[data, statusCode] = me.flushQueue();
 				% Return only relevent data
 				if numel(statusCode) > 1; statusCode = statusCode(end); end
-  				%if floor(statusCode/100) == 2 && ~isempty(data)
-    			%	data = data(end);
-  				%end
+				%if floor(statusCode/100) == 2 && ~isempty(data)
+				%	data = data(end);
+				%end
 			else
 				statusCode = 000;
 				data = [];
@@ -362,15 +364,15 @@ classdef alyxManager < optickaCore
 			
 			% Get sessions for specified refs
 			if isfield(p.Results, 'ref') && ~isempty(p.Results.ref)
-  				refs = cellstr(p.Results.ref);
-  				parsedRef = regexp(refs, me.alfMatch, 'names');
-  				sessFromRef = @(ref)me.getData('sessions/', ...
-    				'subject', ref.subject, 'date_range', [ref.date ',' ref.date], 'number', ref.seq);
+				refs = cellstr(p.Results.ref);
+				parsedRef = regexp(refs, me.alfMatch, 'names');
+				sessFromRef = @(ref)me.getData('sessions/', ...
+					'subject', ref.subject, 'date_range', [ref.date ',' ref.date], 'number', ref.seq);
 				b = cellfun(@isempty, parsedRef);
-  				isRef = ~b;
-  				sessions = [me.mapToCell(@(eid)me.getData(['sessions/' eid]), refs(~isRef))...
-    				me.mapToCell(sessFromRef, parsedRef(isRef))];
-  				sessions = me.rmEmpty(sessions);
+				isRef = ~b;
+				sessions = [me.mapToCell(@(eid)me.getData(['sessions/' eid]), refs(~isRef))...
+					me.mapToCell(sessFromRef, parsedRef(isRef))];
+				sessions = me.rmEmpty(sessions);
 			end
 			
 			% Do search for other queries
@@ -382,19 +384,19 @@ classdef alyxManager < optickaCore
 				eids = me.url2eid({sessions.url});
 			end
 			function value = processValue(name)
-    			if contains(name,'date')
-      				if isnumeric(p.Results.(name))
-        				value = me.iff(isscalar(p.Results.(name)), repmat(p.Results.(name),1,2), p.Results.(name));
-        				value = string(datestr(value, 'yyyy-mm-dd'));
-      				elseif isscalar(string(p.Results.(name))) && ~any(p.Results.(name)==',')
-        				value = repmat(string(p.Results.(name)),2,1);
-      				else
-        				error('Alyx:getSessions:InvalidInput', 'The value of ''date_range'' is invalid')
-      				end
-    			else
+				if contains(name,'date')
+					if isnumeric(p.Results.(name))
+						value = me.iff(isscalar(p.Results.(name)), repmat(p.Results.(name),1,2), p.Results.(name));
+						value = string(datestr(value, 'yyyy-mm-dd'));
+					elseif isscalar(string(p.Results.(name))) && ~any(p.Results.(name)==',')
+						value = repmat(string(p.Results.(name)),2,1);
+					else
+						error('Alyx:getSessions:InvalidInput', 'The value of ''date_range'' is invalid')
+					end
+				else
 					value = p.Results.(name);
 				end
-    			if iscellstr(value)||isstring(value); value = strjoin(value,','); end
+				if iscellstr(value)||isstring(value); value = strjoin(value,','); end
 			end
 		end
 
@@ -413,38 +415,38 @@ classdef alyxManager < optickaCore
 			if nargin < 2; stock = false; end
 			
 			if me.loggedIn % user provided an alyx instance
-  				% convert bool to string for endpoint
-  				alive = me.iff(islogical(alive)&&alive, 'True', 'False');
-  				stock = me.iff(islogical(stock)&&stock, 'True', 'False');
-  				
-  				% get list of all living, non-stock mice from alyx
-  				s = me.getData(sprintf('subjects?stock=%s&alive=%s', stock, alive));
-  				
-  				% return on empty
-  				if isempty(s); subjects = {'default'}; return; end
-  				
-  				% get cell array of subject names
-  				subjNames = {s.nickname};
-  				
-  				if sortByUser
-    				% determine the user for each mouse
-    				respUser = {s.responsible_user};
-    				
-    				% determine which subjects belong to this user
-    				thisUserSubs = sort(subjNames(strcmp(respUser, me.user)));
-    				
-    				% all the subjects
-    				otherUserSubs = sort(subjNames(~strcmp(respUser, me.user)));
-    				
-    				% the full, ordered list
-    				subjects = [{'default'}, thisUserSubs, otherUserSubs]';
-  				else
-    				subjects = [{'default'}, subjNames]';
-  				end
+				% convert bool to string for endpoint
+				alive = me.iff(islogical(alive)&&alive, 'True', 'False');
+				stock = me.iff(islogical(stock)&&stock, 'True', 'False');
+				
+				% get list of all living, non-stock mice from alyx
+				s = me.getData(sprintf('subjects?stock=%s&alive=%s', stock, alive));
+				
+				% return on empty
+				if isempty(s); subjects = {'default'}; return; end
+				
+				% get cell array of subject names
+				subjNames = {s.nickname};
+				
+				if sortByUser
+					% determine the user for each mouse
+					respUser = {s.responsible_user};
+					
+					% determine which subjects belong to this user
+					thisUserSubs = sort(subjNames(strcmp(respUser, me.user)));
+					
+					% all the subjects
+					otherUserSubs = sort(subjNames(~strcmp(respUser, me.user)));
+					
+					% the full, ordered list
+					subjects = [{'default'}, thisUserSubs, otherUserSubs]';
+				else
+					subjects = [{'default'}, subjNames]';
+				end
 			else
-  				% The remote 'main' repositories are the reference for the existence of
-  				% experiments, as given by the folder structure
-  				subjects = [];
+				% The remote 'main' repositories are the reference for the existence of
+				% experiments, as given by the folder structure
+				subjects = [];
 			end
 		end
 
@@ -484,20 +486,20 @@ classdef alyxManager < optickaCore
 			
 			% If no specific endpoint is specified, use the last created subsession
 			if nargin < 3
-  				if ~isempty(me.sessionURL)
-    				endpoint = me.sessionURL;
-  				else % Nothing to go on, throw error
-    				error('No endpoint specified and no subsession URL set');
-  				end
+				if ~isempty(me.sessionURL)
+					endpoint = me.sessionURL;
+				else % Nothing to go on, throw error
+					error('No endpoint specified and no subsession URL set');
+				end
 			end
 			
 			if isempty(comments) && ~isa(comments, 'char')
-  				if ~isempty(subject) && isempty(endpoint)
-    				titleStr = 'Update subject description';
-  				else
-    				titleStr = 'Update session narrative';
-  				end
-  				comments = inputdlg('Enter narrative:', titleStr, [10 60]);
+				if ~isempty(subject) && isempty(endpoint)
+					titleStr = 'Update subject description';
+				else
+					titleStr = 'Update session narrative';
+				end
+				comments = inputdlg('Enter narrative:', titleStr, [10 60]);
 			end
 
 			session = me.getData(endpoint);
@@ -517,26 +519,26 @@ classdef alyxManager < optickaCore
 				% Assume post is intended for subject description
 				warning('Alyx:TODO', 'This feature is not yet implemented')
 				return
-  				% TODO: retreive subject narrative endpoint, requires endpoint to allow
-  				% PUT requests and /subject=%s option.  NB: subject's 'narrative' field
-  				% is called 'description'
+				% TODO: retreive subject narrative endpoint, requires endpoint to allow
+				% PUT requests and /subject=%s option.  NB: subject's 'narrative' field
+				% is called 'description'
 			else
-  				% Remove trailing whitespaces, and ensure string is 1D.  Replace newlines
-  				% with escape charecters
-  				
-  				if iscell(narrative); narrative = narrative{:}; end % Make sure not a cell
-  				try
-    				% Update the record
-    				data = me.postData(endpoint, struct('narrative', narrative), 'patch');
-    				if ~isempty(data)
-        				narrative = strrep(data.narrative, '\n', newline);
-    				else
-        				error('Alyx:updateNarrative:FailedToUpdate',...
-            				'Failed to update narrative on Alyx')
-    				end
-  				catch ex
-    				rethrow(ex)
-  				end
+				% Remove trailing whitespaces, and ensure string is 1D.  Replace newlines
+				% with escape charecters
+				
+				if iscell(narrative); narrative = narrative{:}; end % Make sure not a cell
+				try
+					% Update the record
+					data = me.postData(endpoint, struct('narrative', narrative), 'patch');
+					if ~isempty(data)
+						narrative = strrep(data.narrative, '\n', newline);
+					else
+						error('Alyx:updateNarrative:FailedToUpdate',...
+							'Failed to update narrative on Alyx')
+					end
+				catch ex
+					rethrow(ex)
+				end
 			end
 		end
 
@@ -556,15 +558,15 @@ classdef alyxManager < optickaCore
 			if ~exist('jsonData','var'); jsonData = '[]'; end
 
 			% Ensure user is logged in
-  			if ~me.loggedIn; me.login; end
+			if ~me.loggedIn; me.login; end
 			
 			% check items exists in the database
 			assert(me.hasEntry('labs',session.labName), 'Alyx:newExp:labNotFound', sprintf('lab "%s" does not exist', session.labName));
 			assert(me.hasEntry('subjects',session.subjectName), 'Alyx:newExp:subjectNotFound', sprintf('subject "%s" does not exist', session.subjectName));
 			assert(me.hasEntry('users',session.researcherName), 'Alyx:newExp:userNotFound', sprintf('user "%s" does not exist', session.researcherName));
-			assert(me.hasEntry('projects',session.project), 'Alyx:newExp:projectNotFound', sprintf('project "%s" does not exist', session.project));
-			assert(me.hasEntry('procedures',session.procedure), 'Alyx:newExp:procedureNotFound', sprintf('procedure "%s" does not exist', session.procedure));
-			assert(me.hasEntry('locations',session.location), 'Alyx:newExp:locationNotFound', sprintf('location "%s" does not exist', session.location));
+			%assert(me.hasEntry('projects',session.project), 'Alyx:newExp:projectNotFound', sprintf('project "%s" does not exist', session.project));
+			%assert(me.hasEntry('procedures',session.procedure), 'Alyx:newExp:procedureNotFound', sprintf('procedure "%s" does not exist', session.procedure));
+			%assert(me.hasEntry('locations',session.location), 'Alyx:newExp:locationNotFound', sprintf('location "%s" does not exist', session.location));
 			
 			me.sessionURL = '';
 			me.sessionParentURL = '';
@@ -585,14 +587,14 @@ classdef alyxManager < optickaCore
 			d = struct;
 			d.users = {session.researcherName};
 			d.subject = session.subjectName;
-			d.projects = {session.project};
-  			d.procedures = {session.procedure};
-			d.task_protocol = session.taskProtocol;
-			d.lab = session.labName;
-			d.location = session.location;
-  			d.narrative = ['opticka-generated session: ' path];
+			try d.lab = session.labName; end
+			try d.location = session.location; end
+			try d.projects = {session.project}; end
+			try d.procedures = {session.procedure}; end
+			try d.task_protocol = session.taskProtocol; end
+			d.narrative = ['opticka-generated session: ' path];
 			d.number = sessionID;
-  			d.start_time = expDate;
+			d.start_time = expDate;
 			d.type = 'Experiment';
 			d.json = ['{ "parameters": ' jsonData ' }'];
 			
@@ -601,11 +603,11 @@ classdef alyxManager < optickaCore
 				url = newSession.url;
 				me.sessionURL = url;
 			catch ME
-  				if (isinteger(statusCode) && statusCode == 503) || me.Headless % Unable to connect, or user is supressing errors
-    				warning(ME.identifier, 'Failed to create session file for %i: %s.', sessionID, ME.message)
-  				else % Probably fatal user error
-    				rethrow(ME)
-  				end
+				if (isinteger(statusCode) && statusCode == 503)
+					warning(ME.identifier, 'Failed to create session file for %i: %s.', sessionID, ME.message)
+				else % Probably fatal user error
+					rethrow(ME)
+				end
 			end
 		end
 
@@ -614,16 +616,16 @@ classdef alyxManager < optickaCore
 			if isempty(me.sessionURL); return; end
 			if ~exist('narrative','var'); narrative = []; end
 			if ~exist('QC','var') || isempty(QC); QC = 'NOT_SET'; end
-			
-			[session, s] = me.getData(me.sessionURL);
+			session = [];
+			[ses, s] = me.getData(me.sessionURL);
 
-			if ~isempty(session)
+			if ~isempty(ses)
 				if ~isempty(narrative)
 					me.updateNarrative(narrative);
 				end
 				d.qc = QC;
 				d.end_time = char(datetime("now",'Format','yyyy-MM-dd''T''HH:mm:ss'));
-				session = me.postData(['sessions/' session.id],d,'patch');
+				session = me.postData(['sessions/' ses.id], d, 'patch');
 			end
 		end
 
@@ -646,15 +648,15 @@ classdef alyxManager < optickaCore
 			% See also ALYX, REGISTERFILES, POSTDATA, HTTP.JSONGET
 			
 			if nargin < 3
-  				if isempty(me.sessionURL)
-    				error('No session URL set')
-  				else
-    				sessionURL = me.sessionURL;
-  				end
+				if isempty(me.sessionURL)
+					error('No session URL set')
+				else
+					sessionURL = me.sessionURL;
+				end
 			end
 			
 			assert(exist('dirPlus','file') == 2,...
-  			'Function ''dirPlus'' not found, make sure alyx helpers folder is added to path')
+			'Function ''dirPlus'' not found, make sure alyx helpers folder is added to path')
 			
 			%%INPUT VALIDATION
 			% Validate alfDir path
@@ -674,8 +676,8 @@ classdef alyxManager < optickaCore
 			%2) Get all the files contained within the alfDir, which match a
 			%datasetType in the Alyx database
 			function v = validateFcn(fileObj)
-    			match = regexp(fileObj.name, regexptranslate('wildcard',datasetTypes_filemasks));
-    			v = ~isempty([match{:}]);
+				match = regexp(fileObj.name, regexptranslate('wildcard',datasetTypes_filemasks));
+				v = ~isempty([match{:}]);
 			end
 			alfFiles = dirPlus(alfDir, 'ValidateFileFcn', @validateFcn, 'Struct', true);
 			assert(~isempty(alfFiles), 'No files within %s matched a datasetType', alfDir);
@@ -689,56 +691,56 @@ classdef alyxManager < optickaCore
 			parentURLs = cell(size(parentTypes));
 			fprintf('Creating parent datasets... ');
 			for parent = 1:length(parentTypes)
-    			d = struct('created_by', me.User,...
-               			'dataset_type', parentTypes{parent},...
-               			'session', sessionURL,...
-               			'data_format', 'notData');
-    			w = me.postData('datasets',d);
-    			parentURLs{parent} = w.url;
+				d = struct('created_by', me.User,...
+						'dataset_type', parentTypes{parent},...
+						'session', sessionURL,...
+						'data_format', 'notData');
+				w = me.postData('datasets',d);
+				parentURLs{parent} = w.url;
 			end
 			
 			%Now go through each file, creating a dataset and filerecord for that file
 			for file = 1:length(alfFiles)
-    			fullPath = fullfile(alfFiles(file).folder, alfFiles(file).name);
-    			fileFormat = alfFileParts{file,3};
-    			parentDataset = parentURLs{parentID(file)};
+				fullPath = fullfile(alfFiles(file).folder, alfFiles(file).name);
+				fileFormat = alfFileParts{file,3};
+				parentDataset = parentURLs{parentID(file)};
 			
-    			datasetTypes_filemasks(contains(datasetTypes_filemasks,'*.*')) = []; % Remove parant datasets from search
-    			matchIdx = regexp(alfFiles(file).name, regexptranslate('wildcard', datasetTypes_filemasks));
-    			matchIdx = find(~cellfun(@isempty, matchIdx));
-    			assert(isscalar(matchIdx), 'Insufficient/Too many matches of datasetType for file %s', alfFiles(file).name);
-    			datasetType = datasetTypes(matchIdx).name;
-    			
-    			me.registerFile(fullPath, fileFormat, sessionURL, datasetType, parentDataset);
-    			
-    			fprintf('Registered file %s as datasetType %s\n', alfFiles(file).name, datasetType);
+				datasetTypes_filemasks(contains(datasetTypes_filemasks,'*.*')) = []; % Remove parant datasets from search
+				matchIdx = regexp(alfFiles(file).name, regexptranslate('wildcard', datasetTypes_filemasks));
+				matchIdx = find(~cellfun(@isempty, matchIdx));
+				assert(isscalar(matchIdx), 'Insufficient/Too many matches of datasetType for file %s', alfFiles(file).name);
+				datasetType = datasetTypes(matchIdx).name;
+				
+				me.registerFile(fullPath, fileFormat, sessionURL, datasetType, parentDataset);
+				
+				fprintf('Registered file %s as datasetType %s\n', alfFiles(file).name, datasetType);
 			end
 			
 			%% Alyx-dev
 			return
 			try %#ok<UNRCH>
-  			%Get datarepositories and their base paths
-  			repo_paths = cellfun(@(r) r.name, me.getData('data-repository'), 'uni', 0);
-  			
-  			%Identify which repository the filePath is in
-  			which_repo = cellfun( @(rp) contains(alfDir, rp), repo_paths);
-  			assert(sum(which_repo) == 1, 'Input filePath\n%s\ndoes not contain the a repository path\n', alfDir);
-  			
-  			%Define the relative path of the file within the repo
-  			dnsId = regexp(alfDir, ['(?<=' repo_paths{which_repo} '.*)\\?'], 'once')+1;
-  			relativePath = alfDir(dnsId:end);
-  			
-  			me.BaseURL = 'https://alyx-dev.cortexlab.net';
+			%Get datarepositories and their base paths
+			repo_paths = cellfun(@(r) r.name, me.getData('data-repository'), 'uni', 0);
+			
+			%Identify which repository the filePath is in
+			which_repo = cellfun( @(rp) contains(alfDir, rp), repo_paths);
+			assert(sum(which_repo) == 1, 'Input filePath\n%s\ndoes not contain the a repository path\n', alfDir);
+			
+			%Define the relative path of the file within the repo
+			dnsId = regexp(alfDir, ['(?<=' repo_paths{which_repo} '.*)\\?'], 'once')+1;
+			relativePath = alfDir(dnsId:end);
+			
+			me.BaseURL = 'https://alyx-dev.cortexlab.net';
 			%   subject = regexpi(relativePath, '(?<=Subjects\\)[A-Z_0-9]+', 'match');
-  			
+			
 			%   D.subject = subject{1};
-  			D.filenames = {alfFiles.name};
-  			D.path = alfDir;
+			D.filenames = {alfFiles.name};
+			D.path = alfDir;
 			%   D.exists_in = repo_paths{which_repo};
-  			
-  			me.postData('register-file', D);
+			
+			me.postData('register-file', D);
 			catch ex
-  			warning(ex.identifier, '%s', ex.message)
+			warning(ex.identifier, '%s', ex.message)
 			end
 			me.BaseURL = 'https://alyx.cortexlab.net';
 		end
@@ -792,17 +794,17 @@ classdef alyxManager < optickaCore
 			
 			parsed = regexp(varargin{1}, me.alfMatch, 'tokens');
 			if isempty(parsed) % Subject, not ref
-  				subject = varargin{1};
-  				expDate = varargin{2};
-  				seq = varargin{3};
-  				type = varargin{4};
-  				varargin(1:4) = [];
+				subject = varargin{1};
+				expDate = varargin{2};
+				seq = varargin{3};
+				type = varargin{4};
+				varargin(1:4) = [];
 			else % Ref, not subject
-  				subject = parsed{1}{3};
-  				expDate = parsed{1}{1};
-  				seq = parsed{1}{2};
-  				type = varargin{2};
-  				varargin(1:2) = [];
+				subject = parsed{1}{3};
+				expDate = parsed{1}{1};
+				seq = parsed{1}{2};
+				type = varargin{2};
+				varargin(1:2) = [];
 			end
 			
 			% Check date
@@ -813,27 +815,27 @@ classdef alyxManager < optickaCore
 			end
 			
 			if length(varargin) > 1 % Repository location defined
-  				user = varargin{1};
-  				location = varargin{2};
-  				% Validate repository
-  				repos = catStructs(me.getData('data-repository'));
-  				idx = strcmpi(location, {repos.name});
-  				assert(any(idx), 'Alyx:expFilePath:InvalidType', ...
-    				'Error: ''%s'' is an invalid data set type', location)
-  				location = repos(idx).name; % Ensures correct case
+				user = varargin{1};
+				location = varargin{2};
+				% Validate repository
+				repos = catStructs(me.getData('data-repository'));
+				idx = strcmpi(location, {repos.name});
+				assert(any(idx), 'Alyx:expFilePath:InvalidType', ...
+					'Error: ''%s'' is an invalid data set type', location)
+				location = repos(idx).name; % Ensures correct case
 			elseif ~isempty(varargin)
-  				user = varargin{1};
-  				location = [];
+				user = varargin{1};
+				location = [];
 			else
-  				location = [];
-  				user = '';
+				location = [];
+				user = '';
 			end
 			
 			% Validate type
 			dataSets = catStructs(me.getData('dataset-types'));
 			idx = strcmpi(type, {dataSets.name});
 			assert(any(idx), 'Alyx:expFilePath:InvalidType', ...
-  			'Error: ''%s'' is an invalid data set type', type)
+			'Error: ''%s'' is an invalid data set type', type)
 			type = dataSets(idx).name; % Ensures correct case
 			
 			% Construct the endpoint
@@ -843,27 +845,27 @@ classdef alyxManager < optickaCore
 			% filter by created time under the assumption that the dataset was created
 			% on the same day as the session.  See https://github.com/cortex-lab/alyx/issues/601
 			if strictSearch
-  				endpoint = sprintf(['/datasets?'...
-    				'subject=%s&'...
-    				'experiment_number=%s&'...
-    				'dataset_type=%s&'...
-    				'created_by=%s'],...
-    				subject, num2str(seq), type, user);
-  				records = me.getData(endpoint);
-  				if ~isempty(records)
-    				sessions = me.getSessions(me.url2eid({records.session}));
-    				records = records(floor(me.datenum({sessions.start_time})) == datenum(expDate));
-  				end
+				endpoint = sprintf(['/datasets?'...
+					'subject=%s&'...
+					'experiment_number=%s&'...
+					'dataset_type=%s&'...
+					'created_by=%s'],...
+					subject, num2str(seq), type, user);
+				records = me.getData(endpoint);
+				if ~isempty(records)
+					sessions = me.getSessions(me.url2eid({records.session}));
+					records = records(floor(me.datenum({sessions.start_time})) == datenum(expDate));
+				end
 			else
-  				endpoint = sprintf(['/datasets?'...
-    				'subject=%1$s&'...
-    				'experiment_number=%2$s&'...
-    				'dataset_type=%3$s&'...
-    				'created_by=%4$s&'...
-    				'created_datetime_gte=%5$s&'...
-    				'created_datetime_lte=%5$s'],...
-    				subject, num2str(seq), type, user, expDate);
-  				records = me.getData(endpoint);
+				endpoint = sprintf(['/datasets?'...
+					'subject=%1$s&'...
+					'experiment_number=%2$s&'...
+					'dataset_type=%3$s&'...
+					'created_by=%4$s&'...
+					'created_datetime_gte=%5$s&'...
+					'created_datetime_lte=%5$s'],...
+					subject, num2str(seq), type, user, expDate);
+				records = me.getData(endpoint);
 			end
 			% Construct the endpoint
 			% endpoint = sprintf('/datasets?subject=%s&date=%s&experiment_number=%s&dataset_type=%s&created_by=%s',...
@@ -871,25 +873,25 @@ classdef alyxManager < optickaCore
 			% records = me.getData(endpoint);
 			
 			if ~isempty(records)
-  				data = me.catStructs(records);
-  				fileRecords = me.catStructs([data(:).file_records]);
+				data = me.catStructs(records);
+				fileRecords = me.catStructs([data(:).file_records]);
 			else
-  				fullpath = [];
-  				filename = [];
-  				fileID = [];
+				fullpath = [];
+				filename = [];
+				fileID = [];
 				return
 			end
 			
 			if ~isempty(location)
-  				% Remove records in unwanted repo locations
-  				idx = strcmp({fileRecords.data_repository}, location);
-  				fileRecords = fileRecords(idx);
+				% Remove records in unwanted repo locations
+				idx = strcmp({fileRecords.data_repository}, location);
+				fileRecords = fileRecords(idx);
 			end
 			
 			% Get the full paths
 			mkPath = @(x) me.iff(isempty(x.data_url), ... % If data url not present
-  			[x.data_repository_path x.relative_path], ... % make path from repo path and relative path
-  			x.data_url); % otherwise use data_url field
+			[x.data_repository_path x.relative_path], ... % make path from repo path and relative path
+			x.data_url); % otherwise use data_url field
 			% Make paths
 			fullpath = arrayfun(mkPath, fileRecords, 'uni', 0);
 			filename = {data.name};
@@ -897,9 +899,9 @@ classdef alyxManager < optickaCore
 			
 			% If only one record was returned, don't return a cell array
 			if isscalar(fullpath)
-  				fullpath = fullpath{1};
-  				filename = filename{1};
-  				fileID = fileID{1};
+				fullpath = fullpath{1};
+				filename = filename{1};
+				fileID = fileID{1};
 			end
 		end
 
@@ -923,8 +925,8 @@ classdef alyxManager < optickaCore
 
 			if isempty(fieldnames(rFiles)); warning('alyxManager.register file incorrect input'); end
 
-  			[datasets, statusCode] = me.postData('register-file', rFiles);
-  			
+			[datasets, statusCode] = me.postData('register-file', rFiles);
+			
 			if statusCode ~= 201
 				warning('HTTP Error %i -- No file registering, return %s', statusCode, datasets)
 			end
@@ -965,7 +967,7 @@ classdef alyxManager < optickaCore
 			rf.bytes = bytes;
 			rf.labs = session.labName;
 
-			datasets = me.alyx.registerFile(rf);
+			datasets = me.registerFile(rf);
 
 		end
 
@@ -1061,9 +1063,9 @@ classdef alyxManager < optickaCore
 			%SET.QUEUEDIR Ensure directory exists
 			if ~exist(qDir, 'dir'); mkdir(qDir); end
 			me.queueDir = qDir;
-    	end
-    	
-    	% ===================================================================
+		end
+		
+		% ===================================================================
 		function set.baseURL(me, value)
 		% ===================================================================
 			% Drop trailing slash and ensure protocol defined
@@ -1088,6 +1090,18 @@ classdef alyxManager < optickaCore
 	%=======================================================================
 
 	%=======================================================================
+	methods (Hidden = true)
+	%=======================================================================
+		function secrets = getSecrets(me)
+			secrets.password = me.password;
+			secrets.AWS_KEY = me.AWS_KEY;
+			secrets.AWS_ID = me.AWS_ID;
+		end
+	%=======================================================================
+	end %---END HIDDEN METHODS---%
+	%=======================================================================
+
+	%=======================================================================
 	methods ( Access = protected ) %-------PRIVATE (protected) METHODS-----%
 	%=======================================================================
 
@@ -1102,19 +1116,19 @@ classdef alyxManager < optickaCore
 			%
 			% See also ALYX, LOGIN
 			[statusCode, responseBody] = me.jsonPost('auth-token',...
-  			['{"username":"', username, '","password":"', password, '"}']);
+			['{"username":"', username, '","password":"', password, '"}']);
 			if statusCode == 200
-  				me.token = responseBody.token;
-  				me.user = username;
+				me.token = responseBody.token;
+				me.user = username;
 				me.assignedUser = me.user;
-  				% Add the token to the authorization header field
-  				me.webOptions.HeaderFields = {'Authorization', ['Token ' me.token]};
-  				% Flush the local queue on successful login
-  				me.flushQueue();
+				% Add the token to the authorization header field
+				me.webOptions.HeaderFields = {'Authorization', ['Token ' me.token]};
+				% Flush the local queue on successful login
+				me.flushQueue();
 			elseif statusCode == 000
 				me.assignedUser = '';
 				me.token = '';
-  				error('Alyx:Login:FailedToConnect', responseBody)
+				error('Alyx:Login:FailedToConnect', responseBody)
 			elseif statusCode == 400 && isempty(password)
 				me.assignedUser = '';
 				me.token = '';
@@ -1130,17 +1144,17 @@ classdef alyxManager < optickaCore
 		function fullEndpoint = makeEndpoint(me, endpoint)
 		% ===================================================================
 			assert(~isempty(endpoint)...
-       			&& (ischar(endpoint) || isStringScalar(endpoint))...
-       			&& endpoint ~= "", ...
-       			'Alyx:makeEndpoint:invalidInput', 'Invalid endpoint');
+				&& (ischar(endpoint) || isStringScalar(endpoint))...
+				&& endpoint ~= "", ...
+				'Alyx:makeEndpoint:invalidInput', 'Invalid endpoint');
 			if startsWith(endpoint, 'http')
 				% this is a full url already
 				fullEndpoint = endpoint;
 			else
 				fullEndpoint = [me.baseURL, '/', char(endpoint)];
-  				if isstring(endpoint)
-    				fullEndpoint = string(fullEndpoint);
-  				end
+				if isstring(endpoint)
+					fullEndpoint = string(fullEndpoint);
+				end
 			end
 			% drop trailing slash
 			fullEndpoint = strip(fullEndpoint, '/');
@@ -1169,7 +1183,7 @@ classdef alyxManager < optickaCore
 			endpoint = me.makeEndpoint(endpoint); % Ensure absolute URL
 			if nargin == 3; requestMethod = 'post'; end % Default request method
 			assert(any(strcmpi(requestMethod, {'post', 'put', 'patch', 'delete'})),...
-  			'%s not a valid HTTP request method', requestMethod)
+			'%s not a valid HTTP request method', requestMethod)
 			% Set the HTTP request method in options
 			options = me.webOptions;
 			options.RequestMethod = lower(requestMethod);
@@ -1187,17 +1201,17 @@ classdef alyxManager < optickaCore
 				getReport(ex)
 				responseBody = ex.message;
 				switch ex.identifier
-    			case 'MATLAB:webservices:UnknownHost'
+				case 'MATLAB:webservices:UnknownHost'
 					% Can't resolve URL
 					warning(ex.identifier, '%s Posting temporarily supressed', ex.message)
 					statusCode = 000;
-    			case {'MATLAB:webservices:CopyContentToDataStreamError'
-        			'MATLAB:webservices:SSLConnectionFailure'
-        			'MATLAB:webservices:Timeout'}
-      			% Connection refused or timed out, set as headless and continue on
+				case {'MATLAB:webservices:CopyContentToDataStreamError'
+					'MATLAB:webservices:SSLConnectionFailure'
+					'MATLAB:webservices:Timeout'}
+				% Connection refused or timed out, set as headless and continue on
 					warning(ex.identifier, '%s. Posting temporarily supressed', ex.message)
 					statusCode = 000;
-    			otherwise
+				otherwise
 					response = regexp(ex.message, '(?:the status )(?<status>\d{3}).*"(?<message>.+)"', 'names');
 					if ~isempty(response)
 						statusCode = str2double(response.status);
@@ -1228,13 +1242,18 @@ classdef alyxManager < optickaCore
 			%
 			% See also ALYX, ALYX.JSONPOST
 			if ~exist('dontSend','var'); dontSend = false; end
-			% Get all currently queued posts, puts, etc.
-			alyxQueue = [dir([me.queueDir filesep '*.post']);...
-  			dir([me.queueDir filesep '*.put']);...
-  			dir([me.queueDir filesep '*.patch'])];
-			alyxQueueFiles = sort(cellfun(@(x) fullfile(me.queueDir, x), {alyxQueue.name}, 'uni', false));
 			
-			% Leave the function if there aren't any queued commands
+			if ~exist(me.queueDir,'dir')
+				me.queueDir = me.paths.parent;
+			end
+
+			try
+				% Get all currently queued posts, puts, etc.
+				alyxQueue = [dir([me.queueDir filesep '*.post']);...
+				dir([me.queueDir filesep '*.put']);...
+				dir([me.queueDir filesep '*.patch'])];
+				alyxQueueFiles = sort(cellfun(@(x) fullfile(me.queueDir, x), {alyxQueue.name}, 'uni', false));
+			end
 			if isempty(alyxQueueFiles); return; end
 			
 			if dontSend
@@ -1254,50 +1273,50 @@ classdef alyxManager < optickaCore
 				% Rest of the text is the JSON data
 				jsonData = fscanf(fid,'%c');
 				fclose(fid);
-  			
-  				try
-    				[statusCode(curr_file), responseBody] = me.jsonPost(endpoint, jsonData, uploadType(2:end));
+			
+				try
+					[statusCode(curr_file), responseBody] = me.jsonPost(endpoint, jsonData, uploadType(2:end));
 				%     [statusCode(curr_file), responseBody] = http.jsonPost(me.makeEndpoint(endpoint), jsonData, 'Authorization', ['Token ' me.Token]);
-    				switch floor(statusCode(curr_file)/100)
-      				case 2
-        				% Upload success - delete from queue
-        				data{curr_file} = responseBody;
-        				delete(alyxQueueFiles{curr_file});
-        				disp([int2str(statusCode(curr_file)) ' Success, uploaded to Alyx: ' jsonData])
-      				case 3
-        				% Redirect - delete from queue
-        				data{curr_file} = responseBody;
-        				delete(alyxQueueFiles{curr_file});
-        				disp([int2str(statusCode(curr_file)) ' Redirect, uploaded to Alyx: ' jsonData])
-      				case 4
-        				if statusCode(curr_file) == 403 % Invalid token
-          				me.logout; % delete token
-          				if ~me.headless % if user can see dialog...
-            				me.login; % prompt for login
-            				[data, statusCode] = me.flushQueue; % Retry
-          				else % otherwise - save in queue
-            				warning('Alyx:flushQueue:InvalidToken', '%s (%i): %s saved in queue',...
-              				responseBody, statusCode(curr_file), alyxQueue(curr_file).name)
-          				end
-        				else % User error - delete from queue
+					switch floor(statusCode(curr_file)/100)
+					case 2
+						% Upload success - delete from queue
+						data{curr_file} = responseBody;
+						delete(alyxQueueFiles{curr_file});
+						disp([int2str(statusCode(curr_file)) ' Success, uploaded to Alyx: ' jsonData])
+					case 3
+						% Redirect - delete from queue
+						data{curr_file} = responseBody;
+						delete(alyxQueueFiles{curr_file});
+						disp([int2str(statusCode(curr_file)) ' Redirect, uploaded to Alyx: ' jsonData])
+					case 4
+						if statusCode(curr_file) == 403 % Invalid token
+						me.logout; % delete token
+						if ~me.headless % if user can see dialog...
+							me.login; % prompt for login
+							[data, statusCode] = me.flushQueue; % Retry
+						else % otherwise - save in queue
+							warning('Alyx:flushQueue:InvalidToken', '%s (%i): %s saved in queue',...
+							responseBody, statusCode(curr_file), alyxQueue(curr_file).name)
+						end
+						else % User error - delete from queue
 							delete(alyxQueueFiles{curr_file});
 							warning('Alyx:flushQueue:BadUploadCommand', '%s (%i): %s',...
-            				responseBody, statusCode(curr_file), alyxQueue(curr_file).name)
-        				end
-      				case 5
-        				% Server error - save in queue
-        				warning('Alyx:flushQueue:InternalServerError', '%s (%i): %s saved in queue',...
-          				responseBody, statusCode(curr_file), alyxQueue(curr_file).name)
-    				end
-  				catch ex
-      				if strcmp(ex.identifier, 'MATLAB:weboptions:unrecognizedStringChoice')
-          				warning('Alyx:flushQueue:MethodNotSupported',...
-              				'%s method not supported', upper(uploadType(2:end)));
-      				else
-          				% If the JSON command failed (e.g. internet is down)
-          				warning('Alyx:flushQueue:NotConnected', 'Alyx upload failed - saved in queue');
-      				end
-  				end
+							responseBody, statusCode(curr_file), alyxQueue(curr_file).name)
+						end
+					case 5
+						% Server error - save in queue
+						warning('Alyx:flushQueue:InternalServerError', '%s (%i): %s saved in queue',...
+						responseBody, statusCode(curr_file), alyxQueue(curr_file).name)
+					end
+				catch ex
+					if strcmp(ex.identifier, 'MATLAB:weboptions:unrecognizedStringChoice')
+						warning('Alyx:flushQueue:MethodNotSupported',...
+							'%s method not supported', upper(uploadType(2:end)));
+					else
+						% If the JSON command failed (e.g. internet is down)
+						warning('Alyx:flushQueue:NotConnected', 'Alyx upload failed - saved in queue');
+					end
+				end
 			end
 			data = me.cellflat(data(~cellfun('isempty',data))); % Remove empty cells
 			data = me.catStructs(data); % Convert cell array into struct
@@ -1320,7 +1339,7 @@ classdef alyxManager < optickaCore
 	%=======================================================================
 	methods ( Static ) %----------STATIC METHODS
 	%=======================================================================
-    
+	
 		% ===================================================================
 		function [a, wrapped] = ensureCell(a)
 		% ===================================================================
@@ -1333,10 +1352,10 @@ classdef alyxManager < optickaCore
 		% ===================================================================
 			flat = {};
 			for i = 1:numel(c)
-  				elem = c{i};
-  				if iscell(elem); elem = alyxManager.cellflat(elem); end
-  				if isempty(elem); elem = {elem}; end
-  				flat = [flat; alyxManager.ensureCell(elem)];
+				elem = c{i};
+				if iscell(elem); elem = alyxManager.cellflat(elem); end
+				if isempty(elem); elem = {elem}; end
+				flat = [flat; alyxManager.ensureCell(elem)];
 			end
 		end
 
@@ -1385,11 +1404,11 @@ classdef alyxManager < optickaCore
 			end
 			varargout = cell(nargout - 1, 1);
 			for i = 1:nout
-  				if i == 1
-    				C1 = reshape(arg(i,:), inSize);
-  				else
-    				varargout{i - 1} = reshape(arg(i,:), inSize);
-  				end
+				if i == 1
+					C1 = reshape(arg(i,:), inSize);
+				else
+					varargout{i - 1} = reshape(arg(i,:), inSize);
+				end
 			end
 		end
 
@@ -1404,10 +1423,10 @@ classdef alyxManager < optickaCore
 			%   including ones present in the original input.
 			if nargin < 2; missingValue = []; end
 			fields = unique(alyxManager.cellflat(alyxManager.mapToCell(@fieldnames, cellOfStructs)));
-  			function t = valueTable(s)
-    			if ~isrow(s); s = reshape(s, 1, []); end
-    			t =  alyxManager.mapToCell(@(f) alyxManager.pick(s, f, 'cell', 'def', missingValue), fields);
-    			t = vertcat(t{:});
+			function t = valueTable(s)
+				if ~isrow(s); s = reshape(s, 1, []); end
+				t =  alyxManager.mapToCell(@(f) alyxManager.pick(s, f, 'cell', 'def', missingValue), fields);
+				t = vertcat(t{:});
 			end
 			values = alyxManager.mapToCell(@valueTable, cellOfStructs);
 			values = horzcat(values{:});
@@ -1482,74 +1501,74 @@ classdef alyxManager < optickaCore
 			if iscell(key)
 				v = mapToCell(@(k) pick(from, k, varargin{:}), key);
 			else
-  				stringArgs = cellfun(@ischar, varargin); %string option params
-  				[withDefault, default] = alyxManager.namedArg(varargin, 'def');
-  				cellOut = any(strcmpi(varargin(stringArgs), 'cell'));
+				stringArgs = cellfun(@ischar, varargin); %string option params
+				[withDefault, default] = alyxManager.namedArg(varargin, 'def');
+				cellOut = any(strcmpi(varargin(stringArgs), 'cell'));
 				if isa(from, 'containers.Map')
 					%% Handle MATLAB maps with key meaning key!
-    				v = me.iff(withDefault && ~from.isKey(key), default, @() from(key));
-  				elseif ischar(key)
-    				%% Handle structures and class objects with key meaning field/property
-    				if ~iscell(from)
-      					if cellOut
-        					if ~withDefault
+					v = me.iff(withDefault && ~from.isKey(key), default, @() from(key));
+				elseif ischar(key)
+					%% Handle structures and class objects with key meaning field/property
+					if ~iscell(from)
+						if cellOut
+							if ~withDefault
 								v = reshape({from.(key)}, size(from));
-        					elseif withDefault && (isfield(from, key) || isAProp(from, key))
+							elseif withDefault && (isfield(from, key) || isAProp(from, key))
 								% create cell array, then replace empties with default value
 								v = reshape({from.(key)}, size(from));
 								[v{cellfun(@isempty, v)}] = deal(default);
-        					else
+							else
 								% default but field or property does not exist
 								v = repmat({default}, size(from));
-        					end
-      					else
-        					if ~withDefault
-          						if isscalar(from)
-            						v = from.(key);
-          						else
-            						v = reshape([from.(key)], size(from));
-          						end
-        					else
-          						% if using default but with default array output, first get cell
-          						% output with defaults applied, then convert back to a MATLAB array:
-          						asCell = alyxManager.pick(from, key, varargin{:}, 'cell');
+							end
+						else
+							if ~withDefault
+								if isscalar(from)
+									v = from.(key);
+								else
+									v = reshape([from.(key)], size(from));
+								end
+							else
+								% if using default but with default array output, first get cell
+								% output with defaults applied, then convert back to a MATLAB array:
+								asCell = alyxManager.pick(from, key, varargin{:}, 'cell');
 								% v = cell2mat( pick(from, key, varargin{:}, 'cell'));
-          						% cell2mat doesn't process single element cells if they contain a
-          						% cell or string, so we short circuit ourselves in this case:
-          						v = iff(isscalar(asCell), @() asCell{1}, @() cell2mat(asCell));
-        					end
+								% cell2mat doesn't process single element cells if they contain a
+								% cell or string, so we short circuit ourselves in this case:
+								v = iff(isscalar(asCell), @() asCell{1}, @() cell2mat(asCell));
+							end
 						end
-    				else
-      					if cellOut
-        					% The following line was changed 2019-08
+					else
+						if cellOut
+							% The following line was changed 2019-08
 					%         v = mapToCell(@(e) pick(pick(e, key, varargin{:}), 1), from);
-        					v = me.mapToCell(@(e) me.pick(e, key, varargin{:}), from);
-      					else
-        					v = cellfun(@(e) me.pick(e, key, varargin{:}), from);
-      					end
-    				end
-  				elseif iscell(from)
-    				%% Handle cell arrays with key meaning indices
-    				if cellOut
+							v = me.mapToCell(@(e) me.pick(e, key, varargin{:}), from);
+						else
+							v = cellfun(@(e) me.pick(e, key, varargin{:}), from);
+						end
+					end
+				elseif iscell(from)
+					%% Handle cell arrays with key meaning indices
+					if cellOut
 						v = from(key);
-    				else
+					else
 						v = [from{key}];
-    				end
-  				else
-    				v = from(key);
-    				if cellOut
+					end
+				else
+					v = from(key);
+					if cellOut
 						v = num2cell(v);
-    				end
+					end
 				end
 			end
 			
-  			function b = isAProp(v, name)
-    			if isstruct(v) || isempty(v)
-      			b = false;
-    			else
-      			b = isprop(v, name);
-    			end
-  			end
+			function b = isAProp(v, name)
+				if isstruct(v) || isempty(v)
+				b = false;
+				else
+				b = isprop(v, name);
+				end
+			end
 
 		end
 
@@ -1612,19 +1631,19 @@ classdef alyxManager < optickaCore
 			% See also SAVEOBJ, LOADOBJ
 			if nargin > 1 % in [ref, AlyxInstance]
 				ref = varargin{1}; % extract expRef
-  				ai = varargin{2}; % extract AlyxInstance struct
-  				if isa(ai, 'Alyx') % if there is an AlyxInstance
-    				d = ai.saveobj;
-  				end
-  				d.expRef = ref; % Add expRef field
-  				ref = jsonencode(d); % Convert to JSON string
+				ai = varargin{2}; % extract AlyxInstance struct
+				if isa(ai, 'Alyx') % if there is an AlyxInstance
+					d = ai.saveobj;
+				end
+				d.expRef = ref; % Add expRef field
+				ref = jsonencode(d); % Convert to JSON string
 			else % in [UDP_string]
-    			s = jsondecode(varargin{1}); % Convert JSON to structure
-    			ref = s.expRef; % Extract the expRef
-    			AlyxInstance = Alyx('',''); % Create empty Alyx object
-    			if numel(fieldnames(s)) > 1 % Assume to be Alyx object as struct
+				s = jsondecode(varargin{1}); % Convert JSON to structure
+				ref = s.expRef; % Extract the expRef
+				AlyxInstance = Alyx('',''); % Create empty Alyx object
+				if numel(fieldnames(s)) > 1 % Assume to be Alyx object as struct
 					AlyxInstance = AlyxInstance.loadobj(s); % Turn into object
-    			end
+				end
 			end
 		end
 
@@ -1647,14 +1666,14 @@ classdef alyxManager < optickaCore
 			if cond; result = evalTrue; else; result = evalFalse; end
 			
 			if isa(result, 'function_handle')
-	  		if nargout == 0 || nargout(result) == 0
+			if nargout == 0 || nargout(result) == 0
 				result();
 				varargout = {};
-	  		else
-				[varargout{1:nargout}] = result();
-	  		end
 			else
-	  		varargout = {result};
+				[varargout{1:nargout}] = result();
+			end
+			else
+			varargout = {result};
 			end
 		end
 

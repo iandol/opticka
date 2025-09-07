@@ -1170,7 +1170,7 @@ classdef runExperiment < optickaCore
 					if ~exist(me.paths.ALFPath,'dir'); mkdir(me.paths.ALFPath); end
 					sname = [me.paths.ALFPath filesep 'opticka.raw.' me.name '.mat'];
 					rE = me;
-					save(sname,'rE','tS');
+					save(sname,'rE','tS','-v7.3');
 					me.paths.sname = sname;
 					fprintf('\n\n#####################\n≣≣≣≣ <strong>SAVED RAW DATA to: %s</strong>\n#####################\n',sname)
 

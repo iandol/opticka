@@ -694,13 +694,17 @@ classdef touchManager < optickaCore
 		end
 
 		% ===================================================================
-		function demo(me,useaudio)
+		function demo(me, nTrials, useaudio)
 		%> @fn demo
 		%>
 		%> @param
 		%> @return
 		% ===================================================================
-			if ~exist('useaudio','var'); useaudio=false; end
+			arguments(Input)
+				me
+				nTrials double = 10
+				useaudio logical = false
+			end
 			if isempty(me.screen); me.screen = screenManager(); end
 			sM = me.screen;
 			if max(Screen('Screens'))==0 && me.verbose
@@ -724,7 +728,7 @@ classdef touchManager < optickaCore
 				createQueue(me);	%===================!!! Create Queue
 				start(me); 			%===================!!! Start touch collection
 
-				for i = 1 : 6
+				for i = 1 : nTrials
 					if doQuit; break; end
 					tx = randi(20)-10;
 					ty = randi(20)-10;
