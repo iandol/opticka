@@ -145,16 +145,7 @@ classdef alyxManager < optickaCore
 			end
 			
 			if isempty(me.password)
-				if noDisplay
-					diaryState = get(0, 'Diary');
-					diary('off'); % At minimum we can keep out of diary log file
-					passwd = input('Alyx password <strong>**INSECURE**</strong>: ', 's');
-					me.password = passwd;
-					diary(diaryState);
-				else
-					passwd = passwordUI();
-					me.password = passwd;
-				end
+				secretUI(me,'password');
 			end
 			
 			try
@@ -1092,11 +1083,55 @@ classdef alyxManager < optickaCore
 	%=======================================================================
 	methods (Hidden = true)
 	%=======================================================================
+		
+		% ===================================================================
+		% GETSECRETS Function to retrieve user secrets
+		%
+		% Input Arguments:
+		%     me - object containing user credentials
+		%
+		% Output Arguments:
+		%     secrets - structure containing user credentials
 		function secrets = getSecrets(me)
+			% Extract user credentials from the object
+			secrets.user = me.user;
 			secrets.password = me.password;
 			secrets.AWS_KEY = me.AWS_KEY;
 			secrets.AWS_ID = me.AWS_ID;
 		end
+
+		% ===================================================================
+		% SECRETUI Function to securely handle password input for the alyxManager
+		%
+		% Input Arguments:
+		%     me    - Instance of alyxManager
+		%     field - Field name to store the password, default is 'password'
+		function secretUI(me,field)
+			arguments (Input)
+				me alyxManager
+				field char = 'password'
+			end
+			switch field
+				case 'password'
+					secret = 'AlyxPassword';
+				case {'AWS_ID', 'AWS_KEY'}
+					secret = field;
+				otherwise
+					return
+			end
+    		if noDisplay
+        		% Temporarily disable diary logging to avoid storing the password
+        		diaryState = get(0, 'Diary');
+        		diary('off'); % At minimum we can keep out of diary log file
+        		passwd = input('Alyx password <strong>**INSECURE**</strong>: ', 's');
+        		me.(field) = passwd; % Store the entered password in the object
+        		diary(diaryState); % Restore the previous diary state
+    		else
+        		setSecret(secret, true); % Get secret through a user interface
+        		me.(field) = getSecret(secret); % Store the entered password in the object
+    		end
+		end
+
 	%=======================================================================
 	end %---END HIDDEN METHODS---%
 	%=======================================================================
