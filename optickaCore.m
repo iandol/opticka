@@ -670,15 +670,18 @@ classdef optickaCore < handle
 
 			oldhome = me.paths.home;
 			newhome = getenv('HOME');
-			if ~matches(newhome,oldhome)
-				fn = fieldnames(me.paths);
-				for ii = 1:length(fn)
-					if ischar(me.paths.(fn{ii})) && contains(me.paths.(fn{ii}),oldhome)
+			fn = fieldnames(me.paths);
+			for ii = 1:length(fn)
+				if ischar(me.paths.(fn{ii})) || isstring(me.paths.(fn{ii}))
+					if IsLinux; me.paths.(fn{ii}) = regexprep(me.paths.(fn{ii}),"\\","/"); end
+					if ~exist(oldhome, 'dir') && ...
+						~matches(newhome,oldhome) && ...
+						contains(me.paths.(fn{ii}),oldhome)
 						me.paths.(fn{ii}) = regexprep(me.paths.(fn{ii}),oldhome,newhome);
 					end
 				end
-				me.paths.oldhome = oldhome;
 			end
+			me.paths.oldhome = oldhome;
 
 			samePath = false;
 			if isprop(me,'dir')

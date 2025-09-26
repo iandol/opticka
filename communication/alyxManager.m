@@ -76,6 +76,18 @@ classdef alyxManager < optickaCore
 
 		% ===================================================================
 		function setSecrets(me, password, AWS_ID, AWS_KEY)
+		%> @brief Set secrets for the AlyxManager instance
+		%>
+		%> This method allows the user to set the password, AWS ID, and AWS key
+		%> for the AlyxManager instance. If any of these values are not provided,
+		%> the method attempts to retrieve them from a secure storage.
+		%>
+		%> @param password (char) The password for the Alyx database. If not provided,
+		%> it will be retrieved from secure storage.
+		%> @param AWS_ID (char) The AWS ID for accessing AWS services. If not provided,
+		%> it will be retrieved from secure storage.
+		%> @param AWS_KEY (char) The AWS key for accessing AWS services. If not provided,
+		%> it will be retrieved from secure storage.
 		% ===================================================================
 			arguments
 				me alyxManager
@@ -106,6 +118,11 @@ classdef alyxManager < optickaCore
 
 		% ===================================================================
 		function logout(me)
+		%> @brief Logs out the current user from the AlyxManager instance
+		%>
+		%> This method clears the session token and any associated session
+		%> information, effectively logging the user out of the Alyx system.
+		%> It also provides feedback to the user indicating the logout status.
 		% ===================================================================
 			if me.loggedIn
 				me.token = [];
@@ -176,10 +193,16 @@ classdef alyxManager < optickaCore
 
 		% ===================================================================
 		function r = hasEntry(me, type, name)
+		%> @brief Checks if an item exists in the Alyx database
+		%>
+		%> This method verifies the existence of a specified entry in the
+		%> Alyx database based on the type and name provided. It returns
+		%> true if the entry exists, and false otherwise.
+		%>
+		%> @param type (char) The type of entry to check (e.g., 'users', 'subjects').
+		%> @param name (char) The name of the entry to check for existence.
+		%> @return r (logical) Returns true if the entry exists, false otherwise.
 		% ===================================================================
-			%HASENTRY check if an item exists, e.g.
-			%  hasEntry('users','admin') checks if there is a user called
-			%  admin.
 			[rt, st] = me.getData(type);
 			if st ~= 200; error('Problem retrieving %s from Alyx',type); end
 			switch type
