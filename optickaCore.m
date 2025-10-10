@@ -208,43 +208,92 @@ classdef optickaCore < handle
 		end
 
 		% ===================================================================
-		function makeReport(me, rpt)
-			try
-				import mlreportgen.report.* %#ok<*SIMPT>
-				import mlreportgen.dom.* 
-			catch
-				warning('Report Generator Toolbox not installed...');
+		function rpt = makeReport(me, rpt)
+		%> @fn rpt = makeReport(me, rpt)
+		%> @brief Generate a detailed report for the opticka object
+		%>
+		%> Creates an HTML report using MATLAB's Report Generator toolbox. The report
+		%> includes detailed information about the object and its components.
+		%>
+		%> @param me this instance object
+		%> @param rpt optional existing Report object to append to (creates new if empty)
+		%> @return rpt generated Report object
+		%>
+		%> @details Handles different object types including:
+		%>  - opticka core objects
+		%>  - runExperiment objects
+		%>  - timeLogger objects
+		%>  - taskSequence objects
+		%>  - stateMachine objects
+		%>  - behaviouralRecord objects
+		%>  - eye tracker analysis objects
+		%>
+		%> Requires MATLAB Report Generator toolbox.
+		% ===================================================================
+			% Constants (could also be moved to class properties)
+			REPORT_FORMAT = 'HTML';
+			REPORT_TITLE = 'Opticka Object Report';
+			REPORT_PUBLISHER = 'Opticka';
+			REPORT_IMAGE_PATH = fullfile(me.paths.root, 'ui', 'images', 'opticka-clear.png');
+			PARAGRAPH_STYLE = {Color('#8b008b'), Bold(true), FontSize('14pt')};
+			
+			% Enhanced Error Handling
+			hasReportToolbox = license('test', 'Report_Generator') && ...
+						  ~isempty(ver('mlreportgen'));
+			if ~hasReportToolbox
+				error('Opticka:MissingToolbox', ...
+					['Report Generator Toolbox is required but not installed or licensed.\n', ...
+					 'Please install the toolbox or use alternative reporting methods.']);
 			end
-
-			if ~exist('rpt','var') || isempty(rpt) 
-				fullReport = true; 
+			
+			% Input Validation
+			if nargin < 2 || isempty(rpt)
+				fullReport = true;
+			elseif ~isa(rpt, 'mlreportgen.report.Report')
+				error('Opticka:InvalidInput', ...
+					'rpt must be a valid mlreportgen.report.Report object');
 			else
-				fullReport = false; 
+				fullReport = false;
 			end
-
-			persistent tt
+			
+			% Performance Optimization
+			reportTimer = tic;
 			
 			if fullReport
-				warning off
-				tt = tic;
-				name = me.name;
-				name = regexprep(name,'\s*','-');
-				name = [me.paths.parent filesep name '--' me.uuid];
-				rpt = Report(name,'HTML');
-				fprintf('=== makeReport: initialise %s...\n',name);
-	
-				tp = TitlePage; 
-				tp.Title = 'Opticka Object Report'; 
-				tp.Subtitle = sprintf('Name: %s',me.fullName); 
-				tp.Publisher = 'Opticka';
-				tp.Image = [me.paths.root filesep 'ui' filesep 'images' filesep 'opticka-clear.png'];
-				tp.Author = me.comment; 
-				append(rpt,tp); 
-				append(rpt,TableOfContents);
-				fprintf('=== makeReport: initialise @%.2f secs\n',toc(tt));
+				% String Handling Optimization
+				safeName = regexprep(me.name, '\s+', '-');
+				reportPath = fullfile(me.paths.parent, [safeName '--' me.uuid]);
+				
+				% Initialize new report with detailed logging
+				fprintf('=== makeReport: Initializing new report "%s"...\n', safeName);
+				rpt = Report(reportPath, REPORT_FORMAT);
+				
+				% Title Page with Better Organization
+				try
+					tp = TitlePage();
+					tp.Title = REPORT_TITLE;
+					tp.Subtitle = sprintf('Name: %s', me.fullName);
+					tp.Publisher = REPORT_PUBLISHER;
+					
+					% Robust Image Handling
+					if exist(REPORT_IMAGE_PATH, 'file')
+						tp.Image = REPORT_IMAGE_PATH;
+					else
+						warning('Opticka:MissingImage', ...
+							'Report logo image not found at: %s', REPORT_IMAGE_PATH);
+					end
+					
+					tp.Author = me.comment;
+					append(rpt, tp);
+					append(rpt, TableOfContents());
+					
+					fprintf('=== makeReport: Initialization completed in %.2f seconds\n', ...
+						toc(reportTimer));
+				catch ME
+					error('Opticka:ReportError', ...
+						'Failed to create report title page: %s', ME.message);
+				end
 			end
-
-			parnote = {Color('#8b008b'),Bold(true),FontSize('14pt')};
 
 			switch class(me)
 
@@ -655,7 +704,7 @@ classdef optickaCore < handle
 		% ===================================================================
 		function ID = initialiseSaveFile(me, varargin)
 		%> @fn initialiseSaveFile
-		%> @brief just get date fragment
+		%> @brief just get date fragment for backwards compatibility
 		%>
 		% ===================================================================
 			[~,~,ID] = getALF(me);
