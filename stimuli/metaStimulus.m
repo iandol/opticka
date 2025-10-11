@@ -451,36 +451,21 @@ classdef metaStimulus < optickaCore
 		%>
 		%> Using fixationChoice parameter, return the x and y positions of each stimulus
 		% ===================================================================
-		function [x,y] = getFixationPositions(me)
-			x = 0; y = 0;
+		function [x,y,size] = getFixationPositions(me)
+			x = NaN; y = NaN; size = NaN;
 			if ~isempty(me.fixationChoice)
-				x=zeros(length(me.fixationChoice),1); y = x;
+				x=zeros(length(me.fixationChoice),1); y = x; size = x;
 				for i=1:length(me.fixationChoice)
 					x(i) = me.stimuli{me.fixationChoice(i)}.xPositionOut / me.ppd_;
 					y(i) = me.stimuli{me.fixationChoice(i)}.yPositionOut / me.ppd_;
+					if ~isempty(me.stimuli{me.fixationChoice(i)}.szPx)
+						size(i) = me.stimuli{me.fixationChoice(i)}.szPx / me.ppd_; 
+					else
+						size(i) = me.stimuli{me.fixationChoice(i)}.sizeOut * me.ppd_;
+					end
 				end
 				me.lastXPosition = x;
 				me.lastYPosition = y;
-			end
-		end
-
-		% ===================================================================
-		%> @brief Return the stimulus exclusion positions
-		%>
-		%> Use the exclusionChoice value to find the X and Y positions of these
-		%> stimuli, returns x and y positions and also sets the lastXExclusion
-		%> and lastXExclusion parameters
-		% ===================================================================
-		function [x,y] = getExclusionPositions(me)
-			x = []; y = [];
-			if ~isempty(me.exclusionChoice)
-				x=zeros(length(me.exclusionChoice),1); y = x;
-				for i=1:length(me.exclusionChoice)
-					x(i) = me.stimuli{me.exclusionChoice(i)}.xPositionOut / me.ppd_;
-					y(i) = me.stimuli{me.exclusionChoice(i)}.yPositionOut / me.ppd_;
-				end
-				me.lastXExclusion = x;
-				me.lastYExclusion = y;
 			end
 		end
 
@@ -528,6 +513,26 @@ classdef metaStimulus < optickaCore
 				end
 			end
 			me.stimulusPositions = out;
+		end
+
+		% ===================================================================
+		%> @brief Return the stimulus exclusion positions
+		%>
+		%> Use the exclusionChoice value to find the X and Y positions of these
+		%> stimuli, returns x and y positions and also sets the lastXExclusion
+		%> and lastXExclusion parameters
+		% ===================================================================
+		function [x,y] = getExclusionPositions(me)
+			x = []; y = [];
+			if ~isempty(me.exclusionChoice)
+				x=zeros(length(me.exclusionChoice),1); y = x;
+				for i=1:length(me.exclusionChoice)
+					x(i) = me.stimuli{me.exclusionChoice(i)}.xPositionOut / me.ppd_;
+					y(i) = me.stimuli{me.exclusionChoice(i)}.yPositionOut / me.ppd_;
+				end
+				me.lastXExclusion = x;
+				me.lastYExclusion = y;
+			end
 		end
 
 		% ===================================================================
