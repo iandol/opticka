@@ -559,14 +559,15 @@ classdef touchManager < optickaCore
 			wasTouch = me.eventPressed;
 
 			if ~isempty(evt.xy)
-				if ~isempty(windows) && ~isempty(me.window)
-					for ii = 1 : nWindows
-						result = calculateWindow(me, evt.xy(1), evt.xy(2), windows(ii,:));
+				for ii = 1 : nWindows
+					% for negation with multiple windows, only the last
+					% window should be used
+					isLast = ii == nWindows;
+					if ~isempty(windows) && ~isempty(me.window)
+						result = calculateWindow(me, evt.xy(1), evt.xy(2), windows(ii,:), isLast);
 						if result; win = ii; break; end
-					end
-				else
-					for ii = 1 : nWindows
-						result = calculateWindow(me, evt.xy(1), evt.xy(2), me.window(ii));
+					else
+						result = calculateWindow(me, evt.xy(1), evt.xy(2), me.window(ii), isLast);
 						if result; win = ii; break; end
 					end
 				end
@@ -1040,7 +1041,7 @@ classdef touchManager < optickaCore
 		end
 
 		% ===================================================================
-		function result = calculateWindow(me, x, y, tempWindow)
+		function result = calculateWindow(me, x, y, tempWindow, isLast)
 		%> @fn calculateWindow
 		%>
 		%> @param
@@ -1048,9 +1049,12 @@ classdef touchManager < optickaCore
 		% ===================================================================
 			arguments(Input)
 				me
-				x = []
-				y = []
+				x double = []
+				y double = []
+				% can be a rect or a window parameter struct
 				tempWindow = []
+				% doNegation can only be properly tested on the last window
+				isLast logical = true
 			end
 			arguments(Output)
 				result 
@@ -1075,7 +1079,7 @@ classdef touchManager < optickaCore
 					% [-x +x -y +y]
 					if (x >= ez(i,1) && x <= ez(i,3)) && ...
 						(y >= ez(i,2) && y <= ez(i,4))
-						result = -100;
+						result = -1000;
 						return;
 					end
 				end
@@ -1099,9 +1103,9 @@ classdef touchManager < optickaCore
 					matchneg = true;
 				end
 			end
-			if (tempWindow.doNegation && matchneg) || (~tempWindow.doNegation && match)
+			if (~tempWindow.doNegation && match) || (tempWindow.doNegation && matchneg)
 				result = true;
-			elseif tempWindow.doNegation && ~matchneg
+			elseif isLast && tempWindow.doNegation && ~matchneg
 				result = -100;
 			end
 		end
