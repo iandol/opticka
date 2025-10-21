@@ -100,7 +100,7 @@ classdef imageStimulus < baseStimulus
 
 	properties (Access = protected)
 		%> mask texture
-		maskshader
+		maskshader = []
 		%> allowed properties passed to object upon construction
 		allowedProperties = {'type', 'filePath', 'selection', 'contrast', ...
 			'randomiseSelection','precision','filter','crop','specialFlags',...
@@ -163,8 +163,6 @@ classdef imageStimulus < baseStimulus
 
 			me.chosenImages = [];
 
-			checkfilePath(me);
-
 			me.sM = sM;
 			if ~sM.isOpen; error('Screen needs to be Open!'); end
 			me.ppd = sM.ppd;
@@ -186,6 +184,7 @@ classdef imageStimulus < baseStimulus
 
 			addRuntimeProperties(me);
 
+			checkfilePath(me);
 			loadImage(me, in);
 			me.chosenImages = string(['[setup]' regexprep(me.currentFile,'\\','/')]);
 			me.inSetup = false; me.isSetup = true;
@@ -249,7 +248,6 @@ classdef imageStimulus < baseStimulus
 				me.currentFile = '';
 			end
 
-
 			if me.precision > 0
 				me.matrix = double(me.matrix)/255;
 			end
@@ -297,8 +295,8 @@ classdef imageStimulus < baseStimulus
 			me.heightD = me.height / me.ppd;
 			if me.sizeOut > 0
 				me.scale = me.sizeOut / (me.width / me.ppd);
-				me.szPx = (me.sizeOut * me.ppd) * me.scale;
-				me.szD  = me.sizeOut * me.scale;
+				me.szPx = me.sizeOut * me.scale;
+				me.szD  = me.sizeOut;
 			else
 				me.szPx = (me.width+me.height)/2;
 				me.szD = me.szPx / me.ppd;
@@ -318,7 +316,7 @@ classdef imageStimulus < baseStimulus
 				end
 			end
 
-			makeMaskShader(me);
+			makeMaskShader(me, me.inSetup);
 
 			if ~isempty(me.sM) && me.sM.isOpen == true
 				% 'MakeTexture', WindowIndex, imageMatrix [, optimizeForDrawAngle=0] 
@@ -338,17 +336,20 @@ classdef imageStimulus < baseStimulus
 			else 
 				im = me.getP('selection');
 			end
+			checkfilePath(me);
+			if me.randomiseSelection; im = randi(me.nImages); end
 			if im > 0 && ~strcmpi(me.currentFile,me.filePaths{im})
 				if ~isempty(me.texture) && me.texture > 0 && Screen(me.texture,'WindowKind') == -1
 					try Screen('Close',me.texture); end %#ok<*TRYNC>
+					me.texture = [];
 				end
 				loadImage(me,im);
 			end
 			me.chosenImages = [me.chosenImages string(['[' num2str(me.getP('selection')) ']' regexprep(me.currentFile,'\\','/')])];
 			if me.sizeOut > 0
 				me.scale = me.sizeOut / (me.width / me.ppd);
-				me.szPx = (me.sizeOut * me.ppd) * me.scale;
-				me.szD  = me.sizeOut * me.scale;
+				me.szPx = mean([me.width me.height]) * me.scale;
+				me.szD  = me.sizeOut;
 			else
 				me.szPx = (me.width+me.height)/2;
 				me.szD = me.szPx / me.ppd;
@@ -457,7 +458,6 @@ classdef imageStimulus < baseStimulus
 				me.selection = 1;
 				warning('--->>> imageStimulus couldn''t find correct image %s, reverted to default!',tf)
 			end
-			me.currentFile = me.filePaths{me.selection};
 		end
 
 	end %---END PUBLIC METHODS---%
@@ -470,8 +470,12 @@ classdef imageStimulus < baseStimulus
 		%> @brief makeMaskShader
 		%>  
 		% ===================================================================
-		function makeMaskShader(me)
-			if me.circularMask
+		function makeMaskShader(me, force)
+			arguments(Input)
+				me
+				force logical = false
+			end
+			if (force && me.circularMask) || (me.circularMask && isempty(me.maskshader))
 				w = me.width;
 				h = me.height;
 				shader = LoadGLSLProgramFromFiles(which('circularMask.frag'), 1);
@@ -482,7 +486,7 @@ classdef imageStimulus < baseStimulus
 				glUniform1f(glGetUniformLocation(shader, 'Sigma'), me.sigma);
     			glUseProgram(0);
 				me.maskshader = shader;
-			else
+			elseif ~me.circularMask
 				me.maskshader = [];
 			end
 		end
@@ -508,7 +512,7 @@ classdef imageStimulus < baseStimulus
 						me.dstRect(1), me.dstRect(2),me.dstRect(3),me.dstRect(4),...
 						me.dstRect(3)-me.dstRect(1),me.dstRect(4)-me.dstRect(2));
 				end
-				me.szPx = min([RectWidth(me.dstRect) RectHeight(me.dstRect)]);
+				me.szPx = mean([RectWidth(me.dstRect) RectHeight(me.dstRect)]);
 				me.mvRect = me.dstRect;
 			end
 		end

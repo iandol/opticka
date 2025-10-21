@@ -35,14 +35,14 @@ classdef optickaCore < handle
 
 	%--------------------VISIBLE PROPERTIES-----------%
 	properties (SetAccess = protected, GetAccess = public)
+		%> version number
+		optickaVersion char		= '2.17.1'
 		%> clock() dateStamp set on construction
 		dateStamp = []
 		%> universal ID
 		uuid char
 		%> storage of various paths
 		paths struct
-		%> version number
-		optickaVersion char		= '2.17.1'
 	end
 
 	%--------------------DEPENDENT PROPERTIES----------%

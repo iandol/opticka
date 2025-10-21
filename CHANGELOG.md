@@ -3,7 +3,47 @@
 > [!NOTE]
 > Changes which may affect your use of Opticka will be detailed here, starting with V2.16.x
 
-## V2.17.X
+## V2.17.1
+
+### New Features
+* **alyxManager** — Major refactor with comprehensive Doxygen-style documentation and MATLAB `arguments()` blocks for all methods. Improved error handling with specific error identifiers and better input validation. Added retry mechanism with exponential backoff for failed operations. New `downloadFiles()` method for retrieving data from S3 buckets.
+* **awsManager** — Enhanced with Doxygen-style documentation and `arguments()` blocks. Added retry functionality with exponential backoff for `copyFiles()` operations. Improved reliability with better status reporting and error messages. Added `downloadFiles()` method for S3 downloads with automatic directory creation.
+* **jzmqConnection** — Added comprehensive `arguments()` blocks to all methods (except constructor) for better type checking and validation. Improved documentation following Doxygen style guidelines. Enhanced error handling and message logging throughout.
+* **DataHash.m** — New utility added for computing cryptographic hashes of MATLAB data structures (534 lines).
+
+### Improvements
+* **touchManager** — Significant refactor (585 lines changed) improving touch event handling and integration with physics animations. Better mouse dummy mode support.
+* **optickaCore** — Enhanced with improved argument parsing and validation (206 lines changed). Better error handling and logging capabilities.
+* **runExperiment** — Refined logging system and experiment flow (250 lines changed). Better integration with Alyx/HED metadata systems.
+* **tobiiAnalysis** — Improved data analysis capabilities (213 lines changed) with better integration of Nyström & Holmqvist 2010 cleaning algorithms.
+* **metaStimulus** — Code cleanup and improvements (54 lines changed).
+* **audioManager** — Enhanced reliability and error handling (69 lines changed).
+* **touchData** — Better data handling and validation (91 lines changed).
+* **menuN** — UI improvements (22 lines changed).
+
+### Bug Fixes
+* **screenManager** — Minor fixes (10 lines changed).
+* **imageStimulus** — Bug fixes (4 lines changed).
+* **joystickManager** — Minor updates (2 lines).
+* **zmqConnection** — Code refinements (55 lines changed).
+
+### Documentation
+* All communication classes now follow consistent Doxygen-style documentation
+* Added comprehensive inline comments explaining complex operations
+* Improved method signatures with MATLAB `arguments()` blocks for better IDE support
+* Updated **HEDTagger** documentation (2 lines changed)
+
+### Infrastructure
+* Updated `.gitignore` with additional exclusions
+* Updated `addOptickaToPath.m` for better path management
+* **opticka_ui.mlapp** — UI updates (binary file, 7KB increase)
+* Minor updates to core protocols: `PupillaryReflex.m`, `Saccadic_DoubleStep.m`
+
+### Summary
+24 files changed, 2240 insertions(+), 1091 deletions(-)  
+Major focus on code quality, reliability, and documentation improvements across communication and core infrastructure.
+
+## V2.17.0
 
 * Add support for ØMQ for communication messages (command + serialised MATLAB data packet) across networked PTB instances using the `jzmqConnection` class. This is *much more robust* than raw TCP/UDP used by `pnet` & `dataConnection` and we are using it for communication across [CageLab devices](https://github.com/cogplatform/CageLab). This adds a dependency on <https://github.com/cogplatform/matlab-jzmq>, a MATLAB wrapper for [JeroMQ](https://github.com/zeromq/jeromq). The class explicitly supports a new neuroscience-targetted middleware called [cogmoteGO](https://github.com/Ccccraz/cogmoteGO) with an API designed to manage multiple remote PTB instances and broadcast behavioural data and results back to clients.
 * Major update to the opticka UI for Alyx integration. There is an Alyx panel where you can connect to your Alyx instance to retrieve data from the server. Opticka can create a new Alyx session, and will upload the task data as a copy to the Alyx server. The data is sent to an AWS compatible data store linked to the Alyx session. The data is stored in a folder structure that matches the [International Brain Lab ONE Protocol](https://int-brain-lab.github.io/ONE/alf_intro.html) (see "A modular architecture for organizing, processing and sharing neurophysiology data," The International Brain Laboratory et al., 2023 Nat. Methods, [DOI](https://doi.org/10.1038/s41592-022-01742-6)).
