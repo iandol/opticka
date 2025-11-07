@@ -147,7 +147,8 @@ classdef audioManager < optickaCore
 			if ~exist('when','var'); when = []; end
 			if ~me.isSetup; setup(me);end
 			if ~me.isSample; loadSamples(me);end
-			if me.isSetup && me.isSample && me.isValid
+			isValid = checkFiles(me);
+			if me.isSetup && me.isSample && isValid
 				PsychPortAudio('Start', me.aHandle, [], when);
 			end
 		end
