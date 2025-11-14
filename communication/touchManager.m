@@ -962,6 +962,19 @@ classdef touchManager < optickaCore
 			end
 		end
 
+		function displayInfo(me)
+			disp(me);
+			for ii = 1:length(me.devices)
+				disp(me.devices(ii))
+			end
+			for ii = 1:length(me.names)
+				disp(me.nameallInfos(ii));
+			end
+			for ii = 1:length(me.allInfo)
+				disp(me.names(ii));
+			end
+		end
+
 	end
 
 	%=======================================================================

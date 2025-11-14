@@ -7,6 +7,11 @@ classdef touchData < optickaCore
 		verbose = true
 	end
 
+	properties(Hidden)
+		% for plotting recent correct rate
+		lastN = 10
+	end
+
 	properties (GetAccess = public, SetAccess = protected)
 		nData
 		nSessions
@@ -73,23 +78,41 @@ classdef touchData < optickaCore
 			else
 				time = in.data.time - in.data.time(1);
 			end
+			% calculate rolling average correct rate
+			trls = in.data.trials;
+			res = in.data.result;
+			if isfield(in.data,'stepN')
+				lastN = in.data.stepN;
+			else
+				lastN = in.lastN;
+			end
+			for i = 1:length(trls)
+				if i <= lastN; cr(i) = NaN; continue; end
+				rec = res(i-lastN:i);
+				cr(i) = length(find(rec == 1)) / length(rec);
+			end
 			[~,f,e] = fileparts(in.name);
 			tit = [f e];
 			f = figure("Name",tit);
 			tl = tiledlayout(f);
 			nexttile;
-			plot(in.data.trials,in.data.result,'ko-','MarkerFaceColor',[0 0 0]);
+			yyaxis left
+			plot(trls,res,'ko-','MarkerFaceColor',[0.7 0.7 0.7]);
 			ylim([-0.2 1.2]);
 			yticks([0 1]);
 			yticklabels({'incorrect','correct'});
 			ytickangle(45);
+			ylabel('Response');
+			yyaxis right
+			plot(trls,cr,"LineWidth",1.5,"Color",[1 0.5 0 0.5]);
+			ylim([-0.1 1.1]);
+			ylabel(sprintf('Rolling Average N=%i',in.lastN));
 			xlim([0 max(in.data.trials)]);
 			title("Performance");
 			xlabel('Trial Number');
-			ylabel('Response');
 			box on; grid on;
 			nexttile;
-			plot(in.data.trials,in.data.rt,'ko-','MarkerFaceColor',[0 0 0]);
+			plot(in.data.trials,in.data.rt,'ko-','MarkerFaceColor',[0.7 0.7 0.7]);
 			xlim([0 max(in.data.trials)]);
 			xlabel('Trial Number');
 			ylabel('Reaction Time (s)');
@@ -100,11 +123,17 @@ classdef touchData < optickaCore
 			if length(unique(in.data.phase)) > 1
 				plotPhase = true;
 				nexttile;
-				plot(time,in.data.phase,'ko-','MarkerFaceColor',[0 0 0]);
+				yyaxis left
+				plot(time,in.data.phase,'ko-','MarkerFaceColor',[0.7 0.7 0.7]);
 				ylim([0 max(in.data.phase)+1]);
+				ylabel('Task Phase / Step');
+				yyaxis right 
+				plot(time,cr,'k-',"LineWidth",1.5,"Color",[1 0.5 0 0.5]);
+				ylim([-0.1 1.1]);
+				ylabel(sprintf('Rolling Average N=%i',in.lastN));
 				xlim([0 max(time)]);
 				xlabel('Task Time (s)');
-				ylabel('Task Phase / Step');
+				title('Task Phase');
 				box on; grid on;
 			end
 
