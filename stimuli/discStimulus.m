@@ -261,6 +261,7 @@ classdef discStimulus < baseStimulus
 			me.inSetup = false;
 			computePosition(me);
 			setRect(me);
+			if strcmpi(me.type,'flash'); me.doFlash = true; end
 			if me.doFlash; me.setupFlash; end
 			if me.doAnimator; me.animator.reset(); end
 		end

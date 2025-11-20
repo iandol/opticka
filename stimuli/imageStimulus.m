@@ -51,7 +51,7 @@ classdef imageStimulus < baseStimulus
 		%> blurred or low-pass filtered images, e.g., for gaze-contingent
 		%> displays.
 		filter						= 1
-		%> crop: none | square | vertical | horizontal
+		%> crop: none | square | vertical | horizontal | stretch
 		crop						= 'none'
 		%> direction for motion of the image, different to angle
 		direction					= []
@@ -257,6 +257,17 @@ classdef imageStimulus < baseStimulus
 			h = size(me.matrix,1);
 
 			switch me.crop
+				case 'stretch'
+					wdiff = me.sM.screenVals.width - w;
+					hdiff = me.sM.screenVals.height - h;
+					scale = 1;
+					if hdiff > wdiff
+						scale = 1 + (hdiff/h);
+					elseif wdiff > hdiff
+						scale = 1 + (wdiff/w);
+					end
+					% we make sizeOut scale to the screen
+					me.sizeOut = me.sM.screenVals.widthInDegrees * scale;
 				case 'square'
 					if w < h
 						p = floor((h - w)/2);
@@ -295,10 +306,10 @@ classdef imageStimulus < baseStimulus
 			me.heightD = me.height / me.ppd;
 			if me.sizeOut > 0
 				me.scale = me.sizeOut / (me.width / me.ppd);
-				me.szPx = me.sizeOut * me.scale;
+				me.szPx = round(me.sizeOut * me.ppd);
 				me.szD  = me.sizeOut;
 			else
-				me.szPx = (me.width+me.height)/2;
+				me.szPx = me.width/2;
 				me.szD = me.szPx / me.ppd;
 			end
 
@@ -348,10 +359,10 @@ classdef imageStimulus < baseStimulus
 			me.chosenImages = [me.chosenImages string(['[' num2str(me.getP('selection')) ']' regexprep(me.currentFile,'\\','/')])];
 			if me.sizeOut > 0
 				me.scale = me.sizeOut / (me.width / me.ppd);
-				me.szPx = mean([me.width me.height]) * me.scale;
+				me.szPx = me.sizeOut * me.ppd;
 				me.szD  = me.sizeOut;
 			else
-				me.szPx = (me.width+me.height)/2;
+				me.szPx = me.width;
 				me.szD = me.szPx / me.ppd;
 			end
 			resetTicks(me);
@@ -512,7 +523,8 @@ classdef imageStimulus < baseStimulus
 						me.dstRect(1), me.dstRect(2),me.dstRect(3),me.dstRect(4),...
 						me.dstRect(3)-me.dstRect(1),me.dstRect(4)-me.dstRect(2));
 				end
-				me.szPx = mean([RectWidth(me.dstRect) RectHeight(me.dstRect)]);
+				me.szPx = RectWidth(me.dstRect);
+				me.szD = me.szPx / me.ppd;
 				me.mvRect = me.dstRect;
 			end
 		end
