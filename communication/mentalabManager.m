@@ -1,39 +1,34 @@
 % ======================================================================
-%> @brief nirSmart fNIRS Sync manager
+%> @brief mentaLab Sync Class
 %>
 %> 
 %>
 %> Copyright ©2014-2025 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ======================================================================
-classdef nirSmartManager < optickaCore
+classdef mentalabManager < optickaCore
 	
 	properties
-		ip char = '127.0.0.1'
-		port double = 8889
-		%> the hardware object
-		io dataConnection
-		%>
+		deviceName string = ""
 		silentMode logical = false
-		%>
 		stimOFFValue = 255
-		%> 
 		verbose = false
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Dependent = true)
-		%> hardware class
-		%type char
+		pythonVersion
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
 		isOpen logical = false
 		sendValue
 		lastValue
+		env
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		pCode = ["import time","import explorepy","exp = explorepy.Explore()"]
 		%> properties allowed to be modified during construction
-		allowedProperties = {'ip','port','io','silentMode','stimOFFValue','verbose'}
+		allowedProperties = {'deviceName','silentMode','stimOFFValue','verbose'}
 	end
 	
 	methods
@@ -42,11 +37,26 @@ classdef nirSmartManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function me = nirSmartManager(varargin)
-			if nargin == 0; varargin.name = 'NirSmart Manager'; varargin.type = 'NirSmart'; end
+		function me = mentalabManager(varargin)
+			if nargin == 0; varargin.name = 'Mentalab Manager'; varargin.type = 'Mentalab'; end
 			me=me@optickaCore(varargin); %superclass constructor
 			if nargin > 0; me.parseArgs(varargin,me.allowedProperties); end
-			me.io = dataConnection('rAddress', me.ip, 'rPort', me.port);
+			me.env = pyenv;
+			if me.env.Version == ""
+    			disp "Python not installed"
+			end
+			try
+				pyrun("print('Python is Setup')")
+			catch ME
+				warning("Python cannot be run, please reconfigure MATLAB pyenv");
+				rethrow(ME);
+			end
+			try
+				pyrun(["import explorepy","exp = explorepy.Explore()"]);
+			catch ME
+				warning("explorepy and liblsl must be added via pip, please configure Python!");
+				rethrow(ME);
+			end
 		end
 
 		% ===================================================================
@@ -56,25 +66,17 @@ classdef nirSmartManager < optickaCore
 		% ===================================================================
 		function open(me,varargin)
 			if me.silentMode; me.isOpen = true; return; end
-			if isempty(me.io)
-				me.io = dataConnection('rAddress', me.ip, 'rPort', me.port);
+			me.env = pyenv;
+			if me.env.Version == ""
+    			disp "Python not installed"
 			end
-			me.io.rAddress = me.ip;
-			me.io.rPort = me.port;
-			me.io.readSize = 1024;
-			try 
-				open(me.io);
-			catch ERR
-				getREport(ERR);
-				me.isOpen = false;
-				return
-			end
-			if me.io.isOpen
+			try
+				cmd = [me.pCode, sprintf('explore.connect(device_name="%s"',me.deviceName)];
+				pyrun(cmd);
 				me.isOpen = true;
-				fprintf('--->>> Connected to %s : %i\n',me.ip,me.port)
-			else
+			catch ME
+				warning('--->>> mentalabManager cannot open device!');
 				me.isOpen = false;
-				error('===>>> !!! Cannot open TCP port');
 			end
 		end
 		
@@ -84,7 +86,6 @@ classdef nirSmartManager < optickaCore
 		%> @param 
 		% ===================================================================
 		function close(me,varargin)
-			try close(me.io); end %#ok<*TRYNC>
 			me.isOpen = false;
 		end
 
@@ -110,13 +111,12 @@ classdef nirSmartManager < optickaCore
 				if ~isempty(me.sendValue)
 					value = me.sendValue; 
 				else
-					warning('--->>> nirSmartManager No strobe value set, no strobe sent!'); return
+					warning('--->>> mentalabManager No strobe value set, no strobe sent!'); return
 				end
 			end
-			sendString = [250,252,251,253,3,value,252,253,250,251];
-			write(me.io, uint8(sendString));
-			me.sendValue = value;
-            if me.verbose; fprintf('===>>> nirSmartManager: We sent strobe %i!\n',value);end
+			cmd = [me.pCode, sprintf("exp_device.send_8_bit_trigger(%i)",me.sendValue)];
+			pyrun(cmd);
+            if me.verbose; fprintf('===>>> mentalabManager: We sent strobe %i!\n',value);end
 		end
 		
 		% ===================================================================
@@ -136,9 +136,13 @@ classdef nirSmartManager < optickaCore
 		% ===================================================================
 		function triggerStrobe(me,varargin)
 			if ~me.isOpen || me.silentMode; return; end
-			if isempty(me.sendValue); warning('--->>> nirSmartManager No strobe value set, trigger failed!'); return; end
-			sendString = [250,252,251,253,3,me.sendValue,252,253,250,251];
-			write(me.io, uint8(sendString));
+			if isempty(me.sendValue); warning('--->>> mentalabManager No strobe value set, trigger failed!'); return; end
+			cmd = [me.pcode, sprintf("exp_device.send_8_bit_trigger(%i)",me.sendValue)];
+			pyrun(cmd);
+		end
+
+		function ver = get.pythonVersion(me)
+			ver = me.env.Version;
 		end
 
 	end
@@ -269,13 +273,7 @@ classdef nirSmartManager < optickaCore
 		%>
 		% ===================================================================
 		function delete(me)
-			try
-				if ~isempty(me.io)
-					close(me.io);
-				end
-			catch
-				warning('IO Manager Couldn''t close hardware')
-			end
+			
 		end
 		
 	end

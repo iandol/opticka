@@ -2262,9 +2262,20 @@ classdef runExperiment < optickaCore
 		%> Configures the IO devices.
 		%> @param
 		% ===================================================================
-			if ~exist("onlyIO","var") || isempty(onlyIO);onlyIO=false;end
+			pif ~exist("onlyIO","var") || isempty(onlyIO);onlyIO=false;end
 			%-------Set up Digital I/O (dPixx and labjack) for this task run...
-			if strcmp(me.strobe.device,'nirsmart')
+			if strcmp(me.strobe.device,'mentalab')
+				if ~isa(me.strobeDevice,'mentalabManager') || isempty(me.strobeDevice)
+					me.strobeDevice = mentalabManager('verbose',me.verbose);
+				end
+				io = me.strobeDevice;  %#ok<*PROP>
+				open(io);
+				if io.isOpen
+					fprintf('===> Using mentalab for strobed I/O...\n')
+				else
+					warning('Couldn''t open mentalabManager, check device name!!!')
+				end
+			elseif strcmp(me.strobe.device,'nirsmart')
 				if ~isa(me.strobeDevice,'nirsmartManager') || isempty(me.strobeDevice)
 					me.strobeDevice = nirSmartManager('verbose',me.verbose);
 				end

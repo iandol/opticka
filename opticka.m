@@ -440,6 +440,8 @@ classdef opticka < optickaCore
 				me.r.strobe.device = 'datapixx';	
 			elseif me.ui.OKuseDisplayPP.Checked == true
 				me.r.strobe.device = 'display++';
+			elseif me.ui.OKuseMentalab.Checked == true
+				me.r.strobe.device = 'mentalab';
 			elseif me.ui.OKUseNirSmart.Checked == true
 				me.r.strobe.device = 'nirsmart';
 			else
