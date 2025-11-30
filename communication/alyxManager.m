@@ -1142,6 +1142,7 @@ classdef alyxManager < optickaCore
 				otherwise
 					return
 			end
+			noDisplay = usejava('jvm') && ~feature('ShowFigureWindows');
     		if noDisplay
         		% Temporarily disable diary logging to avoid storing the password
         		diaryState = get(0, 'Diary');
@@ -1150,7 +1151,7 @@ classdef alyxManager < optickaCore
         		me.(field) = passwd; % Store the entered password in the object
         		diary(diaryState); % Restore the previous diary state
     		else
-        		setSecret(secret, true); % Get secret through a user interface
+        		setSecret(secret, Overwrite=true); % Get secret through a user interface
         		me.(field) = getSecret(secret); % Store the entered password in the object
     		end
 		end

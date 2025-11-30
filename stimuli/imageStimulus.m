@@ -342,13 +342,12 @@ classdef imageStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function update(me)
+			checkfilePath(me);
 			if me.randomiseSelection
 				im = randi(me.nImages);
 			else 
 				im = me.getP('selection');
 			end
-			checkfilePath(me);
-			if me.randomiseSelection; im = randi(me.nImages); end
 			if im > 0 && ~strcmpi(me.currentFile,me.filePaths{im})
 				if ~isempty(me.texture) && me.texture > 0 && Screen(me.texture,'WindowKind') == -1
 					try Screen('Close',me.texture); end %#ok<*TRYNC>
