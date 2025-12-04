@@ -1142,7 +1142,8 @@ classdef alyxManager < optickaCore
 				otherwise
 					return
 			end
-			noDisplay = usejava('jvm') && ~feature('ShowFigureWindows');
+			noDisplay = false;
+			try noDisplay = usejava('jvm') && ~feature('ShowFigureWindows'); end
     		if noDisplay
         		% Temporarily disable diary logging to avoid storing the password
         		diaryState = get(0, 'Diary');
@@ -1246,7 +1247,7 @@ classdef alyxManager < optickaCore
 			% Set the HTTP request method in options
 			options = me.webOptions;
 			options.RequestMethod = lower(requestMethod);
-			
+			responseBody = [];
 			try % Post data
 				responseBody = webwrite(endpoint, jsonData, options);
 				if endsWith(endpoint,'auth-token')
@@ -1256,7 +1257,7 @@ classdef alyxManager < optickaCore
 				end
 			catch ex
 				disp("=== Response Body:")
-				disp(responseBody)
+				try disp(responseBody); end
 				getReport(ex)
 				responseBody = ex.message;
 				switch ex.identifier
