@@ -71,6 +71,7 @@ classdef alyxManager < optickaCore
 			me.parseArgs(varargin, me.allowedProperties);
 
 			flushQueue(me,true);
+			setSecrets(me);
 		end
 
 
@@ -98,7 +99,7 @@ classdef alyxManager < optickaCore
 
 			me.assignedUser = me.user;
 
-			if isempty(password) && isempty(me.password)
+			if isempty(password)
 				try password = getSecret('AlyxPassword'); end %#ok<*TRYNC>
 			end
 			if isempty(AWS_ID)
@@ -161,6 +162,9 @@ classdef alyxManager < optickaCore
 				end
 			end
 			
+			if isempty(me.password)
+				setSecrets(me);
+			end
 			if isempty(me.password)
 				secretUI(me,'password');
 			end

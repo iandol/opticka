@@ -167,7 +167,12 @@ classdef touchManager < optickaCore
 				error('≣≣≣≣⊱touchManager:Need to pass an open screenManager object!');
 			end
 			try touchManager.enableTouchDevice(me.deviceName, "enable"); end
-			try [me.devices,me.names,me.allInfo] = GetTouchDeviceIndices([], 1); end
+			try touchManager.enableTouchDevice(me.deviceName, "enable"); end
+			loop = 1;
+			while isempty(me.devices) && loop <=5
+				try [me.devices,me.names,me.allInfo] = GetTouchDeviceIndices([], 1); end
+				WaitSecs(0.1); loop = loop + 1;
+			end
 			if me.isDummy
 				me.comment = 'Dummy Mode Active';
 				fprintf('≣≣≣≣⊱touchManager: %s\n',me.comment);

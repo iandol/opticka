@@ -642,7 +642,7 @@ classdef jzmqConnection < optickaCore
 				dataOut
 			end
 			response = []; dataOut = [];
-			opts = weboptions('MediaType', 'application/json', 'ContentType', 'json', 'CharacterEncoding', 'UTF-8');
+			opts = weboptions('TimeOut',2,'MediaType', 'application/json', 'ContentType', 'json', 'CharacterEncoding', 'UTF-8');
 			data = getByteStreamFromArray(data);
 			dataStruct = struct('command',command,'dataType','byteStream','data', data);
 			try
