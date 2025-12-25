@@ -76,7 +76,7 @@ classdef alyxManager < optickaCore
 
 
 		% ===================================================================
-		function setSecrets(me, password, AWS_ID, AWS_KEY)
+		function setSecrets(me, password, AWS_ID, AWS_KEY, force)
 		%> @brief Set secrets for the AlyxManager instance
 		%>
 		%> This method allows the user to set the password, AWS ID, and AWS key
@@ -95,6 +95,7 @@ classdef alyxManager < optickaCore
 				password char = ''
 				AWS_ID char = ''
 				AWS_KEY char = ''
+				force logical = false
 			end
 
 			me.assignedUser = me.user;
@@ -108,6 +109,21 @@ classdef alyxManager < optickaCore
 			if isempty(AWS_KEY)
 				try AWS_KEY = getSecret('AWS_KEY'); end
 			end	
+
+			if force
+				if isempty(password)
+					setSecret('AlyxPassword');
+					password = getSecret('AlyxPassword');
+				end
+				if isempty(AWS_ID)
+					setSecret('AWS_ID');
+					AWS_ID = getSecret('AWS_ID');
+				end
+				if isempty(AWS_KEY)
+					setSecret('AWS_KEY');
+					AWS_KEY = getSecret('AWS_KEY');
+				end	
+			end
 
 			txt = "";
 			if ~isempty(password); me.password = password; txt=txt+"password"; end
