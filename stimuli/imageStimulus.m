@@ -106,7 +106,7 @@ classdef imageStimulus < baseStimulus
 			'randomiseSelection','precision','filter','crop','specialFlags',...
 			'direction','circularMask'}
 		%>properties to not create transient copies of during setup phase
-		ignoreProperties = {'type', 'scale', 'filePath','nImages','chosenImages',...
+		ignoreProperties = {'type', 'scale', 'crop', 'filePath','nImages','chosenImages',...
 			'randomiseSelection','circularMask','currentFile'}
 	end
 
@@ -267,7 +267,7 @@ classdef imageStimulus < baseStimulus
 						scale = 1 + (wdiff/w);
 					end
 					% we make sizeOut scale to the screen
-					me.sizeOut = me.sM.screenVals.widthInDegrees * scale;
+					me.sizeOut = (w / me.ppd) * scale;
 				case 'square'
 					if w < h
 						p = floor((h - w)/2);
