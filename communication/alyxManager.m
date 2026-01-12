@@ -1,9 +1,12 @@
 % ========================================================================
 classdef alyxManager < optickaCore
-%> @class alyxManager
-%> @brief manage connection to an Alyx database
+%> @class alyxManager @brief manage connection to an Alyx database
 %>
-%> Copyright ©2014-2025 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> This class provides methods to connect to an Alyx database, login/logout,
+%> upload data, and other management tasks. It is based on the Alyx REST API
+%> and code from IBL.
+%>
+%> Copyright ©2014-2026 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 
 	%--------------------PUBLIC PROPERTIES----------%
@@ -18,9 +21,9 @@ classdef alyxManager < optickaCore
 		subject	char			= 'TestSubject'
 		%> where to save the temporary json files sent via REST
 		queueDir char			= ''
-		%> if we open a new session this is the URL
+		%> if we open a new session this is the main URL
 		sessionURL				= []
-		%> if we open a new session this is the base session URL
+		%> if we open a new session as a child, this is the base session URL
 		sessionParentURL		= []
 		%> limit how many values returned
 		pageLimit				= 100
@@ -30,7 +33,7 @@ classdef alyxManager < optickaCore
 
 	%--------------------TRANSIENT PROPERTIES-----------%
 	properties (Transient = true)
-		webOptions				= weboptions('MediaType','application/json','Timeout',10);
+		webOptions				= weboptions('MediaType','application/json','Timeout',5);
 	end
 	
 	%--------------------DEPENDENT PROTECTED PROPERTIES----------%
@@ -45,12 +48,17 @@ classdef alyxManager < optickaCore
 	
 	%--------------------PRIVATE PROPERTIES----------%
 	properties (Access = private)
-		password char	= ''
+		%> password for Alyx login
+		password char	= '' 
+		%> AWS key for S3 uploads
+		AWS_KEY char	= '' 
+		%> AWS ID for S3 uploads
+		AWS_ID char		= '' 
+		%> user assigned when setting secrets
 		assignedUser char	= ''
-		AWS_KEY char	= ''
-		AWS_ID char		= ''
 		%> properties allowed to be passed on construction
 		allowedProperties = {'baseURL','user','lab','subject','queueDir','pageLimit','verbose'}
+		%> regular expression to parse ALF filenames
 		alfMatch = '(?<date>^[0-9\-]+)_(?<seq>\d+)_(?<subject>\w+)'
 	end
 	
@@ -68,27 +76,33 @@ classdef alyxManager < optickaCore
 		% ===================================================================
 		function me = alyxManager(varargin)
 			me=me@optickaCore(varargin); %superclass constructor
-			me.parseArgs(varargin, me.allowedProperties);
+			me.parseArgs(varargin, me.allowedProperties); %parse input args
 
-			flushQueue(me,true);
-			setSecrets(me);
+			flushQueue(me,true); %flush any existing queue in the queueDir
+			setSecrets(me); %set secrets from secure storage if present
 		end
-
 
 		% ===================================================================
 		function setSecrets(me, password, AWS_ID, AWS_KEY, force)
 		%> @brief Set secrets for the AlyxManager instance
 		%>
-		%> This method allows the user to set the password, AWS ID, and AWS key
-		%> for the AlyxManager instance. If any of these values are not provided,
-		%> the method attempts to retrieve them from a secure storage.
+		%> This method allows the user to set the password, AWS ID, and AWS
+		%> key for the AlyxManager instance. If any of these values are not
+		%> provided, the method attempts to retrieve them from a secure
+		%> storage.
 		%>
-		%> @param password (char) The password for the Alyx database. If not provided,
-		%> it will be retrieved from secure storage.
-		%> @param AWS_ID (char) The AWS ID for accessing AWS services. If not provided,
-		%> it will be retrieved from secure storage.
-		%> @param AWS_KEY (char) The AWS key for accessing AWS services. If not provided,
-		%> it will be retrieved from secure storage.
+		%> @param password (char) The password for the Alyx database. If not
+		%> provided, it will be retrieved from secure storage. 
+		% 
+		%> @param AWS_ID (char) The AWS ID for accessing AWS services. If
+		%> not provided, it will be retrieved from secure storage. 
+		% 
+		%> @param AWS_KEY (char) The AWS key for accessing AWS services. If
+		%> not provided, it will be retrieved from secure storage. 
+		% 
+		%> @param force (logical) If true, prompts the user to set the
+		%> secrets even if no secrets are stored or provided. In this case
+		%> it will use a GUI requestor to get secrets and store them
 		% ===================================================================
 			arguments
 				me alyxManager
