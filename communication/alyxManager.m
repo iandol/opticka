@@ -215,7 +215,7 @@ classdef alyxManager < optickaCore
 					return
 				elseif contains(ex.message, 'credentials')||strcmpi(ex.message, 'Bad Request')
 					warning('Alyx:LoginFail:BadCredentials', 'Unable to log in with provided credentials. Will reset password')
-					me.pwd = '';
+					me.password = '';
 					return
 				elseif contains(ex.message, 'password')&&contains(ex.message, 'blank')
 					disp('Password may not be left blank')
