@@ -5,12 +5,12 @@ classdef optickaCore < handle
 %>
 %> @section intro Introduction
 %>
-%> optickaCore is itself derived from handle. It provides methods to find
+%> optickaCore is itself derived from handle. It provides methods to: find
 %> attributes with specific parameters (used in autogenerating UI panels),
 %> clone the object, parse arguments safely on construction and add default
 %> properties such as paths, dateStamp, uuid and name/comment management.
 %>
-%> Copyright ©2014-2025 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2026 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 
 	%--------------------PUBLIC PROPERTIES----------%
@@ -36,7 +36,7 @@ classdef optickaCore < handle
 	%--------------------VISIBLE PROPERTIES-----------%
 	properties (SetAccess = protected, GetAccess = public)
 		%> version number
-		optickaVersion char		= '2.17.2'
+		optickaVersion char		= '2.17.3'
 		%> clock() dateStamp set on construction
 		dateStamp = []
 		%> universal ID

@@ -35,7 +35,7 @@ classdef runExperiment < optickaCore
 %>
 %> @TODO refactor checkKey(): can we use a config for keyboard commands?
 %>
-%> Copyright ©2014-2024 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2026 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================	
 	properties
 		sessionData struct		= struct( ...
@@ -62,19 +62,20 @@ classdef runExperiment < optickaCore
 		%> device = '' | display++ | datapixx | labjackt | labjack | nirsmart
 		%> optional port = not needed for most of the interfaces
 		%> optional config = plain | plexon style strobe
-		%> default stim OFF strobe value
+		%> default stim OFF strobe value (if strobe.device is not empty)
 		strobe struct				= struct('device','','port','',...
 									'mode','plain','stimOFFValue',255)
-		%> what reward device to use
+		%> what reward device to use (if reward.device is not empty)
 		reward struct				= struct('device','','port','',...
 									'board','');
-		%> which eyetracker to use
+		%> which eyetracker to use (if eyetracker.device is not empty)
 		eyetracker struct			= struct('device','','dummy',true,...
 									'esettings',[],'tsettings',[],...
 									'isettings',[],'psettings',[])
+		%> whether to initialise a touch screen (if touch.device is not empty)
 		touch struct				= struct('device','','dummy',true)
 		%> use control commands to start / stop recording
-		%> device = intan | plexon | none
+		%> device = '' | intan | plexon | none
 		%> port = tcp port
 		control struct				= struct('device','','port','127.0.0.1:5000')
 		%> Keyboard device, use -1 for all keyboards (slower) or [] for
@@ -153,6 +154,8 @@ classdef runExperiment < optickaCore
 		stateMachine
 		%> eyetracker manager object
 		eyeTracker 
+		%> touch screen manager object
+		touchDevice
 		%> strobe / trigger manager
 		strobeDevice
 		%> user functions object
@@ -615,7 +618,7 @@ classdef runExperiment < optickaCore
 			%------make sure we reset any state machine functions to not cause
 			% problems when they are reassigned below. For example, io interfaces
 			% can be reset unless we clear this before we open the io.
-            me.userFunctions = [];
+			me.userFunctions = [];
 			me.stateInfo = {};
 			if isa(me.stateMachine,'stateMachine'); me.stateMachine.reset; me.stateMachine = []; end
 			
@@ -713,6 +716,10 @@ classdef runExperiment < optickaCore
 				configureEyetracker(me, s);
 				eT						= me.eyeTracker;
 				
+				%================================set up the touch interface
+				configureTouchScreen(me, s);
+				tM						= me.touchDevice;
+				
 				%================================initialise the user functions object
 				if ~exist(me.userFunctionsFile,'file')
 					me.userFunctionsFile = [me.paths.root filesep 'userFunctions.m'];
@@ -728,7 +735,7 @@ classdef runExperiment < optickaCore
 				me.userFunctions		= ans; %#ok<NOANS> 
 				uF						= me.userFunctions;
 				uF.rE = me; uF.s = s; uF.task = task; uF.eT = eT;
-				uF.stims = stims; uF.io = io; uF.rM = rM; uF.verbose = me.verbose;
+				uF.stims = stims; uF.io = io; uF.rM = rM; uF.tM = tM; uF.verbose = me.verbose;
 
 				%================================initialise the state machine
 				me.stateMachine		= [];
@@ -794,7 +801,7 @@ classdef runExperiment < optickaCore
 				if ~tS.saveData; me.name = [tS.dateID '_' me.sessionData.subjectName]; end
 				if me.diaryMode
 					diary off
-					diary([me.paths.ALFPath filesep 'log.text.' me.name '.log']);
+					diary([me.paths.ALFPath filesep '_matlab_diary.' me.name '.log']);
 				end
 
 				%================================initialise save file and ALYX
@@ -809,6 +816,7 @@ classdef runExperiment < optickaCore
 					tS.sessionURL = me.alyx.sessionURL;
 					tS.parentSessionURL = me.alyx.sessionParentURL;
 				end
+				uF.alyx = me.alyx;
 				if matches(lower(me.eyetracker.device),'eyelink')
 					eT.saveFile	= [me.paths.ALFPath filesep 'eyetracking.raw.eyelink.' me.name '.edf'];
 				elseif matches(lower(me.eyetracker.device),'tobii')
@@ -1143,6 +1151,7 @@ classdef runExperiment < optickaCore
 				try close(s); end %screen
 				try close(io); end % I/O system
 				try close(eT); end % eyetracker, should save the data for us we've already given it our name and folder
+				try close(tM); end % touch manager
 				try close(aM); end % audio manager
 				try close(rM); end % reward manager
 				try close(dC); end % data connection
@@ -1249,11 +1258,12 @@ classdef runExperiment < optickaCore
 					end
 				end
 				fprintf('\n\n===!!! ERROR in runExperiment.runTask() %s\n',ERR.message);
-                try me.userFunctions = []; end %user functions
+				try me.userFunctions = []; end %user functions
 				try reset(stims); end
 				try close(s); end
 				try close(aM); end
 				try close(eT); end
+				try close(tM); end
 				try close(rM); end
 				if strcmpi(me.control.device,'plexon') && exist('io','var')
 					try pauseRecording(io); end%pause plexon
@@ -1409,10 +1419,10 @@ classdef runExperiment < optickaCore
 			s.flip;
 			WaitSecs(1);
 			try 
-                s.close;
-			    rM.close;
-			    aM.close;
-            end
+				s.close;
+				rM.close;
+				aM.close;
+			end
 			if exist('io','var'); io.close; end
 			
 		end
@@ -2093,7 +2103,35 @@ classdef runExperiment < optickaCore
 		%> Configures the touch screen.
 		%> @param s screen object
 		% ===================================================================
-			
+			if ~exist('s','var'); s = me.screen; end
+			if isempty(me.touchDevice) || ~isa(me.touchDevice, 'touchManager')
+				tM = touchManager();
+			else
+				tM = me.touchDevice;
+			end
+
+			tM.verbose = me.verbose;
+			close(tM); reset(tM);
+			if isempty(me.touch) ...
+				|| ~isfield(me.touch,'device') ...
+				|| isempty(me.touch.device) ...
+				|| (isfield(me.touch,'dummy') && me.touch.dummy)
+				tM.isDummy = true;
+			elseif isfield(me.touch,'device') && ~isempty(me.touch.device)
+				if isnumeric(me.touch.device)
+					tM.device = me.touch.device;
+				elseif ischar(me.touch.device) || isstring(me.touch.device)
+					devNum = str2double(me.touch.device);
+					if ~isnan(devNum)
+						tM.device = devNum;
+					else
+						tM.deviceName = string(me.touch.device);
+					end
+				end
+			end
+			setup(tM, s);
+			start(tM);
+			me.touchDevice = tM;
 		end
 
 		% ===================================================================
@@ -2371,7 +2409,7 @@ classdef runExperiment < optickaCore
 			rM = optickaCore.initialiseGlobals();
 			if matches(me.reward.device,'arduino')
 				if ~isa(rM,'arduinoManager')
-                    rM = arduinoManager();
+					rM = arduinoManager();
 				end
 				if ~isempty(me.reward.port); rM.port = me.reward.port; end
 				if ~isempty(me.reward.board); rM.board = me.reward.board; end

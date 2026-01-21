@@ -9,16 +9,16 @@ classdef userFunctions < handle %#ok<*MCFIL>
 %> user wants to customise their own functions then we need to have a generic
 %> class we can load and use where they can add their own methods. This
 %> class serves this purpose. 
-%> 
+%>
 %> The user should make a copy of this file and save it somewhere alongside
 %> their protocols (you can rename the file, but keep the class name the
 %> same). They can add their own methods. The class will be added as a uF
 %> object and these methods can be used via the state info file.
 %>
-%> Copyright ©2014-2023 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2026 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 
-	% task object handles are added here by runExperiment, DO NOT EDIT
+	%% task object handles are added here by runExperiment, DO NOT REMOVE
 	properties 
 		%> runExperiment
 		rE 
@@ -36,11 +36,15 @@ classdef userFunctions < handle %#ok<*MCFIL>
 		io
 		%> eyetracker manager
 		eT
+		%> touch manager
+		tM
+		%> alyx manager
+		alyx
 		%> toggle to send messages to the command window
 		verbose logical = true
 	end
 
-	% ADD YOUR OWN VARIABLES HERE
+	%% ADD YOUR OWN VARIABLES HERE ↓
 	properties 
 		
 	end
@@ -51,20 +55,25 @@ classdef userFunctions < handle %#ok<*MCFIL>
 
 		% ===================================================================
 		function me = userFunctions()
-		%>userFunctions CONSTRUCT an instance of this class
-		%>   Rename to the name of the class
+		%> @brief Construct an instance of this class.
 		% ===================================================================
 			if me.verbose; fprintf('\n\n===>>> User Functions instantiated…\n\n'); end
 		end
 
 		% ===================================================================
 		function setDelayTimeWithStaircase(me, stim, duration)
-		%> uses a staircase to set the off time for a specific stimulus
-		%>   
+		%> @brief Use the staircase to set stimulus delay/off time.
+		%> @param stim Index of stimulus in `stims`.
+		%> @param duration Optional extra duration added to off time.
 		% ===================================================================
+			arguments
+				me % self
+				stim (1,1) double
+				duration (1,1) double = NaN
+			end
 			if ~isempty(me.task.staircase)
 				me.stims{stim}.delayTime = me.task.staircase(1).sc.xCurrent;
-				if exist('duration','var')
+				if ~isnan(duration)
 					me.stims{stim}.offTime = me.stims{stim}.delayTime + duration;
 				end
 				me.stims{stim}.resetTicks();
@@ -74,9 +83,15 @@ classdef userFunctions < handle %#ok<*MCFIL>
 
 		% ===================================================================
 		function resetDelayTime(me, stim, value)
-		%> reset stimulus delay on time
-		%>   
+		%> @brief Reset stimulus delay time to a specific value.
+		%> @param stim Index of stimulus in `stims`.
+		%> @param value Delay time value to apply.
 		% ===================================================================
+			arguments
+				me % self
+				stim (1,1) double
+				value (1,1) double
+			end
 			if ~isempty(me.task.staircase)
 				me.stims{stim}.delayTime = value;
 				me.stims{stim}.offTime = inf;
@@ -87,9 +102,11 @@ classdef userFunctions < handle %#ok<*MCFIL>
 
 		% ===================================================================
 		function testFunction(me)
-		%> testFunction test method
-		%>   Just prints a message
+		%> @brief Test method that prints a message.
 		% ===================================================================
+			arguments
+				me % self
+			end
 			if isa(me.rE, 'runExperiment')
 				fprintf(['\n===>>> Hello from userFunctions.testFunction() for:' me.rE.fullName '\n'])
 			else
@@ -98,7 +115,7 @@ classdef userFunctions < handle %#ok<*MCFIL>
 		end
 
 
-		% ADD YOUR FUNCTIONS BELOW ↓
+		%% ADD YOUR FUNCTIONS BELOW ↓
 
 
 	end

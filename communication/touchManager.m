@@ -16,7 +16,7 @@ classdef touchManager < optickaCore
 %> buttons, enter text etc.), so on Linux we also enable / disable the touch
 %> screen when deviceName is passed to try to mitigate this problem.
 %>
-%> Copyright ©2014-2025 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2026 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 
 	%--------------------PUBLIC PROPERTIES----------%
@@ -166,17 +166,19 @@ classdef touchManager < optickaCore
 			else
 				error('≣≣≣≣⊱touchManager:Need to pass an open screenManager object!');
 			end
-			try touchManager.enableTouchDevice(me.deviceName, "enable"); end
-			try touchManager.enableTouchDevice(me.deviceName, "enable"); end
-			loop = 1;
-			while isempty(me.devices) && loop <=5
-				try [me.devices,me.names,me.allInfo] = GetTouchDeviceIndices([], 1); end
-				WaitSecs(0.1); loop = loop + 1;
-			end
 			if me.isDummy
 				me.comment = 'Dummy Mode Active';
 				fprintf('≣≣≣≣⊱touchManager: %s\n',me.comment);
-			elseif isempty(me.devices)
+				return
+			else
+				try touchManager.enableTouchDevice(me.deviceName, "enable"); end
+				loop = 1;
+				while isempty(me.devices) && loop <=5
+					try [me.devices,me.names,me.allInfo] = GetTouchDeviceIndices([], 1); end
+					WaitSecs(0.1); loop = loop + 1;
+				end
+			end
+			if isempty(me.devices)
 				me.comment = 'No Touch Screen are available, please check USB!';
 				warning('≣≣≣≣⊱touchManager: %s\n',me.comment);
 			elseif isscalar(me.devices)
@@ -215,9 +217,9 @@ classdef touchManager < optickaCore
 		%>
 		%> @return
 		% ===================================================================
-			if me.isDummy; me.isOpen = true; return; end
 			if ~me.isQueue; createQueue(me); end
-			if isempty(me.devices(me.device)); error("≣≣≣≣⊱touchManager: no device available!!!"); end
+			if me.isDummy; me.isOpen = true; return; end
+			if isempty(me.devices) || isempty(me.devices(me.device)); error("≣≣≣≣⊱touchManager: no device available!!!"); end
 			TouchQueueStart(me.devices(me.device));
 			me.isOpen = true;
 			if me.verbose; logOutput(me,'start','Started queue...'); end
@@ -242,13 +244,12 @@ classdef touchManager < optickaCore
 		%> @param choice which touch device to use, default uses me.device
 		%> @return
 		% ===================================================================
-			flush(me);
-			me.isOpen = false;
-			me.isQueue = false;
-			if me.isDummy; return; end
+			if me.isOpen && me.isQueue; flush(me); end
+			me.isOpen = false; me.isQueue = false;
+			if me.isDummy || isempty(me.devices); return; end
 			if ~exist('choice','var') || isempty(choice); choice = me.device; end
 			for i = 1:length(choice)
-				TouchQueueRelease(me.devices(me.device));
+				try TouchQueueRelease(me.devices(me.device)); end
 			end
 			if me.verbose; logOutput(me,'close','Closed...'); end
 		end
@@ -260,6 +261,7 @@ classdef touchManager < optickaCore
 		%> @param
 		%> @return n number of flushed events
 		% ===================================================================
+			if ~me.isOpen && ~me.isQueue; return; end
 			reset(me);
 			n = 0;
 			syncTime(me);
@@ -276,7 +278,7 @@ classdef touchManager < optickaCore
 		%>
 		%> @param timestamp: [optional] time to set the queue time to, default is GetSecs
 		% ===================================================================
-			if ~exist('timestamp','var');timestamp = GetSecs; end
+			if ~exist('timestamp','var'); timestamp = GetSecs; end
 			me.queueTime = timestamp;
 		end
 

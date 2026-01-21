@@ -4,11 +4,20 @@ This is the **single source of truth** for coding/agent instructions in this rep
 Tool-specific instruction files (Copilot, etc.) should **link here** rather than
 duplicating content.
 
+## Formatting rules
+- ALWAYS use camelCase for variable / property / function / method names.
+- Comments MUST follow Doxygen conventions. Line comments start with `%>`
+- Prefer **tabs** for indentation in all MATLAB code and scripts.
+- **Exception:** YAML files (`*.yml`, `*.yaml`) must use **spaces** (2 spaces) for indentation.
+- Keep lines reasonably short (aim ~80 chars when practical).
+
 ## Big picture
 - Opticka is an object-oriented MATLAB framework around Psychtoolbox (PTB) for
   running experiments.
 - Core orchestration is `runExperiment` (runs MOC tasks and state-machine
   behavioural tasks) and the GUI wrapper `opticka`.
+- All classes can be used separately, and do not depend on runExperiment or the
+  GUI for their function.
 - Most classes inherit `optickaCore` (handle-class base) which sets common
   paths, IDs, argument parsing, and defaults.
 
@@ -19,9 +28,11 @@ duplicating content.
 - Script examples:
   - Method of Constants (MOC) demo: `optickaTest.m`
   - Behaviour/state-machine demo: `optickaBehaviourTest.m`
+  - Minimal stimulus demo: `im = imageStimulus; run(im);`
   - Minimal state machine demo: `sM = stateMachine; runDemo(sM);`
+  - Minimal touch screen demo: `tM = touchManager; demo(tM);`
 
-## Architecture & data flow (typical run)
+## Standard architecture & data flow (typical run)
 - `runExperiment` coordinates:
   - `screenManager` (`screen`) for opening/configuring PTB screen + degree→pixel
     transforms.
@@ -31,12 +42,13 @@ duplicating content.
     `blockVar`, `trialVar`).
   - `stateMachine` + a `StateInfo.m` file for behavioural tasks.
   - Hardware/IO managers (strobe/reward/eyetracker/control) and optional network
-    via `communication/dataConnection`.
+    via `communication/jzmqConnection` (ZeroMQ, more robust) or
+    `communication/dataConnection` (TCP/UDP).
 
 ## Project-specific conventions to follow
 - **Handle classes + property validation**
-  - Many classes are `handle` and rely on property validation/`arguments` blocks.
-  - Prefer adding new options as validated properties and add them to each
+  - Most classes are `handle` and rely on property validation/`arguments` blocks.
+  - Prefer adding new public options as validated properties and add them to each
     class’s `allowedProperties` list.
 - **Stimulus API contract**
   - New stimulus classes are expected to implement the unified interface used by
@@ -64,8 +76,8 @@ duplicating content.
 ## External integrations / dependencies
 - Requires Psychtoolbox (PTB) and OpenGL; real experiments should avoid
   `debug=true` because timing fidelity is reduced.
-- Networking uses `communication/jzmqConnection` (ZeroMQ) and `communication/dataConnection` (PNET-based TCP/UDP) for remote
-  control/telemetry.
+- Networking uses `communication/jzmqConnection` (ZeroMQ) and 
+  `communication/dataConnection` (PNET-based TCP/UDP) for remote control/telemetry.
 - Alyx integration uses `communication/alyxManager` (REST API + secrets via
   `getSecret/setSecret`).
 
@@ -74,11 +86,6 @@ duplicating content.
   allocations/logging in the display loop.
 - Prefer editing/adding example protocols under `CoreProtocols/` (StateInfo +
   `.mat`) and custom functions in `userFunctions` rather than changing core runner logic.
-
-## Formatting rules
-- Prefer **tabs** for indentation in MATLAB code and scripts.
-- **Exception:** YAML files (`*.yml`, `*.yaml`) must use **spaces** (2 spaces).
-- Keep lines reasonably short (aim ~80 chars when practical).
 
 ## Tooling notes
 - If a tool supports a “project instructions” file (Copilot, Gemini CLI, OpenCode,

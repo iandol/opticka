@@ -4,7 +4,7 @@ classdef alyxManager < optickaCore
 %>
 %> This class provides methods to connect to an Alyx database, login/logout,
 %> upload data, and other management tasks. It is based on the Alyx REST API
-%> and code from IBL.
+%> and code modified from IBL.
 %>
 %> Copyright ©2014-2026 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
