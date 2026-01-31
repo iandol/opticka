@@ -74,7 +74,7 @@ classdef optickaCore < handle
 	%--------------------PRIVATE PROPERTIES----------%
 	properties (Access = private)
 		%> allowed properties passed to object upon construction
-		allowedPropertiesCore = {'name','comment','cloning'}
+		allowedPropertiesCore string = ["name", "comment", "cloning"]
 	end
 
 	%=======================================================================

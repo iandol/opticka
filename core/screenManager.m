@@ -1,22 +1,27 @@
 % ========================================================================
+classdef screenManager < optickaCore
 %> @class screenManager
 %> @brief screenManager — manage opening and configuring the PTB screen
 %>
-%> screenManager manages the (many!) PTB screen settings. You can set many
-%> properties of this class to control PTB screens, and use it to open and
-%> close the screen based on those properties. This class controls the
-%> transformation from degrees into pixels, and it can offset the screen
-%> co-ordinates (i.e. you can set a global X and Y position offset, to a
-%> screen position and then all other positions will be relative to this
-%> global screen center). By setting `bitDepth` you can enable Display++,
-%> DataPixx, HDR and high bit-depth display modes. This class also manages
-%> movie recording of the screen buffer. Finally it wraps some generic
-%> drawing commands like grids, text, spots or other basic things that would
-%> be overkill for aa dedicated stimulus class.
+%> screenManager manages the (MANY!) PTB screen settings. It ensures screen
+%> coordinates are based on visual degrees, with conversions to and from
+%> pixels as needed. Setting class properties controls most PTB advanced
+%> features. You can provide a calibrateGamma object for gamma correction.
+%> It can offset the screen co-ordinates (i.e. you can set a global X and Y
+%> position offset, to a screen position and then all other positions will
+%> be relative to this global screen center). By setting `bitDepth` you can
+%> enable Display++, DataPixx, HDR and high bit-depth display modes. This
+%> class also manages movie recording of the screen buffer for stimulus
+%> samples. It finally wraps some generic drawing commands like grids, text,
+%> spots or other basic things that would be overkill for a dedicated
+%> stimulus class. This class is used by other opticka classes, for example
+%> you pass it to stimuli or eyetracker objects and they can access the
+%> properties of the PTB window automatically.
 %>
-%> Copyright ©2014-2025 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> @author Ian Max Andolina
+%>
+%> Copyright ©2014-2026 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
-classdef screenManager < optickaCore
 
 	properties
 		%> the display to use, 0 is the main display on macOS/Linux
@@ -240,7 +245,8 @@ classdef screenManager < optickaCore
 	end
 
 	methods
-		% ===================================================================
+
+		% ===================================================================CONSTRUCTOR
 		function me = screenManager(varargin)
 		%> @fn me = screenManager(varargin)
 		%>
@@ -266,7 +272,7 @@ classdef screenManager < optickaCore
 			prepareScreen(me);
 		end
 
-		% ===================================================================
+		% ===================================================================PREPARESCREEN
 		function screenVals = prepareScreen(me)
 		%> @fn prepareScreen
 		%>
@@ -350,8 +356,8 @@ classdef screenManager < optickaCore
 
 		end
 
-		% ===================================================================
-		function sv = open(me,debug,tL,forceScreen)
+		% ===================================================================OPEN
+		function sv = open(me, debug, tL, forceScreen)
 		%> @fn open
 		%> @brief open a screen with object defined settings
 		%>
@@ -360,21 +366,15 @@ classdef screenManager < optickaCore
 		%> @param forceScreen force a particular screen number to open
 		%> @return sv structure of basic info from the opened screen
 		% ===================================================================
-			if me.isOpen; fprintf('===>>> screenManager.open(): Screen already open!');return; end
+			if me.isOpen; fprintf('===>>> screenManager.open(): Screen already open!'); return; end
 			if me.isPTB == false
 				warning('No PTB found!');
 				sv = me.screenVals;
 				return;
 			end
-			if ~exist('debug','var') || isempty(debug)
-				debug = me.debug;
-			end
-			if ~exist('tL','var') || isempty(tL)
-				tL = struct;
-			end
-			if ~exist('forceScreen','var')
-				forceScreen = [];
-			end
+			if ~exist('debug','var') || isempty(debug); debug = me.debug; end
+			if ~exist('tL','var') || isempty(tL); tL = struct;end
+			if ~exist('forceScreen','var'); forceScreen = []; end
 
 			sv = me.screenVals;
 
@@ -382,26 +382,28 @@ classdef screenManager < optickaCore
 				PsychDefaultSetup(2);
 				sv.resetGamma = false;
 
+				%% === hide screen flash if requested
 				me.hideScreenFlash();
 
+				%% === set Screen to head preferences
 				if ~isempty(me.screenToHead) && isnumeric(me.screenToHead)
 					for i = 1:size(me.screenToHead,1)
 						sth = me.screenToHead(i,:);
-						if lengtht(stc) == 3
+						if length(sth) == 3
 							fprintf('\n---> screenManager: Custom Screen to Head: %i %i %i\n',sth(1), sth(2), sth(3));
 							Screen('Preference', 'ScreenToHead', sth(1), sth(2), sth(3));
 						end
 					end
 				end
-
 				%1=beamposition,kernel fallback | 2=beamposition crossvalidate with kernel
 				%Screen('Preference', 'VBLTimestampingMode', me.timestampingMode);
 
-				if ~islogical(me.windowed) && isnumeric(me.windowed) %force debug for windowed stimuli!
-					debug = true;
+				
+				%% === set Screen debug preferences
+				if (~islogical(me.windowed) && isnumeric(me.windowed)) || (isscalar(me.windowed) && me.windowed ~= 0)
+					debug = true; % force debug for windowed stimuli!
 				end
-
-				if debug == true || (isscalar(me.windowed) && me.windowed ~= 0)
+				if debug == true
 					fprintf('\n---> screenManager: Skipping Sync Tests etc. - ONLY FOR DEVELOPMENT!\n');
 					Screen('Preference','SyncTestSettings', 0.002); %up to 2ms variability
 					Screen('Preference', 'SkipSyncTests', 2);
@@ -409,7 +411,7 @@ classdef screenManager < optickaCore
 					Screen('Preference', 'Verbosity', me.verbosityLevel);
 					Screen('Preference', 'SuppressAllWarnings', 0);
 				else
-					if me.disableSyncTests
+					if me.disableSyncTests % skip sync tests
 						fprintf('\n---> screenManager: Sync Tests OVERRIDDEN, do not use for real experiments!!!\n');
 						warning('---> screenManager: Sync Tests OVERRIDDEN, do not use for real experiments!!!')
 						Screen('Preference', 'SkipSyncTests', 2);
@@ -418,21 +420,22 @@ classdef screenManager < optickaCore
 						Screen('Preference', 'SkipSyncTests', 0);
 					end
 					Screen('Preference','SyncTestSettings', me.syncVariance); %set acceptable variability
-					Screen('Preference', 'VisualDebugLevel', 3);
+					Screen('Preference', 'VisualDebugLevel', 3); 
 					Screen('Preference', 'Verbosity', me.verbosityLevel); %errors and warnings
 					Screen('Preference', 'SuppressAllWarnings', 0);
 				end
 
+				%% === log init time
 				tL.screenLog.preOpenWindow=GetSecs;
 
-				%=== check if system supports HDR mode
+				%% === check if system supports HDR mode
 				isHDR = logical(PsychHDR('Supported'));
 				if strcmp(me.bitDepth,'HDR') && ~isHDR
 					me.bitDepth = 'Native10Bit';
 					error('---> screenManager: tried to use HDR but it is not supported!\n');
 				end
 
-				%=== check stereomode is anaglyph
+				%% === check stereomode is anaglyph
 				if ismember(me.stereoMode, 6:9)
 					stereo = me.stereoMode;
 				elseif me.stereoMode > 0
@@ -442,9 +445,11 @@ classdef screenManager < optickaCore
 					stereo = 0;
 				end
 
-				%=== start to set up PTB screen
+				%% === start to set up PTB screen
 				PsychImaging('PrepareConfiguration');
 				PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
+
+				%% === deal with Vulkan if requested
 				if me.useVulkan
 					if ~me.screenVals.isVulkan; fprintf('---> screenManager: Probing for Vulkan failed...\n'); end
 					try
@@ -454,10 +459,13 @@ classdef screenManager < optickaCore
 						warning('Vulkan failed to be initialised...')
 					end
 				end
-				me.isPlusPlus = screenManager.bitsCheckOpen();
-				fprintf('---> screenManager: Probing for a Display++...');
+
 				bD = me.bitDepth;
 				normalMode = true;
+
+				%% === deal with Bits++ / Display++
+				fprintf('---> screenManager: Probing for a Display++...');
+				me.isPlusPlus = screenManager.bitsCheckOpen();
 				if ~me.isPlusPlus && contains(bD, 'Bits++')
 					error('---> screenManager: You specified a Bits++ colour mode but cannot connect to the Display++!');
 				end
@@ -480,6 +488,8 @@ classdef screenManager < optickaCore
 				else
 					fprintf('\tNO Display++\n');
 				end
+
+				%% === deal with remaining modes
 				if normalMode
 					switch lower(bD)
 						case {'hdr','enablehdr'}
@@ -510,11 +520,13 @@ classdef screenManager < optickaCore
 					end
 				end
 
+				%% === deal with retina mode
 				if me.useRetina
 					fprintf('---> screenManager: Retina mode enabled\n');
 					PsychImaging('AddTask', 'General', 'UseRetinaResolution');
 				end
 
+				%% === set Display++ refresh rate if requested
 				try %#ok<*TRYNC>
 					if me.isPlusPlus && ~isempty(me.displayPPRefresh) && IsLinux
 						outputID = 0;
@@ -523,7 +535,7 @@ classdef screenManager < optickaCore
 					end
 				end
 
-				%===deal with windowed or full-screen
+				%% === deal with windowed or full-screen
 				if isempty(me.windowed); me.windowed = false; end
 				if ~isempty(forceScreen)
 					thisScreen = forceScreen;
@@ -548,18 +560,21 @@ classdef screenManager < optickaCore
 					end
 				end
 
+				%% === deal with mirror display
 				if thisScreen > 0 && me.mirrorDisplay
 					PsychImaging('AddTask', 'General', 'MirrorDisplayTo2ndOutputHead', ...
 						0, [0 0 900 600], [], 1);
 				end
 
-				% ==============================================================
+				%% ==============================================================OPENWINDOW
 				[me.win, me.winRect] = PsychImaging('OpenWindow', thisScreen, ...
 					me.backgroundColour, winSize, [], me.doubleBuffer+1, stereo, ...
 					me.antiAlias, [], sf);
 				me.isOpen = true;
+				if me.verbose; fprintf('===>>> screenManager: opened win: %i kind: %i\n',me.win,Screen(me.win,'WindowKind')); end
 				% ==============================================================
 
+				%% === set up mirror overlay if needed
 				if thisScreen > 0 && me.mirrorDisplay
 					me.overlayWin = PsychImaging('GetMirrorOverlayWindow', me.win);
 					sv.mirror = true;
@@ -569,7 +584,7 @@ classdef screenManager < optickaCore
 					sv.overlayWin= [];
 				end
 
-				%===ANAGLYPH VALUES
+				%% === ANAGLYPH VALUES
 				if stereo > 0 && ~isempty(me.anaglyphLeft) && ~isempty(me.anaglyphRight)
 					SetAnaglyphStereoParameters('LeftGains', me.win,  me.anaglyphLeft);
     				SetAnaglyphStereoParameters('RightGains', me.win, me.anaglyphRight);
@@ -590,17 +605,20 @@ classdef screenManager < optickaCore
 					end
 				end
 
-				sv.win			= me.win; % make a copy
+				%% === set up screenVals info
+				sv.win			= me.win;
 				sv.winRect		= me.winRect;
 				sv.useRetina	= me.useRetina;
 				sv				= setScreenSize(me, sv);
+				sv.white = WhiteIndex(me.screen);
+				sv.black = BlackIndex(me.screen);
+				sv.gray = GrayIndex(me.screen);
 
-				if me.verbose; fprintf('===>>>Made win: %i kind: %i\n',me.win,Screen(me.win,'WindowKind')); end
-
+				%% === log open time and delta
 				tL.screenLog.postOpenWindow=GetSecs;
 				tL.screenLog.deltaOpenWindow=(tL.screenLog.postOpenWindow-tL.screenLog.preOpenWindow);
 
-				%===check we have GLSL
+				%% === check we have GLSL
 				try
 					AssertGLSL;
 				catch
@@ -608,7 +626,7 @@ classdef screenManager < optickaCore
 					error('GLSL Shading support is required for octicka!');
 				end
 
-				% get HDR properties
+				%% === get HDR properties
 				if strcmpi(me.bitDepth,'HDR') && isHDR
 					sv.hdrProperties = PsychHDR('GetHDRProperties', me.win);
 					if IsWin; oldDim = PsychHDR('HDRLocalDimming', me.win, 0); end
@@ -616,7 +634,7 @@ classdef screenManager < optickaCore
 					sv.hdrProperties = [];
 				end
 
-				%===Linux can give us some more information
+				%% === Linux can give us some more information
 				if IsLinux && ~isHDR && ~me.useVulkan
 					try
 						d			= Screen('ConfigureDisplay','Scanout',me.screen,0);
@@ -627,7 +645,7 @@ classdef screenManager < optickaCore
 					end
 				end
 
-				%===get timing info
+				%% === get timing info
 				sv.ifi			= Screen('GetFlipInterval', me.win);
 				sv.fps			= Screen('NominalFramerate', me.win);
 				% find our fps if not defined above
@@ -640,7 +658,6 @@ classdef screenManager < optickaCore
 					sv.fps = 60;
 					sv.ifi = 1 / 60;
 				end
-
 				if me.windowed == false % full-screen
 					sv.halfifi = sv.ifi/2; sv.halfisi = sv.halfifi;
 				else
@@ -650,7 +667,7 @@ classdef screenManager < optickaCore
 					sv.halfifi = 0; sv.halfisi = 0;
 				end
 
-				%===configure photodiode to top right
+				%% === configure photodiode to top right
 				if me.useRetina
 					me.photoDiodeRect = [me.winRect(3)-90 0 me.winRect(3) 90];
 				else
@@ -658,7 +675,7 @@ classdef screenManager < optickaCore
 				end
 				sv.photoDiodeRect = me.photoDiodeRect;
 
-				%===get gamma table and info
+				%% === get gamma table and info
 				try
 					[sv.originalGamma, sv.dacBits, sv.lutSize]=Screen('ReadNormalizedGammaTable', me.win);
 				catch
@@ -668,7 +685,6 @@ classdef screenManager < optickaCore
 				end
 				sv.linearGamma  = repmat(linspace(0,1,sv.lutSize)',1,3);
 				sv.gammaTable	= sv.originalGamma;
-
 				if me.hideFlash == true && isempty(me.gammaTable) && sv.lutSize > 0
 					Screen('LoadNormalizedGammaTable', me.screen, sv.linearGamma);
 					sv.gammaTable = sv.linearGamma;
@@ -703,7 +719,7 @@ classdef screenManager < optickaCore
 					sv.resetGamma = false;
 				end
 
-				% Enable alpha blending.
+				%% === Enable alpha blending.
 				sv.blending = false;
 				sv.newSrc = me.srcMode;
 				sv.newDst = me.dstMode;
@@ -718,10 +734,10 @@ classdef screenManager < optickaCore
 					[sv.oldSrc,sv.oldDst,sv.oldMask] = Screen('BlendFunction', me.win);
 				end
 
-				% set up text defaults
+				%% === set up text defaults
 				updateFontValues(me);
 
-				sv.ppd = me.ppd; %generate our dependent propertie and caches it to ppd_ for speed
+				%% === make our visualDebug grid if needed
 				me.makeGrid; %our visualDebug size grid
 				if mean(me.backgroundColour(1:3)) > 0.6
 					me.gridColour = [0 0 0.2];
@@ -729,26 +745,32 @@ classdef screenManager < optickaCore
 					me.gridColour = [1 1 0.8];
 				end
 
+				%% === prepare movie recording if needed
 				if me.movieSettings.record
 					prepareMovie(me);
 				end
 
-				sv.white = WhiteIndex(me.screen);
-				sv.black = BlackIndex(me.screen);
-				sv.gray = GrayIndex(me.screen);
-				sv.ppd = me.ppd;
+				%% === final screenVals assignments
+				sv.ppd = me.ppd; %generate our dependent propertie and caches it to ppd_ for speed
 				me.screenVals = sv;
+
 			catch ME
 				getReport(ME);
 				close(me);
-				Priority(0);
-				prepareScreen(me);
+				Priority(0); ShowCursor;
+				try prepareScreen(me); end
 				rethrow(ME);
 			end
 
 		end
 
+		% ===================================================================
 		function switchChannel(me, channel)
+		%> @fn demo
+		%> @brief Small demo of screen opening, drawing, closing
+		%>
+		%>
+		% ===================================================================
 			persistent thisChannel
 			if me.isOpen
 				if ~exist('channel','var'); channel = ~thisChannel;end
@@ -812,13 +834,26 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		function [vbl, when, flipTime, missed] = flip(me, varargin)
 		%> @fn flip
-		%> @brief Flip the screen
+		%> @brief Flip the screen and optionally return timing information
 		%>
-		%> [VBLTimestamp StimulusOnsetTime FlipTimestamp Missed Beampos] = 
-		%>   Screen('Flip', me.win [, when] [, dontclear] [, dontsync] [, multiflip]);
+		%> This method wraps PTB's Screen('Flip') command to swap the front and back
+		%> buffers, displaying the rendered content on screen. It provides precise timing
+		%> information about the vertical blank (VBL) and stimulus onset.
 		%>
-		%> @param varargin - pass other options to screen flip
-		%> @return vbl - a vbl from this flip
+		%> @param me The screenManager object instance
+		%> @param varargin Optional arguments passed directly to Screen('Flip'):
+		%>   - when: Target time for flip (defaults to immediate)
+		%>   - dontclear: If non-zero, don't clear buffer after flip (default: 0)
+		%>   - dontsync: If non-zero, don't sync to VBL (default: 0)
+		%>   - multiflip: Multi-flip mode parameter
+		%>
+		%> @return vbl VBL (Vertical Blank) timestamp - time when flip occurred
+		%> @return when Stimulus onset time - best estimate of when stimulus became visible
+		%> @return flipTime Flip completion timestamp
+		%> @return missed Number of frames missed (0 = no miss, >0 = frames dropped)
+		%>
+		%> @note Accurate timing requires proper screen synchronization configuration
+		%> @see Screen('Flip') in Psychtoolbox documentation
 		% ===================================================================
 			if ~me.isOpen; return; end
 			[vbl, when, flipTime, missed] = Screen('Flip',me.win,varargin{:});
@@ -882,7 +917,7 @@ classdef screenManager < optickaCore
 		end
 
 		% ===================================================================
-		function forceWin(me,win)
+		function forceWin(me, win)
 		%> @fn forceWin
 		%> @brief force this object to use an existing window handle
 		%>
@@ -936,8 +971,10 @@ classdef screenManager < optickaCore
 			try ListenChar(0); end
 			ShowCursor;
 			if me.screenVals.resetGamma && isfield(me.screenVals,'originalGamma') && ~isempty(me.screenVals.originalGamma)
-				Screen('LoadNormalizedGammaTable', me.win, me.screenVals.originalGamma);
-				fprintf('\n---> screenManager: REVERT GAMMA TABLES\n');
+				try
+					fprintf('\n---> screenManager: REVERT GAMMA TABLES\n');
+					Screen('LoadNormalizedGammaTable', me.win, me.screenVals.originalGamma);
+				end
 			end
 			if me.isInAsync
 				try Screen('ASyncFlipEnd',me.win); end
@@ -980,7 +1017,13 @@ classdef screenManager < optickaCore
 			end
 		end
 
+		% ===================================================================
 		function set.font(me,varargin)
+		%> @fn set.font
+		%> @brief Set method for font
+		%>
+		%> @param varargin font struct
+		% ===================================================================
 			if ~isempty(varargin{1}) && isstruct(varargin{1})
 				me.font = varargin{1};
 				updateFontValues(me);
@@ -992,6 +1035,7 @@ classdef screenManager < optickaCore
 		%> @fn set.backgroundColour
 		%> @brief Set method for backgroundColour
 		%>
+		%> @param value RGBA values in 1, 3 or 4 element format.
 		% ===================================================================
 			switch length(value)
 				case 1
@@ -1008,10 +1052,11 @@ classdef screenManager < optickaCore
 		end
 
 		% ===================================================================
-		function set.bitDepth(me,value)
+		function set.bitDepth(me, value)
 		%> @fn set.bitDepth
 		%> @brief Set method for bitDepth
 		%>
+		%> @param value bitDepth string
 		% ===================================================================
 			check = strcmpi(value,me.bitDepths);
 			if any(check)
@@ -1024,7 +1069,7 @@ classdef screenManager < optickaCore
 		end
 
 		% ===================================================================
-		function set.srcMode(me,value)
+		function set.srcMode(me, value)
 		%> @fn set.srcMode
 		%> @brief Set method for GL blending src
 		%>
@@ -1039,7 +1084,7 @@ classdef screenManager < optickaCore
 		end
 
 		% ===================================================================
-		function set.dstMode(me,value)
+		function set.dstMode(me, value)
 		%> @fn set.dstMode
 		%> @brief Set method for GL blending dst
 		%>
@@ -1055,7 +1100,7 @@ classdef screenManager < optickaCore
 		end
 
 		% ===================================================================
-		function set.distance(me,value)
+		function set.distance(me, value)
 		%> @fn set.distance
 		%> @brief Set method for distance
 		%>
@@ -1067,7 +1112,7 @@ classdef screenManager < optickaCore
 		end
 
 		% ===================================================================
-		function set.pixelsPerCm(me,value)
+		function set.pixelsPerCm(me, value)
 		%> @fn set.pixelsPerCm
 		%> @brief Set method for pixelsPerCm
 		%>
@@ -1093,11 +1138,11 @@ classdef screenManager < optickaCore
 		end
 
 		% ===================================================================
-		function set.windowed(me,value)
+		function set.windowed(me, value)
 		%> @fn set.windowed
 		%> @brief Set method for windowed
 		%>
-		%> @param value
+		%> @param value Windowed mode value
 		% ===================================================================
 			if length(value) == 2 && isnumeric(value)
 				me.windowed = [0 0 value];
@@ -1115,31 +1160,31 @@ classdef screenManager < optickaCore
 		end
 
 		% ===================================================================
+		function set.screenXOffset(me, value)
 		%> @brief Set method for screenXOffset
 		%>
-		%> @param
+		%> @param value Screen X offset value
 		% ===================================================================
-		function set.screenXOffset(me,value)
 			me.screenXOffset = value;
 			me.updateCenter();
 		end
 
 		% ===================================================================
+		function set.screenYOffset(me, value)
 		%> @brief Set method for screenYOffset
 		%>
-		%> @param
+		%> @param value Screen Y offset value
 		% ===================================================================
-		function set.screenYOffset(me,value)
 			me.screenYOffset = value;
 			me.updateCenter();
 		end
 
 		% ===================================================================
+		function set.verbosityLevel(me, value)
 		%> @brief Set method for verbosityLevel
 		%>
-		%> @param
+		%> @param value Verbosity level
 		% ===================================================================
-		function set.verbosityLevel(me,value)
 			me.verbosityLevel = value;
 			Screen('Preference', 'Verbosity', me.verbosityLevel); %errors and warnings
 		end
@@ -1174,11 +1219,11 @@ classdef screenManager < optickaCore
 		end
 
 		% ===================================================================
-		function flashScreen(me,interval)
+		function flashScreen(me, interval)
 		%> @fn flashScreen
 		%> @brief Flash the screen until keypress
 		%>
-		%> @param interval
+		%> @param interval interval in seconds
 		% ===================================================================
 			if ~me.isOpen; return; end
 			int = round(interval / me.screenVals.ifi);
@@ -1201,7 +1246,7 @@ classdef screenManager < optickaCore
 		end
 
 		% ===================================================================
-		function drawCross(me,size,colour,x,y,lineWidth,showDisk,alpha,alpha2)
+		function drawCross(me, size, colour, x, y, lineWidth, showDisk, alpha, alpha2)
 		%> @fn drawCross
 		%> @brief draw fixation cross from Thaler L, Schütz AC,
 		%>  Goodale MA, & Gegenfurtner KR (2013) “What is the best fixation target?
@@ -1503,7 +1548,7 @@ classdef screenManager < optickaCore
 			if size(xy,1)==1 && size(xy,2)==2;xy = xy'; end
 			xy(1,:) = xy(1,:) * me.ppd_ + me.xCenter;
 			xy(2,:) = xy(2,:) * me.ppd_ + me.yCenter;
-			if length(boxsize) == 1
+			if isscalar(boxsize)
 				xbs = boxsize;
 				ybs = boxsize;
 			else
@@ -1858,11 +1903,11 @@ classdef screenManager < optickaCore
 		end
 
 		% ===================================================================
+		function out = toDegrees(me, in, axis)
 		%> @brief toDegrees - convert from pixels to degrees
 		%>
 		%> expects col1 = x, col2 = y for 'xy'
 		% ===================================================================
-		function out = toDegrees(me, in, axis)
 			if ~exist('axis','var') || isempty(axis)
 				if size(in, 2) == 2
 					axis = 'xy';
@@ -1939,10 +1984,10 @@ classdef screenManager < optickaCore
 		end
 
 		% ===================================================================
+		function delete(me)
 		%> @brief Delete method
 		%>
 		% ===================================================================
-		function delete(me)
 			if me.isOpen
 				close(me);
 				logOutput(me, 'DELETE method', 'Screen closed');
@@ -1950,17 +1995,17 @@ classdef screenManager < optickaCore
 		end
 	end
 
-	%=======================================================================
+	%% =======================================================================
 	methods (Hidden = true) %------------------HIDDEN METHODS
-	%=======================================================================
+	%% =======================================================================
 		function drawPhotoDiode(me,colour)
 			Screen('FillRect',me.win,colour,me.photoDiodeRect);
 		end
 	end
 
-	%=======================================================================
+	%% =======================================================================
 	methods (Static = true) %------------------STATIC METHODS
-	%=======================================================================
+	%% =======================================================================
 
 		% ===================================================================
 		function out = equidistantPoints(n,distance,phase)
@@ -2130,9 +2175,9 @@ classdef screenManager < optickaCore
 
 	end
 
-	%=======================================================================
+	%% =======================================================================
 	methods (Access = private) %------------------PRIVATE METHODS
-	%=======================================================================
+	%% =======================================================================
 
 		% ===================================================================
 		%> @brief Sets screen size, taking retina mode into account

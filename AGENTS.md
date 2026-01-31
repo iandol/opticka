@@ -12,20 +12,24 @@ duplicating content.
 - Keep lines reasonably short (aim ~80 chars when practical).
 
 ## Big picture
-- Opticka is an object-oriented MATLAB framework around Psychtoolbox (PTB) for
-  running experiments.
+- Opticka is an object-oriented MATLAB framework built around Psychtoolbox (PTB) for
+  running cognitive neuroscience experiments.
 - Core orchestration is `runExperiment` (runs MOC tasks and state-machine
   behavioural tasks) and the GUI wrapper `opticka`.
-- All classes can be used separately, and do not depend on runExperiment or the
+- All classes can be used separately, and do not depend on `runExperiment` or the
   GUI for their function.
+- Handle classes ensures a singleton pattern, where each manager object is a 
+  unique representation that can be passed to other objects. For example an 
+  physical eyetracker gets a singular handle object, and this can be passed 
+  to other objects so they can use the eyetracker without conflict.
 - Most classes inherit `optickaCore` (handle-class base) which sets common
-  paths, IDs, argument parsing, and defaults.
+  paths, UUIDs (each object gets a unique ID), argument parsing, and defaults.
 
 ## Key entry points
 - Setup MATLAB path: run `addOptickaToPath` (adds repo + optional sibling
   toolboxes; excludes folders like `.git`, `legacy`, `doc`).
 - GUI run: `o = opticka;` (creates GUI and a `runExperiment` instance at `o.r`).
-- Script examples:
+- Script examples (not using GUI):
   - Method of Constants (MOC) demo: `optickaTest.m`
   - Behaviour/state-machine demo: `optickaBehaviourTest.m`
   - Minimal stimulus demo: `im = imageStimulus; run(im);`
@@ -33,11 +37,12 @@ duplicating content.
   - Minimal touch screen demo: `tM = touchManager; demo(tM);`
 
 ## Standard architecture & data flow (typical run)
-- `runExperiment` coordinates:
-  - `screenManager` (`screen`) for opening/configuring PTB screen + degree→pixel
-    transforms.
+- `runExperiment` coordinates the following objects:
+  - `screenManager` (`screen`) for opening/configuring PTB screen, degree↔pixel
+    transforms and as a singleton "container" that holds all settings to pass to other classes.
   - `metaStimulus` (`stimuli`) as a container for multiple stimuli; it forwards
-    `setup/animate/draw/update/reset`.
+    `setup/animate/draw/update/reset`. A single draw command for example can 
+    "draw" many stimuli.
   - `taskSequence` (`task`) for block/trial variable randomisation (`nVar`,
     `blockVar`, `trialVar`).
   - `stateMachine` + a `StateInfo.m` file for behavioural tasks.

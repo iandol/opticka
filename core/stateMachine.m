@@ -56,24 +56,24 @@ classdef stateMachine < optickaCore
 	
 	properties
 		%> our state list, stored as a structure
-		stateList struct			= struct([])
+		stateList struct		= struct([])
 		%> use real time (true, using @clockFcn) or ticks (false) to mark state time. Real time is more
 		%> accurate / robust against unexpected delays. Ticks uses timeDelta per tick and a
 		%> tick timer (each update loop is 1 tick) for time measurement. This is simpler, can be
 		%> controlled by an external driver that deals with timing, and without supervision
 		%> but delays in the external update may cause drift.
-		realTime logical			= false
+		realTime logical		= false
 		%> timedelta for time > ticks calculation, assume 0.1ms (1e-4) by default
 		%> can set to IFI of display. This sets the "resolution" when
 		%> realTime == false
-		timeDelta double			= 1e-4
+		timeDelta double		= 1e-4
 		%> clock function to use (GetSecs from PTB is optimal…)
-		clockFcn function_handle	= @GetSecs
+		clockFcn function_handle = @GetSecs
 		%> N x 2 cell array of strings to compare, list to skip the current -> next state's exit functions; for example
 		%> skipExitStates = {'fixate',{'incorrect','breakfix'}}; means that if the currentstate is
 		%> 'fixate' and the next state is either incorrect OR breakfix, then skip the FIXATE exit
 		%> state. Add multiple rows for skipping multiple state's exit states.
-		skipExitStates cell			= {}
+		skipExitStates cell		= {}
 		%> for a state transition you can override the next state,
 		%> but this is reset on the transition, so you need logic at runtime
 		%> to set this value each time. This can be used in an experiment
@@ -81,28 +81,28 @@ classdef stateMachine < optickaCore
 		%> probability you can transition to state B or state C for
 		%> example. See taskSequence.trialVar and runExperiment.updateNextState
 		%> for the tools to use this.
-		tempNextState char			= ''
+		tempNextState char		= ''
 		%> verbose logging to command window?
-		verbose						= false
+		verbose					= false
 		%> pause function (WaitSecs from PTB is optimal…)
-		waitFcn function_handle		= @WaitSecs
+		waitFcn function_handle	= @WaitSecs
 		%> do we run timers for function evaluations?
-		fnTimers logical			= false
+		fnTimers logical		= false
 		%> [optional] use a timeLogger class object to log transition times. This class will
 		%> usually be passed from runExperiment
-		externalLog							= []
+		externalLog				= []
 	end
 
 	properties (Hidden = true)
 		%> size of the log arrays to preallocate
-		logSize = 1
+		logSize 				= 1
 		%> the raw stateMachine.m file
 		raw
 	end
 	
 	properties (SetAccess = protected, GetAccess = public, Transient = true)
 		%> true or false, whether this object is currently busy running
-		isRunning					= false
+		isRunning				= false
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -148,26 +148,27 @@ classdef stateMachine < optickaCore
 	
 	properties (SetAccess = protected, GetAccess = protected)
 		%> use timeLogger log
-		useExternalLog				= false
+		useExternalLog			= false
 		%> number of states
 		nStates
 		%> current state number
 		thisN
 		%> should we run the finish function
-		isFinishing logical			= false
+		isFinishing logical		= false
 		%> field names of allStates struct array, defining state behaviors
-		stateFields cell			= { 'name', 'next', 'time', 'entryFcn', 'withinFcn', 'transitionFcn', 'exitFcn', 'skipExitFcn' }
+		stateFields string		= ["name", "next", "time", "entryFcn", "withinFcn", ...
+								"transitionFcn", "exitFcn", "skipExitFcn"]
 		%> default values of allStates struct array fields
-		stateDefaults cell			= { '', '', 1, {}, {}, {}, {}, false }
+		stateDefaults cell		= { '', '', 1, {}, {}, {}, {}, false }
 		%> properties allowed during construction
-		allowedProperties			= {'name','realTime','verbose','clockFcn','waitFcn'...
-							'timeDelta','skipExitStates','tempNextState','fnTimers','externalLog'}
-		logFields					= ["n","startTime","index","tnow","name","uuid",...
-							"tick","entryTime","nextTimeOut", "nextTickOut",...
-							"tempNextState","fevalEnter","fevalExit","fevalStore"]
-		logValues					= {[],[],[],[],"","",...
-							[],[],[],[],...
-							"",[],[],[]}
+		allowedProperties string = ["name", "realTime", "verbose", "clockFcn", "waitFcn", ...
+								"timeDelta", "skipExitStates", "tempNextState", "fnTimers", "externalLog"]
+		logFields	string		= ["n","startTime","index","tnow","name","uuid",...
+								"tick","entryTime","nextTimeOut", "nextTickOut",...
+								"tempNextState","fevalEnter","fevalExit","fevalStore"]
+		logValues				= {[],[],[],[],"","",...
+								[],[],[],[],...
+								"",[],[],[]}
 	end
 	
 	%=======================================================================
@@ -639,7 +640,7 @@ classdef stateMachine < optickaCore
 			tblD = tbl;
 			for i = 1:me.nStates
 				for j = 1:length(titles)
-					tbl{i+1,j} = me.stateList(i).(titles{j});
+					tbl{i+1,j} = me.stateList(i).(titles(j));
 					if iscell(tbl{i+1,j})
 						t = [];
 						for k = 1:length(tbl{i+1,j})
