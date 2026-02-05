@@ -406,7 +406,10 @@ classdef touchManager < optickaCore
 		%> @fn reset
 		%>
 		%> @param softReset -- soft reset = keep lastPressed and event flags
-		%> @return
+		%> (reason: because touch screen has no state and subject holding a
+		%> touch screen without moving is the same as no touch, a soft reset
+		%> keeps the last event state but resets other properties) 
+		%> 
 		% ===================================================================
 			arguments(Input)
 				me
@@ -618,15 +621,31 @@ classdef touchManager < optickaCore
 		end
 
 		% ===================================================================
+		function [held, heldtime, release, releasing, searching, failed, touch] = isHold(me)
 		%> @fn isHold
 		%>
 		%> This is the main function which runs touch timers and calculates
-		%> the logic of whether the touch is in a region and for how long.
+		%> the logic of whether the touch is in a region and for how long. 
+		%> Use me.window to set the parameters for the hold, for example:
+		%> me.window(1).X = 0; me.window(1).Y = 0; me.window(1).radius = 2;
 		%>
-		%> @param
-		%> @return
+		%> @return held logical indicating if touch is currently in window
+		%> @return heldtime logical indicating if hold duration requirement met
+		%> @return release logical indicating if release condition satisfied
+		%> @return releasing logical indicating if currently in release phase
+		%> @return searching logical indicating if still searching for touch initiation
+		%> @return failed logical indicating if touch attempt failed
+		%> @return touch logical indicating if touch event was detected, whether in window or not
 		% ===================================================================
-		function [held, heldtime, release, releasing, searching, failed, touch] = isHold(me)
+			arguments(Output)
+				held {mustBeNumericOrLogical}
+				heldtime {mustBeNumericOrLogical}
+				release {mustBeNumericOrLogical}
+				releasing {mustBeNumericOrLogical}
+				searching {mustBeNumericOrLogical}
+				failed {mustBeNumericOrLogical}
+				touch {mustBeNumericOrLogical}
+			end
 			held = false; heldtime = false; release = false;
 			releasing = false; searching = true; failed = false; 
 			touch = false;
@@ -686,6 +705,7 @@ classdef touchManager < optickaCore
 						me.wasHeld = true;
 						heldtime = true;
 						if noReleaseRequirement
+							if me.verbose; fprintf('≣isHold⊱ touchManager no release requirement, hold successful!\n'); end
 							release = true;
 							releasing = false;
 							searching = false;
@@ -731,6 +751,7 @@ classdef touchManager < optickaCore
 					me.wasHeld = true;
 					heldtime = true;
 					if noReleaseRequirement
+						if me.verbose; fprintf('≣isHold⊱ touchManager no release requirement, hold successful!\n'); end
 						release = true;
 						releasing = false;
 					else
@@ -739,6 +760,7 @@ classdef touchManager < optickaCore
 				end
 				if me.wasHeld
 					if noReleaseRequirement
+						if me.verbose; fprintf('≣isHold⊱ touchManager no release requirement, hold successful!\n'); end
 						release = true;
 						releasing = false;
 					else
@@ -770,6 +792,7 @@ classdef touchManager < optickaCore
 						me.wasHeld = true;
 						heldtime = true;
 						if noReleaseRequirement
+							if me.verbose; fprintf('≣isHold⊱ touchManager no release requirement, hold successful!\n'); end
 							release = true;
 							releasing = false;
 						else
