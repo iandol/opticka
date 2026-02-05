@@ -38,7 +38,7 @@ classdef touchData < optickaCore
 
 		end
 
-		function update(me,result,phase,trials,rt,stimulus,info,xAll,yAll,tAll,value)
+		function update(me,result,resultValue,phase,trials,rt,stimulus,info,xAll,yAll,tAll,value)
 			if ~exist('result','var'); return; end
 			if me.nData == 0
 				if isempty(me.data); me.data = me.dataTemplate; end
@@ -50,6 +50,7 @@ classdef touchData < optickaCore
 			end
 			me.data.time(n) = GetSecs;
 			me.data.result(n) = result;
+			if exist('resultValue','var') && ~isempty(resultValue); me.data.resultValue(n) = resultValue; end
 			if exist('phase','var') && ~isempty(phase); me.data.phase(n) = phase; end
 			if exist('trials','var') && ~isempty(trials); me.data.trials(n) = trials; end
 			if exist('rt','var') && ~isempty(rt); me.data.rt(n) = rt; end
