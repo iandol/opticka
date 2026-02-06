@@ -102,11 +102,11 @@ classdef touchManager < optickaCore
 		eventRelease		= false
 		% window info from checkTouchWindows()
 		windowTouched		= []
+		wasNegation			= false
 		wasInWindow			= false
 		% hold info from isHold()
 		hold				= []
 		wasHeld				= false
-		wasNegation			= false
 		isSearching			= false
 		isReleased			= false
 		isOpen				= false
@@ -125,7 +125,6 @@ classdef touchManager < optickaCore
 	end
 
 	properties (Access = private)
-		deferLog			= false
 		lastPressed			= false
 		currentID			= []
 		pressed				= false
@@ -136,7 +135,8 @@ classdef touchManager < optickaCore
 		windowTemplate		= struct('X', 0, 'Y', 0, 'radius', 2, ...
 							'init', 3, 'hold', 0.05, 'release', NaN, ...
 							'doNegation', false, 'negationBuffer', 2, 'strict', true);
-		holdTemplate		= struct('N',0,'inWindow',false,'touched',false,...
+		holdTemplate		= struct('N',0,'inWindow',false,'touched',false, ...
+							'negation', false, 'searching', false, 'failed', false, ...
 							'start',0,'now',0,'total',0,'search',0,'init',0,'releaseinit',0,...
 							'length',0,'release',0)
 		allowedProperties	= {'isDummy','device','deviceName','verbose','window','nSlots',...
@@ -570,13 +570,13 @@ classdef touchManager < optickaCore
 			arguments(Input)
 				me
 				windows = []; % Ensure windows is numeric
-				getEvt {mustBeNumericOrLogical} = true; % Ensure getEvt is numeric or logical
+				getEvt logical = true; % Ensure getEvt is numeric or logical
 			end
 			arguments(Output)
 				result {mustBeNumericOrLogical}
 				win {mustBeNumeric}
-				wasEvent {mustBeNumericOrLogical} 
-				wasTouch {mustBeNumericOrLogical} 
+				wasEvent logical
+				wasTouch logical
 			end
 
 			%% ============================= default return values
@@ -616,7 +616,12 @@ classdef touchManager < optickaCore
 				end
 				me.windowTouched = win;
 				me.event.result = result;
-				if any(result); me.wasInWindow = true; end
+				if any(result == -100)
+					me.wasNegation = true;
+					me.hold.negation = true;
+				elseif any(result == true)
+					me.wasInWindow = true;
+				end
 			end
 			if me.verbose
 				fprintf('≣checkWin-%s⊱%i wasHeld:%i type:%i result:%i new:%i mv:%i prs:%i lastprs: %i rel:%i \n\t%.1fX %.1fY [win:%i %sX %sY]\n',...
@@ -678,8 +683,7 @@ classdef touchManager < optickaCore
 					me.hold.search = me.hold.total;
 				end
 			end
-			me.deferLog = true;
-
+			
 			%% ======================== check window 
 			[held, ~, wasEvent] = checkTouchWindows(me);
 			if ~isempty(me.windowTouched) && me.windowTouched > 0
@@ -690,7 +694,6 @@ classdef touchManager < optickaCore
 
 			%% ======================== NEGATION CHECK
 			if held == -100
-				me.wasNegation = true;
 				searching = false;
 				failed = true;
 				if me.verbose; fprintf('≣isHold⊱ touchManager -100 NEGATION!\n'); end
@@ -699,10 +702,7 @@ classdef touchManager < optickaCore
 
 			%% ======================= check release requirement, if release is empty / NaN / Inf then we ignore release codition
 			releaseTime = me.window(win).release;
-			noReleaseRequirement = isempty(releaseTime) || any(isnan(releaseTime(:))) || any(isinf(releaseTime(:)));
-
-			%% ======================== reset deferLog
-			me.deferLog = false;
+			noReleaseRequirement = isempty(releaseTime) || isnan(releaseTime) || isinf(releaseTime);
 
 			%% ======================== check if we have a touch event or not
 			if ~wasEvent 
@@ -713,7 +713,7 @@ classdef touchManager < optickaCore
 						me.wasHeld = true;
 						heldtime = true;
 						if noReleaseRequirement
-							if me.verbose; fprintf('≣isHold⊱ touchManager no release requirement, hold successful!\n'); end
+							if me.verbose; fprintf('≣isHold⊱ ~wasEvent touchManager no release requirement, hold successful!\n'); end
 							release = true;
 							releasing = false;
 							searching = false;
@@ -759,7 +759,7 @@ classdef touchManager < optickaCore
 					me.wasHeld = true;
 					heldtime = true;
 					if noReleaseRequirement
-						if me.verbose; fprintf('≣isHold⊱ touchManager no release requirement, hold successful!\n'); end
+						if me.verbose; fprintf('≣isHold⊱ %s touchManager no release requirement, hold successful!\n',st); end
 						release = true;
 						releasing = false;
 					else
@@ -768,7 +768,7 @@ classdef touchManager < optickaCore
 				end
 				if me.wasHeld
 					if noReleaseRequirement
-						if me.verbose; fprintf('≣isHold⊱ touchManager no release requirement, hold successful!\n'); end
+						if me.verbose; fprintf('≣isHold⊱ %s touchManager no release requirement, hold successful!\n',st); end
 						release = true;
 						releasing = false;
 					else
@@ -800,7 +800,7 @@ classdef touchManager < optickaCore
 						me.wasHeld = true;
 						heldtime = true;
 						if noReleaseRequirement
-							if me.verbose; fprintf('≣isHold⊱ touchManager no release requirement, hold successful!\n'); end
+							if me.verbose; fprintf('≣isHold⊱ %s touchManager no release requirement, hold successful!\n',st); end
 							release = true;
 							releasing = false;
 						else
@@ -833,7 +833,7 @@ classdef touchManager < optickaCore
 			me.isSearching = searching;
 			me.isReleased = release;
 			if me.verbose
-				fprintf('≣isHold⊱%s⊱%s:evt%i new:%i mv:%i prs:%i rel:%i {x:%.1f y:%.1f winx:%s winy:%s} tt:%.2f st:%.2f ht:%.2f rt:%.2f inWin:%i tchd:%i h:%i ht:%i r:%i rl:%i s:%i fail:%i N:%i\n',...
+				fprintf('≣isHold⊱%s⊱%s evt%i new:%i mv:%i prs:%i rel:%i {x:%.1f y:%.1f winx:%s winy:%s} tt:%.2f st:%.2f ht:%.2f rt:%.2f inWin:%i tchd:%i h:%i ht:%i r:%i rl:%i s:%i fail:%i N:%i\n',...
 				me.name,st,me.eventID,me.eventNew,me.eventMove,me.eventPressed,me.eventRelease,...
 				me.x,me.y,sprintf("<%.1f>",me.window(:).X),sprintf("<%.1f>",me.window(:).Y),...
 				me.hold.total,me.hold.search,me.hold.length,me.hold.release,...
@@ -886,7 +886,7 @@ classdef touchManager < optickaCore
 		end
 
 		% ===================================================================
-		function demo(me, nTrials, useaudio, testRelease)
+		function demo(me, nTrials, useaudio, holdTime, releaseTime)
 		%> @fn demo
 		%>
 		%> @param
@@ -896,7 +896,8 @@ classdef touchManager < optickaCore
 				me
 				nTrials double = 10
 				useaudio logical = false
-				testRelease = false;
+				holdTime double = 1
+				releaseTime double = NaN
 			end
 			if isempty(me.screen); me.screen = screenManager(); end
 			sM = me.screen;
@@ -914,16 +915,14 @@ classdef touchManager < optickaCore
 
 			try
 				if ~sM.isOpen; open(sM); end
-				setup(me, sM); 		%===================!!! Run setup first
+				setup(me, sM);		%===================!!! Run setup first
 				im = discStimulus('size', 6);
 				setup(im, sM);
 				quitKey = KbName('escape');
 				doQuit = false;
 
-				if testRelease; rtime = 1; else; rtime = NaN; end
-
 				createQueue(me);	%===================!!! Create Queue
-				start(me); 			%===================!!! Start touch collection
+				start(me);			%===================!!! Start touch collection
 
 				for i = 1 : nTrials
 					if doQuit; break; end
@@ -933,7 +932,7 @@ classdef touchManager < optickaCore
 					im.yPositionOut = ty;
 					update(im);
 					%X,Y,radius,doNegation,negationBuffer,strict,init,hold,release
-					me.updateWindow(tx, ty, im.size/2, true, 2, true, 5, 1, rtime);
+					me.updateWindow(tx, ty, im.size/2, true, 2, true, 5, holdTime, releaseTime);
 					if useaudio;beep(a,1000,0.1,0.1);end
 					fprintf('\n\nTouchManager Demo TRIAL %i -- X = %s Y = %s R = %s\n',i,sprintf("<%.1f>",me.window.X),sprintf("<%.1f>",me.window.Y),sprintf("<%.1f>",me.window.radius));
 					infoTxt = sprintf('Negation buffer: %s | Init: %s s | Hold > time: %s s | Release < time %s s',...
@@ -942,13 +941,13 @@ classdef touchManager < optickaCore
 					fprintf("%s\n",infoTxt);
 					% wait for no touch on screen
 					while isTouch(me); WaitSecs(0.2); end
-					reset(me);  %===================!!! reset the touch data
-					flush(me); 	%===================!!! flush the queue
+					reset(me); %===================!!! reset the touch data
+					flush(me); %===================!!! flush the queue
 					vbl = flip(sM); ts = vbl;
 					result = 'timeout';
 					holdResult = '';
 					while isempty(holdResult) && vbl <= ts + 20
-						if testRelease
+						if ~isnan(releaseTime) && ~isinf(releaseTime)
 							[holdResult, hld, hldt, rel, reli, se, fl, tch] = testHoldRelease(me,'yes','no');
 						else
 							[holdResult, hld, hldt, rel, reli, se, fl, tch] = testHold(me,'yes','no');
@@ -1194,7 +1193,7 @@ classdef touchManager < optickaCore
 				isLast logical = true
 			end
 			arguments(Output)
-				result 
+				result {mustBeNumericOrLogical}
 			end
 			if isempty(x) || isempty(y); return; end
 			if exist('tempWindow','var') && isnumeric(tempWindow) && length(tempWindow) == 4
