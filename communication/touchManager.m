@@ -90,6 +90,8 @@ classdef touchManager < optickaCore
 		%> times the xAll and yAll coordinates were recorded, see queueTime
 		%> which is the time of the last flush or a sync event to get relative times
 		tAll				= []
+		%> IDs for each timepoint
+		IDall				= []
 		%> time of last flush or syncTime method call, useful for getting relative times
 		queueTime			= 0
 		% touch event info from getEvent()
@@ -394,9 +396,9 @@ classdef touchManager < optickaCore
 				for ii=1:length(me.window)
 					fprintf('≣updateWindow %i⊱ X:%.1f Y:%.1f R:%.1f Neg:%i Buf:%.1f Strict:%i Init:%.1f Hold:%.1f Rel: %.1f\n',...
 					ii, me.window(ii).X, me.window(ii).Y,...
-					me.window(ii).radius,me.window(ii).doNegation,...
-					me.window(ii).negationBuffer,me.window(ii).strict,...
-					me.window(ii).init,me.window(ii).hold,me.window(ii).release);
+					me.window(ii).radius, me.window(ii).doNegation,...
+					me.window(ii).negationBuffer, me.window(ii).strict,...
+					me.window(ii).init, me.window(ii).hold, me.window(ii).release);
 				end
 			end
 		end
@@ -428,6 +430,7 @@ classdef touchManager < optickaCore
 			me.xAll			= [];
 			me.yAll			= [];
 			me.tAll			= [];
+			me.IDall		= [];
 			me.windowTouched= [];
 			me.wasInWindow	= false;
 			me.wasHeld		= false;
@@ -439,7 +442,9 @@ classdef touchManager < optickaCore
 			me.event		= [];
 			me.currentID	= [];
 			me.queueTime	= GetSecs;
-			if me.verbose; fprintf('≣Reset⊱ Touch data reset: soft = %i | lastPressed = %i\n', softReset, me.lastPressed); end
+			if me.verbose
+				fprintf('≣reset⊱ Touch data reset: softReset = %i | lastPressed = %i\n', softReset, me.lastPressed); 
+			end
 		end
 
 		% ===================================================================
@@ -471,30 +476,31 @@ classdef touchManager < optickaCore
 					'Keycode',55);
 				end
 			else
-				[evt, evtN] = getEvents(me);
+				[evt, evtN] = getAvailableEvents(me);
 			end
 			if ~isempty(evt)
 				me.eventNew = false; me.eventMove = false; me.eventRelease = false; me.eventPressed = false;
-				lg = zeros(1,evtN);
+				xy = [];
 				for ii = 1:evtN
 					if me.trackID && ~isempty(me.currentID) && me.currentID ~= evt(ii).Keycode
 						continue;
 					end
 					switch evt(ii).Type
+						case 1
+							fprintf('Event Type 1!!!!!!\n');
 						case 2 %NEW
+							me.currentID = evt(ii).Keycode;
 							me.eventNew = true;
 							me.eventMove = false;
 							me.eventRelease = false;
 							me.eventPressed = true;
 							me.lastPressed = true;
-							lg(ii) = 2;
 						case 3 %MOVE
 							me.eventNew = false;
 							me.eventMove = true;
 							me.eventRelease = false;
 							me.eventPressed = true;
 							me.lastPressed = true;
-							lg(ii) = 3;
 						case 4 %RELEASE
 							if me.lastPressed || me.isDummy
 								me.eventNew = false;
@@ -503,7 +509,6 @@ classdef touchManager < optickaCore
 								me.eventPressed = false;
 								me.lastPressed = false;
 							end
-							lg(ii) = 4;
 							me.currentID = [];
 						case 5 %ERROR
 							warning('≣≣≣≣⊱touchManager: Event lost!');
@@ -513,29 +518,38 @@ classdef touchManager < optickaCore
 							return
 					end
 					if evt(ii).Type == 2 || evt(ii).Type == 3
+						me.IDall = [me.IDall evt(ii).Type];
+						% transparent display back has a reversed X
+						if me.panelType == 2
+							evt.changeX = true; 
+							evt.MappedX = me.screenVals.width - evt.MappedX; 
+						end
 						evt(ii).xy = me.screen.toDegrees([evt(ii).MappedX evt(ii).MappedY],'xy');
-						if ~isempty(evt(ii).xy) && length(evt(ii).xy)==2
-							me.xAll = [me.xAll evt(ii).xy(1)];
-							me.yAll = [me.yAll evt(ii).xy(2)];
+						xy = evt(ii).xy;
+						if ~isempty(xy) && length(xy)==2 && ~any(isnan(xy))
+							me.xAll = [me.xAll xy(1)];
+							me.yAll = [me.yAll xy(2)];
 							me.tAll = [me.tAll evt(ii).Time];
+							me.x = xy(1);
+							me.y = xy(2);
 						end
 					end
+					if me.verbose
+						fprintf('>>>Event ID: %i type:%i evtX:%.1f evtY:%.1f nrmX: %.2f nrmY: %.2f mapX: %.1f mapY: %.1f press:%i motion:%i last:%i\n', ...
+							evt(ii).Keycode, evt(ii).Type, evt(ii).X, evt(ii).Y, evt(ii).NormX, evt(ii).NormY, ...
+							evt(ii).MappedX, evt(ii).MappedY, evt(ii).Pressed, evt(ii).Motion, me.lastPressed);
+					end
 				end
-				if me.verbose; fprintf('≣getEvent⊱ processed %i event(s) %s! IDs %s\n', ...
-						length(evt), sprintf('%i ',lg), sprintf('%i ',evt(:).Keycode)); end
 				evt = evt(end);
+				if evt.Type == 4; evt.xy = [me.x me.y]; end
 				me.eventID		= evt.Keycode;
 				me.eventType	= evt.Type;
 				
-				% transparent display back has a reversed X
-				if me.panelType == 2
-					evt.changeX = true; 
-					evt.MappedX = me.screenVals.width - evt.MappedX; 
-				end
-
-				evt.xy = me.screen.toDegrees([evt.MappedX evt.MappedY],'xy');
 				me.event = evt;
-				me.x = evt.xy(1); me.y = evt.xy(2);
+				if me.verbose
+					fprintf('≣getEvent⊱ processed %i event(s) %s IDs %s final x: %.1f final y: %.1f\n', ...
+						length(evt), sprintf('%i ', evt(:).Type), sprintf('%i ', evt(:).Keycode), me.x, me.y); 
+				end
 			end
 		end
 
@@ -608,7 +622,7 @@ classdef touchManager < optickaCore
 
 			wasEvent = true;
 
-			if ~isempty(evt.xy)
+			if isstruct(evt) && isfield(evt,'xy') && length(evt.xy)==2
 				for ii = 1 : nWindows
 					% for negation with multiple windows, only the last
 					% window should be used
@@ -634,14 +648,14 @@ classdef touchManager < optickaCore
 				fprintf('≣checkTouchWindows-%s⊱%i wasHeld:%i type:%i result:%i new:%i mv:%i prs:%i lastprs:%i rel:%i \n\tx:%.1f y:%.1fY [win:%i %sX %sY]\n',...
 				me.name, me.eventID, me.wasHeld, evt.Type, result, ...
 				me.eventNew, me.eventMove, me.eventPressed, me.lastPressed, ...
-				me.eventRelease,me.x, me.y, win, ...
-				sprintf("<%.1f>",me.window.X), ...
-				sprintf("<%.1f>",me.window.Y));
+				me.eventRelease, me.x, me.y, win, ...
+				sprintf("{%.1f}",me.window(:).X), ...
+				sprintf("{%.1f}",me.window(:).Y));
 			end
 		end
 
 		% ===================================================================
-		function [held, heldtime, release, releasing, searching, failed, touch] = isHold(me)
+		function [held, heldtime, release, releasing, searching, failed, touch, negation] = isHold(me)
 		%> @fn isHold
 		%>
 		%> This is the main function which runs touch timers and calculates
@@ -656,19 +670,22 @@ classdef touchManager < optickaCore
 		%> @return searching logical indicating if still searching for touch initiation
 		%> @return failed logical indicating if touch attempt failed
 		%> @return touch logical indicating if touch event was detected, whether in window or not
+		%> @return negation was a negation touch event detected?
 		% ===================================================================
 			arguments(Output)
 				held {mustBeNumericOrLogical}
-				heldtime {mustBeNumericOrLogical}
-				release {mustBeNumericOrLogical}
-				releasing {mustBeNumericOrLogical}
-				searching {mustBeNumericOrLogical}
-				failed {mustBeNumericOrLogical}
-				touch {mustBeNumericOrLogical}
+				heldtime logical
+				release logical
+				releasing logical
+				searching logical
+				failed logical
+				touch logical
+				negation logical
 			end
+
 			held = false; heldtime = false; release = false;
 			releasing = false; searching = true; failed = false; 
-			touch = false;
+			touch = false; negation = false;
 
 			%% ======================== update hold times
 			me.hold.now = GetSecs;
@@ -701,6 +718,8 @@ classdef touchManager < optickaCore
 
 			%% ======================== NEGATION CHECK
 			if held == -100
+				negation = true;
+				touch = true; %a negation can only occur using a touch out of the window
 				searching = false;
 				failed = true;
 				if me.verbose; fprintf('≣isHold⊱ touchManager -100 NEGATION!\n'); end
@@ -841,10 +860,10 @@ classdef touchManager < optickaCore
 			me.isSearching = searching;
 			me.isReleased = release;
 			if me.verbose
-				fprintf(['≣isHold⊱%s⊱%i⊱%s new:%i mv:%i prs:%i rel:%i {x:%.1f y:%.1f winx:%s winy:%s}\n\t' ...
+				fprintf(['≣isHold⊱%s⊱%i⊱%s new:%i mv:%i prs:%i rel:%i [x:%.1f y:%.1f winx:%s winy:%s]\n\t' ...
 					'N:%i total:%.2f search:%.2f len:%.2f rel:%.2f inWin:%i tchd:%i h:%i ht:%i r:%i rl:%i s:%i fail:%i\n'],...
 				me.name,me.eventID,st,me.eventNew,me.eventMove,me.eventPressed,me.eventRelease,...
-				me.x,me.y,sprintf("<%.1f>",me.window(:).X),sprintf("<%.1f>",me.window(:).Y),...
+				me.x,me.y,sprintf("{%.1f}",me.window(:).X),sprintf("{%.1f}",me.window(:).Y),...
 				me.hold.N, me.hold.total, me.hold.search, me.hold.length, me.hold.release,...
 				me.hold.inWindow, me.hold.touched,...
 				held, heldtime, release, releasing, searching, failed);
@@ -853,22 +872,22 @@ classdef touchManager < optickaCore
 
 
 		% ===================================================================
-		function [out, held, heldtime, release, releasing, searching, failed, touch] = testHold(me, yesString, noString)
+		function [out, held, heldtime, release, releasing, searching, failed, touch, negation] = testHold(me, yesString, noString)
 		%> @fn testHold
 		%>
 		%> @param
 		%> @return
 		% ===================================================================
-			[held, heldtime, release, releasing, searching, failed, touch] = isHold(me);
+			[held, heldtime, release, releasing, searching, failed, touch, negation] = isHold(me);
 			out = '';
-			if me.wasNegation || failed || (~held && ~release && ~searching)
+			if negation || failed || (~held && ~release && ~searching)
 				out = noString;
 			elseif heldtime
 				out = yesString;
 			end
 			if me.verbose && ~isempty(out)
-				fprintf('≣testHold⊱"%s" held:%i heldtime:%i rel:%i reling:%i ser:%i fail:%i touch:%i {x:%.1f y:%.1f winx:%s winy:%s}\n',...
-					out, held, heldtime, release, releasing, searching, failed, touch,...
+				fprintf('≣testHold⊱"%s" held:%i heldtime:%i rel:%i reling:%i ser:%i fail:%i touch:%i neg: {x:%.1f y:%.1f winx:%s winy:%s}\n',...
+					out, held, heldtime, release, releasing, searching, failed, touch, negation, ...
 					me.x,me.y,sprintf("<%.1f>",me.window(:).X),sprintf("<%.1f>",me.window(:).Y))
 			end
 		end
@@ -888,7 +907,7 @@ classdef touchManager < optickaCore
 				out = yesString;
 			end
 			if me.verbose && ~isempty(out)
-				fprintf('≣testHold⊱ <%s> held:%i heldtime:%i rel:%i reling:%i ser:%i fail:%i touch:%i {x:%.1f y:%.1f winx:%s winy:%s}\n',...
+				fprintf('≣testHoldRelease⊱"%s" held:%i heldtime:%i rel:%i reling:%i ser:%i fail:%i touch:%i {x:%.1f y:%.1f winx:%s winy:%s}\n',...
 					out, held, heldtime, release, releasing, searching, failed, touch,...
 					me.x,me.y,sprintf("<%.1f>",me.window(:).X),sprintf("<%.1f>",me.window(:).Y))
 			end
@@ -940,7 +959,7 @@ classdef touchManager < optickaCore
 					im.xPositionOut = tx;
 					im.yPositionOut = ty;
 					update(im);
-					%X,Y,radius,doNegation,negationBuffer,strict,init,hold,release
+					%updateWindow(me,X,Y,radius,doNegation,negationBuffer,strict,init,hold,release)
 					me.updateWindow(tx, ty, im.size/2, true, 2, true, 5, holdTime, releaseTime);
 					if useaudio;beep(a,1000,0.1,0.1);end
 					fprintf('\n\nTouchManager Demo TRIAL %i -- X = %s Y = %s R = %s\n',i,sprintf("<%.1f>",me.window.X),sprintf("<%.1f>",me.window.Y),sprintf("<%.1f>",me.window.radius));
@@ -1021,11 +1040,13 @@ classdef touchManager < optickaCore
 		% ===================================================================
 			if isempty(me.screen); me.screen = screenManager(); end
 			sM = me.screen;
-			sM.screen = 0;
+			sM.screen = max(Screen('Screens'));
 			sM.disableSyncTests = true;
-			sM.font.TextSize = 22;
+			sM.font.TextSize = 24;
+			clearScreen = false;
 			if max(Screen('Screens'))==0 && me.verbose
-				PsychDebugWindowConfiguration; 
+				PsychDebugWindowConfiguration;
+				clearScreen = true;
 			end
 			
 			oldWin = me.window;
@@ -1041,9 +1062,10 @@ classdef touchManager < optickaCore
 			start(me); 			%===================!!! Start touch collection
 			try
 				while ~doQuit
+					%updateWindow(me,X,Y,radius,doNegation,negationBuffer,strict,init,hold,release)
+					me.updateWindow(0,0,3,true,2,true,5,1,1);
 					reset(me);
 					flush(me); 	%===================!!! flush the queue
-					me.updateWindow(0,0,3,true,2,true,5,1,1);
 					vbl = flip(sM); ts = vbl;
 					while vbl <= ts + 30
 						[held, heldtime, release, releasing, searching, failed, touch] = isHold(me);
@@ -1070,7 +1092,7 @@ classdef touchManager < optickaCore
 				me.verbose = oldVerbose;
 				try reset(im); end
 				try close(sM); end
-				clear Screen
+				if clearScreen; clear Screen; end
 				if ~isempty(me.xAll)
 					figure;
 					plot(me.xAll, me.yAll);
@@ -1085,7 +1107,7 @@ classdef touchManager < optickaCore
 				try reset(im); end
 				try close(sM); end
 				try close(me); end
-				clear Screen
+				if clearScreen; clear Screen; end
 				rethrow(ME);
 			end
 		end
@@ -1096,7 +1118,7 @@ classdef touchManager < optickaCore
 				disp(me.devices(ii))
 			end
 			for ii = 1:length(me.names)
-				disp(me.nameallInfos(ii));
+				disp(me.namIDallInfos(ii));
 			end
 			for ii = 1:length(me.allInfo)
 				disp(me.names(ii));
@@ -1166,12 +1188,17 @@ classdef touchManager < optickaCore
 	%=======================================================================
 
 		% ===================================================================
-		function [evt, n] = getEvents(me)
-		%> @fn getEvents
+		function [evt, n] = getAvailableEvents(me)
+		%> @fn getAvailableEvents
 		%>
 		%> @param
-		%> @return
-		% ===================================================================	
+		%> @return evt
+		%> @return n
+		% ===================================================================
+			arguments(Output)
+				evt struct
+				n double
+			end
 			n = 0;
 			while eventAvail(me) > 0
 				n = n + 1;
@@ -1235,7 +1262,7 @@ classdef touchManager < optickaCore
 				if any(find(r < radius))
 					match = true; 
 				end
-				if any(find(r < negradius))
+				if tempWindow.doNegation && any(find(r < negradius))
 					matchneg = true;
 				end
 			else % ---- x y rectangular window test
@@ -1243,8 +1270,9 @@ classdef touchManager < optickaCore
 						&& (y >= (yWin - radius(2))) && (y <= (yWin + radius(2)))
 					match = true;
 				end
-				if (x >= (xWin - negradius(1))) && (x <= (xWin + negradius(1))) ...
-						&& (y >= (yWin - negradius(2))) && (y <= (yWin + negradius(2)))
+				if tempWindow.doNegation ...
+					&& (x >= (xWin - negradius(1))) && (x <= (xWin + negradius(1))) ...
+					&& (y >= (yWin - negradius(2))) && (y <= (yWin + negradius(2)))
 					matchneg = true;
 				end
 			end
