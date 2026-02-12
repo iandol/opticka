@@ -483,6 +483,8 @@ classdef touchManager < optickaCore
 				xy = [];
 				processedEvt = [];
 				processedCount = 0;
+				types = zeros(1,evtN);
+				ids = zeros(1,evtN);
 				for ii = 1:evtN
 					if me.trackID
 						if isempty(me.currentID)
@@ -493,6 +495,8 @@ classdef touchManager < optickaCore
 							continue;
 						end
 					end
+					types(ii) = evt(ii).Type;
+					ids(ii) = evt(ii).Keycode;
 					switch evt(ii).Type
 						case 1
 							fprintf('≣≣≣≣⊱touchManager: WARNING: Event Type 1!!!\n');
@@ -548,18 +552,19 @@ classdef touchManager < optickaCore
 							evt(ii).MappedX, evt(ii).MappedY, evt(ii).Pressed, evt(ii).Motion, me.lastPressed);
 					end
 				end
+
 				if isempty(processedEvt)
 					return
 				end
+
 				evt = processedEvt;
-				if evt.Type == 4; evt.xy = [me.x me.y]; end
 				me.eventID		= evt.Keycode;
 				me.eventType	= evt.Type;
-				
 				me.event = evt;
+
 				if me.verbose
-					fprintf('≣getEvent⊱ processed %i event(s) %s IDs %s final x: %.1f final y: %.1f\n', ...
-						processedCount, sprintf('%i ', evt(:).Type), sprintf('%i ', evt(:).Keycode), me.x, me.y); 
+					fprintf('≣getEvent⊱ processed %i event(s) (dropped: %i): %s IDs: %s final x: %.1f final y: %.1f\n', ...
+						processedCount, evtN - processedCount, sprintf('%i ', types), sprintf('%i ', ids), me.x, me.y); 
 				end
 			end
 		end
