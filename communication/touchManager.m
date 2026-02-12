@@ -449,10 +449,17 @@ classdef touchManager < optickaCore
 
 		% ===================================================================
 		function evt = getEvent(me)
-		%> @fn getEvent
+		%> @fn evt = getEvent
+		%> @brief getEvent gets and processes the latest event(s) from the touch queue
+		%> @detailed get event(s) from the touch queue and process them
+		%> to update the state of the touchManager object. This is the main
+		%> function for getting touch events and should be called in your
+		%> main loop to update the state of the touchManager. It handles
+		%> both real touch events and dummy mouse events, and updates the
+		%> properties of the touchManager accordingly.
 		%>
-		%> @param
-		%> @return event structure
+		%> @param me -- touchManager object
+		%> @return evt -- the last event from the touch screen
 		% ===================================================================
 			evt = []; evtN = 0;
 			if me.isDummy % use mouse to simulate touch
@@ -557,10 +564,10 @@ classdef touchManager < optickaCore
 					return
 				end
 
-				evt = processedEvt;
+				evt				= processedEvt;
 				me.eventID		= evt.Keycode;
 				me.eventType	= evt.Type;
-				me.event = evt;
+				me.event		= evt;
 
 				if me.verbose
 					fprintf('≣getEvent⊱ processed %i event(s) (dropped: %i): %s IDs: %s final x: %.1f final y: %.1f\n', ...
@@ -570,6 +577,7 @@ classdef touchManager < optickaCore
 		end
 
 		% ===================================================================
+		function touch = isTouch(me, getEvt)
 		%> @fn isTouch
 		%>
 		%> Simply checks for touch event irrespective of position / time etc.
@@ -577,7 +585,6 @@ classdef touchManager < optickaCore
 		%> @param getEvt -- do we force a getEvent() or use the last valid event?
 		%> @return touch -- logical for if there is a touch event
 		% ===================================================================
-		function touch = isTouch(me, getEvt)
 			arguments(Input)
 				me
 				getEvt {mustBeNumericOrLogical} = true
