@@ -270,7 +270,7 @@ classdef touchManager < optickaCore
 			if me.isDummy || isempty(me.devices); return; end
 			if ~exist('choice','var') || isempty(choice); choice = me.device; end
 			for i = 1:length(choice)
-				try TouchQueueRelease(me.devices(me.device)); end
+				try TouchQueueRelease(me.devices(choice(i))); end
 			end
 			if me.verbose; logOutput(me,'close','Closed...'); end
 		end
@@ -481,13 +481,22 @@ classdef touchManager < optickaCore
 			if ~isempty(evt)
 				me.eventNew = false; me.eventMove = false; me.eventRelease = false; me.eventPressed = false;
 				xy = [];
+				processedEvt = [];
+				processedCount = 0;
 				for ii = 1:evtN
-					if me.trackID && ~isempty(me.currentID) && me.currentID ~= evt(ii).Keycode
-						continue;
+					if me.trackID
+						if isempty(me.currentID)
+							if evt(ii).Type ~= 2
+								continue;
+							end
+						elseif me.currentID ~= evt(ii).Keycode
+							continue;
+						end
 					end
 					switch evt(ii).Type
 						case 1
-							fprintf('Event Type 1!!!!!!\n');
+							fprintf('≣≣≣≣⊱touchManager: WARNING: Event Type 1!!!\n');
+							continue;
 						case 2 %NEW
 							me.currentID = evt(ii).Keycode;
 							me.eventNew = true;
@@ -511,18 +520,15 @@ classdef touchManager < optickaCore
 							end
 							me.currentID = [];
 						case 5 %ERROR
-							warning('≣≣≣≣⊱touchManager: Event lost!');
-							me.event = []; evt = [];
-							me.lastPressed = false;
-							me.currentID = [];
-							return
+							warning('≣≣≣≣⊱touchManager: Event Type 5!!!\n');
+							continue;
 					end
-					if evt(ii).Type == 2 || evt(ii).Type == 3
-						me.IDall = [me.IDall evt(ii).Type];
+					if evt(ii).Type > 1 && evt(ii).Type < 5 % NEW / MOVE / RELEASE
+						me.IDall = [me.IDall evt(ii).Keycode];
 						% transparent display back has a reversed X
 						if me.panelType == 2
-							evt.changeX = true; 
-							evt.MappedX = me.screenVals.width - evt.MappedX; 
+							evt(ii).changeX = true; 
+							evt(ii).MappedX = me.screenVals.width - evt(ii).MappedX; 
 						end
 						evt(ii).xy = me.screen.toDegrees([evt(ii).MappedX evt(ii).MappedY],'xy');
 						xy = evt(ii).xy;
@@ -534,13 +540,18 @@ classdef touchManager < optickaCore
 							me.y = xy(2);
 						end
 					end
+					processedEvt = evt(ii);
+					processedCount = processedCount + 1;
 					if me.verbose
-						fprintf('>>>Event ID: %i type:%i evtX:%.1f evtY:%.1f nrmX: %.2f nrmY: %.2f mapX: %.1f mapY: %.1f press:%i motion:%i last:%i\n', ...
+						fprintf('≣≣≣⊱Event ID: %i type:%i evtX:%.1f evtY:%.1f nrmX: %.2f nrmY: %.2f mapX: %.1f mapY: %.1f press:%i motion:%i last:%i\n', ...
 							evt(ii).Keycode, evt(ii).Type, evt(ii).X, evt(ii).Y, evt(ii).NormX, evt(ii).NormY, ...
 							evt(ii).MappedX, evt(ii).MappedY, evt(ii).Pressed, evt(ii).Motion, me.lastPressed);
 					end
 				end
-				evt = evt(end);
+				if isempty(processedEvt)
+					return
+				end
+				evt = processedEvt;
 				if evt.Type == 4; evt.xy = [me.x me.y]; end
 				me.eventID		= evt.Keycode;
 				me.eventType	= evt.Type;
@@ -548,7 +559,7 @@ classdef touchManager < optickaCore
 				me.event = evt;
 				if me.verbose
 					fprintf('≣getEvent⊱ processed %i event(s) %s IDs %s final x: %.1f final y: %.1f\n', ...
-						length(evt), sprintf('%i ', evt(:).Type), sprintf('%i ', evt(:).Keycode), me.x, me.y); 
+						processedCount, sprintf('%i ', evt(:).Type), sprintf('%i ', evt(:).Keycode), me.x, me.y); 
 				end
 			end
 		end
@@ -645,8 +656,22 @@ classdef touchManager < optickaCore
 				end
 			end
 			if me.verbose
+				eventIdValue = me.eventID;
+				if isstring(eventIdValue) || ischar(eventIdValue)
+					eventIdValue = str2double(eventIdValue);
+				end
+				if isempty(eventIdValue) || isnan(eventIdValue)
+					eventIdValue = -1;
+				end
+				resultValue = result;
+				if isstring(resultValue) || ischar(resultValue)
+					resultValue = str2double(resultValue);
+				end
+				if isempty(resultValue) || isnan(resultValue)
+					resultValue = 0;
+				end
 				fprintf('≣checkTouchWindows-%s⊱%i wasHeld:%i type:%i result:%i new:%i mv:%i prs:%i lastprs:%i rel:%i \n\tx:%.1f y:%.1fY [win:%i %sX %sY]\n',...
-				me.name, me.eventID, me.wasHeld, evt.Type, result, ...
+				me.name, eventIdValue, me.wasHeld, evt.Type, resultValue, ...
 				me.eventNew, me.eventMove, me.eventPressed, me.lastPressed, ...
 				me.eventRelease, me.x, me.y, win, ...
 				sprintf("{%.1f}",me.window(:).X), ...
@@ -1069,8 +1094,15 @@ classdef touchManager < optickaCore
 					vbl = flip(sM); ts = vbl;
 					while vbl <= ts + 30
 						[held, heldtime, release, releasing, searching, failed, touch] = isHold(me);
-						txt = sprintf('X: %.1f Y: %.1f - h:%i ht:%i r:%i rl:%i s:%i f:%i touch:%i N:%i - evtX:%.1f evtYvbn  ',...
-							me.x,me.y,held,heldtime,release,releasing,searching,failed,touch,me.hold.N);
+						uniqueIDs = unique(me.IDall);
+						nUnique = length(uniqueIDs);
+						if nUnique > 0
+							idsString = sprintf('%i ', uniqueIDs(1:min(nUnique,5)));
+						else
+							idsString = '';
+						end
+						txt = sprintf('X: %.1f Y: %.1f - h:%i ht:%i r:%i rl:%i s:%i f:%i touch:%i N:%i ids:%i [%s]- evtX:%.1f evtYvbn  ',...
+							me.x,me.y,held,heldtime,release,releasing,searching,failed,touch,me.hold.N,nUnique,idsString);
 						if ~isempty(me.event) && isstruct(me.event)
 							txt = sprintf('%s\n ID: %i type:%i evtX:%.1f evtY:%.1f nrmX: %.2f nrmY: %.2f mapX: %.1f mapY: %.1f press:%i motion:%i',...
 								txt, me.event.Keycode, me.event.Type, me.event.X, me.event.Y, me.event.NormX, me.event.NormY,...
@@ -1118,10 +1150,14 @@ classdef touchManager < optickaCore
 				disp(me.devices(ii))
 			end
 			for ii = 1:length(me.names)
-				disp(me.namIDallInfos(ii));
+				disp(me.names(ii));
 			end
 			for ii = 1:length(me.allInfo)
-				disp(me.names(ii));
+				if iscell(me.allInfo)
+					disp(me.allInfo{ii});
+				else
+					disp(me.allInfo(ii));
+				end
 			end
 		end
 
@@ -1234,14 +1270,14 @@ classdef touchManager < optickaCore
 			if isempty(x) || isempty(y); return; end
 			if exist('tempWindow','var') && isnumeric(tempWindow) && length(tempWindow) == 4
 				pos = screenManager.rectToPos(tempWindow);
-				radius = pos.radius;
-				xWin = pos.X;
-				yWin = pos.Y;
-			else
-				radius = tempWindow.radius;
-				xWin = tempWindow.X;
-				yWin = tempWindow.Y;
+				tempWindow = me.windowTemplate;
+				tempWindow.X = pos.X;
+				tempWindow.Y = pos.Y;
+				tempWindow.radius = pos.radius;
 			end
+			radius = tempWindow.radius;
+			xWin = tempWindow.X;
+			yWin = tempWindow.Y;
 			result = false; match = false; matchneg = false;
 			negradius = radius + tempWindow.negationBuffer;
 			ez = me.exclusionZone;
