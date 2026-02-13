@@ -753,8 +753,8 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 		end
 		
 		% ===================================================================
-		function runDemo(me, forcescreen)
-		%> @fn runDemo(me, forceScreen)
+		function demo(me, forcescreen)
+		%> @fn demo(me, forceScreen)
 		%> @brief runs a demo of this class, useful for testing
 		%>
 		%> @param forcescreen forces to use a specific screen number
@@ -773,7 +773,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 			oldexc				= me.exclusionZone;
 			oldfixinit			= me.fixInit;
 			oldname				= me.name;
-			me.name				= 'iRecManager-runDemo';
+			me.name				= 'iRecManager-demo';
 			try
 				if ~me.isConnected; initialise(me);end
 				s = me.screen; s2 = me.operatorScreen;

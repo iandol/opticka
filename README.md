@@ -27,7 +27,7 @@ For more complex behavioural tasks, a state machine is used. You can still edit 
 
 ```matlab
 sM = stateMachine;
-runDemo(sM);
+demo(sM);
 ```
 
 ## Hardware currently supported

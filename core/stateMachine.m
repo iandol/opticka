@@ -44,7 +44,7 @@
 %>
 %> ~~~~~~~~~~~~~~~~~~~~~~
 %> >> sm = stateMachine;
-%> >> runDemo(sm);
+%> >> demo(sm);
 %> ~~~~~~~~~~~~~~~~~~~~~~
 %>
 %> To see how to run the stateMacine from a PTB loop, see
@@ -514,20 +514,20 @@ classdef stateMachine < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief runDemo runs a sample state machine session
+		%> @brief demo runs a sample state machine session
 		%>
 		%>
 		% ===================================================================
-		function runDemo(me)
+		function demo(me)
 			oldVerbose = me.verbose;
 			oldTimers = me.fnTimers;
 			oldUseLog = me.useExternalLog;
 			oldTimeDelta = me.timeDelta;
-			me.verbose = true;
-			me.fnTimers = true;
-			me.timeDelta = 0.01;
-			me.useExternalLog = false;
-			fprintf('===>>> StateMachine Demo: time delta = %.3g | Real time mode = %i\n\n',me.timeDelta,me.realTime);
+			me.verbose = true; %let's be chatty for the demo
+			me.fnTimers = true; %let's time our function evaluations for fun
+			me.timeDelta = 0.001; %1ms per tick, so 1000Hz update rate if realTime = false
+			me.useExternalLog = false; %don't use an external log for the demo, but you can set this to a timeLogger object if you want to see how that works
+			fprintf('\n===>>> StateMachine Demo: time delta = %.3g | Real time mode = %i\n\n',me.timeDelta,me.realTime);
 			beginFcn = { @()fprintf('\t\t\t\tbegin state: Hello there!\n'); };
 			transitFcn = { @()fprintf('\t\t\t\ttransit state: Wait for it!\n'); };
 			endFcn = { @()fprintf('\t\t\t\tend state: See you!\n'); };
@@ -715,7 +715,7 @@ classdef stateMachine < optickaCore
 			end
 			if me.fnTimers 
 				me.log.fevalExit(me.thisN) = toc(tx)*1000;
-				tx = tic;
+				txs = tic;
 			end
 			
 			me.log.n					= me.thisN;
@@ -728,7 +728,7 @@ classdef stateMachine < optickaCore
 			me.log.nextTimeOut(me.thisN)= me.nextTimeOut;
 			me.log.nextTickOut(me.thisN)= me.nextTickOut;
 			if me.fnTimers
-				me.log.fevalStore(me.thisN)	= toc(tx)*1000;
+				me.log.fevalStore(me.thisN)	= toc(txs)*1000;
 			end
 			if me.useExternalLog
 				me.externalLog.addMessage(0,me.currentEntryTime,me.currentTime,['State Details: ' me.currentName ' - ' me.currentUUID],'me.clockFcn');
@@ -755,7 +755,7 @@ classdef stateMachine < optickaCore
 			me.thisN = me.thisN + 1;
 			if me.thisN == 1; me.log.startTime = me.startTime; end
 			if me.nStates >= thisIndex
-				if me.fnTimers; tt = tic; end	%run our enter state functions
+				if me.fnTimers; tt = tic; end	%time our enter state functions
 				me.currentEntryTime = me.clockFcn();
 				me.currentState = me.stateList(me.currentIndex);
 				me.currentTick = 0;

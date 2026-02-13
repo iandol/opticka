@@ -696,7 +696,7 @@ classdef eyelinkManager < eyetrackerCore
 		end
 		
 		% ===================================================================
-		function runDemo(me, forcescreen)
+		function demo(me, forcescreen)
 		%> @brief runs a demo of the eyelink, tests this class
 		%>
 		% ===================================================================
@@ -917,7 +917,7 @@ classdef eyelinkManager < eyetrackerCore
 				me.resetFixation;
 				me.resetOffset;
 				ListenChar(0);Priority(0);ShowCursor;RestrictKeysForKbCheck([]);
-				me.salutation('runDemo ERROR!!!')
+				me.salutation('run demo ERROR!!!')
 				try Eyelink('Shutdown'); end
 				try close(s); end
 				try close(aM); end

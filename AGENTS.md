@@ -33,7 +33,7 @@ duplicating content.
   - Method of Constants (MOC) demo: `optickaTest.m`
   - Behaviour/state-machine demo: `optickaBehaviourTest.m`
   - Minimal stimulus demo: `im = imageStimulus; run(im);`
-  - Minimal state machine demo: `sM = stateMachine; runDemo(sM);`
+  - Minimal state machine demo: `sM = stateMachine; demo(sM);`
   - Minimal touch screen demo: `tM = touchManager; demo(tM);`
 
 ## Standard architecture & data flow (typical run)

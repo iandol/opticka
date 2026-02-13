@@ -870,7 +870,7 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 		%> @brief runs a demo of the tobii workflow, testing this class
 		%>
 		% ===================================================================
-		function runDemo(me,forcescreen)
+		function demo(me,forcescreen)
 			PsychDefaultSetup(2);
 			stopKey				= KbName('q');
 			upKey				= KbName('uparrow');
@@ -886,7 +886,7 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 			oldfixinit			= me.fixInit;
 			me.initialiseSaveFile();
 			[p,~,e]				= fileparts(me.saveFile);
-			me.saveFile			= [p filesep 'tobiiRunDemo-' me.savePrefix e];
+			me.saveFile			= [p filesep 'tobiiDemo-' me.savePrefix e];
 			useS2				= false;
 			try
 				if isa(me.screen,'screenManager') && ~isempty(me.screen)

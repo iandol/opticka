@@ -25,12 +25,12 @@
 %>    time X, do not allow the eye to leave this zone before X + t (t by
 %>    default is 100ms). This stops potential cheating by the subject.
 %>
-%> Try using the demo mode to see it in action (read the runDemo() code to
+%> Try using the demo mode to see it in action (read the demo() code to
 %> understand how to use the class):
 %>
 %>```matlab
 %> >> eT = eyelinkManager('verbose', true);
-%> >> eT.runDemo();
+%> >> eT.demo();
 %>```
 %>
 %> Multiple fixation windows can be assigned (either circular or
@@ -222,7 +222,7 @@ classdef eyetrackerCore < optickaCore
 		out = getSample(in)
 		out = trackerMessage(in)
 		out = statusMessage(in)
-		out = runDemo(in)
+		out = demo(in)
 	end %---END ABSTRACT METHODS---%
 		
 	
