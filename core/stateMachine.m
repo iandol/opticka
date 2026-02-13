@@ -306,7 +306,7 @@ classdef stateMachine < optickaCore
 
 			me.currentTick = me.currentTick + 1;
 			me.totalTicks = me.totalTicks + 1;
-			me.currentTime = feval(me.clockFcn);
+			me.currentTime = me.clockFcn();
 
 			if me.realTime %are we running on time or ticks?
 				trigger = me.currentTime >= me.nextTimeOut;
@@ -331,8 +331,9 @@ classdef stateMachine < optickaCore
 				%that the eye is fixated for the fixation time, returning
 				%an empty string until that is met, then return the name of
 				%a state to transition to.
-				if ~isempty(me.currentTransitionFcn)
-					tname = strtok(feval(me.currentTransitionFcn{1}));
+				tcn = me.currentTransitionFcn; %local cache
+				if ~isempty(tcn)
+					tname = strtok(tcn{1}());
 					if ~isempty(tname)
 						if isStateName(me,tname) % a valid name was returned, time to transition
 							me.transitionToStateWithName(tname);
@@ -344,8 +345,9 @@ classdef stateMachine < optickaCore
 					end
 				end
 				%run our within state functions
-				for i = 1:length(me.currentWithinFcn) %nested class
-					me.currentWithinFcn{i}();
+				wcn = me.currentWithinFcn; %local cache
+				for i = 1:length(wcn) 
+					wcn{i}();
 				end
 			end
 		end
@@ -358,7 +360,7 @@ classdef stateMachine < optickaCore
 		function forceTransition(me, stateName)
 			if me.isRunning == true
 				if isStateName(me, stateName)
-					me.currentTime = feval(me.clockFcn);
+					me.currentTime = me.clockFcn();
 					transitionToStateWithName(me, stateName)
 					return
 				end
@@ -383,7 +385,7 @@ classdef stateMachine < optickaCore
 				me.currentTick = 0;
 				me.thisN = 0;
 				me.finalTime = [];
-				me.startTime = feval(me.clockFcn);
+				me.startTime = me.clockFcn();
 				me.enterStateAtIndex(1);
 			else
 				me.salutation('start method','stateMachine already started...',true)
@@ -398,7 +400,7 @@ classdef stateMachine < optickaCore
 		function finish(me, force)
 			if ~exist('force','var'); force = me.isFinishing; end
 			if force
-				me.finalTime = feval(me.clockFcn) - me.startTime;
+				me.finalTime = me.clockFcn() - me.startTime;
 				me.finalTick = me.totalTicks;
 				me.isRunning = false;
 				me.isFinishing = false;
@@ -692,7 +694,7 @@ classdef stateMachine < optickaCore
 				exitCurrentState(me);
 				enterStateAtIndex(me, index);
 			else
-				me.salutation('transitionToStateWithName method', 'ERROR, default to return to first state!!!\n',true)
+				me.salutation('transitionToStateWithName method', ['ERROR, could not find state: ' nextName '; default to return to first state!!!\n'],true)
 				enterStateAtIndex(me, 1);
 			end
 			
@@ -706,8 +708,9 @@ classdef stateMachine < optickaCore
 		function exitCurrentState(me)
 			if me.fnTimers; tx=tic; end
 			if ~me.currentState.skipExitFcn 
-				for i = 1:length(me.currentState.exitFcn) %nested class
-					me.currentState.exitFcn{i}();
+				ef = me.currentState.exitFcn;
+				for i = 1:length(ef) %nested class
+					ef{i}();
 				end
 			end
 			if me.fnTimers 
@@ -728,16 +731,18 @@ classdef stateMachine < optickaCore
 				me.log.fevalStore(me.thisN)	= toc(tx)*1000;
 			end
 			if me.useExternalLog
-				me.externalLog.addMessage(0,me.currentEntryTime,me.currentTime,['State Details: ' me.currentName ' - ' me.currentUUID],'GetSecs');
+				me.externalLog.addMessage(0,me.currentEntryTime,me.currentTime,['State Details: ' me.currentName ' - ' me.currentUUID],'me.clockFcn');
 			end
 			
 			me.tempNextState = '';
 			
-			if me.verbose; me.salutation(['EXIT: ' me.currentName ...
+			if me.verbose
+				me.salutation(['EXIT: ' me.currentName ...
 					' @ ' num2str(me.log.tnow(me.log.n)-me.log.startTime,'%.2f') ...
 					's | state time: ' num2str(me.log.tnow(me.log.n)-me.log.entryTime(me.log.n),'%.2f'), ...
 					's | ' num2str(me.log.tick(me.log.n)) '/' num2str(me.totalTicks) ...
-					' ticks'],''); end
+					' ticks'],''); 
+			end
 		end
 		
 		% ===================================================================
@@ -751,7 +756,7 @@ classdef stateMachine < optickaCore
 			if me.thisN == 1; me.log.startTime = me.startTime; end
 			if me.nStates >= thisIndex
 				if me.fnTimers; tt = tic; end	%run our enter state functions
-				me.currentEntryTime = feval(me.clockFcn);
+				me.currentEntryTime = me.clockFcn();
 				me.currentState = me.stateList(me.currentIndex);
 				me.currentTick = 0;
 				me.currentName = me.currentState.name;
@@ -766,12 +771,14 @@ classdef stateMachine < optickaCore
 				me.nextTimeOut = me.currentEntryTime + me.currentState.time;
 				me.nextTickOut = floor(me.currentState.time / me.timeDelta);
 					
-				for i = 1:length(me.currentEntryFcn)
-					me.currentEntryFcn{i}();
+				ef = me.currentEntryFcn;
+				for i = 1:length(ef)
+					ef{i}();
 				end
 				%run our within state functions
-				for i = 1:length(me.currentWithinFcn) %nested class
-					me.currentWithinFcn{i}();
+				wf = me.currentWithinFcn;
+				for i = 1:length(wf) %nested class
+					wf{i}();
 				end
 				if me.fnTimers; me.log.fevalEnter(me.thisN) = toc(tt)*1000; end
 				
