@@ -731,7 +731,7 @@ classdef stateMachine < optickaCore
 				me.log.fevalStore(me.thisN)	= toc(txs)*1000;
 			end
 			if me.useExternalLog
-				me.externalLog.addMessage(0,me.currentEntryTime,me.currentTime,['State Details: ' me.currentName ' - ' me.currentUUID],'me.clockFcn');
+				me.externalLog.addMessage(0,me.currentEntryTime,me.currentTime,['State Details: ' me.currentName ' - ' me.currentUUID],func2str(me.clockFcn));
 			end
 			
 			me.tempNextState = '';
