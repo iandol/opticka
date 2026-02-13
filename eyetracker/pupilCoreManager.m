@@ -645,8 +645,8 @@ classdef pupilCoreManager < eyetrackerCore & eyetrackerSmooth
 		end
 		
 		% ===================================================================
-		function runDemo(me, forcescreen)
-		%> @fn runDemo(me, forceScreen)
+		function demo(me, forcescreen)
+		%> @fn demo(me, forceScreen)
 		%> @brief runs a demo of this class, useful for testing
 		%>
 		%> @param forcescreen forces to use a specific screen number
@@ -664,7 +664,7 @@ classdef pupilCoreManager < eyetrackerCore & eyetrackerSmooth
 			oldexc				= me.exclusionZone;
 			oldfixinit			= me.fixInit;
 			oldname				= me.name;
-			me.name				= 'pupilLabs-runDemo';
+			me.name				= 'pupilLabs-demo';
 			try
 				if ~me.isConnected; initialise(me);end
 				s = me.screen; s2 = me.operatorScreen;
