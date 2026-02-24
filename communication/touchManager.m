@@ -1,7 +1,7 @@
 % ========================================================================
 classdef touchManager < optickaCore
-%> @class touchManager @brief Manages touch screens (wraps the PTB
-%> TouchQueue* functions), and provides touch area management methods.
+%> @class touchManager @brief Manages touch screens (wraps all the PTB
+%> TouchQueue* functions), and also provides touch area management methods.
 %>
 %> TOUCHMANAGER -- call this and setup with screen manager, then run your
 %> task. This class can handles touch windows (circular or rectangular),
@@ -267,12 +267,12 @@ classdef touchManager < optickaCore
 		% ===================================================================
 			if me.isOpen && me.isQueue; flush(me); end
 			me.isOpen = false; me.isQueue = false;
+			if me.verbose; fprintf('≣Close⊱ Close Touch Manager...\n'); end
 			if me.isDummy || isempty(me.devices); return; end
 			if ~exist('choice','var') || isempty(choice); choice = me.device; end
 			for i = 1:length(choice)
 				try TouchQueueRelease(me.devices(choice(i))); end
 			end
-			if me.verbose; logOutput(me,'close','Closed...'); end
 		end
 
 		% ===================================================================

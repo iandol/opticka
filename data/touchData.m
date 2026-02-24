@@ -20,7 +20,7 @@ classdef touchData < optickaCore
 	properties (Access = protected)
 		dataTemplate = struct('date',[],'startTime',NaN,'comment',[],'phase',[],'time',[],...
 			'trials',[],'value',[],'result',[],'rt',[],'stimulus',[],'timeOut',[],'random',0,'rewards',0,...
-			'info',{},'xAll',{},'yAll',{},'tAll',{},'xLast',[],'yLast',[]);
+			'store',{},'info',{},'xAll',{},'yAll',{},'tAll',{},'xLast',[],'yLast',[]);
 		allowedProperties = {'subject','verbose'}
 	end
 
@@ -38,12 +38,13 @@ classdef touchData < optickaCore
 
 		end
 
-		function update(me,result,resultValue,phase,trials,rt,stimulus,info,xAll,yAll,tAll,value)
+		function update(me, result, resultValue, phase, trials, rt, stimulus, ...
+				info, xAll, yAll, tAll, value, store)
 			if ~exist('result','var'); return; end
 			if me.nData == 0
 				if isempty(me.data); me.data = me.dataTemplate; end
-				me.data(1).date = clock;
-				me.data(1).time = GetSecs;
+				me.data(1).date = datetime('now');
+				me.data(1).startTime = GetSecs;
 				n = 1;
 			else
 				n = me.nData + 1;
@@ -60,6 +61,7 @@ classdef touchData < optickaCore
 			if exist('yAll','var') && ~isempty(yAll); me.data.yAll{n} = yAll; end
 			if exist('yAll','var') && ~isempty(tAll); me.data.tAll{n} = tAll; end
 			if exist('value','var') && ~isempty(value); me.data.value(n) = value; end
+			if exist('store','var') && ~isempty(store); me.data.store{n} = store; end
 			me.nData = n;
 		end
 
