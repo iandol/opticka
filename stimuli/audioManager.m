@@ -139,7 +139,7 @@ classdef audioManager < optickaCore
 		end
 
 		% ===================================================================
-		%> @brief  
+		%> @brief
 		%>
 		% ===================================================================
 		function play(me, when)
@@ -263,6 +263,10 @@ classdef audioManager < optickaCore
 			reset(me);
 		end
 
+		% ===================================================================
+		%> @brief showDevices 
+		%>
+		% ===================================================================
 		function showDevices(me)
 			for ii=1:length(me.devices)
 				disp(['===========================Loop: ' num2str(ii)]);

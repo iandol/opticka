@@ -610,13 +610,13 @@ classdef screenManager < optickaCore
 				sv.winRect		= me.winRect;
 				sv.useRetina	= me.useRetina;
 				sv				= setScreenSize(me, sv);
-				sv.white = WhiteIndex(me.screen);
-				sv.black = BlackIndex(me.screen);
-				sv.gray = GrayIndex(me.screen);
+				sv.white 		= WhiteIndex(me.win);
+				sv.black 		= BlackIndex(me.win);
+				sv.gray 		= GrayIndex(me.win);
 
 				%% === log open time and delta
-				tL.screenLog.postOpenWindow=GetSecs;
-				tL.screenLog.deltaOpenWindow=(tL.screenLog.postOpenWindow-tL.screenLog.preOpenWindow);
+				tL.screenLog.postOpenWindow = GetSecs;
+				tL.screenLog.deltaOpenWindow = (tL.screenLog.postOpenWindow-tL.screenLog.preOpenWindow);
 
 				%% === check we have GLSL
 				try
@@ -677,13 +677,13 @@ classdef screenManager < optickaCore
 
 				%% === get gamma table and info
 				try
-					[sv.originalGamma, sv.dacBits, sv.lutSize]=Screen('ReadNormalizedGammaTable', me.win);
+					[sv.originalGamma, sv.dacBits, sv.lutSize] = Screen('ReadNormalizedGammaTable', me.win);
 				catch
 					sv.originalGamma = [];
 					sv.dacBits = 0;
 					sv.lutSize = 0;
 				end
-				sv.linearGamma  = repmat(linspace(0,1,sv.lutSize)',1,3);
+				sv.linearGamma	= repmat(linspace(0,1,sv.lutSize)',1,3);
 				sv.gammaTable	= sv.originalGamma;
 				if me.hideFlash == true && isempty(me.gammaTable) && sv.lutSize > 0
 					Screen('LoadNormalizedGammaTable', me.screen, sv.linearGamma);
@@ -756,7 +756,7 @@ classdef screenManager < optickaCore
 
 			catch ME
 				getReport(ME);
-				close(me);
+				try close(me); end
 				Priority(0); ShowCursor;
 				try prepareScreen(me); end
 				rethrow(ME);
