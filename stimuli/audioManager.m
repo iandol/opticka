@@ -8,6 +8,8 @@ classdef audioManager < optickaCore
 		frequency double	= 44100
 		lowLatency logical	= false
 		latencyLevel		= 1
+		%> default volume
+		volumeLevel double	= 1
 		%> this allows us to be used even if no sound is attached
 		silentMode logical	= false 
 		%> chain snd() function to use psychportaudio?
@@ -27,10 +29,14 @@ classdef audioManager < optickaCore
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		beepHandle			= NaN
+		sampleHandle		= NaN
 		handles				= []
 		isFiles logical		= false
+		%> cache generated beep vectors by sample rate, frequency and duration
+		beepCache struct	= struct('key', {}, 'soundVec', {})
 		allowedProperties = {'numChannels', 'frequency', 'lowLatency', ...
-			'device', 'fileName', 'silentMode', 'verbose'}
+			'device', 'volumeLevel', 'fileName', 'silentMode', 'verbose'}
 	end 
 	
 	%=======================================================================
@@ -110,7 +116,7 @@ classdef audioManager < optickaCore
 				if me.chainSnd
 					Snd('Open',me.aHandle); % chain Snd() to this instance
 				end
-				PsychPortAudio('Volume', me.aHandle, 1);
+				PsychPortAudio('Volume', me.aHandle, me.volumeLevel);
 				me.status = PsychPortAudio('GetStatus', me.aHandle);
 				me.frequency = me.status.SampleRate;
 				me.silentMode = false;
@@ -122,9 +128,26 @@ classdef audioManager < optickaCore
 				me.silentMode = true;
 			end
 		end
+
+		% ===================================================================
+		%> @brief
+		%>  
+		% ===================================================================
+		function volume(me, value)
+			if me.silentMode; return; end
+			if ~exist('value','var'); value = me.volumeLevel; end
+			% Clamp if necessary
+			if (value > 1.0)
+				value = 1.0;
+			elseif (value < 0)
+				value = 0;
+			end
+			me.volumeLevel = value;
+			PsychPortAudio('Volume', me.aHandle, value);
+		end
 		
 		% ===================================================================
-		%> @brief setup
+		%> @brief
 		%>  
 		% ===================================================================
 		function loadSamples(me)
@@ -134,7 +157,9 @@ classdef audioManager < optickaCore
 			else
 				[audiodata, ~] = psychwavread(me.fileName);
 			end
-			PsychPortAudio('FillBuffer', me.aHandle, audiodata');
+
+			me.sampleHandle = PsychPortAudio('CreateBuffer', me.aHandle, audiodata');
+			PsychPortAudio('FillBuffer', me.aHandle, me.sampleHandle);
 			me.isSample = true;
 		end
 
@@ -146,10 +171,20 @@ classdef audioManager < optickaCore
 			if me.silentMode; return; end
 			if ~exist('when','var'); when = []; end
 			if ~me.isSetup; setup(me);end
-			if ~me.isSample; loadSamples(me);end
-			isValid = checkFiles(me);
-			if me.isSetup && me.isSample && isValid
+			if me.isSetup && me.isSample && ~isnan(me.sampleHandle) 
+				PsychPortAudio('FillBuffer', me.aHandle, me.sampleHandle);
 				PsychPortAudio('Start', me.aHandle, [], when);
+			end
+		end
+
+		% ===================================================================
+		%> @brief
+		%>
+		% ===================================================================
+		function stop(me)
+			if me.silentMode; return; end
+			if me.isSetup
+				PsychPortAudio('Stop', me.aHandle, 0, 1);
 			end
 		end
 		
@@ -165,7 +200,7 @@ classdef audioManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief
 		%>
 		% ===================================================================
 		function beep(me,freq,durationSec,fVolume)
@@ -194,9 +229,8 @@ classdef audioManager < optickaCore
 				elseif strcmpi(freq, 'low'); freq = 300;
 				end
 			end
-			nSample = me.frequency*durationSec;
-			soundVec = sin(2*pi*freq*(1:nSample)/me.frequency);
-			soundVec = [soundVec;soundVec];
+			
+			soundVec = getBeepSoundVec(me, freq, durationSec);
 
 			% Scale down the volume
 			soundVec = soundVec * fVolume;
@@ -206,7 +240,7 @@ classdef audioManager < optickaCore
 		end
 
 		% ===================================================================
-		%> @brief  
+		%> @brief
 		%>
 		% ===================================================================
 		function run(me)
@@ -217,7 +251,7 @@ classdef audioManager < optickaCore
 		end
 
 		% ===================================================================
-		%> @brief Reset 
+		%> @brief Reset
 		%>
 		% ===================================================================
 		function reset(me)
@@ -234,6 +268,8 @@ classdef audioManager < optickaCore
 				me.aHandle = [];
 				me.status = [];
 				me.frequency = [];
+				me.sampleHandle = NaN;
+				me.beepHandle = NaN;
 				me.isSetup = false; me.isOpen = false; me.isSample = false;
 				me.silentMode = false;
 			catch ME
@@ -242,13 +278,16 @@ classdef audioManager < optickaCore
 				me.status = [];
 				me.frequency = [];
 				me.isSetup = false; me.isOpen = false; me.isSample = false;
+				me.sampleHandle = NaN;
+				me.beepHandle = NaN;
 				warning('audioManager:reset','%s',ME.message);
 			end
+			me.beepCache = struct('key', {}, 'soundVec', {});
 			try InitializePsychSound(me.lowLatency); end
 		end
 
 		% ===================================================================
-		%> @brief Close 
+		%> @brief Close
 		%>
 		% ===================================================================
 		function close(me)
@@ -256,20 +295,20 @@ classdef audioManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief Close 
+		%> @brief Close
 		%>
 		% ===================================================================
-		function delete(me)			
+		function delete(me)
 			reset(me);
 		end
 
 		% ===================================================================
-		%> @brief showDevices 
+		%> @brief showDevices
 		%>
 		% ===================================================================
 		function showDevices(me)
 			for ii=1:length(me.devices)
-				disp(['===========================Loop: ' num2str(ii)]);
+				disp(['===========================Index: ' num2str(ii)]);
 				disp(me.devices(ii));
 			end
 		end
@@ -339,6 +378,24 @@ classdef audioManager < optickaCore
 	%=======================================================================
 	methods ( Access = private ) %-------PRIVATE METHODS-----%
 	%=======================================================================
+
+		% ===================================================================
+		%> @brief Return a cached beep vector or build it if needed.
+		%>
+		% ===================================================================
+		function soundVec = getBeepSoundVec(me, freq, durationSec)
+			cacheKey = sprintf('%.12g_%.12g_%.12g', me.frequency, freq, durationSec);
+			cacheIdx = find(strcmp({me.beepCache.key}, cacheKey), 1);
+			if isempty(cacheIdx)
+				nSample = me.frequency*durationSec;
+				soundVec = sin(2*pi*freq*(1:nSample)/me.frequency);
+				soundVec = [soundVec;soundVec];
+				me.beepCache(end + 1).key = cacheKey;
+				me.beepCache(end).soundVec = soundVec;
+			else
+				soundVec = me.beepCache(cacheIdx).soundVec;
+			end
+		end
 		
 	end %---END PRIVATE METHODS---%
 end
