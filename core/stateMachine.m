@@ -638,7 +638,7 @@ classdef stateMachine < optickaCore
 			if isempty(me.stateList); return; end
 			titles = me.stateFields;
 			tbl = cell(me.nStates+1,length(titles));
-			tbl(1,:) = titles;
+			tbl(1,:) = cellstr(titles);
 			tblD = tbl;
 			for i = 1:me.nStates
 				for j = 1:length(titles)
@@ -651,7 +651,6 @@ classdef stateMachine < optickaCore
 							else
 								t = [t '; ' char(tbl{i+1,j}{k})];
 							end
-							
 						end
 						tblD{i+1,j} = t;
 					else
@@ -667,7 +666,7 @@ classdef stateMachine < optickaCore
 			end
 		end
 		
-	end
+	end %-------------------PUBLIC
 	
 	%=======================================================================
 	methods ( Access = protected ) %-------PROTECTED METHODS-----%

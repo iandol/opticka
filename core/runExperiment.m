@@ -735,7 +735,8 @@ classdef runExperiment < optickaCore
 				me.userFunctions		= ans; %#ok<NOANS> 
 				uF						= me.userFunctions;
 				uF.rE = me; uF.s = s; uF.task = task; uF.eT = eT;
-				uF.stims = stims; uF.io = io; uF.rM = rM; uF.tM = tM; uF.verbose = me.verbose;
+				uF.stims = stims; uF.io = io; uF.rM = rM; uF.verbose = me.verbose;
+				try uF.tM = tM; end
 
 				%================================initialise the state machine
 				me.stateMachine		= [];

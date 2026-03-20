@@ -28,27 +28,39 @@ duplicating content.
 ## Key entry points
 - Setup MATLAB path: run `addOptickaToPath` (adds repo + optional sibling
   toolboxes; excludes folders like `.git`, `legacy`, `doc`).
-- GUI run: `o = opticka;` (creates GUI and a `runExperiment` instance at `o.r`).
+- GUI run: `o = opticka;` (creates GUI and a `runExperiment` instance at
+  `o.r`).
 - Script examples (not using GUI):
   - Method of Constants (MOC) demo: `optickaTest.m`
   - Behaviour/state-machine demo: `optickaBehaviourTest.m`
   - Minimal stimulus demo: `im = imageStimulus; run(im);`
   - Minimal state machine demo: `sM = stateMachine; demo(sM);`
+  - Minimal eyetracker demo (dummy uses mouse to simulate the eye): 
+    `eM =iRecManager('isDummy',true); demo(eM);`
   - Minimal touch screen demo: `tM = touchManager; demo(tM);`
 
 ## Standard architecture & data flow (typical run)
-- `runExperiment` coordinates the following objects:
-  - `screenManager` (`screen`) for opening/configuring PTB screen, degree↔pixel
-    transforms and as a singleton "container" that holds all settings to pass to other classes.
-  - `metaStimulus` (`stimuli`) as a container for multiple stimuli; it forwards
-    `setup/animate/draw/update/reset`. A single draw command for example can 
-    "draw" many stimuli.
-  - `taskSequence` (`task`) for block/trial variable randomisation (`nVar`,
-    `blockVar`, `trialVar`).
-  - `stateMachine` + a `StateInfo.m` file for behavioural tasks.
-  - Hardware/IO managers (strobe/reward/eyetracker/control) and optional network
-    via `communication/jzmqConnection` (ZeroMQ, more robust) or
-    `communication/dataConnection` (TCP/UDP).
+
+Each object can be run independently or managed via `runExperiment` to coordinates the following objects:
+
+- `screenManager` (`screen`) for opening/configuring PTB screen,
+  degree↔pixel transforms and as a singleton "container" that holds all
+  settings to pass to other classes.
+- `metaStimulus` (`stimuli`) as a container for multiple stimuli; it forwards
+  `setup/animate/draw/update/reset`. A single draw command for example can 
+  "draw" many stimuli.
+- `taskSequence` (`task`) for block/trial variable randomisation (`nVar`,
+  `blockVar`, `trialVar`).
+- `stateMachine` + a `StateInfo.m` file for behavioural tasks.
+- `tobiiManager` `eyelinkManager` `iRecManager` provide a unified API
+  `eyetrackerCore` for integrating eye trackers, you can swap the eye
+  tracker without changing any task code.
+- `touchManager` manages touch screen tasks by wrapping the PTB TouchQueue
+  functions. Touchscreens only send touch events when there is a change of
+  touch state.
+- Hardware/IO managers (strobe/reward/eyetracker/control) and optional network
+  via `communication/jzmqConnection` (ZeroMQ, more robust) or
+  `communication/dataConnection` (TCP/UDP).
 
 ## Project-specific conventions to follow
 - **Handle classes + property validation**

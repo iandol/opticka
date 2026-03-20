@@ -1,4 +1,3 @@
-
 % ======================================================================
 %> @class opticka
 %> @brief GUI Manager for runExperiment() class
@@ -564,7 +563,6 @@ classdef opticka < optickaCore
 							addStates(tsM, stateInfoTmp);
 							tbl = tsM.showTable;
 							if ~isempty(tbl)
-								disp(tbl)
 								met.ui.OKStateTable.ColumnName = tbl.Properties.VariableNames;
 								met.ui.OKStateTable.Data = tbl;
 							else
@@ -576,7 +574,7 @@ classdef opticka < optickaCore
 						end
 						clear me stims eT tsM
 					catch ME
-						getReport(ME);
+						getReport(ME)
 						met.ui.OKStateTable.ColumnName = {'STATE','Next','time','entry','within','transition','exit'}; %#ok<*USENS>
 						met.ui.OKStateTable.Data = cell2table(cell(7,7));
 						met.ui.OKStateFcnView.Value = {'Error loading state info',ME.message};
