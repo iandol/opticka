@@ -587,21 +587,21 @@ classdef screenManager < optickaCore
 				%% === ANAGLYPH VALUES
 				if stereo > 0 && ~isempty(me.anaglyphLeft) && ~isempty(me.anaglyphRight)
 					SetAnaglyphStereoParameters('LeftGains', me.win,  me.anaglyphLeft);
-    				SetAnaglyphStereoParameters('RightGains', me.win, me.anaglyphRight);
+					SetAnaglyphStereoParameters('RightGains', me.win, me.anaglyphRight);
 				elseif stereo > 0
 					switch stereo
 						case 6
-    						SetAnaglyphStereoParameters('LeftGains', me.win,  [1.0 0.0 0.0]);
-    						SetAnaglyphStereoParameters('RightGains', me.win, [0.0 0.6 0.0]);
+							SetAnaglyphStereoParameters('LeftGains', me.win,  [1.0 0.0 0.0]);
+							SetAnaglyphStereoParameters('RightGains', me.win, [0.0 0.6 0.0]);
 						case 7
-    						SetAnaglyphStereoParameters('LeftGains', me.win,  [0.0 0.6 0.0]);
-    						SetAnaglyphStereoParameters('RightGains', me.win, [1.0 0.0 0.0]);
+							SetAnaglyphStereoParameters('LeftGains', me.win,  [0.0 0.6 0.0]);
+							SetAnaglyphStereoParameters('RightGains', me.win, [1.0 0.0 0.0]);
 						case 8
-    						SetAnaglyphStereoParameters('LeftGains', me.win, [0.4 0.0 0.0]);
-    						SetAnaglyphStereoParameters('RightGains', me.win, [0.0 0.2 0.7]);
+							SetAnaglyphStereoParameters('LeftGains', me.win, [0.4 0.0 0.0]);
+							SetAnaglyphStereoParameters('RightGains', me.win, [0.0 0.2 0.7]);
 						case 9
-    						SetAnaglyphStereoParameters('LeftGains', me.win, [0.0 0.2 0.7]);
-    						SetAnaglyphStereoParameters('RightGains', me.win, [0.4 0.0 0.0]);
+							SetAnaglyphStereoParameters('LeftGains', me.win, [0.0 0.2 0.7]);
+							SetAnaglyphStereoParameters('RightGains', me.win, [0.4 0.0 0.0]);
 					end
 				end
 
@@ -2042,7 +2042,7 @@ classdef screenManager < optickaCore
 		%> @return
 		% ===================================================================
 			if ~isstruct(pos); out = []; return; end
-			if length(pos.radius) == 1
+			if isscalar(pos.radius)
 				w = pos.radius * 2;
 				h = w;
 			else

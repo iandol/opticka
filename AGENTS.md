@@ -4,6 +4,11 @@ This is the **single source of truth** for coding/agent instructions in this rep
 Tool-specific instruction files (Copilot, etc.) should **link here** rather than
 duplicating content.
 
+## Online Documentation
+
+- See https://deepwiki.com/iandol/opticka for deepwiki documentation for this repo.
+- See https://iandol.github.io/OptickaDocs/index.html for the Class documentation generated using DOxygen.
+
 ## Formatting rules
 - ALWAYS use camelCase for variable / property / function / method names.
 - Comments MUST follow Doxygen conventions. Line comments start with `%>`
