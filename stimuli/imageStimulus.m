@@ -342,6 +342,8 @@ classdef imageStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function update(me)
+			me.currentFile = [];
+			me.filePaths = {};
 			checkfilePath(me);
 			if me.randomiseSelection
 				im = randi(me.nImages);
@@ -536,6 +538,7 @@ classdef imageStimulus < baseStimulus
 			if exist(me.filePath,'dir') == 7
 				d = dir(me.filePath);
 				n = 0;
+				me.filePaths = {};
 				for i = 1: length(d)
 					if d(i).isdir; continue; end
 					[~,f,e]=fileparts(d(i).name);
