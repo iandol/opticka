@@ -83,6 +83,16 @@ classdef alyxManager < optickaCore
 		end
 
 		% ===================================================================
+		function result = hasSecrets(me)
+		%> @brief check secrets for the AlyxManager instance
+		 	if isempty(me.password) && isempty(me.AWS_ID) && isempty(me.AWS_KEY)
+				result = false;
+			else
+				result = true;
+			end
+		end
+
+		% ===================================================================
 		function setSecrets(me, password, AWS_ID, AWS_KEY, force)
 		%> @brief Set secrets for the AlyxManager instance
 		%>
@@ -128,14 +138,17 @@ classdef alyxManager < optickaCore
 				if isempty(password)
 					setSecret('AlyxPassword');
 					password = getSecret('AlyxPassword');
+					me.password = '';
 				end
 				if isempty(AWS_ID)
 					setSecret('AWS_ID');
 					AWS_ID = getSecret('AWS_ID');
+					me.AWS_ID = '';
 				end
 				if isempty(AWS_KEY)
 					setSecret('AWS_KEY');
 					AWS_KEY = getSecret('AWS_KEY');
+					me.AWS_KEY = '';
 				end	
 			end
 
@@ -1126,9 +1139,8 @@ classdef alyxManager < optickaCore
 		function set.user(me, value)
 		% ===================================================================
 			if ~matches(me.user, value)
-				if me.loggedIn; logout(me); end
-				me.password = '';
-				fprintf('≣≣≣≣⊱ User name change, removed old password!\n');
+				%if me.loggedIn; logout(me); end
+				%fprintf('≣≣≣≣⊱ User name change, logged out!\n');
 			end
 			me.user = value;
 		end
