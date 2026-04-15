@@ -2015,12 +2015,77 @@ classdef screenManager < optickaCore
 		%> @param distance distance from center
 		%> @return array of X,Y positions
 		% ===================================================================
+			arguments(Input)
+				n (1,1) {mustBePositive, mustBeInteger}
+				distance (1,1) {mustBeNonNegative}
+				phase (1,1) {mustBeNumeric} = 0
+			end
+			arguments(Output)
+				out double
+			end
 			th = linspace(0,360,n+1);
 			th = th(1:end-1) + phase;
 			out = zeros(2,length(th));
 			for i = 1:length(th)
 				[out(1,i),out(2,i)] = pol2cart(deg2rad(th(i)),distance);
 			end
+			out = round(out,4);
+		end
+
+		% ===================================================================
+		function [xOut, yOut] = polarToCartesianPoints(x,y,angle,distance)
+		%> @fn [xOut, yOut] = polarToCartesianPoints(x,y,angle,distance)
+		%>
+		%> @brief Convert polar offsets around an origin to Cartesian
+		%> points.
+		%>
+		%> Angles are specified in degrees. If angle and distance are both
+		%> arrays, all angle-distance combinations are returned as matrices
+		%> of size numel(angle)-by-numel(distance).
+		%>
+		%> IMPORTANT: 0deg is to the right of the origin and angles increase
+		%> clockwise because PTB + y is downwards. This is the opposite of
+		%> the standard mathematical convention, so be careful when using
+		%> angles from other sources.
+		%>
+		%> @param x origin X position 
+		%> @param y origin Y position 
+		%> @param angle angle or array of angles in degrees 
+		%> @param distance distance or array of distances 
+		%> @return xOut X positions 
+		%> @return yOut Y positions
+		% ===================================================================
+			arguments (Input)
+				x (1,1) double {mustBeReal}
+				y (1,1) double {mustBeReal}
+				angle {mustBeNumeric, mustBeReal}
+				distance {mustBeNumeric, mustBeReal, mustBeNonnegative}
+			end
+			arguments (Output)
+				xOut double
+				yOut double
+			end
+			if isempty(angle) || isempty(distance)
+				xOut = [];
+				yOut = [];
+				return;
+			end
+			[angleGrid, distanceGrid] = ndgrid(angle(:),distance(:));
+			[deltaX, deltaY] = pol2cart(deg2rad(angleGrid),distanceGrid);
+			xOut = x + deltaX;
+			yOut = y + deltaY;
+			if isscalar(angle) && isscalar(distance)
+				xOut = xOut(1);
+				yOut = yOut(1);
+			elseif isscalar(angle)
+				xOut = reshape(xOut,size(distance));
+				yOut = reshape(yOut,size(distance));
+			elseif isscalar(distance)
+				xOut = reshape(xOut,size(angle));
+				yOut = reshape(yOut,size(angle));
+			end
+			xOut = round(xOut,4);
+			yOut = round(yOut,4);
 		end
 
 		% ===================================================================
@@ -2030,6 +2095,12 @@ classdef screenManager < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
+			arguments(Input)
+				rect (1,4) double {mustBeReal, mustBeNonNegative}
+			end
+			arguments(Output)
+				out structure
+			end
 			[out.X,out.Y] = RectCenter(rect);
 			out.radius = [RectWidth(rect) RectHeight(rect)] / 2;
 		end
