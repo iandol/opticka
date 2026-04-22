@@ -959,8 +959,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 			elseif isprop(me, name)
 				value = me.(name);
 				if exist('range','var'); value = value(range); end
-			else
-				if me.verbose;fprintf('Property %s doesn''t exist...\n',name);end
+			elseif me.verbose
+				fprintf('!!! Property %s doesn''t exist...\n',name)
 				value = []; name = [];
 			end
 		end
@@ -984,8 +984,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 				me.([name 'Out']) = value;
 			elseif isprop(me, name)
 				me.(name) = value;
-			else
-				if me.verbose;fprintf('Property %s doesn''t exist...\n',name);end
+			elseif me.verbose
+				fprintf('!!! Property %s doesn''t exist...\n',name);
 			end
 		end
 

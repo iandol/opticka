@@ -24,7 +24,7 @@
 %> your programs. 
 %>
 %>
-%> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2026 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef calibrateLuminance < handle
 	
@@ -52,9 +52,9 @@ classdef calibrateLuminance < handle
 		tableLength double = 1024
 		%> choose I1Pro over CCal if both connected?
 		preferI1Pro logical = false
-		%> test Lum, R, G and B as seperate curves?
+		%> test Lum, R, G and B as separate curves?
 		testColour logical = true
-		%> correct R G B seperately (true) or overall luminance (false) 
+		%> correct R G B separately (true) or overall luminance (false) 
 		correctColour logical = false
 		%> methods list to fit to raw luminance values, first is always
 		%> gamma
@@ -124,7 +124,7 @@ classdef calibrateLuminance < handle
 		%> universal ID
 		uuid char
         SPD struct
-		%spectroCAL serial object
+		%> spectroCAL serialport object
 		spCAL
 	end
 	
@@ -161,7 +161,7 @@ classdef calibrateLuminance < handle
 					for i=1:length(fnames)
 						if regexp(fnames{i},me.allowedPropertiesBase) %only set if allowed property
 							me.salutation(fnames{i},'Configuring property constructor');
-							me.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
+							me.(fnames{i})=args.(fnames{i}); %we set up the properties from the arguments as a structure
 						end
 					end
 				end
@@ -322,10 +322,16 @@ classdef calibrateLuminance < handle
 					WaitSecs(0.01);
 				end
 			elseif me.useSpectroCal2
-				me.openSpectroCAL();
-				me.spectroCalLaser(true)
-				input('Align Laser then press enter to start...')
-				me.spectroCalLaser(false)
+				try
+					me.openSpectroCAL();
+					me.spectroCalLaser(true)
+					input('Align Laser then press enter to start...')
+					me.spectroCalLaser(false)
+				catch
+					resetAll(me);
+					Screen('CloseAll');
+					psychrethrow(psychlasterror);
+				end
 			end
 			
 			psychlasterror('reset');
@@ -954,13 +960,13 @@ classdef calibrateLuminance < handle
 		function [x, y, Y, wavelengths, spectrum] = getSpectroCALValues(me)
 			%[CIEXY, ~, Luminance, Lambda, Radiance, errorString] = SpectroCALMakeSPDMeasurement(me.port, ...
 			%	me.wavelengths(1), me.wavelengths(end), me.wavelengths(2)-me.wavelengths(1));
-			if ~isa(me.spCAL,'serial') || isempty(me.spCAL) || strcmp(me.spCAL.Status,'closed')
-				doClose = true;
-				me.openSpectroCAL();
-			else
-				doClose = false;
-			end
-			[x, y, Y, wavelengths, spectrum] = me.takeSpectroCALMeasurement();
+		if ~isa(me.spCAL,'internal.Serialport') || isempty(me.spCAL) || ~isvalid(me.spCAL)
+			doClose = true;
+			me.openSpectroCAL();
+		else
+			doClose = false;
+		end
+		[x, y, Y, wavelengths, spectrum] = me.takeSpectroCALMeasurement();
 			%[Radiance, WL, XYZ] = SpectroCALtakeMeas(me.spCAL);
 			me.thisx = x;
 			me.thisy = y;
@@ -978,14 +984,14 @@ classdef calibrateLuminance < handle
 			else
 				state = false;
 			end
-			if ~isa(me.spCAL,'serial') || isempty(me.spCAL) || strcmp(me.spCAL.Status,'closed')
+			if ~isa(me.spCAL,'internal.Serialport') || isempty(me.spCAL) || ~isvalid(me.spCAL)
 				doClose = true;
 				me.openSpectroCAL();
 			else
 				doClose = false;
 			end
-			fprintf(me.spCAL,['*CONTR:LASER ', num2str(state), char(13)]);
-			error=fread(me.spCAL,1);
+			writeline(me.spCAL, sprintf('*CONTR:LASER %i', state));
+			ret = me.checkACK('laser');
 			if doClose && ~me.keepOpen; me.closeSpectroCAL(); end
 		end
 		
@@ -1046,17 +1052,18 @@ classdef calibrateLuminance < handle
 		
 		%===============init======================%
 		function openSpectroCAL(me)
-			if ~isa(me.spCAL,'serial')
-				me.spCAL = serial(me.port, 'BaudRate', 921600,'DataBits', 8, 'StopBits', 1, 'FlowControl', 'none', 'Parity', 'none', 'Terminator', 'CR','Timeout', 240, 'InputBufferSize', 16000);
+			if ~isa(me.spCAL,'internal.Serialport') || ~isvalid(me.spCAL)
+				me.spCAL = serialport(me.port, 921600, 'DataBits', 8, 'StopBits', 1, ...
+					'FlowControl', 'none', 'Parity', 'none', 'Timeout', 240);
+				configureTerminator(me.spCAL, 'CR');
 			end
-			try fopen(me.spCAL);catch;warning('Port Already Open...');end
 			me.configureSpectroCAL();
 		end
 		
 		%===============init======================%
 		function closeSpectroCAL(me)
-			if isa(me.spCAL,'serial') && strcmp(me.spCAL.Status,'open')
-				try; fclose(me.spCAL); end
+			if isa(me.spCAL,'internal.Serialport') && isvalid(me.spCAL)
+				delete(me.spCAL);
 				me.spCAL = [];
 			end
 		end
@@ -1146,41 +1153,40 @@ classdef calibrateLuminance < handle
 		function [refreshRate] = configureSpectroCAL(me)
 			intgrTime = [];
 			doSynchonised = me.monitorSync;
-			doHorBarPTB = false;
 			reps = 1;
 			freq = me.screenVals.fps;
 			% set the range to be fit the CIE 1931 2-deg CMFs
 			start = me.wavelengths(1); stop = me.wavelengths(end); step = me.wavelengths(2) - me.wavelengths(1);
 			if isempty(intgrTime)
 				% Set automatic adaption to exposure
-				fprintf(me.spCAL,['*CONF:EXPO 1', char(13)]); % setting: adaption of tint
-				errorString = me.checkACK('setting exposure'); if ~isempty(errorString), fclose(me.spCAL); return; end
+				writeline(me.spCAL, '*CONF:EXPO 1'); % setting: adaption of tint
+				errorString = me.checkACK('setting exposure'); if ~isempty(errorString), delete(me.spCAL); return; end
 				if doSynchonised
-					fprintf(me.spCAL,['*CONF:CYCMOD 1', char(13)]); %switching to synchronized measuring mode
-					errorString = me.checkACK('setting SYNC'); if ~isempty(errorString), fclose(me.spCAL); return; end
+					writeline(me.spCAL, '*CONF:CYCMOD 1'); %switching to synchronized measuring mode
+					errorString = me.checkACK('setting SYNC'); if ~isempty(errorString), delete(me.spCAL); return; end
 					while reps
 						reps=reps-1;
-						fprintf(me.spCAL,['*CONTR:CYCTIM 200 4000', char(13)]); %measurement of cycle time
+						writeline(me.spCAL, '*CONTR:CYCTIM 200 4000'); %measurement of cycle time
 						% read the return
-						data = fscanf(me.spCAL);
+						data = char(readline(me.spCAL));
 						disp(data);
 						tint = str2double(data(13:end)); % in mS
 						refreshRate = 1/tint*1000;
 						disp(['Refresh rate is: ',num2str(refreshRate)]);
 						if ~isnan(tint)
-							fprintf(me.spCAL,['*CONF:CYCTIM ',num2str(tint*1000), char(13)]);  %setting: cycle time to measured value (in us)
-							errorString = me.checkACK('setting Cycle Time'); if ~isempty(errorString), fclose(me.spCAL); return; end
+							writeline(me.spCAL, sprintf('*CONF:CYCTIM %g', tint*1000));  %setting: cycle time to measured value (in us)
+							errorString = me.checkACK('setting Cycle Time'); if ~isempty(errorString), delete(me.spCAL); return; end
 						else
 							% reset
-							fprintf(me.spCAL,['*RST', char(13)]); % software reset
+							writeline(me.spCAL, '*RST'); % software reset
 							pause(2);
-							if me.spCAL.BytesAvailable>0
-								data = fread(me.spCAL,me.spCAL.BytesAvailable)';
+							if me.spCAL.NumBytesAvailable > 0
+								data = read(me.spCAL, me.spCAL.NumBytesAvailable, 'uint8');
 								disp(char(data));
 							end
 							% Set automatic adaption to exposure
-							fprintf(me.spCAL,['*CONF:EXPO 1', char(13)]); % setting: adaption of tint
-							errorString = me.checkACK('setting exposure'); if ~isempty(errorString), fclose(me.spCAL); return; end
+							writeline(me.spCAL, '*CONF:EXPO 1'); % setting: adaption of tint
+							errorString = me.checkACK('setting exposure'); if ~isempty(errorString), delete(me.spCAL); return; end
 						end
 						if ~isempty(freq)
 							if abs(refreshRate-freq)<1;reps=0;end
@@ -1190,61 +1196,60 @@ classdef calibrateLuminance < handle
 				
 			else
 				% Set integration time to intgrTime
-				fprintf(me.spCAL,['*CONF:TINT ',num2str(intgrTime), char(13)]);
+				writeline(me.spCAL, sprintf('*CONF:TINT %g', intgrTime));
 				me.checkACK('set integration time');
 				refreshRate = NaN;
 				% Set manual adaption to exposure
-				fprintf(me.spCAL,['*CONF:EXPO 2', char(13)]);
+				writeline(me.spCAL, '*CONF:EXPO 2');
 				me.checkACK('set manual exposure');
 			end
 			% Radiometric spectra in nm / value
-			fprintf(me.spCAL,['*CONF:FUNC 6', char(13)]);
-			errorString = me.checkACK('setting spectra'); if ~isempty(errorString), fclose(me.spCAL); return; end
+			writeline(me.spCAL, '*CONF:FUNC 6');
+			errorString = me.checkACK('setting spectra'); if ~isempty(errorString), delete(me.spCAL); return; end
 			% Set wavelength range and resolution
-			fprintf(me.spCAL,['*CONF:WRAN ',num2str(start),' ',num2str(stop),' ',num2str(step), char(13)]);
-			errorString = me.checkACK('setting wavelength'); if ~isempty(errorString), fclose(me.spCAL); return; end
+			writeline(me.spCAL, sprintf('*CONF:WRAN %d %d %d', start, stop, step));
+			errorString = me.checkACK('setting wavelength'); if ~isempty(errorString), delete(me.spCAL); return; end
 			disp('SpectroCAL initialised.');
 		end
 		
 		%===============init======================%
 		function [CIEx, CIEy, Y, Lambda, Radiance] = takeSpectroCALMeasurement(me)
 			% request a measurement
-			fprintf(me.spCAL,['*INIT', char(13)]);
-			errorString = me.checkACK('request measurement'); if ~isempty(errorString), fclose(me.spCAL); return; end
+			writeline(me.spCAL, '*INIT');
+			errorString = me.checkACK('request measurement'); if ~isempty(errorString), delete(me.spCAL); return; end
 			% wait while measuring
 			tic;
 			while 1
-				if me.spCAL.BytesAvailable>0
-					sReturn = fread(me.spCAL,me.spCAL.BytesAvailable)';
-					if sReturn(1)~=7 % if the return is not 7
+				if me.spCAL.NumBytesAvailable > 0
+					sReturn = read(me.spCAL, me.spCAL.NumBytesAvailable, 'uint8');
+					if sReturn(1) ~= 7 % if the return is not 7
 						warning(['SpectroCAL: returned error code ',num2str(sReturn(1))]);
 						errorString = {['SpectroCAL: returned error code ',num2str(sReturn(1))],'Check for overexposure.'};
-						fclose(me.spCAL);
+						delete(me.spCAL);
 						return % abort the measurement and exit the function
 					else
 						break; % measurement succesfully completed
 					end
-					
 				end
-				if toc>240
+				if toc > 240
 					warning('SpectroCAL: timeout. No response received within 240 seconds.');
 					errorString = 'SpectroCAL: timeout. No response received within 240 seconds.';
-					fclose(me.spCAL);
+					delete(me.spCAL);
 					return % abort the measurement and exit the function
 				end
 				pause(0.01);
 			end
 			% retrieve the measurement
-			fprintf(me.spCAL,['*FETCH:SPRAD 7', char(13)]);
+			writeline(me.spCAL, '*FETCH:SPRAD 7');
 			% the returned data will be a header followed by two consecutive carriage
 			% returns and then the data followed by two consecutive carriage returns
 			% read head and data
 			data = [];
 			while 1
-				if me.spCAL.BytesAvailable>0
-					data =  [data;fread(me.spCAL, me.spCAL.BytesAvailable)]; %#ok<AGROW>
-					if length(data)>40 % read until both header and data is retrieved
-						if data(end)==13 && data(end-1)==13
+				if me.spCAL.NumBytesAvailable > 0
+					data = [data; read(me.spCAL, me.spCAL.NumBytesAvailable, 'uint8')]; %#ok<AGROW>
+					if length(data) > 40 % read until both header and data is retrieved
+						if data(end) == 13 && data(end-1) == 13
 							break
 						end
 					end
@@ -1258,12 +1263,12 @@ classdef calibrateLuminance < handle
 			Radiance = tmp(2,:);
 			
 			% Get XYZ tristimulus values
-			fprintf(me.spCAL,['*FETCH:XYZ', char(13)]);
+			writeline(me.spCAL, '*FETCH:XYZ');
 			data = [];
 			while 1
-				if me.spCAL.BytesAvailable>0
-					data =  [data;fread(me.spCAL, me.spCAL.BytesAvailable)]; %#ok<AGROW>
-					if length(find(data==13))>=3 % wait for all three cr
+				if me.spCAL.NumBytesAvailable > 0
+					data = [data; read(me.spCAL, me.spCAL.NumBytesAvailable, 'uint8')]; %#ok<AGROW>
+					if length(find(data==13)) >= 3 % wait for all three cr
 						break
 					end
 				end
@@ -1284,9 +1289,9 @@ classdef calibrateLuminance < handle
 			if ~exist('string','var') || isempty(string); string = 'GENERAL';end
 			tic;
 			while 1
-				if me.spCAL.BytesAvailable>0
-					sReturn = fread(me.spCAL,1)';
-					if sReturn(1)~=6 % if the return is not 6
+				if me.spCAL.NumBytesAvailable > 0
+					sReturn = read(me.spCAL, 1, 'uint8');
+					if sReturn(1) ~= 6 % if the return is not 6
 						warning(['error initialising SpectroCAL: returned error code ',num2str(sReturn(1))]);
 						errorString = ['SpectroCAL: ',string];
 						return
@@ -1294,9 +1299,8 @@ classdef calibrateLuminance < handle
 						errorString = '';
 						return; % command acknowledged
 					end
-					
 				end
-				if toc>2
+				if toc > 2
 					warning('error initialising SpectroCAL: timeout. No response received within 2 seconds.');
 					errorString = 'SpectroCAL: timeout. No response received within 2 seconds.';
 					return

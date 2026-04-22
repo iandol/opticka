@@ -53,6 +53,10 @@ classdef eyelinkAnalysis < analysisCore
 		%> conversion pupil size to mm? true/false | calibration value | measured
 		%> diameter
 		useDiameter = {false, 9250, 8}
+		%> screen resolution
+		resolution									= [ 1920 1080 ]
+		%> NystromHolmqvist2010 saccade classifier parameters struct
+		ETparams
 	end
 
 	properties (Hidden = true)
@@ -180,6 +184,35 @@ classdef eyelinkAnalysis < analysisCore
 				if ischar(f); me.file = f; me.dir = p; end
 			end
 			me.ppd; %cache our initial ppd_
+			x = which('defaultParameters.m');
+			if isempty(x)
+				warning('Please add NystromHolmqvist2010 to the path for full functionality!')
+			else
+				p = fileparts(x);
+				addpath(genpath([p filesep 'function_library']));
+				addpath(genpath([p filesep 'post-process']));
+			end
+			if isempty(me.ETparams) && ~isempty(which('defaultParameters.m'))
+				me.ETparams = defaultParameters;
+				me.ETparams.extraCut             = [0 0];
+				me.ETparams.qInterpMissingPos    = true;
+				me.ETparams.cutPosTraceMode      = 1;
+				me.ETparams.cutVelTraceMode      = 1;
+				me.ETparams.cutSaccadeSkipWindow = 1;
+				me.ETparams.samplingFreq = me.sampleRate;
+				me.ETparams.screen.resolution              = [ me.resolution(1) me.resolution(2) ];
+				me.ETparams.screen.size                    = [ me.resolution(1)/me.pixelsPerCm/100 me.resolution(2)/me.pixelsPerCm/100 ];
+				me.ETparams.screen.viewingDist             = me.distance/100;
+				me.ETparams.screen.dataCenter              = [ me.resolution(1)/2 me.resolution(2)/2 ];
+				me.ETparams.screen.subjectStraightAhead    = [ me.resolution(1)/2 me.resolution(2)/2 ];
+				me.ETparams.data.alsoStoreComponentDerivs  = true;
+				me.ETparams.data.detrendWithMedianFilter   = true;
+				me.ETparams.data.applySaccadeTemplate      = true;
+				me.ETparams.data.minDur                    = 100;
+				me.ETparams.fixation.doClassify            = true;
+				me.ETparams.blink.replaceWithInterp        = true;
+				me.ETparams.blink.replaceVelWithNan        = true;
+			end
 		end
 
 		% ===================================================================
@@ -267,6 +300,7 @@ classdef eyelinkAnalysis < analysisCore
 			parseROI(me);
 			parseTOI(me);
 			computeMicrosaccades(me);
+			computeFullSaccades(me);
 		end
 
 		% ===================================================================
@@ -405,8 +439,8 @@ classdef eyelinkAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function handle = plot(me,select,type,seperateVars,name)
-			% plot(me,select,type,seperateVars,name)
+		function handle = plot(me,select,type,seperateVars,name,handle)
+			% plot(me,select,type,seperateVars,name,handle)
 			if ~exist('select','var') || ~isnumeric(select); select = []; end
 			if ~exist('type','var') || isempty(type); type = 'all'; end
 			if ~exist('seperateVars','var') || ~islogical(seperateVars); seperateVars = false; end
@@ -414,9 +448,10 @@ classdef eyelinkAnalysis < analysisCore
 				if isnumeric(select) && length(select) > 1
 					name = [me.file ' | Select: ' num2str(length(select)) ' trials'];
 				else
-					name = [me.file ' | Select: ' select];
+					name = [me.file ' | Select: ' num2str(select)];
 				end
 			end
+			if ~exist('handle','var'); handle = []; end
 			if isnumeric(select) && ~isempty(select)
 				idx = select;
 				type = '';
@@ -447,10 +482,13 @@ classdef eyelinkAnalysis < analysisCore
 				end
 				return
 			end
-			handle=figure('Name',name,'Color',[1 1 1],'NumberTitle','off',...
-				'Papertype','a4','PaperUnits','centimeters',...
-				'PaperOrientation','landscape','Renderer','painters');
-			figpos(1,[0.6 0.9],1,'%');
+			if isempty(handle)
+				handle=figure('Name',name,'Color',[1 1 1],'NumberTitle','off',...
+					'Papertype','a4','PaperUnits','centimeters',...
+					'PaperOrientation','landscape','Renderer','painters');
+				figpos(1,[0.6 0.9],1,'%');
+			end
+			figure(handle);
 			p = tiledlayout(3,2,'TileSpacing','compact','Padding','compact');
 			
 			a = 1;
@@ -521,8 +559,8 @@ classdef eyelinkAnalysis < analysisCore
 				xa = thisTrial.gx / me.ppd_;
 				ya = thisTrial.gy / me.ppd_;
 				lim = 30; %max degrees in data
-				xa(xa < -lim) = -lim; xa(xa > lim) = lim; 
-				ya(ya < -lim) = -lim; ya(ya > lim) = lim;
+				xa(xa < -lim) = NaN; xa(xa > lim) = NaN; 
+				ya(ya < -lim) = NaN; ya(ya > lim) = NaN;
 				pupilAll = thisTrial.pa;
 				
 				%x = xa(ix);
@@ -1139,6 +1177,88 @@ classdef eyelinkAnalysis < analysisCore
 			me.parseAsVars;
 		end
 
+		% ===================================================================
+		%> @brief plotNH - plot NH2010 classification for a single trial
+		%>
+		%> @param trial trial index
+		%> @param handle optional figure handle
+		% ===================================================================
+		function plotNH(me, trial, handle)
+			if ~me.isParsed; return; end
+			if ~exist('handle','var'); handle = []; end
+			try
+				if isempty(handle)
+					handle = figure('Name','Saccade Plots','Color',[1 1 1],'NumberTitle','off',...
+						'Papertype','a4','PaperUnits','centimeters',...
+						'PaperOrientation','landscape');
+					figpos(1,[0.5 0.9],1,'%');
+				end
+				figure(handle);
+				data = me.trials(trial).data;
+				me.ETparams.screen.rect = struct('deg', [-5 -5 5 5]);
+				plotClassification(data,'deg','vel',me.ETparams.samplingFreq,...
+					me.ETparams.glissade.searchWindow,me.ETparams.screen.rect,...
+					'title','Test','showSacInScan',true);
+			catch ME
+				getReport(ME)
+			end
+		end
+
+		% ===================================================================
+		%> @brief explore - interactive GUI to step through trials
+		%>
+		%> @param close set true to close all figures
+		% ===================================================================
+		function explore(me, close)
+			persistent ww hh fig figA figB N
+
+			if exist('close','var') && close == true
+				try delete(figB); end
+				try delete(figA); end
+				try delete(fig.f); end
+				fig = []; figA = []; figB = [];
+				return;
+			end
+			if isempty(N); N = 1; end
+			if isempty(fig); fig.f = figure('Units','Normalized','Position',[0 0.8 0.05 0.2],'CloseRequestFcn',@exploreClose); end
+			if isempty(figA); figA = figure('Units','Normalized','Position',[0.05 0 0.45 1],'CloseRequestFcn',@exploreClose); end
+			if isempty(figB); figB = figure('Units','Normalized','Position',[0.5 0 0.5 1],'CloseRequestFcn',@exploreClose); end
+
+			if isempty(fig.f.Children) || ~ishandle(fig.f)
+				fig.b0 = uicontrol('Parent',fig.f,'Units','Normalized',...
+					'Style','text','String',['TRIAL: ' num2str(N)],'Position',[0.1 0.8 0.8 0.1]);
+				fig.b1 = uicontrol('Parent',fig.f,'Units','Normalized',...
+					'String','Next','Position',[0.1 0.1 0.8 0.3],...
+					'Callback', @exploreNext);
+				fig.b2 = uicontrol('Parent',fig.f,'Units','Normalized',...
+					'String','Previous','Position',[0.1 0.5 0.8 0.3],...
+					'Callback', @explorePrevious);
+			end
+
+			if isempty(figA.Children); N = 0; exploreNext(); end
+
+			function exploreNext(src, ~)
+				N = N + 1;
+				if N > length(me.trials); N = 1; end
+				clf(figA); clf(figB);
+				plotNH(me,N,figB);
+				plot(me,N,[],[],[],figA);
+				fig.b0.String = ['TRIAL: ' num2str(N)];
+			end
+			function explorePrevious(src, ~)
+				N = N - 1;
+				if N < 1; N = length(me.trials); end
+				clf(figA); clf(figB);
+				plotNH(me,N,figB);
+				plot(me,N,[],[],[],figA);
+				fig.b0.String = ['TRIAL: ' num2str(N)];
+			end
+			function exploreClose(src, ~)
+				me.explore(true);
+			end
+
+		end
+
 	end%-------------------------END PUBLIC METHODS--------------------------------%
 
 	%=======================================================================
@@ -1340,7 +1460,7 @@ classdef eyelinkAnalysis < analysisCore
 			trialDef.rttime = NaN;
 			startSampleTemp = NaN;
 
-			me.ppd; %faster to cache this now (dependant property sets ppd_ too)
+			me.ppd; %faster to cache this now (dependent property sets ppd_ too)
 
 			sample = me.raw.FSAMPLE.gx(:,100); %check which eye
 			if sample(1) == -32768 %only use right eye if left eye data is not present
@@ -1930,6 +2050,60 @@ classdef eyelinkAnalysis < analysisCore
 			else
 				outx = [];
 				outy = [];
+			end
+		end
+
+		% ===================================================================
+		%> @brief computeFullSaccades - run NH2010 classification on all trials
+		%>
+		% ===================================================================
+		function computeFullSaccades(me)
+			assert(exist('runNH2010Classification.m','file') > 0, ...
+				'Please add NystromHolmqvist2010 to path!');
+			% Ensure ETparams is initialised (constructor should have done this,
+			%> but guard here in case object was loaded from a .mat file)
+			if isempty(me.ETparams)
+				me.ETparams = defaultParameters;
+				me.ETparams.extraCut                   = [0 0];
+				me.ETparams.qInterpMissingPos          = true;
+				me.ETparams.cutPosTraceMode            = 1;
+				me.ETparams.cutVelTraceMode            = 1;
+				me.ETparams.cutSaccadeSkipWindow       = 1;
+				me.ETparams.screen.resolution          = [me.resolution(1) me.resolution(2)];
+				me.ETparams.screen.size                = [me.resolution(1)/me.pixelsPerCm/100 me.resolution(2)/me.pixelsPerCm/100];
+				me.ETparams.screen.viewingDist         = me.distance/100;
+				me.ETparams.screen.dataCenter          = [me.resolution(1)/2 me.resolution(2)/2];
+				me.ETparams.screen.subjectStraightAhead= [me.resolution(1)/2 me.resolution(2)/2];
+				me.ETparams.data.alsoStoreComponentDerivs = true;
+				me.ETparams.data.detrendWithMedianFilter   = true;
+				me.ETparams.data.applySaccadeTemplate      = true;
+				me.ETparams.data.minDur                    = 100;
+				me.ETparams.fixation.doClassify            = true;
+				me.ETparams.blink.replaceWithInterp        = true;
+				me.ETparams.blink.replaceVelWithNan        = true;
+			end
+			me.ETparams.samplingFreq = me.sampleRate;
+
+			% process params
+			ETparams = prepareParameters(me.ETparams);
+
+			for ii = 1:length(me.trials)
+				fprintf('--->>> Full saccadic analysis of Trial %i:\n', ii);
+				%> gx/gy are centred at 0 (pixels - display/2); NH2010 needs
+				%> top-left-origin pixel coordinates, so add back display/2.
+				x = me.trials(ii).gx + me.display(1)/2;
+				y = me.trials(ii).gy + me.display(2)/2;
+				p = me.trials(ii).pa;
+				t = me.trials(ii).times; %> already in ms
+
+				if length(x) < me.ETparams.data.minDur
+					data = struct([]);
+				else
+					data = runNH2010Classification(x, y, p, ETparams, t);
+					data = replaceMissing(data, ETparams.qInterpMissingPos);
+				end
+
+				me.trials(ii).data = data;
 			end
 		end
 

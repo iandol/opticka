@@ -357,7 +357,7 @@ classdef screenManager < optickaCore
 		end
 
 		% ===================================================================OPEN
-		function sv = open(me, debug, tL, forceScreen)
+		function sv = open(me, debug, timeLog, forceScreen)
 		%> @fn open
 		%> @brief open a screen with object defined settings
 		%>
@@ -366,15 +366,20 @@ classdef screenManager < optickaCore
 		%> @param forceScreen force a particular screen number to open
 		%> @return sv structure of basic info from the opened screen
 		% ===================================================================
+			arguments (Input)
+				me
+				debug logical = []
+				timeLog struct = []
+				forceScreen double {mustBeInteger} = []
+			end
 			if me.isOpen; fprintf('===>>> screenManager.open(): Screen already open!'); return; end
 			if me.isPTB == false
 				warning('No PTB found!');
 				sv = me.screenVals;
 				return;
 			end
-			if ~exist('debug','var') || isempty(debug); debug = me.debug; end
-			if ~exist('tL','var') || isempty(tL); tL = struct;end
-			if ~exist('forceScreen','var'); forceScreen = []; end
+			if isempty(debug); debug = me.debug; end
+			if isempty(timeLog); timeLog = timeLogger(); end
 
 			sv = me.screenVals;
 
@@ -426,7 +431,7 @@ classdef screenManager < optickaCore
 				end
 
 				%% === log init time
-				tL.screenLog.preOpenWindow=GetSecs;
+				timeLog.screenLog.preOpenWindow=GetSecs;
 
 				%% === check if system supports HDR mode
 				isHDR = logical(PsychHDR('Supported'));
@@ -615,8 +620,8 @@ classdef screenManager < optickaCore
 				sv.gray 		= GrayIndex(me.win);
 
 				%% === log open time and delta
-				tL.screenLog.postOpenWindow = GetSecs;
-				tL.screenLog.deltaOpenWindow = (tL.screenLog.postOpenWindow-tL.screenLog.preOpenWindow);
+				timeLog.screenLog.postOpenWindow = GetSecs;
+				timeLog.screenLog.deltaOpenWindow = (timeLog.screenLog.postOpenWindow-timeLog.screenLog.preOpenWindow);
 
 				%% === check we have GLSL
 				try
@@ -755,7 +760,7 @@ classdef screenManager < optickaCore
 				me.screenVals = sv;
 
 			catch ME
-				getReport(ME);
+				getReport(ME)
 				try close(me); end
 				Priority(0); ShowCursor;
 				try prepareScreen(me); end
@@ -771,9 +776,13 @@ classdef screenManager < optickaCore
 		%>
 		%>
 		% ===================================================================
+			arguments
+				me
+				channel = []
+			end
 			persistent thisChannel
 			if me.isOpen
-				if ~exist('channel','var'); channel = ~thisChannel;end
+				if isempty(channel); channel = ~thisChannel; end
 				thisChannel = channel;
 				Screen('SelectStereoDrawBuffer', me.win, thisChannel);
 			end
@@ -855,6 +864,18 @@ classdef screenManager < optickaCore
 		%> @note Accurate timing requires proper screen synchronization configuration
 		%> @see Screen('Flip') in Psychtoolbox documentation
 		% ===================================================================
+			arguments (Input)
+				me
+			end
+			arguments (Input, Repeating)
+				varargin
+			end
+			arguments (Output)
+				vbl
+				when
+				flipTime
+				missed
+			end
 			if ~me.isOpen; return; end
 			[vbl, when, flipTime, missed] = Screen('Flip',me.win,varargin{:});
 			if me.movieSettings.record; addMovieFrame(me); end
@@ -868,12 +889,22 @@ classdef screenManager < optickaCore
 		%> @param when - when to flip
 		%> @return vbl - a vbl from this flip
 		% ===================================================================
+			arguments (Input)
+				me
+				when {mustBeNumeric, mustBeReal} = []
+			end
+			arguments (Input, Repeating)
+				varargin
+			end
+			arguments (Output)
+				vbl
+			end
 			if ~me.isOpen; return; end
 			if me.isInAsync
 				vbl = Screen('AsyncFlipCheckEnd', me.win);
 				if vbl == 0; return; end
 			end
-			if exist('when','var')
+			if ~isempty(when)
 				vbl = Screen('AsyncFlipBegin',me.win, when, varargin{:});
 			else
 				vbl = Screen('AsyncFlipBegin',me.win);
@@ -1263,14 +1294,19 @@ classdef screenManager < optickaCore
 		%> @param alpha2 alpha for the disc
 		%> @return
 		% ===================================================================
-			% drawCross(me, size, colour, x, y, lineWidth, showDisk, alpha, alpha2)
-			if nargin < 9 || isempty(alpha2); alpha2 = 1; end
-			if nargin < 8 || isempty(alpha); alpha = 1; end
-			if nargin < 7 || isempty(showDisk); showDisk = true; end
-			if nargin < 6 || isempty(lineWidth); lineWidth = 0.05; end
-			if nargin < 5 || isempty(y); y = 0; end
-			if nargin < 4 || isempty(x); x = 0; end
-			if nargin < 3 || isempty(colour)
+			arguments
+				me
+				size (1,1) double = 0.6
+				colour double = []
+				x (1,1) double = 0
+				y (1,1) double = 0
+				lineWidth (1,1) double = 0.05
+				showDisk (1,1) logical = true
+				alpha (1,1) double = 1
+				alpha2 (1,1) double = 1
+			end
+
+			if isempty(colour)
 				if mean(me.backgroundColour(1:3)) <= 0.333
 					colour = [1 1 1 alpha];
 				else
@@ -1283,7 +1319,7 @@ classdef screenManager < optickaCore
 			else
 				lineColour = [0 0 0 alpha2];
 			end
-			if nargin < 2 || isempty(size); size = 0.6; end
+
 			x = me.xCenter + (x * me.ppd_);
 			y = me.yCenter + (y * me.ppd_);
 			size = size * me.ppd_;
@@ -1310,17 +1346,22 @@ classdef screenManager < optickaCore
 		%> @param y position in degrees relative to screen center
 		%> @param lineWidth of lines
 		% ===================================================================
-			if nargin < 6 || isempty(lineWidth); lineWidth = 2; end
-			if nargin < 5 || isempty(y); y = 0; end
-			if nargin < 4 || isempty(x); x = 0; end
-			if nargin < 3 || isempty(colour)
+			arguments
+				me
+				size (1,1) double = 0.5
+				colour double = []
+				x (1,1) double = 0
+				y (1,1) double = 0
+				lineWidth (1,1) double = 2
+			end
+
+			if isempty(colour)
 				if mean(me.backgroundColour(1:3)) <= 0.5
 					colour = [1 1 1 1];
 				else
 					colour = [0 0 0 1];
 				end
 			end
-			if nargin < 2 || isempty(size); size = 0.5; end
 
 			x = me.xCenter + (x * me.ppd_);
 			y = me.yCenter + (y * me.ppd_);
@@ -1340,10 +1381,13 @@ classdef screenManager < optickaCore
 		%> @param y position in degrees relative to screen center
 		%> @param is it a stop marker?
 		% ===================================================================
-			if nargin < 5 || isempty(stop); stop = false; end
-			if nargin < 4 || isempty(y); y = 0; end
-			if nargin < 3 || isempty(x); x = 0; end
-			if nargin < 2 || isempty(sz); sz = 5; end
+			arguments
+				me
+				sz (1,1) double = 5
+				x (1,1) double = 0
+				y (1,1) double = 0
+				stop (1,1) logical = false
+			end
 
 			xo = x;
 			yo = y;
@@ -1388,10 +1432,13 @@ classdef screenManager < optickaCore
 		%> @param y position in degrees relative to screen center
 		%> @return
 		% ===================================================================
-			if nargin < 5 || isempty(y); y = 0; end
-			if nargin < 4 || isempty(x); x = 0; end
-			if nargin < 3 || isempty(colour); colour = [1 1 1 1]; end
-			if nargin < 2 || isempty(size); size = 1; end
+			arguments
+				me
+				size (1,1) double = 1
+				colour double = [1 1 1 1]
+				x (1,1) double = 0
+				y (1,1) double = 0
+			end
 
 			x = me.xCenter + (x * me.ppd_);
 			y = me.yCenter + (y * me.ppd_);
@@ -1408,10 +1455,13 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		function drawTimedSpot(me,size,colour,time,reset)
 			% drawTimedSpot(me,size,colour,time,reset)
-			if nargin < 5; reset = false; end
-			if nargin < 4; time = 0.2; end
-			if nargin < 3; colour = [1 1 1 1]; end
-			if nargin < 2; size = 1; end
+			arguments
+				me
+				size (1,1) double {mustBePositive} = 1
+				colour double = [1 1 1 1]
+				time (1,:) double {mustBePositive} = 0.2
+				reset (1,1) logical = false
+			end
 			if reset == true
 				if length(time) == 2
 					me.timedSpotTime = randi(time*1000)/1000;
@@ -1437,8 +1487,9 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		function drawGreenSpot(me,size)
 			% drawGreenSpot(me,size)
-			if ~exist('size','var')
-				size = 1;
+			arguments
+				me
+				size (1,1) double {mustBePositive} = 1
 			end
 			size = size/2 * me.ppd_;
 			Screen('gluDisk',me.win,[0 1 0 1],me.xCenter,me.yCenter,size);
@@ -1452,8 +1503,9 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		function drawRedSpot(me,size)
 			% drawRedSpot(me,size)
-			if ~exist('size','var')
-				size = 1;
+			arguments
+				me
+				size (1,1) double {mustBePositive} = 1
 			end
 			size = size/2 * me.ppd_;
 			Screen('gluDisk',me.win,[1 0 0 1],me.xCenter,me.yCenter,size);
@@ -1466,10 +1518,18 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		function drawTextNow(me, text, x, y, wrapat)
 			% drawTextNow(me,text,x,y,wrapat)
-			if ~exist('text','var') || isempty(text); return; end
-			if ~exist('x','var') || isempty(x); x = (-me.xCenter / me.ppd_) + 0.25;end
-			if ~exist('y','var') || isempty(y); y = (-me.yCenter / me.ppd_) + 0.25;end
-			if ~exist('wrapat','var') || isempty(wrapat)
+			arguments
+				me
+				text {mustBeTextScalar} = ""
+				x (1,1) double = NaN
+				y (1,1) double = NaN
+				wrapat = []
+			end
+			if strlength(string(text)) == 0; return; end
+			if isnan(x); x = (-me.xCenter / me.ppd_) + 0.25; end
+			if isnan(y); y = (-me.yCenter / me.ppd_) + 0.25; end
+			text = char(string(text));
+			if isempty(wrapat)
 				me.drawText(text, x, y);
 			else
 				me.drawTextWrapped(text, wrapat, x, y);
@@ -1484,9 +1544,16 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		function drawText(me, text, x, y)
 			% drawText(me,text,x,y)
-			if ~exist('text','var') || isempty(text); return; end
-			if ~exist('x','var') || isempty(x); x = (-me.xCenter / me.ppd_) + 0.25;end
-			if ~exist('y','var') || isempty(x); y = (-me.yCenter / me.ppd_) + 0.25;end
+			arguments
+				me
+				text {mustBeTextScalar} = ""
+				x (1,1) double = NaN
+				y (1,1) double = NaN
+			end
+			if strlength(string(text)) == 0; return; end
+			if isnan(x); x = (-me.xCenter / me.ppd_) + 0.25; end
+			if isnan(y); y = (-me.yCenter / me.ppd_) + 0.25; end
+			text = char(string(text));
 			Screen('DrawText', me.win, text, (x * me.ppd_) + me.xCenter, (y * me.ppd_) + me.yCenter);
 		end
 
@@ -1498,10 +1565,18 @@ classdef screenManager < optickaCore
 		%> @param text text to draw
 		%> @param wrapat character to wrap at
 		% ===================================================================
-			if ~exist('text','var') || isempty(text); return; end
-			if exist('wrapat','var') && ~isempty(wrapat); text = WrapString(text,wrapat); end
-			if ~exist('x','var');x = (-me.xCenter / me.ppd_) + 0.25;end
-			if ~exist('y','var');y = (-me.yCenter / me.ppd_) + 0.25;end
+			arguments
+				me
+				text {mustBeTextScalar} = ""
+				wrapat = []
+				x (1,1) double = NaN
+				y (1,1) double = NaN
+			end
+			if strlength(string(text)) == 0; return; end
+			text = char(string(text));
+			if ~isempty(wrapat); text = WrapString(text,wrapat); end
+			if isnan(x); x = (-me.xCenter / me.ppd_) + 0.25; end
+			if isnan(y); y = (-me.yCenter / me.ppd_) + 0.25; end
 			c = strsplit(text,'\n');
 			x = (x * me.ppd_) + me.xCenter;
 			yy = (y * me.ppd_) + me.yCenter;
@@ -1522,9 +1597,12 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		function drawLines(me,xy,width,colour)
 			% drawLines(me, xy, width, colour)
-			if ~exist('xy','var');return;end
-			if ~exist('width','var') || isempty(width); width = 0.1; end
-			if ~exist('colour','var') || isempty(colour); colour = [1 1 0]; end
+			arguments
+				me
+				xy double
+				width (1,1) double {mustBePositive} = 0.1
+				colour double = [1 1 0]
+			end
 			xy(1,:) = me.xCenter + (xy(1,:) * me.ppd_);
 			xy(2,:) = me.yCenter + (xy(2,:) * me.ppd_);
 			width	= width * me.ppd_;
@@ -1541,9 +1619,12 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		function drawBox(me,xy,boxsize,colour)
 			% drawBox(me, xy, size, colour)
-			if ~exist('xy','var');return;end
-			if ~exist('boxsize','var') || isempty(boxsize); boxsize = 2; end
-			if ~exist('colour','var') || isempty(colour); colour = [1 1 0]'; end
+			arguments
+				me
+				xy double
+				boxsize double {mustBePositive} = 2
+				colour double = [1 1 0]'
+			end
 			boxsize = boxsize .* me.ppd_;
 			if size(xy,1)==1 && size(xy,2)==2;xy = xy'; end
 			xy(1,:) = xy(1,:) * me.ppd_ + me.xCenter;
@@ -1572,9 +1653,12 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		function drawBoxPx(me,xy,boxsize,colour)
 			% drawBox(me, xy, size, colour)
-			if ~exist('xy','var');return;end
-			if ~exist('boxsize','var') || isempty(boxsize); boxsize = 50; end
-			if ~exist('colour','var') || isempty(colour); colour = [1 1 0.75]'; end
+			arguments
+				me
+				xy double
+				boxsize double {mustBePositive} = 50
+				colour double = [1 1 0.75]'
+			end
 			if length(boxsize) == 1
 				xbs = boxsize;
 				ybs = boxsize;
@@ -1597,8 +1681,11 @@ classdef screenManager < optickaCore
 		%> @return
 		% ===================================================================
 		function drawRect(me,rect,colour)
-			if ~exist('rect','var');return;end
-			if ~exist('colour','var') || isempty(colour); colour = [1 1 0]'; end
+			arguments
+				me
+				rect (1,4) double {mustBeReal}
+				colour double = [1 1 0]'
+			end
 			x = me.xCenter + ([rect(1) rect(3)] * me.ppd_);
 			y = me.yCenter + ([rect(2) rect(4)] * me.ppd_);
 			Screen('FillRect', me.win, colour, [x(1) y(1) x(2) y(2)]);
@@ -1611,10 +1698,13 @@ classdef screenManager < optickaCore
 		%> @return
 		% ===================================================================
 		function drawDots(me,xy,size,colour,center)
-			if ~exist('xy','var');return;end
-			if ~exist('size','var') || isempty(size); size = 0.5; end
-			if ~exist('colour','var') || isempty(colour); colour = [1 1 0 0.5]; end
-			if ~exist('center','var') || isempty(center); center = [0 0]; end
+			arguments
+				me
+				xy double
+				size (1,1) double {mustBePositive} = 0.5
+				colour double = [1 1 0 0.5]
+				center (1,2) double = [0 0]
+			end
 			size = size * me.ppd_;
 			xy(1,:) = me.xCenter + (xy(1,:) * me.ppd_);
 			xy(2,:) = me.yCenter + (xy(2,:) * me.ppd_);
@@ -1628,9 +1718,12 @@ classdef screenManager < optickaCore
 		%> @return
 		% ===================================================================
 		function drawDotsDegs(me,xy,size,colour)
-			if ~exist('xy','var');return;end
-			if ~exist('size','var') || isempty(size); size = 0.5; end
-			if ~exist('colour','var') || isempty(colour); colour = [1 1 0 0.5]; end
+			arguments
+				me
+				xy double
+				size (1,1) double {mustBePositive} = 0.5
+				colour double = [1 1 0 0.5]
+			end
 			size = size * me.ppd_;
 			xy(1,:) = me.xCenter + (xy(1,:) * me.ppd_);
 			xy(2,:) = me.yCenter + (xy(2,:) * me.ppd_);
@@ -1681,8 +1774,11 @@ classdef screenManager < optickaCore
 		%> @return
 		% ===================================================================
 		function drawMousePosition(me,force)
+			arguments
+				me
+				force (1,1) logical = false
+			end
 			global mouseGlobalX mouseGlobalY %#ok<*GVMIS>
-			if ~exist('force','var'); force = false; end
 			if force == true
 				[x,y] = mousePosition(me,false);
 				val = [x y];
@@ -1703,7 +1799,11 @@ classdef screenManager < optickaCore
 		%> @param background an optional colour
 		% ===================================================================
 			% drawBackground(me,background)
-			if ~exist('background','var'); background=me.backgroundColour; end
+			arguments
+				me
+				background double = []
+			end
+			if isempty(background); background = me.backgroundColour; end
 			Screen('FillRect',me.win,background,[]);
 		end
 
@@ -1714,9 +1814,14 @@ classdef screenManager < optickaCore
 		%>
 		%> @param filename optional filename
 		% ===================================================================
-			if ~exist('filename','var')
+			arguments
+				me
+				filename {mustBeTextScalar} = ""
+			end
+			if strlength(string(filename)) == 0
 				filename=[me.paths.parent filesep 'Shot' datestr(now,'YYYY-mm-DD-HH-MM-SS') '.png'];
 			end
+			filename = char(string(filename));
 			myImg = Screen('GetImage',me.win);
 			imwrite(myImg, filename);
 			fprintf('---> screenManager captureScreen saved to: %s\n', filename);
@@ -1728,7 +1833,11 @@ classdef screenManager < optickaCore
 		%> @param
 		% ===================================================================
 		function [xPos, yPos] = mousePosition(me, verbose)
-			if ~exist('verbose','var') || isempty(verbose); verbose = me.verbose; end
+			arguments
+				me
+				verbose = []
+			end
+			if isempty(verbose); verbose = me.verbose; end
 			global mouseGlobalX mouseGlobalY
 			if me.isOpen
 				[mouseGlobalX,mouseGlobalY] = GetMouse(me.win);
@@ -1908,27 +2017,33 @@ classdef screenManager < optickaCore
 		%>
 		%> expects col1 = x, col2 = y for 'xy'
 		% ===================================================================
-			if ~exist('axis','var') || isempty(axis)
+			arguments
+				me
+				in double
+				axis {mustBeTextScalar} = ""
+			end
+			axis = string(axis);
+			if strlength(axis) == 0
 				if size(in, 2) == 2
-					axis = 'xy';
+					axis = "xy";
 				elseif size(in, 2) == 4
-					axis = 'rect';
+					axis = "rect";
 				else
-					axis = 'x';
+					axis = "x";
 				end
 			end
 			switch axis
-				case 'xy'
+				case "xy"
 					out(:,1) = (in(:,1) - me.xCenter) / me.ppd_;
 					out(:,2) = (in(:,2) - me.yCenter) / me.ppd_;
-				case 'rect'
+				case "rect"
 					out(:,1) = (in(:,1) - me.xCenter) / me.ppd_;
 					out(:,2) = (in(:,2) - me.yCenter) / me.ppd_;
 					out(:,3) = (in(:,3) - me.xCenter) / me.ppd_;
 					out(:,4) = (in(:,4) - me.yCenter) / me.ppd_;
-				case 'x'
+				case "x"
 					out = (in - me.xCenter) / me.ppd_;
-				case 'y'
+				case "y"
 					out = (in - me.yCenter) / me.ppd_;
 				otherwise
 					if length(in)==4
@@ -1948,27 +2063,33 @@ classdef screenManager < optickaCore
 		%>
 		% ===================================================================
 		function out = toPixels(me, in, axis)
-			if ~exist('axis','var') || isempty(axis)
+			arguments
+				me
+				in double
+				axis {mustBeTextScalar} = ""
+			end
+			axis = string(axis);
+			if strlength(axis) == 0
 				if size(in, 2) == 2
-					axis='xy';
+					axis = "xy";
 				elseif size(in, 2) == 4
-					axis='rect';
+					axis = "rect";
 				else
-					axis = 'x';
+					axis = "x";
 				end
 			end
 			switch axis
-				case 'xy'
+				case "xy"
 					out(:,1) = (in(:,1) * me.ppd_) + me.xCenter;
 					out(:,2) = (in(:,2) * me.ppd_) + me.yCenter;
-				case 'rect'
+				case "rect"
 					out(:,1) = (in(:,1) * me.ppd_) + me.xCenter;
 					out(:,2) = (in(:,2) * me.ppd_) + me.yCenter;
 					out(:,3) = (in(:,3) * me.ppd_) + me.xCenter;
 					out(:,4) = (in(:,4) * me.ppd_) + me.yCenter;
-				case 'x'
+				case "x"
 					out = (in * me.ppd_) + me.xCenter;
-				case 'y'
+				case "y"
 					out = (in * me.ppd_) + me.yCenter;
 				otherwise
 					if length(in)==4
@@ -2130,11 +2251,14 @@ classdef screenManager < optickaCore
 		%>   [, newwidth][, newheight][, newHz][, newX][, newY]);
 		% ===================================================================
 		function setRefresh(value)
+			arguments
+				value (1,1) double {mustBePositive} = NaN
+			end
 			if IsLinux
 				inf=Screen('ConfigureDisplay','Scanout',1,0);
 				disp('Previous Settings:');
 				disp(inf);
-				if ~exist('value','var'); return; end
+				if isnan(value); return; end
 				try Screen('ConfigureDisplay','Scanout',1,0,[],[],value); end
 				inf=Screen('ConfigureDisplay','Scanout',1,0);
 				disp('New Settings:');
@@ -2148,17 +2272,22 @@ classdef screenManager < optickaCore
 		%>   [, newwidth][, newheight][, newHz][, newX][, newY]);
 		% ===================================================================
 		function setResolution(w,h,f)
+			arguments
+				w (1,1) double {mustBePositive} = NaN
+				h (1,1) double {mustBePositive} = NaN
+				f (1,1) double {mustBePositive} = NaN
+			end
 			if IsLinux
 				inf=Screen('ConfigureDisplay','Scanout',1,0);
 				disp('Previous Settings:');
 				disp(inf);
 
-				if exist('w','var') && exist('h','var')
+				if ~isnan(w) && ~isnan(h)
 					try
-						if exist('f','var')
+						if ~isnan(f)
 							Screen('ConfigureDisplay','Scanout',1,0,w,h,f);
 						else
-							Screen('ConfigureDisplay','Scanout',1,0,w,f);
+							Screen('ConfigureDisplay','Scanout',1,0,w,h);
 						end
 
 						inf=Screen('ConfigureDisplay','Scanout',1,0);
@@ -2174,8 +2303,11 @@ classdef screenManager < optickaCore
 		%>
 		% ===================================================================
 		function validateDisplayPlusPlus(screen, vulkan)
-			if ~exist('screen','var'); screen = max(Screen('Screens')); end
-			if ~exist('vulkan','var'); vulkan = 0; end
+			arguments
+				screen (1,1) double {mustBeInteger, mustBeNonnegative} = NaN
+				vulkan (1,1) double {mustBeNonnegative} = 0
+			end
+			if isnan(screen); screen = max(Screen('Screens')); end
 			screenManager.bitsCheckOpen([], false);
 			BitsPlusImagingPipelineTest(screen);
 			BitsPlusIdentityClutTest(screen, [], [], [], vulkan);
@@ -2219,12 +2351,16 @@ classdef screenManager < optickaCore
 		%> @return connected - is the Display++ connected?
 		% ===================================================================
 		function connected = bitsCheckOpen(port,keepOpen)
-			connected = false;
-			if ~exist('keepOpen','var') || isempty(keepOpen)
-				keepOpen = true;
+			arguments
+				port = []
+				keepOpen (1,1) logical = true
 			end
+			arguments (Output)
+				connected logical
+			end
+			connected = false;
 			try
-				if ~exist('port','var') || isempty(port)
+				if isempty(port)
 					ret = BitsPlusPlus('OpenBits#');
 				else
 					ret = BitsPlusPlus('OpenBits#',port);

@@ -896,7 +896,7 @@ classdef eyelinkManager < eyetrackerCore
 				close(me);
 				clear s o
 				if ~me.isDummy
-					an = questdlg('Do you want to load the data and plot it?');
+					an = questdlg('Do you want to load the data and plot it?','Eyelink Manager','Yes');
 					if strcmpi(an,'yes')
 						if ~isdeployed; commandwindow; end
 						evalin('base',['eA=eyelinkAnalysis(''dir'',''' ...

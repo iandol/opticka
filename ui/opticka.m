@@ -1103,7 +1103,7 @@ classdef opticka < optickaCore
 			file = me.gs(me.ui.OKProtocolsList,v);
 			me.paths.currentPath = pwd;
 			cd(me.store.protocolsPath);
-			out=questdlg(['Are you sure you want to delete ' file '?'],'Protocol Delete');
+			out=questdlg(['Are you sure you want to delete ' file '?'],'Protocol Delete','No');
 			if strcmpi(out,'yes')
 				delete(file);
 			end
@@ -1131,7 +1131,7 @@ classdef opticka < optickaCore
 				me.store.protocolName = f;
 				me.r.paths.protocolName = me.store.protocolName;
 				if contains(p,[filesep 'opticka' filesep])
-					resp=questdlg('Are you sure you want write to the Opticka folder!? You should save protocols outside the program folder as they will be overwritten on an update...','Opticka','Yes','No','No');
+					resp=questdlg('Are you sure you want write to the Opticka folder!? You should save protocols outside the program folder as they will be overwritten on an update...','Opticka Save Protocol','No');
 					if matches(resp,'No')
 						disp('Didn''t save protocol...'); return
 					end
