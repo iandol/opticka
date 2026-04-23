@@ -103,6 +103,47 @@ Each object can be run independently or managed via `runExperiment` to coordinat
 - Alyx integration uses `communication/alyxManager` (REST API + secrets via
   `getSecret/setSecret`).
 
+## Alyx database integration
+
+Opticka integrates with the Alyx data management system (IBL pipeline) for
+recording and uploading experimental sessions. Session metadata is stored in
+Alyx via REST API, while actual data files are uploaded to an S3-compatible
+object store that Alyx links to the session records.
+
+### Core classes
+- `alyxManager` — handles Alyx REST API authentication, session registration,
+  and metadata CRUD. Secrets stored via `getSecret`/`setSecret` (e.g.
+  `alyxManager.setSecret('username','password')`).
+- `awsManager` — handles S3-compatible file uploads (multipart + streaming).
+  Used by `runExperiment` to upload recorded data files after a session.
+
+### Typical workflow (runExperiment.runTask)
+1. **Session creation** — `alyxManager.createSession(subject,date,project)` 
+   registers the session in Alyx and returns a session UUID.
+2. **Recording** — behavioural data saved locally to ALF-style session folders
+   (`optickaCore.getALF`).
+3. **File upload** — after recording, `awsManager.uploadSession(sessionPath,
+   alyxSessionURL)` pushes files to S3 and associates them with the Alyx
+   session record.
+4. **Metadata update** — `alyxManager.updateSession(sessionUUID, key, value)`
+   can tag sessions (e.g. `{'qc':'pass'}`) or attach probe/chan map info.
+
+### Online documentation
+- Alyx REST API reference: https://openalyx.internationalbrainlab.org/docs
+- ALF file format: https://int-brain-lab.github.io/ONE/alf_intro.html
+- Alyx API docs: https://alyx.readthedocs.io/en/latest/api.html
+
+### Key alyxManager properties for session management
+- `baseURL` — Alyx server endpoint (e.g. `https://alyx.example.org`)
+- `username` / `token` — authentication credentials (use `setSecret`)
+- `subjects` — cached list of registered subjects
+- `projects` — cached list of registered projects
+
+### Key awsManager properties for uploads
+- `endpoint` — S3-compatible endpoint URL
+- `bucket` — target bucket name
+- `accessKey` / `secretKey` — credentials (use `setSecret`)
+
 ## When making changes
 - Keep behavioural timing-sensitive code minimal and avoid adding per-frame
   allocations/logging in the display loop.

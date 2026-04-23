@@ -604,19 +604,22 @@ classdef alyxManager < optickaCore
 		end
 
 		% ===================================================================
-		function [url, newSession] = newExp(me, path, sessionID, session, jsonData)
+		function [url, newSession] = newExp(me, path, sessionID, session, jsonData, startTime)
 		% ===================================================================
 			%NEWEXP Create a new unique experimental session in the database
-			%   [ref, seq] = NEWEXP(path, sessionID, session, jsonData)
+			%   [ref, seq] = NEWEXP(path, sessionID, session, jsonData, startTime)
 			%   Create a new experiment:
 			%
 			%   subject/
 			%          |_ YYYY-MM-DD/
 			%                       |_ sessionID/
 			%
+			%   startTime (optional) — datetime or ISO-8601 char 'yyyy-MM-ddTHH:mm:ss'
+			%   override for start_time; defaults to now. Use this when registering
+			%   historical sessions so the Alyx record carries the original date.
 			
 			if nargin < 3; error('Need to pass an ALF PATH, sessionID and session info'); end 
-			if ~exist('jsonData','var'); jsonData = '[]'; end
+			if ~exist('jsonData','var') || isempty(jsonData); jsonData = '[]'; end
 
 			% Ensure user is logged in
 			if ~me.loggedIn; me.login; end
@@ -627,12 +630,22 @@ classdef alyxManager < optickaCore
 			assert(me.hasEntry('users',session.researcherName), 'Alyx:newExp:userNotFound', sprintf('user "%s" does not exist', session.researcherName));
 			%assert(me.hasEntry('projects',session.project), 'Alyx:newExp:projectNotFound', sprintf('project "%s" does not exist', session.project));
 			%assert(me.hasEntry('procedures',session.procedure), 'Alyx:newExp:procedureNotFound', sprintf('procedure "%s" does not exist', session.procedure));
-			%assert(me.hasEntry('locations',session.location), 'Alyx:newExp:locationNotFound', sprintf('location "%s" does not exist', session.location));
+			assert(me.hasEntry('locations',session.location), 'Alyx:newExp:locationNotFound', sprintf('location "%s" does not exist', session.location));
 			
 			me.sessionURL = '';
 			me.sessionParentURL = '';
 
-			expDate = char(datetime("now",'Format','yyyy-MM-dd''T''HH:mm:ss'));
+			%> Use caller-supplied startTime when registering historical sessions,
+			%> otherwise default to now.
+			if exist('startTime','var') && ~isempty(startTime)
+				if isa(startTime,'datetime')
+					expDate = char(startTime,'yyyy-MM-dd''T''HH:mm:ss');
+				else
+					expDate = char(startTime); % assume already formatted
+				end
+			else
+				expDate = char(datetime("now",'Format','yyyy-MM-dd''T''HH:mm:ss'));
+			end
 			dayDate = expDate(1:10);
 
 			% make sure the session is new

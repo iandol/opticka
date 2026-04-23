@@ -68,6 +68,22 @@ classdef awsManager < handle
 		end
 
 		% ===================================================================
+		function success = get(me, bucket, key)
+			if ~exist('bucket','var') || isempty(bucket); return; end
+			if ~exist('key','var') || isempty(key); return; end
+
+			cmdin = strjoin(["aws --endpoint-url " me.ENDPOINT " s3 cp s3://" bucket "/" key " ./"],"");
+			[r, out] = system(cmdin);
+			success = ~logical(r);
+			if ~success
+				warning("!!! Problem making bucket: %s - %s", cmdin, out);
+			else
+				fprintf('--->>> awsManager: Get File: %s\n',cmdin)
+				disp(out)
+			end
+		end
+
+		% ===================================================================
 		function success = copyFiles(me, file, bucket, key)
 			if ~exist('file','var') || isempty(file); return; end
 			if ~exist('bucket','var') || isempty(bucket); return; end
