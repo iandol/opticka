@@ -331,16 +331,29 @@ classdef alyxManager < optickaCore
 		% ===================================================================
 		function [data, statusCode] = postData(me, endpoint, data, requestMethod)
 		% ===================================================================
-			%POSTDATA Post any new data to an Alyx/REST endpoint
-			%   Description: Makes a request to an Alyx endpoint with new data as a
-			%   MATLAB struct; returns the JSON response data as a MATLAB struct.
-			%   This function will create a new record by default, if requestMethod is
-			%   undefined. Other methods include 'PUT', 'PATCH and 'DELETE'.
-			%   Example:
-			%     subjects = me.postData('subjects', myStructData, 'post')
-			%
-			% See also ALYX, JSONPOST, FLUSHQUEUE, REGISTERFILE, GETDATA
-			if nargin == 3; requestMethod = 'post'; end % Default request method
+			%> @brief Post any new data to an Alyx/REST endpoint
+			%>
+			%> Makes a request to an Alyx endpoint with new data as a MATLAB
+			%> struct; returns the JSON response data as a MATLAB struct. This
+			%> function will create a new record by default, if requestMethod
+			%> is undefined. Other methods include 'PUT', 'PATCH' and 'DELETE'.
+			%>
+			%> @param endpoint char for REST endpoint
+			%> @param data struct to encode as JSON and send
+			%> @param requestMethod char default 'post', can be 'put','patch','delete'
+			%> @return data the JSON response as MATLAB struct
+			%> @return statusCode integer HTTP status code
+			%>
+			%> Example:
+			%>   subjects = me.postData('subjects', myStructData, 'post')
+			%>
+			%> @see ALYX, JSONPOST, FLUSHQUEUE, REGISTERFILE, GETDATA
+			arguments
+				me alyxManager
+				endpoint char
+				data struct
+				requestMethod char = 'post'
+			end
 			assert(any(strcmpi(requestMethod, {'post', 'put', 'patch', 'delete'})),...
 			'%s not a valid HTTP request method', requestMethod)
 			
@@ -377,33 +390,45 @@ classdef alyxManager < optickaCore
 		end
 
 		% ===================================================================
-		function [sessions, eids] = getSessions(me, varargin)
+		function [sessions, eids] = getSessions(me, ref, varargin)
 		% ===================================================================
-			% GETSESSIONS Return sessions and eids for a given search query
-			%   Returns Alyx records for specific refs (eid and/or expRef strings)
-			%   and/or those matching search queries.  Values may be char arrays,
-			%   strings, or cell strings.  If searching dates, values may also be a
-			%   datenum or array thereof.
-			%
-			%   Examples:
-			%     sessions = ai.getSessions('cf264653-2deb-44cb-aa84-89b82507028a')
-			%     sessions = ai.getSessions('2018-07-13_1_flowers')
-			%     sessions = ai.getSessions('cf264653-2deb-44cb-aa84-89b82507028a', ...
-			%                 'subject', {'flowers', 'ZM_307'})
-			%     sessions = ai.getSessions('lab', 'cortexlab', ...
-			%                 'date_range', datenum([2018 8 28 ; 2018 8 31]))
-			%     sessions = ai.getSessions('date', now)
-			%     sessions = ai.getSessions('data', {'clusters.probes', 'eye.blink'})
-			%     [~, eids] = ai.getSessions(expRefs)
-			%
-			% See also ALYX.UPDATESESSIONS, ALYX.GETDATA
-			
-			p = inputParser;
-			if mod(length(varargin),2) % Uneven num args when ref is first input
-				validationFcn = @(x)(iscellstr(x) || isstring(x) || ischar(x));
-				addOptional(p, 'ref', [], validationFcn);
+			%> @brief Return sessions and eids for a given search query
+			%>
+			%> Returns Alyx records for specific refs (eid and/or expRef strings)
+			%> and/or those matching search queries. Values may be char arrays,
+			%> strings, or cell strings. If searching dates, values may also be a
+			%> datenum or array thereof.
+			%>
+			%> @param ref char[] or cellstr of experiment reference strings
+			%> @param varargin can include 'subject', 'users', 'lab',
+			%>   'date_range', 'dataset_types', 'number' as name-value pairs
+			%> @return sessions cell array of session records
+			%> @return eids cell array of session UUIDs
+			%>
+			%> Examples:
+			%>   sessions = ai.getSessions('cf264653-2deb-44cb-aa84-89b82507028a')
+			%>   sessions = ai.getSessions('2018-07-13_1_flowers')
+			%>   sessions = ai.getSessions('cf264653-2deb-44cb-aa84-89b82507028a', ...
+			%>               'subject', {'flowers', 'ZM_307'})
+			%>   sessions = ai.getSessions('lab', 'cortexlab', ...
+			%>               'date_range', datenum([2018 8 28 ; 2018 8 31]))
+			%>   sessions = ai.getSessions('date', now)
+			%>   sessions = ai.getSessions('data', {'clusters.probes', 'eye.blink'})
+			%>   [~, eids] = ai.getSessions(expRefs)
+			%>
+			%> @see ALYX.UPDATESESSIONS, ALYX.GETDATA
+			arguments
+				me alyxManager
+				ref cell = {}
+				varargin
 			end
-			% Parse Name-Value paired args
+			% Parse Name-Value paired args - we use inputParser here because
+			% we need PartialMatchPriority which arguments blocks don't support
+			p = inputParser;
+			if ~isempty(ref)
+				validationFcn = @(x)(iscellstr(x) || isstring(x) || ischar(x));
+				addOptional(p, 'ref', ref, validationFcn);
+			end
 			addParameter(p, 'subject', '');
 			addParameter(p, 'users', '');
 			addParameter(p, 'lab', '');
@@ -464,16 +489,26 @@ classdef alyxManager < optickaCore
 		% ===================================================================
 		function subjects = listSubjects(me, stock, alive, sortByUser)
 		% ===================================================================
-			%ALYX.LISTSUBJECTS Lists recorded subjects
-			%   subjects = ALYX.LISTSUBJECTS([stock, alive, sortByUser]) Lists the
-			%   experimental subjects present in main repository.  If logged in,
-			%   returns a subject list generated from Alyx, with the option of
-			%   filtering by stock (default false) and alive (default true).  The
-			%   sortByUser flag, when (default) true, returns the list with the user's
-			%   animals at the top. 
-			if nargin < 4; sortByUser = true; end
-			if nargin < 3; alive = true; end
-			if nargin < 2; stock = false; end
+			%> @brief Lists recorded subjects
+			%>
+			%> Lists the experimental subjects present in main repository. If
+			%> logged in, returns a subject list generated from Alyx, with the
+			%> option of filtering by stock (default false) and alive (default
+			%> true). The sortByUser flag, when (default) true, returns the list
+			%> with the user's animals at the top.
+			%>
+			%> @param stock logical filter by stock (default false)
+			%> @param alive logical filter by alive status (default true)
+			%> @param sortByUser logical sort user's animals first (default true)
+			%> @return subjects cell array of subject names
+			%>
+			%> @see ALYX
+			arguments
+				me alyxManager
+				stock logical = false
+				alive logical = true
+				sortByUser logical = true
+			end
 			
 			if me.loggedIn % user provided an alyx instance
 				% convert bool to string for endpoint
@@ -514,39 +549,34 @@ classdef alyxManager < optickaCore
 		% ===================================================================
 		function narrative = updateNarrative(me, comments, endpoint, subject)
 		% ===================================================================
-			%UPDATENARRATIVE Update an Alyx session or subject narrative
-			%   Update an Alyx narrative field with comments.  If an endpoint is
-			%   specified, the narrative for that record is updated, otherwise the last
-			%   subsession URL is used.  If the SessionURL property is empty and no
-			%   endpoint is specified, the narrative field of the subject's Alyx record
-			%   is updated.
-			%
-			%   NARRATIVE = UPDATENARRATIVE(OBJ)
-			%   If SessionURL is set, display comments dialog (unless Headless flag
-			%   set) and post input to that subsession narrative, otherwise it returns
-			%   an error.
-			%
-			%   NARRATIVE = UPDATENARRATIVE(OBJ, COMMENTS)
-			%   If SessionURL is set, posts COMMENTS to that subsession narrative,
-			%   otherwise it returns an error. If COMMENTS is empty and not a charector
-			%   array, prompts user for input (unless Headless flag set).
-			%
-			%   NARRATIVE = UPDATENARRATIVE(OBJ, COMMENTS, ENDPOINT)
-			%   Posts COMMENTS to ENDPOINT.  If COMMENTS is empty and not a charector
-			%   array, prompts user for input (unless Headless flag set).
-			%
-			%   NARRATIVE = UPDATENARRATIVE(OBJ, COMMENTS, ENDPOINT, SUBJECT)
-			%   Posts COMMENTS to ENDPOINT narrative.  If ENDPOINT is empty, posts
-			%   COMMENTS to SUBJECT description.
-			%   
-			%   See also ALYX, DAT.UPDATELOGENTRY, EUI.EXPPANEL/SAVELOGENTRY, PUTDATA
-	
-			% Validate inputs
-			if nargin < 2; comments = []; end
-			if nargin < 4; subject = []; end
-			
+			%> @brief Update an Alyx session or subject narrative
+			%>
+			%> Update an Alyx narrative field with comments. If an endpoint is
+			%> specified, the narrative for that record is updated, otherwise
+			%> the last subsession URL is used. If the SessionURL property is
+			%> empty and no endpoint is specified, the narrative field of the
+			%> subject's Alyx record is updated.
+			%>
+			%> @param comments char[] comments to add to narrative
+			%> @param endpoint char[] endpoint URL (optional, uses sessionURL)
+			%> @param subject char[] subject name (optional)
+			%> @return narrative the updated narrative string
+			%>
+			%> Examples:
+			%>   NARRATIVE = UPDATENARRATIVE(OBJ)
+			%>   NARRATIVE = UPDATENARRATIVE(OBJ, COMMENTS)
+			%>   NARRATIVE = UPDATENARRATIVE(OBJ, COMMENTS, ENDPOINT)
+			%>   NARRATIVE = UPDATENARRATIVE(OBJ, COMMENTS, ENDPOINT, SUBJECT)
+			%>
+			%> @see ALYX, DAT.UPDATELOGENTRY, EUI.EXPPANEL/SAVELOGENTRY, PUTDATA
+			arguments
+				me alyxManager
+				comments char = ''
+				endpoint char = ''
+				subject char = ''
+			end
 			% If no specific endpoint is specified, use the last created subsession
-			if nargin < 3
+			if isempty(endpoint)
 				if ~isempty(me.sessionURL)
 					endpoint = me.sessionURL;
 				else % Nothing to go on, throw error
@@ -606,21 +636,31 @@ classdef alyxManager < optickaCore
 		% ===================================================================
 		function [url, newSession] = newExp(me, path, sessionID, session, jsonData, startTime)
 		% ===================================================================
-			%NEWEXP Create a new unique experimental session in the database
-			%   [ref, seq] = NEWEXP(path, sessionID, session, jsonData, startTime)
-			%   Create a new experiment:
-			%
-			%   subject/
-			%          |_ YYYY-MM-DD/
-			%                       |_ sessionID/
-			%
-			%   startTime (optional) — datetime or ISO-8601 char 'yyyy-MM-ddTHH:mm:ss'
-			%   override for start_time; defaults to now. Use this when registering
-			%   historical sessions so the Alyx record carries the original date.
-			
-			if nargin < 3; error('Need to pass an ALF PATH, sessionID and session info'); end 
-			if ~exist('jsonData','var') || isempty(jsonData); jsonData = '[]'; end
-
+			%> @brief Create a new unique experimental session in the database
+			%>
+			%> Creates a new experiment session in Alyx with the structure:
+			%> subject/ |_ YYYY-MM-DD/ |_ sessionID/
+			%>
+			%> @param path char ALF path for the session
+			%> @param sessionID integer experiment sequence number
+			%> @param session struct with labName, subjectName, researcherName, location
+			%> @param jsonData char JSON string (default '[]')
+			%> @param startTime datetime optional override for start_time
+			%> @return url char URL of created session
+			%> @return newSession struct created session record
+			%>
+			%> Example:
+			%>   [url, session] = newExp(me, '/path/to/alf', 1, sessionStruct)
+			%>
+			%> @see ALYX
+			arguments
+				me alyxManager
+				path char
+				sessionID numeric
+				session struct
+				jsonData char = '[]'
+				startTime datetime = datetime.empty
+			end
 			% Ensure user is logged in
 			if ~me.loggedIn; me.login; end
 			
@@ -637,7 +677,7 @@ classdef alyxManager < optickaCore
 
 			%> Use caller-supplied startTime when registering historical sessions,
 			%> otherwise default to now.
-			if exist('startTime','var') && ~isempty(startTime)
+			if ~isempty(startTime)
 				if isa(startTime,'datetime')
 					expDate = char(startTime,'yyyy-MM-dd''T''HH:mm:ss');
 				else
@@ -687,9 +727,23 @@ classdef alyxManager < optickaCore
 
 		% ===================================================================
 		function session = closeSession(me, narrative, QC)
-			if isempty(me.sessionURL); return; end
-			if ~exist('narrative','var'); narrative = []; end
-			if ~exist('QC','var') || isempty(QC); QC = 'NOT_SET'; end
+		% ===================================================================
+			%> @brief Close an Alyx session
+			%>
+			%> Closes the current session by setting end_time and optionally
+			%> updating the narrative and QC fields.
+			%>
+			%> @param narrative char[] narrative text to add (optional)
+			%> @param QC char quality control status (default 'NOT_SET')
+			%> @return session struct the updated session record
+			%>
+			%> @see ALYX, UPDATENARRATIVE
+			arguments
+				me alyxManager
+				narrative char = ''
+				QC char = 'NOT_SET'
+			end
+			if isempty(me.sessionURL); session = []; return; end
 			session = [];
 			[ses, s] = me.getData(me.sessionURL);
 
@@ -706,22 +760,21 @@ classdef alyxManager < optickaCore
 		% ===================================================================
 		function registerALF(me, alfDir, sessionURL)
 		% ===================================================================
-			%REGISTERALFTOALYX Register files contained within alfDir to Alyx
-			%   This function registers files contained within the alfDir to Alyx.
-			%   Files are only registered if their filenames match a datasetType's
-			%   alf_filename field. Must also provide an alyx session URL. Optionally
-			%   can provide alyxInstance as well.
-			%
-			%   INPUTS:
-			%     -alfDir: Directory containing ALF files, this will be searched
-			%     recursively for all ALF files which match a datasetType
-			%     -endpoint (optional): Alyx URL of the session to register this data
-			%     to. If none supplied, will use SessionURL in me.  If this is unset,
-			%     an error is thrown.
-			%
-			% See also ALYX, REGISTERFILES, POSTDATA, HTTP.JSONGET
-			
-			if nargin < 3
+			%> @brief Register files contained within alfDir to Alyx
+			%>
+			%> Files are only registered if their filenames match a datasetType's
+			%> alf_filename field. Must also provide an alyx session URL.
+			%>
+			%> @param alfDir char directory containing ALF files
+			%> @param sessionURL char Alyx URL of the session (uses me.sessionURL)
+			%>
+			%> @see ALYX, REGISTERFILES, POSTDATA, HTTP.JSONGET
+			arguments
+				me alyxManager
+				alfDir char
+				sessionURL char = ''
+			end
+			if isempty(sessionURL)
 				if isempty(me.sessionURL)
 					error('No session URL set')
 				else
@@ -822,43 +875,21 @@ classdef alyxManager < optickaCore
 		% ===================================================================
 		function [fullpath, filename, fileID, records] = expFilePath(me, varargin)
 		% ===================================================================
-			%EXPFILEPATH Full path for file pertaining to designated experiment
-			%   Returns the path(s) that a particular type of experiment file should be
-			%   located at for a specific experiment. NB: Unlike dat.expFilePath, this
-			%   CAN NOT be used to determine where a file should be saved to.  This
-			%   function only returns existing file records from Alyx.  There may be
-			%   files that exist but aren't on Alyx and likewise, may not exist but are
-			%   still on Alyx.
-			%
-			%   e.g. to get the paths for an experiments 2 photon TIFF movie:
-			%   ALYX.EXPFILEPATH('mouse1', datenum(2013, 01, 01), 1, 'block');
-			%
-			%   [full, filename] = expFilePath(ref, type[, user, reposlocation])
-			%   [full, filename] = expFilePath(subject, date, seq, type[, user, reposlocation])
-			%
-			%   
-			%   You specify:
-			%     - subject/ref: a string with the subject name or an experiment
-			%       reference
-			%     - date: a string in 'yyyy-mm-dd', 'yyyymmdd' or  'yyyy-mm-ddTHH:MM:SS'
-			%       format, or a datenum 
-			%     - seq: an integer number of the experiment you want
-			%     - type: a case-insensitive string specifying which file you want, e.g. 'Block'.  Must
-			%       be a valid dataset type on Alyx (see /dataset-types)
-			%     - user: optional string argument specifying the user who created the files 
-			%     - reposlocation: optional case-insensitive string argument specifying
-			%       the location of the files e.g. 'zubjects'.  Must be a valid data 
-			%       repository on Alyx (see /data-repository)
-			%
-			%   Outputs:
-			%     - fullpath: the full file paths of the files
-			%     - filename: the names of the files
-			%     - uuid: the Alyx ids of the files
-			%     - records: the complete records returned by Alyx
-			%
-			%   If more than one matching paths are found, output argument filePath
-			%   will be a cell array of strings, otherwise just a string.
-			
+			%> @brief Full path for file pertaining to designated experiment
+			%>
+			%> Returns the path(s) that a particular type of experiment file should
+			%> be located at for a specific experiment. NB: Unlike dat.expFilePath,
+			%> this CAN NOT be used to determine where a file should be saved to.
+			%> This function only returns existing file records from Alyx.
+			%>
+			%> @param varargin can be (ref, type[, user, reposlocation]) or
+			%>   (subject, date, seq, type[, user, reposlocation])
+			%> @return fullpath char[] full file paths
+			%> @return filename char[] file names
+			%> @return fileID char[] file UUIDs
+			%> @return records struct[] complete records from Alyx
+			%>
+			%> @see ALYX
 			% Validate input
 			assert(nargin > 2, 'Error: Not enough arguments supplied.')
 			
@@ -1282,25 +1313,26 @@ classdef alyxManager < optickaCore
 		% ===================================================================
 		function [statusCode, responseBody] = jsonPost(me, endpoint, jsonData, requestMethod)
 		% ===================================================================
-			%JSONPOST Makes POST, PUT and PATCH requests to endpoint with a JSON request body
-			% Makes a POST request, with a JSON request body (`Content-Type: application/json`), 
-			% and asking for a JSON response (`Accept: application/json`).
-			%   
-			% Inputs:
-			%   endpoint      - REST API endpoint to make the request to
-			%   requestBody   - String to use as request body
-			%   requestMethod - String indicating HTTP request method, i.e. 'POST'
-			%                   (default), 'PUT', 'PATCH' or 'DELETE'
-			%
-			% Output:
-			%   statusCode - Integer response code
-			%   responseBody - String response body or data struct
-			%
-			% See also JSONGET, JSONPUT, JSONPATCH
-			
+			%> @brief Makes POST, PUT and PATCH requests with JSON body
+			%>
+			%> Makes a POST request, with a JSON request body, asking for a
+			%> JSON response.
+			%>
+			%> @param endpoint char REST API endpoint to make the request to
+			%> @param jsonData char JSON string to use as request body
+			%> @param requestMethod char HTTP method: 'post'(default),'put','patch','delete'
+			%> @return statusCode integer HTTP response code
+			%> @return responseBody char[] response body or data struct
+			%>
+			%> @see JSONGET, JSONPUT, JSONPATCH
+			arguments
+				me alyxManager
+				endpoint char
+				jsonData char
+				requestMethod char = 'post'
+			end
 			% Validate the inputs
 			endpoint = me.makeEndpoint(endpoint); % Ensure absolute URL
-			if nargin == 3; requestMethod = 'post'; end % Default request method
 			assert(any(strcmpi(requestMethod, {'post', 'put', 'patch', 'delete'})),...
 			'%s not a valid HTTP request method', requestMethod)
 			% Set the HTTP request method in options
@@ -1346,22 +1378,29 @@ classdef alyxManager < optickaCore
 		% ===================================================================
 		function [data, statusCode] = flushQueue(me, dontSend)
 		% ===================================================================
-			% FLUSHQUEUE Checks for and uploads queued data to Alyx
-			%   Checks all .post and .put files in me.QueueDir and tries to post/put
-			%   them to the database.  If the upload is successfull, the queued file is
-			%   deleted.  If an error is returned the queued file is also deleted,
-			%   unless it was a server error.
-			%
-			%   Status codes:
-			%     200: Upload success - delete from queue
-			%     300: Redirect - delete from queue
-			%     400: User error - delete from queue
-			%     403: Invalid token - delete from queue
-			%     500: Server error - save in queue
-			%
-			% See also ALYX, ALYX.JSONPOST
-			if ~exist('dontSend','var'); dontSend = false; end
-			
+			%> @brief Checks for and uploads queued data to Alyx
+			%>
+			%> Checks all .post and .put files in me.QueueDir and tries to post/put
+			%> them to the database. If the upload is successful, the queued file
+			%> is deleted. If an error is returned the queued file is also deleted,
+			%> unless it was a server error.
+			%>
+			%> Status codes:
+			%>   200: Upload success - delete from queue
+			%>   300: Redirect - delete from queue
+			%>   400: User error - delete from queue
+			%>   403: Invalid token - delete from queue
+			%>   500: Server error - save in queue
+			%>
+			%> @param dontSend logical if true, skip sending (default false)
+			%> @return data cell array of response data
+			%> @return statusCode integer[] HTTP status codes
+			%>
+			%> @see ALYX, ALYX.JSONPOST
+			arguments
+				me alyxManager
+				dontSend logical = false
+			end
 			if ~exist(me.queueDir,'dir')
 				me.queueDir = me.paths.parent;
 			end
@@ -1534,13 +1573,25 @@ classdef alyxManager < optickaCore
 		% ===================================================================
 		function s = catStructs(cellOfStructs, missingValue)
 		% ===================================================================
-			%CATSTRUCTS Concatenates different structures into one structure array
-			%   s = catStructs(cellOfStructs, [missingValue])
-			%   Returns a non-scalar structure made from concatinating the structures
-			%   in `cellOfStructs` and optionally replacing any missing values. NB: all
-			%   empty values in the output struct are replaced by `missingValue`,
-			%   including ones present in the original input.
-			if nargin < 2; missingValue = []; end
+			%> @brief Concatenates different structures into one structure array
+			%>
+			%> Returns a non-scalar structure made from concatenating the
+			%> structures in `cellOfStructs` and optionally replacing any missing
+			%> values. NB: all empty values in the output struct are replaced by
+			%> `missingValue`, including ones present in the original input.
+			%>
+			%> @param cellOfStructs cell cell array of structs to concatenate
+			%> @param missingValue any value to replace missing fields with
+			%> @return s struct concatenated structure array
+			%>
+			%> Example:
+			%>   s = catStructs({struct1, struct2}, NaN)
+			%>
+			%> @see ALYX
+			arguments
+				cellOfStructs cell
+				missingValue = []
+			end
 			fields = unique(alyxManager.cellflat(alyxManager.mapToCell(@fieldnames, cellOfStructs)));
 			function t = valueTable(s)
 				if ~isrow(s); s = reshape(s, 1, []); end
@@ -1741,14 +1792,14 @@ classdef alyxManager < optickaCore
 		% ===================================================================
 		function [ref, AlyxInstance] = parseAlyxInstance(varargin)
 		% ===================================================================
-			%PARSEALYXINSTANCE Converts input to string for UDP message and back
-			%   [UDP_string] = ALYX.PARSEALYXINSTANCE(ref, AlyxInstance)
-			%   [ref, AlyxInstance] = ALYX.PARSEALYXINSTANCE(UDP_string)
-			%   
-			%   AlyxInstance should be an Alyx object.
-			%
-			% See also SAVEOBJ, LOADOBJ
-			if nargin > 1 % in [ref, AlyxInstance]
+			%> @brief Converts input to string for UDP message and back
+			%>
+			%> @param varargin can be (ref, AlyxInstance) or (UDP_string)
+			%> @return ref either JSON string or expRef depending on call mode
+			%> @return AlyxInstance either empty or Alyx object depending on call mode
+			%>
+			%> @see SAVEOBJ, LOADOBJ
+			if length(varargin) > 1 % in [ref, AlyxInstance]
 				ref = varargin{1}; % extract expRef
 				ai = varargin{2}; % extract AlyxInstance struct
 				if isa(ai, 'Alyx') % if there is an AlyxInstance
