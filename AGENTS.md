@@ -104,7 +104,6 @@ Each object can be run independently or managed via `runExperiment` to coordinat
   `getSecret/setSecret`).
 
 ## Alyx database integration
-
 Opticka integrates with the Alyx data management system (IBL pipeline) for
 recording and uploading experimental sessions. Session metadata is stored in
 Alyx via REST API, while actual data files are uploaded to an S3-compatible

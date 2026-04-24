@@ -2259,7 +2259,7 @@ classdef runExperiment < optickaCore
 					try arrayfun(@(ss)disp([ss.name ' - bytes: ' num2str(ss.file_size)]),datasets); end
 					
 					%% get the ALYX UUID for each file registered
-					uuids = {};
+					uuids = {}; setQC = false;
 					if length(datasets) == length(filenames)
 						for ii = 1:length(filenames)
 							if contains(filenames{ii},datasets(ii).name)
@@ -2284,11 +2284,31 @@ classdef runExperiment < optickaCore
 							else
 								key = [me.paths.ALFKeyShort filesep f e];
 							end
-							aws.copyFiles(filenames{ii}, bucket, key);
+							try
+								aws.copyFiles(filenames{ii}, bucket, key);
+								setQC = true;
+							catch
+								setQC = false;
+								warning('Failed to upload file to AWS server, check connection and credentials!!!');
+							end
 						end
 					else
-						warning('To upload Alyx files you need to set setSecrets: AWS_ID and AWS_KEY!!!'); 
+						setQC = false;
+						warning('To upload Alyx files you MUST setSecrets: AWS_ID and AWS_KEY!!!'); 
 					end
+
+					if setQC
+						qc = struct("QC", "PASS");
+						%% set the dataset QC to PASS if upload successful
+						for ii = 1:length(uuids)
+							if ~isempty(uuids{ii})
+								me.alyx.postData("datasets/"+string(uuids{ii}), qc, 'PATCH');
+							end
+						end
+						fprintf('≣≣≣≣⊱ Set ALYX QC to PASS for session: %s\n', me.alyx.sessionURL);
+					end
+
+
 				catch ME
 					getReport(ME)
 				end
