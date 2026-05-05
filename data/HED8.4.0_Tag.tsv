@@ -1,0 +1,1234 @@
+hedId	Level	rdfs:label	omn:SubClassOf	Attributes	dc:description
+HED_0012001	0	Event	HedTag	suggestedTag=Task-property, annotation=ncit:C25499, annotation=rdfs:comment Should have this tag in every event process.	Something that happens at a given time and (typically) place. Elements of this tag subtree designate the general category in which an event falls.
+HED_0012002	1	Sensory-event	Event	suggestedTag=Task-event-role, suggestedTag=Sensory-presentation	Something perceivable by the participant. An event meant to be an experimental stimulus should include the tag Task-property/Task-event-role/Experimental-stimulus.
+HED_0012003	1	Agent-action	Event	suggestedTag=Task-event-role, suggestedTag=Agent	Any action engaged in by an agent (see the Agent subtree for agent categories). A participant response to an experiment stimulus should include the tag Agent-property/Agent-task-role/Experiment-participant.
+HED_0012004	1	Data-feature	Event	suggestedTag=Data-property	An event marking the occurrence of a data feature such as an interictal spike or alpha burst that is often added post hoc to the data record.
+HED_0012005	1	Experiment-control	Event		An event pertaining to the physical control of the experiment during its operation.
+HED_0012006	1	Experiment-procedure	Event		An event indicating an experimental procedure, as in performing a saliva swab during the experiment or administering a survey.
+HED_0012007	1	Experiment-structure	Event		An event specifying a change-point of the structure of experiment. This event is typically used to indicate a change in experimental conditions or tasks.
+HED_0012008	1	Measurement-event	Event	suggestedTag=Data-property	A discrete measure returned by an instrument.
+HED_0012009	0	Agent	HedTag	suggestedTag=Agent-property	Someone or something that takes an active role or produces a specified effect.The role or effect may be implicit. Being alive or performing an activity such as a computation may qualify something to be an agent. An agent may also be something that simulates something else.
+HED_0012010	1	Animal-agent	Agent		An agent that is an animal.
+HED_0012011	1	Avatar-agent	Agent		An agent associated with an icon or avatar representing another agent.
+HED_0012012	1	Controller-agent	Agent		Experiment control software or hardware.
+HED_0012013	1	Human-agent	Agent		A person who takes an active role or produces a specified effect.
+HED_0012014	1	Robotic-agent	Agent		An agent mechanical device capable of performing a variety of often complex tasks on command or by being programmed in advance.
+HED_0012015	1	Software-agent	Agent		An agent computer program that interacts with the participant in an active role such as an AI advisor.
+HED_0012016	0	Action	HedTag	extensionAllowed	Do something.
+HED_0012017	1	Communicate	Action		Action conveying knowledge of or about something.
+HED_0012018	2	Communicate-gesturally	Communicate	relatedTag=Move-face, relatedTag=Move-upper-extremity	Communicate non-verbally using visible bodily actions, either in place of speech or together and in parallel with spoken words. Gestures include movement of the hands, face, or other parts of the body.
+HED_0012019	3	Clap-hands	Communicate-gesturally		Strike the palms of against one another resoundingly, and usually repeatedly, especially to express approval.
+HED_0012020	3	Clear-throat	Communicate-gesturally	relatedTag=Move-face, relatedTag=Move-head	Cough slightly so as to speak more clearly, attract attention, or to express hesitancy before saying something awkward.
+HED_0012021	3	Frown	Communicate-gesturally	relatedTag=Move-face	Express disapproval, displeasure, or concentration, typically by turning down the corners of the mouth.
+HED_0012022	3	Grimace	Communicate-gesturally	relatedTag=Move-face	Make a twisted expression, typically expressing disgust, pain, or wry amusement.
+HED_0012023	3	Nod-head	Communicate-gesturally	relatedTag=Move-head	Tilt head in alternating up and down arcs along the sagittal plane. It is most commonly, but not universally, used to indicate agreement, acceptance, or acknowledgement.
+HED_0012024	3	Pump-fist	Communicate-gesturally	relatedTag=Move-upper-extremity	Raise with fist clenched in triumph or affirmation.
+HED_0012025	3	Raise-eyebrows	Communicate-gesturally	relatedTag=Move-face, relatedTag=Move-eyes	Move eyebrows upward.
+HED_0012026	3	Shake-fist	Communicate-gesturally	relatedTag=Move-upper-extremity	Clench hand into a fist and shake to demonstrate anger.
+HED_0012027	3	Shake-head	Communicate-gesturally	relatedTag=Move-head	Turn head from side to side as a way of showing disagreement or refusal.
+HED_0012028	3	Shhh	Communicate-gesturally	relatedTag=Move-upper-extremity	Place finger over lips and possibly uttering the syllable shhh to indicate the need to be quiet.
+HED_0012029	3	Shrug	Communicate-gesturally	relatedTag=Move-upper-extremity, relatedTag=Move-torso	Lift shoulders up towards head to indicate a lack of knowledge about a particular topic.
+HED_0012030	3	Smile	Communicate-gesturally	relatedTag=Move-face	Form facial features into a pleased, kind, or amused expression, typically with the corners of the mouth turned up and the front teeth exposed.
+HED_0012031	3	Spread-hands	Communicate-gesturally	relatedTag=Move-upper-extremity	Spread hands apart to indicate ignorance.
+HED_0012032	3	Thumb-up	Communicate-gesturally	relatedTag=Move-upper-extremity	Extend the thumb upward to indicate approval.
+HED_0012033	3	Thumbs-down	Communicate-gesturally	relatedTag=Move-upper-extremity	Extend the thumb downward to indicate disapproval.
+HED_0012034	3	Wave	Communicate-gesturally	relatedTag=Move-upper-extremity	Raise hand and move left and right, as a greeting or sign of departure.
+HED_0012035	3	Widen-eyes	Communicate-gesturally	relatedTag=Move-face, relatedTag=Move-eyes	Open eyes and possibly with eyebrows lifted especially to express surprise or fear.
+HED_0012036	3	Wink	Communicate-gesturally	relatedTag=Move-face, relatedTag=Move-eyes	Close and open one eye quickly, typically to indicate that something is a joke or a secret or as a signal of affection or greeting.
+HED_0012037	2	Communicate-musically	Communicate		Communicate using music.
+HED_0012038	3	Hum	Communicate-musically		Make a low, steady continuous sound like that of a bee. Sing with the lips closed and without uttering speech.
+HED_0012039	3	Play-instrument	Communicate-musically		Make musical sounds using an instrument.
+HED_0012040	3	Sing	Communicate-musically		Produce musical tones by means of the voice.
+HED_0012041	3	Vocalize	Communicate-musically		Utter vocal sounds.
+HED_0012042	3	Whistle	Communicate-musically		Produce a shrill clear sound by forcing breath out or air in through the puckered lips.
+HED_0012043	2	Communicate-vocally	Communicate		Communicate using mouth or vocal cords.
+HED_0012044	3	Cry	Communicate-vocally		Shed tears associated with emotions, usually sadness but also joy or frustration.
+HED_0012045	3	Groan	Communicate-vocally		Make a deep inarticulate sound in response to pain or despair.
+HED_0012046	3	Laugh	Communicate-vocally		Make the spontaneous sounds and movements of the face and body that are the instinctive expressions of lively amusement and sometimes also of contempt or derision.
+HED_0012047	3	Scream	Communicate-vocally		Make loud, vociferous cries or yells to express pain, excitement, or fear.
+HED_0012048	3	Shout	Communicate-vocally		Say something very loudly.
+HED_0012049	3	Sigh	Communicate-vocally		Emit a long, deep, audible breath expressing sadness, relief, tiredness, or a similar feeling.
+HED_0012050	3	Speak	Communicate-vocally		Communicate using spoken language.
+HED_0012051	3	Whisper	Communicate-vocally		Speak very softly using breath without vocal cords.
+HED_0012052	1	Move	Action		Move in a specified direction or manner. Change position or posture.
+HED_0012053	2	Breathe	Move		Inhale or exhale during respiration.
+HED_0012054	3	Blow	Breathe		Expel air through pursed lips.
+HED_0012055	3	Cough	Breathe		Suddenly and audibly expel air from the lungs through a partially closed glottis, preceded by inhalation.
+HED_0012056	3	Exhale	Breathe		Blow out or expel breath.
+HED_0012057	3	Hiccup	Breathe		Involuntarily spasm the diaphragm and respiratory organs, with a sudden closure of the glottis and a characteristic sound like that of a cough.
+HED_0012058	3	Hold-breath	Breathe		Interrupt normal breathing by ceasing to inhale or exhale.
+HED_0012059	3	Inhale	Breathe		Draw in with the breath through the nose or mouth.
+HED_0012060	3	Sneeze	Breathe		Suddenly and violently expel breath through the nose and mouth.
+HED_0012061	3	Sniff	Breathe		Draw in air audibly through the nose to detect a smell, to stop it from running, or to express contempt.
+HED_0012062	2	Move-body	Move		Move entire body.
+HED_0012063	3	Bend	Move-body		Move body in a bowed or curved manner.
+HED_0012064	3	Dance	Move-body		Perform a purposefully selected sequences of human movement often with aesthetic or symbolic value. Move rhythmically to music, typically following a set sequence of steps.
+HED_0012065	3	Fall-down	Move-body		Lose balance and collapse.
+HED_0012066	3	Flex	Move-body		Cause a muscle to stand out by contracting or tensing it. Bend a limb or joint.
+HED_0012067	3	Jerk	Move-body		Make a quick, sharp, sudden movement.
+HED_0012068	3	Lie-down	Move-body		Move to a horizontal or resting position.
+HED_0012069	3	Recover-balance	Move-body		Return to a stable, upright body position.
+HED_0012070	3	Shudder	Move-body		Tremble convulsively, sometimes as a result of fear or revulsion.
+HED_0012071	3	Sit-down	Move-body		Move from a standing to a sitting position.
+HED_0012072	3	Sit-up	Move-body		Move from lying down to a sitting position.
+HED_0012073	3	Stand-up	Move-body		Move from a sitting to a standing position.
+HED_0012074	3	Stretch	Move-body		Straighten or extend body or a part of body to its full length, typically so as to tighten muscles or in order to reach something.
+HED_0012075	3	Stumble	Move-body		Trip or momentarily lose balance and almost fall.
+HED_0012076	3	Turn	Move-body		Change or cause to change direction.
+HED_0012077	2	Move-body-part	Move		Move one part of a body.
+HED_0012078	3	Move-eyes	Move-body-part		Move eyes.
+HED_0012079	4	Blink	Move-eyes		Shut and open the eyes quickly.
+HED_0012080	4	Close-eyes	Move-eyes		Lower and keep eyelids in a closed position.
+HED_0012081	4	Fixate	Move-eyes		Direct eyes to a specific point or target.
+HED_0012082	4	Inhibit-blinks	Move-eyes		Purposely prevent blinking.
+HED_0012083	4	Open-eyes	Move-eyes		Raise eyelids to expose pupil.
+HED_0012084	4	Saccade	Move-eyes		Move eyes rapidly between fixation points.
+HED_0012085	4	Squint	Move-eyes		Squeeze one or both eyes partly closed in an attempt to see more clearly or as a reaction to strong light.
+HED_0012086	4	Stare	Move-eyes		Look fixedly or vacantly at someone or something with eyes wide open.
+HED_0012087	3	Move-face	Move-body-part		Move the face or jaw.
+HED_0012088	4	Bite	Move-face		Seize with teeth or jaws an object or organism so as to grip or break the surface covering.
+HED_0012089	4	Burp	Move-face		Noisily release air from the stomach through the mouth. Belch.
+HED_0012090	4	Chew	Move-face		Repeatedly grinding, tearing, and or crushing with teeth or jaws.
+HED_0012091	4	Gurgle	Move-face		Make a hollow bubbling sound like that made by water running out of a bottle.
+HED_0012092	4	Swallow	Move-face		Cause or allow something, especially food or drink to pass down the throat.
+HED_0012093	5	Gulp	Swallow		Swallow quickly or in large mouthfuls, often audibly, sometimes to indicate apprehension.
+HED_0012094	4	Yawn	Move-face		Take a deep involuntary inhalation with the mouth open often as a sign of drowsiness or boredom.
+HED_0012095	3	Move-head	Move-body-part		Move head.
+HED_0012096	4	Lift-head	Move-head		Tilt head back lifting chin.
+HED_0012097	4	Lower-head	Move-head		Move head downward so that eyes are in a lower position.
+HED_0012098	4	Turn-head	Move-head		Rotate head horizontally to look in a different direction.
+HED_0012099	3	Move-lower-extremity	Move-body-part		Move leg and/or foot.
+HED_0012100	4	Curl-toes	Move-lower-extremity		Bend toes sometimes to grip.
+HED_0012101	4	Hop	Move-lower-extremity		Jump on one foot.
+HED_0012102	4	Jog	Move-lower-extremity		Run at a trot to exercise.
+HED_0012103	4	Jump	Move-lower-extremity		Move off the ground or other surface through sudden muscular effort in the legs.
+HED_0012104	4	Kick	Move-lower-extremity		Strike out or flail with the foot or feet.Strike using the leg, in unison usually with an area of the knee or lower using the foot.
+HED_0012105	4	Pedal	Move-lower-extremity		Move by working the pedals of a bicycle or other machine.
+HED_0012106	4	Press-foot	Move-lower-extremity		Move by pressing foot.
+HED_0012107	4	Run	Move-lower-extremity		Travel on foot at a fast pace.
+HED_0012108	4	Step	Move-lower-extremity		Put one leg in front of the other and shift weight onto it.
+HED_0012109	5	Heel-strike	Step		Strike the ground with the heel during a step.
+HED_0012110	5	Toe-off	Step		Push with toe as part of a stride.
+HED_0012111	4	Trot	Move-lower-extremity		Run at a moderate pace, typically with short steps.
+HED_0012112	4	Walk	Move-lower-extremity		Move at a regular pace by lifting and setting down each foot in turn never having both feet off the ground at once.
+HED_0012113	3	Move-torso	Move-body-part		Move body trunk.
+HED_0012114	3	Move-upper-extremity	Move-body-part		Move arm, shoulder, and/or hand.
+HED_0012115	4	Drop	Move-upper-extremity		Let or cause to fall vertically.
+HED_0012116	4	Grab	Move-upper-extremity		Seize suddenly or quickly. Snatch or clutch.
+HED_0012117	4	Grasp	Move-upper-extremity		Seize and hold firmly.
+HED_0012118	4	Hold-down	Move-upper-extremity		Prevent someone or something from moving by holding them firmly.
+HED_0012119	4	Lift	Move-upper-extremity		Raising something to higher position.
+HED_0012120	4	Make-fist	Move-upper-extremity		Close hand tightly with the fingers bent against the palm.
+HED_0012121	4	Point	Move-upper-extremity		Draw attention to something by extending a finger or arm.
+HED_0012122	4	Press	Move-upper-extremity	relatedTag=Push	Apply pressure to something to flatten, shape, smooth or depress it. This action tag should be used to indicate key presses and mouse clicks.
+HED_0012123	4	Push	Move-upper-extremity	relatedTag=Press	Apply force in order to move something away. Use Press to indicate a key press or mouse click.
+HED_0012124	4	Reach	Move-upper-extremity		Stretch out your arm in order to get or touch something.
+HED_0012125	4	Release	Move-upper-extremity		Make available or set free.
+HED_0012126	4	Retract	Move-upper-extremity		Draw or pull back.
+HED_0012127	4	Scratch	Move-upper-extremity		Drag claws or nails over a surface or on skin.
+HED_0012128	4	Snap-fingers	Move-upper-extremity		Make a noise by pushing second finger hard against thumb and then releasing it suddenly so that it hits the base of the thumb.
+HED_0012129	4	Touch	Move-upper-extremity		Come into or be in contact with.
+HED_0012130	1	Perceive	Action		Produce an internal, conscious image through stimulating a sensory system.
+HED_0012131	2	Hear	Perceive		Give attention to a sound.
+HED_0012132	2	See	Perceive		Direct gaze toward someone or something or in a specified direction.
+HED_0012133	2	Sense-by-touch	Perceive		Sense something through receptors in the skin.
+HED_0012134	2	Smell	Perceive		Inhale in order to ascertain an odor or scent.
+HED_0012135	2	Taste	Perceive		Sense a flavor in the mouth and throat on contact with a substance.
+HED_0012136	1	Perform	Action		Carry out or accomplish an action, task, or function.
+HED_0012137	2	Close	Perform		Act as to blocked against entry or passage.
+HED_0012138	2	Collide-with	Perform		Hit with force when moving.
+HED_0012139	2	Halt	Perform		Bring or come to an abrupt stop.
+HED_0012140	2	Modify	Perform		Change something.
+HED_0012141	2	Open	Perform		Widen an aperture, door, or gap, especially one allowing access to something.
+HED_0012142	2	Operate	Perform		Control the functioning of a machine, process, or system.
+HED_0012143	2	Play	Perform		Engage in activity for enjoyment and recreation rather than a serious or practical purpose.
+HED_0012144	2	Read	Perform		Interpret something that is written or printed.
+HED_0012145	2	Repeat	Perform		Make do or perform again.
+HED_0012146	2	Rest	Perform		Be inactive in order to regain strength, health, or energy.
+HED_0012147	2	Ride	Perform		Ride on an animal or in a vehicle. Ride conveys some notion that another agent has partial or total control of the motion.
+HED_0012148	2	Write	Perform		Communicate or express by means of letters or symbols written or imprinted on a surface.
+HED_0012149	1	Think	Action		Direct the mind toward someone or something or use the mind actively to form connected ideas.
+HED_0012150	2	Allow	Think		Allow access to something such as allowing a car to pass.
+HED_0012151	2	Attend-to	Think		Focus mental experience on specific targets.
+HED_0012152	2	Count	Think		Tally items either silently or aloud.
+HED_0012153	2	Deny	Think		Refuse to give or grant something requested or desired by someone.
+HED_0012154	2	Detect	Think		Discover or identify the presence or existence of something.
+HED_0012155	2	Discriminate	Think		Recognize a distinction.
+HED_0012156	2	Encode	Think		Convert information or an instruction into a particular form.
+HED_0012157	2	Evade	Think		Escape or avoid, especially by cleverness or trickery.
+HED_0012158	2	Generate	Think		Cause something, especially an emotion or situation to arise or come about.
+HED_0012159	2	Identify	Think		Establish or indicate who or what someone or something is.
+HED_0012160	2	Imagine	Think		Form a mental image or concept of something.
+HED_0012161	2	Judge	Think		Evaluate evidence to make a decision or form a belief.
+HED_0012162	2	Learn	Think		Adaptively change behavior as the result of experience.
+HED_0012163	2	Memorize	Think		Adaptively change behavior as the result of experience.
+HED_0012164	2	Plan	Think		Think about the activities required to achieve a desired goal.
+HED_0012165	2	Predict	Think		Say or estimate that something will happen or will be a consequence of something without having exact information.
+HED_0012166	2	Recall	Think		Remember information by mental effort.
+HED_0012167	2	Recognize	Think		Identify someone or something from having encountered them before.
+HED_0012168	2	Respond	Think		React to something such as a treatment or a stimulus.
+HED_0012169	2	Switch-attention	Think		Transfer attention from one focus to another.
+HED_0012170	2	Track	Think		Follow a person, animal, or object through space or time.
+HED_0012171	0	Item	HedTag	extensionAllowed	An independently existing thing (living or nonliving).
+HED_0012172	1	Biological-item	Item		An entity that is biological, that is related to living organisms.
+HED_0012173	2	Anatomical-item	Biological-item		A biological structure, system, fluid or other substance excluding single molecular entities.
+HED_0012174	3	Body	Anatomical-item		The biological structure representing an organism.
+HED_0012175	3	Body-part	Anatomical-item		Any part of an organism.
+HED_0012176	4	Head	Body-part		The upper part of the human body, or the front or upper part of the body of an animal, typically separated from the rest of the body by a neck, and containing the brain, mouth, and sense organs.
+HED_0013200	4	Head-part	Body-part		A part of the head.
+HED_0012177	5	Brain	Head-part		Organ inside the head that is made up of nerve cells and controls the body.
+HED_0013201	5	Brain-region	Head-part		A region of the brain.
+HED_0013202	6	Cerebellum	Brain-region		A major structure of the brain located near the brainstem. It plays a key role in motor control, coordination, precision, with contributions to different cognitive functions.
+HED_0012178	6	Frontal-lobe	Brain-region		
+HED_0012179	6	Occipital-lobe	Brain-region		
+HED_0012180	6	Parietal-lobe	Brain-region		
+HED_0012181	6	Temporal-lobe	Brain-region		
+HED_0012182	5	Ear	Head-part		A sense organ needed for the detection of sound and for establishing balance.
+HED_0012183	5	Face	Head-part		The anterior portion of the head extending from the forehead to the chin and ear to ear. The facial structures contain the eyes, nose and mouth, cheeks and jaws.
+HED_0013203	5	Face-part	Head-part		A part of the face.
+HED_0012184	6	Cheek	Face-part		The fleshy part of the face bounded by the eyes, nose, ear, and jawline.
+HED_0012185	6	Chin	Face-part		The part of the face below the lower lip and including the protruding part of the lower jaw.
+HED_0012186	6	Eye	Face-part		The organ of sight or vision.
+HED_0012187	6	Eyebrow	Face-part		The arched strip of hair on the bony ridge above each eye socket.
+HED_0012188	6	Eyelid	Face-part		The folds of the skin that cover the eye when closed.
+HED_0012189	6	Forehead	Face-part		The part of the face between the eyebrows and the normal hairline.
+HED_0012190	6	Lip	Face-part		Fleshy fold which surrounds the opening of the mouth.
+HED_0012191	6	Mouth	Face-part		The proximal portion of the digestive tract, containing the oral cavity and bounded by the oral opening.
+HED_0013204	6	Mouth-part	Face-part		A part of the mouth.
+HED_0012193	7	Teeth	Mouth-part		The hard bone-like structures in the jaws. A collection of teeth arranged in some pattern in the mouth or other part of the body.
+HED_0013205	7	Tongue	Mouth-part		A muscular organ in the mouth with significant role in mastication, swallowing, speech, and taste.
+HED_0012192	6	Nose	Face-part		A structure of special sense serving as an organ of the sense of smell and as an entrance to the respiratory tract.
+HED_0012194	5	Hair	Head-part		The filamentous outgrowth of the epidermis.
+HED_0012195	4	Lower-extremity	Body-part		Refers to the whole inferior limb (leg and/or foot).
+HED_0013206	4	Lower-extremity-part	Body-part		A part of the lower extremity.
+HED_0012196	5	Ankle	Lower-extremity-part		A gliding joint between the distal ends of the tibia and fibula and the proximal end of the talus.
+HED_0012198	5	Foot	Lower-extremity-part		The structure found below the ankle joint required for locomotion.
+HED_0013207	5	Foot-part	Lower-extremity-part		A part of the foot.
+HED_0012200	6	Heel	Foot-part		The back of the foot below the ankle.
+HED_0012201	6	Instep	Foot-part		The part of the foot between the ball and the heel on the inner side.
+HED_0013208	6	Toe	Foot-part		A digit of the foot.
+HED_0012199	7	Big-toe	Toe		The largest toe on the inner side of the foot.
+HED_0012202	7	Little-toe	Toe		The smallest toe located on the outer side of the foot.
+HED_0012203	6	Toes	Foot-part	relatedTag=Toe	The terminal digits of the foot. Used to describe collective attributes of all toes, such as bending all toes
+HED_0012204	5	Knee	Lower-extremity-part		A joint connecting the lower part of the femur with the upper part of the tibia.
+HED_0013209	5	Lower-leg	Lower-extremity-part		The part of the leg between the knee and the ankle.
+HED_0013210	5	Lower-leg-part	Lower-extremity-part		A part of the lower leg.
+HED_0012197	6	Calf	Lower-leg-part		The fleshy part at the back of the leg below the knee.
+HED_0012205	6	Shin	Lower-leg-part		Front part of the leg below the knee.
+HED_0013211	5	Upper-leg	Lower-extremity-part		The part of the leg between the hip and the knee.
+HED_0013212	5	Upper-leg-part	Lower-extremity-part		A part of the upper leg.
+HED_0012206	6	Thigh	Upper-leg-part		Upper part of the leg between hip and knee.
+HED_0013213	4	Neck	Body-part		The part of the body connecting the head to the torso, containing the cervical spine and vital pathways of nerves, blood vessels, and the airway.
+HED_0012207	4	Torso	Body-part		The body excluding the head and neck and limbs.
+HED_0013214	4	Torso-part	Body-part		A part of the torso.
+HED_0013215	5	Abdomen	Torso-part		The part of the body between the thorax and the pelvis.
+HED_0013216	5	Navel	Torso-part		The central mark on the abdomen created by the detachment of the umbilical cord after birth.
+HED_0013217	5	Pelvis	Torso-part		The bony structure at the base of the spine supporting the legs.
+HED_0013218	5	Pelvis-part	Torso-part		A part of the pelvis.
+HED_0012208	6	Buttocks	Pelvis-part		The round fleshy parts that form the lower rear area of a human trunk.
+HED_0013219	6	Genitalia	Pelvis-part		The external organs of reproduction and urination, located in the pelvic region. This includes both male and female genital structures.
+HED_0012209	6	Gentalia	Pelvis-part	deprecatedFrom=8.1.0	The external organs of reproduction. Deprecated due to spelling error. Use Genitalia.
+HED_0012210	6	Hip	Pelvis-part		The lateral prominence of the pelvis from the waist to the thigh.
+HED_0012211	5	Torso-back	Torso-part		The rear surface of the human body from the shoulders to the hips.
+HED_0012212	5	Torso-chest	Torso-part		The anterior side of the thorax from the neck to the abdomen.
+HED_0012213	5	Viscera	Torso-part		Internal organs of the body.
+HED_0012214	5	Waist	Torso-part		The abdominal circumference at the navel.
+HED_0012215	4	Upper-extremity	Body-part		Refers to the whole superior limb (shoulder, arm, elbow, wrist, hand).
+HED_0013220	4	Upper-extremity-part	Body-part		A part of the upper extremity.
+HED_0012216	5	Elbow	Upper-extremity-part		A type of hinge joint located between the forearm and upper arm.
+HED_0012217	5	Forearm	Upper-extremity-part		Lower part of the arm between the elbow and wrist.
+HED_0013221	5	Forearm-part	Upper-extremity-part		A part of the forearm.
+HED_0012218	5	Hand	Upper-extremity-part		The distal portion of the upper extremity. It consists of the carpus, metacarpus, and digits.
+HED_0013222	5	Hand-part	Upper-extremity-part		A part of the hand.
+HED_0012219	6	Finger	Hand-part		Any of the digits of the hand.
+HED_0012220	7	Index-finger	Finger		The second finger from the radial side of the hand, next to the thumb.
+HED_0012221	7	Little-finger	Finger		The fifth and smallest finger from the radial side of the hand.
+HED_0012222	7	Middle-finger	Finger		The middle or third finger from the radial side of the hand.
+HED_0012223	7	Ring-finger	Finger		The fourth finger from the radial side of the hand.
+HED_0012224	7	Thumb	Finger		The thick and short hand digit which is next to the index finger in humans.
+HED_0013223	6	Fingers	Hand-part	relatedTag=Finger	The terminal digits of the hand. Used to describe collective attributes of all fingers, such as bending all fingers
+HED_0012225	6	Knuckles	Hand-part		A part of a finger at a joint where the bone is near the surface, especially where the finger joins the hand.
+HED_0012226	6	Palm	Hand-part		The part of the inner surface of the hand that extends from the wrist to the bases of the fingers.
+HED_0012227	5	Shoulder	Upper-extremity-part		Joint attaching upper arm to trunk.
+HED_0012228	5	Upper-arm	Upper-extremity-part		Portion of arm between shoulder and elbow.
+HED_0013224	5	Upper-arm-part	Upper-extremity-part		A part of the upper arm.
+HED_0012229	5	Wrist	Upper-extremity-part		A joint between the distal end of the radius and the proximal row of carpal bones.
+HED_0012230	2	Organism	Biological-item		A living entity, more specifically a biological entity that consists of one or more cells and is capable of genomic replication (independently or not).
+HED_0012231	3	Animal	Organism		A living organism that has membranous cell walls, requires oxygen and organic foods, and is capable of voluntary movement.
+HED_0012232	3	Human	Organism		The bipedal primate mammal Homo sapiens.
+HED_0012233	3	Plant	Organism		Any living organism that typically synthesizes its food from inorganic substances and possesses cellulose cell walls.
+HED_0012234	1	Language-item	Item	suggestedTag=Sensory-presentation	An entity related to a systematic means of communicating by the use of sounds, symbols, or gestures.
+HED_0012235	2	Character	Language-item		A mark or symbol used in writing.
+HED_0012236	2	Clause	Language-item		A unit of grammatical organization next below the sentence in rank, usually consisting of a subject and predicate.
+HED_0012237	2	Glyph	Language-item		A hieroglyphic character, symbol, or pictograph.
+HED_0012238	2	Nonword	Language-item		An unpronounceable group of letters or speech sounds that is surrounded by white space when written, is not accepted as a word by native speakers.
+HED_0012239	2	Paragraph	Language-item		A distinct section of a piece of writing, usually dealing with a single theme.
+HED_0012240	2	Phoneme	Language-item		Any of the minimally distinct units of sound in a specified language that distinguish one word from another.
+HED_0012241	2	Phrase	Language-item		A phrase is a group of words functioning as a single unit in the syntax of a sentence.
+HED_0012242	2	Pseudoword	Language-item		A pronounceable group of letters or speech sounds that looks or sounds like a word but that is not accepted as such by native speakers.
+HED_0012243	2	Sentence	Language-item		A set of words that is complete in itself, conveying a statement, question, exclamation, or command and typically containing an explicit or implied subject and a predicate containing a finite verb.
+HED_0012244	2	Syllable	Language-item		A unit of pronunciation having a vowel or consonant sound, with or without surrounding consonants, forming the whole or a part of a word.
+HED_0012245	2	Textblock	Language-item		A block of text.
+HED_0012246	2	Word	Language-item		A single distinct meaningful element of speech or writing, used with others (or sometimes alone) to form a sentence and typically surrounded by white space when written or printed.
+HED_0012247	1	Object	Item	suggestedTag=Sensory-presentation	Something perceptible by one or more of the senses, especially by vision or touch. A material thing.
+HED_0012248	2	Geometric-object	Object		An object or a representation that has structure and topology in space.
+HED_0012249	3	2D-shape	Geometric-object		A planar, two-dimensional shape.
+HED_0012250	4	Arrow	2D-shape		A shape with a pointed end indicating direction.
+HED_0012251	4	Clockface	2D-shape		The dial face of a clock. A location identifier based on clock-face-position numbering or anatomic subregion.
+HED_0012252	4	Cross	2D-shape		A figure or mark formed by two intersecting lines crossing at their midpoints.
+HED_0012253	4	Dash	2D-shape		A horizontal stroke in writing or printing to mark a pause or break in sense or to represent omitted letters or words.
+HED_0012254	4	Ellipse	2D-shape		A closed plane curve resulting from the intersection of a circular cone and a plane cutting completely through it, especially a plane not parallel to the base.
+HED_0012255	5	Circle	Ellipse		A ring-shaped structure with every point equidistant from the center.
+HED_0012256	4	Rectangle	2D-shape		A parallelogram with four right angles.
+HED_0012257	5	Square	Rectangle		A square is a special rectangle with four equal sides.
+HED_0012258	4	Single-point	2D-shape		A point is a geometric entity that is located in a zero-dimensional spatial region and whose position is defined by its coordinates in some coordinate system.
+HED_0012259	4	Star	2D-shape		A conventional or stylized representation of a star, typically one having five or more points.
+HED_0012260	4	Triangle	2D-shape		A three-sided polygon.
+HED_0012261	3	3D-shape	Geometric-object		A geometric three-dimensional shape.
+HED_0012262	4	Box	3D-shape		A square or rectangular vessel, usually made of cardboard or plastic.
+HED_0012263	5	Cube	Box		A solid or semi-solid in the shape of a three dimensional square.
+HED_0012264	4	Cone	3D-shape		A shape whose base is a circle and whose sides taper up to a point.
+HED_0012265	4	Cylinder	3D-shape		A surface formed by circles of a given radius that are contained in a plane perpendicular to a given axis, whose centers align on the axis.
+HED_0012266	4	Ellipsoid	3D-shape		A closed plane curve resulting from the intersection of a circular cone and a plane cutting completely through it, especially a plane not parallel to the base.
+HED_0012267	5	Sphere	Ellipsoid		A solid or hollow three-dimensional object bounded by a closed surface such that every point on the surface is equidistant from the center.
+HED_0012268	4	Pyramid	3D-shape		A polyhedron of which one face is a polygon of any number of sides, and the other faces are triangles with a common vertex.
+HED_0012269	3	Pattern	Geometric-object		An arrangement of objects, facts, behaviors, or other things which have scientific, mathematical, geometric, statistical, or other meaning.
+HED_0012270	4	Dots	Pattern		A small round mark or spot.
+HED_0012271	4	LED-pattern	Pattern		A pattern created by lighting selected members of a fixed light emitting diode array.
+HED_0012272	2	Ingestible-object	Object		Something that can be taken into the body by the mouth for digestion or absorption.
+HED_0012273	2	Man-made-object	Object		Something constructed by human means.
+HED_0012274	3	Building	Man-made-object		A structure that usually has a roof and walls and stands more or less permanently in one place.
+HED_0013231	3	Building-part	Man-made-object		A part of a building.
+HED_0012275	4	Attic	Building-part		A room or a space immediately below the roof of a building.
+HED_0012276	4	Basement	Building-part		The part of a building that is wholly or partly below ground level.
+HED_0013232	4	Door	Building-part		A door is a hinged or otherwise movable barrier that allows entry into and exit from an enclosed structure.
+HED_0012277	4	Entrance	Building-part		The means or place of entry.
+HED_0012278	4	Roof	Building-part		A roof is the covering on the uppermost part of a building which provides protection from animals and weather, notably rain, but also heat, wind and sunlight.
+HED_0012279	4	Room	Building-part		An area within a building enclosed by walls and floor and ceiling.
+HED_0013233	4	Window	Building-part		An opening in a wall, roof, or vehicle that allows light and air to enter, typically covered by glass or other transparent material.
+HED_0012280	3	Clothing	Man-made-object		A covering designed to be worn on the body.
+HED_0012281	3	Device	Man-made-object		An object contrived for a specific purpose.
+HED_0012282	4	Assistive-device	Device		A device that help an individual accomplish a task.
+HED_0012283	5	Glasses	Assistive-device		Frames with lenses worn in front of the eye for vision correction, eye protection, or protection from UV rays.
+HED_0012284	5	Writing-device	Assistive-device		A device used for writing.
+HED_0012285	6	Pen	Writing-device		A common writing instrument used to apply ink to a surface for writing or drawing.
+HED_0012286	6	Pencil	Writing-device		An implement for writing or drawing that is constructed of a narrow solid pigment core in a protective casing that prevents the core from being broken or marking the hand.
+HED_0012287	4	Computing-device	Device		An electronic device which take inputs and processes results from the inputs.
+HED_0012288	5	Cellphone	Computing-device		A telephone with access to a cellular radio system so it can be used over a wide area, without a physical connection to a network.
+HED_0012289	5	Desktop-computer	Computing-device		A computer suitable for use at an ordinary desk.
+HED_0012290	5	Laptop-computer	Computing-device		A computer that is portable and suitable for use while traveling.
+HED_0012291	5	Tablet-computer	Computing-device		A small portable computer that accepts input directly on to its screen rather than via a keyboard or mouse.
+HED_0012292	4	Engine	Device		A motor is a machine designed to convert one or more forms of energy into mechanical energy.
+HED_0012293	4	IO-device	Device		Hardware used by a human (or other system) to communicate with a computer.
+HED_0012294	5	Input-device	IO-device		A piece of equipment used to provide data and control signals to an information processing system such as a computer or information appliance.
+HED_0012295	6	Computer-mouse	Input-device		A hand-held pointing device that detects two-dimensional motion relative to a surface.
+HED_0012296	7	Mouse-button	Computer-mouse		An electric switch on a computer mouse which can be pressed or clicked to select or interact with an element of a graphical user interface.
+HED_0012297	7	Scroll-wheel	Computer-mouse		A scroll wheel or mouse wheel is a wheel used for scrolling made of hard plastic with a rubbery surface usually located between the left and right mouse buttons and is positioned perpendicular to the mouse surface.
+HED_0012298	6	Joystick	Input-device		A control device that uses a movable handle to create two-axis input for a computer device.
+HED_0012299	6	Keyboard	Input-device		A device consisting of mechanical keys that are pressed to create input to a computer.
+HED_0012300	7	Keyboard-key	Keyboard		A button on a keyboard usually representing letters, numbers, functions, or symbols.
+HED_0012301	8	Keyboard-key-#	Keyboard-key	takesValue	Value of a keyboard key.
+HED_0012302	6	Keypad	Input-device		A device consisting of keys, usually in a block arrangement, that provides limited input to a system.
+HED_0012303	7	Keypad-key	Keypad		A key on a separate section of a computer keyboard that groups together numeric keys and those for mathematical or other special functions in an arrangement like that of a calculator.
+HED_0012304	8	Keypad-key-#	Keypad-key	takesValue	Value of keypad key.
+HED_0012305	6	Microphone	Input-device		A device designed to convert sound to an electrical signal.
+HED_0012306	6	Push-button	Input-device		A switch designed to be operated by pressing a button.
+HED_0012307	5	Output-device	IO-device		Any piece of computer hardware equipment which converts information into human understandable form.
+HED_0012308	6	Auditory-device	Output-device		A device designed to produce sound.
+HED_0012309	7	Headphones	Auditory-device		An instrument that consists of a pair of small loudspeakers, or less commonly a single speaker, held close to ears and connected to a signal source such as an audio amplifier, radio, CD player or portable media player.
+HED_0012310	7	Loudspeaker	Auditory-device		A device designed to convert electrical signals to sounds that can be heard.
+HED_0012311	6	Display-device	Output-device		An output device for presentation of information in visual or tactile form the latter used for example in tactile electronic displays for blind people.
+HED_0012312	7	Computer-screen	Display-device		An electronic device designed as a display or a physical device designed to be a protective mesh work.
+HED_0012314	7	Head-mounted-display	Display-device		An instrument that functions as a display device, worn on the head or as part of a helmet, that has a small display optic in front of one (monocular HMD) or each eye (binocular HMD).
+HED_0012315	7	LED-display	Display-device		A LED display is a flat panel display that uses an array of light-emitting diodes as pixels for a video display.
+HED_0012313	7	Screen-window	Display-device		A part of a computer screen that contains a display different from the rest of the screen.
+HED_0012316	5	Recording-device	IO-device		A device that copies information in a signal into a persistent information bearer.
+HED_0012317	6	EEG-recorder	Recording-device		A device for recording electric currents in the brain using electrodes applied to the scalp, to the surface of the brain, or placed within the substance of the brain.
+HED_0013225	6	EMG-recorder	Recording-device		A device for recording electrical activity of muscles using electrodes on the body surface or within the muscular mass.
+HED_0012318	6	File-storage	Recording-device		A device for recording digital information to a permanent media.
+HED_0012319	6	MEG-recorder	Recording-device		A device for measuring the magnetic fields produced by electrical activity in the brain, usually conducted externally.
+HED_0012320	6	Motion-capture	Recording-device		A device for recording the movement of objects or people.
+HED_0012321	6	Tape-recorder	Recording-device		A device for recording and reproduction usually using magnetic tape for storage that can be saved and played back.
+HED_0012322	5	Touchscreen	IO-device		A control component that operates an electronic device by pressing the display on the screen.
+HED_0012323	4	Machine	Device		A human-made device that uses power to apply forces and control movement to perform an action.
+HED_0012324	4	Measurement-device	Device		A device that measures something.
+HED_0012325	5	Clock	Measurement-device		A device designed to indicate the time of day or to measure the time duration of an event or action.
+HED_0012327	4	Robot	Device		A mechanical device that sometimes resembles a living animal and is capable of performing a variety of often complex human tasks on command or by being programmed in advance.
+HED_0012328	4	Tool	Device		A component that is not part of a device but is designed to support its assembly or operation.
+HED_0012329	3	Document	Man-made-object		A physical object, or electronic counterpart, that is characterized by containing writing which is meant to be human-readable.
+HED_0012330	4	Book	Document		A volume made up of pages fastened along one edge and enclosed between protective covers.
+HED_0012331	4	Letter	Document		A written message addressed to a person or organization.
+HED_0012332	4	Note	Document		A brief written record.
+HED_0012333	4	Notebook	Document		A book for notes or memoranda.
+HED_0012334	4	Questionnaire	Document		A document consisting of questions and possibly responses, depending on whether it has been filled out.
+HED_0012335	3	Furnishing	Man-made-object		Furniture, fittings, and other decorative accessories, such as curtains and carpets, for a house or room.
+HED_0012336	3	Manufactured-material	Man-made-object		Substances created or extracted from raw materials.
+HED_0012337	4	Ceramic	Manufactured-material		A hard, brittle, heat-resistant and corrosion-resistant material made by shaping and then firing a nonmetallic mineral, such as clay, at a high temperature.
+HED_0012338	4	Glass	Manufactured-material		A brittle transparent solid with irregular atomic structure.
+HED_0012339	4	Paper	Manufactured-material		A thin sheet material produced by mechanically or chemically processing cellulose fibres derived from wood, rags, grasses or other vegetable sources in water.
+HED_0012340	4	Plastic	Manufactured-material		Various high-molecular-weight thermoplastic or thermo-setting polymers that are capable of being molded, extruded, drawn, or otherwise shaped and then hardened into a form.
+HED_0012341	4	Steel	Manufactured-material		An alloy made up of iron with typically a few tenths of a percent of carbon to improve its strength and fracture resistance compared to iron.
+HED_0012342	3	Media	Man-made-object		Media are audio/visual/audiovisual modes of communicating information for mass consumption.
+HED_0012343	4	Media-clip	Media		A short segment of media.
+HED_0012344	5	Audio-clip	Media-clip		A short segment of audio.
+HED_0012345	5	Audiovisual-clip	Media-clip		A short media segment containing both audio and video.
+HED_0012346	5	Video-clip	Media-clip		A short segment of video.
+HED_0012347	4	Visualization	Media		An planned process that creates images, diagrams or animations from the input data.
+HED_0012348	5	Animation	Visualization		A form of graphical illustration that changes with time to give a sense of motion or represent dynamic changes in the portrayal.
+HED_0012349	5	Art-installation	Visualization		A large-scale, mixed-media constructions, often designed for a specific place or for a temporary period of time.
+HED_0012350	5	Braille	Visualization		A display using a system of raised dots that can be read with the fingers by people who are blind.
+HED_0012351	5	Image	Visualization		Any record of an imaging event whether physical or electronic.
+HED_0012352	6	Cartoon	Image		A type of illustration, sometimes animated, typically in a non-realistic or semi-realistic style. The specific meaning has evolved over time, but the modern usage usually refers to either an image or series of images intended for satire, caricature, or humor. A motion picture that relies on a sequence of illustrations for its animation.
+HED_0012353	6	Drawing	Image		A representation of an object or outlining a figure, plan, or sketch by means of lines.
+HED_0012354	6	Icon	Image		A sign (such as a word or graphic symbol) whose form suggests its meaning.
+HED_0012355	6	Painting	Image		A work produced through the art of painting.
+HED_0012356	6	Photograph	Image		An image recorded by a camera.
+HED_0012357	5	Movie	Visualization		A sequence of images displayed in succession giving the illusion of continuous movement.
+HED_0012358	5	Outline-visualization	Visualization		A visualization consisting of a line or set of lines enclosing or indicating the shape of an object in a sketch or diagram.
+HED_0012359	5	Point-light-visualization	Visualization		A display in which action is depicted using a few points of light, often generated from discrete sensors in motion capture.
+HED_0012360	5	Sculpture	Visualization		A two- or three-dimensional representative or abstract forms, especially by carving stone or wood or by casting metal or plaster.
+HED_0012361	5	Stick-figure-visualization	Visualization		A drawing showing the head of a human being or animal as a circle and all other parts as straight lines.
+HED_0012362	3	Navigational-object	Man-made-object		An object whose purpose is to assist directed movement from one location to another.
+HED_0012363	4	Path	Navigational-object		A trodden way. A way or track laid down for walking or made by continual treading.
+HED_0012364	4	Road	Navigational-object		An open way for the passage of vehicles, persons, or animals on land.
+HED_0012365	5	Lane	Road		A defined path with physical dimensions through which an object or substance may traverse.
+HED_0012366	4	Runway	Navigational-object		A paved strip of ground on a landing field for the landing and takeoff of aircraft.
+HED_0012367	3	Vehicle	Man-made-object		A mobile machine which transports people or cargo.
+HED_0012368	4	Aircraft	Vehicle		A vehicle which is able to travel through air in an atmosphere.
+HED_0012369	4	Bicycle	Vehicle		A human-powered, pedal-driven, single-track vehicle, having two wheels attached to a frame, one behind the other.
+HED_0012370	4	Boat	Vehicle		A watercraft of any size which is able to float or plane on water.
+HED_0012371	4	Car	Vehicle		A wheeled motor vehicle used primarily for the transportation of human passengers.
+HED_0012372	4	Cart	Vehicle		A cart is a vehicle which has two wheels and is designed to transport human passengers or cargo.
+HED_0012373	4	Tractor	Vehicle		A mobile machine specifically designed to deliver a high tractive effort at slow speeds, and mainly used for the purposes of hauling a trailer or machinery used in agriculture or construction.
+HED_0012374	4	Train	Vehicle		A connected line of railroad cars with or without a locomotive.
+HED_0012375	4	Truck	Vehicle		A motor vehicle which, as its primary function, transports cargo rather than human passengers.
+HED_0012376	2	Natural-object	Object		Something that exists in or is produced by nature, and is not artificial or man-made.
+HED_0012377	3	Mineral	Natural-object		A solid, homogeneous, inorganic substance occurring in nature and having a definite chemical composition.
+HED_0012378	3	Natural-feature	Natural-object		A feature that occurs in nature. A prominent or identifiable aspect, region, or site of interest.
+HED_0012379	4	Field	Natural-feature		An unbroken expanse as of ice or grassland.
+HED_0012380	4	Hill	Natural-feature		A rounded elevation of limited extent rising above the surrounding land with local relief of less than 300m.
+HED_0012381	4	Mountain	Natural-feature		A landform that extends above the surrounding terrain in a limited area.
+HED_0012382	4	River	Natural-feature		A natural freshwater surface stream of considerable volume and a permanent or seasonal flow, moving in a definite channel toward a sea, lake, or another river.
+HED_0012383	4	Waterfall	Natural-feature		A sudden descent of water over a step or ledge in the bed of a river.
+HED_0012384	1	Sound	Item		Mechanical vibrations transmitted by an elastic medium. Something that can be heard.
+HED_0012385	2	Environmental-sound	Sound		Sounds occurring in the environment. An accumulation of noise pollution that occurs outside. This noise can be caused by transport, industrial, and recreational activities.
+HED_0012386	3	Crowd-sound	Environmental-sound		Noise produced by a mixture of sounds from a large group of people.
+HED_0012387	3	Signal-noise	Environmental-sound		Any part of a signal that is not the true or original signal but is introduced by the communication mechanism.
+HED_0012388	2	Musical-sound	Sound		Sound produced by continuous and regular vibrations, as opposed to noise.
+HED_0012389	3	Instrument-sound	Musical-sound		Sound produced by a musical instrument.
+HED_0012390	3	Tone	Musical-sound		A musical note, warble, or other sound used as a particular signal on a telephone or answering machine.
+HED_0012391	3	Vocalized-sound	Musical-sound		Musical sound produced by vocal cords in a biological agent.
+HED_0012392	2	Named-animal-sound	Sound		A sound recognizable as being associated with particular animals.
+HED_0012393	3	Barking	Named-animal-sound		Sharp explosive cries like sounds made by certain animals, especially a dog, fox, or seal.
+HED_0012394	3	Bleating	Named-animal-sound		Wavering cries like sounds made by a sheep, goat, or calf.
+HED_0012395	3	Chirping	Named-animal-sound		Short, sharp, high-pitched noises like sounds made by small birds or an insects.
+HED_0012396	3	Crowing	Named-animal-sound		Loud shrill sounds characteristic of roosters.
+HED_0012397	3	Growling	Named-animal-sound		Low guttural sounds like those that made in the throat by a hostile dog or other animal.
+HED_0012398	3	Meowing	Named-animal-sound		Vocalizations like those made by as those cats. These sounds have diverse tones and are sometimes chattered, murmured or whispered. The purpose can be assertive.
+HED_0012399	3	Mooing	Named-animal-sound		Deep vocal sounds like those made by a cow.
+HED_0012400	3	Purring	Named-animal-sound		Low continuous vibratory sound such as those made by cats. The sound expresses contentment.
+HED_0012401	3	Roaring	Named-animal-sound		Loud, deep, or harsh prolonged sounds such as those made by big cats and bears for long-distance communication and intimidation.
+HED_0012402	3	Squawking	Named-animal-sound		Loud, harsh noises such as those made by geese.
+HED_0012403	2	Named-object-sound	Sound		A sound identifiable as coming from a particular type of object.
+HED_0012404	3	Alarm-sound	Named-object-sound		A loud signal often loud continuous ringing to alert people to a problem or condition that requires urgent attention.
+HED_0012405	3	Beep	Named-object-sound		A short, single tone, that is typically high-pitched and generally made by a computer or other machine.
+HED_0012406	3	Buzz	Named-object-sound		A persistent vibratory sound often made by a buzzer device and used to indicate something incorrect.
+HED_0012407	3	Click	Named-object-sound		The sound made by a mechanical cash register, often to designate a reward.
+HED_0012408	3	Ding	Named-object-sound		A short ringing sound such as that made by a bell, often to indicate a correct response or the expiration of time.
+HED_0012409	3	Horn-blow	Named-object-sound		A loud sound made by forcing air through a sound device that funnels air to create the sound, often used to sound an alert.
+HED_0012410	3	Ka-ching	Named-object-sound		The sound made by a mechanical cash register, often to designate a reward.
+HED_0012411	3	Siren	Named-object-sound		A loud, continuous sound often varying in frequency designed to indicate an emergency.
+HED_0012412	0	Property	HedTag	extensionAllowed	Something that pertains to a thing. A characteristic of some entity. A quality or feature regarded as a characteristic or inherent part of someone or something. HED attributes are adjectives or adverbs.
+HED_0012413	1	Agent-property	Property		Something that pertains to or describes an agent.
+HED_0012414	2	Agent-state	Agent-property		The state of the agent.
+HED_0012415	3	Agent-cognitive-state	Agent-state		The state of the cognitive processes or state of mind of the agent.
+HED_0012416	4	Alert	Agent-cognitive-state		Condition of heightened watchfulness or preparation for action.
+HED_0012417	4	Anesthetized	Agent-cognitive-state		Having lost sensation to pain or having senses dulled due to the effects of an anesthetic.
+HED_0012418	4	Asleep	Agent-cognitive-state		Having entered a periodic, readily reversible state of reduced awareness and metabolic activity, usually accompanied by physical relaxation and brain activity.
+HED_0012419	4	Attentive	Agent-cognitive-state		Concentrating and focusing mental energy on the task or surroundings.
+HED_0012420	4	Awake	Agent-cognitive-state		In a non sleeping state.
+HED_0012421	4	Brain-dead	Agent-cognitive-state		Characterized by the irreversible absence of cortical and brain stem functioning.
+HED_0012422	4	Comatose	Agent-cognitive-state		In a state of profound unconsciousness associated with markedly depressed cerebral activity.
+HED_0012423	4	Distracted	Agent-cognitive-state		Lacking in concentration because of being preoccupied.
+HED_0012424	4	Drowsy	Agent-cognitive-state		In a state of near-sleep, a strong desire for sleep, or sleeping for unusually long periods.
+HED_0012425	4	Intoxicated	Agent-cognitive-state		In a state with disturbed psychophysiological functions and responses as a result of administration or ingestion of a psychoactive substance.
+HED_0012426	4	Locked-in	Agent-cognitive-state		In a state of complete paralysis of all voluntary muscles except for the ones that control the movements of the eyes.
+HED_0012427	4	Passive	Agent-cognitive-state		Not responding or initiating an action in response to a stimulus.
+HED_0012428	4	Resting	Agent-cognitive-state		A state in which the agent is not exhibiting any physical exertion.
+HED_0012429	4	Vegetative	Agent-cognitive-state		A state of wakefulness and conscience, but (in contrast to coma) with involuntary opening of the eyes and movements (such as teeth grinding, yawning, or thrashing of the extremities).
+HED_0012430	3	Agent-emotional-state	Agent-state		The status of the general temperament and outlook of an agent.
+HED_0012431	4	Angry	Agent-emotional-state		Experiencing emotions characterized by marked annoyance or hostility.
+HED_0012432	4	Aroused	Agent-emotional-state		In a state reactive to stimuli leading to increased heart rate and blood pressure, sensory alertness, mobility and readiness to respond.
+HED_0012433	4	Awed	Agent-emotional-state		Filled with wonder. Feeling grand, sublime or powerful emotions characterized by a combination of joy, fear, admiration, reverence, and/or respect.
+HED_0012434	4	Compassionate	Agent-emotional-state		Feeling or showing sympathy and concern for others often evoked for a person who is in distress and associated with altruistic motivation.
+HED_0012435	4	Content	Agent-emotional-state		Feeling satisfaction with things as they are.
+HED_0012436	4	Disgusted	Agent-emotional-state		Feeling revulsion or profound disapproval aroused by something unpleasant or offensive.
+HED_0012437	4	Emotionally-neutral	Agent-emotional-state		Feeling neither satisfied nor dissatisfied.
+HED_0012438	4	Empathetic	Agent-emotional-state		Understanding and sharing the feelings of another. Being aware of, being sensitive to, and vicariously experiencing the feelings, thoughts, and experience of another.
+HED_0012439	4	Excited	Agent-emotional-state		Feeling great enthusiasm and eagerness.
+HED_0012440	4	Fearful	Agent-emotional-state		Feeling apprehension that one may be in danger.
+HED_0012441	4	Frustrated	Agent-emotional-state		Feeling annoyed as a result of being blocked, thwarted, disappointed or defeated.
+HED_0012442	4	Grieving	Agent-emotional-state		Feeling sorrow in response to loss, whether physical or abstract.
+HED_0012443	4	Happy	Agent-emotional-state		Feeling pleased and content.
+HED_0012444	4	Jealous	Agent-emotional-state		Feeling threatened by a rival in a relationship with another individual, in particular an intimate partner, usually involves feelings of threat, fear, suspicion, distrust, anxiety, anger, betrayal, and rejection.
+HED_0012445	4	Joyful	Agent-emotional-state		Feeling delight or intense happiness.
+HED_0012446	4	Loving	Agent-emotional-state		Feeling a strong positive emotion of affection and attraction.
+HED_0012447	4	Relieved	Agent-emotional-state		No longer feeling pain, distress,anxiety, or reassured.
+HED_0012448	4	Sad	Agent-emotional-state		Feeling grief or unhappiness.
+HED_0012449	4	Stressed	Agent-emotional-state		Experiencing mental or emotional strain or tension.
+HED_0012450	3	Agent-physiological-state	Agent-state		Having to do with the mechanical, physical, or biochemical function of an agent.
+HED_0013226	4	Catamenial	Agent-physiological-state		Related to menstruation.
+HED_0013227	4	Fever	Agent-physiological-state	relatedTag=Sick	Body temperature above the normal range.
+HED_0012451	4	Healthy	Agent-physiological-state	relatedTag=Sick	Having no significant health-related issues.
+HED_0012452	4	Hungry	Agent-physiological-state	relatedTag=Sated, relatedTag=Thirsty	Being in a state of craving or desiring food.
+HED_0012453	4	Rested	Agent-physiological-state	relatedTag=Tired	Feeling refreshed and relaxed.
+HED_0012454	4	Sated	Agent-physiological-state	relatedTag=Hungry	Feeling full.
+HED_0012455	4	Sick	Agent-physiological-state	relatedTag=Healthy	Being in a state of ill health, bodily malfunction, or discomfort.
+HED_0012456	4	Thirsty	Agent-physiological-state	relatedTag=Hungry	Feeling a need to drink.
+HED_0012457	4	Tired	Agent-physiological-state	relatedTag=Rested	Feeling in need of sleep or rest.
+HED_0012458	3	Agent-postural-state	Agent-state		Pertaining to the position in which agent holds their body.
+HED_0012459	4	Crouching	Agent-postural-state		Adopting a position where the knees are bent and the upper body is brought forward and down, sometimes to avoid detection or to defend oneself.
+HED_0012460	4	Eyes-closed	Agent-postural-state		Keeping eyes closed with no blinking.
+HED_0012461	4	Eyes-open	Agent-postural-state		Keeping eyes open with occasional blinking.
+HED_0012462	4	Kneeling	Agent-postural-state		Positioned where one or both knees are on the ground.
+HED_0012463	4	On-treadmill	Agent-postural-state		Ambulation on an exercise apparatus with an endless moving belt to support moving in place.
+HED_0012464	4	Prone	Agent-postural-state		Positioned in a recumbent body position whereby the person lies on its stomach and faces downward.
+HED_0012465	4	Seated-with-chin-rest	Agent-postural-state		Using a device that supports the chin and head.
+HED_0012466	4	Sitting	Agent-postural-state		In a seated position.
+HED_0012467	4	Standing	Agent-postural-state		Assuming or maintaining an erect upright position.
+HED_0012468	2	Agent-task-role	Agent-property		The function or part that is ascribed to an agent in performing the task.
+HED_0012469	3	Experiment-actor	Agent-task-role		An agent who plays a predetermined role to create the experiment scenario.
+HED_0012470	3	Experiment-controller	Agent-task-role		An agent exerting control over some aspect of the experiment.
+HED_0012471	3	Experiment-participant	Agent-task-role		Someone who takes part in an activity related to an experiment.
+HED_0012472	3	Experimenter	Agent-task-role		Person who is the owner of the experiment and has its responsibility.
+HED_0012473	2	Agent-trait	Agent-property		A genetically, environmentally, or socially determined characteristic of an agent.
+HED_0012474	3	Age	Agent-trait		Length of time elapsed time since birth of the agent.
+HED_0012475	4	Age-#	Age	takesValue, valueClass=numericClass, unitClass=timeUnits	
+HED_0012476	3	Agent-experience-level	Agent-trait		Amount of skill or knowledge that the agent has as pertains to the task.
+HED_0012477	4	Expert-level	Agent-experience-level	relatedTag=Intermediate-experience-level, relatedTag=Novice-level	Having comprehensive and authoritative knowledge of or skill in a particular area related to the task.
+HED_0012478	4	Intermediate-experience-level	Agent-experience-level	relatedTag=Expert-level, relatedTag=Novice-level	Having a moderate amount of knowledge or skill related to the task.
+HED_0012479	4	Novice-level	Agent-experience-level	relatedTag=Expert-level, relatedTag=Intermediate-experience-level	Being inexperienced in a field or situation related to the task.
+HED_0012480	3	Ethnicity	Agent-trait		Belong to a social group that has a common national or cultural tradition. Use with Label to avoid extension.
+HED_0012481	3	Gender	Agent-trait		Characteristics that are socially constructed, including norms, behaviors, and roles based on sex.
+HED_0012482	3	Handedness	Agent-trait		Individual preference for use of a hand, known as the dominant hand.
+HED_0012483	4	Ambidextrous	Handedness		Having no overall dominance in the use of right or left hand or foot in the performance of tasks that require one hand or foot.
+HED_0012484	4	Left-handed	Handedness		Preference for using the left hand or foot for tasks requiring the use of a single hand or foot.
+HED_0012485	4	Right-handed	Handedness		Preference for using the right hand or foot for tasks requiring the use of a single hand or foot.
+HED_0012486	3	Race	Agent-trait		Belonging to a group sharing physical or social qualities as defined within a specified society. Use with Label to avoid extension.
+HED_0012487	3	Sex	Agent-trait		Physical properties or qualities by which male is distinguished from female.
+HED_0012488	4	Female	Sex		Biological sex of an individual with female sexual organs such ova.
+HED_0012489	4	Intersex	Sex		Having genitalia and/or secondary sexual characteristics of indeterminate sex.
+HED_0012490	4	Male	Sex		Biological sex of an individual with male sexual organs producing sperm.
+HED_0012491	4	Other-sex	Sex		A non-specific designation of sexual traits.
+HED_0012492	1	Data-property	Property	extensionAllowed	Something that pertains to data or information.
+HED_0012493	2	Data-artifact	Data-property		An anomalous, interfering, or distorting signal originating from a source other than the item being studied.
+HED_0012494	3	Biological-artifact	Data-artifact		A data artifact arising from a biological entity being measured.
+HED_0012495	4	Chewing-artifact	Biological-artifact		Artifact from moving the jaw in a chewing motion.
+HED_0012496	4	ECG-artifact	Biological-artifact		An electrical artifact from the far-field potential from pulsation of the heart, time locked to QRS complex.
+HED_0012497	4	EMG-artifact	Biological-artifact		Artifact from muscle activity and myogenic potentials at the measurements site. In EEG, myogenic potentials are the most common artifacts. Frontalis and temporalis muscles (e.g. clenching of jaw muscles) are common causes. Generally, the potentials generated in the muscles are of shorter duration than those generated in the brain. The frequency components are usually beyond 30-50 Hz, and the bursts are arrhythmic.
+HED_0012498	4	Eye-artifact	Biological-artifact		Ocular movements and blinks can result in artifacts in different types of data. In electrophysiology data, these can result transients and offsets the signal.
+HED_0012499	5	Eye-blink-artifact	Eye-artifact		Artifact from eye blinking. In EEG, Fp1/Fp2 electrodes become electro-positive with eye closure because the cornea is positively charged causing a negative deflection in Fp1/Fp2. If the eye blink is unilateral, consider prosthetic eye.
+HED_0012500	5	Eye-movement-artifact	Eye-artifact		Eye movements can cause artifacts on recordings. The charge of the eye can especially cause artifacts in electrophysiology data.
+HED_0012501	6	Horizontal-eye-movement-artifact	Eye-movement-artifact		Artifact from moving eyes left-to-right and right-to-left. In EEG, there is an upward deflection in the Fp2-F8 derivation, when the eyes move to the right side. In this case F8 becomes more positive and therefore. When the eyes move to the left, F7 becomes more positive and there is an upward deflection in the Fp1-F7 derivation.
+HED_0012502	6	Nystagmus-artifact	Eye-movement-artifact		Artifact from nystagmus (a vision condition in which the eyes make repetitive, uncontrolled movements).
+HED_0012503	6	Slow-eye-movement-artifact	Eye-movement-artifact		Artifacts originating from slow, rolling eye-movements, seen during drowsiness.
+HED_0012504	6	Vertical-eye-movement-artifact	Eye-movement-artifact		Artifact from moving eyes up and down. In EEG, this causes positive potentials (50-100 micro V) with bi-frontal distribution, maximum at Fp1 and Fp2, when the eyeball rotates upward. The downward rotation of the eyeball is associated with the negative deflection. The time course of the deflections is similar to the time course of the eyeball movement.
+HED_0012505	4	Movement-artifact	Biological-artifact		Artifact in the measured data generated by motion of the subject.
+HED_0012506	4	Pulse-artifact	Biological-artifact		A mechanical artifact from a pulsating blood vessel near a measurement site, cardio-ballistic artifact.
+HED_0012507	4	Respiration-artifact	Biological-artifact		Artifact from breathing.
+HED_0012508	4	Rocking-patting-artifact	Biological-artifact		Quasi-rhythmical artifacts in recordings most commonly seen in infants. Typically caused by a caregiver rocking or patting the infant.
+HED_0012509	4	Sucking-artifact	Biological-artifact		Artifact from sucking, typically seen in very young cases.
+HED_0012510	4	Sweat-artifact	Biological-artifact		Artifact from sweating. In EEG, this is a low amplitude undulating waveform that is usually greater than 2 seconds and may appear to be an unstable baseline.
+HED_0012511	4	Tongue-movement-artifact	Biological-artifact		Artifact from tongue movement (Glossokinetic). The tongue functions as a dipole, with the tip negative with respect to the base. In EEG, the artifact produced by the tongue has a broad potential field that drops from frontal to occipital areas, although it is less steep than that produced by eye movement artifacts. The amplitude of the potentials is greater inferiorly than in parasagittal regions; the frequency is variable but usually in the delta range. Chewing and sucking can produce similar artifacts.
+HED_0012512	3	Nonbiological-artifact	Data-artifact		A data artifact arising from a non-biological source.
+HED_0012513	4	Artificial-ventilation-artifact	Nonbiological-artifact		Artifact stemming from mechanical ventilation. These can occur at the same rate as the ventilator, but also have other patterns.
+HED_0012514	4	Dialysis-artifact	Nonbiological-artifact		Artifacts seen in recordings during continuous renal replacement therapy (dialysis).
+HED_0012515	4	Electrode-movement-artifact	Nonbiological-artifact		Artifact from electrode movement.
+HED_0012516	4	Electrode-pops-artifact	Nonbiological-artifact		Brief artifact with a steep rise and slow fall of an electrophysiological signal, most often caused by a loose electrode.
+HED_0012517	4	Induction-artifact	Nonbiological-artifact		Artifacts induced by nearby equipment. In EEG, these are usually of high frequency.
+HED_0012518	4	Line-noise-artifact	Nonbiological-artifact		Power line noise at 50 Hz or 60 Hz.
+HED_0012519	5	Line-noise-artifact-#	Line-noise-artifact	takesValue, valueClass=numericClass, unitClass=frequencyUnits	
+HED_0012520	4	Salt-bridge-artifact	Nonbiological-artifact		Artifact from salt-bridge between EEG electrodes.
+HED_0012521	2	Data-marker	Data-property		An indicator placed to mark something.
+HED_0012522	3	Data-break-marker	Data-marker		An indicator place to indicate a gap in the data.
+HED_0012523	3	Temporal-marker	Data-marker		An indicator placed at a particular time in the data.
+HED_0012524	4	Inset	Temporal-marker	topLevelTagGroup, reserved, relatedTag=Onset, relatedTag=Offset	Marks an intermediate point in an ongoing event of temporal extent.
+HED_0012525	4	Offset	Temporal-marker	topLevelTagGroup, reserved, relatedTag=Onset, relatedTag=Inset	Marks the end of an event of temporal extent.
+HED_0012526	4	Onset	Temporal-marker	topLevelTagGroup, reserved, relatedTag=Inset, relatedTag=Offset	Marks the start of an ongoing event of temporal extent.
+HED_0012527	4	Pause	Temporal-marker		Indicates the temporary interruption of the operation of a process and subsequently a wait for a signal to continue.
+HED_0012528	4	Time-out	Temporal-marker		A cancellation or cessation that automatically occurs when a predefined interval of time has passed without a certain event occurring.
+HED_0012529	4	Time-sync	Temporal-marker		A synchronization signal whose purpose is to help synchronize different signals or processes. Often used to indicate a marker inserted into the recorded data to allow post hoc synchronization of concurrently recorded data streams.
+HED_0012530	2	Data-resolution	Data-property		Smallest change in a quality being measured by an sensor that causes a perceptible change.
+HED_0012531	3	Printer-resolution	Data-resolution		Resolution of a printer, usually expressed as the number of dots-per-inch for a printer.
+HED_0012532	4	Printer-resolution-#	Printer-resolution	takesValue, valueClass=numericClass	
+HED_0012533	3	Screen-resolution	Data-resolution		Resolution of a screen, usually expressed as the of pixels in a dimension for a digital display device.
+HED_0012534	4	Screen-resolution-#	Screen-resolution	takesValue, valueClass=numericClass	
+HED_0012535	3	Sensory-resolution	Data-resolution		Resolution of measurements by a sensing device.
+HED_0012536	4	Sensory-resolution-#	Sensory-resolution	takesValue, valueClass=numericClass	
+HED_0012537	3	Spatial-resolution	Data-resolution		Linear spacing of a spatial measurement.
+HED_0012538	4	Spatial-resolution-#	Spatial-resolution	takesValue, valueClass=numericClass	
+HED_0012539	3	Spectral-resolution	Data-resolution		Measures the ability of a sensor to resolve features in the electromagnetic spectrum.
+HED_0012540	4	Spectral-resolution-#	Spectral-resolution	takesValue, valueClass=numericClass	
+HED_0012541	3	Temporal-resolution	Data-resolution		Measures the ability of a sensor to resolve features in time.
+HED_0012542	4	Temporal-resolution-#	Temporal-resolution	takesValue, valueClass=numericClass	
+HED_0012543	2	Data-source-type	Data-property		The type of place, person, or thing from which the data comes or can be obtained.
+HED_0012544	3	Computed-feature	Data-source-type		A feature computed from the data by a tool. This tag should be grouped with a label of the form Toolname_propertyName.
+HED_0012545	3	Computed-prediction	Data-source-type		A computed extrapolation of known data.
+HED_0012546	3	Expert-annotation	Data-source-type		An explanatory or critical comment or other in-context information provided by an authority.
+HED_0012547	3	Instrument-measurement	Data-source-type		Information obtained from a device that is used to measure material properties or make other observations.
+HED_0012548	3	Observation	Data-source-type		Active acquisition of information from a primary source. Should be grouped with a label of the form AgentID_featureName.
+HED_0012549	2	Data-value	Data-property		Designation of the type of a data item.
+HED_0012550	3	Categorical-value	Data-value		Indicates that something can take on a limited and usually fixed number of possible values.
+HED_0012551	4	Categorical-class-value	Categorical-value		Categorical values that fall into discrete classes such as true or false. The grouping is absolute in the sense that it is the same for all participants.
+HED_0012552	5	All	Categorical-class-value	relatedTag=Some, relatedTag=None	To a complete degree or to the full or entire extent.
+HED_0012553	5	Correct	Categorical-class-value	relatedTag=Wrong	Free from error. Especially conforming to fact or truth.
+HED_0012554	5	Explicit	Categorical-class-value	relatedTag=Implicit	Stated clearly and in detail, leaving no room for confusion or doubt.
+HED_0012555	5	False	Categorical-class-value	relatedTag=True	Not in accordance with facts, reality or definitive criteria.
+HED_0012556	5	Implicit	Categorical-class-value	relatedTag=Explicit	Implied though not plainly expressed.
+HED_0012557	5	Invalid	Categorical-class-value	relatedTag=Valid	Not allowed or not conforming to the correct format or specifications.
+HED_0012558	5	None	Categorical-class-value	relatedTag=All, relatedTag=Some	No person or thing, nobody, not any.
+HED_0012559	5	Some	Categorical-class-value	relatedTag=All, relatedTag=None	At least a small amount or number of, but not a large amount of, or often.
+HED_0012560	5	True	Categorical-class-value	relatedTag=False	Conforming to facts, reality or definitive criteria.
+HED_0012561	5	Unknown	Categorical-class-value	relatedTag=Invalid	The information has not been provided.
+HED_0012562	5	Valid	Categorical-class-value	relatedTag=Invalid	Allowable, usable, or acceptable.
+HED_0012563	5	Wrong	Categorical-class-value	relatedTag=Correct	Inaccurate or not correct.
+HED_0012564	4	Categorical-judgment-value	Categorical-value		Categorical values that are based on the judgment or perception of the participant such familiar and famous.
+HED_0012565	5	Abnormal	Categorical-judgment-value	relatedTag=Normal	Deviating in any way from the state, position, structure, condition, behavior, or rule which is considered a norm.
+HED_0012566	5	Asymmetrical	Categorical-judgment-value	relatedTag=Symmetrical	Lacking symmetry or having parts that fail to correspond to one another in shape, size, or arrangement.
+HED_0012567	5	Audible	Categorical-judgment-value	relatedTag=Inaudible	A sound that can be perceived by the participant.
+HED_0012568	5	Complex	Categorical-judgment-value	relatedTag=Simple	Hard, involved or complicated, elaborate, having many parts.
+HED_0012569	5	Congruent	Categorical-judgment-value	relatedTag=Incongruent	Concordance of multiple evidence lines. In agreement or harmony.
+HED_0012570	5	Constrained	Categorical-judgment-value	relatedTag=Unconstrained	Keeping something within particular limits or bounds.
+HED_0012571	5	Disordered	Categorical-judgment-value	relatedTag=Ordered	Not neatly arranged. Confused and untidy. A structural quality in which the parts of an object are non-rigid.
+HED_0012572	5	Familiar	Categorical-judgment-value	relatedTag=Unfamiliar, relatedTag=Famous	Recognized, familiar, or within the scope of knowledge.
+HED_0012573	5	Famous	Categorical-judgment-value	relatedTag=Familiar, relatedTag=Unfamiliar	A person who has a high degree of recognition by the general population for his or her success or accomplishments. A famous person.
+HED_0012574	5	Inaudible	Categorical-judgment-value	relatedTag=Audible	A sound below the threshold of perception of the participant.
+HED_0012575	5	Incongruent	Categorical-judgment-value	relatedTag=Congruent	Not in agreement or harmony.
+HED_0012576	5	Involuntary	Categorical-judgment-value	relatedTag=Voluntary	An action that is not made by choice. In the body, involuntary actions (such as blushing) occur automatically, and cannot be controlled by choice.
+HED_0012577	5	Masked	Categorical-judgment-value	relatedTag=Unmasked	Information exists but is not provided or is partially obscured due to security,privacy, or other concerns.
+HED_0012578	5	Normal	Categorical-judgment-value	relatedTag=Abnormal	Being approximately average or within certain limits. Conforming with or constituting a norm or standard or level or type or social norm.
+HED_0012579	5	Ordered	Categorical-judgment-value	relatedTag=Disordered	Conforming to a logical or comprehensible arrangement of separate elements.
+HED_0012580	5	Simple	Categorical-judgment-value	relatedTag=Complex	Easily understood or presenting no difficulties.
+HED_0012581	5	Symmetrical	Categorical-judgment-value	relatedTag=Asymmetrical	Made up of exactly similar parts facing each other or around an axis. Showing aspects of symmetry.
+HED_0012582	5	Unconstrained	Categorical-judgment-value	relatedTag=Constrained	Moving without restriction.
+HED_0012583	5	Unfamiliar	Categorical-judgment-value	relatedTag=Familiar, relatedTag=Famous	Not having knowledge or experience of.
+HED_0012584	5	Unmasked	Categorical-judgment-value	relatedTag=Masked	Information is revealed.
+HED_0012585	5	Voluntary	Categorical-judgment-value	relatedTag=Involuntary	Using free will or design; not forced or compelled; controlled by individual volition.
+HED_0012586	4	Categorical-level-value	Categorical-value		Categorical values based on dividing a continuous variable into levels such as high and low.
+HED_0012587	5	Cold	Categorical-level-value	relatedTag=Hot	Having an absence of heat.
+HED_0012588	5	Deep	Categorical-level-value	relatedTag=Shallow	Extending relatively far inward or downward.
+HED_0012589	5	High	Categorical-level-value	relatedTag=Low, relatedTag=Medium	Having a greater than normal degree, intensity, or amount.
+HED_0012590	5	Hot	Categorical-level-value	relatedTag=Cold	Having an excess of heat.
+HED_0012591	5	Large	Categorical-level-value	relatedTag=Small	Having a great extent such as in physical dimensions, period of time, amplitude or frequency.
+HED_0012592	5	Liminal	Categorical-level-value	relatedTag=Subliminal, relatedTag=Supraliminal	Situated at a sensory threshold that is barely perceptible or capable of eliciting a response.
+HED_0012593	5	Loud	Categorical-level-value	relatedTag=Quiet	Having a perceived high intensity of sound.
+HED_0012594	5	Low	Categorical-level-value	relatedTag=High	Less than normal in degree, intensity or amount.
+HED_0012595	5	Medium	Categorical-level-value	relatedTag=Low, relatedTag=High	Mid-way between small and large in number, quantity, magnitude or extent.
+HED_0012596	5	Negative	Categorical-level-value	relatedTag=Positive	Involving disadvantage or harm.
+HED_0012597	5	Positive	Categorical-level-value	relatedTag=Negative	Involving advantage or good.
+HED_0012598	5	Quiet	Categorical-level-value	relatedTag=Loud	Characterizing a perceived low intensity of sound.
+HED_0012599	5	Rough	Categorical-level-value	relatedTag=Smooth	Having a surface with perceptible bumps, ridges, or irregularities.
+HED_0012600	5	Shallow	Categorical-level-value	relatedTag=Deep	Having a depth which is relatively low.
+HED_0012601	5	Small	Categorical-level-value	relatedTag=Large	Having a small extent such as in physical dimensions, period of time, amplitude or frequency.
+HED_0012602	5	Smooth	Categorical-level-value	relatedTag=Rough	Having a surface free from bumps, ridges, or irregularities.
+HED_0012603	5	Subliminal	Categorical-level-value	relatedTag=Liminal, relatedTag=Supraliminal	Situated below a sensory threshold that is imperceptible or not capable of eliciting a response.
+HED_0012604	5	Supraliminal	Categorical-level-value	relatedTag=Liminal, relatedTag=Subliminal	Situated above a sensory threshold that is perceptible or capable of eliciting a response.
+HED_0012605	5	Thick	Categorical-level-value	relatedTag=Thin	Wide in width, extent or cross-section.
+HED_0012606	5	Thin	Categorical-level-value	relatedTag=Thick	Narrow in width, extent or cross-section.
+HED_0012607	4	Categorical-location-value	Categorical-value		Value indicating the location of something, primarily as an identifier rather than an expression of where the item is relative to something else.
+HED_0012608	5	Anterior	Categorical-location-value		Relating to an item on the front of an agent body (from the point of view of the agent) or on the front of an object from the point of view of an agent. This pertains to the identity of an agent or a thing.
+HED_0012609	5	Lateral	Categorical-location-value		Identifying the portion of an object away from the midline, particularly applied to the (anterior-posterior, superior-inferior) surface of a brain.
+HED_0012610	5	Left	Categorical-location-value		Relating to an item on the left side of an agent body (from the point of view of the agent) or the left side of an object from the point of view of an agent. This pertains to the identity of an agent or a thing, for example (Left, Hand) as an identifier for the left hand. HED spatial relations should be used for relative positions such as (Hand, (Left-side-of, Keyboard)), which denotes the hand placed on the left side of the keyboard, which could be either the identified left hand or right hand.
+HED_0012611	5	Medial	Categorical-location-value		Identifying the portion of an object towards the center, particularly applied to the (anterior-posterior, superior-inferior) surface of a brain.
+HED_0012612	5	Posterior	Categorical-location-value		Relating to an item on the back of an agent body (from the point of view of the agent) or on the back of an object from the point of view of an agent. This pertains to the identity of an agent or a thing.
+HED_0012613	5	Right	Categorical-location-value		Relating to an item on the right side of an agent body (from the point of view of the agent) or the right side of an object from the point of view of an agent. This pertains to the identity of an agent or a thing, for example (Right, Hand) as an identifier for the right hand. HED spatial relations should be used for relative positions such as (Hand, (Right-side-of, Keyboard)), which denotes the hand placed on the right side of the keyboard, which could be either the identified left hand or right hand.
+HED_0012614	4	Categorical-orientation-value	Categorical-value		Value indicating the orientation or direction of something.
+HED_0012615	5	Backward	Categorical-orientation-value	relatedTag=Forward	Directed behind or to the rear.
+HED_0012616	5	Downward	Categorical-orientation-value	relatedTag=Leftward, relatedTag=Rightward, relatedTag=Upward	Moving or leading toward a lower place or level.
+HED_0012617	5	Forward	Categorical-orientation-value	relatedTag=Backward	At or near or directed toward the front.
+HED_0012618	5	Horizontally-oriented	Categorical-orientation-value	relatedTag=Vertically-oriented	Oriented parallel to or in the plane of the horizon.
+HED_0012619	5	Leftward	Categorical-orientation-value	relatedTag=Downward, relatedTag=Rightward, relatedTag=Upward	Going toward or facing the left.
+HED_0012620	5	Oblique	Categorical-orientation-value	relatedTag=Rotated	Slanting or inclined in direction, course, or position that is neither parallel nor perpendicular nor right-angular.
+HED_0012621	5	Rightward	Categorical-orientation-value	relatedTag=Downward, relatedTag=Leftward, relatedTag=Upward	Going toward or situated on the right.
+HED_0012622	5	Rotated	Categorical-orientation-value		Positioned offset around an axis or center.
+HED_0012623	5	Upward	Categorical-orientation-value	relatedTag=Downward, relatedTag=Leftward, relatedTag=Rightward	Moving, pointing, or leading to a higher place, point, or level.
+HED_0012624	5	Vertically-oriented	Categorical-orientation-value	relatedTag=Horizontally-oriented	Oriented perpendicular to the plane of the horizon.
+HED_0012625	3	Physical-value	Data-value		The value of some physical property of something.
+HED_0012626	4	Temperature	Physical-value		A measure of hot or cold based on the average kinetic energy of the atoms or molecules in the system.
+HED_0012627	5	Temperature-#	Temperature	takesValue, valueClass=numericClass, unitClass=temperatureUnits	
+HED_0012628	4	Weight	Physical-value		The relative mass or the quantity of matter contained by something.
+HED_0012629	5	Weight-#	Weight	takesValue, valueClass=numericClass, unitClass=weightUnits	
+HED_0012630	3	Quantitative-value	Data-value		Something capable of being estimated or expressed with numeric values.
+HED_0012631	4	Fraction	Quantitative-value		A numerical value between 0 and 1.
+HED_0012632	5	Fraction-#	Fraction	takesValue, valueClass=numericClass	
+HED_0012633	4	Item-count	Quantitative-value		The integer count of something which is usually grouped with the entity it is counting. (Item-count/3, A) indicates that 3 of A have occurred up to this point.
+HED_0012634	5	Item-count-#	Item-count	takesValue, valueClass=numericClass	
+HED_0012635	4	Item-index	Quantitative-value		The index of an item in a collection, sequence or other structure. (A (Item-index/3, B)) means that A is item number 3 in B.
+HED_0012636	5	Item-index-#	Item-index	takesValue, valueClass=numericClass	
+HED_0012637	4	Item-interval	Quantitative-value		An integer indicating how many items or entities have passed since the last one of these. An item interval of 0 indicates the current item.
+HED_0012638	5	Item-interval-#	Item-interval	takesValue, valueClass=numericClass	
+HED_0012639	4	Percentage	Quantitative-value		A fraction or ratio with 100 understood as the denominator.
+HED_0012640	5	Percentage-#	Percentage	takesValue, valueClass=numericClass	
+HED_0012641	4	Ratio	Quantitative-value		A quotient of quantities of the same kind for different components within the same system.
+HED_0012642	5	Ratio-#	Ratio	takesValue, valueClass=numericClass	
+HED_0012643	3	Spatiotemporal-value	Data-value		A property relating to space and/or time.
+HED_0012644	4	Rate-of-change	Spatiotemporal-value		The amount of change accumulated per unit time.
+HED_0012645	5	Acceleration	Rate-of-change		Magnitude of the rate of change in either speed or direction. The direction of change should be given separately.
+HED_0012646	6	Acceleration-#	Acceleration	takesValue, valueClass=numericClass, unitClass=accelerationUnits	
+HED_0012647	5	Frequency	Rate-of-change		Frequency is the number of occurrences of a repeating event per unit time.
+HED_0012648	6	Frequency-#	Frequency	takesValue, valueClass=numericClass, unitClass=frequencyUnits	
+HED_0012649	5	Jerk-rate	Rate-of-change		Magnitude of the rate at which the acceleration of an object changes with respect to time. The direction of change should be given separately.
+HED_0012650	6	Jerk-rate-#	Jerk-rate	takesValue, valueClass=numericClass, unitClass=jerkUnits	
+HED_0012651	5	Refresh-rate	Rate-of-change		The frequency with which the image on a computer monitor or similar electronic display screen is refreshed, usually expressed in hertz.
+HED_0012652	6	Refresh-rate-#	Refresh-rate	takesValue, valueClass=numericClass	
+HED_0012653	5	Sampling-rate	Rate-of-change		The number of digital samples taken or recorded per unit of time.
+HED_0012654	6	Sampling-rate-#	Sampling-rate	takesValue, valueClass=numericClass, unitClass=frequencyUnits	
+HED_0012655	5	Speed	Rate-of-change		A scalar measure of the rate of movement of the object expressed either as the distance traveled divided by the time taken (average speed) or the rate of change of position with respect to time at a particular point (instantaneous speed). The direction of change should be given separately.
+HED_0012656	6	Speed-#	Speed	takesValue, valueClass=numericClass, unitClass=speedUnits	
+HED_0012657	5	Temporal-rate	Rate-of-change		The number of items per unit of time.
+HED_0012658	6	Temporal-rate-#	Temporal-rate	takesValue, valueClass=numericClass, unitClass=frequencyUnits	
+HED_0012659	4	Spatial-value	Spatiotemporal-value		Value of an item involving space.
+HED_0012660	5	Angle	Spatial-value		The amount of inclination of one line to another or the plane of one object to another.
+HED_0012661	6	Angle-#	Angle	takesValue, unitClass=angleUnits, valueClass=numericClass	
+HED_0012662	5	Distance	Spatial-value		A measure of the space separating two objects or points.
+HED_0012663	6	Distance-#	Distance	takesValue, valueClass=numericClass, unitClass=physicalLengthUnits	
+HED_0012664	5	Position	Spatial-value		A reference to the alignment of an object, a particular situation or view of a situation, or the location of an object. Coordinates with respect a specified frame of reference or the default Screen-frame if no frame is given.
+HED_0012326	6	Clock-face	Position	deprecatedFrom=8.2.0	A location identifier based on clock-face numbering or anatomic subregion. Use Clock-face-position.
+HED_0013228	7	Clock-face-#	Clock-face	deprecatedFrom=8.2.0, takesValue, valueClass=numericClass	
+HED_0013229	6	Clock-face-position	Position		A location identifier based on clock-face numbering or anatomic subregion. As an object, just use the tag Clock.
+HED_0013230	7	Clock-face-position-#	Clock-face-position	takesValue, valueClass=numericClass	
+HED_0012665	6	X-position	Position		The position along the x-axis of the frame of reference.
+HED_0012666	7	X-position-#	X-position	takesValue, valueClass=numericClass, unitClass=physicalLengthUnits	
+HED_0012667	6	Y-position	Position		The position along the y-axis of the frame of reference.
+HED_0012668	7	Y-position-#	Y-position	takesValue, valueClass=numericClass, unitClass=physicalLengthUnits	
+HED_0012669	6	Z-position	Position		The position along the z-axis of the frame of reference.
+HED_0012670	7	Z-position-#	Z-position	takesValue, valueClass=numericClass, unitClass=physicalLengthUnits	
+HED_0012671	5	Size	Spatial-value		The physical magnitude of something.
+HED_0012672	6	Area	Size		The extent of a 2-dimensional surface enclosed within a boundary.
+HED_0012673	7	Area-#	Area	takesValue, valueClass=numericClass, unitClass=areaUnits	
+HED_0012674	6	Depth	Size		The distance from the surface of something especially from the perspective of looking from the front.
+HED_0012675	7	Depth-#	Depth	takesValue, valueClass=numericClass, unitClass=physicalLengthUnits	
+HED_0012676	6	Height	Size		The vertical measurement or distance from the base to the top of an object.
+HED_0012677	7	Height-#	Height	takesValue, valueClass=numericClass, unitClass=physicalLengthUnits	
+HED_0012678	6	Length	Size		The linear extent in space from one end of something to the other end, or the extent of something from beginning to end.
+HED_0012679	7	Length-#	Length	takesValue, valueClass=numericClass, unitClass=physicalLengthUnits	
+HED_0012680	6	Perimeter	Size		The minimum length of paths enclosing a 2D shape.
+HED_0012681	7	Perimeter-#	Perimeter	takesValue, valueClass=numericClass, unitClass=physicalLengthUnits	
+HED_0012682	6	Radius	Size		The distance of the line from the center of a circle or a sphere to its perimeter or outer surface, respectively.
+HED_0012683	7	Radius-#	Radius	takesValue, valueClass=numericClass, unitClass=physicalLengthUnits	
+HED_0012684	6	Volume	Size		The amount of three dimensional space occupied by an object or the capacity of a space or container.
+HED_0012685	7	Volume-#	Volume	takesValue, valueClass=numericClass, unitClass=volumeUnits	
+HED_0012686	6	Width	Size		The extent or measurement of something from side to side.
+HED_0012687	7	Width-#	Width	takesValue, valueClass=numericClass, unitClass=physicalLengthUnits	
+HED_0012688	4	Temporal-value	Spatiotemporal-value		A characteristic of or relating to time or limited by time.
+HED_0012689	5	Delay	Temporal-value	topLevelTagGroup, reserved, requireChild, relatedTag=Duration	The time at which an event start time is delayed from the current onset time. This tag defines the start time of an event of temporal extent and may be used with the Duration tag.
+HED_0012690	6	Delay-#	Delay	takesValue, valueClass=numericClass, unitClass=timeUnits	
+HED_0012691	5	Duration	Temporal-value	topLevelTagGroup, reserved, requireChild, relatedTag=Delay	The period of time during which an event occurs. This tag defines the end time of an event of temporal extent and may be used with the Delay tag.
+HED_0012692	6	Duration-#	Duration	takesValue, valueClass=numericClass, unitClass=timeUnits	
+HED_0012693	5	Time-interval	Temporal-value		The period of time separating two instances, events, or occurrences.
+HED_0012694	6	Time-interval-#	Time-interval	takesValue, valueClass=numericClass, unitClass=timeUnits	
+HED_0012695	5	Time-value	Temporal-value		A value with units of time. Usually grouped with tags identifying what the value represents.
+HED_0012696	6	Time-value-#	Time-value	takesValue, valueClass=numericClass, unitClass=timeUnits	
+HED_0012697	3	Statistical-value	Data-value	extensionAllowed	A value based on or employing the principles of statistics.
+HED_0012698	4	Data-maximum	Statistical-value		The largest possible quantity or degree.
+HED_0012699	5	Data-maximum-#	Data-maximum	takesValue, valueClass=numericClass	
+HED_0012700	4	Data-mean	Statistical-value		The sum of a set of values divided by the number of values in the set.
+HED_0012701	5	Data-mean-#	Data-mean	takesValue, valueClass=numericClass	
+HED_0012702	4	Data-median	Statistical-value		The value which has an equal number of values greater and less than it.
+HED_0012703	5	Data-median-#	Data-median	takesValue, valueClass=numericClass	
+HED_0012704	4	Data-minimum	Statistical-value		The smallest possible quantity.
+HED_0012705	5	Data-minimum-#	Data-minimum	takesValue, valueClass=numericClass	
+HED_0012706	4	Probability	Statistical-value		A measure of the expectation of the occurrence of a particular event.
+HED_0012707	5	Probability-#	Probability	takesValue, valueClass=numericClass	
+HED_0012708	4	Standard-deviation	Statistical-value		A measure of the range of values in a set of numbers. Standard deviation is a statistic used as a measure of the dispersion or variation in a distribution, equal to the square root of the arithmetic mean of the squares of the deviations from the arithmetic mean.
+HED_0012709	5	Standard-deviation-#	Standard-deviation	takesValue, valueClass=numericClass	
+HED_0012710	4	Statistical-accuracy	Statistical-value		A measure of closeness to true value expressed as a number between 0 and 1.
+HED_0012711	5	Statistical-accuracy-#	Statistical-accuracy	takesValue, valueClass=numericClass	
+HED_0012712	4	Statistical-precision	Statistical-value		A quantitative representation of the degree of accuracy necessary for or associated with a particular action.
+HED_0012713	5	Statistical-precision-#	Statistical-precision	takesValue, valueClass=numericClass	
+HED_0012714	4	Statistical-recall	Statistical-value		Sensitivity is a measurement datum qualifying a binary classification test and is computed by subtracting the false negative rate to the integral numeral 1.
+HED_0012715	5	Statistical-recall-#	Statistical-recall	takesValue, valueClass=numericClass	
+HED_0012716	4	Statistical-uncertainty	Statistical-value		A measure of the inherent variability of repeated observation measurements of a quantity including quantities evaluated by statistical methods and by other means.
+HED_0012717	5	Statistical-uncertainty-#	Statistical-uncertainty	takesValue, valueClass=numericClass	
+HED_0012718	2	Data-variability-attribute	Data-property		An attribute describing how something changes or varies.
+HED_0012719	3	Abrupt	Data-variability-attribute		Marked by sudden change.
+HED_0012720	3	Constant	Data-variability-attribute		Continually recurring or continuing without interruption. Not changing in time or space.
+HED_0012721	3	Continuous	Data-variability-attribute	relatedTag=Discrete, relatedTag=Discontinuous	Uninterrupted in time, sequence, substance, or extent.
+HED_0012722	3	Decreasing	Data-variability-attribute	relatedTag=Increasing	Becoming smaller or fewer in size, amount, intensity, or degree.
+HED_0012723	3	Deterministic	Data-variability-attribute	relatedTag=Random, relatedTag=Stochastic	No randomness is involved in the development of the future states of the element.
+HED_0012724	3	Discontinuous	Data-variability-attribute	relatedTag=Continuous	Having a gap in time, sequence, substance, or extent.
+HED_0012725	3	Discrete	Data-variability-attribute	relatedTag=Continuous, relatedTag=Discontinuous	Constituting a separate entities or parts.
+HED_0012726	3	Estimated-value	Data-variability-attribute		Something that has been calculated or measured approximately.
+HED_0012727	3	Exact-value	Data-variability-attribute		A value that is viewed to the true value according to some standard.
+HED_0012728	3	Flickering	Data-variability-attribute		Moving irregularly or unsteadily or burning or shining fitfully or with a fluctuating light.
+HED_0012729	3	Fractal	Data-variability-attribute		Having extremely irregular curves or shapes for which any suitably chosen part is similar in shape to a given larger or smaller part when magnified or reduced to the same size.
+HED_0012730	3	Increasing	Data-variability-attribute	relatedTag=Decreasing	Becoming greater in size, amount, or degree.
+HED_0012731	3	Random	Data-variability-attribute	relatedTag=Deterministic, relatedTag=Stochastic	Governed by or depending on chance. Lacking any definite plan or order or purpose.
+HED_0012732	3	Repetitive	Data-variability-attribute		A recurring action that is often non-purposeful.
+HED_0012733	3	Stochastic	Data-variability-attribute	relatedTag=Deterministic, relatedTag=Random	Uses a random probability distribution or pattern that may be analyzed statistically but may not be predicted precisely to determine future states.
+HED_0012734	3	Varying	Data-variability-attribute		Differing in size, amount, degree, or nature.
+HED_0012735	1	Environmental-property	Property		Relating to or arising from the surroundings of an agent.
+HED_0012736	2	Augmented-reality	Environmental-property		Using technology that enhances real-world experiences with computer-derived digital overlays to change some aspects of perception of the natural environment. The digital content is shown to the user through a smart device or glasses and responds to changes in the environment.
+HED_0012737	2	Indoors	Environmental-property		Located inside a building or enclosure.
+HED_0012738	2	Motion-platform	Environmental-property		A mechanism that creates the feelings of being in a real motion environment.
+HED_0012739	2	Outdoors	Environmental-property		Any area outside a building or shelter.
+HED_0012740	2	Real-world	Environmental-property		Located in a place that exists in real space and time under realistic conditions.
+HED_0012741	2	Rural	Environmental-property		Of or pertaining to the country as opposed to the city.
+HED_0012742	2	Terrain	Environmental-property		Characterization of the physical features of a tract of land.
+HED_0012743	3	Composite-terrain	Terrain		Tracts of land characterized by a mixture of physical features.
+HED_0012744	3	Dirt-terrain	Terrain		Tracts of land characterized by a soil surface and lack of vegetation.
+HED_0012745	3	Grassy-terrain	Terrain		Tracts of land covered by grass.
+HED_0012746	3	Gravel-terrain	Terrain		Tracts of land covered by a surface consisting a loose aggregation of small water-worn or pounded stones.
+HED_0012747	3	Leaf-covered-terrain	Terrain		Tracts of land covered by leaves and composited organic material.
+HED_0012748	3	Muddy-terrain	Terrain		Tracts of land covered by a liquid or semi-liquid mixture of water and some combination of soil, silt, and clay.
+HED_0012749	3	Paved-terrain	Terrain		Tracts of land covered with concrete, asphalt, stones, or bricks.
+HED_0012750	3	Rocky-terrain	Terrain		Tracts of land consisting or full of rock or rocks.
+HED_0012751	3	Sloped-terrain	Terrain		Tracts of land arranged in a sloping or inclined position.
+HED_0012752	3	Uneven-terrain	Terrain		Tracts of land that are not level, smooth, or regular.
+HED_0012753	2	Urban	Environmental-property		Relating to, located in, or characteristic of a city or densely populated area.
+HED_0012754	2	Virtual-world	Environmental-property		Using technology that creates immersive, computer-generated experiences that a person can interact with and navigate through. The digital content is generally delivered to the user through some type of headset and responds to changes in head position or through interaction with other types of sensors. Existing in a virtual setting such as a simulation or game environment.
+HED_0012755	1	Informational-property	Property	extensionAllowed	Something that pertains to a task.
+HED_0012756	2	Description	Informational-property		An explanation of what the tag group it is in means. If the description is at the top-level of an event string, the description applies to the event.
+HED_0012757	3	Description-#	Description	takesValue, valueClass=textClass	
+HED_0012758	2	ID	Informational-property		An alphanumeric name that identifies either a unique object or a unique class of objects. Here the object or class may be an idea, physical countable object (or class), or physical uncountable substance (or class).
+HED_0012759	3	ID-#	ID	takesValue, valueClass=textClass	
+HED_0012760	2	Label	Informational-property		A string of 20 or fewer characters identifying something. Labels usually refer to general classes of things while IDs refer to specific instances. A term that is associated with some entity. A brief description given for purposes of identification. An identifying or descriptive marker that is attached to an object.
+HED_0012761	3	Label-#	Label	takesValue, valueClass=nameClass	
+HED_0012762	2	Metadata	Informational-property		Data about data. Information that describes another set of data.
+HED_0012763	3	Creation-date	Metadata		The date on which the creation of this item began.
+HED_0012764	4	Creation-date-#	Creation-date	takesValue, valueClass=dateTimeClass	
+HED_0012765	3	Experimental-note	Metadata		A brief written record about the experiment.
+HED_0012766	4	Experimental-note-#	Experimental-note	takesValue, valueClass=textClass	
+HED_0012767	3	Library-name	Metadata		Official name of a HED library.
+HED_0012768	4	Library-name-#	Library-name	takesValue, valueClass=nameClass	
+HED_0012769	3	Metadata-identifier	Metadata		Identifier (usually unique) from another metadata source.
+HED_0012770	4	CogAtlas	Metadata-identifier		The Cognitive Atlas ID number of something.
+HED_0012771	5	CogAtlas-#	CogAtlas	takesValue	
+HED_0012772	4	CogPo	Metadata-identifier		The CogPO ID number of something.
+HED_0012773	5	CogPo-#	CogPo	takesValue	
+HED_0012774	4	DOI	Metadata-identifier		Digital object identifier for an object.
+HED_0012775	5	DOI-#	DOI	takesValue	
+HED_0012776	4	OBO-identifier	Metadata-identifier		The identifier of a term in some Open Biology Ontology (OBO) ontology.
+HED_0012777	5	OBO-identifier-#	OBO-identifier	takesValue, valueClass=nameClass	
+HED_0012778	4	Species-identifier	Metadata-identifier		A binomial species name from the NCBI Taxonomy, for example, homo sapiens, mus musculus, or rattus norvegicus.
+HED_0012779	5	Species-identifier-#	Species-identifier	takesValue	
+HED_0012780	4	Subject-identifier	Metadata-identifier		A sequence of characters used to identify, name, or characterize a trial or study subject.
+HED_0012781	5	Subject-identifier-#	Subject-identifier	takesValue	
+HED_0012782	4	UUID	Metadata-identifier		A unique universal identifier.
+HED_0012783	5	UUID-#	UUID	takesValue	
+HED_0012784	4	Version-identifier	Metadata-identifier		An alphanumeric character string that identifies a form or variant of a type or original.
+HED_0012785	5	Version-identifier-#	Version-identifier	takesValue	Usually is a semantic version.
+HED_0012786	3	Modified-date	Metadata		The date on which the item was modified (usually the last-modified data unless a complete record of dated modifications is kept.
+HED_0012787	4	Modified-date-#	Modified-date	takesValue, valueClass=dateTimeClass	
+HED_0012788	3	Pathname	Metadata		The specification of a node (file or directory) in a hierarchical file system, usually specified by listing the nodes top-down.
+HED_0012789	4	Pathname-#	Pathname	takesValue	
+HED_0012790	3	URL	Metadata		A valid URL.
+HED_0012791	4	URL-#	URL	takesValue	
+HED_0012792	2	Parameter	Informational-property		Something user-defined for this experiment.
+HED_0012793	3	Parameter-label	Parameter		The name of the parameter.
+HED_0012794	4	Parameter-label-#	Parameter-label	takesValue, valueClass=nameClass	
+HED_0012795	3	Parameter-value	Parameter		The value of the parameter.
+HED_0012796	4	Parameter-value-#	Parameter-value	takesValue, valueClass=textClass	
+HED_0012797	1	Organizational-property	Property		Relating to an organization or the action of organizing something.
+HED_0012798	2	Collection	Organizational-property	reserved	A tag designating a grouping of items such as in a set or list.
+HED_0012799	3	Collection-#	Collection	takesValue, valueClass=nameClass	Name of the collection.
+HED_0012800	2	Condition-variable	Organizational-property	reserved	An aspect of the experiment or task that is to be varied during the experiment. Task-conditions are sometimes called independent variables or contrasts.
+HED_0012801	3	Condition-variable-#	Condition-variable	takesValue, valueClass=nameClass	Name of the condition variable.
+HED_0012802	2	Control-variable	Organizational-property	reserved	An aspect of the experiment that is fixed throughout the study and usually is explicitly controlled.
+HED_0012803	3	Control-variable-#	Control-variable	takesValue, valueClass=nameClass	Name of the control variable.
+HED_0012804	2	Def	Organizational-property	requireChild, reserved	A HED-specific utility tag used with a defined name to represent the tags associated with that definition.
+HED_0012805	3	Def-#	Def	takesValue, valueClass=nameClass	Name of the definition.
+HED_0012806	2	Def-expand	Organizational-property	requireChild, reserved, tagGroup	A HED specific utility tag that is grouped with an expanded definition. The child value of the Def-expand is the name of the expanded definition.
+HED_0012807	3	Def-expand-#	Def-expand	takesValue, valueClass=nameClass	
+HED_0012808	2	Definition	Organizational-property	requireChild, reserved, topLevelTagGroup	A HED-specific utility tag whose child value is the name of the concept and the tag group associated with the tag is an English language explanation of a concept.
+HED_0012809	3	Definition-#	Definition	takesValue, valueClass=nameClass	Name of the definition.
+HED_0012810	2	Event-context	Organizational-property	reserved, topLevelTagGroup, unique	A special HED tag inserted as part of a top-level tag group to contain information about the interrelated conditions under which the event occurs. The event context includes information about other events that are ongoing when this event happens.
+HED_0012811	2	Event-stream	Organizational-property	reserved	A special HED tag indicating that this event is a member of an ordered succession of events.
+HED_0012812	3	Event-stream-#	Event-stream	takesValue, valueClass=nameClass	Name of the event stream.
+HED_0012813	2	Experimental-intertrial	Organizational-property	reserved	A tag used to indicate a part of the experiment between trials usually where nothing is happening.
+HED_0012814	3	Experimental-intertrial-#	Experimental-intertrial	takesValue, valueClass=nameClass	Optional label for the intertrial block.
+HED_0012815	2	Experimental-trial	Organizational-property	reserved	Designates a run or execution of an activity, for example, one execution of a script. A tag used to indicate a particular organizational part in the experimental design often containing a stimulus-response pair or stimulus-response-feedback triad.
+HED_0012816	3	Experimental-trial-#	Experimental-trial	takesValue, valueClass=nameClass	Optional label for the trial (often a numerical string).
+HED_0012817	2	Indicator-variable	Organizational-property	reserved	An aspect of the experiment or task that is measured as task conditions are varied during the experiment. Experiment indicators are sometimes called dependent variables.
+HED_0012818	3	Indicator-variable-#	Indicator-variable	takesValue, valueClass=nameClass	Name of the indicator variable.
+HED_0012819	2	Recording	Organizational-property	reserved	A tag designating the data recording. Recording tags are usually have temporal scope which is the entire recording.
+HED_0012820	3	Recording-#	Recording	takesValue, valueClass=nameClass	Optional label for the recording.
+HED_0012821	2	Task	Organizational-property	reserved	An assigned piece of work, usually with a time allotment. A tag used to indicate a linkage the structured activities performed as part of the experiment.
+HED_0012822	3	Task-#	Task	takesValue, valueClass=nameClass	Optional label for the task block.
+HED_0012823	2	Time-block	Organizational-property	reserved	A tag used to indicate a contiguous time block in the experiment during which something is fixed or noted.
+HED_0012824	3	Time-block-#	Time-block	takesValue, valueClass=nameClass	Optional label for the task block.
+HED_0012825	1	Sensory-property	Property		Relating to sensation or the physical senses.
+HED_0012826	2	Sensory-attribute	Sensory-property		A sensory characteristic associated with another entity.
+HED_0012827	3	Auditory-attribute	Sensory-attribute		Pertaining to the sense of hearing.
+HED_0012828	4	Loudness	Auditory-attribute		Perceived intensity of a sound.
+HED_0012829	5	Loudness-#	Loudness	takesValue, valueClass=numericClass, valueClass=nameClass	
+HED_0012830	4	Pitch	Auditory-attribute		A perceptual property that allows the user to order sounds on a frequency scale.
+HED_0012831	5	Pitch-#	Pitch	takesValue, valueClass=numericClass, unitClass=frequencyUnits	
+HED_0012832	4	Sound-envelope	Auditory-attribute		Description of how a sound changes over time.
+HED_0012833	5	Sound-envelope-attack	Sound-envelope		The time taken for initial run-up of level from nil to peak usually beginning when the key on a musical instrument is pressed.
+HED_0012834	6	Sound-envelope-attack-#	Sound-envelope-attack	takesValue, valueClass=numericClass, unitClass=timeUnits	
+HED_0012835	5	Sound-envelope-decay	Sound-envelope		The time taken for the subsequent run down from the attack level to the designated sustain level.
+HED_0012836	6	Sound-envelope-decay-#	Sound-envelope-decay	takesValue, valueClass=numericClass, unitClass=timeUnits	
+HED_0012837	5	Sound-envelope-release	Sound-envelope		The time taken for the level to decay from the sustain level to zero after the key is released.
+HED_0012838	6	Sound-envelope-release-#	Sound-envelope-release	takesValue, valueClass=numericClass, unitClass=timeUnits	
+HED_0012839	5	Sound-envelope-sustain	Sound-envelope		The time taken for the main sequence of the sound duration, until the key is released.
+HED_0012840	6	Sound-envelope-sustain-#	Sound-envelope-sustain	takesValue, valueClass=numericClass, unitClass=timeUnits	
+HED_0012841	4	Sound-volume	Auditory-attribute		The sound pressure level (SPL) usually the ratio to a reference signal estimated as the lower bound of hearing.
+HED_0012842	5	Sound-volume-#	Sound-volume	takesValue, valueClass=numericClass, unitClass=intensityUnits	
+HED_0012843	4	Timbre	Auditory-attribute		The perceived sound quality of a singing voice or musical instrument.
+HED_0012844	5	Timbre-#	Timbre	takesValue, valueClass=nameClass	
+HED_0012845	3	Gustatory-attribute	Sensory-attribute		Pertaining to the sense of taste.
+HED_0012846	4	Bitter	Gustatory-attribute		Having a sharp, pungent taste.
+HED_0012847	4	Salty	Gustatory-attribute		Tasting of or like salt.
+HED_0012848	4	Savory	Gustatory-attribute		Belonging to a taste that is salty or spicy rather than sweet.
+HED_0012849	4	Sour	Gustatory-attribute		Having a sharp, acidic taste.
+HED_0012850	4	Sweet	Gustatory-attribute		Having or resembling the taste of sugar.
+HED_0012851	3	Olfactory-attribute	Sensory-attribute		Having a smell.
+HED_0012852	3	Somatic-attribute	Sensory-attribute		Pertaining to the feelings in the body or of the nervous system.
+HED_0012853	4	Pain	Somatic-attribute		The sensation of discomfort, distress, or agony, resulting from the stimulation of specialized nerve endings.
+HED_0012854	4	Stress	Somatic-attribute		The negative mental, emotional, and physical reactions that occur when environmental stressors are perceived as exceeding the adaptive capacities of the individual.
+HED_0012855	3	Tactile-attribute	Sensory-attribute		Pertaining to the sense of touch.
+HED_0012856	4	Tactile-pressure	Tactile-attribute		Having a feeling of heaviness.
+HED_0012857	4	Tactile-temperature	Tactile-attribute		Having a feeling of hotness or coldness.
+HED_0012858	4	Tactile-texture	Tactile-attribute		Having a feeling of roughness.
+HED_0012859	4	Tactile-vibration	Tactile-attribute		Having a feeling of mechanical oscillation.
+HED_0012860	3	Vestibular-attribute	Sensory-attribute		Pertaining to the sense of balance or body position.
+HED_0012861	3	Visual-attribute	Sensory-attribute		Pertaining to the sense of sight.
+HED_0012862	4	Color	Visual-attribute		The appearance of objects (or light sources) described in terms of perception of their hue and lightness (or brightness) and saturation.
+HED_0012863	5	CSS-color	Color		One of 140 colors supported by all browsers. For more details such as the color RGB or HEX values,check:https://www.w3schools.com/colors/colors_groups.asp.
+HED_0012864	6	Blue-color	CSS-color		CSS color group.
+HED_0012865	7	Blue	Blue-color		CSS-color 0x0000FF.
+HED_0012866	7	CadetBlue	Blue-color		CSS-color 0x5F9EA0.
+HED_0012867	7	CornflowerBlue	Blue-color		CSS-color 0x6495ED.
+HED_0012868	7	DarkBlue	Blue-color		CSS-color 0x00008B.
+HED_0012869	7	DeepSkyBlue	Blue-color		CSS-color 0x00BFFF.
+HED_0012870	7	DodgerBlue	Blue-color		CSS-color 0x1E90FF.
+HED_0012871	7	LightBlue	Blue-color		CSS-color 0xADD8E6.
+HED_0012872	7	LightSkyBlue	Blue-color		CSS-color 0x87CEFA.
+HED_0012873	7	LightSteelBlue	Blue-color		CSS-color 0xB0C4DE.
+HED_0012874	7	MediumBlue	Blue-color		CSS-color 0x0000CD.
+HED_0012875	7	MidnightBlue	Blue-color		CSS-color 0x191970.
+HED_0012876	7	Navy	Blue-color		CSS-color 0x000080.
+HED_0012877	7	PowderBlue	Blue-color		CSS-color 0xB0E0E6.
+HED_0012878	7	RoyalBlue	Blue-color		CSS-color 0x4169E1.
+HED_0012879	7	SkyBlue	Blue-color		CSS-color 0x87CEEB.
+HED_0012880	7	SteelBlue	Blue-color		CSS-color 0x4682B4.
+HED_0012881	6	Brown-color	CSS-color		CSS color group.
+HED_0012882	7	Bisque	Brown-color		CSS-color 0xFFE4C4.
+HED_0012883	7	BlanchedAlmond	Brown-color		CSS-color 0xFFEBCD.
+HED_0012884	7	Brown	Brown-color		CSS-color 0xA52A2A.
+HED_0012885	7	BurlyWood	Brown-color		CSS-color 0xDEB887.
+HED_0012886	7	Chocolate	Brown-color		CSS-color 0xD2691E.
+HED_0012887	7	Cornsilk	Brown-color		CSS-color 0xFFF8DC.
+HED_0012888	7	DarkGoldenRod	Brown-color		CSS-color 0xB8860B.
+HED_0012889	7	GoldenRod	Brown-color		CSS-color 0xDAA520.
+HED_0012890	7	Maroon	Brown-color		CSS-color 0x800000.
+HED_0012891	7	NavajoWhite	Brown-color		CSS-color 0xFFDEAD.
+HED_0012892	7	Olive	Brown-color		CSS-color 0x808000.
+HED_0012893	7	Peru	Brown-color		CSS-color 0xCD853F.
+HED_0012894	7	RosyBrown	Brown-color		CSS-color 0xBC8F8F.
+HED_0012895	7	SaddleBrown	Brown-color		CSS-color 0x8B4513.
+HED_0012896	7	SandyBrown	Brown-color		CSS-color 0xF4A460.
+HED_0012897	7	Sienna	Brown-color		CSS-color 0xA0522D.
+HED_0012898	7	Tan	Brown-color		CSS-color 0xD2B48C.
+HED_0012899	7	Wheat	Brown-color		CSS-color 0xF5DEB3.
+HED_0012900	6	Cyan-color	CSS-color		CSS color group.
+HED_0012901	7	Aqua	Cyan-color		CSS-color 0x00FFFF.
+HED_0012902	7	Aquamarine	Cyan-color		CSS-color 0x7FFFD4.
+HED_0012903	7	Cyan	Cyan-color		CSS-color 0x00FFFF.
+HED_0012904	7	DarkTurquoise	Cyan-color		CSS-color 0x00CED1.
+HED_0012905	7	LightCyan	Cyan-color		CSS-color 0xE0FFFF.
+HED_0012906	7	MediumTurquoise	Cyan-color		CSS-color 0x48D1CC.
+HED_0012907	7	PaleTurquoise	Cyan-color		CSS-color 0xAFEEEE.
+HED_0012908	7	Turquoise	Cyan-color		CSS-color 0x40E0D0.
+HED_0012909	6	Gray-color	CSS-color		CSS color group.
+HED_0012910	7	Black	Gray-color		CSS-color 0x000000.
+HED_0012911	7	DarkGray	Gray-color		CSS-color 0xA9A9A9.
+HED_0012912	7	DarkSlateGray	Gray-color		CSS-color 0x2F4F4F.
+HED_0012913	7	DimGray	Gray-color		CSS-color 0x696969.
+HED_0012914	7	Gainsboro	Gray-color		CSS-color 0xDCDCDC.
+HED_0012915	7	Gray	Gray-color		CSS-color 0x808080.
+HED_0012916	7	LightGray	Gray-color		CSS-color 0xD3D3D3.
+HED_0012917	7	LightSlateGray	Gray-color		CSS-color 0x778899.
+HED_0012918	7	Silver	Gray-color		CSS-color 0xC0C0C0.
+HED_0012919	7	SlateGray	Gray-color		CSS-color 0x708090.
+HED_0012920	6	Green-color	CSS-color		CSS color group.
+HED_0012921	7	Chartreuse	Green-color		CSS-color 0x7FFF00.
+HED_0012922	7	DarkCyan	Green-color		CSS-color 0x008B8B.
+HED_0012923	7	DarkGreen	Green-color		CSS-color 0x006400.
+HED_0012924	7	DarkOliveGreen	Green-color		CSS-color 0x556B2F.
+HED_0012925	7	DarkSeaGreen	Green-color		CSS-color 0x8FBC8F.
+HED_0012926	7	ForestGreen	Green-color		CSS-color 0x228B22.
+HED_0012927	7	Green	Green-color		CSS-color 0x008000.
+HED_0012928	7	GreenYellow	Green-color		CSS-color 0xADFF2F.
+HED_0012929	7	LawnGreen	Green-color		CSS-color 0x7CFC00.
+HED_0012930	7	LightGreen	Green-color		CSS-color 0x90EE90.
+HED_0012931	7	LightSeaGreen	Green-color		CSS-color 0x20B2AA.
+HED_0012932	7	Lime	Green-color		CSS-color 0x00FF00.
+HED_0012933	7	LimeGreen	Green-color		CSS-color 0x32CD32.
+HED_0012934	7	MediumAquaMarine	Green-color		CSS-color 0x66CDAA.
+HED_0012935	7	MediumSeaGreen	Green-color		CSS-color 0x3CB371.
+HED_0012936	7	MediumSpringGreen	Green-color		CSS-color 0x00FA9A.
+HED_0012937	7	OliveDrab	Green-color		CSS-color 0x6B8E23.
+HED_0012938	7	PaleGreen	Green-color		CSS-color 0x98FB98.
+HED_0012939	7	SeaGreen	Green-color		CSS-color 0x2E8B57.
+HED_0012940	7	SpringGreen	Green-color		CSS-color 0x00FF7F.
+HED_0012941	7	Teal	Green-color		CSS-color 0x008080.
+HED_0012942	7	YellowGreen	Green-color		CSS-color 0x9ACD32.
+HED_0012943	6	Orange-color	CSS-color		CSS color group.
+HED_0012944	7	Coral	Orange-color		CSS-color 0xFF7F50.
+HED_0012945	7	DarkOrange	Orange-color		CSS-color 0xFF8C00.
+HED_0012946	7	Orange	Orange-color		CSS-color 0xFFA500.
+HED_0012947	7	OrangeRed	Orange-color		CSS-color 0xFF4500.
+HED_0012948	7	Tomato	Orange-color		CSS-color 0xFF6347.
+HED_0012949	6	Pink-color	CSS-color		CSS color group.
+HED_0012950	7	DeepPink	Pink-color		CSS-color 0xFF1493.
+HED_0012951	7	HotPink	Pink-color		CSS-color 0xFF69B4.
+HED_0012952	7	LightPink	Pink-color		CSS-color 0xFFB6C1.
+HED_0012953	7	MediumVioletRed	Pink-color		CSS-color 0xC71585.
+HED_0012954	7	PaleVioletRed	Pink-color		CSS-color 0xDB7093.
+HED_0012955	7	Pink	Pink-color		CSS-color 0xFFC0CB.
+HED_0012956	6	Purple-color	CSS-color		CSS color group.
+HED_0012957	7	BlueViolet	Purple-color		CSS-color 0x8A2BE2.
+HED_0012958	7	DarkMagenta	Purple-color		CSS-color 0x8B008B.
+HED_0012959	7	DarkOrchid	Purple-color		CSS-color 0x9932CC.
+HED_0012960	7	DarkSlateBlue	Purple-color		CSS-color 0x483D8B.
+HED_0012961	7	DarkViolet	Purple-color		CSS-color 0x9400D3.
+HED_0012962	7	Fuchsia	Purple-color		CSS-color 0xFF00FF.
+HED_0012963	7	Indigo	Purple-color		CSS-color 0x4B0082.
+HED_0012964	7	Lavender	Purple-color		CSS-color 0xE6E6FA.
+HED_0012965	7	Magenta	Purple-color		CSS-color 0xFF00FF.
+HED_0012966	7	MediumOrchid	Purple-color		CSS-color 0xBA55D3.
+HED_0012967	7	MediumPurple	Purple-color		CSS-color 0x9370DB.
+HED_0012968	7	MediumSlateBlue	Purple-color		CSS-color 0x7B68EE.
+HED_0012969	7	Orchid	Purple-color		CSS-color 0xDA70D6.
+HED_0012970	7	Plum	Purple-color		CSS-color 0xDDA0DD.
+HED_0012971	7	Purple	Purple-color		CSS-color 0x800080.
+HED_0012972	7	RebeccaPurple	Purple-color		CSS-color 0x663399.
+HED_0012973	7	SlateBlue	Purple-color		CSS-color 0x6A5ACD.
+HED_0012974	7	Thistle	Purple-color		CSS-color 0xD8BFD8.
+HED_0012975	7	Violet	Purple-color		CSS-color 0xEE82EE.
+HED_0012976	6	Red-color	CSS-color		CSS color group.
+HED_0012977	7	Crimson	Red-color		CSS-color 0xDC143C.
+HED_0012978	7	DarkRed	Red-color		CSS-color 0x8B0000.
+HED_0012979	7	DarkSalmon	Red-color		CSS-color 0xE9967A.
+HED_0012980	7	FireBrick	Red-color		CSS-color 0xB22222.
+HED_0012981	7	IndianRed	Red-color		CSS-color 0xCD5C5C.
+HED_0012982	7	LightCoral	Red-color		CSS-color 0xF08080.
+HED_0012983	7	LightSalmon	Red-color		CSS-color 0xFFA07A.
+HED_0012984	7	Red	Red-color		CSS-color 0xFF0000.
+HED_0012985	7	Salmon	Red-color		CSS-color 0xFA8072.
+HED_0012986	6	White-color	CSS-color		CSS color group.
+HED_0012987	7	AliceBlue	White-color		CSS-color 0xF0F8FF.
+HED_0012988	7	AntiqueWhite	White-color		CSS-color 0xFAEBD7.
+HED_0012989	7	Azure	White-color		CSS-color 0xF0FFFF.
+HED_0012990	7	Beige	White-color		CSS-color 0xF5F5DC.
+HED_0012991	7	FloralWhite	White-color		CSS-color 0xFFFAF0.
+HED_0012992	7	GhostWhite	White-color		CSS-color 0xF8F8FF.
+HED_0012993	7	HoneyDew	White-color		CSS-color 0xF0FFF0.
+HED_0012994	7	Ivory	White-color		CSS-color 0xFFFFF0.
+HED_0012995	7	LavenderBlush	White-color		CSS-color 0xFFF0F5.
+HED_0012996	7	Linen	White-color		CSS-color 0xFAF0E6.
+HED_0012997	7	MintCream	White-color		CSS-color 0xF5FFFA.
+HED_0012998	7	MistyRose	White-color		CSS-color 0xFFE4E1.
+HED_0012999	7	OldLace	White-color		CSS-color 0xFDF5E6.
+HED_0013000	7	SeaShell	White-color		CSS-color 0xFFF5EE.
+HED_0013001	7	Snow	White-color		CSS-color 0xFFFAFA.
+HED_0013002	7	White	White-color		CSS-color 0xFFFFFF.
+HED_0013003	7	WhiteSmoke	White-color		CSS-color 0xF5F5F5.
+HED_0013004	6	Yellow-color	CSS-color		CSS color group.
+HED_0013005	7	DarkKhaki	Yellow-color		CSS-color 0xBDB76B.
+HED_0013006	7	Gold	Yellow-color		CSS-color 0xFFD700.
+HED_0013007	7	Khaki	Yellow-color		CSS-color 0xF0E68C.
+HED_0013008	7	LemonChiffon	Yellow-color		CSS-color 0xFFFACD.
+HED_0013009	7	LightGoldenRodYellow	Yellow-color		CSS-color 0xFAFAD2.
+HED_0013010	7	LightYellow	Yellow-color		CSS-color 0xFFFFE0.
+HED_0013011	7	Moccasin	Yellow-color		CSS-color 0xFFE4B5.
+HED_0013012	7	PaleGoldenRod	Yellow-color		CSS-color 0xEEE8AA.
+HED_0013013	7	PapayaWhip	Yellow-color		CSS-color 0xFFEFD5.
+HED_0013014	7	PeachPuff	Yellow-color		CSS-color 0xFFDAB9.
+HED_0013015	7	Yellow	Yellow-color		CSS-color 0xFFFF00.
+HED_0013016	5	Color-shade	Color		A slight degree of difference between colors, especially with regard to how light or dark it is or as distinguished from one nearly like it.
+HED_0013017	6	Dark-shade	Color-shade		A color tone not reflecting much light.
+HED_0013018	6	Light-shade	Color-shade		A color tone reflecting more light.
+HED_0013019	5	Grayscale	Color		Using a color map composed of shades of gray, varying from black at the weakest intensity to white at the strongest.
+HED_0013020	6	Grayscale-#	Grayscale	takesValue, valueClass=numericClass	White intensity between 0 and 1.
+HED_0013021	5	HSV-color	Color		A color representation that models how colors appear under light.
+HED_0013022	6	HSV-value	HSV-color		An attribute of a visual sensation according to which an area appears to emit more or less light.
+HED_0013023	7	HSV-value-#	HSV-value	takesValue, valueClass=numericClass	
+HED_0013024	6	Hue	HSV-color		Attribute of a visual sensation according to which an area appears to be similar to one of the perceived colors.
+HED_0013025	7	Hue-#	Hue	takesValue, valueClass=numericClass	Angular value between 0 and 360.
+HED_0013026	6	Saturation	HSV-color		Colorfulness of a stimulus relative to its own brightness.
+HED_0013027	7	Saturation-#	Saturation	takesValue, valueClass=numericClass	B value of RGB between 0 and 1.
+HED_0013028	5	RGB-color	Color		A color from the RGB schema.
+HED_0013029	6	RGB-blue	RGB-color		The blue component.
+HED_0013030	7	RGB-blue-#	RGB-blue	takesValue, valueClass=numericClass	B value of RGB between 0 and 1.
+HED_0013031	6	RGB-green	RGB-color		The green component.
+HED_0013032	7	RGB-green-#	RGB-green	takesValue, valueClass=numericClass	G value of RGB between 0 and 1.
+HED_0013033	6	RGB-red	RGB-color		The red component.
+HED_0013034	7	RGB-red-#	RGB-red	takesValue, valueClass=numericClass	R value of RGB between 0 and 1.
+HED_0013035	4	Luminance	Visual-attribute		A quality that exists by virtue of the luminous intensity per unit area projected in a given direction.
+HED_0013036	4	Luminance-contrast	Visual-attribute	suggestedTag=Percentage, suggestedTag=Ratio	The difference in luminance in specific portions of a scene or image.
+HED_0013037	5	Luminance-contrast-#	Luminance-contrast	takesValue, valueClass=numericClass	A non-negative value, usually in the range 0 to 1 or alternative 0 to 100, if representing a percentage.
+HED_0013038	4	Opacity	Visual-attribute		A measure of impenetrability to light.
+HED_0013039	2	Sensory-presentation	Sensory-property		The entity has a sensory manifestation.
+HED_0013040	3	Auditory-presentation	Sensory-presentation		The sense of hearing is used in the presentation to the user.
+HED_0013041	4	Loudspeaker-separation	Auditory-presentation	suggestedTag=Distance	The distance between two loudspeakers. Grouped with the Distance tag.
+HED_0013042	4	Monophonic	Auditory-presentation		Relating to sound transmission, recording, or reproduction involving a single transmission path.
+HED_0013043	4	Silent	Auditory-presentation		The absence of ambient audible sound or the state of having ceased to produce sounds.
+HED_0013044	4	Stereophonic	Auditory-presentation		Relating to, or constituting sound reproduction involving the use of separated microphones and two transmission channels to achieve the sound separation of a live hearing.
+HED_0013045	3	Gustatory-presentation	Sensory-presentation		The sense of taste used in the presentation to the user.
+HED_0013046	3	Olfactory-presentation	Sensory-presentation		The sense of smell used in the presentation to the user.
+HED_0013047	3	Somatic-presentation	Sensory-presentation		The nervous system is used in the presentation to the user.
+HED_0013048	3	Tactile-presentation	Sensory-presentation		The sense of touch used in the presentation to the user.
+HED_0013049	3	Vestibular-presentation	Sensory-presentation		The sense balance used in the presentation to the user.
+HED_0013050	3	Visual-presentation	Sensory-presentation		The sense of sight used in the presentation to the user.
+HED_0013051	4	2D-view	Visual-presentation		A view showing only two dimensions.
+HED_0013052	4	3D-view	Visual-presentation		A view showing three dimensions.
+HED_0013053	4	Background-view	Visual-presentation		Parts of the view that are farthest from the viewer and usually the not part of the visual focus.
+HED_0013054	4	Bistable-view	Visual-presentation		Something having two stable visual forms that have two distinguishable stable forms as in optical illusions.
+HED_0013055	4	Foreground-view	Visual-presentation		Parts of the view that are closest to the viewer and usually the most important part of the visual focus.
+HED_0013056	4	Foveal-view	Visual-presentation		Visual presentation directly on the fovea. A view projected on the small depression in the retina containing only cones and where vision is most acute.
+HED_0013057	4	Map-view	Visual-presentation		A diagrammatic representation of an area of land or sea showing physical features, cities, roads.
+HED_0013058	5	Aerial-view	Map-view		Elevated view of an object from above, with a perspective as though the observer were a bird.
+HED_0013059	5	Satellite-view	Map-view		A representation as captured by technology such as a satellite.
+HED_0013060	5	Street-view	Map-view		A 360-degrees panoramic view from a position on the ground.
+HED_0013061	4	Peripheral-view	Visual-presentation		Indirect vision as it occurs outside the point of fixation.
+HED_0013062	1	Task-property	Property	extensionAllowed	Something that pertains to a task.
+HED_0013063	2	Task-action-type	Task-property		How an agent action should be interpreted in terms of the task specification.
+HED_0013064	3	Appropriate-action	Task-action-type	relatedTag=Inappropriate-action	An action suitable or proper in the circumstances.
+HED_0013065	3	Correct-action	Task-action-type	relatedTag=Incorrect-action, relatedTag=Indeterminate-action	An action that was a correct response in the context of the task.
+HED_0013066	3	Correction	Task-action-type		An action offering an improvement to replace a mistake or error.
+HED_0013067	3	Done-indication	Task-action-type	relatedTag=Ready-indication	An action that indicates that the participant has completed this step in the task.
+HED_0013068	3	Imagined-action	Task-action-type		Form a mental image or concept of something. This is used to identity something that only happened in the imagination of the participant as in imagined movements in motor imagery paradigms.
+HED_0013069	3	Inappropriate-action	Task-action-type	relatedTag=Appropriate-action	An action not in keeping with what is correct or proper for the task.
+HED_0013070	3	Incorrect-action	Task-action-type	relatedTag=Correct-action, relatedTag=Indeterminate-action	An action considered wrong or incorrect in the context of the task.
+HED_0013071	3	Indeterminate-action	Task-action-type	relatedTag=Correct-action, relatedTag=Incorrect-action, relatedTag=Miss, relatedTag=Near-miss	An action that cannot be distinguished between two or more possibilities in the current context. This tag might be applied when an outside evaluator or a classification algorithm cannot determine a definitive result.
+HED_0013072	3	Miss	Task-action-type	relatedTag=Near-miss	An action considered to be a failure in the context of the task. For example, if the agent is supposed to try to hit a target and misses.
+HED_0013073	3	Near-miss	Task-action-type	relatedTag=Miss	An action barely satisfied the requirements of the task. In a driving experiment for example this could pertain to a narrowly avoided collision or other accident.
+HED_0013074	3	Omitted-action	Task-action-type		An expected response was skipped.
+HED_0013075	3	Ready-indication	Task-action-type	relatedTag=Done-indication	An action that indicates that the participant is ready to perform the next step in the task.
+HED_0013076	2	Task-attentional-demand	Task-property		Strategy for allocating attention toward goal-relevant information.
+HED_0013077	3	Bottom-up-attention	Task-attentional-demand	relatedTag=Top-down-attention	Attentional guidance purely by externally driven factors to stimuli that are salient because of their inherent properties relative to the background. Sometimes this is referred to as stimulus driven.
+HED_0013078	3	Covert-attention	Task-attentional-demand	relatedTag=Overt-attention	Paying attention without moving the eyes.
+HED_0013079	3	Divided-attention	Task-attentional-demand	relatedTag=Focused-attention	Integrating parallel multiple stimuli. Behavior involving responding simultaneously to multiple tasks or multiple task demands.
+HED_0013080	3	Focused-attention	Task-attentional-demand	relatedTag=Divided-attention	Responding discretely to specific visual, auditory, or tactile stimuli.
+HED_0013081	3	Orienting-attention	Task-attentional-demand		Directing attention to a target stimulus.
+HED_0013082	3	Overt-attention	Task-attentional-demand	relatedTag=Covert-attention	Selectively processing one location over others by moving the eyes to point at that location.
+HED_0013083	3	Selective-attention	Task-attentional-demand		Maintaining a behavioral or cognitive set in the face of distracting or competing stimuli. Ability to pay attention to a limited array of all available sensory information.
+HED_0013084	3	Sustained-attention	Task-attentional-demand		Maintaining a consistent behavioral response during continuous and repetitive activity.
+HED_0013085	3	Switched-attention	Task-attentional-demand		Having to switch attention between two or more modalities of presentation.
+HED_0013086	3	Top-down-attention	Task-attentional-demand	relatedTag=Bottom-up-attention	Voluntary allocation of attention to certain features. Sometimes this is referred to goal-oriented attention.
+HED_0013087	2	Task-effect-evidence	Task-property		The evidence supporting the conclusion that the event had the specified effect.
+HED_0013088	3	Behavioral-evidence	Task-effect-evidence		An indication or conclusion based on the behavior of an agent.
+HED_0013089	3	Computational-evidence	Task-effect-evidence		A type of evidence in which data are produced, and/or generated, and/or analyzed on a computer.
+HED_0013090	3	External-evidence	Task-effect-evidence		A phenomenon that follows and is caused by some previous phenomenon.
+HED_0013091	3	Intended-effect	Task-effect-evidence		A phenomenon that is intended to follow and be caused by some previous phenomenon.
+HED_0013092	2	Task-event-role	Task-property		The purpose of an event with respect to the task.
+HED_0013104	3	Cue	Task-event-role		A signal for an action usually indicating a particular response.
+HED_0013093	3	Experimental-stimulus	Task-event-role		Part of something designed to elicit a response in the experiment.
+HED_0013108	3	Feedback	Task-event-role		An evaluative response to an inquiry, process, event, or activity.
+HED_0013094	3	Incidental	Task-event-role		A sensory or other type of event that is unrelated to the task or experiment.
+HED_0013095	3	Instructional	Task-event-role		Usually associated with a sensory event intended to give instructions to the participant about the task or behavior.
+HED_0013096	3	Mishap	Task-event-role		Unplanned disruption such as an equipment or experiment control abnormality or experimenter error.
+HED_0013097	3	Participant-response	Task-event-role		Something related to a participant actions in performing the task.
+HED_0013098	3	Task-activity	Task-event-role		Something that is part of the overall task or is necessary to the overall experiment but is not directly part of a stimulus-response cycle. Examples would be taking a survey or provided providing a silva sample.
+HED_0013099	3	Warning	Task-event-role		Something that should warn the participant that the parameters of the task have been or are about to be exceeded such as a warning message about getting too close to the shoulder of the road in a driving task.
+HED_0013100	2	Task-relationship	Task-property		Specifying organizational importance of sub-tasks.
+HED_0013101	3	Background-subtask	Task-relationship		A part of the task which should be performed in the background as for example inhibiting blinks due to instruction while performing the primary task.
+HED_0013102	3	Primary-subtask	Task-relationship		A part of the task which should be the primary focus of the participant.
+HED_0013103	2	Task-stimulus-role	Task-property		The role the stimulus or other type of sensory event, such as feedback, plays in the task.
+HED_0013105	3	Distractor	Task-stimulus-role		A person or thing that distracts or a plausible but incorrect option in a multiple-choice question. In psychological studies this is sometimes referred to as a foil.
+HED_0013106	3	Expected	Task-stimulus-role	relatedTag=Unexpected, suggestedTag=Target	Considered likely, probable or anticipated. Something of low information value as in frequent non-targets in an RSVP paradigm.
+HED_0013107	3	Extraneous	Task-stimulus-role		Irrelevant or unrelated to the subject being dealt with.
+HED_0013109	3	Go-signal	Task-stimulus-role	relatedTag=Stop-signal	An indicator to proceed with a planned action.
+HED_0013110	3	Meaningful	Task-stimulus-role		Conveying significant or relevant information.
+HED_0013111	3	Newly-learned	Task-stimulus-role		Representing recently acquired information or understanding.
+HED_0013112	3	Non-informative	Task-stimulus-role		Something that is not useful in forming an opinion or judging an outcome.
+HED_0013113	3	Non-target	Task-stimulus-role	relatedTag=Target	Something other than that done or looked for. Also tag Expected if the Non-target is frequent.
+HED_0013114	3	Not-meaningful	Task-stimulus-role		Not having a serious, important, or useful quality or purpose.
+HED_0013115	3	Novel	Task-stimulus-role		Having no previous example or precedent or parallel.
+HED_0013116	3	Oddball	Task-stimulus-role	relatedTag=Unexpected, suggestedTag=Target	Something unusual, or infrequent.
+HED_0013117	3	Penalty	Task-stimulus-role		A disadvantage, loss, or hardship due to some action.
+HED_0013118	3	Planned	Task-stimulus-role	relatedTag=Unplanned	Something that was decided on or arranged in advance.
+HED_0013119	3	Priming	Task-stimulus-role		An implicit memory effect in which exposure to a stimulus influences response to a later stimulus.
+HED_0013120	3	Query	Task-stimulus-role		A sentence of inquiry that asks for a reply.
+HED_0013121	3	Reward	Task-stimulus-role		A positive reinforcement for a desired action, behavior or response.
+HED_0013122	3	Stop-signal	Task-stimulus-role	relatedTag=Go-signal	An indicator that the agent should stop the current activity.
+HED_0013123	3	Target	Task-stimulus-role		Something fixed as a goal, destination, or point of examination.
+HED_0013124	3	Threat	Task-stimulus-role		An indicator that signifies hostility and predicts an increased probability of attack.
+HED_0013125	3	Timed	Task-stimulus-role		Something planned or scheduled to be done at a particular time or lasting for a specified amount of time.
+HED_0013126	3	Unexpected	Task-stimulus-role	relatedTag=Expected	Something that is not anticipated.
+HED_0013127	3	Unplanned	Task-stimulus-role	relatedTag=Planned	Something that has not been planned as part of the task.
+HED_0013128	0	Relation	HedTag	extensionAllowed	Concerns the way in which two or more people or things are connected.
+HED_0013129	1	Comparative-relation	Relation		Something considered in comparison to something else. The first entity is the focus.
+HED_0013130	2	Approximately-equal-to	Comparative-relation		(A, (Approximately-equal-to, B)) indicates that A and B have almost the same value. Here A and B could refer to sizes, orders, positions or other quantities.
+HED_0013131	2	Equal-to	Comparative-relation		(A, (Equal-to, B)) indicates that the size or order of A is the same as that of B.
+HED_0013132	2	Greater-than	Comparative-relation		(A, (Greater-than, B)) indicates that the relative size or order of A is bigger than that of B.
+HED_0013133	2	Greater-than-or-equal-to	Comparative-relation		(A, (Greater-than-or-equal-to, B)) indicates that the relative size or order of A is bigger than or the same as that of B.
+HED_0013134	2	Less-than	Comparative-relation		(A, (Less-than, B)) indicates that A is smaller than B. Here A and B could refer to sizes, orders, positions or other quantities.
+HED_0013135	2	Less-than-or-equal-to	Comparative-relation		(A, (Less-than-or-equal-to, B)) indicates that the relative size or order of A is smaller than or equal to B.
+HED_0013136	2	Not-equal-to	Comparative-relation		(A, (Not-equal-to, B)) indicates that the size or order of A is not the same as that of B.
+HED_0013137	1	Connective-relation	Relation		Indicates two entities are related in some way. The first entity is the focus.
+HED_0013138	2	Belongs-to	Connective-relation		(A, (Belongs-to, B)) indicates that A is a member of B.
+HED_0013139	2	Connected-to	Connective-relation		(A, (Connected-to, B)) indicates that A is related to B in some respect, usually through a direct link.
+HED_0013140	2	Contained-in	Connective-relation		(A, (Contained-in, B)) indicates that A is completely inside of B.
+HED_0013141	2	Described-by	Connective-relation		(A, (Described-by, B)) indicates that B provides information about A.
+HED_0013142	2	From-to	Connective-relation		(A, (From-to, B)) indicates a directional relation from A to B. A is considered the source.
+HED_0013143	2	Group-of	Connective-relation		(A, (Group-of, B)) indicates A is a group of items of type B.
+HED_0013144	2	Implied-by	Connective-relation		(A, (Implied-by, B)) indicates B is suggested by A.
+HED_0013145	2	Includes	Connective-relation		(A, (Includes, B)) indicates that A has B as a member or part.
+HED_0013146	2	Interacts-with	Connective-relation		(A, (Interacts-with, B)) indicates A and B interact, possibly reciprocally.
+HED_0013147	2	Member-of	Connective-relation		(A, (Member-of, B)) indicates A is a member of group B.
+HED_0013148	2	Part-of	Connective-relation		(A, (Part-of, B)) indicates A is a part of the whole B.
+HED_0013149	2	Performed-by	Connective-relation		(A, (Performed-by, B)) indicates that the action or procedure A was carried out by agent B.
+HED_0013150	2	Performed-using	Connective-relation		(A, (Performed-using, B)) indicates that the action or procedure A was accomplished using B.
+HED_0013151	2	Related-to	Connective-relation		(A, (Related-to, B)) indicates A has some relationship to B.
+HED_0013152	2	Unrelated-to	Connective-relation		(A, (Unrelated-to, B)) indicates that A is not related to B.For example, A is not related to Task.
+HED_0013153	1	Directional-relation	Relation		A relationship indicating direction of change of one entity relative to another. The first entity is the focus.
+HED_0013154	2	Away-from	Directional-relation		(A, (Away-from, B)) indicates that A is going or has moved away from B. The meaning depends on A and B.
+HED_0013155	2	Towards	Directional-relation		(A, (Towards, B)) indicates that A is going to or has moved to B. The meaning depends on A and B.
+HED_0013156	1	Logical-relation	Relation		Indicating a logical relationship between entities. The first entity is usually the focus.
+HED_0013157	2	And	Logical-relation		(A, (And, B)) means A and B are both in effect.
+HED_0013158	2	Or	Logical-relation		(A, (Or, B)) means at least one of A and B are in effect.
+HED_0013159	1	Spatial-relation	Relation		Indicating a relationship about position between entities.
+HED_0013160	2	Above	Spatial-relation		(A, (Above, B)) means A is in a place or position that is higher than B.
+HED_0013161	2	Across-from	Spatial-relation		(A, (Across-from, B)) means A is on the opposite side of something from B.
+HED_0013162	2	Adjacent-to	Spatial-relation		(A, (Adjacent-to, B)) indicates that A is next to B in time or space.
+HED_0013163	2	Ahead-of	Spatial-relation		(A, (Ahead-of, B)) indicates that A is further forward in time or space in B.
+HED_0013164	2	Around	Spatial-relation		(A, (Around, B)) means A is in or near the present place or situation of B.
+HED_0013165	2	Behind	Spatial-relation		(A, (Behind, B)) means A is at or to the far side of B, typically so as to be hidden by it.
+HED_0013166	2	Below	Spatial-relation		(A, (Below, B)) means A is in a place or position that is lower than the position of B.
+HED_0013167	2	Between	Spatial-relation		(A, (Between, (B, C))) means A is in the space or interval separating B and C.
+HED_0013168	2	Bilateral-to	Spatial-relation		(A, (Bilateral, B)) means A is on both sides of B or affects both sides of B.
+HED_0013169	2	Bottom-edge-of	Spatial-relation	relatedTag=Left-edge-of, relatedTag=Right-edge-of, relatedTag=Top-edge-of	(A, (Bottom-edge-of, B)) means A is on the bottom most part or or near the boundary of B.
+HED_0013170	2	Boundary-of	Spatial-relation		(A, (Boundary-of, B)) means A is on or part of the edge or boundary of B.
+HED_0013171	2	Center-of	Spatial-relation		(A, (Center-of, B)) means A is at a point or or in an area that is approximately central within B.
+HED_0013172	2	Close-to	Spatial-relation		(A, (Close-to, B)) means A is at a small distance from or is located near in space to B.
+HED_0013173	2	Far-from	Spatial-relation		(A, (Far-from, B)) means A is at a large distance from or is not located near in space to B.
+HED_0013174	2	In-front-of	Spatial-relation		(A, (In-front-of, B)) means A is in a position just ahead or at the front part of B, potentially partially blocking B from view.
+HED_0013175	2	Left-edge-of	Spatial-relation	relatedTag=Bottom-edge-of, relatedTag=Right-edge-of, relatedTag=Top-edge-of	(A, (Left-edge-of, B)) means A is located on the left side of B on or near the boundary of B.
+HED_0013176	2	Left-side-of	Spatial-relation	relatedTag=Right-side-of	(A, (Left-side-of, B)) means A is located on the left side of B usually as part of B.
+HED_0013177	2	Lower-center-of	Spatial-relation	relatedTag=Center-of, relatedTag=Lower-left-of, relatedTag=Lower-right-of, relatedTag=Upper-center-of, relatedTag=Upper-right-of	(A, (Lower-center-of, B)) means A is situated on the lower center part of B (due south). This relation is often used to specify qualitative information about screen position.
+HED_0013178	2	Lower-left-of	Spatial-relation	relatedTag=Center-of, relatedTag=Lower-center-of, relatedTag=Lower-right-of, relatedTag=Upper-center-of, relatedTag=Upper-left-of, relatedTag=Upper-right-of	(A, (Lower-left-of, B)) means A is situated on the lower left part of B. This relation is often used to specify qualitative information about screen position.
+HED_0013179	2	Lower-right-of	Spatial-relation	relatedTag=Center-of, relatedTag=Lower-center-of, relatedTag=Lower-left-of, relatedTag=Upper-left-of, relatedTag=Upper-center-of, relatedTag=Upper-left-of, relatedTag=Lower-right-of	(A, (Lower-right-of, B)) means A is situated on the lower right part of B. This relation is often used to specify qualitative information about screen position.
+HED_0013180	2	Outside-of	Spatial-relation		(A, (Outside-of, B)) means A is located in the space around but not including B.
+HED_0013181	2	Over	Spatial-relation		(A, (Over, B)) means A above is above B so as to cover or protect or A extends over the a general area as from a from a vantage point.
+HED_0013182	2	Right-edge-of	Spatial-relation	relatedTag=Bottom-edge-of, relatedTag=Left-edge-of, relatedTag=Top-edge-of	(A, (Right-edge-of, B)) means A is located on the right side of B on or near the boundary of B.
+HED_0013183	2	Right-side-of	Spatial-relation	relatedTag=Left-side-of	(A, (Right-side-of, B)) means A is located on the right side of B usually as part of B.
+HED_0013184	2	To-left-of	Spatial-relation		(A, (To-left-of, B)) means A is located on or directed toward the side to the west of B when B is facing north. This term is used when A is not part of B.
+HED_0013185	2	To-right-of	Spatial-relation		(A, (To-right-of, B)) means A is located on or directed toward the side to the east of B when B is facing north. This term is used when A is not part of B.
+HED_0013186	2	Top-edge-of	Spatial-relation	relatedTag=Left-edge-of, relatedTag=Right-edge-of, relatedTag=Bottom-edge-of	(A, (Top-edge-of, B)) means A is on the uppermost part or or near the boundary of B.
+HED_0013187	2	Top-of	Spatial-relation		(A, (Top-of, B)) means A is on the uppermost part, side, or surface of B.
+HED_0013188	2	Underneath	Spatial-relation		(A, (Underneath, B)) means A is situated directly below and may be concealed by B.
+HED_0013189	2	Upper-center-of	Spatial-relation	relatedTag=Center-of, relatedTag=Lower-center-of, relatedTag=Lower-left-of, relatedTag=Lower-right-of, relatedTag=Upper-center-of, relatedTag=Upper-right-of	(A, (Upper-center-of, B)) means A is situated on the upper center part of B (due north). This relation is often used to specify qualitative information about screen position.
+HED_0013190	2	Upper-left-of	Spatial-relation	relatedTag=Center-of, relatedTag=Lower-center-of, relatedTag=Lower-left-of, relatedTag=Lower-right-of, relatedTag=Upper-center-of, relatedTag=Upper-right-of	(A, (Upper-left-of, B)) means A is situated on the upper left part of B. This relation is often used to specify qualitative information about screen position.
+HED_0013191	2	Upper-right-of	Spatial-relation	relatedTag=Center-of, relatedTag=Lower-center-of, relatedTag=Lower-left-of, relatedTag=Upper-left-of, relatedTag=Upper-center-of, relatedTag=Lower-right-of	(A, (Upper-right-of, B)) means A is situated on the upper right part of B. This relation is often used to specify qualitative information about screen position.
+HED_0013192	2	Within	Spatial-relation		(A, (Within, B)) means A is on the inside of or contained in B.
+HED_0013193	1	Temporal-relation	Relation		A relationship that includes a temporal or time-based component.
+HED_0013194	2	After	Temporal-relation		(A, (After, B)) means A happens at a time subsequent to a reference time related to B.
+HED_0013195	2	Asynchronous-with	Temporal-relation		(A, (Asynchronous-with, B)) means A happens at times not occurring at the same time or having the same period or phase as B.
+HED_0013196	2	Before	Temporal-relation		(A, (Before, B)) means A happens at a time earlier in time or order than B.
+HED_0013197	2	During	Temporal-relation		(A, (During, B)) means A happens at some point in a given period of time in which B is ongoing.
+HED_0013198	2	Synchronous-with	Temporal-relation		(A, (Synchronous-with, B)) means A happens at occurs at the same time or rate as B.
+HED_0013199	2	Waiting-for	Temporal-relation		(A, (Waiting-for, B)) means A pauses for something to happen in B.
