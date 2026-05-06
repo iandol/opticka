@@ -85,6 +85,7 @@ classdef alyxManager < optickaCore
 		% ===================================================================
 		function result = hasSecrets(me)
 		%> @brief check secrets for the AlyxManager instance
+		% ===================================================================
 		 	if isempty(me.password) && isempty(me.AWS_ID) && isempty(me.AWS_KEY)
 				result = false;
 			else
@@ -180,6 +181,7 @@ classdef alyxManager < optickaCore
 
 		% ===================================================================
 		function success = login(me)
+		%> @brief Log in the current user from the AlyxManager instance
 		% ===================================================================
 			success = false;
 			if me.loggedIn; warning('Already Logged in...'); end
@@ -219,11 +221,9 @@ classdef alyxManager < optickaCore
 				me.sessionURL = [];
 				me.sessionParentURL = [];
 				flushQueue(me, true);
-			catch ex
-				%products = ver;
-				%toolboxes = matlab.addons.toolbox.installedToolboxes;
-				% Check the correct toolboxes are installed
-				if strcmp(ex.identifier, 'Alyx:Login:FailedToConnect')
+  			catch ex
+    			if strcmp(ex.identifier, 'Alyx:Login:FailedToConnect')
+
 					warning('Alyx:LoginFail:FailedToConnect', 'Failed To Connect.')
 					return
 				elseif contains(ex.message, 'credentials')||strcmpi(ex.message, 'Bad Request')
@@ -417,10 +417,16 @@ classdef alyxManager < optickaCore
 			%>   [~, eids] = ai.getSessions(expRefs)
 			%>
 			%> @see ALYX.UPDATESESSIONS, ALYX.GETDATA
-			arguments
+			arguments(Input)
 				me alyxManager
 				ref cell = {}
+			end
+			arguments(Repeating)
 				varargin
+			end
+			arguments(Output)
+				sessions
+				eids
 			end
 			% Parse Name-Value paired args - we use inputParser here because
 			% we need PartialMatchPriority which arguments blocks don't support
@@ -653,30 +659,48 @@ classdef alyxManager < optickaCore
 			%>   [url, session] = newExp(me, '/path/to/alf', 1, sessionStruct)
 			%>
 			%> @see ALYX
-			arguments
+			arguments (Input)
 				me alyxManager
 				path char
-				sessionID numeric
+				sessionID double
 				session struct
 				jsonData char = '[]'
 				startTime datetime = datetime.empty
 			end
+			arguments (Output)
+				url char
+				newSession struct
+			end
+
+			url = ''; newSession = [];
+			
 			% Ensure user is logged in
 			if ~me.loggedIn; me.login; end
 			
-			% check items exists in the database
-			assert(me.hasEntry('labs',session.labName), 'Alyx:newExp:labNotFound', sprintf('lab "%s" does not exist', session.labName));
+			% check items exists in the database, subject is necessary,
+			% others optional
 			assert(me.hasEntry('subjects',session.subjectName), 'Alyx:newExp:subjectNotFound', sprintf('subject "%s" does not exist', session.subjectName));
-			assert(me.hasEntry('users',session.researcherName), 'Alyx:newExp:userNotFound', sprintf('user "%s" does not exist', session.researcherName));
-			%assert(me.hasEntry('projects',session.project), 'Alyx:newExp:projectNotFound', sprintf('project "%s" does not exist', session.project));
-			%assert(me.hasEntry('procedures',session.procedure), 'Alyx:newExp:procedureNotFound', sprintf('procedure "%s" does not exist', session.procedure));
-			assert(me.hasEntry('locations',session.location), 'Alyx:newExp:locationNotFound', sprintf('location "%s" does not exist', session.location));
-			
+			if isfield(session,'researcherName') && ~me.hasEntry('users',session.researcherName)
+				session = rmfield(session,'researcherName');
+			end
+			if isfield(session,'labName') && ~me.hasEntry('labs',session.labName)
+				session = rmfield(session,'labName');
+			end
+			if isfield(session,'location') && ~me.hasEntry('locations',session.location)
+				session = rmfield(session,'location');
+			end
+			if isfield(session,'project') && ~me.hasEntry('projects',session.project)
+				session = rmfield(session,'project');
+			end
+			if isfield(session,'procedure') && ~me.hasEntry('procedures',session.procedure)
+				session = rmfield(session,'procedure');
+			end
+
 			me.sessionURL = '';
 			me.sessionParentURL = '';
 
-			%> Use caller-supplied startTime when registering historical sessions,
-			%> otherwise default to now.
+			% Use caller-supplied startTime when registering historical sessions,
+			% otherwise default to now.
 			if ~isempty(startTime)
 				if isa(startTime,'datetime')
 					expDate = char(startTime,'yyyy-MM-dd''T''HH:mm:ss');
@@ -696,8 +720,7 @@ classdef alyxManager < optickaCore
 				error("There is an existing session for ID = %i!!!", sessionID);
 			end
 
-			%Now create a new SESSION, using the experiment number
-			newSession = []; url = [];
+			% Now create a new SESSION, using the experiment number
 			d = struct;
 			d.users = {session.researcherName};
 			d.subject = session.subjectName;
@@ -706,7 +729,7 @@ classdef alyxManager < optickaCore
 			try d.projects = {session.project}; end
 			try d.procedures = {session.procedure}; end
 			try d.task_protocol = session.taskProtocol; end
-			d.narrative = ['opticka-generated session: ' path];
+			d.narrative = ['alyxManager generated session: ' path];
 			d.number = sessionID;
 			d.start_time = expDate;
 			d.type = 'Experiment';
@@ -846,28 +869,28 @@ classdef alyxManager < optickaCore
 			%% Alyx-dev
 			return
 			try %#ok<UNRCH>
-			%Get datarepositories and their base paths
-			repo_paths = cellfun(@(r) r.name, me.getData('data-repository'), 'uni', 0);
-			
-			%Identify which repository the filePath is in
-			which_repo = cellfun( @(rp) contains(alfDir, rp), repo_paths);
-			assert(sum(which_repo) == 1, 'Input filePath\n%s\ndoes not contain the a repository path\n', alfDir);
-			
-			%Define the relative path of the file within the repo
-			dnsId = regexp(alfDir, ['(?<=' repo_paths{which_repo} '.*)\\?'], 'once')+1;
-			relativePath = alfDir(dnsId:end);
-			
-			me.BaseURL = 'https://alyx-dev.cortexlab.net';
-			%   subject = regexpi(relativePath, '(?<=Subjects\\)[A-Z_0-9]+', 'match');
-			
-			%   D.subject = subject{1};
-			D.filenames = {alfFiles.name};
-			D.path = alfDir;
-			%   D.exists_in = repo_paths{which_repo};
-			
-			me.postData('register-file', D);
+				%Get datarepositories and their base paths
+				repo_paths = cellfun(@(r) r.name, me.getData('data-repository'), 'uni', 0);
+				
+				%Identify which repository the filePath is in
+				which_repo = cellfun( @(rp) contains(alfDir, rp), repo_paths);
+				assert(sum(which_repo) == 1, 'Input filePath\n%s\ndoes not contain the a repository path\n', alfDir);
+				
+				%Define the relative path of the file within the repo
+				dnsId = regexp(alfDir, ['(?<=' repo_paths{which_repo} '.*)\\?'], 'once')+1;
+				relativePath = alfDir(dnsId:end);
+				
+				me.BaseURL = 'https://alyx-dev.cortexlab.net';
+				%   subject = regexpi(relativePath, '(?<=Subjects\\)[A-Z_0-9]+', 'match');
+				
+				%   D.subject = subject{1};
+				D.filenames = {alfFiles.name};
+				D.path = alfDir;
+				%   D.exists_in = repo_paths{which_repo};
+				
+				me.postData('register-file', D);
 			catch ex
-			warning(ex.identifier, '%s', ex.message)
+				warning(ex.identifier, '%s', ex.message)
 			end
 			me.BaseURL = 'https://alyx.cortexlab.net';
 		end
@@ -1069,7 +1092,7 @@ classdef alyxManager < optickaCore
 			rf.path = paths.ALFKeyShort;
 			rf.filenames = filenames;
 			rf.hashes = hashes;
-			rf.bytes = bytes;
+			rf.filesizes = int32(bytes);
 			rf.labs = session.labName;
 
 			datasets = me.registerFile(rf);
