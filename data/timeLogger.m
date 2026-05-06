@@ -1,7 +1,10 @@
 classdef timeLogger < optickaCore
-	%TIMELOGGER Simple class used to store the timing data from an experiment
-	%  timeLogger stores timing data for a taskrun and optionally graphs the
-	%  result.
+	%> @brief Log frame timing and event annotations for a task run.
+	%>
+	%> The class stores per-frame timing values such as VBL, draw, flip, miss,
+	%> and stimulus state, together with timestamped messages that can include
+	%> time type metadata and optional HED annotations. The logged data can be
+	%> normalised, plotted, and exported as a table for later inspection.
 	
 	properties
 		timer			= @GetSecs
@@ -62,14 +65,20 @@ classdef timeLogger < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief Preallocate array: a bit more efficient
+		%> @brief Preallocate timing and message storage.
 		%>
-		%> @param varargin
-		%> @return
+		%> This avoids repeated array growth during a run and resets the message
+		%> write index to the start of the buffers.
+		%>
+		%> @param n Number of frame timing entries to reserve.
+		%> @param m Number of message entries to reserve.
 		% ===================================================================
 		function preAllocate(me,n,m)
-			if ~exist('n','var') || isempty(n); n = me.preallocateTimes; end
-			if ~exist('m','var') || isempty(m); m = me.preallocateMessages; end
+			arguments
+				me
+				n (1,1) double {mustBeInteger,mustBePositive} = me.preallocateTimes
+				m (1,1) double {mustBeInteger,mustBePositive} = me.preallocateMessages
+			end
 			if isprop(me,'t')
 				me.t.vbl = zeros(1,n);
 				me.t.show = me.t.vbl;
@@ -96,7 +105,7 @@ classdef timeLogger < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief print Log of the frame timings
+		%> @brief Plot timing summaries and, when present, the message log.
 		% ===================================================================
 		function plot(me)
 			printRunLog(me);
@@ -104,9 +113,17 @@ classdef timeLogger < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief Mark whether the stimulus was active for a frame tick.
+		%>
+		%> @param name Stimulus state name for the current frame.
+		%> @param tick Frame index to update.
 		% ===================================================================
 		function logStim(me, name, tick)
+			arguments
+				me
+				name {mustBeTextScalar}
+				tick (1,1) double {mustBeInteger,mustBeNonnegative}
+			end
 			if matches(name, me.stimStateNames)
 				me.t.stimTime(tick) = 1;
 			else
@@ -115,21 +132,38 @@ classdef timeLogger < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief add message with timestamp to message list
+		%> @brief Append a timestamped message to the event log.
+		%>
+		%> Empty timing inputs fall back to the most recent VBL time or the
+		%> logger timer. HED payloads are normalised to a stored string path.
+		%>
+		%> @param tick Frame index associated with the message.
+		%> @param startTime Timestamp of message onset.
+		%> @param exitTime Timestamp of message completion.
+		%> @param message Text message to store.
+		%> @param timeType Label describing how the timestamp was generated.
+		%> @param HED Optional HED tag or HED tag object.
 		% ===================================================================
 		function addMessage(me, tick, startTime, exitTime, message, timeType, HED)
-			if ~exist('message','var'); return; end
-			if ~exist('tick','var') || isempty(tick); tick = me.tick; end
-			if (~exist('startTime','var') || isempty(startTime)) && ~isempty(me.lastvbl)
+			arguments
+				me
+				tick double = []
+				startTime double = []
+				exitTime double = NaN
+				message = []
+				timeType {mustBeTextScalar} = "passed"
+				HED = ""
+			end
+			if isempty(message); return; end
+			if isempty(tick); tick = me.tick; end
+			if isempty(startTime) && ~isempty(me.lastvbl)
 				startTime = me.lastvbl;
 				timeType = "lastvbl";
 			elseif isempty(startTime)
-				startTime = GetSecs;
+				startTime = me.timer();
 				timeType = "getsecs";
 			end
-			if ~exist('timeType','var') || isempty(timeType); timeType = 'passed'; end
-			if ~exist('exitTime','var') || isempty(exitTime); exitTime = NaN; end
-			if ~exist('HED','var') || isempty(HED); HED = ""; end
+			if isempty(exitTime); exitTime = NaN; end
 			N = me.messageN;
 			me.messages(1).time(N) = startTime;
 			me.messages.exitTime(N) = exitTime;
@@ -143,17 +177,16 @@ classdef timeLogger < optickaCore
 			else
 				me.messages.stimTime(N) = NaN;
 			end
-			me.messages.type(N) = timeType;
-			me.messages.message(N) = message;
+			me.messages.type(N) = string(timeType);
+			me.messages.message(N) = string(message);
 			me.messages.HED(N) = normalizeHEDTag(me,HED);
 			me.messageN = me.messageN + 1;
 		end
 		
 		% ===================================================================
-		%> @brief print Log of the frame timings
+		%> @brief Plot raw timing, frame deltas, timing offsets, and misses.
 		%>
-		%> @param
-		%> @return
+		%> @return h Figure handle or empty when no timing data is available.
 		% ===================================================================
 		function h = printRunLog(me)
 			h = [];
@@ -270,10 +303,9 @@ classdef timeLogger < optickaCore
 		end
 
 		% ===================================================================
-		%> @brief print messages
+		%> @brief Show the message log in a UI table.
 		%>
-		%> @param
-		%> @return
+		%> @return h Struct of UI handles, or empty when there are no messages.
 		% ===================================================================
 		function h = plotMessages(me)
 			msgs = messageTable(me);
@@ -311,10 +343,12 @@ classdef timeLogger < optickaCore
 		end
 
 		% ===================================================================
-		%> @brief 
+		%> @brief Export the message log as a sorted table.
 		%>
-		%> @param
-		%> @return
+		%> The returned table contains onset, exit, relative time, duration,
+		%> frame tick, stimulus state, free text message, time type, and HED tag.
+		%>
+		%> @return tbl Message log as a MATLAB table.
 		% ===================================================================
 		function tbl = messageTable(me)
 			removeEmptyValues(me);
@@ -366,15 +400,18 @@ classdef timeLogger < optickaCore
 	%=======================================================================
 		
 		% ===================================================================
-		%> @brief calculate genuine missed stim frames
+		%> @brief Count missed frames that occurred during stimulus display.
 		%>
-		%> @param
-		%> @return
+		%> @param miss Frame miss vector.
+		%> @param stimTime Stimulus-on mask for each frame.
 		% ===================================================================
 		function calculateMisses(me,miss,stimTime)
+			arguments
+				me
+				miss double = me.t.miss
+				stimTime double = me.t.stimTime
+			end
 			removeEmptyValues(me)
-			if nargin < 3; stimTime = me.t.stimTime;end
-			if nargin < 2; miss = me.t.miss;end
 			me.missImportant = miss;
 			me.missImportant(me.missImportant <= 0) = -inf;
 			me.missImportant(stimTime < 1) = -inf;
@@ -383,10 +420,10 @@ classdef timeLogger < optickaCore
 		end
 
 		% ===================================================================
-		%> @brief if we preallocated, remove empty 0 values
+		%> @brief Trim unused preallocated values and normalise old log formats.
 		%>
-		%> @param
-		%> @return
+		%> This method collapses legacy message layouts into the current schema,
+		%> removes missing entries, and ensures optional fields exist.
 		% ===================================================================
 		function removeEmptyValues(me)
 			if isprop(me,'t')
@@ -462,12 +499,17 @@ classdef timeLogger < optickaCore
 	%=======================================================================
 
 		% ===================================================================
-		%> @brief 
+		%> @brief Compute the mean and standard error of a numeric vector.
 		%>
-		%> @param
-		%> @return
+		%> @param data Numeric values to summarise.
+		%> @return avg Mean value.
+		%> @return err Standard error of the mean.
 		% ===================================================================
-		function [avg,err] = stderr(me, data)
+		function [avg,err] = stderr(~, data)
+			arguments
+				~
+				data double
+			end
 			avg=mean(data);
 			err=std(data);
 			err=sqrt(err.^2/length(data));
@@ -476,11 +518,15 @@ classdef timeLogger < optickaCore
 		% ===================================================================
 		%> @brief Normalize a HED tag payload for storage in the message log.
 		%>
-		%> @param HED
-		%> @return tag
+		%> @param HED Plain tag text or an object carrying tag metadata.
+		%> @return tag Normalised tag string.
 		% ===================================================================
 		function tag = normalizeHEDTag(~, HED)
-			if nargin < 2 || isempty(HED)
+			arguments
+				~
+				HED = ""
+			end
+			if isempty(HED)
 				tag = "";
 				return
 			end
@@ -507,13 +553,16 @@ classdef timeLogger < optickaCore
 	%=======================================================================
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief Rebuild a logger object after loading saved state.
 		%>
-		%> @param
-		%> @return
+		%> @param s Saved struct or already-instantiated logger.
+		%> @return me Reconstructed timeLogger instance.
 		% ===================================================================
 
 		function me = loadobj(s)
+			arguments
+				s
+			end
 			if isstruct(s)
 				newObj = timeLogger;
 				newObj.name = s.name;
