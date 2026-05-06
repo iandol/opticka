@@ -177,8 +177,10 @@ classdef discStimulus < baseStimulus
 			function set_alphaOut(me, value)
 				if me.isInSetColour; return; end
 				me.alphaOut = value;
-				[~,name] = getP(me,'colour');
-				me.(name) = [me.(name)(1:3) value];
+				[val,name] = getP(me,'colour');
+				if ~isempty(val)
+					me.(name) = [val(1:3) value];
+				end
 				[val,name] = getP(me,'flashColour');
 				if ~isempty(val)
 					me.(name) = [me.(name)(1:3) value];

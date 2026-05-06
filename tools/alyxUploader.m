@@ -38,9 +38,9 @@ classdef alyxUploader < handle
 		%> researcher / responsible user to set on new sessions
 		researcherName char			= ''
 		%> Alyx location string
-		location char				= ''
+		location char				= 'cagelab-dev'
 		%> S3/MinIO endpoint URL
-		dataRepo char				= 'http://172.16.102.30:9000'
+		dataRepo char				= 'http://172.16.102.77:9000'
 		%> perform all steps but do NOT post to Alyx or upload to S3
 		dryRun logical				= false
 		%> more logging
@@ -57,8 +57,8 @@ classdef alyxUploader < handle
 	properties (Access = private)
 		%> internal alyxManager instance
 		alyx alyxManager
-		%> internal awsManager instance (created on demand)
-		aws
+		%> internal minioManager instance (created on demand)
+		store
 		%> regex to extract timestamp from opticka filenames
 		%> matches: 2026-04-23-10-20-03  (yyyy-MM-dd-HH-mm-ss)
 		tsPattern = '(\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2})'
@@ -119,6 +119,7 @@ classdef alyxUploader < handle
 				try
 					me.processSession(sessions(ii));
 				catch ERR
+					getReport(ERR)
 					warning('alyxUploader:sessionError', ...
 						'Error processing %s:\n  %s', sessions(ii).alfPath, ERR.message);
 				end
@@ -197,12 +198,9 @@ classdef alyxUploader < handle
 			% Build sessionData struct mimicking runExperiment.sessionData
 			session = struct();
 			session.subjectName    = s.subject;
-			session.researcherName = me.ternary(~isempty(me.researcherName), me.researcherName, me.user);
-			session.labName        = me.ternary(~isempty(s.lab),             s.lab,             me.labName);
-			session.location       = me.location;
-			session.procedure      = '';
-			session.project        = '';
-			session.taskProtocol   = '';
+			try session.researcherName = me.ternary(~isempty(me.researcherName), me.researcherName, me.user); end
+			try session.labName        = me.ternary(~isempty(s.lab),             s.lab,             me.labName); end
+			if ~isempty(me.location); session.location = me.location; end
 			session.dataBucket     = lower(session.labName);
 			session.dataRepo       = me.dataRepo;
 
@@ -222,18 +220,31 @@ classdef alyxUploader < handle
 				fprintf('  ↳ No files found in %s, skipping.\n', paths.ALFPath);
 				return;
 			end
-			filenames = arrayfun(@(f) fullfile(f.folder, f.name), sFiles, 'UniformOutput', false);
-			fprintf('  ↳ %d file(s) found.\n', numel(filenames));
+			files = arrayfun(@(f) fullfile(f.folder, f.name), sFiles, 'UniformOutput', false);
+			fprintf('  ↳ %d file(s) found.\n', numel(files));
 
 			% --- Extract start_time from filename timestamps -------------------
 			startTime = me.extractStartTime(sFiles, s.date);
 			fprintf('  ↳ Session start_time: %s\n', char(startTime, 'yyyy-MM-dd''T''HH:mm:ss'));
 
-			% Validate subject / user / lab exist in Alyx before proceeding
+			%% check if a mat file is present and it contains session data
+			% if so we prefer this session info
+			[tmpSession,json] = getSessionDetails(me,files);
+			if ~isempty(tmpSession)
+				try session.researcherName = tmpSession.researcherName; end
+				try session.location = tmpSession.location; end %#ok<*TRYNC>
+				try session.project = tmpSession.project; end
+				try session.procedure = tmpSession.procedure; end
+				try session.brainRegion = tmpSession.brainRegion; end
+				session.dataBucket     = lower(session.labName);
+			end
+
+			%% Validate subject / user / lab exist in Alyx before proceeding
 			if ~me.dryRun
 				me.validateAlyxEntries(session);
 			end
 
+			%%============================================================CREATE SESSION
 			% Check if this session already exists in Alyx (using the real date)
 			% Use only the date part for the date_range query
 			dayDate = char(startTime, 'yyyy-MM-dd');
@@ -245,7 +256,9 @@ classdef alyxUploader < handle
 					fprintf('  ↳ Session already in Alyx (id=%s), skipping creation.\n', existing(1).id);
 					me.alyx.sessionURL = existing(1).url;
 				else
-					me.createAlyxSession(paths, session, startTime);
+					url = me.createAlyxSession(paths, session, startTime, json);
+					me.alyx.updateNarrative("UPLOAD by alyxUploader");
+					if isempty(url);error("Could not create a new session!"); end
 				end
 			else
 				fprintf('  [DryRun] Would create Alyx session with start_time %s.\n', ...
@@ -253,20 +266,20 @@ classdef alyxUploader < handle
 			end
 
 			% Register files with Alyx
-			uuids = cell(1, numel(filenames));
 			if ~me.dryRun
+				uuids = cell(1, numel(files)); setQC = false;
 				try
-					[datasets, regNames] = me.alyx.registerALFFiles(paths, session);
-					fprintf('  ↳ Registered %d dataset(s) with Alyx.\n', numel(datasets));
-					% match UUIDs back to local filenames
-					for ii = 1:min(numel(datasets), numel(regNames))
-						[~, rn, re] = fileparts(regNames{ii});
-						needle = [rn re];
-						for jj = 1:numel(filenames)
-							[~, fn2, ext2] = fileparts(filenames{jj});
-							if strcmp([fn2 ext2], needle)
-								uuids{jj} = datasets(ii).id;
-								break;
+					[datasets, filenames] = me.alyx.registerALFFiles(paths, session);
+					fprintf('≣≣≣≣⊱ Added Files to ALYX Session: %s\n', me.alyx.sessionURL);
+					try arrayfun(@(ss)disp([ss.name ' - bytes: ' num2str(ss.file_size)]),datasets); end
+					
+					%% get the ALYX dataset UUID for each file registered
+					if length(datasets) == length(filenames)
+						for ii = 1:length(filenames)
+							if contains(filenames{ii},datasets(ii).name)
+								uuids{ii} = datasets(ii).id;
+							else
+								uuids{ii} = '';
 							end
 						end
 					end
@@ -281,9 +294,22 @@ classdef alyxUploader < handle
 			% Upload to S3
 			if ~me.dryRun
 				me.uploadToS3(filenames, uuids, paths, session);
+				setQC = true;
 			else
 				fprintf('  [DryRun] Would upload %d file(s) to S3 bucket "%s".\n', ...
 					numel(filenames), lower(session.labName));
+			end
+
+			%% if the upload was successful, set the dataset QC to PASS in ALYX
+			if setQC
+				qc = struct("qc", "PASS");
+				%% set the dataset QC to PASS if upload successful
+				for ii = 1:length(uuids)
+					if ~isempty(uuids{ii})
+						me.alyx.postData("datasets/"+string(uuids{ii}), qc, 'PATCH');
+					end
+				end
+				fprintf('≣≣≣≣⊱ Set ALYX QC to PASS for session: %s\n', me.alyx.sessionURL);
 			end
 
 			% Close the Alyx session with the original end_time
@@ -402,34 +428,32 @@ classdef alyxUploader < handle
 		function validateAlyxEntries(me, session)
 		%> @brief Warn (not error) if required Alyx entries are missing
 		% ===================================================================
-			if ~isempty(session.labName)
-				if ~me.alyx.hasEntry('labs', session.labName)
-					warning('alyxUploader:missingLab', ...
-						'Lab "%s" not found in Alyx', session.labName);
-				end
-			end
 			if ~me.alyx.hasEntry('subjects', session.subjectName)
 				warning('alyxUploader:missingSubject', ...
 					'Subject "%s" not found in Alyx', session.subjectName);
+			end
+			if isfield(session,'labName') && ~me.alyx.hasEntry('labs', session.labName)
+				warning('alyxUploader:missingLab', ...
+					'Lab "%s" not found in Alyx', session.labName);
 			end
 			if ~me.alyx.hasEntry('users', session.researcherName)
 				warning('alyxUploader:missingUser', ...
 					'User "%s" not found in Alyx', session.researcherName);
 			end
-			if ~isempty(session.location) && ~me.alyx.hasEntry('locations', session.location)
+			if isfield(session,'location') && ~isempty(session.location) && ~me.alyx.hasEntry('locations', session.location)
 				warning('alyxUploader:missingLocation', ...
 					'Location "%s" not found in Alyx', session.location);
 			end
 		end
 
 		% ===================================================================
-		function createAlyxSession(me, paths, session, startTime)
+		function [url, newSession] = createAlyxSession(me, paths, session, json, startTime)
 		%> @brief Wrapper around alyxManager.newExp passing the real start_time
 		%>
 		%> @param startTime  datetime scalar — the timestamp parsed from filenames
 		% ===================================================================
 			try
-				[url, ~] = me.alyx.newExp(paths.ALFPath, paths.sessionID, session, [], startTime);
+				[url, newSession] = me.alyx.newExp(paths.ALFPath, paths.sessionID, session, json, startTime);
 				if ~isempty(url)
 					fprintf('  ↳ Created Alyx session: %s\n', url);
 				else
@@ -442,7 +466,7 @@ classdef alyxUploader < handle
 
 		% ===================================================================
 		function uploadToS3(me, filenames, uuids, paths, session)
-		%> @brief Upload files to S3 / MinIO via awsManager
+		%> @brief Upload files to S3 / MinIO via minioManager
 		% ===================================================================
 			if isempty(me.dataRepo)
 				if me.verbose
@@ -452,15 +476,15 @@ classdef alyxUploader < handle
 			end
 
 			try
-				if isempty(me.aws)
-					awsID  = '';
-					awsKey = '';
-					try awsID  = getSecret('AWS_ID');  end %#ok<TRYNC>
-					try awsKey = getSecret('AWS_KEY'); end %#ok<TRYNC>
-					assert(~isempty(awsID) && ~isempty(awsKey), ...
-						'alyxUploader:noAWSSecrets', ...
-						'AWS_ID and AWS_KEY secrets are not set. Run setSecret(''AWS_ID'') etc.');
-					me.aws = awsManager(awsID, awsKey, me.dataRepo);
+				if isempty(me.store)
+					minioID  = '';
+					minioKey = '';
+					try minioID  = getSecret('AWS_ID');  end %#ok<TRYNC>
+					try minioKey = getSecret('AWS_KEY'); end %#ok<TRYNC>
+					assert(~isempty(minioID) && ~isempty(minioKey), ...
+						'alyxUploader:noMINIOSecrets', ...
+						'MINIO_ID and MINIO_KEY secrets are not set. Run setSecret(''MINIO_ID'') etc.');
+					me.store = minioManager(minioID, minioKey, me.dataRepo);
 				end
 
 				bucket = lower(session.labName);
@@ -469,7 +493,7 @@ classdef alyxUploader < handle
 						'labName is empty; cannot determine S3 bucket name. Skipping upload.');
 					return;
 				end
-				me.aws.checkBucket(bucket);
+				me.store.checkBucket(bucket);
 
 				for ii = 1:numel(filenames)
 					[~, fn, ext] = fileparts(filenames{ii});
@@ -479,12 +503,55 @@ classdef alyxUploader < handle
 					else
 						key = fullfile(paths.ALFKeyShort, [fn ext]);
 					end
-					me.aws.copyFiles(filenames{ii}, bucket, key);
+					success = me.store.copyFiles(filenames{ii}, bucket, key);
 				end
 				fprintf('  ↳ Uploaded %d file(s) to s3://%s/%s\n', ...
 					numel(filenames), bucket, paths.ALFKeyShort);
 			catch ERR
 				warning('alyxUploader:s3Fail', 'S3 upload failed: %s', ERR.message);
+			end
+		end
+
+		% ===================================================================
+		function [session, json] = getSessionDetails(me, files)
+		% ===================================================================
+			arguments(Input)
+				me alyxUploader
+				files cell
+			end
+			arguments(Output)
+				session struct
+				json char
+			end
+
+			session = []; json = '';
+
+			for ii = 1:length(files)
+				if ~contains(files{ii},'opticka.raw'); continue; end
+				ml = load(files{ii});
+				%% touchData signifies a cagelab session
+				if isfield(ml,'dt') && isa(ml.dt,'touchData')
+					if isfield(ml,'in') 
+						if isfield(ml.in,'session')
+							session = ml.in.session;
+						end
+						if isstruct(ml.in)
+							json = jsonencode(ml.in);
+						end
+					end
+				elseif isfield(ml,'rE') && isa(ml.rE,'runExperiment')
+					if isprop(ml.rE,'sessionData')
+						session = ml.rE.sessionData;
+						fn = fieldnames(session);
+						for jj = 1:numel(fn)
+							if isempty(session.(fn{jj})); session = rmfield(session, fn{jj}); end
+						end
+					end
+					if isfield(ml,'tS') && isstruct(ml.tS) && isfield(ml.tS,'runName')
+						session.taskProtocol = ml.tS.runName;
+						json = jsonencode(ml.tS);
+					end
+				end
 			end
 		end
 

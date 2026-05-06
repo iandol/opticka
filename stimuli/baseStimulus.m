@@ -950,18 +950,19 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> @param range of property to return
 		%> @return value of property
 		% ===================================================================
-		function [value, name] = getP(me, name, range)
+		function [value, nameOut] = getP(me, name, range)
 		% [value, name] = getP(me, name, range)
+			value = []; nameOut = [];
 			if isprop(me, [name 'Out']) && ~isempty(me.([name 'Out']))
-				name = [name 'Out'];
+				nameOut = [name 'Out'];
 				value = me.(name);
 				if exist('range','var'); value = value(range); end
 			elseif isprop(me, name)
 				value = me.(name);
+				nameOut = name;
 				if exist('range','var'); value = value(range); end
 			elseif me.verbose
 				fprintf('!!! Property %s doesn''t exist...\n',name)
-				value = []; name = [];
 			end
 		end
 
@@ -1100,12 +1101,21 @@ classdef baseStimulus < optickaCore & dynamicprops
 			me.doDrift		= false;
 			me.doFlash		= false;
 			me.doAnimator	= false;
-			[v,n] = getP(me,'tf');
-			if ~isempty(n) && v > 0; me.doDrift = true; end
-			[v,n] = getP(me,'speed');
-			if ~isempty(n) && v > 0; me.doMotion = true; end
+
+			if isprop(me, 'tf')
+				[v,n] = getP(me,'tf');
+				if ~isempty(n) && v > 0; me.doDrift = true; end
+			end
+
+			if isprop(me, 'speed')
+				[v,n] = getP(me,'speed');
+				if ~isempty(n) && v > 0; me.doMotion = true; end
+			end
+
 			if strcmpi(me.family,'dots'); me.doDots = true; end
+
 			if strcmpi(me.type,'flash'); me.doFlash = true; end
+
 			if ~isempty(me.animator) && isa(me.animator,'animationManager')
 				me.doAnimator = true;
 			end

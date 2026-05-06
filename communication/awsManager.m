@@ -6,7 +6,7 @@ classdef awsManager < handle
 	% Secrets can be kept locally using setSecret('AWS_ID') 
 	% and setSecret('AWS_KEY'), then passed with getSecret
 	% e.g.
-	% aws=awsManager(getSecret("AWS_ID"),getSecret("AWS_KEY"), "http://172.16.102.77:9000")
+	% aws=awsManager(getSecret("AWS_ID"),getSecret("AWS_KEY"), "http://1.1.1.1:9000")
 	
 	properties
 		AWS_DEFAULT_REGION = 'cn-north-1'
@@ -29,29 +29,34 @@ classdef awsManager < handle
 			me.AWS_ACCESS_KEY_ID = id;
 			me.AWS_SECRET_ACCESS_KEY = key;
 			me.ENDPOINT = url;
-			me.AWS_DEFAULT_REGION = 'cn-north-1';
-
 			updateENV(me);
 		end
 
 		% ===================================================================
 		function updateENV(me)
-			setenv("AWS_ACCESS_KEY_ID", me.AWS_ACCESS_KEY_ID)
-			setenv("AWS_SECRET_ACCESS_KEY", me.AWS_SECRET_ACCESS_KEY)
-			setenv("AWS_DEFAULT_REGION", me.AWS_DEFAULT_REGION)
+			setenv("AWS_ACCESS_KEY_ID", me.AWS_ACCESS_KEY_ID);
+			setenv("AWS_SECRET_ACCESS_KEY", me.AWS_SECRET_ACCESS_KEY);
+			setenv("AWS_DEFAULT_REGION", me.AWS_DEFAULT_REGION);
+			setenv("AWS_ENDPOINT_URL", me.ENDPOINT);
 		end
 
 		% ===================================================================
 		function out = list(me)
-			cmdin = strjoin(["aws --endpoint-url " me.ENDPOINT " s3 ls"],"");
+			updateENV(me);
+			cmdin = "aws s3 ls";
 			[~, out] = system(cmdin);
 			out = strtrim(out);
 		end
 
 		% ===================================================================
 		function checkBucket(me, bucket)
+			updateENV(me);
 			buckets = list(me);
-			if ~contains(buckets,lower(bucket))
+			if contains(buckets,'[ERROR]')
+				buckets = '';
+				warning('Couldn''t get buckets list, problem with aws!!!');
+			end
+			if ~isempty(buckets) && ~contains(buckets,lower(bucket))
 				createBucket(me, lower(bucket));
 			end
 		end
@@ -59,7 +64,7 @@ classdef awsManager < handle
 		% ===================================================================
 		function success = createBucket(me, bucket)
 			if nargin < 2; error("--->>> awsManager: you must enter a bucket name"); end
-			cmdin = strjoin(["aws --endpoint-url " me.ENDPOINT " s3 mb s3://" bucket],"");
+			cmdin = strjoin(["aws s3 mb s3://" bucket],"");
 			[r, out] = system(cmdin);
 			success = ~logical(r);
 			if ~success
@@ -72,7 +77,7 @@ classdef awsManager < handle
 			if ~exist('bucket','var') || isempty(bucket); return; end
 			if ~exist('key','var') || isempty(key); return; end
 
-			cmdin = strjoin(["aws --endpoint-url " me.ENDPOINT " s3 cp s3://" bucket "/" key " ./"],"");
+			cmdin = strjoin(["aws s3 cp s3://" bucket "/" key " ./"],"");
 			[r, out] = system(cmdin);
 			success = ~logical(r);
 			if ~success
@@ -94,8 +99,8 @@ classdef awsManager < handle
 			else
 				rec = "";
 			end
-
-			cmdin = strjoin(["aws --no-progress " rec "--endpoint-url " me.ENDPOINT " s3 cp '" file "' s3://" bucket "/" key],"");
+			updateENV(me);
+			cmdin = strjoin(["aws --no-progress " rec " s3 cp '" file "' s3://" bucket "/" key],"");
 			[r, out] = system(cmdin);
 			success = ~logical(r);
 			if ~success

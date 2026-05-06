@@ -2272,20 +2272,19 @@ classdef runExperiment < optickaCore
 
 					%% upload the files to MINIO AWS server
 					if isSecret("AWS_ID")
-						aws = awsManager(getSecret("AWS_ID"),getSecret("AWS_KEY"), me.sessionData.dataRepo);
+						store = minioManager(secrets.AWS_ID,secrets.AWS_KEY, session.dataURL);
 						bucket = lower(me.sessionData.labName);
-						aws.checkBucket(bucket);
+						store.checkBucket(bucket);
 						for ii = 1:length(filenames)
 							[~,f,e] = fileparts(filenames{ii});
 							if ~isempty(uuids) && ~isempty(uuids{ii})
-								% append the uuid to the filename, seems to
-								% be required by ONE protocol
+								% append the uuid to the filename, seems to be required by ONE protocol
 								key = [me.paths.ALFKeyShort filesep f '.' uuids{ii} e];
 							else
 								key = [me.paths.ALFKeyShort filesep f e];
 							end
 							try
-								aws.copyFiles(filenames{ii}, bucket, key);
+								store.copyFiles(filenames{ii}, bucket, key); 
 								setQC = true;
 							catch
 								setQC = false;
@@ -2297,9 +2296,9 @@ classdef runExperiment < optickaCore
 						warning('To upload Alyx files you MUST setSecrets: AWS_ID and AWS_KEY!!!'); 
 					end
 
+					%% set the dataset QC to PASS if upload successful
 					if setQC
-						qc = struct("QC", "PASS");
-						%% set the dataset QC to PASS if upload successful
+						qc = struct("qc", "PASS");
 						for ii = 1:length(uuids)
 							if ~isempty(uuids{ii})
 								me.alyx.postData("datasets/"+string(uuids{ii}), qc, 'PATCH');
