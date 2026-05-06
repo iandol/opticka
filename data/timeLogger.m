@@ -29,7 +29,8 @@ classdef timeLogger < optickaCore
 	end
 
 	properties (SetAccess = private, GetAccess = public)
-		messages struct	= struct('time',[],'exitTime',[],'tick',[],'stimTime',[],'message',[],'type',[])
+		messages struct	= struct('time',[],'exitTime',[],'tick',[],...
+								'stimTime',[],'message',[],'type',[],'HED',[])
 		messageN = 1
 		missImportant
 		nMissed
@@ -89,6 +90,7 @@ classdef timeLogger < optickaCore
 				me.messages.stimTime = me.messages.time;
 				me.messages.message = repmat("",1,m);
 				me.messages.type = me.messages.message;
+				me.messages.HED = me.messages.message;
 			end
 			me.messageN = 1;
 		end
@@ -115,7 +117,7 @@ classdef timeLogger < optickaCore
 		% ===================================================================
 		%> @brief add message with timestamp to message list
 		% ===================================================================
-		function addMessage(me, tick, startTime, exitTime, message, timeType)
+		function addMessage(me, tick, startTime, exitTime, message, timeType, HED)
 			if ~exist('message','var'); return; end
 			if ~exist('tick','var') || isempty(tick); tick = me.tick; end
 			if (~exist('startTime','var') || isempty(startTime)) && ~isempty(me.lastvbl)
@@ -127,6 +129,7 @@ classdef timeLogger < optickaCore
 			end
 			if ~exist('timeType','var') || isempty(timeType); timeType = 'passed'; end
 			if ~exist('exitTime','var') || isempty(exitTime); exitTime = NaN; end
+			if ~exist('HED','var') || isempty(HED); HED = ""; end
 			N = me.messageN;
 			me.messages(1).time(N) = startTime;
 			me.messages.exitTime(N) = exitTime;
@@ -142,6 +145,7 @@ classdef timeLogger < optickaCore
 			end
 			me.messages.type(N) = timeType;
 			me.messages.message(N) = message;
+			me.messages.HED(N) = normalizeHEDTag(me,HED);
 			me.messageN = me.messageN + 1;
 		end
 		
@@ -302,7 +306,7 @@ classdef timeLogger < optickaCore
 					'BackgroundColor', [1 1 1;0.95 0.95 0.95], ...
 					'RowStriping','on', ...
 					'ColumnEditable', [], ...
-					'ColumnWidth', {'fit','fit','fit','4x'});
+					'ColumnWidth', {'fit','fit','fit','fit','fit','fit','3x','fit','3x'});
 			end
 		end
 
@@ -317,10 +321,11 @@ classdef timeLogger < optickaCore
 			tbl = [];
 			if isempty(me.messages); return; end
 			if isfield(me.messages,'type'); addType=true; else; addType=false; end
-			msgs = cell(length(me.messages.time)+1,8);
+			msgs = cell(length(me.messages.time)+1,9);
 			msgs{1,1} = toDateTime(me.startTime); msgs{1,2} = NaT; msgs{1,3} = 0;
 			msgs{1,4} = NaT; msgs{1,5} = NaN; msgs{1,6} = NaN; msgs{1,7} = 'Session Start Time'; 
 			msgs{1,8} = 'GetSecs';
+			msgs{1,9} = "";
 			for i = 1:length(me.messages.time)
 				msgs{i+1,1} = toDateTime(me.messages.time(i));
 				if isfield(me.messages,'exitTime'); msgs{i+1,2} = toDateTime(me.messages.exitTime(i)); end
@@ -338,8 +343,13 @@ classdef timeLogger < optickaCore
 				else
 					msgs{i+1,8} = 'undefined';
 				end
+				if isfield(me.messages,'HED') && length(me.messages.HED) >= i
+					msgs{i+1,9} = me.messages.HED(i);
+				else
+					msgs{i+1,9} = "";
+				end
 			end
-			tbl = cell2table(msgs,'VariableNames',{'Onset','Exit','Time','Duration','Tick','StimulusOn','Message','TimeType'});
+			tbl = cell2table(msgs,'VariableNames',{'Onset','Exit','Time','Duration','Tick','StimulusOn','Message','TimeType','HED'});
 			tblt = table2timetable(tbl);
 			tblt = sortrows(tblt);
 			tbl = timetable2table(tblt);
@@ -418,13 +428,17 @@ classdef timeLogger < optickaCore
 			% messages
 			if isstruct(me.messages) && length(me.messages) > 1 % old format was struct(N), convert to struct.item(N)
 				m = me.messages;
-				mm = struct('time',[],'tick',[],'message',"",'type',"");
+				mm = struct('time',[],'exitTime',[],'tick',[],'stimTime',[],...
+					'message',"",'type',"",'HED',"");
 				for ii = 1:length(m)
 					if isfield(m,'vbl'); mm(1).time(ii) = m(ii).vbl;
 					elseif isfield(m,'time'); mm(1).time(ii) = m(ii).time; end
+					if isfield(m,'exitTime'); mm.exitTime(ii) = m(ii).exitTime; end
 					if isfield(m,'tick'); mm.tick(ii) = m(ii).tick; end
+					if isfield(m,'stimTime'); mm.stimTime(ii) = m(ii).stimTime; end
 					if isfield(m,'type'); mm.type(ii) = m(ii).type; end
 					if isfield(m,'message'); mm.message(ii) = string(strip(m(ii).message)); end
+					if isfield(m,'HED'); mm.HED(ii) = normalizeHEDTag(me,m(ii).HED); end
 				end
 				me.messages = mm;
 			end
@@ -436,8 +450,10 @@ classdef timeLogger < optickaCore
 			try	me.messages.tick(idx) = []; end
 			try	me.messages.stimTime(idx) = []; end
 			try	me.messages.message(idx) = []; end
-			if ~isfield(me.messages,'type'); me.messages.type = string(size(me.messages.time)); end
+			if ~isfield(me.messages,'type'); me.messages.type = strings(size(me.messages.time)); end
 			try	me.messages.type(idx) = []; end
+			if ~isfield(me.messages,'HED'); me.messages.HED = strings(size(me.messages.time)); end
+			try	me.messages.HED(idx) = []; end
 		end
 	end
 
@@ -455,6 +471,33 @@ classdef timeLogger < optickaCore
 			avg=mean(data);
 			err=std(data);
 			err=sqrt(err.^2/length(data));
+		end
+
+		% ===================================================================
+		%> @brief Normalize a HED tag payload for storage in the message log.
+		%>
+		%> @param HED
+		%> @return tag
+		% ===================================================================
+		function tag = normalizeHEDTag(~, HED)
+			if nargin < 2 || isempty(HED)
+				tag = "";
+				return
+			end
+			if isobject(HED) || isstruct(HED)
+				if isprop(HED,'tagPath') || (isstruct(HED) && isfield(HED,'tagPath'))
+					tag = string(HED.tagPath);
+				elseif isprop(HED,'tag') || (isstruct(HED) && isfield(HED,'tag'))
+					tag = string(HED.tag);
+				else
+					tag = string(HED);
+				end
+			else
+				tag = string(HED);
+			end
+			if numel(tag) > 1
+				tag = strjoin(tag, " | ");
+			end
 		end
 		
 	end
