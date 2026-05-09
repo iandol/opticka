@@ -147,22 +147,23 @@ classdef timeLogger < optickaCore
 		function addMessage(me, tick, startTime, exitTime, message, timeType, HED)
 			arguments
 				me
-				tick double = []
-				startTime double = []
+				tick double = NaN
+				startTime double = NaN
 				exitTime double = NaN
-				message = []
-				timeType {mustBeTextScalar} = "passed"
-				HED = ""
+				message string = ""
+				timeType string = ""
+				HED string = ""
 			end
-			if isempty(message); return; end
-			if isempty(tick); tick = me.tick; end
-			if isempty(startTime) && ~isempty(me.lastvbl)
+			if strlength(message) == 0; return; end
+			if isempty(tick) || isnan(tick); tick = me.tick; end
+			if (isempty(startTime) || isnan(startTime)) && ~isempty(me.lastvbl) && me.lastvbl > 0
 				startTime = me.lastvbl;
 				timeType = "lastvbl";
-			elseif isempty(startTime)
+			else
 				startTime = me.timer();
 				timeType = "getsecs";
 			end
+			if strlength(timeType) == 0; timeType = "unknown"; end
 			if isempty(exitTime); exitTime = NaN; end
 			N = me.messageN;
 			me.messages(1).time(N) = startTime;
@@ -179,7 +180,7 @@ classdef timeLogger < optickaCore
 			end
 			me.messages.type(N) = string(timeType);
 			me.messages.message(N) = string(message);
-			me.messages.HED(N) = normalizeHEDTag(me,HED);
+			me.messages.HED(N) = string(HED);
 			me.messageN = me.messageN + 1;
 		end
 		
@@ -514,51 +515,19 @@ classdef timeLogger < optickaCore
 			err=std(data);
 			err=sqrt(err.^2/length(data));
 		end
-
-		% ===================================================================
-		%> @brief Normalize a HED tag payload for storage in the message log.
-		%>
-		%> @param HED Plain tag text or an object carrying tag metadata.
-		%> @return tag Normalised tag string.
-		% ===================================================================
-		function tag = normalizeHEDTag(~, HED)
-			arguments
-				~
-				HED = ""
-			end
-			if isempty(HED)
-				tag = "";
-				return
-			end
-			if isobject(HED) || isstruct(HED)
-				if isprop(HED,'tagPath') || (isstruct(HED) && isfield(HED,'tagPath'))
-					tag = string(HED.tagPath);
-				elseif isprop(HED,'tag') || (isstruct(HED) && isfield(HED,'tag'))
-					tag = string(HED.tag);
-				else
-					tag = string(HED);
-				end
-			else
-				tag = string(HED);
-			end
-			if numel(tag) > 1
-				tag = strjoin(tag, " | ");
-			end
-		end
 		
 	end
 
 	%=======================================================================
 	methods ( Static ) %-------STATIC METHODS-----%
 	%=======================================================================
-		
+
 		% ===================================================================
 		%> @brief Rebuild a logger object after loading saved state.
 		%>
 		%> @param s Saved struct or already-instantiated logger.
 		%> @return me Reconstructed timeLogger instance.
 		% ===================================================================
-
 		function me = loadobj(s)
 			arguments
 				s
