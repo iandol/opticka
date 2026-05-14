@@ -44,6 +44,7 @@ classdef alyxManager < optickaCore
 	%--------------------TRANSIENT PROTECTED PROPERTIES----------%
 	properties (Access = protected, Transient = true)
 		token char		= ''
+		cache dictionary
 	end
 	
 	%--------------------PRIVATE PROPERTIES----------%
@@ -80,6 +81,7 @@ classdef alyxManager < optickaCore
 
 			flushQueue(me,true); %flush any existing queue in the queueDir
 			setSecrets(me); %set secrets from secure storage if present
+			me.cache = configureDictionary("string","cell");
 		end
 
 		% ===================================================================
@@ -250,17 +252,35 @@ classdef alyxManager < optickaCore
 		%> @param name (char) The name of the entry to check for existence.
 		%> @return r (logical) Returns true if the entry exists, false otherwise.
 		% ===================================================================
-			[rt, st] = me.getData(type);
-			if st ~= 200; error('Problem retrieving %s from Alyx',type); end
-			switch type
-				case {'subjects'}
-					rt = {rt(:).nickname};
-				case {'tags','tasks','procedures','labs', 'locations', 'projects','data-repository','dataset-types'}
-					rt = {rt(:).name};
-				case {'users'}
-					rt = {rt(:).username};
-				case {'sessions'}
-					rt = {rt(:).id};
+			arguments(Input)
+				me
+				type string
+				name string
+			end
+			if isKey(me.cache, type)
+				rt = lookup(me.cache, type);
+				while isscalar(rt); rt = rt{1}; end
+				status = 200;
+				doCache = false;
+			else
+				[rt, status] = me.getData(type);
+				doCache = true;
+			end
+			if status ~= 200; warning('Alyx:hasEntry','Problem retrieving %s from Alyx',type); return; end
+			if isstruct(rt)
+				switch type
+					case {'subjects'}
+						rt = {rt(:).nickname};
+					case {'tags','tasks','procedures','labs', 'locations', 'brain-regions', 'projects','data-repository','dataset-types'}
+						rt = {rt(:).name};
+					case {'users'}
+						rt = {rt(:).username};
+					case {'sessions'}
+						rt = {rt(:).id};
+				end
+			end
+			if doCache && iscell(rt)
+				me.cache = insert(me.cache, type, {rt}); 
 			end
 			if iscell(rt) && any(contains(name, rt))
 				r = true;
@@ -616,12 +636,12 @@ classdef alyxManager < optickaCore
 				% Assume post is intended for subject description
 				warning('Alyx:TODO', 'This feature is not yet implemented')
 				return
-				% TODO: retreive subject narrative endpoint, requires endpoint to allow
+				% TODO: retrieve subject narrative endpoint, requires endpoint to allow
 				% PUT requests and /subject=%s option.  NB: subject's 'narrative' field
 				% is called 'description'
 			else
-				% Remove trailing whitespaces, and ensure string is 1D.  Replace newlines
-				% with escape charecters
+				% Remove trailing whitespace, and ensure string is 1D.  Replace newlines
+				% with escape characters
 				
 				if iscell(narrative); narrative = narrative{:}; end % Make sure not a cell
 				try
@@ -664,7 +684,7 @@ classdef alyxManager < optickaCore
 				path char
 				sessionID double
 				session struct
-				jsonData char = '[]'
+				jsonData string = "{}"
 				startTime datetime = datetime.empty
 			end
 			arguments (Output)
@@ -729,11 +749,13 @@ classdef alyxManager < optickaCore
 			try d.projects = {session.project}; end
 			try d.procedures = {session.procedure}; end
 			try d.task_protocol = session.taskProtocol; end
+			try d.brain_region = session.brainRegion; end
 			d.narrative = ['alyxManager generated session: ' path];
 			d.number = sessionID;
 			d.start_time = expDate;
 			d.type = 'Experiment';
-			d.json = ['{ "parameters": ' jsonData ' }'];
+			try jsondecode(jsonData); jsonOK = true; catch; jsonOK = false; end
+			if jsonOK; d.json = jsonData; end
 			
 			try
 				[newSession, statusCode] = me.postData('sessions', d, 'post');
@@ -749,7 +771,7 @@ classdef alyxManager < optickaCore
 		end
 
 		% ===================================================================
-		function session = closeSession(me, narrative, QC)
+		function session = closeSession(me, narrative, QC, nTrials, nTrialsCorrect, jsonData)
 		% ===================================================================
 			%> @brief Close an Alyx session
 			%>
@@ -765,6 +787,9 @@ classdef alyxManager < optickaCore
 				me alyxManager
 				narrative char = ''
 				QC char = 'NOT_SET'
+				nTrials double = NaN
+				nTrialsCorrect double = NaN
+				jsonData string = ""
 			end
 			if isempty(me.sessionURL); session = []; return; end
 			session = [];
@@ -776,6 +801,15 @@ classdef alyxManager < optickaCore
 				end
 				d.qc = QC;
 				d.end_time = char(datetime("now",'Format','yyyy-MM-dd''T''HH:mm:ss'));
+				if ~isnan(nTrials) && nTrials >= 0
+					d.n_trials = nTrials;
+				end
+				if ~isnan(nTrialsCorrect) && nTrialsCorrect >= 0
+					d.n_trials_correct = nTrialsCorrect;
+				end
+				if jsonData ~= ""
+					d.json = [jsonData];
+				end
 				session = me.postData(['sessions/' ses.id], d, 'patch');
 			end
 		end
@@ -1087,15 +1121,15 @@ classdef alyxManager < optickaCore
 				hashes{ii} = DataHash(filenames{ii},'file','sha1');
 			end
 
-			rf = struct('created_by',session.researcherName);
-			rf.name = session.dataBucket;
+			rf = struct('name',session.dataBucket);
 			rf.path = paths.ALFKeyShort;
 			rf.filenames = filenames;
 			rf.hashes = hashes;
 			rf.filesizes = int32(bytes);
 			rf.labs = session.labName;
+			try rf = struct('created_by',session.researcherName); end
 
-			datasets = me.registerFile(rf);
+			datasets = registerFile(me, rf);
 
 		end
 
