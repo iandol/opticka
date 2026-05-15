@@ -2221,31 +2221,39 @@ classdef runExperiment < optickaCore
 				end
 			end
 
-			if ~isfield(me.paths,'ALFPath') || isempty(me.paths.ALFPath)
-				[path,id,dateID,name] = me.getALF(me.sessionData.subjectName, me.sessionData.labName, true);
-				fprintf('≣≣≣≣⊱ Alyx Path created: %s %s %s %s\n',path,id,dateID,name);
+			if ~isfield(me.paths,'ALFPath') || isempty(me.paths.ALFPath) || me.paths.ALFPath == ""
+				getALF(me, me.sessionData.subjectName, me.sessionData.labName, true);
+				fprintf('≣≣≣≣⊱ Alyx Path created: %s %s %s %s\n',me.paths.ALFPath, me.paths.sessionID, me.paths.dateID, me.paths.name);
 			end
 
-			[url] = me.alyx.newExp(me.paths.ALFPath, me.paths.sessionID, me.sessionData);
+			[url] = me.alyx.createSession(me.paths.ALFPath, me.paths.sessionID, me.sessionData);
 			me.paths.sessionURL = url;
 			fprintf('≣≣≣≣⊱ Alyx File Path Path: %s \n\t  Alyx URL: %s...\n',me.paths.ALFPath, me.paths.sessionURL);
 		end
 
 		% ===================================================================
-		function endAlyxSession(me, result, saveData)
+		function endAlyxSession(me, result, saveData, nTrials, nTrialsCorrect, jsonData)
 		%> @fn endAlyxSession
 		%> @brief end an alyx session
 		%>
 		%> @param
 		% ===================================================================
+			arguments(Input)
+				me
+				result (1,1) string = "NOT_SET"
+				saveData (1,1) logical = false
+				nTrials (1,1) {mustBeNumeric} = NaN
+				nTrialsCorrect (1,1) {mustBeNumeric} = NaN
+				jsonData (1,1) string = ""
+			end
+
 			if ~me.sessionData.useAlyx; return; end
-			if ~exist('saveData','var') || isempty(saveData); saveData = false; end
 
 			%% close the session
 			fprintf('≣≣≣≣⊱ Closing ALYX Session: %s\n', me.alyx.sessionURL);
-			session = me.alyx.closeSession(me.comment, result);
+			session = me.alyx.closeSession(me.comment, result, nTrials, nTrialsCorrect, jsonData);
 			if isfield(me.screenSettings,'statusbar')
-				t = sprintf('ALYX Session Closed: %s',me.alyx.sessionURL);
+				t = sprintf('ALYX Session Closed: %s', me.alyx.sessionURL);
 				me.screenSettings.statusbar.Text = t;
 				me.screenSettings.statusbar.URL = me.alyx.sessionURL;
 			end

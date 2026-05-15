@@ -257,7 +257,7 @@ classdef alyxManager < optickaCore
 				type string
 				name string
 			end
-			if isKey(me.cache, type)
+			if numEntries(me.cache) > 0 && isKey(me.cache, type)
 				rt = lookup(me.cache, type);
 				while isscalar(rt); rt = rt{1}; end
 				status = 200;
@@ -660,7 +660,7 @@ classdef alyxManager < optickaCore
 		end
 
 		% ===================================================================
-		function [url, newSession] = newExp(me, path, sessionID, session, jsonData, startTime)
+		function [url, newSession] = createSession(me, path, sessionID, session, jsonData, startTime)
 		% ===================================================================
 			%> @brief Create a new unique experimental session in the database
 			%>
@@ -676,7 +676,7 @@ classdef alyxManager < optickaCore
 			%> @return newSession struct created session record
 			%>
 			%> Example:
-			%>   [url, session] = newExp(me, '/path/to/alf', 1, sessionStruct)
+			%>   [url, session] = createSession(me, '/path/to/alf', 1, sessionStruct)
 			%>
 			%> @see ALYX
 			arguments (Input)
@@ -684,7 +684,7 @@ classdef alyxManager < optickaCore
 				path char
 				sessionID double
 				session struct
-				jsonData string = "{}"
+				jsonData string = "[]"
 				startTime datetime = datetime.empty
 			end
 			arguments (Output)
@@ -699,9 +699,11 @@ classdef alyxManager < optickaCore
 			
 			% check items exists in the database, subject is necessary,
 			% others optional
-			assert(me.hasEntry('subjects',session.subjectName), 'Alyx:newExp:subjectNotFound', sprintf('subject "%s" does not exist', session.subjectName));
+			assert(me.hasEntry('subjects',session.subjectName), 'Alyx:createSession:subjectNotFound', sprintf('subject "%s" does not exist', session.subjectName));
 			if isfield(session,'researcherName') && ~me.hasEntry('users',session.researcherName)
 				session = rmfield(session,'researcherName');
+				session.researcherName = 'Unknown';
+
 			end
 			if isfield(session,'labName') && ~me.hasEntry('labs',session.labName)
 				session = rmfield(session,'labName');
@@ -711,6 +713,7 @@ classdef alyxManager < optickaCore
 			end
 			if isfield(session,'project') && ~me.hasEntry('projects',session.project)
 				session = rmfield(session,'project');
+				session.project = 'Unknown';
 			end
 			if isfield(session,'procedure') && ~me.hasEntry('procedures',session.procedure)
 				session = rmfield(session,'procedure');
@@ -742,26 +745,22 @@ classdef alyxManager < optickaCore
 
 			% Now create a new SESSION, using the experiment number
 			d = struct;
-			d.users = {session.researcherName};
 			d.subject = session.subjectName;
-			try d.lab = session.labName; end
-			try d.location = session.location; end
-			try d.projects = {session.project}; end
-			try d.procedures = {session.procedure}; end
-			try d.task_protocol = session.taskProtocol; end
-			try d.brain_region = session.brainRegion; end
-			d.narrative = ['alyxManager generated session: ' path];
 			d.number = sessionID;
 			d.start_time = expDate;
-			d.type = 'Experiment';
-			try jsondecode(jsonData); jsonOK = true; catch; jsonOK = false; end
-			if jsonOK; d.json = jsonData; end
+			d.projects = {session.project};
+			try d.lab = session.labName; end
+			try d.location = session.location; end
+			try d.brain_region = session.brainRegion; end
+			try d.task_protocol = session.taskProtocol; end
+			try d.users = {session.researcherName}; end
 			
 			try
 				[newSession, statusCode] = me.postData('sessions', d, 'post');
 				url = newSession.url;
 				me.sessionURL = url;
 			catch ME
+				getReport(ME)
 				if (isinteger(statusCode) && statusCode == 503)
 					warning(ME.identifier, 'Failed to create session file for %i: %s.', sessionID, ME.message)
 				else % Probably fatal user error
@@ -1068,7 +1067,7 @@ classdef alyxManager < optickaCore
 		end
 
 		% ===================================================================
-		function [datasets] = registerFile(me, rFiles)
+		function [datasets, success] = registerFile(me, rFiles)
 		% ===================================================================
 			%REGISTERFILE Registers filepath(s) to Alyx. data is a struct
 			%that follows https://openalyx.internationalbrainlab.org/docs/#register-file
@@ -1085,12 +1084,17 @@ classdef alyxManager < optickaCore
 				rFiles struct
 			end
 
+			success = false;
+
 			if isempty(fieldnames(rFiles)); warning('alyxManager.register file incorrect input'); end
 
 			[datasets, statusCode] = me.postData('register-file', rFiles);
 			
 			if statusCode ~= 201
-				warning('HTTP Error %i -- No file registering, return %s', statusCode, datasets)
+				warning('HTTP Error %i -- No file registering', statusCode)
+				disp(datasets)
+			else 
+				success = true;
 			end
 
 		end
@@ -1127,7 +1131,7 @@ classdef alyxManager < optickaCore
 			rf.hashes = hashes;
 			rf.filesizes = int32(bytes);
 			rf.labs = session.labName;
-			try rf = struct('created_by',session.researcherName); end
+			try rf.created_by = session.researcherName; end
 
 			datasets = registerFile(me, rf);
 
@@ -1524,6 +1528,7 @@ classdef alyxManager < optickaCore
 						responseBody, statusCode(curr_file), alyxQueue(curr_file).name)
 					end
 				catch ex
+					getReport(ex)
 					if strcmp(ex.identifier, 'MATLAB:weboptions:unrecognizedStringChoice')
 						warning('Alyx:flushQueue:MethodNotSupported',...
 							'%s method not supported', upper(uploadType(2:end)));
