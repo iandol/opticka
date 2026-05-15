@@ -24,7 +24,7 @@ addpath(opaths{~qAdd});
 
 % Define the parent folder and the string array of optional project folder names
 parentFolder = fileparts(opath); % Adjust this to your actual parent folder
-folderNames = ["Palamedes" "CageLab/software" "matlab-jzmq", "matmoteGO", "PTBSimia"]; % Example folder names
+folderNames = ["Palamedes" "CageLab-Code" "matlab-jzmq", "matmoteGO", "PTBSimia"]; % Example folder names
 
 % Loop through each folder name
 for i = 1:length(folderNames)
