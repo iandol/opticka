@@ -10,6 +10,8 @@ classdef audioManager < optickaCore
 		latencyLevel		= 1
 		%> default volume
 		volumeLevel double	= 1
+		%> for beeps add a linear ramp to reduce clicks, in seconds
+		rampDuration double	= 0.0025
 		%> this allows us to be used even if no sound is attached
 		silentMode logical	= false 
 		%> chain snd() function to use psychportaudio?
@@ -34,7 +36,7 @@ classdef audioManager < optickaCore
 		handles				= []
 		isFiles logical		= false
 		%> cache generated beep vectors by sample rate, frequency and duration
-		beepCache struct	= struct('key', {}, 'soundVec', {})
+		beepCache dictionary
 		allowedProperties = {'numChannels', 'frequency', 'lowLatency', ...
 			'device', 'volumeLevel', 'fileName', 'silentMode', 'verbose'}
 	end 
@@ -45,10 +47,10 @@ classdef audioManager < optickaCore
 	
 		%==============CONSTRUCTOR============%
 		function me = audioManager(varargin)
-			
 			args = optickaCore.addDefaults(varargin,struct('name','audio-manager'));
 			me=me@optickaCore(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
+			me.beepCache = configureDictionary("string","cell");
 			
 			isValid = checkFiles(me);
 			if ~isValid
@@ -270,6 +272,7 @@ classdef audioManager < optickaCore
 				me.frequency = [];
 				me.sampleHandle = NaN;
 				me.beepHandle = NaN;
+				me.beepCache = configureDictionary("string","cell");
 				me.isSetup = false; me.isOpen = false; me.isSample = false;
 				me.silentMode = false;
 			catch ME
@@ -282,7 +285,7 @@ classdef audioManager < optickaCore
 				me.beepHandle = NaN;
 				warning('audioManager:reset','%s',ME.message);
 			end
-			me.beepCache = struct('key', {}, 'soundVec', {});
+			me.beepCache = configureDictionary("string","cell");
 			try InitializePsychSound(me.lowLatency); end
 		end
 
@@ -384,18 +387,27 @@ classdef audioManager < optickaCore
 		%>
 		% ===================================================================
 		function soundVec = getBeepSoundVec(me, freq, durationSec)
-			cacheKey = sprintf('%.12g_%.12g_%.12g', me.frequency, freq, durationSec);
-			cacheIdx = find(strcmp({me.beepCache.key}, cacheKey), 1);
-			if isempty(cacheIdx)
-				nSample = me.frequency*durationSec;
+			cacheKey = string(sprintf('%.12g_%.12g_%.12g', me.frequency, freq, durationSec));
+			if ~isKey(me.beepCache, cacheKey)
+				nSample = max(1, round(me.frequency * durationSec));
 				soundVec = sin(2*pi*freq*(1:nSample)/me.frequency);
+				% Apply a short linear attack/release envelope to reduce clicks.
+				rampSamples = max(1, round(me.rampDuration * me.frequency));
+				rampSamples = min(rampSamples, floor(nSample / 2));
+				if rampSamples > 0
+					env = ones(1, nSample);
+					ramp = linspace(0, 1, rampSamples);
+					env(1:rampSamples) = ramp;
+					env(end-rampSamples+1:end) = fliplr(ramp);
+					soundVec = soundVec .* env;
+				end
 				soundVec = [soundVec;soundVec];
-				me.beepCache(end + 1).key = cacheKey;
-				me.beepCache(end).soundVec = soundVec;
+				insert(me.beepCache, cacheKey, {soundVec});
 			else
-				soundVec = me.beepCache(cacheIdx).soundVec;
+				soundVec = me.beepCache(cacheKey);
+				soundVec = soundVec{1}; % unpack from cell
 			end
 		end
-		
+
 	end %---END PRIVATE METHODS---%
 end
