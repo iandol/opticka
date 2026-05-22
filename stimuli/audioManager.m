@@ -315,6 +315,52 @@ classdef audioManager < optickaCore
 				disp(me.devices(ii));
 			end
 		end
+
+		% ===================================================================
+		%> @brief demo
+		%>
+		% ===================================================================
+		function demo(me)
+			beat = 0.11;
+			if me.silentMode; return; end
+			if ~me.isSetup; setup(me);end
+			% J.S. Bach's Prelude in C major (BWV 846)
+			song = [
+				% Bar 1: C major
+				262, 1; 330, 1; 392, 1; 523, 1; 659, 1; 784, 1; 1047, 1; 784, 1;
+				659, 1; 523, 1; 392, 1; 330, 1; 262, 1; 330, 1; 392, 1; 523, 1;
+				% Bar 2: D minor
+				294, 1; 349, 1; 440, 1; 587, 1; 698, 1; 880, 1; 1175, 1; 880, 1;
+				698, 1; 587, 1; 440, 1; 349, 1; 294, 1; 349, 1; 440, 1; 587, 1;
+				% Bar 3: G7
+				392, 1; 494, 1; 587, 1; 698, 1; 784, 1; 988, 1; 1175, 1; 988, 1;
+				784, 1; 698, 1; 587, 1; 494, 1; 392, 1; 494, 1; 587, 1; 698, 1;
+				% Bar 4: C major
+				262, 1; 330, 1; 392, 1; 523, 1; 659, 1; 784, 1; 1047, 1; 784, 1;
+				659, 1; 523, 1; 392, 1; 330, 1; 262, 1; 330, 1; 392, 1; 523, 1;
+				% Bar 5: C major (repeat)
+				262, 1; 330, 1; 392, 1; 523, 1; 659, 1; 784, 1; 1047, 1; 784, 1;
+				659, 1; 523, 1; 392, 1; 330, 1; 262, 1; 330, 1; 392, 1; 523, 1;
+				% Bar 6: D minor
+				294, 1; 349, 1; 440, 1; 587, 1; 698, 1; 880, 1; 1175, 1; 880, 1;
+				698, 1; 587, 1; 440, 1; 349, 1; 294, 1; 349, 1; 440, 1; 587, 1;
+				% Bar 7: G7
+				392, 1; 494, 1; 587, 1; 698, 1; 784, 1; 988, 1; 1175, 1; 988, 1;
+				784, 1; 698, 1; 587, 1; 494, 1; 392, 1; 494, 1; 587, 1; 698, 1;
+				% Bar 8: C major
+				262, 1; 330, 1; 392, 1; 523, 1; 659, 1; 784, 1; 1047, 1; 784, 1;
+				659, 1; 523, 1; 392, 1; 330, 1; 262, 1; 330, 2; 392, 2; 523, 4;
+				];
+			for i = size(song, 1)
+				freq = song(i, 1);
+				dur  = song(i, 2) * beat;
+				if freq > 0
+					me.beep(freq,dur);
+				end
+				WaitSecs(dur);
+			end
+
+		end
 		
 	end %---END PUBLIC METHODS---%
 	
@@ -392,8 +438,12 @@ classdef audioManager < optickaCore
 				nSample = max(1, round(me.frequency * durationSec));
 				soundVec = sin(2*pi*freq*(1:nSample)/me.frequency);
 				% Apply a short linear attack/release envelope to reduce clicks.
-				rampSamples = max(1, round(me.rampDuration * me.frequency));
-				rampSamples = min(rampSamples, floor(nSample / 2));
+				if me.rampDuration > 0
+					rampSamples = max(1, round(me.rampDuration * me.frequency));
+					rampSamples = min(rampSamples, floor(nSample / 2));
+				else
+					rampSamples = 0;
+				end
 				if rampSamples > 0
 					env = ones(1, nSample);
 					ramp = linspace(0, 1, rampSamples);

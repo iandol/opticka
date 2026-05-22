@@ -128,14 +128,6 @@ classdef stateMachine < optickaCore
 		currentTime
 		%> time entered current state
 		currentEntryTime
-		%> current entry function
-		currentEntryFcn
-		%> current within function
-		currentWithinFcn
-		%> current transition function
-		currentTransitionFcn
-		%> current exit function
-		currentExitFcn
 		%> number of ticks before next transition when realTime = false
 		nextTickOut
 		%> time before next transition when realTime = true
@@ -203,10 +195,8 @@ classdef stateMachine < optickaCore
 		function newStateIndexes = addStates(me,newStates)
 			sz = size(newStates);
 			newStateIndexes = zeros(1,sz(1)-1);
-			for ii = 1:size(newStates,2)
-				% just in case we have e.g. entryFn instead of entryFcn
-				newStates{1,ii} = regexprep(newStates{1,ii},'Fn$','Fcn');
-			end
+			% vectorised regexprep on the header row (field names)
+			newStates(1,:) = regexprep(newStates(1,:),'Fn$','Fcn');
 			for ii = 2:sz(1)
 				newState = cell2struct(newStates(ii,:), newStates(1,:), 2);
 				if isfield(newState,'name') && ~isempty(newState.name)
@@ -314,7 +304,7 @@ classdef stateMachine < optickaCore
 				trigger = me.currentTick >= me.nextTickOut;
 			end
 
-			if trigger == true %we have exceeded the time (real|ticks): transition or exit
+			if trigger %we have exceeded the time (real|ticks): transition or exit
 				if ~isempty(me.tempNextState) && isStateName(me, me.tempNextState)
 					me.transitionToStateWithName(me.tempNextState);
 				elseif ~isempty(me.stateList(me.currentIndex).next) 
@@ -331,7 +321,7 @@ classdef stateMachine < optickaCore
 				%that the eye is fixated for the fixation time, returning
 				%an empty string until that is met, then return the name of
 				%a state to transition to.
-				tcn = me.currentTransitionFcn; %local cache
+				tcn = me.currentState.transitionFcn; %local cache
 				if ~isempty(tcn)
 					tname = strtok(tcn{1}());
 					if ~isempty(tname)
@@ -345,9 +335,8 @@ classdef stateMachine < optickaCore
 					end
 				end
 				%run our within state functions
-				wcn = me.currentWithinFcn; %local cache
-				for i = 1:length(wcn) 
-					wcn{i}();
+				for wf = me.currentState.withinFcn
+					wf{1}();
 				end
 			end
 		end
@@ -497,10 +486,6 @@ classdef stateMachine < optickaCore
 			me.currentName = '';
 			me.currentUUID = '';
 			me.currentTime = [];
-			me.currentEntryFcn = {};
-			me.currentExitFcn = {};
-			me.currentTransitionFcn = {};
-			me.currentWithinFcn = {};
 			me.currentEntryTime = {};
 			me.currentIndex = [];
 			me.currentTick = [];
@@ -522,10 +507,8 @@ classdef stateMachine < optickaCore
 			oldVerbose = me.verbose;
 			oldTimers = me.fnTimers;
 			oldUseLog = me.useExternalLog;
-			oldTimeDelta = me.timeDelta;
 			me.verbose = true; %let's be chatty for the demo
 			me.fnTimers = true; %let's time our function evaluations for fun
-			me.timeDelta = 0.001; %1ms per tick, so 1000Hz update rate if realTime = false
 			me.useExternalLog = false; %don't use an external log for the demo, but you can set this to a timeLogger object if you want to see how that works
 			fprintf('\n===>>> StateMachine Demo: time delta = %.3g | Real time mode = %i\n\n',me.timeDelta,me.realTime);
 			beginFcn = { @()fprintf('\t\t\t\tbegin state: Hello there!\n'); };
@@ -560,7 +543,6 @@ classdef stateMachine < optickaCore
 			disp('>--------------------------------------------------')
 			reset(me);
 			me.verbose = oldVerbose; %reset verbose back to original value
-			me.timeDelta = oldTimeDelta;
 			me.fnTimers = oldTimers;
 			me.useExternalLog = oldUseLog;
 		end
@@ -644,15 +626,8 @@ classdef stateMachine < optickaCore
 				for j = 1:length(titles)
 					tbl{i+1,j} = me.stateList(i).(titles(j));
 					if iscell(tbl{i+1,j})
-						t = [];
-						for k = 1:length(tbl{i+1,j})
-							if isempty(t)
-								t = char(tbl{i+1,j}{k});
-							else
-								t = [t '; ' char(tbl{i+1,j}{k})];
-							end
-						end
-						tblD{i+1,j} = t;
+						strs = cellfun(@(x)char(x), tbl{i+1,j}, 'UniformOutput', false);
+						tblD{i+1,j} = strjoin(strs, '; ');
 					else
 						tblD{i+1,j} = tbl{i+1,j};
 					end
@@ -706,12 +681,13 @@ classdef stateMachine < optickaCore
 		% ===================================================================
 		function exitCurrentState(me)
 			if me.fnTimers; tx=tic; end
+			
 			if ~me.currentState.skipExitFcn 
-				ef = me.currentState.exitFcn;
-				for i = 1:length(ef) %nested class
-					ef{i}();
+				for ef = me.currentState.exitFcn
+					ef{1}();
 				end
 			end
+
 			if me.fnTimers 
 				me.log.fevalExit(me.thisN) = toc(tx)*1000;
 				txs = tic;
@@ -759,25 +735,21 @@ classdef stateMachine < optickaCore
 				me.currentState = me.stateList(me.currentIndex);
 				me.currentTick = 0;
 				me.currentName = me.currentState.name;
-				me.currentUUID = num2str(dec2hex(floor((now - floor(now))*1e10)));
-				me.currentEntryFcn = me.currentState.entryFcn;
-				me.currentWithinFcn = me.currentState.withinFcn;
-				me.currentTransitionFcn = me.currentState.transitionFcn;
+				me.currentUUID = dec2hex(me.thisN);
 				
 				if length(me.currentState.time) == 2
 					me.currentState.time = randi([me.currentState.time(1)*1e3, me.currentState.time(2)*1e3]) / 1e3;
 				end
 				me.nextTimeOut = me.currentEntryTime + me.currentState.time;
 				me.nextTickOut = floor(me.currentState.time / me.timeDelta);
-					
-				ef = me.currentEntryFcn;
-				for i = 1:length(ef)
-					ef{i}();
+				
+				% run our entry functions
+				for ef = me.currentState.entryFcn
+					ef{1}();
 				end
 				%run our within state functions
-				wf = me.currentWithinFcn;
-				for i = 1:length(wf) %nested class
-					wf{i}();
+				for wf = me.currentState.withinFcn
+					wf{1}();
 				end
 				if me.fnTimers; me.log.fevalEnter(me.thisN) = toc(tt)*1000; end
 				
@@ -803,7 +775,7 @@ classdef stateMachine < optickaCore
 			if n == 1; me.log = cell2struct(me.logValues, me.logFields, 2); return; end
 			me.log.(me.logFields(1)) = 0;
 			for i = 3:length(me.logFields)
-				if ~me.fnTimers && contains(me.logFields(i),'feval');continue;end
+				if ~me.fnTimers && startsWith(me.logFields(i),'feval');continue;end
 				if isnumeric(me.logValues{i})
 					me.log.(me.logFields(i)) = NaN(1,n);
 				else
