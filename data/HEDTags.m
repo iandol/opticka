@@ -17,6 +17,7 @@ classdef HEDTags
 		Experiment_procedure ("Experiment-procedure", "Event/Experiment-procedure", "An event indicating an experimental procedure, as in performing a saliva swab during the experiment or administering a survey.", "HED_0012006")
 		Experiment_structure ("Experiment-structure", "Event/Experiment-structure", "An event specifying a change-point of the structure of experiment. This event is typically used to indicate a change in experimental conditions or tasks.", "HED_0012007")
 		Measurement_event ("Measurement-event", "Event/Measurement-event", "A discrete measure returned by an instrument.", "HED_0012008")
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Agent
 		Agent ("Agent", "Agent", "Someone or something that takes an active role or produces a specified effect.The role or effect may be implicit. Being alive or performing an activity such as a computation may qualify something to be an agent. An agent may also be something that simulates something else.", "HED_0012009")
 		Animal_agent ("Animal-agent", "Agent/Animal-agent", "An agent that is an animal.", "HED_0012010")
 		Avatar_agent ("Avatar-agent", "Agent/Avatar-agent", "An agent associated with an icon or avatar representing another agent.", "HED_0012011")
@@ -24,8 +25,11 @@ classdef HEDTags
 		Human_agent ("Human-agent", "Agent/Human-agent", "A person who takes an active role or produces a specified effect.", "HED_0012013")
 		Robotic_agent ("Robotic-agent", "Agent/Robotic-agent", "An agent mechanical device capable of performing a variety of often complex tasks on command or by being programmed in advance.", "HED_0012014")
 		Software_agent ("Software-agent", "Agent/Software-agent", "An agent computer program that interacts with the participant in an active role such as an AI advisor.", "HED_0012015")
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Action
 		Action ("Action", "Action", "Do something.", "HED_0012016")
 		Communicate ("Communicate", "Action/Communicate", "Action conveying knowledge of or about something.", "HED_0012017")
+		
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Communicate_gesturally
 		Communicate_gesturally ("Communicate-gesturally", "Action/Communicate/Communicate-gesturally", "Communicate non-verbally using visible bodily actions, either in place of speech or together and in parallel with spoken words. Gestures include movement of the hands, face, or other parts of the body.", "HED_0012018")
 		Clap_hands ("Clap-hands", "Action/Communicate/Communicate-gesturally/Clap-hands", "Strike the palms of against one another resoundingly, and usually repeatedly, especially to express approval.", "HED_0012019")
 		Clear_throat ("Clear-throat", "Action/Communicate/Communicate-gesturally/Clear-throat", "Cough slightly so as to speak more clearly, attract attention, or to express hesitancy before saying something awkward.", "HED_0012020")
@@ -45,12 +49,14 @@ classdef HEDTags
 		Wave ("Wave", "Action/Communicate/Communicate-gesturally/Wave", "Raise hand and move left and right, as a greeting or sign of departure.", "HED_0012034")
 		Widen_eyes ("Widen-eyes", "Action/Communicate/Communicate-gesturally/Widen-eyes", "Open eyes and possibly with eyebrows lifted especially to express surprise or fear.", "HED_0012035")
 		Wink ("Wink", "Action/Communicate/Communicate-gesturally/Wink", "Close and open one eye quickly, typically to indicate that something is a joke or a secret or as a signal of affection or greeting.", "HED_0012036")
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Communicate_musically
 		Communicate_musically ("Communicate-musically", "Action/Communicate/Communicate-musically", "Communicate using music.", "HED_0012037")
 		Hum ("Hum", "Action/Communicate/Communicate-musically/Hum", "Make a low, steady continuous sound like that of a bee. Sing with the lips closed and without uttering speech.", "HED_0012038")
 		Play_instrument ("Play-instrument", "Action/Communicate/Communicate-musically/Play-instrument", "Make musical sounds using an instrument.", "HED_0012039")
 		Sing ("Sing", "Action/Communicate/Communicate-musically/Sing", "Produce musical tones by means of the voice.", "HED_0012040")
 		Vocalize ("Vocalize", "Action/Communicate/Communicate-musically/Vocalize", "Utter vocal sounds.", "HED_0012041")
 		Whistle ("Whistle", "Action/Communicate/Communicate-musically/Whistle", "Produce a shrill clear sound by forcing breath out or air in through the puckered lips.", "HED_0012042")
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Communicate_vocally
 		Communicate_vocally ("Communicate-vocally", "Action/Communicate/Communicate-vocally", "Communicate using mouth or vocal cords.", "HED_0012043")
 		Cry ("Cry", "Action/Communicate/Communicate-vocally/Cry", "Shed tears associated with emotions, usually sadness but also joy or frustration.", "HED_0012044")
 		Groan ("Groan", "Action/Communicate/Communicate-vocally/Groan", "Make a deep inarticulate sound in response to pain or despair.", "HED_0012045")
@@ -60,6 +66,7 @@ classdef HEDTags
 		Sigh ("Sigh", "Action/Communicate/Communicate-vocally/Sigh", "Emit a long, deep, audible breath expressing sadness, relief, tiredness, or a similar feeling.", "HED_0012049")
 		Speak ("Speak", "Action/Communicate/Communicate-vocally/Speak", "Communicate using spoken language.", "HED_0012050")
 		Whisper ("Whisper", "Action/Communicate/Communicate-vocally/Whisper", "Speak very softly using breath without vocal cords.", "HED_0012051")
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Move
 		Move ("Move", "Action/Move", "Move in a specified direction or manner. Change position or posture.", "HED_0012052")
 		Breathe ("Breathe", "Action/Move/Breathe", "Inhale or exhale during respiration.", "HED_0012053")
 		Blow ("Blow", "Action/Move/Breathe/Blow", "Expel air through pursed lips.", "HED_0012054")
@@ -138,12 +145,14 @@ classdef HEDTags
 		Scratch ("Scratch", "Action/Move/Move-body-part/Move-upper-extremity/Scratch", "Drag claws or nails over a surface or on skin.", "HED_0012127")
 		Snap_fingers ("Snap-fingers", "Action/Move/Move-body-part/Move-upper-extremity/Snap-fingers", "Make a noise by pushing second finger hard against thumb and then releasing it suddenly so that it hits the base of the thumb.", "HED_0012128")
 		Touch ("Touch", "Action/Move/Move-body-part/Move-upper-extremity/Touch", "Come into or be in contact with.", "HED_0012129")
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Perceive
 		Perceive ("Perceive", "Action/Perceive", "Produce an internal, conscious image through stimulating a sensory system.", "HED_0012130")
 		Hear ("Hear", "Action/Perceive/Hear", "Give attention to a sound.", "HED_0012131")
 		See ("See", "Action/Perceive/See", "Direct gaze toward someone or something or in a specified direction.", "HED_0012132")
 		Sense_by_touch ("Sense-by-touch", "Action/Perceive/Sense-by-touch", "Sense something through receptors in the skin.", "HED_0012133")
 		Smell ("Smell", "Action/Perceive/Smell", "Inhale in order to ascertain an odor or scent.", "HED_0012134")
 		Taste ("Taste", "Action/Perceive/Taste", "Sense a flavor in the mouth and throat on contact with a substance.", "HED_0012135")
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Perform
 		Perform ("Perform", "Action/Perform", "Carry out or accomplish an action, task, or function.", "HED_0012136")
 		Close ("Close", "Action/Perform/Close", "Act as to blocked against entry or passage.", "HED_0012137")
 		Collide_with ("Collide-with", "Action/Perform/Collide-with", "Hit with force when moving.", "HED_0012138")
@@ -157,6 +166,7 @@ classdef HEDTags
 		Rest ("Rest", "Action/Perform/Rest", "Be inactive in order to regain strength, health, or energy.", "HED_0012146")
 		Ride ("Ride", "Action/Perform/Ride", "Ride on an animal or in a vehicle. Ride conveys some notion that another agent has partial or total control of the motion.", "HED_0012147")
 		Write ("Write", "Action/Perform/Write", "Communicate or express by means of letters or symbols written or imprinted on a surface.", "HED_0012148")
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Think
 		Think ("Think", "Action/Think", "Direct the mind toward someone or something or use the mind actively to form connected ideas.", "HED_0012149")
 		Allow ("Allow", "Action/Think/Allow", "Allow access to something such as allowing a car to pass.", "HED_0012150")
 		Attend_to ("Attend-to", "Action/Think/Attend-to", "Focus mental experience on specific targets.", "HED_0012151")
@@ -179,6 +189,7 @@ classdef HEDTags
 		Respond ("Respond", "Action/Think/Respond", "React to something such as a treatment or a stimulus.", "HED_0012168")
 		Switch_attention ("Switch-attention", "Action/Think/Switch-attention", "Transfer attention from one focus to another.", "HED_0012169")
 		Track ("Track", "Action/Think/Track", "Follow a person, animal, or object through space or time.", "HED_0012170")
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Item
 		Item ("Item", "Item", "An independently existing thing (living or nonliving).", "HED_0012171")
 		Biological_item ("Biological-item", "Item/Biological-item", "An entity that is biological, that is related to living organisms.", "HED_0012172")
 		Anatomical_item ("Anatomical-item", "Item/Biological-item/Anatomical-item", "A biological structure, system, fluid or other substance excluding single molecular entities.", "HED_0012173")
@@ -267,6 +278,7 @@ classdef HEDTags
 		Animal ("Animal", "Item/Biological-item/Organism/Animal", "A living organism that has membranous cell walls, requires oxygen and organic foods, and is capable of voluntary movement.", "HED_0012231")
 		Human ("Human", "Item/Biological-item/Organism/Human", "The bipedal primate mammal Homo sapiens.", "HED_0012232")
 		Plant ("Plant", "Item/Biological-item/Organism/Plant", "Any living organism that typically synthesizes its food from inorganic substances and possesses cellulose cell walls.", "HED_0012233")
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Language_item
 		Language_item ("Language-item", "Item/Language-item", "An entity related to a systematic means of communicating by the use of sounds, symbols, or gestures.", "HED_0012234")
 		Character ("Character", "Item/Language-item/Character", "A mark or symbol used in writing.", "HED_0012235")
 		Clause ("Clause", "Item/Language-item/Clause", "A unit of grammatical organization next below the sentence in rank, usually consisting of a subject and predicate.", "HED_0012236")
@@ -280,6 +292,7 @@ classdef HEDTags
 		Syllable ("Syllable", "Item/Language-item/Syllable", "A unit of pronunciation having a vowel or consonant sound, with or without surrounding consonants, forming the whole or a part of a word.", "HED_0012244")
 		Textblock ("Textblock", "Item/Language-item/Textblock", "A block of text.", "HED_0012245")
 		Word ("Word", "Item/Language-item/Word", "A single distinct meaningful element of speech or writing, used with others (or sometimes alone) to form a sentence and typically surrounded by white space when written or printed.", "HED_0012246")
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Object
 		Object ("Object", "Item/Object", "Something perceptible by one or more of the senses, especially by vision or touch. A material thing.", "HED_0012247")
 		Geometric_object ("Geometric-object", "Item/Object/Geometric-object", "An object or a representation that has structure and topology in space.", "HED_0012248")
 		twoD_shape ("2D-shape", "Item/Object/Geometric-object/2D-shape", "A planar, two-dimensional shape.", "HED_0012249")
@@ -412,6 +425,7 @@ classdef HEDTags
 		Tractor ("Tractor", "Item/Object/Man-made-object/Vehicle/Tractor", "A mobile machine specifically designed to deliver a high tractive effort at slow speeds, and mainly used for the purposes of hauling a trailer or machinery used in agriculture or construction.", "HED_0012373")
 		Train ("Train", "Item/Object/Man-made-object/Vehicle/Train", "A connected line of railroad cars with or without a locomotive.", "HED_0012374")
 		Truck ("Truck", "Item/Object/Man-made-object/Vehicle/Truck", "A motor vehicle which, as its primary function, transports cargo rather than human passengers.", "HED_0012375")
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Natural_object
 		Natural_object ("Natural-object", "Item/Object/Natural-object", "Something that exists in or is produced by nature, and is not artificial or man-made.", "HED_0012376")
 		Mineral ("Mineral", "Item/Object/Natural-object/Mineral", "A solid, homogeneous, inorganic substance occurring in nature and having a definite chemical composition.", "HED_0012377")
 		Natural_feature ("Natural-feature", "Item/Object/Natural-object/Natural-feature", "A feature that occurs in nature. A prominent or identifiable aspect, region, or site of interest.", "HED_0012378")
@@ -448,6 +462,7 @@ classdef HEDTags
 		Horn_blow ("Horn-blow", "Item/Sound/Named-object-sound/Horn-blow", "A loud sound made by forcing air through a sound device that funnels air to create the sound, often used to sound an alert.", "HED_0012409")
 		Ka_ching ("Ka-ching", "Item/Sound/Named-object-sound/Ka-ching", "The sound made by a mechanical cash register, often to designate a reward.", "HED_0012410")
 		Siren ("Siren", "Item/Sound/Named-object-sound/Siren", "A loud, continuous sound often varying in frequency designed to indicate an emergency.", "HED_0012411")
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Property
 		Property ("Property", "Property", "Something that pertains to a thing. A characteristic of some entity. A quality or feature regarded as a characteristic or inherent part of someone or something. HED attributes are adjectives or adverbs.", "HED_0012412")
 		Agent_property ("Agent-property", "Property/Agent-property", "Something that pertains to or describes an agent.", "HED_0012413")
 		Agent_state ("Agent-state", "Property/Agent-property/Agent-state", "The state of the agent.", "HED_0012414")
@@ -530,6 +545,7 @@ classdef HEDTags
 		Intersex ("Intersex", "Property/Agent-property/Agent-trait/Sex/Intersex", "Having genitalia and/or secondary sexual characteristics of indeterminate sex.", "HED_0012489")
 		Male ("Male", "Property/Agent-property/Agent-trait/Sex/Male", "Biological sex of an individual with male sexual organs producing sperm.", "HED_0012490")
 		Other_sex ("Other-sex", "Property/Agent-property/Agent-trait/Sex/Other-sex", "A non-specific designation of sexual traits.", "HED_0012491")
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Data_property
 		Data_property ("Data-property", "Property/Data-property", "Something that pertains to data or information.", "HED_0012492")
 		Data_artifact ("Data-artifact", "Property/Data-property/Data-artifact", "An anomalous, interfering, or distorting signal originating from a source other than the item being studied.", "HED_0012493")
 		Biological_artifact ("Biological-artifact", "Property/Data-property/Data-artifact/Biological-artifact", "A data artifact arising from a biological entity being measured.", "HED_0012494")
@@ -558,7 +574,8 @@ classdef HEDTags
 		Induction_artifact ("Induction-artifact", "Property/Data-property/Data-artifact/Nonbiological-artifact/Induction-artifact", "Artifacts induced by nearby equipment. In EEG, these are usually of high frequency.", "HED_0012517")
 		Line_noise_artifact ("Line-noise-artifact", "Property/Data-property/Data-artifact/Nonbiological-artifact/Line-noise-artifact", "Power line noise at 50 Hz or 60 Hz.", "HED_0012518")
 		Line_noise_artifact_value ("Line-noise-artifact-#", "Property/Data-property/Data-artifact/Nonbiological-artifact/Line-noise-artifact/Line-noise-artifact-#", "", "HED_0012519")
-		Salt_bridge_artifact ("Salt-bridge-artifact", "Property/Data-property/Data-artifact/Nonbiological-artifact/Salt-bridge-artifact", "Artifact from salt-bridge between EEG electrodes.", "HED_0012520")
+		Salt_bridge_artifact ("Salt-bridge-artifact", "Property/Data-property/Data-artifact/Nonbiological-artifact/Salt-bridge-artifact", "Artifact from salt-bridge between EEG electrodes.", "HED_0012520")	
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Data_marker
 		Data_marker ("Data-marker", "Property/Data-property/Data-marker", "An indicator placed to mark something.", "HED_0012521")
 		Data_break_marker ("Data-break-marker", "Property/Data-property/Data-marker/Data-break-marker", "An indicator place to indicate a gap in the data.", "HED_0012522")
 		Temporal_marker ("Temporal-marker", "Property/Data-property/Data-marker/Temporal-marker", "An indicator placed at a particular time in the data.", "HED_0012523")
@@ -586,7 +603,8 @@ classdef HEDTags
 		Computed_prediction ("Computed-prediction", "Property/Data-property/Data-source-type/Computed-prediction", "A computed extrapolation of known data.", "HED_0012545")
 		Expert_annotation ("Expert-annotation", "Property/Data-property/Data-source-type/Expert-annotation", "An explanatory or critical comment or other in-context information provided by an authority.", "HED_0012546")
 		Instrument_measurement ("Instrument-measurement", "Property/Data-property/Data-source-type/Instrument-measurement", "Information obtained from a device that is used to measure material properties or make other observations.", "HED_0012547")
-		Observation ("Observation", "Property/Data-property/Data-source-type/Observation", "Active acquisition of information from a primary source. Should be grouped with a label of the form AgentID_featureName.", "HED_0012548")
+		Observation ("Observation", "Property/Data-property/Data-source-type/Observation", "Active acquisition of information from a primary source. Should be grouped with a label of the form AgentID_featureName.", "HED_0012548")	
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Data_value
 		Data_value ("Data-value", "Property/Data-property/Data-value", "Designation of the type of a data item.", "HED_0012549")
 		Categorical_value ("Categorical-value", "Property/Data-property/Data-value/Categorical-value", "Indicates that something can take on a limited and usually fixed number of possible values.", "HED_0012550")
 		Categorical_class_value ("Categorical-class-value", "Property/Data-property/Data-value/Categorical-value/Categorical-class-value", "Categorical values that fall into discrete classes such as true or false. The grouping is absolute in the sense that it is the same for all participants.", "HED_0012551")
@@ -602,6 +620,7 @@ classdef HEDTags
 		Unknown ("Unknown", "Property/Data-property/Data-value/Categorical-value/Categorical-class-value/Unknown", "The information has not been provided.", "HED_0012561")
 		Valid ("Valid", "Property/Data-property/Data-value/Categorical-value/Categorical-class-value/Valid", "Allowable, usable, or acceptable.", "HED_0012562")
 		Wrong ("Wrong", "Property/Data-property/Data-value/Categorical-value/Categorical-class-value/Wrong", "Inaccurate or not correct.", "HED_0012563")
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Categorical_judgment_value
 		Categorical_judgment_value ("Categorical-judgment-value", "Property/Data-property/Data-value/Categorical-value/Categorical-judgment-value", "Categorical values that are based on the judgment or perception of the participant such familiar and famous.", "HED_0012564")
 		Abnormal ("Abnormal", "Property/Data-property/Data-value/Categorical-value/Categorical-judgment-value/Abnormal", "Deviating in any way from the state, position, structure, condition, behavior, or rule which is considered a norm.", "HED_0012565")
 		Asymmetrical ("Asymmetrical", "Property/Data-property/Data-value/Categorical-value/Categorical-judgment-value/Asymmetrical", "Lacking symmetry or having parts that fail to correspond to one another in shape, size, or arrangement.", "HED_0012566")
@@ -624,6 +643,7 @@ classdef HEDTags
 		Unfamiliar ("Unfamiliar", "Property/Data-property/Data-value/Categorical-value/Categorical-judgment-value/Unfamiliar", "Not having knowledge or experience of.", "HED_0012583")
 		Unmasked ("Unmasked", "Property/Data-property/Data-value/Categorical-value/Categorical-judgment-value/Unmasked", "Information is revealed.", "HED_0012584")
 		Voluntary ("Voluntary", "Property/Data-property/Data-value/Categorical-value/Categorical-judgment-value/Voluntary", "Using free will or design; not forced or compelled; controlled by individual volition.", "HED_0012585")
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Categorical_level_value
 		Categorical_level_value ("Categorical-level-value", "Property/Data-property/Data-value/Categorical-value/Categorical-level-value", "Categorical values based on dividing a continuous variable into levels such as high and low.", "HED_0012586")
 		Cold ("Cold", "Property/Data-property/Data-value/Categorical-value/Categorical-level-value/Cold", "Having an absence of heat.", "HED_0012587")
 		Deep ("Deep", "Property/Data-property/Data-value/Categorical-value/Categorical-level-value/Deep", "Extending relatively far inward or downward.", "HED_0012588")
@@ -645,13 +665,15 @@ classdef HEDTags
 		Supraliminal ("Supraliminal", "Property/Data-property/Data-value/Categorical-value/Categorical-level-value/Supraliminal", "Situated above a sensory threshold that is perceptible or capable of eliciting a response.", "HED_0012604")
 		Thick ("Thick", "Property/Data-property/Data-value/Categorical-value/Categorical-level-value/Thick", "Wide in width, extent or cross-section.", "HED_0012605")
 		Thin ("Thin", "Property/Data-property/Data-value/Categorical-value/Categorical-level-value/Thin", "Narrow in width, extent or cross-section.", "HED_0012606")
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Categorical_location_value
 		Categorical_location_value ("Categorical-location-value", "Property/Data-property/Data-value/Categorical-value/Categorical-location-value", "Value indicating the location of something, primarily as an identifier rather than an expression of where the item is relative to something else.", "HED_0012607")
 		Anterior ("Anterior", "Property/Data-property/Data-value/Categorical-value/Categorical-location-value/Anterior", "Relating to an item on the front of an agent body (from the point of view of the agent) or on the front of an object from the point of view of an agent. This pertains to the identity of an agent or a thing.", "HED_0012608")
 		Lateral ("Lateral", "Property/Data-property/Data-value/Categorical-value/Categorical-location-value/Lateral", "Identifying the portion of an object away from the midline, particularly applied to the (anterior-posterior, superior-inferior) surface of a brain.", "HED_0012609")
 		Left ("Left", "Property/Data-property/Data-value/Categorical-value/Categorical-location-value/Left", "Relating to an item on the left side of an agent body (from the point of view of the agent) or the left side of an object from the point of view of an agent. This pertains to the identity of an agent or a thing, for example (Left, Hand) as an identifier for the left hand. HED spatial relations should be used for relative positions such as (Hand, (Left-side-of, Keyboard)), which denotes the hand placed on the left side of the keyboard, which could be either the identified left hand or right hand.", "HED_0012610")
 		Medial ("Medial", "Property/Data-property/Data-value/Categorical-value/Categorical-location-value/Medial", "Identifying the portion of an object towards the center, particularly applied to the (anterior-posterior, superior-inferior) surface of a brain.", "HED_0012611")
 		Posterior ("Posterior", "Property/Data-property/Data-value/Categorical-value/Categorical-location-value/Posterior", "Relating to an item on the back of an agent body (from the point of view of the agent) or on the back of an object from the point of view of an agent. This pertains to the identity of an agent or a thing.", "HED_0012612")
-		Right ("Right", "Property/Data-property/Data-value/Categorical-value/Categorical-location-value/Right", "Relating to an item on the right side of an agent body (from the point of view of the agent) or the right side of an object from the point of view of an agent. This pertains to the identity of an agent or a thing, for example (Right, Hand) as an identifier for the right hand. HED spatial relations should be used for relative positions such as (Hand, (Right-side-of, Keyboard)), which denotes the hand placed on the right side of the keyboard, which could be either the identified left hand or right hand.", "HED_0012613")
+		Right ("Right", "Property/Data-property/Data-value/Categorical-value/Categorical-location-value/Right", "Relating to an item on the right side of an agent body (from the point of view of the agent) or the right side of an object from the point of view of an agent. This pertains to the identity of an agent or a thing, for example (Right, Hand) as an identifier for the right hand. HED spatial relations should be used for relative positions such as (Hand, (Right-side-of, Keyboard)), which denotes the hand placed on the right side of the keyboard, which could be either the identified left hand or right hand.", "HED_0012613")	
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Categorical_orientation_value
 		Categorical_orientation_value ("Categorical-orientation-value", "Property/Data-property/Data-value/Categorical-value/Categorical-orientation-value", "Value indicating the orientation or direction of something.", "HED_0012614")
 		Backward ("Backward", "Property/Data-property/Data-value/Categorical-value/Categorical-orientation-value/Backward", "Directed behind or to the rear.", "HED_0012615")
 		Downward ("Downward", "Property/Data-property/Data-value/Categorical-value/Categorical-orientation-value/Downward", "Moving or leading toward a lower place or level.", "HED_0012616")
@@ -663,11 +685,13 @@ classdef HEDTags
 		Rotated ("Rotated", "Property/Data-property/Data-value/Categorical-value/Categorical-orientation-value/Rotated", "Positioned offset around an axis or center.", "HED_0012622")
 		Upward ("Upward", "Property/Data-property/Data-value/Categorical-value/Categorical-orientation-value/Upward", "Moving, pointing, or leading to a higher place, point, or level.", "HED_0012623")
 		Vertically_oriented ("Vertically-oriented", "Property/Data-property/Data-value/Categorical-value/Categorical-orientation-value/Vertically-oriented", "Oriented perpendicular to the plane of the horizon.", "HED_0012624")
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Physical_value
 		Physical_value ("Physical-value", "Property/Data-property/Data-value/Physical-value", "The value of some physical property of something.", "HED_0012625")
 		Temperature ("Temperature", "Property/Data-property/Data-value/Physical-value/Temperature", "A measure of hot or cold based on the average kinetic energy of the atoms or molecules in the system.", "HED_0012626")
 		Temperature_value ("Temperature-#", "Property/Data-property/Data-value/Physical-value/Temperature/Temperature-#", "", "HED_0012627")
 		Weight ("Weight", "Property/Data-property/Data-value/Physical-value/Weight", "The relative mass or the quantity of matter contained by something.", "HED_0012628")
-		Weight_value ("Weight-#", "Property/Data-property/Data-value/Physical-value/Weight/Weight-#", "", "HED_0012629")
+		Weight_value ("Weight-#", "Property/Data-property/Data-value/Physical-value/Weight/Weight-#", "", "HED_0012629")	
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Quantitative_value
 		Quantitative_value ("Quantitative-value", "Property/Data-property/Data-value/Quantitative-value", "Something capable of being estimated or expressed with numeric values.", "HED_0012630")
 		Fraction ("Fraction", "Property/Data-property/Data-value/Quantitative-value/Fraction", "A numerical value between 0 and 1.", "HED_0012631")
 		Fraction_value ("Fraction-#", "Property/Data-property/Data-value/Quantitative-value/Fraction/Fraction-#", "", "HED_0012632")
@@ -681,6 +705,7 @@ classdef HEDTags
 		Percentage_value ("Percentage-#", "Property/Data-property/Data-value/Quantitative-value/Percentage/Percentage-#", "", "HED_0012640")
 		Ratio ("Ratio", "Property/Data-property/Data-value/Quantitative-value/Ratio", "A quotient of quantities of the same kind for different components within the same system.", "HED_0012641")
 		Ratio_value ("Ratio-#", "Property/Data-property/Data-value/Quantitative-value/Ratio/Ratio-#", "", "HED_0012642")
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Spatiotemporal_value
 		Spatiotemporal_value ("Spatiotemporal-value", "Property/Data-property/Data-value/Spatiotemporal-value", "A property relating to space and/or time.", "HED_0012643")
 		Rate_of_change ("Rate-of-change", "Property/Data-property/Data-value/Spatiotemporal-value/Rate-of-change", "The amount of change accumulated per unit time.", "HED_0012644")
 		Acceleration ("Acceleration", "Property/Data-property/Data-value/Spatiotemporal-value/Rate-of-change/Acceleration", "Magnitude of the rate of change in either speed or direction. The direction of change should be given separately.", "HED_0012645")
@@ -738,7 +763,8 @@ classdef HEDTags
 		Time_interval ("Time-interval", "Property/Data-property/Data-value/Spatiotemporal-value/Temporal-value/Time-interval", "The period of time separating two instances, events, or occurrences.", "HED_0012693")
 		Time_interval_value ("Time-interval-#", "Property/Data-property/Data-value/Spatiotemporal-value/Temporal-value/Time-interval/Time-interval-#", "", "HED_0012694")
 		Time_value ("Time-value", "Property/Data-property/Data-value/Spatiotemporal-value/Temporal-value/Time-value", "A value with units of time. Usually grouped with tags identifying what the value represents.", "HED_0012695")
-		Time_value_value ("Time-value-#", "Property/Data-property/Data-value/Spatiotemporal-value/Temporal-value/Time-value/Time-value-#", "", "HED_0012696")
+		Time_value_value ("Time-value-#", "Property/Data-property/Data-value/Spatiotemporal-value/Temporal-value/Time-value/Time-value-#", "", "HED_0012696")	
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Statistical_value
 		Statistical_value ("Statistical-value", "Property/Data-property/Data-value/Statistical-value", "A value based on or employing the principles of statistics.", "HED_0012697")
 		Data_maximum ("Data-maximum", "Property/Data-property/Data-value/Statistical-value/Data-maximum", "The largest possible quantity or degree.", "HED_0012698")
 		Data_maximum_value ("Data-maximum-#", "Property/Data-property/Data-value/Statistical-value/Data-maximum/Data-maximum-#", "", "HED_0012699")
@@ -760,6 +786,7 @@ classdef HEDTags
 		Statistical_recall_value ("Statistical-recall-#", "Property/Data-property/Data-value/Statistical-value/Statistical-recall/Statistical-recall-#", "", "HED_0012715")
 		Statistical_uncertainty ("Statistical-uncertainty", "Property/Data-property/Data-value/Statistical-value/Statistical-uncertainty", "A measure of the inherent variability of repeated observation measurements of a quantity including quantities evaluated by statistical methods and by other means.", "HED_0012716")
 		Statistical_uncertainty_value ("Statistical-uncertainty-#", "Property/Data-property/Data-value/Statistical-value/Statistical-uncertainty/Statistical-uncertainty-#", "", "HED_0012717")
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Data_variability_attribute
 		Data_variability_attribute ("Data-variability-attribute", "Property/Data-property/Data-variability-attribute", "An attribute describing how something changes or varies.", "HED_0012718")
 		Abrupt ("Abrupt", "Property/Data-property/Data-variability-attribute/Abrupt", "Marked by sudden change.", "HED_0012719")
 		Constant ("Constant", "Property/Data-property/Data-variability-attribute/Constant", "Continually recurring or continuing without interruption. Not changing in time or space.", "HED_0012720")
@@ -777,6 +804,7 @@ classdef HEDTags
 		Repetitive ("Repetitive", "Property/Data-property/Data-variability-attribute/Repetitive", "A recurring action that is often non-purposeful.", "HED_0012732")
 		Stochastic ("Stochastic", "Property/Data-property/Data-variability-attribute/Stochastic", "Uses a random probability distribution or pattern that may be analyzed statistically but may not be predicted precisely to determine future states.", "HED_0012733")
 		Varying ("Varying", "Property/Data-property/Data-variability-attribute/Varying", "Differing in size, amount, degree, or nature.", "HED_0012734")
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Environmental_property
 		Environmental_property ("Environmental-property", "Property/Environmental-property", "Relating to or arising from the surroundings of an agent.", "HED_0012735")
 		Augmented_reality ("Augmented-reality", "Property/Environmental-property/Augmented-reality", "Using technology that enhances real-world experiences with computer-derived digital overlays to change some aspects of perception of the natural environment. The digital content is shown to the user through a smart device or glasses and responds to changes in the environment.", "HED_0012736")
 		Indoors ("Indoors", "Property/Environmental-property/Indoors", "Located inside a building or enclosure.", "HED_0012737")
@@ -797,6 +825,7 @@ classdef HEDTags
 		Uneven_terrain ("Uneven-terrain", "Property/Environmental-property/Terrain/Uneven-terrain", "Tracts of land that are not level, smooth, or regular.", "HED_0012752")
 		Urban ("Urban", "Property/Environmental-property/Urban", "Relating to, located in, or characteristic of a city or densely populated area.", "HED_0012753")
 		Virtual_world ("Virtual-world", "Property/Environmental-property/Virtual-world", "Using technology that creates immersive, computer-generated experiences that a person can interact with and navigate through. The digital content is generally delivered to the user through some type of headset and responds to changes in head position or through interaction with other types of sensors. Existing in a virtual setting such as a simulation or game environment.", "HED_0012754")
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Informational_property
 		Informational_property ("Informational-property", "Property/Informational-property", "Something that pertains to a task.", "HED_0012755")
 		Description ("Description", "Property/Informational-property/Description", "An explanation of what the tag group it is in means. If the description is at the top-level of an event string, the description applies to the event.", "HED_0012756")
 		Description_value ("Description-#", "Property/Informational-property/Description/Description-#", "", "HED_0012757")
@@ -804,6 +833,7 @@ classdef HEDTags
 		ID_value ("ID-#", "Property/Informational-property/ID/ID-#", "", "HED_0012759")
 		Label ("Label", "Property/Informational-property/Label", "A string of 20 or fewer characters identifying something. Labels usually refer to general classes of things while IDs refer to specific instances. A term that is associated with some entity. A brief description given for purposes of identification. An identifying or descriptive marker that is attached to an object.", "HED_0012760")
 		Label_value ("Label-#", "Property/Informational-property/Label/Label-#", "", "HED_0012761")
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Metadata
 		Metadata ("Metadata", "Property/Informational-property/Metadata", "Data about data. Information that describes another set of data.", "HED_0012762")
 		Creation_date ("Creation-date", "Property/Informational-property/Metadata/Creation-date", "The date on which the creation of this item began.", "HED_0012763")
 		Creation_date_value ("Creation-date-#", "Property/Informational-property/Metadata/Creation-date/Creation-date-#", "", "HED_0012764")
@@ -834,11 +864,13 @@ classdef HEDTags
 		Pathname_value ("Pathname-#", "Property/Informational-property/Metadata/Pathname/Pathname-#", "", "HED_0012789")
 		URL ("URL", "Property/Informational-property/Metadata/URL", "A valid URL.", "HED_0012790")
 		URL_value ("URL-#", "Property/Informational-property/Metadata/URL/URL-#", "", "HED_0012791")
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Parameter
 		Parameter ("Parameter", "Property/Informational-property/Parameter", "Something user-defined for this experiment.", "HED_0012792")
 		Parameter_label ("Parameter-label", "Property/Informational-property/Parameter/Parameter-label", "The name of the parameter.", "HED_0012793")
 		Parameter_label_value ("Parameter-label-#", "Property/Informational-property/Parameter/Parameter-label/Parameter-label-#", "", "HED_0012794")
 		Parameter_value ("Parameter-value", "Property/Informational-property/Parameter/Parameter-value", "The value of the parameter.", "HED_0012795")
 		Parameter_value_value ("Parameter-value-#", "Property/Informational-property/Parameter/Parameter-value/Parameter-value-#", "", "HED_0012796")
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Organizational_property
 		Organizational_property ("Organizational-property", "Property/Organizational-property", "Relating to an organization or the action of organizing something.", "HED_0012797")
 		Collection ("Collection", "Property/Organizational-property/Collection", "A tag designating a grouping of items such as in a set or list.", "HED_0012798")
 		Collection_value ("Collection-#", "Property/Organizational-property/Collection/Collection-#", "Name of the collection.", "HED_0012799")
@@ -867,6 +899,7 @@ classdef HEDTags
 		Task_value ("Task-#", "Property/Organizational-property/Task/Task-#", "Optional label for the task block.", "HED_0012822")
 		Time_block ("Time-block", "Property/Organizational-property/Time-block", "A tag used to indicate a contiguous time block in the experiment during which something is fixed or noted.", "HED_0012823")
 		Time_block_value ("Time-block-#", "Property/Organizational-property/Time-block/Time-block-#", "Optional label for the task block.", "HED_0012824")
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Sensory_property
 		Sensory_property ("Sensory-property", "Property/Sensory-property", "Relating to sensation or the physical senses.", "HED_0012825")
 		Sensory_attribute ("Sensory-attribute", "Property/Sensory-property/Sensory-attribute", "A sensory characteristic associated with another entity.", "HED_0012826")
 		Auditory_attribute ("Auditory-attribute", "Property/Sensory-property/Sensory-attribute/Auditory-attribute", "Pertaining to the sense of hearing.", "HED_0012827")
@@ -887,13 +920,16 @@ classdef HEDTags
 		Sound_volume_value ("Sound-volume-#", "Property/Sensory-property/Sensory-attribute/Auditory-attribute/Sound-volume/Sound-volume-#", "", "HED_0012842")
 		Timbre ("Timbre", "Property/Sensory-property/Sensory-attribute/Auditory-attribute/Timbre", "The perceived sound quality of a singing voice or musical instrument.", "HED_0012843")
 		Timbre_value ("Timbre-#", "Property/Sensory-property/Sensory-attribute/Auditory-attribute/Timbre/Timbre-#", "", "HED_0012844")
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Gustatory_attribute
 		Gustatory_attribute ("Gustatory-attribute", "Property/Sensory-property/Sensory-attribute/Gustatory-attribute", "Pertaining to the sense of taste.", "HED_0012845")
 		Bitter ("Bitter", "Property/Sensory-property/Sensory-attribute/Gustatory-attribute/Bitter", "Having a sharp, pungent taste.", "HED_0012846")
 		Salty ("Salty", "Property/Sensory-property/Sensory-attribute/Gustatory-attribute/Salty", "Tasting of or like salt.", "HED_0012847")
 		Savory ("Savory", "Property/Sensory-property/Sensory-attribute/Gustatory-attribute/Savory", "Belonging to a taste that is salty or spicy rather than sweet.", "HED_0012848")
 		Sour ("Sour", "Property/Sensory-property/Sensory-attribute/Gustatory-attribute/Sour", "Having a sharp, acidic taste.", "HED_0012849")
 		Sweet ("Sweet", "Property/Sensory-property/Sensory-attribute/Gustatory-attribute/Sweet", "Having or resembling the taste of sugar.", "HED_0012850")
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Olfactory_attribute
 		Olfactory_attribute ("Olfactory-attribute", "Property/Sensory-property/Sensory-attribute/Olfactory-attribute", "Having a smell.", "HED_0012851")
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Somatic_attribute
 		Somatic_attribute ("Somatic-attribute", "Property/Sensory-property/Sensory-attribute/Somatic-attribute", "Pertaining to the feelings in the body or of the nervous system.", "HED_0012852")
 		Pain ("Pain", "Property/Sensory-property/Sensory-attribute/Somatic-attribute/Pain", "The sensation of discomfort, distress, or agony, resulting from the stimulation of specialized nerve endings.", "HED_0012853")
 		Stress ("Stress", "Property/Sensory-property/Sensory-attribute/Somatic-attribute/Stress", "The negative mental, emotional, and physical reactions that occur when environmental stressors are perceived as exceeding the adaptive capacities of the individual.", "HED_0012854")
@@ -902,7 +938,9 @@ classdef HEDTags
 		Tactile_temperature ("Tactile-temperature", "Property/Sensory-property/Sensory-attribute/Tactile-attribute/Tactile-temperature", "Having a feeling of hotness or coldness.", "HED_0012857")
 		Tactile_texture ("Tactile-texture", "Property/Sensory-property/Sensory-attribute/Tactile-attribute/Tactile-texture", "Having a feeling of roughness.", "HED_0012858")
 		Tactile_vibration ("Tactile-vibration", "Property/Sensory-property/Sensory-attribute/Tactile-attribute/Tactile-vibration", "Having a feeling of mechanical oscillation.", "HED_0012859")
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Vestibular_attribute
 		Vestibular_attribute ("Vestibular-attribute", "Property/Sensory-property/Sensory-attribute/Vestibular-attribute", "Pertaining to the sense of balance or body position.", "HED_0012860")
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Visual_attribute
 		Visual_attribute ("Visual-attribute", "Property/Sensory-property/Sensory-attribute/Visual-attribute", "Pertaining to the sense of sight.", "HED_0012861")
 		Color ("Color", "Property/Sensory-property/Sensory-attribute/Visual-attribute/Color", "The appearance of objects (or light sources) described in terms of perception of their hue and lightness (or brightness) and saturation.", "HED_0012862")
 		CSS_color ("CSS-color", "Property/Sensory-property/Sensory-attribute/Visual-attribute/Color/CSS-color", "One of 140 colors supported by all browsers. For more details such as the color RGB or HEX values,check:https://www.w3schools.com/colors/colors_groups.asp.", "HED_0012863")
@@ -1081,6 +1119,7 @@ classdef HEDTags
 		Luminance_contrast ("Luminance-contrast", "Property/Sensory-property/Sensory-attribute/Visual-attribute/Luminance-contrast", "The difference in luminance in specific portions of a scene or image.", "HED_0013036")
 		Luminance_contrast_value ("Luminance-contrast-#", "Property/Sensory-property/Sensory-attribute/Visual-attribute/Luminance-contrast/Luminance-contrast-#", "A non-negative value, usually in the range 0 to 1 or alternative 0 to 100, if representing a percentage.", "HED_0013037")
 		Opacity ("Opacity", "Property/Sensory-property/Sensory-attribute/Visual-attribute/Opacity", "A measure of impenetrability to light.", "HED_0013038")
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Sensory_presentation
 		Sensory_presentation ("Sensory-presentation", "Property/Sensory-property/Sensory-presentation", "The entity has a sensory manifestation.", "HED_0013039")
 		Auditory_presentation ("Auditory-presentation", "Property/Sensory-property/Sensory-presentation/Auditory-presentation", "The sense of hearing is used in the presentation to the user.", "HED_0013040")
 		Loudspeaker_separation ("Loudspeaker-separation", "Property/Sensory-property/Sensory-presentation/Auditory-presentation/Loudspeaker-separation", "The distance between two loudspeakers. Grouped with the Distance tag.", "HED_0013041")
@@ -1092,6 +1131,7 @@ classdef HEDTags
 		Somatic_presentation ("Somatic-presentation", "Property/Sensory-property/Sensory-presentation/Somatic-presentation", "The nervous system is used in the presentation to the user.", "HED_0013047")
 		Tactile_presentation ("Tactile-presentation", "Property/Sensory-property/Sensory-presentation/Tactile-presentation", "The sense of touch used in the presentation to the user.", "HED_0013048")
 		Vestibular_presentation ("Vestibular-presentation", "Property/Sensory-property/Sensory-presentation/Vestibular-presentation", "The sense balance used in the presentation to the user.", "HED_0013049")
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Visual_presentation
 		Visual_presentation ("Visual-presentation", "Property/Sensory-property/Sensory-presentation/Visual-presentation", "The sense of sight used in the presentation to the user.", "HED_0013050")
 		twoD_view ("2D-view", "Property/Sensory-property/Sensory-presentation/Visual-presentation/2D-view", "A view showing only two dimensions.", "HED_0013051")
 		threeD_view ("3D-view", "Property/Sensory-property/Sensory-presentation/Visual-presentation/3D-view", "A view showing three dimensions.", "HED_0013052")
@@ -1104,6 +1144,7 @@ classdef HEDTags
 		Satellite_view ("Satellite-view", "Property/Sensory-property/Sensory-presentation/Visual-presentation/Map-view/Satellite-view", "A representation as captured by technology such as a satellite.", "HED_0013059")
 		Street_view ("Street-view", "Property/Sensory-property/Sensory-presentation/Visual-presentation/Map-view/Street-view", "A 360-degrees panoramic view from a position on the ground.", "HED_0013060")
 		Peripheral_view ("Peripheral-view", "Property/Sensory-property/Sensory-presentation/Visual-presentation/Peripheral-view", "Indirect vision as it occurs outside the point of fixation.", "HED_0013061")
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Task_property
 		Task_property ("Task-property", "Property/Task-property", "Something that pertains to a task.", "HED_0013062")
 		Task_action_type ("Task-action-type", "Property/Task-property/Task-action-type", "How an agent action should be interpreted in terms of the task specification.", "HED_0013063")
 		Appropriate_action ("Appropriate-action", "Property/Task-property/Task-action-type/Appropriate-action", "An action suitable or proper in the circumstances.", "HED_0013064")
@@ -1118,6 +1159,7 @@ classdef HEDTags
 		Near_miss ("Near-miss", "Property/Task-property/Task-action-type/Near-miss", "An action barely satisfied the requirements of the task. In a driving experiment for example this could pertain to a narrowly avoided collision or other accident.", "HED_0013073")
 		Omitted_action ("Omitted-action", "Property/Task-property/Task-action-type/Omitted-action", "An expected response was skipped.", "HED_0013074")
 		Ready_indication ("Ready-indication", "Property/Task-property/Task-action-type/Ready-indication", "An action that indicates that the participant is ready to perform the next step in the task.", "HED_0013075")
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Task_attentional_demand
 		Task_attentional_demand ("Task-attentional-demand", "Property/Task-property/Task-attentional-demand", "Strategy for allocating attention toward goal-relevant information.", "HED_0013076")
 		Bottom_up_attention ("Bottom-up-attention", "Property/Task-property/Task-attentional-demand/Bottom-up-attention", "Attentional guidance purely by externally driven factors to stimuli that are salient because of their inherent properties relative to the background. Sometimes this is referred to as stimulus driven.", "HED_0013077")
 		Covert_attention ("Covert-attention", "Property/Task-property/Task-attentional-demand/Covert-attention", "Paying attention without moving the eyes.", "HED_0013078")
@@ -1134,6 +1176,7 @@ classdef HEDTags
 		Computational_evidence ("Computational-evidence", "Property/Task-property/Task-effect-evidence/Computational-evidence", "A type of evidence in which data are produced, and/or generated, and/or analyzed on a computer.", "HED_0013089")
 		External_evidence ("External-evidence", "Property/Task-property/Task-effect-evidence/External-evidence", "A phenomenon that follows and is caused by some previous phenomenon.", "HED_0013090")
 		Intended_effect ("Intended-effect", "Property/Task-property/Task-effect-evidence/Intended-effect", "A phenomenon that is intended to follow and be caused by some previous phenomenon.", "HED_0013091")
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Task_event_role
 		Task_event_role ("Task-event-role", "Property/Task-property/Task-event-role", "The purpose of an event with respect to the task.", "HED_0013092")
 		Cue ("Cue", "Property/Task-property/Task-event-role/Cue", "A signal for an action usually indicating a particular response.", "HED_0013104")
 		Experimental_stimulus ("Experimental-stimulus", "Property/Task-property/Task-event-role/Experimental-stimulus", "Part of something designed to elicit a response in the experiment.", "HED_0013093")
@@ -1147,6 +1190,7 @@ classdef HEDTags
 		Task_relationship ("Task-relationship", "Property/Task-property/Task-relationship", "Specifying organizational importance of sub-tasks.", "HED_0013100")
 		Background_subtask ("Background-subtask", "Property/Task-property/Task-relationship/Background-subtask", "A part of the task which should be performed in the background as for example inhibiting blinks due to instruction while performing the primary task.", "HED_0013101")
 		Primary_subtask ("Primary-subtask", "Property/Task-property/Task-relationship/Primary-subtask", "A part of the task which should be the primary focus of the participant.", "HED_0013102")
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Task_stimulus_role
 		Task_stimulus_role ("Task-stimulus-role", "Property/Task-property/Task-stimulus-role", "The role the stimulus or other type of sensory event, such as feedback, plays in the task.", "HED_0013103")
 		Distractor ("Distractor", "Property/Task-property/Task-stimulus-role/Distractor", "A person or thing that distracts or a plausible but incorrect option in a multiple-choice question. In psychological studies this is sometimes referred to as a foil.", "HED_0013105")
 		Expected ("Expected", "Property/Task-property/Task-stimulus-role/Expected", "Considered likely, probable or anticipated. Something of low information value as in frequent non-targets in an RSVP paradigm.", "HED_0013106")
@@ -1170,6 +1214,7 @@ classdef HEDTags
 		Timed ("Timed", "Property/Task-property/Task-stimulus-role/Timed", "Something planned or scheduled to be done at a particular time or lasting for a specified amount of time.", "HED_0013125")
 		Unexpected ("Unexpected", "Property/Task-property/Task-stimulus-role/Unexpected", "Something that is not anticipated.", "HED_0013126")
 		Unplanned ("Unplanned", "Property/Task-property/Task-stimulus-role/Unplanned", "Something that has not been planned as part of the task.", "HED_0013127")
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Relation
 		Relation ("Relation", "Relation", "Concerns the way in which two or more people or things are connected.", "HED_0013128")
 		Comparative_relation ("Comparative-relation", "Relation/Comparative-relation", "Something considered in comparison to something else. The first entity is the focus.", "HED_0013129")
 		Approximately_equal_to ("Approximately-equal-to", "Relation/Comparative-relation/Approximately-equal-to", "(A, (Approximately-equal-to, B)) indicates that A and B have almost the same value. Here A and B could refer to sizes, orders, positions or other quantities.", "HED_0013130")
@@ -1179,6 +1224,7 @@ classdef HEDTags
 		Less_than ("Less-than", "Relation/Comparative-relation/Less-than", "(A, (Less-than, B)) indicates that A is smaller than B. Here A and B could refer to sizes, orders, positions or other quantities.", "HED_0013134")
 		Less_than_or_equal_to ("Less-than-or-equal-to", "Relation/Comparative-relation/Less-than-or-equal-to", "(A, (Less-than-or-equal-to, B)) indicates that the relative size or order of A is smaller than or equal to B.", "HED_0013135")
 		Not_equal_to ("Not-equal-to", "Relation/Comparative-relation/Not-equal-to", "(A, (Not-equal-to, B)) indicates that the size or order of A is not the same as that of B.", "HED_0013136")
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Connective_relation
 		Connective_relation ("Connective-relation", "Relation/Connective-relation", "Indicates two entities are related in some way. The first entity is the focus.", "HED_0013137")
 		Belongs_to ("Belongs-to", "Relation/Connective-relation/Belongs-to", "(A, (Belongs-to, B)) indicates that A is a member of B.", "HED_0013138")
 		Connected_to ("Connected-to", "Relation/Connective-relation/Connected-to", "(A, (Connected-to, B)) indicates that A is related to B in some respect, usually through a direct link.", "HED_0013139")
@@ -1195,12 +1241,15 @@ classdef HEDTags
 		Performed_using ("Performed-using", "Relation/Connective-relation/Performed-using", "(A, (Performed-using, B)) indicates that the action or procedure A was accomplished using B.", "HED_0013150")
 		Related_to ("Related-to", "Relation/Connective-relation/Related-to", "(A, (Related-to, B)) indicates A has some relationship to B.", "HED_0013151")
 		Unrelated_to ("Unrelated-to", "Relation/Connective-relation/Unrelated-to", "(A, (Unrelated-to, B)) indicates that A is not related to B.For example, A is not related to Task.", "HED_0013152")
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Directional_relation
 		Directional_relation ("Directional-relation", "Relation/Directional-relation", "A relationship indicating direction of change of one entity relative to another. The first entity is the focus.", "HED_0013153")
 		Away_from ("Away-from", "Relation/Directional-relation/Away-from", "(A, (Away-from, B)) indicates that A is going or has moved away from B. The meaning depends on A and B.", "HED_0013154")
 		Towards ("Towards", "Relation/Directional-relation/Towards", "(A, (Towards, B)) indicates that A is going to or has moved to B. The meaning depends on A and B.", "HED_0013155")
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Logical_relation
 		Logical_relation ("Logical-relation", "Relation/Logical-relation", "Indicating a logical relationship between entities. The first entity is usually the focus.", "HED_0013156")
 		And ("And", "Relation/Logical-relation/And", "(A, (And, B)) means A and B are both in effect.", "HED_0013157")
 		Or ("Or", "Relation/Logical-relation/Or", "(A, (Or, B)) means at least one of A and B are in effect.", "HED_0013158")
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Spatial_relation
 		Spatial_relation ("Spatial-relation", "Relation/Spatial-relation", "Indicating a relationship about position between entities.", "HED_0013159")
 		Above ("Above", "Relation/Spatial-relation/Above", "(A, (Above, B)) means A is in a place or position that is higher than B.", "HED_0013160")
 		Across_from ("Across-from", "Relation/Spatial-relation/Across-from", "(A, (Across-from, B)) means A is on the opposite side of something from B.", "HED_0013161")
@@ -1235,6 +1284,7 @@ classdef HEDTags
 		Upper_left_of ("Upper-left-of", "Relation/Spatial-relation/Upper-left-of", "(A, (Upper-left-of, B)) means A is situated on the upper left part of B. This relation is often used to specify qualitative information about screen position.", "HED_0013190")
 		Upper_right_of ("Upper-right-of", "Relation/Spatial-relation/Upper-right-of", "(A, (Upper-right-of, B)) means A is situated on the upper right part of B. This relation is often used to specify qualitative information about screen position.", "HED_0013191")
 		Within ("Within", "Relation/Spatial-relation/Within", "(A, (Within, B)) means A is on the inside of or contained in B.", "HED_0013192")
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Temporal_relation
 		Temporal_relation ("Temporal-relation", "Relation/Temporal-relation", "A relationship that includes a temporal or time-based component.", "HED_0013193")
 		After ("After", "Relation/Temporal-relation/After", "(A, (After, B)) means A happens at a time subsequent to a reference time related to B.", "HED_0013194")
 		Asynchronous_with ("Asynchronous-with", "Relation/Temporal-relation/Asynchronous-with", "(A, (Asynchronous-with, B)) means A happens at times not occurring at the same time or having the same period or phase as B.", "HED_0013195")
@@ -1245,7 +1295,7 @@ classdef HEDTags
 	end
 
 	methods
-		function tagEntry = HEDTags840(tag, tagPath, description, hedId)
+		function tagEntry = HEDTags(tag, tagPath, description, hedId)
 			tagEntry.tag = tag;
 			tagEntry.tagPath = tagPath;
 			tagEntry.description = description;
@@ -1255,38 +1305,38 @@ classdef HEDTags
 
 	methods(Static = true)
 		function entries = getEntries()
-			entries = enumeration("HEDTags840");
+			entries = enumeration("HEDTags");
 		end
 
 		function tags = getTags()
-			entries = HEDTags840.getEntries();
+			entries = HEDTags.getEntries();
 			tags = string({entries.tagPath});
 		end
 
 		function rawTags = getRawTags()
-			entries = HEDTags840.getEntries();
+			entries = HEDTags.getEntries();
 			rawTags = string({entries.tag});
 		end
 
 		function entry = getByTag(tag)
-			entry = HEDTags840.lookupExact("tag", tag);
+			entry = HEDTags.lookupExact("tag", tag);
 		end
 
 		function entry = getByTagPath(tagPath)
-			entry = HEDTags840.lookupExact("tagPath", tagPath);
+			entry = HEDTags.lookupExact("tagPath", tagPath);
 		end
 
 		function entry = getByPath(tagPath)
-			entry = HEDTags840.getByTagPath(tagPath);
+			entry = HEDTags.getByTagPath(tagPath);
 		end
 
 		function entry = getByHedId(hedId)
-			entry = HEDTags840.lookupExact("hedId", hedId);
+			entry = HEDTags.lookupExact("hedId", hedId);
 		end
 
 		function entries = find(query)
 			query = string(query);
-			entries = HEDTags840.getEntries();
+			entries = HEDTags.getEntries();
 			if strlength(query) == 0
 				return
 			end
@@ -1300,15 +1350,15 @@ classdef HEDTags
 
 	methods(Static, Access = private)
 		function entry = lookupExact(propertyName, value)
-			entries = HEDTags840.getEntries();
+			entries = HEDTags.getEntries();
 			value = string(value);
 			propertyValues = string({entries.(propertyName)});
 			matchMask = strcmp(propertyValues, value);
 			entry = entries(matchMask);
 			if isempty(entry)
-				error("HEDTags840:NotFound", "%s not found: %s", propertyName, value);
+				error("HEDTags:NotFound", "%s not found: %s", propertyName, value);
 			elseif numel(entry) > 1
-				error("HEDTags840:NonUnique", "%s is not unique: %s", propertyName, value);
+				error("HEDTags:NonUnique", "%s is not unique: %s", propertyName, value);
 			end
 		end
 	end

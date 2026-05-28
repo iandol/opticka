@@ -33,8 +33,8 @@ classdef timeLogger < optickaCore
 
 	properties (SetAccess = private, GetAccess = public)
 		messages struct	= struct('time',[],'exitTime',[],'tick',[],...
-								'stimTime',[],'message',[],'type',[],'HED',[])
-		messageN = 1
+								'stimTime',[],'message',"",'type',"",'HED',"")
+		messageN		= 0
 		missImportant
 		nMissed
 	end
@@ -101,7 +101,7 @@ classdef timeLogger < optickaCore
 				me.messages.type = me.messages.message;
 				me.messages.HED = me.messages.message;
 			end
-			me.messageN = 1;
+			me.messageN = 0;
 		end
 		
 		% ===================================================================
@@ -151,11 +151,14 @@ classdef timeLogger < optickaCore
 				startTime double = NaN
 				exitTime double = NaN
 				message string = ""
-				timeType string = ""
-				HED string = ""
+				timeType string = "unknown"
+				HED string = "Experimental-note"
 			end
+
 			if strlength(message) == 0; return; end
+
 			if isempty(tick) || isnan(tick); tick = me.tick; end
+
 			if (isempty(startTime) || isnan(startTime)) && ~isempty(me.lastvbl) && me.lastvbl > 0
 				startTime = me.lastvbl;
 				timeType = "lastvbl";
@@ -163,25 +166,21 @@ classdef timeLogger < optickaCore
 				startTime = me.timer();
 				timeType = "getsecs";
 			end
-			if strlength(timeType) == 0; timeType = "unknown"; end
+
 			if isempty(exitTime); exitTime = NaN; end
-			N = me.messageN;
+			
+			N = me.messageN + 1; me.messageN = N;
 			me.messages(1).time(N) = startTime;
-			me.messages.exitTime(N) = exitTime;
-			me.messages.tick(N) = tick;
+			me.messages(1).exitTime(N) = exitTime;
+			me.messages(1).tick(N) = tick;
 			if ~isempty(me.stimTime) && length(me.stimTime)<=tick
-				try 
-					me.messages.stimTime(N) = me.stimTime(tick); 
-				catch
-					me.messages.stimTime(N) = NaN;
-				end
+				me.messages(1).stimTime(N) = me.stimTime(tick); 
 			else
-				me.messages.stimTime(N) = NaN;
+				me.messages(1).stimTime(N) = NaN;
 			end
-			me.messages.type(N) = string(timeType);
-			me.messages.message(N) = string(message);
-			me.messages.HED(N) = string(HED);
-			me.messageN = me.messageN + 1;
+			me.messages(1).message(N) = message;
+			me.messages(1).type(N) = timeType;
+			me.messages(1).HED(N) = HED;
 		end
 		
 		% ===================================================================

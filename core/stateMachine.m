@@ -116,8 +116,6 @@ classdef stateMachine < optickaCore
 		finalTick double
 		%> current state
 		currentState
-		%> current state name
-		currentName char
 		%> current state uuid
 		currentUUID char
 		%> current state index
@@ -158,7 +156,7 @@ classdef stateMachine < optickaCore
 		logFields	string		= ["n","startTime","index","tnow","name","uuid",...
 								"tick","entryTime","nextTimeOut", "nextTickOut",...
 								"tempNextState","fevalEnter","fevalExit","fevalStore"]
-		logValues				= {[],[],[],[],"","",...
+		logValues	cell		= {[],[],[],[],"","",...
 								[],[],[],[],...
 								"",[],[],[]}
 	end
@@ -483,7 +481,6 @@ classdef stateMachine < optickaCore
 			me.isFinishing = false;
 			me.thisN = 0;
 			me.totalTicks = [];
-			me.currentName = '';
 			me.currentUUID = '';
 			me.currentTime = [];
 			me.currentEntryTime = {};
@@ -659,7 +656,7 @@ classdef stateMachine < optickaCore
 			if isState
 				if ~isempty(me.skipExitStates)
 					for i=1:size(me.skipExitStates,1)
-						if contains(me.currentName,me.skipExitStates{i,1}) && contains(nextName,me.skipExitStates{i,2})
+						if contains(me.currentState.name,me.skipExitStates{i,1}) && contains(nextName,me.skipExitStates{i,2})
 							me.currentState.skipExitFcn = true;
 						end
 						if me.currentState.skipExitFcn; break; end
@@ -696,23 +693,25 @@ classdef stateMachine < optickaCore
 			me.log.n					= me.thisN;
 			me.log.index(me.thisN)		= me.currentIndex;
 			me.log.tnow(me.thisN)		= me.currentTime;
-			me.log.name{me.thisN}		= me.currentName;
+			me.log.name{me.thisN}		= me.currentState.name;
 			me.log.uuid{me.thisN}		= me.currentUUID;
 			me.log.tick(me.thisN)		= me.currentTick;
 			me.log.entryTime(me.thisN)	= me.currentEntryTime;
 			me.log.nextTimeOut(me.thisN)= me.nextTimeOut;
 			me.log.nextTickOut(me.thisN)= me.nextTickOut;
+
 			if me.fnTimers
 				me.log.fevalStore(me.thisN)	= toc(txs)*1000;
 			end
+
 			if me.useExternalLog
-				me.externalLog.addMessage(0,me.currentEntryTime,me.currentTime,['State Details: ' me.currentName ' - ' me.currentUUID],func2str(me.clockFcn));
+				me.externalLog.addMessage(0,me.currentEntryTime,me.currentTime,['State Details: ' me.currentState.name ' - ' me.currentUUID],func2str(me.clockFcn));
 			end
 			
 			me.tempNextState = '';
 			
 			if me.verbose
-				me.salutation(['EXIT: ' me.currentName ...
+				me.salutation(['EXIT: ' me.currentState.name ...
 					' @ ' num2str(me.log.tnow(me.log.n)-me.log.startTime,'%.2f') ...
 					's | state time: ' num2str(me.log.tnow(me.log.n)-me.log.entryTime(me.log.n),'%.2f'), ...
 					's | ' num2str(me.log.tick(me.log.n)) '/' num2str(me.totalTicks) ...
@@ -734,7 +733,7 @@ classdef stateMachine < optickaCore
 				me.currentEntryTime = me.clockFcn();
 				me.currentState = me.stateList(me.currentIndex);
 				me.currentTick = 0;
-				me.currentName = me.currentState.name;
+				me.currentState.name = me.currentState.name;
 				me.currentUUID = dec2hex(me.thisN);
 				
 				if length(me.currentState.time) == 2
@@ -754,7 +753,7 @@ classdef stateMachine < optickaCore
 				if me.fnTimers; me.log.fevalEnter(me.thisN) = toc(tt)*1000; end
 				
 				if me.verbose
-					me.salutation(['ENTER: ' me.currentName ...
+					me.salutation(['ENTER: ' me.currentState.name ...
 						' @ ' num2str(me.currentEntryTime-me.startTime, ...
 						'%.2f') 's - ' num2str(me.totalTicks) ' ticks'],''); 
 				end
