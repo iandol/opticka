@@ -974,7 +974,7 @@ classdef opticka < optickaCore
 		% ===================================================================
 		function loadPrefs(me)
 			if ~ispref('opticka'); return; end
-			anyLoaded = false; prefnames = ''; a = 1;
+			anyLoaded = false; prefnames = ""; a = 1;
 			for i = 1:length(me.uiPrefsList)
 				prfname = me.uiPrefsList{i};
 				if ispref('opticka',prfname) %pref exists
@@ -1000,11 +1000,15 @@ classdef opticka < optickaCore
 									myhandle.Value = prf;
 									thisVal = num2str(prf);
 								end
-							case 'uidropdown'
+							case {'uidropdown','compacteditablecombobox'}
 								str = myhandle.Items;
 								if ischar(prf) && any(contains(prf, str))
 									myhandle.Value = prf;
 									thisVal = prf;
+								elseif iscell(prf) & length(prf)==2
+									myhandle.Items = prf{1};
+									myhandle.Value = prf{2};
+									thisVal = prf{2};
 								end
 							case 'uimenu'
 								myhandle.Checked = prf;
@@ -1015,15 +1019,15 @@ classdef opticka < optickaCore
 									thisVal = prf;
 								end
 						end
-						prefnames = [prefnames ' ' prfname ' «' thisVal '»'];
-						if ~mod(a,4); prefnames = [prefnames '\n']; end
+						prefnames = [prefnames " " prfname " «" string(thisVal) "»"];
+						if ~mod(a,3); prefnames = [prefnames "\n"]; end
 						if ~anyLoaded; anyLoaded = true; end
 						a = a + 1;
 					end
 				end	
 			end
 			if anyLoaded
-				fprintf('\n≣≣≣≣⊱  Opticka Load Preferences:\n'); fprintf(prefnames); fprintf('\n');
+				fprintf('\n≣≣≣≣⊱  Opticka Load Preferences:\n'); fprintf(join(prefnames)); fprintf('\n');
 			end
 		end
 		
@@ -1032,9 +1036,9 @@ classdef opticka < optickaCore
 		%> 
 		% ===================================================================
 		function savePrefs(me)
-			if ispref('opticka'); rmpref('opticka'); end
 			if isempty(me.ui); return; end
-			anySaved = false; prefnames = ''; a = 1;
+			if ispref('opticka'); rmpref('opticka'); end
+			anySaved = false; prefnames = ""; a = 1;
 			for i = 1:length(me.uiPrefsList)
 				prf = [];
 				prfname = me.uiPrefsList{i};
@@ -1043,8 +1047,10 @@ classdef opticka < optickaCore
 					myhandle = me.ui.(prfname);
 					uiType = myhandle.Type;
 					switch uiType
-						case {'uinumericeditfield','uieditfield','uidropdown','uirockerswitch'}
+						case {'uinumericeditfield','uieditfield','uirockerswitch'}
 							prf = myhandle.Value;
+						case {'uidropdown','compacteditablecombobox'}
+							prf = {myhandle.Items, myhandle.Value};
 						case 'uicheckbox'
 							prf = myhandle.Value;
 							if ~islogical(prf); prf=logical(prf);end
@@ -1053,14 +1059,14 @@ classdef opticka < optickaCore
 					end
 					if ~isempty(prf) 
 						setpref('opticka', prfname, prf);
-						prefnames = [prefnames ' ' prfname ' «' num2str(prf) '»'];
-						if ~mod(a,4); prefnames = [prefnames '\n']; end
+						prefnames = [prefnames " " prfname " «"  strip(formattedDisplayText(prf)) "»"];
+						if ~mod(a,3); prefnames = [prefnames "\n"]; end
 						a = a + 1;
 					end
 					if ~anySaved; anySaved = true; end
 				end
 			end
-			if anySaved; fprintf('\n≣≣≣≣⊱ Opticka Save Preferences:\n'); fprintf(prefnames); fprintf('\n');end
+			if anySaved; fprintf('\n≣≣≣≣⊱ Opticka Save Preferences:\n'); fprintf(join(prefnames)); fprintf('\n');end
 		end
 		
 	end
