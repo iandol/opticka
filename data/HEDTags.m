@@ -9,6 +9,7 @@ classdef HEDTags
 	end
 	
 	enumeration
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Event
 		Event ("Event", "Event", "Something that happens at a given time and (typically) place. Elements of this tag subtree designate the general category in which an event falls.", "HED_0012001")
 		Sensory_event ("Sensory-event", "Event/Sensory-event", "Something perceivable by the participant. An event meant to be an experimental stimulus should include the tag Task-property/Task-event-role/Experimental-stimulus.", "HED_0012002")
 		Agent_action ("Agent-action", "Event/Agent-action", "Any action engaged in by an agent (see the Agent subtree for agent categories). A participant response to an experiment stimulus should include the tag Agent-property/Agent-task-role/Experiment-participant.", "HED_0012003")
@@ -28,7 +29,6 @@ classdef HEDTags
 		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Action
 		Action ("Action", "Action", "Do something.", "HED_0012016")
 		Communicate ("Communicate", "Action/Communicate", "Action conveying knowledge of or about something.", "HED_0012017")
-		
 		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Communicate_gesturally
 		Communicate_gesturally ("Communicate-gesturally", "Action/Communicate/Communicate-gesturally", "Communicate non-verbally using visible bodily actions, either in place of speech or together and in parallel with spoken words. Gestures include movement of the hands, face, or other parts of the body.", "HED_0012018")
 		Clap_hands ("Clap-hands", "Action/Communicate/Communicate-gesturally/Clap-hands", "Strike the palms of against one another resoundingly, and usually repeatedly, especially to express approval.", "HED_0012019")

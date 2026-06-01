@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Compact Editable Combo Box</title>
+<style>
+	:root {
+		--border: #bdbdbd;
+		--border-focus: #0076d6;
+		--bg: #ffffff;
+		--bg-button: #f5f5f5;
+		--bg-button-hover: #ececec;
+		--text: #222222;
+		--muted: #767676;
+		--disabled-bg: #f3f3f3;
+		--disabled-text: #999999;
+		--danger: #b00020;
+		--radius: 4px;
+		--font: -apple-system, BlinkMacSystemFont, "Ubuntu", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+	}
+
+	html, body {
+		width: 100%;
+		height: 100%;
+		margin: 0;
+		padding: 0;
+		overflow: hidden;
+		background: transparent;
+		color: var(--text);
+		font-family: var(--font);
+		font-size: 13px;
+	}
+
+	* {
+		box-sizing: border-box;
+	}
+
+	.combo {
+		width: 100%;
+		height: 100%;
+		min-height: 24px;
+		display: flex;
+		align-items: stretch;
+		gap: 2px;
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		background: var(--bg);
+		overflow: hidden;
+	}
+
+	.combo:focus-within {
+		border-color: var(--border-focus);
+		box-shadow: 0 0 0 1px var(--border-focus) inset;
+	}
+
+	input {
+		min-width: 0;
+		flex: 1 1 auto;
+		height: 100%;
+		border: 0;
+		outline: none;
+		padding: 0 7px;
+		background: transparent;
+		color: var(--text);
+		font: inherit;
+	}
+
+	input::placeholder {
+		color: var(--muted);
+	}
+
+	button {
+		flex: 0 0 20px;
+		width: 20px;
+		min-width: 20px;
+		height: 100%;
+		border: 0;
+		border-left: 1px solid #dddddd;
+		padding: 0;
+		margin: 0;
+		background: var(--bg-button);
+		color: var(--text);
+		font: inherit;
+		line-height: 1;
+		cursor: pointer;
+		user-select: none;
+	}
+
+	button:hover {
+		background: var(--bg-button-hover);
+	}
+
+	button:active {
+		transform: translateY(1px);
+	}
+
+	button.main-menu {
+		font-size: 12px;
+	}
+
+	button.small {
+		font-size: 12px;
+	}
+
+	.combo.disabled {
+		background: var(--disabled-bg);
+		color: var(--disabled-text);
+		border-color: #d7d7d7;
+	}
+
+	.combo.disabled input,
+	.combo.disabled button {
+		color: var(--disabled-text);
+		cursor: default;
+	}
+
+	.combo.invalid {
+		border-color: var(--danger);
+		box-shadow: 0 0 0 1px var(--danger) inset;
+	}
+
+	.hidden {
+		display: none !important;
+	}
+	/*
+	Hide the browser-native <datalist> dropdown indicator.
+	We keep the datalist for optional typed suggestions, but hide its
+	picker glyph because this component uses the explicit ▼ button to
+	open the MATLAB uicontextmenu.
+	*/
+	input[list],
+	input::-webkit-calendar-picker-indicator,
+	input::-webkit-list-button {
+		-webkit-appearance: none !important;
+		appearance: none !important;
+	}
+	input::-webkit-calendar-picker-indicator,
+	input::-webkit-list-button {
+		display: none !important;
+		opacity: 0 !important;
+		pointer-events: none !important;
+	}
+</style>
+</head>
+<body>
+	<div id="combo" class="combo" role="combobox" aria-haspopup="listbox" aria-expanded="false">
+		<input id="valueInput" type="text" list="itemList" autocomplete="off" spellcheck="false" />
+		<datalist id="itemList"></datalist>
+		<button id="menuButton" class="main-menu" type="button" title="Show options" aria-label="Show options">▼</button>
+		<button id="addButton" class="small" type="button" title="Add current value" aria-label="Add current value">＋</button>
+		<button id="editButton" class="small" type="button" title="Rename selected item" aria-label="Rename selected item">✎</button>
+		<button id="deleteButton" class="small" type="button" title="Delete selected item" aria-label="Delete selected item">×</button>
+	</div>
+
+<script>
+(function () {
+	"use strict";
+
+	const combo = document.getElementById("combo");
+	const input = document.getElementById("valueInput");
+	const itemList = document.getElementById("itemList");
+	const menuButton = document.getElementById("menuButton");
+	const addButton = document.getElementById("addButton");
+	const editButton = document.getElementById("editButton");
+	const deleteButton = document.getElementById("deleteButton");
+
+	let htmlComponent = null;
+	let state = {
+		items: [],
+		value: "",
+		selectedIndex: 0,
+		placeholder: "Select or type...",
+		allowCustomValue: true,
+		allowDuplicateItems: false,
+		enabled: true,
+		showEditButtons: true,
+		lastAction: "Initialized"
+	};
+
+	function normalizeItems(items) {
+		if (items == null) {
+			return [];
+		}
+		if (Array.isArray(items)) {
+			return items.map(String).filter(x => x.length > 0);
+		}
+		if (typeof items === "string") {
+			return items.length > 0 ? [items] : [];
+		}
+		if (typeof items === "object") {
+			return Object.values(items).map(String).filter(x => x.length > 0);
+		}
+		return [];
+	}
+
+	function selectedIndexFor(value, items) {
+		const idx = items.indexOf(String(value));
+		return idx >= 0 ? idx + 1 : 0;
+	}
+
+	function dataFromState(action) {
+		const value = input.value;
+		return {
+			items: state.items.slice(),
+			value: value,
+			selectedIndex: selectedIndexFor(value, state.items),
+			placeholder: state.placeholder,
+			allowCustomValue: !!state.allowCustomValue,
+			allowDuplicateItems: !!state.allowDuplicateItems,
+			enabled: !!state.enabled,
+			showEditButtons: !!state.showEditButtons,
+			lastAction: action || "ValueChanged"
+		};
+	}
+
+	function setMATLABData(action) {
+		if (!htmlComponent) {
+			return;
+		}
+		htmlComponent.Data = dataFromState(action);
+	}
+
+	function sendEvent(name, payload) {
+		if (!htmlComponent || typeof htmlComponent.sendEventToMATLAB !== "function") {
+			return;
+		}
+		htmlComponent.sendEventToMATLAB(name, payload || dataFromState(name));
+	}
+
+	function render() {
+		input.placeholder = state.placeholder || "";
+		input.value = state.value || "";
+		input.disabled = !state.enabled;
+		menuButton.disabled = !state.enabled;
+		addButton.disabled = !state.enabled;
+		editButton.disabled = !state.enabled;
+		deleteButton.disabled = !state.enabled;
+
+		addButton.classList.toggle("hidden", !state.showEditButtons);
+		editButton.classList.toggle("hidden", !state.showEditButtons);
+		deleteButton.classList.toggle("hidden", !state.showEditButtons);
+
+		itemList.innerHTML = "";
+		state.items.forEach(item => {
+			const option = document.createElement("option");
+			option.value = item;
+			itemList.appendChild(option);
+		});
+
+		combo.classList.toggle("disabled", !state.enabled);
+		combo.classList.toggle(
+			"invalid",
+			!state.allowCustomValue && input.value.length > 0 && selectedIndexFor(input.value, state.items) === 0
+		);
+	}
+
+	function applyData(data) {
+		if (!data || typeof data !== "object") {
+			render();
+			return;
+		}
+
+		state.items = normalizeItems(data.items);
+		state.value = data.value == null ? "" : String(data.value);
+		state.selectedIndex = Number(data.selectedIndex || selectedIndexFor(state.value, state.items));
+		state.placeholder = data.placeholder == null ? state.placeholder : String(data.placeholder);
+		state.allowCustomValue = data.allowCustomValue == null ? state.allowCustomValue : !!data.allowCustomValue;
+		state.allowDuplicateItems = data.allowDuplicateItems == null ? state.allowDuplicateItems : !!data.allowDuplicateItems;
+		state.enabled = data.enabled == null ? state.enabled : !!data.enabled;
+		state.showEditButtons = data.showEditButtons == null ? state.showEditButtons : !!data.showEditButtons;
+		state.lastAction = data.lastAction == null ? state.lastAction : String(data.lastAction);
+
+		render();
+	}
+
+	function commitValue(action) {
+		state.value = input.value;
+		state.selectedIndex = selectedIndexFor(state.value, state.items);
+		render();
+		setMATLABData(action || "ValueChanged");
+		sendEvent("ValueCommitted", dataFromState(action || "ValueChanged"));
+	}
+
+	input.addEventListener("change", function () {
+		commitValue("ValueChanged");
+	});
+
+	input.addEventListener("keydown", function (event) {
+		if (event.key === "Enter") {
+			event.preventDefault();
+			commitValue("ValueChanged");
+		}
+		if (event.key === "ArrowDown" && event.altKey) {
+			event.preventDefault();
+			openMATLABMenu(event);
+		}
+	});
+
+	input.addEventListener("blur", function () {
+		if (input.value !== state.value) {
+			commitValue("ValueEdited");
+		}
+	});
+
+	function payloadForMenu(event) {
+		// MATLAB context-menu coordinates are easier to recover from the
+		// actual click point than from the element rectangle.  clientX/clientY
+		// are viewport coordinates inside the uihtml document.
+		const rect = menuButton.getBoundingClientRect();
+		const x = event && Number.isFinite(event.clientX) ? event.clientX : rect.left + rect.width / 2;
+		const y = event && Number.isFinite(event.clientY) ? event.clientY : rect.top + rect.height / 2;
+		return {
+			x: x,
+			y: y,
+			width: rect.width,
+			height: rect.height,
+			value: input.value,
+			selectedIndex: selectedIndexFor(input.value, state.items),
+			items: state.items.slice(),
+			lastAction: "OpenOptionsMenu"
+		};
+	}
+
+	function openMATLABMenu(event) {
+		if (!state.enabled) {
+			return;
+		}
+		// Do not call commitValue() here.  In MATLAB's uihtml bridge, doing a
+		// Data update immediately before sendEventToMATLAB can make debugging
+		// ambiguous and, in some releases/platforms, can appear to swallow the
+		// subsequent event.  Send the current text as HTMLEventData instead.
+		state.value = input.value;
+		state.selectedIndex = selectedIndexFor(state.value, state.items);
+		sendEvent("OpenOptionsMenu", payloadForMenu(event));
+	}
+
+	menuButton.addEventListener("click", function (event) {
+		event.preventDefault();
+		event.stopPropagation();
+		openMATLABMenu(event);
+	});
+
+	addButton.addEventListener("click", function () {
+		if (!state.enabled) return;
+		commitValue("AddCurrentRequested");
+		sendEvent("AddCurrentItem", dataFromState("AddCurrentRequested"));
+	});
+
+	editButton.addEventListener("click", function () {
+		if (!state.enabled) return;
+		commitValue("RenameRequested");
+		sendEvent("RenameSelectedItem", dataFromState("RenameRequested"));
+	});
+
+	deleteButton.addEventListener("click", function () {
+		if (!state.enabled) return;
+		commitValue("DeleteRequested");
+		sendEvent("DeleteSelectedItem", dataFromState("DeleteRequested"));
+	});
+
+	window.setup = function (component) {
+		htmlComponent = component;
+
+		if (htmlComponent && htmlComponent.Data) {
+			applyData(htmlComponent.Data);
+		} else {
+			render();
+		}
+
+		htmlComponent.addEventListener("DataChanged", function (event) {
+			applyData(htmlComponent.Data || event.Data || {});
+		});
+	};
+
+	render();
+}());
+</script>
+</body>
+</html>
