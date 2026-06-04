@@ -6,7 +6,7 @@ classdef audioManager < optickaCore
 		fileName char		= ''
 		numChannels double	= 2
 		frequency double	= 44100
-		lowLatency logical	= false
+		lowLatency logical	= true
 		latencyLevel		= 1
 		%> default volume
 		volumeLevel double	= 1
@@ -351,7 +351,7 @@ classdef audioManager < optickaCore
 				262, 1; 330, 1; 392, 1; 523, 1; 659, 1; 784, 1; 1047, 1; 784, 1;
 				659, 1; 523, 1; 392, 1; 330, 1; 262, 1; 330, 2; 392, 2; 523, 4;
 				];
-			for i = size(song, 1)
+			for i = 1:size(song, 1)
 				freq = song(i, 1);
 				dur  = song(i, 2) * beat;
 				if freq > 0

@@ -1516,25 +1516,25 @@ classdef screenManager < optickaCore
 		%>
 		%> @param text text to draw
 		% ===================================================================
-		function drawTextNow(me, text, x, y, wrapat)
+		function vbl = drawTextNow(me, text, x, y, wrapat)
 			% drawTextNow(me,text,x,y,wrapat)
 			arguments
 				me
-				text {mustBeTextScalar} = ""
-				x (1,1) double = NaN
-				y (1,1) double = NaN
-				wrapat = []
+				text string		= ""
+				x double		= NaN
+				y double		= NaN
+				wrapat double	= NaN
 			end
 			if strlength(string(text)) == 0; return; end
-			if isnan(x); x = (-me.xCenter / me.ppd_) + 0.25; end
-			if isnan(y); y = (-me.yCenter / me.ppd_) + 0.25; end
+			if isempty(x) || any(isnan(x)); x = (-me.xCenter / me.ppd_) + 0.25; end
+			if isempty(y) || any(isnan(y)); y = (-me.yCenter / me.ppd_) + 0.25; end
 			text = char(string(text));
-			if isempty(wrapat)
+			if isnan(wrapat) || isempty(wrapat)
 				me.drawText(text, x, y);
 			else
 				me.drawTextWrapped(text, wrapat, x, y);
 			end
-			flip(me,[],[],2);
+			vbl = flip(me,[],[],2);
 		end
 
 		% ===================================================================
@@ -1546,13 +1546,13 @@ classdef screenManager < optickaCore
 			% drawText(me,text,x,y)
 			arguments
 				me
-				text {mustBeTextScalar} = ""
-				x (1,1) double = NaN
-				y (1,1) double = NaN
+				text string		= ""
+				x double		= NaN
+				y double		= NaN
 			end
 			if strlength(string(text)) == 0; return; end
-			if isnan(x); x = (-me.xCenter / me.ppd_) + 0.25; end
-			if isnan(y); y = (-me.yCenter / me.ppd_) + 0.25; end
+			if isempty(x) || any(isnan(x)); x = (-me.xCenter / me.ppd_) + 0.25; end
+			if isempty(y) || any(isnan(y)); y = (-me.yCenter / me.ppd_) + 0.25; end
 			text = char(string(text));
 			Screen('DrawText', me.win, text, (x * me.ppd_) + me.xCenter, (y * me.ppd_) + me.yCenter);
 		end
@@ -1567,16 +1567,16 @@ classdef screenManager < optickaCore
 		% ===================================================================
 			arguments
 				me
-				text {mustBeTextScalar} = ""
-				wrapat = []
-				x (1,1) double = NaN
-				y (1,1) double = NaN
+				text string		= ""
+				wrapat double	= []
+				x double		= NaN
+				y double		= NaN
 			end
 			if strlength(string(text)) == 0; return; end
 			text = char(string(text));
 			if ~isempty(wrapat); text = WrapString(text,wrapat); end
-			if isnan(x); x = (-me.xCenter / me.ppd_) + 0.25; end
-			if isnan(y); y = (-me.yCenter / me.ppd_) + 0.25; end
+			if isempty(x) || any(isnan(x)); x = (-me.xCenter / me.ppd_) + 0.25; end
+			if isempty(y) || any(isnan(y)); y = (-me.yCenter / me.ppd_) + 0.25; end
 			c = strsplit(text,'\n');
 			x = (x * me.ppd_) + me.xCenter;
 			yy = (y * me.ppd_) + me.yCenter;
@@ -1600,7 +1600,7 @@ classdef screenManager < optickaCore
 			arguments
 				me
 				xy double
-				width (1,1) double {mustBePositive} = 0.1
+				width double {mustBePositive} = 0.1
 				colour double = [1 1 0]
 			end
 			xy(1,:) = me.xCenter + (xy(1,:) * me.ppd_);

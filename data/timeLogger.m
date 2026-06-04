@@ -16,19 +16,19 @@ classdef timeLogger < optickaCore
 		preallocateMessages = 1e4;
 		screenLog		= struct()
 		missvbls		= 0
-		tick			= 0
-		lastvbl			= 0
-		tickInfo		= 0
-		startTime		= 0
-		startRun		= 0
+		tick			= NaN
+		lastvbl			= NaN
+		tickInfo		= NaN
+		startTime		= NaN
+		startRun		= NaN
 	end
 
 	properties (Hidden)
-		vbl				= 0
-		show			= 0
-		flip			= 0
-		miss			= 0
-		stimTime		= 0
+		vbl				= NaN
+		show			= NaN
+		flip			= NaN
+		miss			= NaN
+		stimTime		= NaN
 	end
 
 	properties (SetAccess = private, GetAccess = public)
@@ -147,15 +147,16 @@ classdef timeLogger < optickaCore
 		function addMessage(me, tick, startTime, exitTime, message, timeType, HED)
 			arguments
 				me
-				tick double = NaN
-				startTime double = NaN
-				exitTime double = NaN
-				message string = ""
-				timeType string = "unknown"
-				HED string = "Experimental-note"
+				tick double			= NaN
+				startTime double	= NaN
+				exitTime double		= NaN
+				message string		= missing
+				timeType string		= missing
+				HED string			= "Experimental-note"
 			end
 
-			if strlength(message) == 0; return; end
+			if ismissing(message) || strlength(message) == 0; return; end
+			message = replace(message, ["\t" "\n"], " "); %remove newlines from message text
 
 			if isempty(tick) || isnan(tick); tick = me.tick; end
 
@@ -173,7 +174,7 @@ classdef timeLogger < optickaCore
 			me.messages(1).time(N) = startTime;
 			me.messages(1).exitTime(N) = exitTime;
 			me.messages(1).tick(N) = tick;
-			if ~isempty(me.stimTime) && length(me.stimTime)<=tick
+			if ~isnan(me.stimTime) && ~isempty(me.stimTime) && length(me.stimTime) <= tick
 				me.messages(1).stimTime(N) = me.stimTime(tick); 
 			else
 				me.messages(1).stimTime(N) = NaN;

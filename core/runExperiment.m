@@ -1327,13 +1327,13 @@ classdef runExperiment < optickaCore
 					io = configureIO(me, true);
 					io.name = 'test';
 					io.verbose = true;
-					t = sprintf('%s: test markers -- ',io.fullName);
-					s.drawTextNow(t,[],[],40);
-					s.drawTextNow([t 'Sending 255'],[],[],40);io.sendStrobe(255); WaitSecs(0.5);
-					s.drawTextNow([t 'Sending 1'],[],[],40);io.sendStrobe(1); WaitSecs(0.5);
-					s.drawTextNow([t 'Sending 255'],[],[],40);io.sendStrobe(255); WaitSecs(0.5);
-					s.drawTextNow([t 'Sending 1'],[],[],40);io.sendStrobe(1); WaitSecs(0.5);
-					s.drawTextNow('Strobe marker testing finished...',[],[],40);
+					t = sprintf("%s: test markers = ",io.fullName);
+					s.drawTextNow(t, NaN,NaN, 40);
+					s.drawTextNow(t + "255", NaN,NaN, 40);io.sendStrobe(255); WaitSecs(0.5);
+					s.drawTextNow(t + "001", NaN,NaN, 40);io.sendStrobe(1); WaitSecs(0.5);
+					s.drawTextNow(t + "255", NaN,NaN, 40);io.sendStrobe(255); WaitSecs(0.5);
+					s.drawTextNow(t + "001", NaN,NaN, 40);io.sendStrobe(1); WaitSecs(0.5);
+					s.drawTextNow("Strobe marker testing finished...", NaN,NaN, 40);
 				end
 				WaitSecs(1);
 			end
@@ -1362,7 +1362,7 @@ classdef runExperiment < optickaCore
 						s.drawTextNow('Reward testing finished...',[],[],40);
 						rM.verbose = oldv;
 					catch ERR
-						getReport(ERR);
+						getReport(ERR)
 					end
 				end
 				WaitSecs(1);
@@ -1377,20 +1377,19 @@ classdef runExperiment < optickaCore
 					aM.verbose = true;
 					if ~aM.isSetup;	try setup(aM); end; end
 					s.drawTextNow('Audio Beeps...');
-					aM.beep(4000,0.1,0.1);WaitSecs(0.2);
-					aM.beep(3000,0.1,0.1);WaitSecs(0.2);
-					aM.beep(2000,0.1,0.1);WaitSecs(0.2);
-					aM.beep(1000,0.1,0.1);WaitSecs(0.2);
-					aM.beep(500,0.1,0.1);WaitSecs(0.2);
-					aM.beep(250,0.1,0.1);WaitSecs(0.2);
-					aM.beep(500,0.1,0.1);WaitSecs(0.2);
-					aM.beep(1000,0.1,0.1);WaitSecs(0.2);
-					aM.beep(2000,0.1,0.1);WaitSecs(0.2);
-					aM.beep(3000,0.1,0.1);WaitSecs(0.2);
-					aM.beep(4000,0.1,0.1);WaitSecs(0.2);
+					song = [
+						% Bar 1: C major
+						262, 1; 330, 1; 392, 1; 523, 1; 659, 1; 784, 1; 1047, 1; 784, 1;
+						659, 1; 523, 1; 392, 1; 330, 1; 262, 1; 330, 1; 392, 1; 523, 1;];
+					for i = 1:size(song, 1)
+						freq = song(i, 1);
+						dur  = song(i, 2) * 0.12;
+						aM.beep(freq,dur);
+						WaitSecs(dur);
+					end
 					aM.verbose = oldv;
 				catch ERR
-					getReport(ERR);
+					getReport(ERR)
 				end
 				WaitSecs(1);
 			end
@@ -1410,7 +1409,7 @@ classdef runExperiment < optickaCore
 						close(me.screen);
 					catch ERR
 						close(me.screen);
-						getReport(ERR);
+						getReport(ERR)
 					end
 				end
 				WaitSecs(1);
