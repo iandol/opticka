@@ -227,7 +227,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> @brief colour set method
 		%> Allow 1 (R=G=B) 3 (RGB) or 4 (RGBA) value colour
 		% ===================================================================
-		function set.colour(me,value)
+		function set.colour(me, value)
 			if me.isSetup; warning('You should set colourOut to affect drawing...'); end
 			me.isInSetColour = true; %#ok<*MCSUP>
 			len=length(value);
@@ -258,7 +258,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> @brief alpha set method
 		%>
 		% ===================================================================
-		function set.alpha(me,value)
+		function set.alpha(me, value)
 			if me.isSetup; warning('You should set alphaOut to affect drawing...'); end
 			if value<0; value=0;elseif value>1; value=1; end
 			me.alpha = value;
@@ -413,16 +413,18 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> @param showVBL show a plot of the VBL times
 		% ===================================================================
 		function run(me, benchmark, runtime, s, forceScreen, showVBL)
-		% run(me, benchmark, runtime, s, forceScreen, showVBL)
+			arguments(Input)
+				me
+				benchmark (1,1) logical		= false
+				runtime (1,1) double		= 2
+				s							= []
+				forceScreen (1,1) double	= -1
+				showVBL (1,1) logical		= false
+			end
+
 			try
 
-				if ~exist('benchmark','var') || isempty(benchmark)
-					benchmark=false;
-				end
-				if ~exist('runtime','var') || isempty(runtime)
-					runtime = 2; %seconds to run
-				end
-				if ~exist('s','var') || ~isa(s,'screenManager')
+				if ~isa(s,'screenManager')
 					if isempty(me.sM); me.sM=screenManager; end
 					s = me.sM;
 					s.blend = true;
@@ -430,8 +432,6 @@ classdef baseStimulus < optickaCore & dynamicprops
 					s.visualDebug = true;
 					s.bitDepth = '8bit';
 				end
-				if ~exist('forceScreen','var') || isempty(forceScreen); forceScreen = -1; end
-				if ~exist('showVBL','var') || isempty(showVBL); showVBL = false; end
 
 				oldscreen = s.screen;
 				oldbitdepth = s.bitDepth;
@@ -951,16 +951,24 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> @return value of property
 		% ===================================================================
 		function [value, nameOut] = getP(me, name, range)
-		% [value, name] = getP(me, name, range)
+			arguments(Input)
+				me
+				name char
+				range = []
+			end
+			arguments(Output)
+				value
+				nameOut char
+			end
 			value = []; nameOut = [];
 			if isprop(me, [name 'Out']) && ~isempty(me.([name 'Out']))
 				nameOut = [name 'Out'];
-				value = me.(name);
-				if exist('range','var'); value = value(range); end
+				value = me.(nameOut);
+				if ~isempty(range); value = value(range); end
 			elseif isprop(me, name)
 				value = me.(name);
 				nameOut = name;
-				if exist('range','var'); value = value(range); end
+				if ~isempty(range); value = value(range); end
 			elseif me.verbose
 				fprintf('!!! Property %s doesn''t exist...\n',name)
 			end
@@ -980,7 +988,11 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> @return value of property
 		% ===================================================================
 		function setP(me, name, value)
-		% setP(me, name, value)
+			arguments(Input)
+				me
+				name char
+				value
+			end
 			if isprop(me,[name 'Out'])
 				me.([name 'Out']) = value;
 			elseif isprop(me, name)
@@ -999,13 +1011,14 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> @param useDegrees where the input is in degrees (true) or pixels (false)
 		% ===================================================================
 		function updateXY(me,x,y,useDegrees)
-		% updateXY(me, x, y, useDegrees[false])
 			arguments(Input)
 				me
-				x {mustBeNumeric} = []
-				y {mustBeNumeric} = []
-				useDegrees {mustBeLogical} = false
+				x double = NaN
+				y double = NaN
+				useDegrees logical = false
 			end
+			if ~me.isSetup; warning("updateXY: Need to setup stimulus first!"); return; end
+			if isnan(x) || isnan(y); return; end
 			if ~isempty(x) && ~isscalar(x); x = x(1); end; if ~isempty(y) && ~isscalar(y); y = y(1); end
 			if useDegrees
 				if ~isempty(x); me.xFinal = me.sM.toPixels(x, 'x'); me.xFinalD = x; me.xPositionOut = x; end
@@ -1030,6 +1043,11 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%>
 		% ===================================================================
 		function out = mixColour(c1, c2, contrast)
+			arguments(Input)
+				c1 (1,3) double 
+				c2 (1,3) double
+				contrast (1,1) double {mustBeNonnegative, mustBeLessThanOrEqual(contrast,1)}
+			end
 			out = c1(1:3) * (1 - contrast) + c2(1:3) * contrast;
 		end
 
