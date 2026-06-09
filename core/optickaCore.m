@@ -5,10 +5,21 @@ classdef optickaCore < handle
 %>
 %> @section intro Introduction
 %>
-%> optickaCore is itself derived from handle. It provides methods to: find
-%> attributes with specific parameters (used in autogenerating UI panels),
-%> clone the object, parse arguments safely on construction and add default
-%> properties such as paths, dateStamp, uuid and name/comment management.
+%> optickaCore is derived from `handle` and provides shared infrastructure
+%> for Opticka classes.
+%>
+%> Main methods:
+%> - `optickaCore(varargin)`: class constructor; parses name-value inputs,
+%>   sets defaults, creates `dateStamp`/`uuid`, and initialises paths/fonts.
+%> - `parseArgs(args, allowedProperties)`: safely applies allowed
+%>   construction properties from a struct or name-value pairs.
+%> - `findAttributes(attrName, attrValue)`: queries class properties by
+%>   metadata attributes (used for UI auto-generation and inspection).
+%> - `clone()`: creates a deep copy of the object and nested Opticka objects.
+%> - `getALF(subject, lab, create)`: builds or resolves ALF-style save paths
+%>   and session identifiers.
+%> - `makeReport(rpt)`: generates or appends an HTML report with object
+%>   state and related manager summaries.
 %>
 %> Copyright ©2014-2026 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
@@ -609,8 +620,19 @@ classdef optickaCore < handle
 		end
 
 		% ===================================================================
-		% TODO 
-		function value = findPropertyDefault(me,propName)
+		function value = findPropertyDefault(me, propName)
+		%> @fn value = findPropertyDefault(me, propName)
+		%> @brief Return the declared default value for a class property.
+		%>
+		%> Accepts either an object instance or a class name in `me`, then
+		%> inspects MATLAB metaclass information to locate `propName`.
+		%>
+		%> @param me object instance or class name to inspect.
+		%> @param propName property name whose default value is requested.
+		%>
+		%> @return value default value declared for the property, or empty if the
+		%> property is not found.
+		% ===================================================================
 			value = [];
 			if ischar(me) % Determine if first input is object or class name
 				mc		= meta.class.fromName(me);
@@ -807,7 +829,7 @@ classdef optickaCore < handle
 		function [rM, aM] = initialiseGlobals(doReset, doOpen)
 		%> @fn [rM, aM] = initialiseGlobals(doReset,doOpen)
 		%> @brief in general we try NOT to use globals but for reward and audio, 
-		%> due to e.g. eyelink and other devices we can't avoid it. This 
+		%> due to e.g. eyelink and other devices we can't always avoid it. This 
 		%> initialises and returns the single-instance globals
 		%> rM (rewardManager) and aM (audioManager). Run this to get the
 		%> reward/audio manager objects in any child class...
@@ -874,7 +896,7 @@ classdef optickaCore < handle
 		% ===================================================================
 		function args = addDefaults(args, defs)
 		%> @fn addDefaults
-		%> @brief add default options to arg input
+		%> @brief regularises and adds default options to arg input
 		%>
 		%>
 		%> @param args input structure from varargin
