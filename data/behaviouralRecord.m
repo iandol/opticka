@@ -151,7 +151,7 @@ classdef behaviouralRecord < optickaCore
 			me.lf = lf;
 			me.SansFont = SansFont;
 			
-			me.h.root = uifigure('Name',me.fullName,'Tag','opticka');
+			me.h.root = uifigure('Name',"Opticka: " + me.fullName,'NumberTitle','off','Tag','opticka');
 			if ~isMATLABReleaseOlderThan("R2025a"); theme(me.h.root,'light'); end
 			me.h.root.Units = 'normalized';
 			me.h.root.Position = [0.6 0 0.4 1];
@@ -169,7 +169,7 @@ classdef behaviouralRecord < optickaCore
 			me.h.axis3 = nexttile(me.h.box); me.h.axis3.FontName = SansFont;
 			me.h.axis4 = nexttile(me.h.box); me.h.axis4.FontName = SansFont;
 			me.h.axis5 = nexttile(me.h.box); me.h.axis5.FontName = SansFont;
-			me.h.axis6 = nexttile(me.h.box); me.h.axis5.FontName = SansFont;
+			me.h.axis6 = nexttile(me.h.box); me.h.axis6.FontName = SansFont;
 
 			figure(me.h.root);
 			colormap(me.h.root, 'turbo');
@@ -219,10 +219,10 @@ classdef behaviouralRecord < optickaCore
 				me.tick = 1;
 			end
 			if exist('sM','var')
-				if matches(sM.currentName, me.correctStateName)
+				if matches(sM.currentState.name, me.correctStateName)
 					me.response(me.tick) = me.correctStateValue;
 					me.rt1(me.tick) = sM.log.tnow(sM.log.n)-sM.log.startTime * 1e3;
-				elseif matches(sM.currentName, me.breakStateName)
+				elseif matches(sM.currentState.name, me.breakStateName)
 					me.response(me.tick) = me.breakStateValue;
 					me.rt1(me.tick) = 0;
 				else

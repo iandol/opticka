@@ -27,7 +27,7 @@ classdef optickaCore < handle
 	%--------------------PUBLIC PROPERTIES----------%
 	properties
 		%> object name
-		name char = ''
+		name string = ""
 		%> comment
 		comment string = ""
 	end

@@ -755,6 +755,7 @@ classdef HEDTags
 		Volume_value ("Volume-#", "Property/Data-property/Data-value/Spatiotemporal-value/Spatial-value/Size/Volume/Volume-#", "", "HED_0012685")
 		Width ("Width", "Property/Data-property/Data-value/Spatiotemporal-value/Spatial-value/Size/Width", "The extent or measurement of something from side to side.", "HED_0012686")
 		Width_value ("Width-#", "Property/Data-property/Data-value/Spatiotemporal-value/Spatial-value/Size/Width/Width-#", "", "HED_0012687")
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Temporal_value
 		Temporal_value ("Temporal-value", "Property/Data-property/Data-value/Spatiotemporal-value/Temporal-value", "A characteristic of or relating to time or limited by time.", "HED_0012688")
 		Delay ("Delay", "Property/Data-property/Data-value/Spatiotemporal-value/Temporal-value/Delay", "The time at which an event start time is delayed from the current onset time. This tag defines the start time of an event of temporal extent and may be used with the Duration tag.", "HED_0012689")
 		Delay_value ("Delay-#", "Property/Data-property/Data-value/Spatiotemporal-value/Temporal-value/Delay/Delay-#", "", "HED_0012690")
@@ -762,7 +763,7 @@ classdef HEDTags
 		Duration_value ("Duration-#", "Property/Data-property/Data-value/Spatiotemporal-value/Temporal-value/Duration/Duration-#", "", "HED_0012692")
 		Time_interval ("Time-interval", "Property/Data-property/Data-value/Spatiotemporal-value/Temporal-value/Time-interval", "The period of time separating two instances, events, or occurrences.", "HED_0012693")
 		Time_interval_value ("Time-interval-#", "Property/Data-property/Data-value/Spatiotemporal-value/Temporal-value/Time-interval/Time-interval-#", "", "HED_0012694")
-		Time_value ("Time-value", "Property/Data-property/Data-value/Spatiotemporal-value/Temporal-value/Time-value", "A value with units of time. Usually grouped with tags identifying what the value represents.", "HED_0012695")
+		Time_value ("2", "Property/Data-property/Data-value/Spatiotemporal-value/Temporal-value/Time-value", "A value with units of time. Usually grouped with tags identifying what the value represents.", "HED_0012695")
 		Time_value_value ("Time-value-#", "Property/Data-property/Data-value/Spatiotemporal-value/Temporal-value/Time-value/Time-value-#", "", "HED_0012696")	
 		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Statistical_value
 		Statistical_value ("Statistical-value", "Property/Data-property/Data-value/Statistical-value", "A value based on or employing the principles of statistics.", "HED_0012697")

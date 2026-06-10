@@ -1012,7 +1012,7 @@ classdef runExperiment < optickaCore
 					%------ Check keyboard for commands (remember we can turn
 					% this off using either tS.keyExclusionPattern
 					% [per-state toggle] or tS.checkKeysDuringStimulus).
-					if isempty(tS.keyExclusionPattern) || ~matches(sM.currentName,tS.keyExclusionPattern)
+					if isempty(tS.keyExclusionPattern) || ~matches(sM.currentState.name,tS.keyExclusionPattern)
 						checkKeys(me);
 					end
 					
@@ -1060,7 +1060,7 @@ classdef runExperiment < optickaCore
 						 
 						% %------ Log stim / no stim + missed frame -----%
 						if thisN > 0 && me.logFrames
-							logStim(tL,sM.currentName,thisN);
+							logStim(tL,sM.currentState.name,thisN);
 						end
 
 						% %------ Debug: if we missed a frame record it somewhere -----%
@@ -2663,7 +2663,7 @@ classdef runExperiment < optickaCore
 			etinfo = ''; name = ''; var = NaN;
 			if me.isRunTask
 				log = me.taskLog;
-				name = [me.stateMachine.currentName ':' me.stateMachine.currentUUID];
+				name = [me.stateMachine.currentState.name ':' me.stateMachine.currentUUID];
 				if ~isempty(me.eyetracker.device)
 					etinfo = sprintf('isFix:%i isExcl:%i isFixInit:%i isBlink:%i fixLength: %.2f',...
 						me.eyeTracker.isFix,me.eyeTracker.isExclusion,me.eyeTracker.isInitFail,me.eyeTracker.isBlink,me.eyeTracker.fixLength);
@@ -2725,7 +2725,7 @@ classdef runExperiment < optickaCore
 		%>
 		%> @param
 		% ===================================================================
-			switch sM.currentName
+			switch sM.currentState.name
 				case 'fixate'
 					prefix = 'F';
 				case 'stimulus'
@@ -2766,7 +2766,7 @@ classdef runExperiment < optickaCore
 			end
 			if (me.askForComments || tS.askForComments) && ~me.debug
 				opts.Interpreter='tex';opts.Resize='on';
-				ncomment = inputdlg(prompt,['Comments for ' me.name],[10 80],{''},opts);
+				ncomment = inputdlg(prompt,['Opticka: Comments for ' me.name],[10 80],{''},opts);
 				if ~isempty(ncomment)
 					ncomment = string(ncomment{1});
 					ncomment = strip(ncomment);

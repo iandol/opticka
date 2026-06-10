@@ -5,36 +5,54 @@ classdef timeLogger < optickaCore
 	%> and stimulus state, together with timestamped messages that can include
 	%> time type metadata and optional HED annotations. The logged data can be
 	%> normalised, plotted, and exported as a table for later inspection.
+	%> We use pre-allocated arrays as this is much faster...
 	
 	properties
-		timer			= @GetSecs
-		verbose			= true
-		stimStateNames	= {'stimulus','onestep','twostep'}
-		t				= struct('vbl',[],'show',[],'flip',[],...
-							'miss',[],'stimTime',[])
-		preallocateTimes = 1e5;
-		preallocateMessages = 1e4;
-		screenLog		= struct()
-		missvbls		= 0
-		tick			= NaN
-		lastvbl			= NaN
-		tickInfo		= NaN
-		startTime		= NaN
-		startRun		= NaN
+		% which timer to use, GetSecs from PTB is preferred
+		timer function_handle	= @GetSecs
+		% which experiment state names are considered stimulus presentation
+		stimStateNames cell		= {'stimulus','onestep','twostep'}
+		% for logging PTB Flip values
+		t struct				= struct('vbl',[],'show',[],'flip',[],...
+								'miss',[],'stimTime',[])
+		% how big an array to preallocate for PTB t arrays
+		preallocateTimes double	= 1e5;
+		% how big an array to preallocate for addMessage() messages
+		preallocateMessages	double = 1e4;
+		% general PTB screen setup times
+		screenLog struct		= struct()
+		% the global start time for all subsequent logging
+		startTime double		= NaN
+		% the last vbl time from a screen flip
+		lastvbl double			= NaN
+		% accumulated missed flips
+		missvbls double			= 0
+		% the current tick from the experiment, this is usually the index
+		% into e.g. which frame-time to add: timeLogger.t.vbl(timeLogger.tick)=xxx
+		tick double				= NaN
+		%
+		tickInfo double			= NaN
+		startRun double			= NaN
+		verbose					= true
+
 	end
 
 	properties (Hidden)
-		vbl				= NaN
-		show			= NaN
-		flip			= NaN
-		miss			= NaN
-		stimTime		= NaN
+		vbl						= NaN
+		show					= NaN
+		flip					= NaN
+		miss					= NaN
+		stimTime				= NaN
 	end
 
 	properties (SetAccess = private, GetAccess = public)
-		messages struct	= struct('time',[],'exitTime',[],'tick',[],...
+		% messages stored via addMessage()
+		messages struct			= struct('time',[],'exitTime',[],'tick',[],...
 								'stimTime',[],'message',"",'type',"",'HED',"")
-		messageN		= 0
+		% number of actual messages
+		messageN double			= 0
+		% did we preallocate?
+		isAllocated				= false
 		missImportant
 		nMissed
 	end
@@ -102,6 +120,7 @@ classdef timeLogger < optickaCore
 				me.messages.HED = me.messages.message;
 			end
 			me.messageN = 0;
+			me.isAllocated = true;
 		end
 		
 		% ===================================================================
@@ -160,12 +179,14 @@ classdef timeLogger < optickaCore
 
 			if isempty(tick) || isnan(tick); tick = me.tick; end
 
-			if (isempty(startTime) || isnan(startTime)) && ~isempty(me.lastvbl) && me.lastvbl > 0
-				startTime = me.lastvbl;
-				timeType = "lastvbl";
-			else
-				startTime = me.timer();
-				timeType = "getsecs";
+			if isempty(startTime) || isnan(startTime)
+				if ~isempty(me.lastvbl) && me.lastvbl > 0
+					startTime = me.lastvbl;
+					timeType = "lastvbl";
+				else
+					startTime = me.timer();
+					timeType = "getsecs";
+				end
 			end
 
 			if isempty(exitTime); exitTime = NaN; end
@@ -180,7 +201,7 @@ classdef timeLogger < optickaCore
 				me.messages(1).stimTime(N) = NaN;
 			end
 			me.messages(1).message(N) = message;
-			me.messages(1).type(N) = timeType;
+			me.messages(1).type(N) = lower(timeType);
 			me.messages(1).HED(N) = HED;
 		end
 		
@@ -218,7 +239,7 @@ classdef timeLogger < optickaCore
 			calculateMisses(me,miss,stimTime)
 			
 			ssz = get(0,'ScreenSize');
-			h = figure('Name',me.name,'NumberTitle','off','tag','opticka',...
+			h = figure('Name',['Opticka: ' me.name],'NumberTitle','off','tag','opticka',...
 				'Position', [10 1 round(ssz(3)/2.5) ssz(4)]);
 			if ~isMATLABReleaseOlderThan("R2025a"); theme(h,'light'); end
 			tl = tiledlayout(4,1,'TileSpacing','compact','Padding','compact');
@@ -321,8 +342,8 @@ classdef timeLogger < optickaCore
 				h.figure1 = uifigure( ...
 					'Tag', 'msglog', ...
 					'Units', 'normalized', ...
-					'Position', [0.6 0 0.4 0.5], ...
-					'Name', ['Log: ' me.fullName], ...
+					'Position', [0 0 0.5 0.5], ...
+					'Name', "Opticka Log: " + me.fullName, ...
 					'MenuBar', 'none', ...
 					'NumberTitle', 'off', ...
 					'Color', [0.94 0.94 0.94], ...
@@ -358,9 +379,9 @@ classdef timeLogger < optickaCore
 			if isfield(me.messages,'type'); addType=true; else; addType=false; end
 			msgs = cell(length(me.messages.time)+1,9);
 			msgs{1,1} = toDateTime(me.startTime); msgs{1,2} = NaT; msgs{1,3} = 0;
-			msgs{1,4} = NaT; msgs{1,5} = NaN; msgs{1,6} = NaN; msgs{1,7} = 'Session Start Time'; 
-			msgs{1,8} = 'GetSecs';
-			msgs{1,9} = "";
+			msgs{1,4} = NaT; msgs{1,5} = NaN; msgs{1,6} = NaN; msgs{1,7} = 'Start Time'; 
+			msgs{1,8} = 'getsecs';
+			msgs{1,9} = "Time-value";
 			for i = 1:length(me.messages.time)
 				msgs{i+1,1} = toDateTime(me.messages.time(i));
 				if isfield(me.messages,'exitTime'); msgs{i+1,2} = toDateTime(me.messages.exitTime(i)); end
@@ -384,7 +405,7 @@ classdef timeLogger < optickaCore
 					msgs{i+1,9} = "";
 				end
 			end
-			tbl = cell2table(msgs,'VariableNames',{'Onset','Exit','Time','Duration','Tick','StimulusOn','Message','TimeType','HED'});
+			tbl = cell2table(msgs,'VariableNames',{'Onset','Exit','Accumulated Time','Duration','Tick','StimulusOn','Message','TimeType','HED'});
 			tblt = table2timetable(tbl);
 			tblt = sortrows(tblt);
 			tbl = timetable2table(tblt);
@@ -428,7 +449,6 @@ classdef timeLogger < optickaCore
 		% ===================================================================
 		function removeEmptyValues(me)
 			if isprop(me,'t')
-				if isempty(me.t.vbl);return;end
 				if me.tick > 1
 					try
 						me.t.vbl = me.t.vbl(1:me.tick-1);
@@ -476,7 +496,7 @@ classdef timeLogger < optickaCore
 					if isfield(m,'stimTime'); mm.stimTime(ii) = m(ii).stimTime; end
 					if isfield(m,'type'); mm.type(ii) = m(ii).type; end
 					if isfield(m,'message'); mm.message(ii) = string(strip(m(ii).message)); end
-					if isfield(m,'HED'); mm.HED(ii) = normalizeHEDTag(me,m(ii).HED); end
+					if isfield(m,'HED'); mm.HED(ii) = m(ii).HED; end
 				end
 				me.messages = mm;
 			end

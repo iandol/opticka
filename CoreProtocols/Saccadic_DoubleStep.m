@@ -186,6 +186,7 @@ pfExitFcn = {
 nsfEntryFcn = {
 	@()edit(stims,1,'offTime',0.1); % make sure we reset this just in case
 	@()resetTicks(stims); % this function regenerates the delay / off timers for stimulus drawing
+	@()resetDelayTime(uF,3,25);
 	@()trackerDrawFixation(eT);
 	@()logRun(me,'Nostep Fix'); %fprintf current trial info to command window
 };
