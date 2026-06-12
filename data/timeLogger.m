@@ -13,8 +13,8 @@ classdef timeLogger < optickaCore
 		% which experiment state names are considered stimulus presentation
 		stimStateNames cell		= {'stimulus','onestep','twostep'}
 		% for logging PTB Flip values
-		t struct				= struct('vbl',[],'show',[],'flip',[],...
-								'miss',[],'stimTime',[])
+		t struct				= struct('vbl', [], 'show', [], 'flip',[],...
+								'miss', [], 'stimTime', [])
 		% how big an array to preallocate for PTB t arrays
 		preallocateTimes double	= 1e5;
 		% how big an array to preallocate for addMessage() messages
@@ -47,8 +47,8 @@ classdef timeLogger < optickaCore
 
 	properties (SetAccess = private, GetAccess = public)
 		% messages stored via addMessage()
-		messages struct			= struct('time',[],'exitTime',[],'tick',[],...
-								'stimTime',[],'message',"",'type',"",'HED',"")
+		messages struct			= struct('time', [], 'exitTime', [], 'tick', [],...
+								'stimTime', [], 'message', "", 'type', "", 'HED', "")
 		% number of actual messages
 		messageN double			= 0
 		% did we preallocate?
@@ -239,8 +239,8 @@ classdef timeLogger < optickaCore
 			calculateMisses(me,miss,stimTime)
 			
 			ssz = get(0,'ScreenSize');
-			h = figure('Name',['Opticka: ' me.name],'NumberTitle','off','tag','opticka',...
-				'Position', [10 1 round(ssz(3)/2.5) ssz(4)]);
+			h = figure('Name',append('Opticka: ', me.name),'NumberTitle','off','tag','opticka',...
+				'Position', [0 0 round(ssz(3)/2.5) ssz(4)]);
 			if ~isMATLABReleaseOlderThan("R2025a"); theme(h,'light'); end
 			tl = tiledlayout(4,1,'TileSpacing','compact','Padding','compact');
 
@@ -486,8 +486,8 @@ classdef timeLogger < optickaCore
 			% messages
 			if isstruct(me.messages) && length(me.messages) > 1 % old format was struct(N), convert to struct.item(N)
 				m = me.messages;
-				mm = struct('time',[],'exitTime',[],'tick',[],'stimTime',[],...
-					'message',"",'type',"",'HED',"");
+				mm = struct('time', [], 'exitTime', [], 'tick', [], 'stimTime', [],...
+					'message', "", 'type', "", 'HED', "");
 				for ii = 1:length(m)
 					if isfield(m,'vbl'); mm(1).time(ii) = m(ii).vbl;
 					elseif isfield(m,'time'); mm(1).time(ii) = m(ii).time; end

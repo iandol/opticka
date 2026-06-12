@@ -63,8 +63,8 @@ tS.strict					= false;	% do we forbid [true] eye to enter-exit-reenter fixation 
 
 %=========================================================================
 %-------------------------------Eyetracker setup--------------------------
-% NOTE: the opticka GUI can set eyetracker options too; me.eyetracker.esettings
-% and me.eyetracker.tsettings contain the GUI settings. We test if they are
+% NOTE: the opticka GUI can set eyetracker options too; me.eyetracker.eyelinkSettings
+% and me.eyetracker.tobiiSettings contain the GUI settings. We test if they are
 % empty or not and set general values based on that...
 eT.name				= tS.name;
 if me.eyetracker.dummy == true;	eT.isDummy = true; end %===use dummy or real eyetracker? 

@@ -192,7 +192,7 @@ classdef alyxManager < optickaCore
 				prompt = {'Alyx Username:'};
 				if noDisplay
 					% use text-based alternative
-					answer = strip(input([prompt{:} ' '], 's'));
+					answer = strip(input(prompt{:}+" ", 's'));
 				else
 					% use GUI dialog
 					dlg_title = 'Alyx Login';
@@ -342,7 +342,7 @@ classdef alyxManager < optickaCore
 								data = me.getData(fullEndpoint); % Retry
 							end
 						else
-							warning(['alyxManager.getData: ' ex.identifier], '%s', ex.message);
+							warning(append('alyxManager.getData: ', ex.identifier), '%s', ex.message);
 						end
 					end
 			end
@@ -381,7 +381,7 @@ classdef alyxManager < optickaCore
 			jsonData = jsonencode(data);
 			
 			% Make a filename for the current command
-			queueFilename = [datestr(now, 'yyyy-mm-dd-HH-MM-SS-FFF') '.' lower(requestMethod)];
+			queueFilename = append(datestr(now, 'yyyy-mm-dd-HH-MM-SS-FFF'), '.', lower(requestMethod));
 			queueFullfile = fullfile(me.queueDir, queueFilename);
 			% If local Alyx queue directory doesn't exist, create one
 			if ~exist(me.queueDir, 'dir')
@@ -466,7 +466,7 @@ classdef alyxManager < optickaCore
 			parse(p, varargin{:})
 			
 			% Convert search params back to cell
-			names = setdiff(fieldnames(p.Results), [{'ref'} p.UsingDefaults]);
+			names = setdiff(fieldnames(p.Results), append({'ref'}, p.UsingDefaults));
 			% Get values, and if nessesary convert datenums to datestrs
 			values = cellfun(@processValue, names, 'UniformOutput', 0);
 			assert(length(names) == length(values))
@@ -479,7 +479,7 @@ classdef alyxManager < optickaCore
 				refs = cellstr(p.Results.ref);
 				parsedRef = regexp(refs, me.alfMatch, 'names');
 				sessFromRef = @(ref)me.getData('sessions/', ...
-					'subject', ref.subject, 'date_range', [ref.date ',' ref.date], 'number', ref.seq);
+					'subject', ref.subject, 'date_range', append(ref.date, ',', ref.date), 'number', ref.seq);
 				b = cellfun(@isempty, parsedRef);
 				isRef = ~b;
 				sessions = [me.mapToCell(@(eid)me.getData(['sessions/' eid]), refs(~isRef))...

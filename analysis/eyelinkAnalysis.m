@@ -1733,7 +1733,7 @@ classdef eyelinkAnalysis < analysisCore
 							continue
 						end
 
-						endfix = regexpi(evt.message,['^' me.rtStartMessage],'match');
+						endfix = regexpi(evt.message,append('^', me.rtStartMessage),'match');
 						if ~isempty(endfix)
 							if thisTrial.rtoverride || thisTrial.rt; continue; end
 							thisTrial.rtstarttimeOLD = thisTrial.rtstarttime;
@@ -1752,7 +1752,7 @@ classdef eyelinkAnalysis < analysisCore
 							continue
 						end
 
-						endrt = regexpi(evt.message,['^' me.rtEndMessage],'match');
+						endrt = regexpi(evt.message,append('^', me.rtEndMessage),'match');
 						if ~isempty(endrt)
 							thisTrial.rtendtime = double(evt.sttime);
 							if isfield(me.trials,'rtstarttime')
@@ -1761,7 +1761,7 @@ classdef eyelinkAnalysis < analysisCore
 							continue
 						end
 
-						id = regexpi(evt.message,['^' me.trialEndMessage ' (?<ID>(\-|\+|\d)+)'],'names');
+						id = regexpi(evt.message,append('^', me.trialEndMessage, ' (?<ID>(\-|\+|\d)+)'),'names');
 						if ~isempty(id) && ~isempty(id.ID)
 							thisTrial.entime = double(evt.sttime);
 							thisTrial.result = str2num(id.ID);

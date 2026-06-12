@@ -51,27 +51,6 @@ classdef opticka < optickaCore
 		ss
 		%> used to sanitise passed values on construction
 		allowedProperties = {'verbose','initUI'}
-		%> which UI settings should be saved locally to the machine?
-		uiPrefsList cell = {'OKOmniplexIP','OKMonitorDistance','OKpixelsPerCm',...
-			'OKbackgroundColour','OKAntiAliasing','OKbitDepth','OKUseRetina',...
-			'OKHideFlash','OKlogFrames','OKlogStateTimers','OKUsePhotoDiode',...
-			'OKSaveFolder''OKSessionProtocol',...
-			'OKResearcher','OKSubject','OKLabName',...
-			'OKSessionPrefix','OKLabLocation','OKAlyxIP','OKAlyxUser','OKAlyxRequest',...
-			'OKaudioDevice','OKverbosityLevel',...
-			'OKarduinoPort','OKarduinoType',...
-			'OKrewardType','OKTTLPin','OKTTLTime',...
-			'OKOpenGLBlending','OKWindowSize',...
-			'OKuseIRec2HS','OKuseTobii','OKuseEyelink','OKusePupilCore',...
-			'OKuseLabJackTStrobe','OKuseLabJackStrobe','OKuseDataPixx','OKuseDisplayPP',...
-			'OKUseNirSmart','OKuseArduino','OKuseLabJackReward',...
-			'OKUseDummy','OKINTANPort', 'OKstrobeOFF',...
-			'OKELCalibProp','OKELCalibDevice','OKELManualMode','OKELCalibBeep',...
-			'OKTobiiCal','OKTobiiVal','OKTobiiAddress',...
-			'OKTobiiManualMode', 'OKTobiiTrackingMode','OKTobiiCalStimulus',...
-			'OKTobiiTracker','OKTobiiOperatorScreen','OKTobiiManualStyle'...
-			'OKiRecCal','OKiRecVal','OKiRecAddress','OKiRecTCP','OKiRecUDP',...
-			'OKiRecCalStim','OKiRecSize','OKiRecFilePath','OKiRecSize'}
 	end
 	
 	%=======================================================================
@@ -220,7 +199,7 @@ classdef opticka < optickaCore
 			try
 				tt = tic;
 				jv = version('-java');
-				if contains(jv,'not enabled');isjava=false;else;isjava=true;end
+				if contains(jv, 'not enabled'); isjava = false; else; isjava = true; end
 				if isjava
 					me.ss = SplashScreen(['Opticka V' me.optickaVersion],'opticka.png');
 					if isdeployed
@@ -271,25 +250,26 @@ classdef opticka < optickaCore
 
 				me.store.protocolsPath = me.paths.protocols;
 				
-				loadPrefs(me);
 				getScreenVals(me);
 				getTaskVals(me);
 				loadCalibration(me);
-				me.ui.getEyetrackerSettings();
+				getEyetrackerSettings(me.ui);
 
 				me.r.screenSettings.statusbar = me.ui.OKStatus;
 				
-				if exist([me.paths.root filesep 'DefaultStateInfo.m'],'file')
-					me.paths.stateInfoFile = [me.paths.root filesep 'DefaultStateInfo.m'];
+				if exist(fullfile(me.paths.root, 'core', 'DefaultStateInfo.m'),'file')
+					me.paths.stateInfoFile = fullfile(me.paths.root, 'core', 'DefaultStateInfo.m');
 					me.r.stateInfoFile = me.paths.stateInfoFile;
 				elseif ~isdeployed
-					me.paths.stateInfoFile = [me.paths.whereami filesep 'DefaultStateInfo.m'];
+					me.paths.stateInfoFile = fullfile(me.paths.whereami, 'core', 'DefaultStateInfo.m');
 					me.r.stateInfoFile = me.paths.stateInfoFile;
 				end
-				if exist([me.store.protocolsPath filesep 'userFunctions.m'],'file')
-					me.r.userFunctionsFile = [me.paths.protocols filesep 'userFunctions.m'];
+				if exist(fullfile(me.paths.root, 'CoreProtocols', 'myUserFunctions.m'),'file')
+					me.r.userFunctionsFile = fullfile(me.paths.root, 'CoreProtocols', 'myUserFunctions.m');
+					me.paths.userFunctionsFile = me.r.userFunctionsFile;
 				elseif ~isdeployed
-					me.r.userFunctionsFile = [me.paths.whereami filesep 'userFunctions.m'];
+					me.r.userFunctionsFile = fullfile(me.paths.whereami, 'CoreProtocols', 'myUserFunctions.m');
+					me.paths.userFunctionsFile = me.r.userFunctionsFile;
 				end
 
 				fprintf('≣≣≣≣⊱  Opticka UI took %.2fsecs to initialise\n',toc(tt));
@@ -968,107 +948,6 @@ classdef opticka < optickaCore
 			end
 		end
 		
-		% ===================================================================
-		%> @brief loadPrefs Load prefs better left local to the machine
-		%> 
-		% ===================================================================
-		function loadPrefs(me)
-			if ~ispref('opticka'); return; end
-			anyLoaded = false; prefnames = ""; a = 1;
-			for i = 1:length(me.uiPrefsList)
-				prfname = me.uiPrefsList{i};
-				if ispref('opticka',prfname) %pref exists
-					if isprop(me.ui, prfname) %ui widget exists
-						myhandle = me.ui.(prfname);
-						prf = getpref('opticka', prfname);
-						uiType = myhandle.Type;
-						thisVal = '';
-						switch uiType
-							case 'uieditfield'
-								if ischar(prf)
-									myhandle.Value = prf; 
-									thisVal = prf;
-								else
-									myhandle.Value = num2str(prf); 
-									thisVal = myhandle.Value;
-								end
-							case 'uinumericeditfield'
-								myhandle.Value = prf;
-								thisVal = num2str(prf);
-							case 'uicheckbox'
-								if islogical(prf) || isnumeric(prf)
-									myhandle.Value = prf;
-									thisVal = num2str(prf);
-								end
-							case {'uidropdown','compacteditablecombobox'}
-								str = myhandle.Items;
-								if ischar(prf) && any(contains(prf, str))
-									myhandle.Value = prf;
-									thisVal = prf;
-								elseif iscell(prf) & length(prf)==2
-									myhandle.Items = prf{1};
-									myhandle.Value = prf{2};
-									thisVal = prf{2};
-								end
-							case 'uimenu'
-								myhandle.Checked = prf;
-								thisVal = char(prf);
-							case 'uirockerswitch'
-								if strcmpi(prf,'on') || strcmpi(prf,'off')
-									myhandle.Value = prf;
-									thisVal = prf;
-								end
-						end
-						prefnames = [prefnames " " prfname " «" string(thisVal) "»"];
-						if ~mod(a,3); prefnames = [prefnames "\n"]; end
-						if ~anyLoaded; anyLoaded = true; end
-						a = a + 1;
-					end
-				end	
-			end
-			if anyLoaded
-				fprintf('\n≣≣≣≣⊱  Opticka Load Preferences:\n'); fprintf(join(prefnames)); fprintf('\n');
-			end
-		end
-		
-		% ===================================================================
-		%> @brief savePrefs Save prefs better left local to the machine
-		%> 
-		% ===================================================================
-		function savePrefs(me)
-			if isempty(me.ui); return; end
-			if ispref('opticka'); rmpref('opticka'); end
-			anySaved = false; prefnames = ""; a = 1;
-			for i = 1:length(me.uiPrefsList)
-				prf = [];
-				prfname = me.uiPrefsList{i};
-				if ~isprop(me.ui,prfname); continue; end
-				try
-					myhandle = me.ui.(prfname);
-					uiType = myhandle.Type;
-					switch uiType
-						case {'uinumericeditfield','uieditfield','uirockerswitch'}
-							prf = myhandle.Value;
-						case {'uidropdown','compacteditablecombobox'}
-							prf = {myhandle.Items, myhandle.Value};
-						case 'uicheckbox'
-							prf = myhandle.Value;
-							if ~islogical(prf); prf=logical(prf);end
-						case 'uimenu'
-							prf = myhandle.Checked;
-					end
-					if ~isempty(prf) 
-						setpref('opticka', prfname, prf);
-						prefnames = [prefnames " " prfname " «"  strip(formattedDisplayText(prf)) "»"];
-						if ~mod(a,3); prefnames = [prefnames "\n"]; end
-						a = a + 1;
-					end
-					if ~anySaved; anySaved = true; end
-				end
-			end
-			if anySaved; fprintf('\n≣≣≣≣⊱ Opticka Save Preferences:\n'); fprintf(join(prefnames)); fprintf('\n');end
-		end
-		
 	end
 	
 	%========================================================
@@ -1137,7 +1016,7 @@ classdef opticka < optickaCore
 				me.store.protocolName = f;
 				me.r.paths.protocolName = me.store.protocolName;
 				if contains(p,[filesep 'opticka' filesep])
-					resp=questdlg('Are you sure you want write to the Opticka folder!? You should save protocols outside the program folder as they will be overwritten on an update...','Opticka Save Protocol','No');
+					resp=questdlg('Are you SURE you want write to the Opticka folder!? You must save protocol copies outside the opticka folder otherwise they will be overwritten on an update...','Opticka Save Protocol','No');
 					if matches(resp,'No')
 						disp('Didn''t save protocol...'); return
 					end
@@ -1155,11 +1034,11 @@ classdef opticka < optickaCore
 					reset(tmp.r.stimuli{i});
 				end
 				
-				[~, ~, ee] = fileparts(me.r.stateInfoFile);
 				if copyIt == true
 					nm = regexprep(me.store.protocolName,'\.mat$','');
-					tmp.r.stateInfoFile = [pwd filesep nm ee];
-					if ~strcmpi(me.r.stateInfoFile,tmp.r.stateInfoFile)
+					
+					tmp.r.stateInfoFile = fullfile(pwd, join([nm '-stateInfo' '.m']));
+					if ~matches(me.r.stateInfoFile,tmp.r.stateInfoFile)
 						[status, msg] = copyfile(me.r.stateInfoFile, tmp.r.stateInfoFile, 'f');
 						if status ~= 1
 							warning(['Couldn''t copy state info file: ' msg]);
@@ -1171,10 +1050,11 @@ classdef opticka < optickaCore
 							end
 						end
 					end
+
 					save(f,'tmp');
 					fprintf('\n≣≣≣≣⊱ Saving Protocol %s as copy (with state file) to %s\n', f, pwd);
 					if exist(tmp.r.stateInfoFile,'file')
-						fprintf('\tState file path: %s\n', me.r.stateInfoFile);
+						fprintf('\tState file path: %s\n', tmp.r.stateInfoFile);
 					end
 					getStateInfo(me);
 				else
@@ -1358,7 +1238,7 @@ classdef opticka < optickaCore
 				end
 				if isempty(me.r.stateInfoFile) || ~exist(me.r.stateInfoFile,'file')
 					warning(['Couldn''t find state info file! Sources were: ' p1 ' ' p2 '  --  Revert to DefaultStateInfo.m']);
-					me.r.stateInfoFile = [me.paths.root filesep 'DefaultStateInfo.m'];
+					me.r.stateInfoFile = fullfile(me.paths.root, 'core', 'DefaultStateInfo.m');
 				else
 					fprintf('\t…state info file [%s] : %s\n', msg, me.r.stateInfoFile);
 				end
@@ -1382,11 +1262,11 @@ classdef opticka < optickaCore
 					me.r.userFunctionsFile=regexprep(me.r.userFunctionsFile,'(\/(home|Users)\/[^\/]+\/)(.+)',[getenv('HOME') filesep '$2'],'ignorecase','once');
 				end
 				if ~exist(me.r.userFunctionsFile,'file') % then try protocols folder
-					me.r.userFunctionsFile=[me.r.paths.protocols filesep f e];
+					me.r.userFunctionsFile=fullfile(me.r.paths.protocols, [f e]);
 				end
 				if ~exist(me.r.userFunctionsFile,'file')
-					warning('Couldn''t find userFunctions file! Revert to default userFunctions.m');
-					me.r.userFunctionsFile = [me.paths.root filesep 'userFunctions.m'];
+					warning('Couldn''t find userFunctions file! Revert to default myUserFunctions.m');
+					me.r.userFunctionsFile = fullfile(me.paths.root, 'CoreProtocols', 'myUserFunctions.m');
 				end
 				
 				if optickaCore.hasKey(tmp.r,'drawFixation');me.r.drawFixation=tmp.r.drawFixation;end
@@ -1467,20 +1347,20 @@ classdef opticka < optickaCore
 						switch me.r.eyetracker.device
 							case 'tobii'
 								me.ui.OKuseTobii.Checked = 'on';
-								if isfield(tmp.r.eyetracker,'tsettings') && ~isempty(tmp.r.eyetracker.tsettings)
-									try me.ui.OKTobiiSampleRate.Value = tmp.r.eyetracker.tsettings.sampleRate; end
-									try me.ui.OKTobiiCal.Value = tmp.r.eyetracker.tsettings.calibration.calPositions; end
-									try me.ui.OKTobiiVal.Value = tmp.r.eyetracker.tsettings.calibration.valPositions; end
-									try me.ui.OKTobiiTrackingMode.Value = tmp.r.eyetracker.tsettings.calibration.mode; end
+								if isfield(tmp.r.eyetracker,'tobiiSettings') && ~isempty(tmp.r.eyetracker.tobiiSettings)
+									try me.ui.OKTobiiSampleRate.Value = tmp.r.eyetracker.tobiiSettings.sampleRate; end
+									try me.ui.OKTobiiCal.Value = tmp.r.eyetracker.tobiiSettings.calibration.calPositions; end
+									try me.ui.OKTobiiVal.Value = tmp.r.eyetracker.tobiiSettings.calibration.valPositions; end
+									try me.ui.OKTobiiTrackingMode.Value = tmp.r.eyetracker.tobiiSettings.calibration.mode; end
 								end
 							case 'eyelink'
 								me.ui.OKuseEyelink.Checked = 'on';
-								if isfield(tmp.r.eyetracker,'esettings') && ~isempty(tmp.r.esettings)
+								if isfield(tmp.r.eyetracker,'eyelinkSettings') && ~isempty(tmp.r.eyelinkSettings)
 
 								end
 							case 'irec'
 								me.ui.OKuseIRec2HS.Checked = 'on';
-								if isfield(tmp.r.eyetracker,'isettings') && ~isempty(tmp.r.isettings)
+								if isfield(tmp.r.eyetracker,'irecSettings') && ~isempty(tmp.r.irecSettings)
 
 								end
 						end
@@ -1677,7 +1557,7 @@ classdef opticka < optickaCore
 				return
 			end
 			pos = me.gp(me.ui.OKStimList);
-			str = cell(me.r.stimuli.n,1);
+			str = strings(me.r.stimuli.n,1);
 			for i=1:me.r.stimuli.n
 				s = me.r.stimuli{i};
 				if isempty(s.name)
@@ -1687,33 +1567,33 @@ classdef opticka < optickaCore
 				end
 				switch s.family
 					case 'grating'
-						tstr = [num2str(i) '.' name ':'];
-						tstr = [tstr ' x=' num2str(s.xPosition)];
-						tstr = [tstr ' y=' num2str(s.yPosition)];
-						tstr = [tstr ' c=' num2str(s.contrast)];
-						tstr = [tstr ' a=' num2str(s.angle)];
-						tstr = [tstr ' sz=' num2str(s.size)];
-						tstr = [tstr ' sf=' num2str(s.sf)];
-						tstr = [tstr ' tf=' num2str(s.tf)];
-						tstr = [tstr ' p=' num2str(s.phase)];
-						tstr = [tstr ' sg=' num2str(s.sigma)];
-						str{i} = tstr;
+						tstr = num2str(i) + "." + name + ":";
+						tstr = tstr + " x=" + num2str(s.xPosition);
+						tstr = tstr + " y=" + num2str(s.yPosition);
+						tstr = tstr + " c=" + num2str(s.contrast);
+						tstr = tstr + " a=" + num2str(s.angle);
+						tstr = tstr + " sz=" + num2str(s.size);
+						tstr = tstr + " sf=" + num2str(s.sf);
+						tstr = tstr + " tf=" + num2str(s.tf);
+						tstr = tstr + " p=" + num2str(s.phase);
+						tstr = tstr + " sg=" + num2str(s.sigma);
+						str(i) = tstr;
 					case 'gabor'
-						tstr = [num2str(i) '.' name ':'];
-						tstr = [tstr ' x=' num2str(s.xPosition)];
-						tstr = [tstr ' y=' num2str(s.yPosition)];
-						tstr = [tstr ' c=' num2str(s.contrast)];
-						tstr = [tstr ' a=' num2str(s.angle)];
-						tstr = [tstr ' sz=' num2str(s.size)];
-						tstr = [tstr ' sf=' num2str(s.sf)];
-						tstr = [tstr ' tf=' num2str(s.tf)];
-						tstr = [tstr ' p=' num2str(s.phase)];
-						str{i} = tstr;
+						tstr = num2str(i) + "." + name + ":";
+						tstr = tstr + " x=" + num2str(s.xPosition);
+						tstr = tstr + " y=" + num2str(s.yPosition);
+						tstr = tstr + " c=" + num2str(s.contrast);
+						tstr = tstr + " a=" + num2str(s.angle);
+						tstr = tstr + " sz=" + num2str(s.size);
+						tstr = tstr + " sf=" + num2str(s.sf);
+						tstr = tstr + " tf=" + num2str(s.tf);
+						tstr = tstr + " p=" + num2str(s.phase);
+						str(i) = join(tstr);
 					case 'bar'
 						x=s.xPosition;
 						y=s.yPosition;
 						a=s.angle;
-						str{i} = [num2str(i) '.' name ': x=' num2str(x) ' y=' num2str(y) ' ang=' num2str(a)];
+						str(i) = num2str(i) + "." + name + ": x=" + num2str(x) + " y=" + num2str(y) + " ang=" + num2str(a);
 					case 'dots'
 						x=s.xPosition;
 						y=s.yPosition;
@@ -1724,7 +1604,7 @@ classdef opticka < optickaCore
 						sp=s.speed;
 						k=s.kill;
 						ct=s.colourType;
-						str{i} = [num2str(i) '.' name ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' ang=' num2str(a) ' coh=' num2str(c) ' dn=' num2str(dn) ' sp=' num2str(sp) ' k=' num2str(k) ' ct=' ct];
+						str(i) = num2str(i) + "." + name + ": x=" + num2str(x) + " y=" + num2str(y) + " sz=" + num2str(sz) + " ang=" + num2str(a) + " coh=" + num2str(c) + " dn=" + num2str(dn) + " sp=" + num2str(sp) + " k=" + num2str(k) + " ct=" + ct;
 					case 'ndots'
 						x=s.xPosition;
 						y=s.yPosition;
@@ -1732,55 +1612,57 @@ classdef opticka < optickaCore
 						a=s.angle;
 						c=s.coherence;
 						dn=s.density;
-						str{i} = [num2str(i) '.' name ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' ang=' num2str(a) ' coh=' num2str(c) ' dn=' num2str(dn)];
+						str(i) = num2str(i) + "." + name + ": x=" + num2str(x) + " y=" + num2str(y) + " sz=" + num2str(sz) + " ang=" + num2str(a) + " coh=" + num2str(c) + " dn=" + num2str(dn);
 					case 'spot'
 						x=s.xPosition;
 						y=s.yPosition;
 						sz=s.size;
 						c=s.contrast;
 						a=s.angle;
-						str{i} = [num2str(i) '.' name ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' c=' num2str(c) ' ang=' num2str(a)];
+						str(i) = join([num2str(i) '.' name ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' c=' num2str(c) ' ang=' num2str(a)]);
 					case 'texture'
 						x=s.xPosition;
 						y=s.yPosition;
 						sz=s.size;
 						c=s.contrast;
 						sp=s.speed;
-						p = [];
-						if isfield(s,'filePath')
+						p = "";
+						if isprop(s,'currentFile') && strlength(s.currentFile)>0
+							p=s.currentFile;
+						elseif isprop(s,'filePath')
 							p=s.filePath;
-						elseif isfield(s,'fileName')
+						elseif isprop(s,'fileName')
 							p=s.fileName;
 						end
-						str{i} = [num2str(i) '.' name ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' c=' num2str(c) ' sp=' num2str(sp) ' [' p ']'];
+						str(i) = num2str(i) + "." + name + ": x=" + num2str(x) + " y=" + num2str(y) + " sz=" + num2str(sz) + " c=" + num2str(c) + " sp=" + num2str(sp) + " [" + p + "]";
 					case 'movie'
 						x=s.xPosition;
 						y=s.yPosition;
 						sz=s.size;
 						sp=s.speed;
-						p = [];
-						if isfield(s,'filePath')
+						p = "";
+						if isprop(s,'filePath')
 							p=s.filePath;
-						elseif isfield(s,'fileName')
+						elseif isprop(s,'fileName')
 							p=s.fileName;
 						end
-						str{i} = [num2str(i) '.' name ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' sp=' num2str(sp) ' [' p ']'];
+						str(i) = num2str(i) + "." + name + ": x=" + num2str(x) + " y=" + num2str(y) + " sz=" + num2str(sz) + " sp=" + num2str(sp) + " [" + p + "]";
 					case 'fixationcross'
 						x=s.xPosition;
 						y=s.yPosition;
 						sz=s.size;
 						c=s.colour;
-						str{i} = [num2str(i) '.' name ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' col=' num2str(c, '%.2f ')];
+						str(i) = num2str(i) + "." + name + ": x=" + num2str(x) + " y=" + num2str(y) + " sz=" + num2str(sz) + " col=" + num2str(c, '%.2f ');
 					otherwise
 						x=s.xPosition;
 						y=s.yPosition;
 						a=s.angle;
-						str{i} = [num2str(i) '.' name ': x=' num2str(x) ' y=' num2str(y) ' ang=' num2str(a)];
+						str(i) = num2str(i) + "." + name + ": x=" + num2str(x) + " y=" + num2str(y) + " ang=" + num2str(a);
 				end
 			end
 			me.ui.OKStimList.Items = str;
 			if ~isempty(pos) && pos <= length(str)
-				me.ui.OKStimList.Value = str{pos};
+				me.ui.OKStimList.Value = str(pos);
 			end
 		end
 		

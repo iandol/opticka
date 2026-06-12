@@ -100,7 +100,7 @@ classdef awsManager < handle
 				rec = "";
 			end
 			updateENV(me);
-			cmdin = strjoin(["aws --no-progress " rec " s3 cp '" file "' s3://" bucket "/" key],"");
+			cmdin = append("aws --no-progress ", rec, " s3 cp '", file, "' s3://", bucket, "/", key);
 			[r, out] = system(cmdin);
 			success = ~logical(r);
 			if ~success

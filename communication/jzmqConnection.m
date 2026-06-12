@@ -68,7 +68,7 @@ classdef jzmqConnection < optickaCore
 			me = me@optickaCore(args); %superclass constructor
 			me.parseArgs(args, me.allowedProperties);
 			if ~any(contains(javaclasspath, 'jeromq-0.6.0.jar'))
-				javaaddpath([fileparts(which('jzmq.ZContext')) filesep 'jeromq-0.6.0.jar'],'-begin');
+				javaaddpath(fullfile(fileparts(which('jzmq.ZContext')), 'jeromq-0.6.0.jar'), '-begin');
 				fprintf('Added JeroMQ jar to javaclasspath.\n');
 			end
 		end

@@ -94,6 +94,7 @@ myStims{2}		= fixationCrossStimulus('size', 0.8);
 % value. There are functions to handle what happens if the subject responds
 % incorrectly, where we can re-randomise the next value within the block.
 myTask					= taskSequence(); %new taskSequence object instance
+myTask.realTime			= true; % do we use system clock, rather than fixed FPS ticks
 
 %%
 % Our variable is xyPosition, applied to stimulus 1 only. 3 different
@@ -143,12 +144,14 @@ myExp = runExperiment('stimuli', myStims,... %stimulus objects
 	'screen', myScreen,... %screen manager object
 	'task', myTask,... % task randomised stimulus sequence
 	'stateInfoFile', 'DefaultStateInfo.m', ... % use the default state info file
+	'verbose', true, ... % more logging to the command window
 	'debug', false,... % debug mode for testing?
-	'logStateTimers',true,...
-	'subjectName', 'Simulcra', ...
-	'researcherName', 'Automated Test');
-myExp.eyetracker.device = 'eyelink';
-myExp.eyetracker.dummy = true;
+	'logStateTimers',true);
+myExp.eyetracker.device = 'irec'; % iRecHS2 eyetracker
+myExp.eyetracker.dummy = true; % dummy mode, so mouse replaces eye position
+myexp.sessionData.subjectName = 'Simulcra';
+myexp.sessionData.researcherName = 'Automated-Test';
+myexp.comment = "This is a test run";
 
 %% Run the full behavioural task
 % 

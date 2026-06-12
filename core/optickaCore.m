@@ -27,9 +27,9 @@ classdef optickaCore < handle
 	%--------------------PUBLIC PROPERTIES----------%
 	properties
 		%> object name
-		name string = ""
+		name char = ''
 		%> comment
-		comment string = ""
+		comment char = ''
 	end
 
 	%--------------------ABSTRACT PROPERTIES----------%
@@ -47,7 +47,7 @@ classdef optickaCore < handle
 	%--------------------VISIBLE PROPERTIES-----------%
 	properties (SetAccess = protected, GetAccess = public)
 		%> version number
-		optickaVersion char		= '2.17.13'
+		optickaVersion char		= '2.17.14'
 		%> clock() dateStamp set on construction
 		dateStamp = []
 		%> universal ID
@@ -1027,13 +1027,16 @@ classdef optickaCore < handle
 		%> @param
 		% ===================================================================
 			me.paths(1).whatami = me.className;
-			me.paths.root = fileparts(which(mfilename));
+			me.paths.root = optickaRoot();
 			me.paths.whereami = me.paths.root;
 			me.paths.PTBroot = PsychtoolboxRoot;
 			me.paths.PTBconfig = PsychtoolboxConfigDir;
 			try v = splitlines(PsychtoolboxVersion); me.paths.PTBversion = v{1};end
 			if ~isfield(me.paths, 'stateInfoFile')
 				me.paths.stateInfoFile = '';
+			end
+			if ~isfield(me.paths, 'userFunctionsFile')
+				me.paths.userFunctionsFile = '';
 			end
 			if ismac || isunix
 				me.paths.home = getenv('HOME');
@@ -1064,6 +1067,8 @@ classdef optickaCore < handle
 				me.paths.deploypath = ctfroot;
 			end
 			me.paths.ALFPath = '';
+			me.paths.ALFKey = '';
+			me.paths.ALFKeyShort = '';
 		end
 
 		% ===================================================================

@@ -7,13 +7,24 @@ classdef userFunctions < handle %#ok<*MCFIL>
 %> exiting states. Most required functions (methods in classes) are found in
 %> the core opticka classes like screenManager, stateMachine etc. BUT if a
 %> user wants to customise their own functions then we need to have a generic
-%> class we can load and use where they can add their own methods. This
+%> class we can load and use where you can add your own methods. This
 %> class serves this purpose. 
 %>
-%> The user should make a copy of this file and save it somewhere alongside
-%> their protocols (you can rename the file, but keep the class name the
-%> same). They can add their own methods. The class will be added as a uF
-%> object and these methods can be used via the state info file.
+%> The user should either make a copy of this file or subclass it and add 
+%> functions there and then save it as a new class somewhere alongside
+%> their protocols (if you copy this you can rename the file, but keep the 
+%> class name the same; if you subclass it then the file and class name can be the
+%> same). The user can add their own methods. The class will be added as a uF
+%> object and these methods can be used via the state info file, like:
+%>
+%> uF.myCustomFunction()
+%>
+%> REMEMBER: as these are stored as anonymous function handles in the state 
+%> machine, any variables are set at instantiation time, not at run time. If
+%> you need to get a run time variable, make a function. So if you need to 
+%> get a value X that changes as the experiment runs, make a function like
+%> X = getCurrentX() that returns the current value. Now when the state 
+%> machine call the function the correct value is returned.
 %>
 %> Copyright ©2014-2026 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
@@ -44,7 +55,7 @@ classdef userFunctions < handle %#ok<*MCFIL>
 		verbose logical = true
 	end
 
-	%% ADD YOUR OWN VARIABLES HERE ↓
+	%% ADD YOUR OWN VARIABLES HERE ↓ if you copy this file
 	properties 
 		
 	end
@@ -66,7 +77,7 @@ classdef userFunctions < handle %#ok<*MCFIL>
 		%> @param stim Index of stimulus in `stims`.
 		%> @param duration Optional extra duration added to off time.
 		% ===================================================================
-			arguments
+			arguments(Input)
 				me % self
 				stim (1,1) double
 				duration (1,1) double = NaN
@@ -87,7 +98,7 @@ classdef userFunctions < handle %#ok<*MCFIL>
 		%> @param stim Index of stimulus in `stims`.
 		%> @param value Delay time value to apply.
 		% ===================================================================
-			arguments
+			arguments(Input)
 				me % self
 				stim (1,1) double
 				value (1,1) double
@@ -104,7 +115,7 @@ classdef userFunctions < handle %#ok<*MCFIL>
 		function testFunction(me)
 		%> @brief Test method that prints a message.
 		% ===================================================================
-			arguments
+			arguments(Input)
 				me % self
 			end
 			if isa(me.rE, 'runExperiment')

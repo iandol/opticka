@@ -544,7 +544,7 @@ classdef imageStimulus < baseStimulus
 					[~,f,e]=fileparts(d(i).name);
 					if regexpi(e,'png|jpeg|jpg|bmp|tif|tiff')
 						n = n + 1;
-						me.filePaths{n} = [me.filePath filesep f e];
+						me.filePaths{n} = append(me.filePath, filesep, f, e);
 						me.filePaths{n} = regexprep(me.filePaths{n},'\/\/','/');
 					end
 				end

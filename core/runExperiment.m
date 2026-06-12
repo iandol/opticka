@@ -69,9 +69,9 @@ classdef runExperiment < optickaCore
 		reward struct				= struct('device','','port','',...
 									'board','');
 		%> which eyetracker to use (if eyetracker.device is not empty)
-		eyetracker struct			= struct('device','','dummy',true,...
-									'esettings',[],'tsettings',[],...
-									'isettings',[],'psettings',[])
+		eyetracker struct			= struct('device', '', 'dummy', true,...
+									'eyelinkSettings', [], 'tobiiSettings', [],...
+									'irecSettings', [], 'pupilcoreSettings', [])
 		%> whether to initialise a touch screen (if touch.device is not empty)
 		touch struct				= struct('device','','dummy',true)
 		%> use control commands to start / stop recording
@@ -262,7 +262,7 @@ classdef runExperiment < optickaCore
 			%===============================enable diary logging if requested
 			if me.diaryMode
 				diary off
-				diary([me.paths.savedData filesep me.name '.log']);
+				diary(fullfile(me.paths.savedData, append(me.name, '.log')));
 			end
 			
 			%===============================initialise runLog for this run
@@ -310,7 +310,7 @@ classdef runExperiment < optickaCore
 
 				%=============================Premptive save in case of crash or error: SAVES IN /TMP
 				rE = me;
-				tS.tmpFile = [tempdir filesep me.name '.mat'];
+				tS.tmpFile = fullfile(tempdir, append(me.name, '.mat'));
 				fprintf('≣≣≣≣⊱ Save initial state: %s\n',tS.tmpFile);
 				save(tS.tmpFile,'rE','tS');
 				
@@ -333,8 +333,8 @@ classdef runExperiment < optickaCore
 					dC.rPort = addr{2};
 					try 
 						open(dC);
-						write(dC,uint8(['set Filename.BaseFilename ' me.name]));
-						write(dC,uint8(['set Filename.Path ' 'C:/OptickaFiles']));
+						write(dC,uint8(append('set Filename.BaseFilename ', me.name)));
+						write(dC,uint8(append('set Filename.Path ', 'C:/OptickaFiles')));
 						write(dC,uint8('set runmode run'));
 					catch
 						warning('runTask cannot contact intan!!!')
@@ -548,7 +548,7 @@ classdef runExperiment < optickaCore
 				s.comment = me.comment; io.comment = me.comment; tL.comment = me.comment; tS.comment = me.comment;
 
 				%================================SAVE the DATA
-				sname = [me.paths.ALFPath filesep 'opticka.raw.' me.name '.mat'];
+				sname = fullfile(me.paths.ALFPath, append('opticka.raw.', me.name, '.mat'));
 				rE = me;
 				save(sname,'rE','tS');
 				fprintf('\n\n#####################\n≣≣≣≣ <strong>SAVED DATA to: %s</strong>\n#####################\n\n',sname)
@@ -722,18 +722,20 @@ classdef runExperiment < optickaCore
 				
 				%================================initialise the user functions object
 				if ~exist(me.userFunctionsFile,'file')
-					me.userFunctionsFile = [me.paths.root filesep 'userFunctions.m'];
+					me.userFunctionsFile = fullfile(me.paths.root, 'CoreProtocols', 'myUserFunctions.m');
 				end
-				[p,f] = fileparts(me.userFunctionsFile);
-				if matches(p,me.paths.root); p = me.paths.protocols; end
-				if ~matches(f,"userFunctions")
-					copyfile(me.userFunctionsFile,[p filesep 'userFunctions.m']);
-					run([p filesep 'userFunctions.m']);
-				else	
-					run(me.userFunctionsFile)
+
+				run(me.userFunctionsFile);
+				uF = ans;
+				sc = superclasses(uF);
+
+				if ~isobject(uF) || ~isa(uF,'userFunctions') || ~any(matches(sc,'userFunctions'))
+					warning('The user functions file must return an object / child of the userFunctions class!');
+					run(fullfile(me.paths.root, 'CoreProtocols', 'myUserFunctions.m'));
+					uF = ans;
 				end
-				me.userFunctions		= ans; %#ok<NOANS> 
-				uF						= me.userFunctions;
+				
+				me.userFunctions		= uF;
 				uF.rE = me; uF.s = s; uF.task = task; uF.eT = eT;
 				uF.stims = stims; uF.io = io; uF.rM = rM; uF.verbose = me.verbose;
 				try uF.tM = tM; end
@@ -825,7 +827,7 @@ classdef runExperiment < optickaCore
 				elseif matches(lower(me.eyetracker.device),'irec')
 					eT.saveFile	= [me.paths.ALFPath filesep 'eyetracking.raw.irec.' me.name '.csv'];
 				end
-				fprintf('\n\n\n≣≣≣≣>>> START BEHAVIOURAL TASK: %s <<<≣≣≣≣',me.name);
+				fprintf('\n\n\n≣≣≣≣>>> START BEHAVIOURAL TASK: %s <<<≣≣≣≣\n',me.name);
 				fprintf('\tInitial Path: %s\n',me.paths.ALFPath);
 				fprintf('\tInitial Comments: %s\n\n\n',me.comment);
 
@@ -889,7 +891,7 @@ classdef runExperiment < optickaCore
 
 				%=============================Preemptive save in case of crash or error: SAVES IN /TMP
 				rE = me;
-				tS.tmpFile = [tempdir filesep 'TEMP' me.name '.mat'];
+				tS.tmpFile = fullfile(tempdir, append('TEMP', me.name, '.mat'));
 				fprintf('\n≣≣≣≣ Save initial state in case of crash: %s ...\n',tS.tmpFile);
 				save(tS.tmpFile,'rE','tS');
 				fprintf('\t ... Saved!\n');
@@ -1048,14 +1050,14 @@ classdef runExperiment < optickaCore
 						if me.sendStrobe && ~any(strcmpi(me.strobe.device,{'display++','datapixx'}))
 							sendStrobe(io);
 							me.sendStrobe = false;
-							addMessage(tL,GetSecs,[],[],['Sent Post-flip strobe: ' num2str(me.strobeDevice.sendValue)]);
+							addMessage(tL, [], [], [], append('Sent Post-flip strobe: ', num2str(me.strobeDevice.sendValue)));
 						end
 
 						% %----- Send Eyetracker messages -----%
 						if ~eT.isOff && me.sendSyncTime % sends SYNCTIME message to eyetracker
 							syncTime(eT);
 							me.sendSyncTime = false;
-							addMessage(tL,GetSecs,[],[],'Sent Post-flip Sync to Eyetracker');
+							addMessage(tL, [], [], [], 'Sent Post-flip Sync to Eyetracker');
 						end
 						 
 						% %------ Log stim / no stim + missed frame -----%
@@ -1065,7 +1067,7 @@ classdef runExperiment < optickaCore
 
 						% %------ Debug: if we missed a frame record it somewhere -----%
 						if me.debug && thisN > 0 && length(tL.miss)==thisN && length(tL.stimTime)==thisN && tL.miss(thisN) > 0 && tL.stimTime(thisN) > 0
-							addMessage(tL,[],[],[],'We missed a frame during stimulus'); 
+							addMessage(tL, [], [], [], 'We missed a frame during stimulus'); 
 						end
 						
 						%----- Increment our global tick counter -----%
@@ -1178,21 +1180,21 @@ classdef runExperiment < optickaCore
 				%================================
 				if tS.saveData
 					if ~exist(me.paths.ALFPath,'dir'); mkdir(me.paths.ALFPath); end
-					sname = [me.paths.ALFPath filesep 'opticka.raw.' me.name '.mat'];
+					sname = fullfile(me.paths.ALFPath, append('opticka.raw.', me.name, '.mat'));
 					rE = me;
 					save(sname,'rE','tS','-v7.3');
 					me.paths.sname = sname;
 					fprintf('\n\n#####################\n≣≣≣≣ <strong>SAVED RAW DATA to: %s</strong>\n#####################\n',sname)
 
 					try 
-						sname = [me.paths.ALFPath filesep 'opticka.details.' me.name '.json'];
+						sname = fullfile(me.paths.ALFPath, append('opticka.details.', me.name, '.json'));
 						j = jsonencode(tS);
 						writelines(j, sname);
 						fprintf('#####################\n≣≣≣≣ <strong>SAVED JSON DATA to: %s</strong>\n#####################\n',sname)
 					end
 
 					try
-						sname = [me.paths.ALFPath filesep 'events.table.' me.name '.tsv'];
+						sname = fullfile(me.paths.ALFPath, append('events.table.', me.name, '.tsv'));
 						tbl = messageTable(tL);
 						writetable(tbl, sname, 'FileType', 'text', 'Delimiter', '\t');
 						fprintf('#####################\n≣≣≣≣ <strong>SAVED TIMED EVENT DATA to: %s</strong>\n#####################\n\n',sname)
@@ -1356,7 +1358,7 @@ classdef runExperiment < optickaCore
 						t = sprintf('%s: test reward -- ',rM.fullName);
 						for i = 1:10
 							rM.giveReward;
-							s.drawTextNow([t 'Sending reward ' num2str(i)],[],[],40);
+							s.drawTextNow(append(t, 'Sending reward ', num2str(i)),[],[],40);
 							WaitSecs(0.2);
 						end
 						s.drawTextNow('Reward testing finished...',[],[],40);
@@ -2144,25 +2146,25 @@ classdef runExperiment < optickaCore
 			
 			clear tobiiManager eyelinkManager iRecManager pupilLabsManager eyetrackerCore
 
-			if ~isfield(me.eyetracker,'isettings'); me.eyetracker.isettings = []; end
-			if ~isfield(me.eyetracker,'psettings'); me.eyetracker.psettings = []; end
-			if ~isfield(me.eyetracker,'tsettings'); me.eyetracker.tsettings = []; end
-			if ~isfield(me.eyetracker,'esettings'); me.eyetracker.esettings = []; end
+			if ~isfield(me.eyetracker,'irecSettings'); me.eyetracker.irecSettings = []; end
+			if ~isfield(me.eyetracker,'pupilcoreSettings'); me.eyetracker.pupilcoreSettings = []; end
+			if ~isfield(me.eyetracker,'tobiiSettings'); me.eyetracker.tobiiSettings = []; end
+			if ~isfield(me.eyetracker,'eyelinkSettings'); me.eyetracker.eyelinkSettings = []; end
 
 			switch lower(me.eyetracker.device)
 				case 'tobii'
 					eT			= tobiiManager();
-					if ~isempty(me.eyetracker.tsettings); eT.addArgs(me.eyetracker.tsettings); end
+					if ~isempty(me.eyetracker.tobiiSettings); eT.addArgs(me.eyetracker.tobiiSettings); end
 					eT.saveFile	= [me.paths.savedData filesep me.name '.mat'];
 					eT.isOff	= false;
-				case 'eyelink'
+				case {'eyelink', 'el'}
 					eT			= eyelinkManager();
-					if ~isempty(me.eyetracker.esettings); eT.addArgs(me.eyetracker.esettings); end
+					if ~isempty(me.eyetracker.eyelinkSettings); eT.addArgs(me.eyetracker.eyelinkSettings); end
 					eT.saveFile	= [me.paths.savedData filesep me.name '.edf'];
 					eT.isOff	= false;
-				case 'irec'
+				case {'irec', 'irechs2'}
 					eT			= iRecManager();
-					if ~isempty(me.eyetracker.isettings); eT.addArgs(me.eyetracker.isettings); end
+					if ~isempty(me.eyetracker.irecSettings); eT.addArgs(me.eyetracker.irecSettings); end
 					eT.saveFile	= '';
 					eT.isOff	= false;
 				otherwise
@@ -2713,7 +2715,7 @@ classdef runExperiment < optickaCore
 				end
 			end
 			if ~isempty(me.variableInfo)
-				t = [t ' | ' me.variableInfo];
+				t = append(t, ' | ', me.variableInfo);
 			end
 			t = WrapString(t, 100);
 		end
@@ -2766,7 +2768,7 @@ classdef runExperiment < optickaCore
 			end
 			if (me.askForComments || tS.askForComments) && ~me.debug
 				opts.Interpreter='tex';opts.Resize='on';
-				ncomment = inputdlg(prompt,['Opticka: Comments for ' me.name],[10 80],{''},opts);
+				ncomment = inputdlg(prompt,append("Opticka: Comments for ", me.name),[10 80],{''},opts);
 				if ~isempty(ncomment)
 					ncomment = string(ncomment{1});
 					ncomment = strip(ncomment);

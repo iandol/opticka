@@ -95,7 +95,7 @@ classdef analysisCore < optickaCore
 				rD = me.rootDirectory;
 				isDir = false;
 				if ~exist(me.dir,'dir')
-					if ~isempty(regexpi(oldDir,[filesep '$'])); oldDir = oldDir(1:end-1); end
+					if ~isempty(regexpi(oldDir,append(filesep, '$'))); oldDir = oldDir(1:end-1); end
 					seps = regexpi(oldDir,filesep,'split');
 					while ~isDir
 						nd = [rD filesep seps{end}];
@@ -117,7 +117,7 @@ classdef analysisCore < optickaCore
 				if ~isempty(regexpi(me.dir,'^/Users/'))
 					re = regexpi(me.dir,'^(?<us>/Users/[^/]+)(?<rd>.+)','names');
 					if ~isempty(re.rd)
-						me.dir = ['~' re.rd];
+						me.dir = append('~', re.rd);
 					end
 				end
 				if isDir
@@ -151,7 +151,7 @@ classdef analysisCore < optickaCore
 			if isprop(me,'nSelection')
 				if ~isempty(me.selectedTrials)
 					for i = 1:length(me.selectedTrials)
-						disp(['---> Plotting eye position for: ' me.selectedTrials{i}.name]);
+						disp(append('---> Plotting eye position for: ', me.selectedTrials{i}.name));
 						me.p.eA.plot(me.selectedTrials{i}.idx,[],[],me.selectedTrials{i}.name);
 					end
 				end
@@ -193,9 +193,9 @@ classdef analysisCore < optickaCore
 			mt = 'p';
 			for i = 1:length(mlist1)
 				if strcmpi(mlist1{i},me.options.stats.method)
-					mt = [mt '|�' mlist1{i}];
+					mt = append(mt, '|�', mlist1{i});
 				else
-					mt = [mt '|' mlist1{i}];
+					mt = append(mt, '|', mlist1{i});
 				end
 			end
 			
@@ -203,9 +203,9 @@ classdef analysisCore < optickaCore
 			statistic = 'p';
 			for i = 1:length(mlist2)
 				if strcmpi(mlist2{i},me.options.stats.statistic)
-					statistic = [statistic '|�' mlist2{i}];
+					statistic = append(statistic, '|�', mlist2{i});
 				else
-					statistic = [statistic '|' mlist2{i}];
+					statistic = append(statistic, '|', mlist2{i});
 				end
 			end
 			

@@ -222,7 +222,7 @@ classdef iRecAnalysis < analysisCore
             if ~isempty(p); me.dir = p; end
 			cd(me.dir);
 			me.raw = readtable([f e],'ReadVariableNames',true);
-			me.markers = readtable([f 'net' e],'ReadVariableNames',true);
+			me.markers = readtable(append(f, 'net', e),'ReadVariableNames',true);
 			
 			me.sampleRate = 1/mean(diff(me.raw.time));
 

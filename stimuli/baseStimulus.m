@@ -414,13 +414,18 @@ classdef baseStimulus < optickaCore & dynamicprops
 		% ===================================================================
 		function run(me, benchmark, runtime, s, forceScreen, showVBL)
 			arguments(Input)
-				me
-				benchmark (1,1) logical		= false
-				runtime (1,1) double		= 2
-				s							= []
-				forceScreen (1,1) double	= -1
-				showVBL (1,1) logical		= false
+				me %self
+				benchmark logical	= false
+				runtime double		= 2
+				s					= []
+				forceScreen double	= -1
+				showVBL logical		= false
 			end
+
+			if isempty(benchmark); benchmark = false; end
+			if isempty(runtime); runtime = 2; end
+			if isempty(forceScreen); forceScreen = -1; end
+			if isempty(showVBL); showVBL = false; end
 
 			try
 

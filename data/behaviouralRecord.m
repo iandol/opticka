@@ -154,7 +154,7 @@ classdef behaviouralRecord < optickaCore
 			me.h.root = uifigure('Name',"Opticka: " + me.fullName,'NumberTitle','off','Tag','opticka');
 			if ~isMATLABReleaseOlderThan("R2025a"); theme(me.h.root,'light'); end
 			me.h.root.Units = 'normalized';
-			me.h.root.Position = [0.6 0 0.4 1];
+			me.h.root.Position = [0 0 0.4 1];
 			me.h.grid = uigridlayout(me.h.root,[2 1]);
 			me.h.grid.RowHeight = {'4x' '1x'};
 			me.h.grid.RowSpacing = 2;
@@ -433,8 +433,7 @@ classdef behaviouralRecord < optickaCore
 				startt = length(me.trials)-10; endt = length(me.trials);
 			end
 			for i = startt:endt
-				t{end+1} = ['#' num2str(i) '<' num2str(me.trials(i).response) '>: ' ...
-					char(me.trials(i).info)];
+				t{end+1} = append('#', num2str(i), '<', num2str(me.trials(i).response), '>: ', char(me.trials(i).info));
 			end
 			me.h.info.Value = t';
 			if ~me.plotOnly

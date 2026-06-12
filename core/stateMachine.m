@@ -225,6 +225,20 @@ classdef stateMachine < optickaCore
 			mergedValues = allowedDefaults;
 			mergedValues(defaultIndices) = infoValues(validIndices);
 			newState = cell2struct(mergedValues, allowedFields, 2);
+
+			% we need to ensure functions are row-ordered
+			if size(newState.entryFcn,1) > size(newState.entryFcn,2)
+				newState.entryFcn = newState.entryFcn';
+			end
+			if size(newState.withinFcn,1) > size(newState.withinFcn,2)
+				newState.withinFcn = newState.withinFcn';
+			end
+			if size(newState.transitionFcn,1) > size(newState.transitionFcn,2)
+				newState.transitionFcn = newState.transitionFcn';
+			end
+			if size(newState.exitFcn,1) > size(newState.exitFcn,2)
+				newState.exitFcn = newState.exitFcn';
+			end
 			
 			% append the new state to allStates
 			%   add to lookup table
@@ -335,8 +349,8 @@ classdef stateMachine < optickaCore
 					end
 				end
 				%run our within state functions
-				for wf = me.currentState.withinFcn
-					wf{1}();
+				for jj = 1:length(me.currentState.withinFcn)
+					feval(me.currentState.withinFcn{jj});
 				end
 			end
 		end
@@ -517,19 +531,23 @@ classdef stateMachine < optickaCore
 			me.verbose = true; %let's be chatty for the demo
 			me.fnTimers = true; %let's time our function evaluations for fun
 			fprintf('\n===>>> StateMachine Demo: time delta = %.3g | Real time mode = %i\n\n',me.timeDelta,me.realTime);
-			beginFcn = { @()fprintf('\t\t\t\tbegin state: Hello there!\n'); };
-			transitFcn = { @()fprintf('\t\t\t\ttransit state: Wait for it!\n'); };
-			endFcn = { @()fprintf('\t\t\t\tend state: See you!\n'); };
-			surpriseFcn = { @()fprintf('\t\t\t\tsurprise state: SURPRISE!!!\n'); };
+			beginFcn = { @()fprintf('Hi'); @()fprintf('\t\tbegin state: Entering!\n') };
+			next1Fcn = { @()fprintf('Hi'); @()fprintf('\t\tnext1 state: Entering!\n') };
+			next2Fcn = { @()fprintf('Hi'); @()fprintf('\t\tnext2 state: Entering!\n') };
+			next3Fcn = { @()fprintf('Hi'); @()fprintf('\t\tnext3 state: Entering!\n') };
+			endFcn = { @()fprintf('Hi'); @()fprintf('\t\t\t\tend state: See you!\n') };
+			transitFcn = { @()fprintf('Hi'); @()fprintf('\t\t\t\ttransit state: Wait for it!\n') };
+			surpriseFcn = { @()fprintf('Hi'); @()fprintf('\t\t\t\tsurprise state: SURPRISE!!!\n') };
 			withinFcn = {}; %don't run anything within the state
-			transitionFcn = { @()sprintf('surprise'); }; %returns a valid state name and thus triggers a transition
-			exitFcn = { @()fprintf('\t\t\t\t<<---exit state--->>\n'); };
+			transitionFcn = { @()sprintf('surprise') }; %returns a valid state name and thus triggers a transition
+			exitFcn = { @()fprintf('<<---exit state--->>\n') };
 			statesInfo = {
 				'name'		'next'		'time'	'entryFcn'	'withinFcn'	'transitionFcn'	'exitFcn'	'HED';
+				%--------------------------------------------------------------------------------------------------------
 				'begin'		'next1'		[2 4]	beginFcn	withinFcn	{}				exitFcn		'Experiment_control';
-				'next1'		'next2'		0.05	{}			withinFcn	{}				exitFcn		'Experiment_control';
-				'next2'		'next3'		0.1		{}			withinFcn	{}				exitFcn		'Experiment_control';
-				'next3'		'transit'	0.2		{}			withinFcn	{}				exitFcn		'Experiment_control';
+				'next1'		'next2'		0.05	next1Fcn	withinFcn	{}				exitFcn		'Experiment_control';
+				'next2'		'next3'		0.1		next2Fcn	withinFcn	{}				exitFcn		'Experiment_control';
+				'next3'		'transit'	0.2		next3Fcn	withinFcn	{}				exitFcn		'Experiment_control';
 				'transit'	'end'		2		transitFcn	withinFcn	transitionFcn	exitFcn		'Experiment_control';
 				'end'		''			2		endFcn		withinFcn	{}				exitFcn		'Experiment_control';
 				'surprise'	'end'		2		surpriseFcn	withinFcn	{}				exitFcn		'Experiment_control';
@@ -671,10 +689,11 @@ classdef stateMachine < optickaCore
 						if me.currentState.skipExitFcn; break; end
 					end
 				end
+				if me.verbose; me.logOutput('transitionToStateWithName method', 'Triggered!'); end
 				exitCurrentState(me);
 				enterStateAtIndex(me, index);
 			else
-				me.salutation('transitionToStateWithName method', ['ERROR, could not find state: ' nextName '; default to return to first state!!!\n'],true)
+				me.logOutput('transitionToStateWithName method', ['ERROR, could not find state: ' nextName '; default to return to first state!!!\n'],true)
 				enterStateAtIndex(me, 1);
 			end
 			
@@ -689,8 +708,8 @@ classdef stateMachine < optickaCore
 			if me.fnTimers; tx=tic; end
 			
 			if ~me.currentState.skipExitFcn 
-				for ef = me.currentState.exitFcn
-					ef{1}();
+				for jj = 1:length(me.currentState.exitFcn)
+					feval(me.currentState.exitFcn{jj});
 				end
 			end
 
@@ -727,7 +746,7 @@ classdef stateMachine < optickaCore
 			me.tempNextState = '';
 			
 			if me.verbose
-				me.salutation(['EXIT: ' me.currentState.name ...
+				me.logOutput(['EXIT: ' me.currentState.name ...
 					' @ ' num2str(me.log.tnow(me.log.n)-me.log.startTime,'%.2f') ...
 					's | state time: ' num2str(me.log.tnow(me.log.n)-me.log.entryTime(me.log.n),'%.2f'), ...
 					's | ' num2str(me.log.tick(me.log.n)) '/' num2str(me.totalTicks) ...
@@ -758,22 +777,22 @@ classdef stateMachine < optickaCore
 				me.nextTickOut = floor(me.currentState.time / me.timeDelta);
 				
 				% run our entry functions
-				for ef = me.currentState.entryFcn
-					ef{1}();
+				for jj = 1:length(me.currentState.entryFcn)
+					feval(me.currentState.entryFcn{jj});
 				end
 				%run our within state functions
-				for wf = me.currentState.withinFcn
-					wf{1}();
+				for jj = 1:length(me.currentState.withinFcn)
+					feval(me.currentState.withinFcn{jj});
 				end
 				if me.fnTimers; me.log.fevalEnter(me.thisN) = toc(tt)*1000; end
 				
 				if me.verbose
-					me.salutation(['ENTER: ' me.currentState.name ...
+					me.logOutput(['ENTER: ' me.currentState.name ...
 						' @ ' num2str(me.currentEntryTime-me.startTime, ...
 						'%.2f') 's - ' num2str(me.totalTicks) ' ticks'],''); 
 				end
 			else
-				if me.verbose; me.salutation('enterStateAtIndex method', 'newIndex is greater than stateList length'); end
+				if me.verbose; me.logOutput('enterStateAtIndex method', 'newIndex is greater than stateList length'); end
 				me.isFinishing = true;
 				finish(me);
 			end
