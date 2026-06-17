@@ -59,7 +59,7 @@ classdef timeLogger < optickaCore
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> allowed properties passed to object upon construction
-		allowedProperties = {'stimStateNames','timer','verbose','preallocateTimes','preallocateMessages'}
+		allowedProperties = {'stimStateNames', 'timer', 'verbose', 'preallocateTimes', 'preallocateMessages'}
 	end
 	
 	%=======================================================================
@@ -174,8 +174,8 @@ classdef timeLogger < optickaCore
 				HED string			= "Experimental-note"
 			end
 
-			if ismissing(message) || strlength(message) == 0; return; end
-			message = replace(message, ["\t" "\n"], " "); %remove newlines from message text
+			if isempty(message) || any(ismissing(message)) || strlength(message) == 0; return; end
+			message = replace(message(1), ["\t" "\n"], " "); %remove newlines from message text
 
 			if isempty(tick) || isnan(tick); tick = me.tick; end
 

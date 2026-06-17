@@ -1,12 +1,12 @@
 % DELAYED MATCH TO SAMPLE (DMS): The subject fixates a central cross,
-% then a sample image appears. After a blank delay period (maintaining
-% fixation), a choice array of images appears at peripheral locations.
+% then a sample image appears. After a delay period (maintaining
+% fixation only), a choice array of images appears at peripheral locations.
 % The subject must saccade to the image matching the sample to receive
 % a reward. Distractors are guarded by exclusion zones.
 %
-% Stimuli (configured via GUI):
+% Stimuli (configured from Opticka GUI):
 %   stims{1} = fixation cross
-%   stims{2} = sample image (shown at centre during sample phase)
+%   stims{2} = sample image (shown during sample phase)
 %   stims{3} = target (peripheral, image matched to sample via taskSequence)
 %   stims{4} = distractor 1
 %   stims{5} = distractor 2
@@ -26,7 +26,8 @@
 % rM		= Reward Manager
 % bR		= behavioural record plot (on-screen GUI during a task run)
 % uF		= user defined functions, see userFunctions.m
-% tS		= structure to hold general variables, saved as part of the data
+% tS		= structure to hold general variables, saved as part of the data file
+% tL		= timeLogger object to hold timing variables, saved as part of the data file
 
 %==================================================================
 %----------------------General Settings----------------------------
@@ -37,7 +38,6 @@ tS.rewardPin				= 2;		%==Output pin, 2 by default with Arduino.
 tS.keyExclusionPattern		= ["fixation","sample","delay","choice"]; %==skip keyboard check
 tS.enableTrainingKeys		= false;	%==enable keys useful during task training?
 tS.recordEyePosition		= false;	%==record local copy of eye position?
-tS.askForComments			= false;	%==UI requestor asks for comments before/after run
 tS.saveData					= true;		%==save behavioural and eye movement data?
 tS.showBehaviourPlot		= true;		%==open the behaviourPlot figure?
 tS.nStims					= stims.n;	%==number of stimuli, from metaStimulus object
@@ -51,9 +51,11 @@ tS.errorSound				= [300, 1, 1];		%==freq,length,volume
 %==================================================================
 %-----------------DMS timing parameters----------------------------
 % These control the key phases of the delayed-match-to-sample task.
-tS.sampleTime				= 0.5;		%==duration sample image is shown (seconds)
-tS.delayTime				= 1.0;		%==blank delay period (seconds)
-tS.choiceTime				= 5.0;		%==max time to make choice saccade (seconds)
+tS.sampleTime				= 0.5;			%==duration sample image is shown (seconds)
+tS.delayTime				= [1.0 2.0];	%==blank delay period (seconds)
+tS.choiceTime				= 10.0;			%==max time to make choice saccade (seconds)
+addMessage(tL, 0, [], [], sprintf('sampleTime: %0.2f, delayTime: %s, choiceTime: %0.2f', tS.sampleTime, num2str(tS.delayTime), tS.choiceTime),...
+ [], 'Experimental-note'); % HED message to store timing parameters in timeLogger
 
 %==================================================================
 %-----------------Debug logging to command window------------------
@@ -61,7 +63,7 @@ tS.choiceTime				= 5.0;		%==max time to make choice saccade (seconds)
 %sM.verbose					= true;		%==print out stateMachine info for debugging
 %stims.verbose				= true;		%==print out metaStimulus info for debugging
 %io.verbose					= true;		%==print out io commands for debugging
-%eT.verbose					= true;		%==print out eyelink commands for debugging
+eT.verbose					= true;		%==print out eyelink commands for debugging
 %rM.verbose					= true;		%==print out reward commands for debugging
 %task.verbose				= true;		%==print out task info for debugging
 
@@ -80,20 +82,20 @@ tS.fixX						= 0;
 % initial fixation Y position in degrees
 tS.fixY						= 0;
 % time to search and enter fixation window (initiate fixation)
-tS.firstFixInit				= 3;
+tS.firstFixInit				= 5;
 % time to maintain initial fixation within window, can be single value
 % or a range to randomise between
-tS.firstFixTime				= [0.25 0.75];
+tS.firstFixTime				= 0.25;
 % circular fixation window radius in degrees
 tS.firstFixRadius			= 2;
 % do we forbid eye to enter-exit-reenter fixation window?
 tS.strict					= true;
 % time to maintain fixation during sample presentation
-tS.sampleFixTime			= 0.5;
+tS.sampleFixTime			= tS.sampleTime;
 % time to maintain fixation during delay period
-tS.delayFixTime				= 0.5;
+tS.delayFixTime				= NaN; % this is computed per trial based on the randomised delay time, see delayEntryFn
 % time to search and enter target fixation window during choice
-tS.targetFixInit			= 0.5;
+tS.targetFixInit			= tS.choiceTime - 0.25;
 % time to maintain fixation on the chosen target
 tS.targetFixTime			= 0.25;
 % radius of the target fixation window in degrees
@@ -112,6 +114,7 @@ bR.correctStateName				= "correct";
 bR.breakStateName				= ["breakfix","incorrect"];
 
 %==================================================================
+%-------------------STATE MACHINE CONFIGURATION--------------------
 % N x 2 cell array of regexpi strings, list to skip the current -> next
 % state's exit functions; e.g. skipExitStates =
 % {'fixate','incorrect|breakfix'}; means if currentstate is 'fixate'
@@ -119,19 +122,29 @@ bR.breakStateName				= ["breakfix","incorrect"];
 sM.skipExitStates				= {'fixation','incorrect|breakfix'};
 
 %==================================================================
+%------------------SACCADE TARGET CONFIGURATION--------------------
 % which stimulus in the list is used for the saccade target?
 % Set to 3 = the peripheral target image that matches the sample.
-stims.fixationChoice			= 3;
-% which stimuli define exclusion zones? distractors.
-stims.exclusionChoice			= [4 5 6 7];
+stims.fixationChoice			= 2;
+% which stimuli define exclusion zones [distractors]?
+stims.exclusionChoice			= [3 4 5 6];
+stims.stimulusSets			= { 7, [1 7], [2 3 4 5 6] };
 
 %===================================================================
 %===================================================================
 %===================================================================
 %-----------------State Machine Task Functions---------------------
+%===================================================================
+%===================================================================
+%===================================================================
 
 %====================================================PAUSE
 %--------------------enter pause state
+% This is the state we enter at the start of the task, and whenever we want
+% to pause the task. The screen is blank, eye tracking is stopped, and a
+% message is displayed to the subject and operator. The task will only
+% resume when the operator presses the 'p' key, which triggers a transition
+% back to the 'prefixation' state.
 pauseEntryFn = {
 	@()hide(stims);
 	@()drawBackground(s); %blank the subject display
@@ -142,7 +155,7 @@ pauseEntryFn = {
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()stopRecording(eT, true); %stop recording eye position data
 	@()needFlip(me, false, 0); % no need to flip the PTB screen
-	@()needEyeSample(me,false); % no need to check eye position
+	@()needEyeSample(me, false); % no need to check eye position
 };
 
 %--------------------exit pause state
@@ -151,7 +164,11 @@ pauseExitFn = {
 };
 
 %====================================================PREFIXATION
-%--------------------prefixation entry
+%--------------------prefixation entry 
+% This is the state we enter at the start of each trial. We set up the
+% parameters for the trial, send a message to the eyetracker with the trial
+% info, and prepare the fixation target for the subject to look at. We also
+% start the PTB screen flip
 pfEntryFn = {
 	@()needFlip(me, true, 4); % start PTB screen flips, tracker screen flip
 	@()needEyeSample(me, true); % start measuring eye position
@@ -177,9 +194,15 @@ pfExitFn = {
 };
 
 %====================================================FIXATION
-%--------------------fixation entry
+%--------------------fixation entry 
+% In this state we show the fixation cross and test for fixation. If the
+% subject maintains fixation for the required time, we transition to the
+% sample phase. If they break fixation for too long, we transition to the
+% breakfix state. Note that we use a custom function testSearchHoldFixation
+% that allows the subject to search for fixation (i.e. enter and exit the
+% fixation window) for a certain amount of time before we break the trial.
 fixEntryFn = {
-	@()show(stims, 1); % show fixation cross (stims{1})
+	@()showSet(stims, 1); % show fixation cross (stims{1})
 	@()trackerMessage(eT,'MSG:Start Fixation');
 };
 
@@ -201,10 +224,10 @@ fixExitFn = {};
 %====================================================SAMPLE
 %--------------------sample entry
 sampleEntryFn = {
-	@()show(stims, [1 2]); % show fixation cross + sample image
+	@()showSet(stims, 2); % show fixation cross + sample image only
 	@()updateFixationValues(eT,[],[],[],tS.sampleFixTime); %reset fix timer
 	@()trackerMessage(eT,'MSG:Sample ON');
-	@()logRun(me,'SAMPLE');
+	@()logRun(me,'MSG:Sample ON');
 };
 
 %--------------------sample within
@@ -222,7 +245,7 @@ sampleFixFn = {
 
 %--------------------exit sample
 sampleExitFn = {
-	@()hide(stims, 2); % hide sample image, keep fixation cross
+	@()showSet(stims, 1); % hide sample image, keep fixation cross
 	@()trackerMessage(eT,'MSG:Sample OFF');
 };
 
@@ -231,13 +254,12 @@ sampleExitFn = {
 delayEntryFn = {
 	@()updateFixationValues(eT,[],[],[],tS.delayFixTime); %reset fix timer
 	@()trackerMessage(eT,'MSG:Delay ON');
-	@()logRun(me,'DELAY');
+	@()logRun(me,'MSG:Delay ON');
 };
 
 %--------------------delay within
 delayWithinFn = {
 	@()draw(stims); % only fixation cross visible
-	@()trackerDrawFixation(eT);
 	@()trackerDrawEyePosition(eT);
 };
 
@@ -248,7 +270,7 @@ delayFixFn = {
 
 %--------------------exit delay
 delayExitFn = {
-	@()hide(stims); % hide fixation cross for choice phase
+	@()showSet(stims, 3); % hide fixation cross and sample for choice phase
 };
 
 %====================================================CHOICE
@@ -260,13 +282,12 @@ choiceEntryFn = {
 	% create exclusion zones around distractor stimuli
 	@()updateExclusionZones(me, true, tS.exclusionRadius);
 	% show the choice array (target + distractors, stimuli 3..7)
-	@()show(stims, [3 4 5 6 7]);
 	% send a sync time message
 	@()doSyncTime(me);
 	% send strobe with stimulus value
 	@()doStrobe(me,true);
 	@()trackerMessage(eT,'MSG:Choice ON');
-	@()logRun(me,'CHOICE');
+	@()logRun(me,'MSG:Choice ON');
 };
 
 %--------------------choice within
@@ -287,6 +308,7 @@ choiceExitFn = {
 	@()setStrobeValue(me, me.strobe.stimOFFValue);
 	@()doStrobe(me,true);
 	@()trackerMessage(eT,'MSG:Choice OFF');
+	@()logRun(me,'MSG:Choice OFF');
 };
 
 %====================================================CORRECT
@@ -309,6 +331,9 @@ correctExitFn = {
 	@()updatePlot(bR, me); % update behavioural report plot
 	@()updateTask(me,tS.CORRECT); % move taskSequence to next trial
 	@()updateVariables(me,[],[],true); % randomise stimuli, set strobe
+	@()updateStimuliImages(uF); % update sample / distractor stimulus images for next trial
+	@()updateLocations(uF); % update distractor locations for next trial
+	@()updateDelayTime(uF); % update delay time for next trial based on randomised trial condition
 	@()update(stims); % update stimuli ready for display
 	@()resetAll(eT); % reset the exclusion zones and fixation state
 	@()plot(bR, 1); % actually do behaviour record drawing
@@ -324,7 +349,7 @@ incEntryFn = {
 	@()needEyeSample(me,false);
 	@()hide(stims);
 	@()beep(aM, tS.errorSound);
-	@()logRun(me,'INCORRECT'); %fprintf current trial info
+	@()logRun(me,'MSG:Incorrect'); %fprintf current trial info
 };
 
 %--------------------incorrect within
@@ -334,6 +359,9 @@ incWithinFn = {};
 incExitFn = {
 	@()updatePlot(bR, me);
 	@()updateVariables(me,[],[],false); % randomise stimuli, set strobe
+	@()updateStimuliImages(uF); % update sample / distractor stimulus images for next trial
+	@()updateLocations(uF); % update distractor location for next trial
+	@()updateDelayTime(uF); % update delay time for next trial based on randomised trial condition
 	@()update(stims); % update stimuli ready for display
 	@()resetAll(eT); % reset exclusion zones
 	@()plot(bR, 1);
@@ -349,7 +377,7 @@ breakEntryFn = {
 	@()needEyeSample(me,false);
 	@()hide(stims);
 	@()beep(aM, tS.errorSound);
-	@()logRun(me,'BREAKFIX'); %fprintf current trial info
+	@()logRun(me,'MSG:Breakfix'); %fprintf current trial info
 };
 
 %--------------------breakfix within
@@ -359,6 +387,9 @@ breakWithinFn = {};
 breakExitFn = {
 	@()updatePlot(bR, me);
 	@()updateVariables(me,[],[],false); % randomise stimuli, set strobe
+	@()updateStimuliImages(uF); % update sample / distractor stimulus images for next trial	
+	@()updateLocations(uF); % update distractor locations for next trial
+	@()updateDelayTime(uF); % update delay time for next trial based on randomised trial condition
 	@()update(stims); % update stimuli ready for display
 	@()resetAll(eT); % reset exclusion zones
 	@()plot(bR, 1);
@@ -417,19 +448,19 @@ gridFn = {
 % this table defines the states and relationships and function sets
 %==================================================================
 stateInfoTmp = {
-'name'		'next'		'time'	'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn';
+'name'		'next'		'time'			'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn';
 %---------------------------------------------------------------------------------------------
-'pause'		'prefixation'	inf		pauseEntryFn	{}				{}				pauseExitFn;
+'pause'		'prefixation'	inf			pauseEntryFn	{}				{}				pauseExitFn;
 %---------------------------------------------------------------------------------------------
-'prefixation'	'fixation'	0.5		pfEntryFn		pfWithinFn		{}				pfExitFn;
-'fixation'		'breakfix'	10		fixEntryFn		fixWithinFn		initFixFn		fixExitFn;
+'prefixation'	'fixation'	0.5			pfEntryFn		pfWithinFn		{}				pfExitFn;
+'fixation'		'breakfix'	10			fixEntryFn		fixWithinFn		initFixFn		fixExitFn;
 'sample'		'breakfix'	tS.sampleTime	sampleEntryFn	sampleWithinFn	sampleFixFn	sampleExitFn;
 'delay'			'breakfix'	tS.delayTime	delayEntryFn	delayWithinFn	delayFixFn	delayExitFn;
 'choice'		'incorrect'	tS.choiceTime	choiceEntryFn	choiceWithinFn	choiceFixFn	choiceExitFn;
 'correct'		'prefixation'	0.1		correctEntryFn	correctWithinFn	{}			correctExitFn;
-'incorrect'		'timeout'	0.1		incEntryFn		incWithinFn		{}				incExitFn;
-'breakfix'		'timeout'	0.1		breakEntryFn	breakWithinFn	{}				breakExitFn;
-'timeout'		'prefixation'	tS.timeOut	{}			{}				{}				{};
+'incorrect'		'timeout'	0.1			incEntryFn		incWithinFn		{}				incExitFn;
+'breakfix'		'timeout'	0.1			breakEntryFn	breakWithinFn	{}				breakExitFn;
+'timeout'		'prefixation' tS.timeOut	{}			{}				{}				{};
 %---------------------------------------------------------------------------------------------
 'calibrate'	'pause'		0.5		calibrateFn		{}				{}				{};
 'offset'	'pause'		0.5		offsetFn		{}				{}				{};

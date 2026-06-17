@@ -772,8 +772,8 @@ classdef opticka < optickaCore
 				try 
 					me.r.task.randomiseTask;
 					validate(me.r.task);
-				catch
-					warndlg('There is a problem with the stimulus variables, please check!')
+				catch ME
+					warning('There is a problem with the stimulus variables, please check!')
 				end
 				me.refreshVariableList;
 			catch ME
@@ -813,8 +813,8 @@ classdef opticka < optickaCore
 				try 
 					me.r.task.randomiseTask;
 					validate(me.r.task);
-				catch
-					warndlg('There is a problem with the stimulus variables, please check!')
+				catch ME
+					warning('There is a problem with the stimulus variables, please check!')
 				end
 				me.refreshVariableList;
 			catch ME
@@ -1224,19 +1224,19 @@ classdef opticka < optickaCore
 					me.r.stateInfoFile = p2;
 					msg = ['p2:' msg];
 				end
-				if ~isempty(me.r.stateInfoFile) && ~exist(me.r.stateInfoFile,'file') % first try to find the file in current dir
+				if ~isempty(me.r.stateInfoFile) && exist(me.r.stateInfoFile,'file')~=2 % first try to find the file in current dir
 					[~,f,e] = fileparts(me.r.stateInfoFile);
 					newfile = [pwd filesep f e];
-					if exist(newfile, 'file')
+					if exist(newfile, 'file')==2
 						me.r.stateInfoFile = newfile;
 						msg = ['pwd:' msg];
 					end
 				end	
-				if ~isempty(me.r.stateInfoFile) && ~exist(me.r.stateInfoFile,'file') % then try to replace the home directory
+				if ~isempty(me.r.stateInfoFile) && exist(me.r.stateInfoFile,'file')~=2 % then try to replace the home directory
 					me.r.stateInfoFile=regexprep(me.r.stateInfoFile,'(.+)(.Code.opticka.+)',[getenv('HOME') '$2'],'ignorecase','once');
 					msg = ['rehome:' msg];
 				end
-				if isempty(me.r.stateInfoFile) || ~exist(me.r.stateInfoFile,'file')
+				if isempty(me.r.stateInfoFile) || exist(me.r.stateInfoFile,'file')~=2
 					warning(['Couldn''t find state info file! Sources were: ' p1 ' ' p2 '  --  Revert to DefaultStateInfo.m']);
 					me.r.stateInfoFile = fullfile(me.paths.root, 'core', 'DefaultStateInfo.m');
 				else
@@ -1245,26 +1245,27 @@ classdef opticka < optickaCore
 				me.r.paths.stateInfoFile = me.r.stateInfoFile;
 				
 				%user functions file
+				me.r.userFunctionsFile = '';
 				if optickaCore.hasKey(tmp.r,'userFunctionsFile') && ~isempty(tmp.r.userFunctionsFile)
 					me.r.userFunctionsFile = tmp.r.userFunctionsFile;
 				end
 				[~,f,e] = fileparts(me.r.userFunctionsFile);
-				if ~exist(me.r.userFunctionsFile,'file') % first try to find the file in current dir
+				if exist(me.r.userFunctionsFile,'file')~=2 && ~isempty(f) 
 					newfile = [pwd filesep f e];
-					if exist(newfile, 'file')
+					if exist(newfile, 'file')==2
 						me.r.userFunctionsFile = newfile;
 					end
 				end	
-				if ~exist(me.r.userFunctionsFile,'file') % then try to replace the home directory
+				if exist(me.r.userFunctionsFile,'file')~=2 && ~isempty(me.r.userFunctionsFile) % then try to replace the home directory
 					me.r.userFunctionsFile=regexprep(me.r.userFunctionsFile,'(.+)(.Code.opticka.+)',[getenv('HOME') '$2'],'ignorecase','once');
 				end
-				if ~exist(me.r.userFunctionsFile,'file') % then try to replace the home directory
+				if exist(me.r.userFunctionsFile,'file')~=2  && ~isempty(me.r.userFunctionsFile) % then try to replace the home directory
 					me.r.userFunctionsFile=regexprep(me.r.userFunctionsFile,'(\/(home|Users)\/[^\/]+\/)(.+)',[getenv('HOME') filesep '$2'],'ignorecase','once');
 				end
-				if ~exist(me.r.userFunctionsFile,'file') % then try protocols folder
+				if exist(me.r.userFunctionsFile,'file')~=2  && ~isempty(f) % then try protocols folder
 					me.r.userFunctionsFile=fullfile(me.r.paths.protocols, [f e]);
 				end
-				if ~exist(me.r.userFunctionsFile,'file')
+				if exist(me.r.userFunctionsFile,'file')~=2
 					warning('Couldn''t find userFunctions file! Revert to default myUserFunctions.m');
 					me.r.userFunctionsFile = fullfile(me.paths.root, 'CoreProtocols', 'myUserFunctions.m');
 				end

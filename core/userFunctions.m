@@ -49,6 +49,8 @@ classdef userFunctions < handle %#ok<*MCFIL>
 		eT
 		%> touch manager
 		tM
+		%> time logger (saves timestamped messages
+		tL
 		%> alyx manager
 		alyx
 		%> toggle to send messages to the command window
@@ -57,6 +59,19 @@ classdef userFunctions < handle %#ok<*MCFIL>
 
 	%% ADD YOUR OWN VARIABLES HERE ↓ if you copy this file
 	properties 
+		
+	end
+
+	%=======================================================================
+	methods (Abstract) %------------------ABSTRACT METHODS
+	%=======================================================================
+
+		%> initial setup to run BEFORE the task starts; this will be called
+		%> by runExperiment before the state machine starts, and before the
+		%> first runExperiment.update(stims) call, so you can set up any
+		%> variables or stimuli here that you want to use in the task. You
+		%> can also call other functions from here to set things up.
+		initialSetup(me)
 		
 	end
 

@@ -107,7 +107,7 @@ classdef imageStimulus < baseStimulus
 			'direction','circularMask'}
 		%>properties to not create transient copies of during setup phase
 		ignoreProperties = {'type', 'scale', 'crop', 'filePath','nImages','chosenImages',...
-			'randomiseSelection','circularMask','currentFile'}
+			'randomiseSelection','circularMask','currentFile','filePaths','selection'}
 	end
 
 	%=======================================================================
@@ -305,7 +305,7 @@ classdef imageStimulus < baseStimulus
 			me.widthD = me.width / me.ppd;
 			me.heightD = me.height / me.ppd;
 			if me.sizeOut > 0
-				me.scale = me.sizeOut / (me.width / me.ppd);
+				me.scale = me.sizeOut / me.widthD; %scale size using WIDTH
 				me.szPx = round(me.sizeOut * me.ppd);
 				me.szD  = me.sizeOut;
 			else
@@ -427,6 +427,9 @@ classdef imageStimulus < baseStimulus
 			me.dstRect = [];
 			removeTmpProperties(me);
 		end
+		function resetImageHistory(me)
+			me.chosenImages = {};
+		end
 
 		% ===================================================================
 		%> @brief nImages
@@ -531,7 +534,8 @@ classdef imageStimulus < baseStimulus
 		end
 
 		% ===================================================================
-		%> @brief findFiles
+		%> @brief findFiles - check a folder and add all images to
+		%> filePaths cell array
 		%>
 		% ===================================================================
 		function findFiles(me)

@@ -144,17 +144,17 @@ classdef runExperiment < optickaCore
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
-		%> log of timings for MOC tasks
+		%> log of timings for MOC tasks (timeLogger object)
 		runLog
-		%> log of timings for state machine tasks
+		%> log of timings for state machine tasks (timeLogger object)
 		taskLog
-		%> behavioural responses log
+		%> behavioural responses log (behaviouralRecord object)
 		behaviouralRecord
-		%> stateMachine object
+		%> stateMachine object (stateMachine class)
 		stateMachine
-		%> eyetracker manager object
+		%> eyetracker manager object (eyetrackerManager class)
 		eyeTracker 
-		%> touch screen manager object
+		%> touch screen manager object (touchManager class)
 		touchDevice
 		%> strobe / trigger manager
 		strobeDevice
@@ -162,7 +162,7 @@ classdef runExperiment < optickaCore
 		userFunctions
 		%> data connection
 		dC
-		%> ALYX Manager
+		%> ALYX Manager (alyxManager class)
 		alyx
 		%> state machine control cell array
 		stateInfo cell				= {}
@@ -735,9 +735,10 @@ classdef runExperiment < optickaCore
 					uF = ans;
 				end
 				
-				me.userFunctions		= uF;
+				me.userFunctions = uF;
 				uF.rE = me; uF.s = s; uF.task = task; uF.eT = eT;
-				uF.stims = stims; uF.io = io; uF.rM = rM; uF.verbose = me.verbose;
+				uF.stims = stims; uF.io = io; uF.rM = rM; 
+				uF.tL = tL; uF.verbose = me.verbose;
 				try uF.tM = tM; end
 
 				%================================initialise the state machine
@@ -937,11 +938,15 @@ classdef runExperiment < optickaCore
 				task.switched				= 1;
 				task.totalRuns				= 1;
 				me.isTask					= tS.useTask;
+
+				%===========================Do initial setup
 				if me.isTask 
 					updateVariables(me, task.totalRuns, true, false); % set to first variable
+					try uF.initialSetup(); end
 					update(stims); %update our stimuli ready for display
 				else
 					updateVariables(me, 1, false, false); % set to first variable
+					try uF.initialSetup(); end
 					update(stims); %update our stimuli ready for display
 				end
 				tS.totalTicks			= 1; % a tick counter
@@ -989,7 +994,8 @@ classdef runExperiment < optickaCore
 				tL.screenLog.trackerStartOffset = getTimeOffset(eT);
 				
 				%==============================IGNITE the stateMachine!
-				fprintf('\n\n≣≣≣≣⊱⊱⊱ Igniting the State Machine... ⊰⊰⊰≣≣≣≣\n');
+				t = sprintf('≣≣≣≣⊱⊱⊱ Igniting the State Machine... ⊰⊰⊰≣≣≣≣');
+				addMessage(tL, [], [], [], t, [], 'Experimental-note'); disp(t);
 				start(sM);
 
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1022,21 +1028,21 @@ classdef runExperiment < optickaCore
 					if me.doFlip
 						%------ Display++ or DataPixx: I/O send strobe
 						% command for this screen flip needs to be sent
-						% PRIOR to the flip! Also remember DPP will be
+						% PRIOR to the flip! Also remember D++ will be
 						% delayed by one flip.
 						if me.sendStrobe && strcmpi(me.strobe.device,'display++')
 							sendStrobe(io); me.sendStrobe = false;
-							addMessage(tL,GetSecs,[],[],['Sent Pre-flip Display++ strobe command: ' num2str(me.strobeDevice.sendValue)]);
+							addMessage(tL, [], [], [], append('Sent Pre-flip Display++ strobe command: ', num2str(me.strobeDevice.sendValue)), [], 'Experiment-structure');
 						elseif me.sendStrobe && strcmpi(me.strobe.device,'datapixx')
 							triggerStrobe(io); me.sendStrobe = false;
-							addMessage(tL,GetSecs,[],[],['Sent Pre-flip Pixx strobe command: ' num2str(me.strobeDevice.sendValue)]);
+							addMessage(tL, [], [], [], append('Sent Pre-flip strobe command: ', num2str(me.strobeDevice.sendValue)), [], 'Experiment-structure');
 						end
 
 						%------ Do the actual Screen flip, save times if enabled.
 						nextvbl = tL.lastvbl + me.screenVals.halfisi;
 						if me.logFrames
-							[tL.t.vbl(tS.totalTicks),tL.t.show(tS.totalTicks),...
-							tL.t.flip(tS.totalTicks),tL.t.miss(tS.totalTicks)] ...
+							[tL.t.vbl(tS.totalTicks), tL.t.show(tS.totalTicks),...
+							tL.t.flip(tS.totalTicks), tL.t.miss(tS.totalTicks)] ...
 							= Screen('Flip', s.win, nextvbl);
 							tL.lastvbl = tL.t.vbl(tS.totalTicks);
 							thisN = tS.totalTicks;
@@ -1050,24 +1056,24 @@ classdef runExperiment < optickaCore
 						if me.sendStrobe && ~any(strcmpi(me.strobe.device,{'display++','datapixx'}))
 							sendStrobe(io);
 							me.sendStrobe = false;
-							addMessage(tL, [], [], [], append('Sent Post-flip strobe: ', num2str(me.strobeDevice.sendValue)));
+							addMessage(tL, [], [], [], append('Sent Post-flip strobe: ', num2str(me.strobeDevice.sendValue)), [], 'Experiment-structure');
 						end
 
 						% %----- Send Eyetracker messages -----%
 						if ~eT.isOff && me.sendSyncTime % sends SYNCTIME message to eyetracker
 							syncTime(eT);
 							me.sendSyncTime = false;
-							addMessage(tL, [], [], [], 'Sent Post-flip Sync to Eyetracker');
+							addMessage(tL, [], [], [], 'Sent Post-flip Sync to Eyetracker', [], 'Experiment-structure');
 						end
 						 
 						% %------ Log stim / no stim + missed frame -----%
 						if thisN > 0 && me.logFrames
-							logStim(tL,sM.currentState.name,thisN);
+							logStim(tL, sM.currentState.name, thisN);
 						end
 
 						% %------ Debug: if we missed a frame record it somewhere -----%
 						if me.debug && thisN > 0 && length(tL.miss)==thisN && length(tL.stimTime)==thisN && tL.miss(thisN) > 0 && tL.stimTime(thisN) > 0
-							addMessage(tL, [], [], [], 'We missed a frame during stimulus'); 
+							addMessage(tL, [], [], [], 'We missed a frame during stimulus', [], 'Experiment-structure'); 
 						end
 						
 						%----- Increment our global tick counter -----%
@@ -1803,7 +1809,7 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
-		function logRun(me, tag)
+		function logRun(me, tag, HED)
 		%> @fn logRun
 		%> @brief print run info to command window
 		%>
@@ -1811,13 +1817,14 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 			if me.isRunning
 				if ~exist('tag','var'); tag = '#'; end
+				if ~exist('HED','var'); HED = 'Experimental-note'; end
 				t = sprintf('≣≣≣≣⊱ %s : %s', tag, infoText(me));
 				fprintf('%s\n',t);
 				me.behaviouralRecord.info = t;
 				if me.isRunTask
-					me.taskLog.addMessage([],[],[],t);
+					addMessage(me.taskLog, [], [], [], t, [], HED);
 				else
-					me.runLog.addMessage([],[],[],t);
+					addMessage(me.runLog,  [], [], [], t, [], HED);
 				end
 			end			
 		end
@@ -1840,7 +1847,13 @@ classdef runExperiment < optickaCore
 				sinfo = sprintf('%s stim:%i<tick:%i drawtick:%i>',sinfo,i,me.stimuli{i}.tick,me.stimuli{i}.drawTick);
 			end
 			info = [info ' ' sinfo '\n' me.variableInfo];
-			updateTask(me.task,result,GetSecs,info); %do this before getting index
+			ts = GetSecs;
+			if ~isempty(me.taskLog)
+				addMessage(me.taskLog, [], ts, [], info, 'getsecs', 'Experimental-note');
+			elseif ~isempty(me.runLog)
+				addMessage(me.runLog, [], ts, [], info, 'getsecs', 'Experimental-note');
+			end
+			updateTask(me.task, result, ts, info); %do this before getting index
 		end
 
 		% ===================================================================
@@ -1918,25 +1931,27 @@ classdef runExperiment < optickaCore
 					valueList = cell(1); oValueList = cell(1); %#ok<NASGU>
 					doXY = false; doColour = false;
 					stimIdx = me.task.nVar(i).stimulus; %which stimuli
-					value=me.task.outVars{thisBlock,i}(thisRun);
+					stimIdx(isnan(stimIdx)) = []; % remove NaNs
+					if isempty(stimIdx); continue; end
+					value = me.task.outVars{thisBlock,i}(thisRun);
 					if iscell(value)
 						value = value{1};
 					end
 					[valueList{1,1:size(stimIdx,2)}] = deal(value);
-					name=[me.task.nVar(i).name 'Out']; %which parameter
+					name = [me.task.nVar(i).name 'Out']; %which parameter
 					
 					if matches(name,'colourBothOut')
-						doColour = true;
+						doColour			= true;
 					elseif matches(name,'xyPositionOut')
-						doXY = true;
-						me.lastXPosition = value(1);
-						me.lastYPosition = value(2);
+						doXY				= true;
+						me.lastXPosition	= value(1);
+						me.lastYPosition	= value(2);
 					elseif matches(name,'xPositionOut')
-						me.lastXPosition = value;
+						me.lastXPosition	= value;
 					elseif matches(name,'yPositionOut')
-						me.lastYPosition = value;
+						me.lastYPosition	= value;
 					elseif matches(name,'sizeOut')
-						me.lastSize = value;
+						me.lastSize			= value;
 					end
 					
 					offsetix = me.task.nVar(i).offsetstimulus;
@@ -2022,6 +2037,11 @@ classdef runExperiment < optickaCore
 						end
 						a = a + 1;
 					end
+				end
+				if ~isempty(me.taskLog)
+					addMessage(me.taskLog, [], [], [], t, [], 'Experimental-note');
+				elseif ~isempty(me.runLog)
+					addMessage(me.runLog,  [], [], [], t, [], 'Experimental-note');
 				end
 				me.variableInfo = t;
 				me.behaviouralRecord.info = [me.behaviouralRecord.info t];

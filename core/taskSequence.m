@@ -866,7 +866,7 @@ classdef taskSequence < optickaCore & dynamicprops
 				me.nVar = [];
 				shift = 0;
 				for i = 1:length(vin)
-					if isempty(vin(i).name) || isempty(vin(i).values) || isempty(vin(i).stimulus)
+					if isempty(vin(i).name) || isempty(vin(i).values)
 						vout(i + shift) = [];
 						shift = shift-1;
 					end

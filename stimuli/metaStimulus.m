@@ -32,7 +32,7 @@ classdef metaStimulus < optickaCore
 		maskStimuli	cell	= {}
 		%> do we draw the mask stimuli instead?
 		showMask logical	= false
-		%> sets of stimuli, e.g. [[1 2 3], [2 3], [1 3]]
+		%> sets of stimuli, e.g. {[1 2 3], [2 3], [1 3]}
 		%> you can quickly switch sets with showSet()
 		stimulusSets		= []
 		%> default set of stimuli to display when calling showSet()
