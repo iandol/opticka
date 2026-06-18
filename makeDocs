@@ -11,16 +11,16 @@ MATLAB=`which matlab`
 # and optickaBehaviourTest.m
 if [[ "$(uname -s)" = "Darwin" ]]; then 
 	if [ -f $MATLAB ]; then
-		$MATLAB -nodesktop -nosplash -r "Screen('Preference', 'SkipSyncTests', 2);publish('optickaTest.m');sca;close all;clear all;pause(1);publish('optickaBehaviourTest.m');sca;close all;clear all;pause(1);exit"
+		$MATLAB -nodesktop -r "Screen('Preference', 'SkipSyncTests', 2);publish('optickaTest.m');sca;close all;clear all;pause(1);publish('optickaBehaviourTest.m');sca;close all;clear all;pause(1);exit"
 	fi
 else
 	if [ -f $MATLAB ]; then
-		$MATLAB -nodesktop -nosplash -r "publish('optickaTest.m');sca;close all;clear all;pause(1);publish('optickaBehaviourTest.m');pause(1);exit"
+		$MATLAB -nodesktop -r "publish('optickaTest.m');sca;close all;clear all;pause(1);publish('optickaBehaviourTest.m');pause(1);exit"
 	fi
 fi
 
 # We scrape the version number from the main opticka file
-VER=$(grep -o -E -e "optickaVersion\schar\s+=\s+'[0-9\.]+'" opticka.m | grep -o -E -e "[0-9\.]+")
+VER=$(grep -o -E -e "optickaVersion\schar\s+=\s+'[0-9\.]+'" core/optickaCore.m | grep -o -E -e "[0-9\.]+")
 echo; echo "---> Opticka version = $VER"; echo
 sleep 1
 # and then auto-edit the Doxygen file
@@ -41,11 +41,15 @@ echo; echo "---> Ran doxygen"
 sleep 1
 mv html/ docs/
 
-list=("uihelpvars" "uihelpstims" "uihelpstate" "uihelpfunctions" "uihelptask")
+list=("uihelpvars" "uihelpstims" "uihelpstate" "uihelpfunctions" "uihelptask" "METHODS" "INSTALL")
 for x in $list; do
 	pandoc -d "help/help.yaml" -o "help/${x}.html" "help/${x}.md"
 done
-cp help/*.html docs/
+cp -v help/*.html docs/
+cp -rv help/media docs/media 
+# needs typst installed, and the typst binary in your path. See https://typst.app/docs/install
+[[ -x "$(command -v typst)" ]] && pandoc -d "help/pdf.yaml" -o "help/opticka-docs.pdf" "help/opticka-docs.md"
+cp -v help/opticka-docs.pdf docs/
 
 if [[ "$(uname -s)" = "Darwin" ]]; then 
 	open docs/index.html

@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
-  <title>uihelpstate</title>
+  <title>Controlling Behavioural Tasks using State Machines</title>
   <style>
   html {font-family: Hoefler Text, Palatino, Georgia, serif;
     color: #1a1a1a;
@@ -22,7 +22,7 @@
     font-kerning: normal;
   }
 
-  @media (max-width: 600px) {body {font-size: 0.9em;
+  @media (max-width: 800px) {body {font-size: 0.9em;
     padding: 1em;}
     h1 {font-size: 1.8em;}
   }
@@ -187,7 +187,38 @@
 <body>
 <nav id="TOC" role="doc-toc">
 <h2 id="toc-title">Contents</h2>
-
+<ul>
+<li><a href="#controlling-behavioural-tasks-using-state-machines"
+id="toc-controlling-behavioural-tasks-using-state-machines">Controlling
+Behavioural Tasks using State Machines</a></li>
+<li><a href="#state-table-format" id="toc-state-table-format">State
+Table Format</a>
+<ul>
+<li><a href="#example-fixate-state-definition"
+id="toc-example-fixate-state-definition">Example: fixate state
+definition</a></li>
+</ul></li>
+<li><a href="#standard-states" id="toc-standard-states">Standard
+States</a>
+<ul>
+<li><a href="#protocol-specific-states"
+id="toc-protocol-specific-states">Protocol-specific states</a></li>
+</ul></li>
+<li><a href="#the-ts-structure" id="toc-the-ts-structure">The
+<code>tS</code> Structure</a></li>
+<li><a href="#conditional-function-assembly"
+id="toc-conditional-function-assembly">Conditional Function Assembly</a>
+<ul>
+<li><a href="#includeerrors-pattern"
+id="toc-includeerrors-pattern">includeErrors pattern</a></li>
+<li><a href="#usetask-pattern" id="toc-usetask-pattern">useTask
+pattern</a></li>
+<li><a href="#dynamic-next-state-pattern"
+id="toc-dynamic-next-state-pattern">Dynamic next-state pattern</a></li>
+</ul></li>
+<li><a href="#skipexitstates"
+id="toc-skipexitstates">skipExitStates</a></li>
+</ul>
 </nav>
 <h1 id="controlling-behavioural-tasks-using-state-machines">Controlling
 Behavioural Tasks using State Machines</h1>
@@ -200,7 +231,7 @@ The important definition of a state machine is:</p>
 <li>The state machine must be in exactly one of a finite number of
 states at any given time. States run for a defined amount of time by
 default before switching to a <code>next</code> state.</li>
-<li>The state machine cal also change from one state to another based on
+<li>The state machine can also change from one state to another based on
 rules; the conditional change from one state to another is called a
 <strong>transition</strong>. A function controls the transition
 (<code>transitionFcn</code>), returning a different state name that
@@ -226,6 +257,13 @@ several experiment states (<em>prefix</em>, <em>fixate</em>,
 <em>stimulus</em>, <em>incorrect</em>, <em>breakfix</em>,
 <em>correct</em>, <em>timeout</em>) and how the task switches between
 them (either with a timer or transitioned using an eyetracker):</p>
+<figure id="example-state-machine">
+<img src="media/f802c7a77f8bb32e2bb944266e6fe8d94569553f.svg"
+alt="“An example state machine task.”" />
+<figcaption aria-hidden="true"><p>“An example state machine
+task.”</p></figcaption>
+</figure>
+<p>The same state flow shown as an ASCII diagram:</p>
 <pre class="smaller"><code>                                                       ┌───────────────────┐
                                                        │      prefix       │
   ┌──────────────────────────────────────────────────▶ │    hide(stims)    │ ◀┐
@@ -258,7 +296,338 @@ them (either with a timer or transitioned using an eyetracker):</p>
 <p>State info files, being plain <code>.m</code> files, should be edited
 in the MATLAB editor (the GUI has an edit button that opens the file in
 the editor for you).</p>
+<h1 id="state-table-format">State Table Format</h1>
+<p>The state machine is defined as a cell array with 8 columns:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="va">stateInfoTmp</span> <span class="op">=</span> {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ss">&#39;name&#39;</span>  <span class="ss">&#39;next&#39;</span>  <span class="ss">&#39;time&#39;</span>  <span class="ss">&#39;entryFcn&#39;</span>  <span class="ss">&#39;withinFcn&#39;</span>  <span class="ss">&#39;transitionFcn&#39;</span>  <span class="ss">&#39;exitFcn&#39;</span> <span class="ss">&#39;HED&#39;</span><span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="op">...</span><span class="va">rows</span> <span class="kw">for</span> <span class="va">each</span> <span class="va">state</span><span class="op">...</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span></code></pre></div>
+<table>
+<colgroup>
+<col style="width: 38%" />
+<col style="width: 61%" />
+</colgroup>
+<thead>
+<tr>
+<th>Column</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code></td>
+<td>State name (string). Must be unique.</td>
+</tr>
+<tr>
+<td><code>next</code></td>
+<td>Default next state after the time expires.</td>
+</tr>
+<tr>
+<td><code>time</code></td>
+<td>Maximum time in seconds before auto-transition to <code>next</code>.
+Use <code>Inf</code> for no timeout.</td>
+</tr>
+<tr>
+<td><code>entryFcn</code></td>
+<td>Cell array of <code>@()</code> function handles run
+<strong>once</strong> on state entry.</td>
+</tr>
+<tr>
+<td><code>withinFcn</code></td>
+<td>Cell array of <code>@()</code> function handles run <strong>every
+frame</strong> while in this state.</td>
+</tr>
+<tr>
+<td><code>transitionFcn</code></td>
+<td>Cell array of <code>@()</code> function handles that return a state
+name string to force an early transition. Returns <code>''</code> to
+stay in current state.</td>
+</tr>
+<tr>
+<td><code>exitFcn</code></td>
+<td>Cell array of <code>@()</code> function handles run
+<strong>once</strong> on state exit.</td>
+</tr>
+<tr>
+<td><code>HED</code></td>
+<td><a href="https://www.hedtags.org">Hierarchical event descriptor</a>
+tag for this state.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="example-fixate-state-definition">Example: fixate state
+definition</h3>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="va">fixEntryFcn</span> <span class="op">=</span> { <span class="op">@</span>()<span class="va">show</span>(<span class="va">stims</span><span class="op">,</span> <span class="fl">2</span>)<span class="op">;</span> <span class="op">@</span>()<span class="va">draw</span>(<span class="va">stims</span>) }<span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="va">fixFcn</span>      <span class="op">=</span> { <span class="op">@</span>()<span class="va">draw</span>(<span class="va">stims</span>)<span class="op">;</span> <span class="op">@</span>()<span class="va">drawPhotoDiodeSquare</span>(<span class="va">s</span><span class="op">,</span> [<span class="fl">0</span> <span class="fl">0</span> <span class="fl">0</span>]) }<span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="va">inFixFcn</span>    <span class="op">=</span> { <span class="op">@</span>()<span class="va">testSearchHoldFixation</span>(<span class="va">eT</span><span class="op">,</span> <span class="ss">&#39;stimulus&#39;</span><span class="op">,</span> <span class="ss">&#39;breakfix&#39;</span>) }<span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="va">fixExitFcn</span>  <span class="op">=</span> { <span class="op">@</span>()<span class="va">updateFixationValues</span>(<span class="va">eT</span><span class="op">,</span> []<span class="op">,</span> []<span class="op">,</span> []<span class="op">,</span> <span class="va">tS</span>.<span class="va">stimulusFixTime</span>)<span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>                <span class="op">@</span>()<span class="va">show</span>(<span class="va">stims</span>)<span class="op">;</span> <span class="op">@</span>()<span class="va">trackerMessage</span>(<span class="va">eT</span><span class="op">,</span> <span class="ss">&#39;END_FIX&#39;</span>) }<span class="op">;</span></span></code></pre></div>
+<h1 id="standard-states">Standard States</h1>
+<p>Most Opticka protocols use a common set of standard states. You can
+add, remove, or rename states as needed for your paradigm.</p>
+<table>
+<colgroup>
+<col style="width: 24%" />
+<col style="width: 31%" />
+<col style="width: 44%" />
+</colgroup>
+<thead>
+<tr>
+<th>State</th>
+<th>Purpose</th>
+<th>Typical Time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pause</code></td>
+<td>Task paused, screen blanked, ET stopped</td>
+<td><code>Inf</code> (manual resume)</td>
+</tr>
+<tr>
+<td><code>prefix</code> / <code>blank</code> / <code>prestim</code></td>
+<td>Pre-trial setup, ET initialisation, hide stimuli</td>
+<td>0.2–0.5 s</td>
+</tr>
+<tr>
+<td><code>fixate</code> / <code>fixation</code></td>
+<td>Subject initiates and holds fixation</td>
+<td><code>Inf</code> (transition-driven)</td>
+</tr>
+<tr>
+<td><code>stimulus</code> / <code>sample</code></td>
+<td>Stimulus presentation while maintaining fixation</td>
+<td><code>Inf</code> (transition-driven)</td>
+</tr>
+<tr>
+<td><code>correct</code></td>
+<td>Reward + positive feedback</td>
+<td>0.3–1.0 s</td>
+</tr>
+<tr>
+<td><code>incorrect</code></td>
+<td>Error feedback</td>
+<td>0.3–0.5 s</td>
+</tr>
+<tr>
+<td><code>breakfix</code></td>
+<td>Fixation break feedback</td>
+<td>0.3–0.5 s</td>
+</tr>
+<tr>
+<td><code>timeout</code></td>
+<td>Delay after error</td>
+<td>0.5–2.0 s</td>
+</tr>
+<tr>
+<td><code>calibrate</code></td>
+<td>Eyetracker calibration</td>
+<td><code>Inf</code> (manual exit)</td>
+</tr>
+<tr>
+<td><code>drift</code></td>
+<td>Drift correction</td>
+<td><code>Inf</code> (manual exit)</td>
+</tr>
+<tr>
+<td><code>offset</code></td>
+<td>Drift offset</td>
+<td><code>Inf</code> (manual exit)</td>
+</tr>
+<tr>
+<td><code>override</code></td>
+<td>Debug override mode (keyboard control)</td>
+<td><code>Inf</code> (manual exit)</td>
+</tr>
+<tr>
+<td><code>flash</code></td>
+<td>Full-screen flash (photodiode calibration)</td>
+<td>0.1 s</td>
+</tr>
+<tr>
+<td><code>showgrid</code></td>
+<td>1-degree grid display</td>
+<td><code>Inf</code> (manual exit)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="protocol-specific-states">Protocol-specific states</h3>
+<p>Some protocols add custom states:</p>
+<table>
+<thead>
+<tr>
+<th>State</th>
+<th>Protocol</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>catchtrial</code></td>
+<td>SaccadePhosphene</td>
+<td>Catch trial with no visual target</td>
+</tr>
+<tr>
+<td><code>exclusion</code></td>
+<td>SaccadePhosphene</td>
+<td>Entered an exclusion zone</td>
+</tr>
+<tr>
+<td><code>delay</code></td>
+<td>DMTS</td>
+<td>Blank delay period between sample and choice</td>
+</tr>
+<tr>
+<td><code>choice</code></td>
+<td>DMTS</td>
+<td>Choice array with target + distractors</td>
+</tr>
+<tr>
+<td><code>magstim</code></td>
+<td>DotDirection, DotColour</td>
+<td>Magnetic stimulation trigger</td>
+</tr>
+</tbody>
+</table>
+<h1 id="the-ts-structure">The <code>tS</code> Structure</h1>
+<p>The <code>tS</code> structure is created in the state info file and
+holds all the settings and constants used throughout the experiment.
+Common fields include:</p>
+<table>
+<colgroup>
+<col style="width: 35%" />
+<col style="width: 65%" />
+</colgroup>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tS.name</code></td>
+<td>Protocol name</td>
+</tr>
+<tr>
+<td><code>tS.saveData</code></td>
+<td>Whether to save data after each trial</td>
+</tr>
+<tr>
+<td><code>tS.useTask</code></td>
+<td>Whether to use the task sequence</td>
+</tr>
+<tr>
+<td><code>tS.includeErrors</code></td>
+<td>Whether to advance the task on errors
+(vs. <code>resetRun</code>)</td>
+</tr>
+<tr>
+<td><code>tS.enableTrainingKeys</code></td>
+<td>Enable arrow-key stimulus adjustment</td>
+</tr>
+<tr>
+<td><code>tS.keyExclusionPattern</code></td>
+<td>Key names to exclude from task control</td>
+</tr>
+<tr>
+<td><code>tS.CORRECT</code> / <code>tS.INCORRECT</code> /
+<code>tS.BREAKFIX</code></td>
+<td>Numeric codes for trial results</td>
+</tr>
+<tr>
+<td><code>tS.correctSound</code> / <code>tS.errorSound</code></td>
+<td>Sound frequency for feedback beeps</td>
+</tr>
+<tr>
+<td><code>tS.fixX</code> / <code>tS.fixY</code></td>
+<td>Fixation window centre position (degrees)</td>
+</tr>
+<tr>
+<td><code>tS.firstFixInit</code></td>
+<td>Time allowed to search for fixation window</td>
+</tr>
+<tr>
+<td><code>tS.firstFixTime</code></td>
+<td>Required fixation hold time</td>
+</tr>
+<tr>
+<td><code>tS.firstFixRadius</code></td>
+<td>Fixation window radius</td>
+</tr>
+<tr>
+<td><code>tS.stimulusFixTime</code></td>
+<td>Fixation hold time during stimulus</td>
+</tr>
+<tr>
+<td><code>tS.strict</code></td>
+<td>Strict fixation mode (cannot leave window)</td>
+</tr>
+<tr>
+<td><code>tS.tOut</code></td>
+<td>Timeout duration after errors</td>
+</tr>
+</tbody>
+</table>
+<h1 id="conditional-function-assembly">Conditional Function
+Assembly</h1>
+<p>State info files often conditionally assemble function arrays based
+on <code>tS</code> settings. This allows a single state file to support
+multiple experimental modes.</p>
+<h3 id="includeerrors-pattern">includeErrors pattern</h3>
+<p>When <code>tS.includeErrors</code> is <code>true</code>, errors
+advance the task sequence. When <code>false</code>,
+<code>resetRun(task)</code> is called instead, randomising within the
+current block:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="va">exitFcn</span> <span class="op">=</span> { <span class="op">@</span>()<span class="va">updatePlot</span>(<span class="va">bR</span><span class="op">,</span><span class="va">me</span>)<span class="op">;</span> <span class="op">@</span>()<span class="va">updateVariables</span>(<span class="va">me</span>)<span class="op">;</span> <span class="op">@</span>()<span class="va">update</span>(<span class="va">stims</span>)<span class="op">;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>            <span class="op">@</span>()<span class="va">resetAll</span>(<span class="va">eT</span>)<span class="op">;</span> <span class="op">@</span>()<span class="va">plot</span>(<span class="va">bR</span><span class="op">,</span><span class="fl">1</span>) }<span class="op">;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="kw">if</span> <span class="va">tS</span>.<span class="va">includeErrors</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="va">incExitFcn</span>  <span class="op">=</span> [ { <span class="op">@</span>()<span class="va">logRun</span>(<span class="va">me</span><span class="op">,</span><span class="ss">&#39;INCORRECT&#39;</span>)<span class="op">;</span> <span class="op">@</span>()<span class="va">updateTask</span>(<span class="va">me</span><span class="op">,</span><span class="va">tS</span>.<span class="va">INCORRECT</span>) }<span class="op">;</span> <span class="va">exitFcn</span> ]<span class="op">;</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="va">breakExitFcn</span> <span class="op">=</span> [ { <span class="op">@</span>()<span class="va">logRun</span>(<span class="va">me</span><span class="op">,</span><span class="ss">&#39;BREAK_FIX&#39;</span>)<span class="op">;</span> <span class="op">@</span>()<span class="va">updateTask</span>(<span class="va">me</span><span class="op">,</span><span class="va">tS</span>.<span class="va">BREAKFIX</span>) }<span class="op">;</span> <span class="va">exitFcn</span> ]<span class="op">;</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="kw">else</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    <span class="va">incExitFcn</span>  <span class="op">=</span> [ { <span class="op">@</span>()<span class="va">logRun</span>(<span class="va">me</span><span class="op">,</span><span class="ss">&#39;INCORRECT&#39;</span>)<span class="op">;</span> <span class="op">@</span>()<span class="va">resetRun</span>(<span class="va">task</span>) }<span class="op">;</span> <span class="va">exitFcn</span> ]<span class="op">;</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    <span class="va">breakExitFcn</span> <span class="op">=</span> [ { <span class="op">@</span>()<span class="va">logRun</span>(<span class="va">me</span><span class="op">,</span><span class="ss">&#39;BREAK_FIX&#39;</span>)<span class="op">;</span> <span class="op">@</span>()<span class="va">resetRun</span>(<span class="va">task</span>) }<span class="op">;</span> <span class="va">exitFcn</span> ]<span class="op">;</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="kw">end</span></span></code></pre></div>
+<h3 id="usetask-pattern">useTask pattern</h3>
+<p>When <code>tS.useTask</code> is true, check if the task has ended
+after each trial:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">if</span> <span class="va">tS</span>.<span class="va">useTask</span> <span class="op">||</span> <span class="va">task</span>.<span class="va">nBlocks</span> <span class="op">&gt;</span> <span class="fl">0</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="va">correctExitFcn</span> <span class="op">=</span> [ <span class="va">correctExitFcn</span><span class="op">;</span> {<span class="op">@</span>()<span class="va">checkTaskEnded</span>(<span class="va">me</span>)} ]<span class="op">;</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="va">incExitFcn</span>     <span class="op">=</span> [ <span class="va">incExitFcn</span><span class="op">;</span>     {<span class="op">@</span>()<span class="va">checkTaskEnded</span>(<span class="va">me</span>)} ]<span class="op">;</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="va">breakExitFcn</span>   <span class="op">=</span> [ <span class="va">breakExitFcn</span><span class="op">;</span>   {<span class="op">@</span>()<span class="va">checkTaskEnded</span>(<span class="va">me</span>)} ]<span class="op">;</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="kw">end</span></span></code></pre></div>
+<h3 id="dynamic-next-state-pattern">Dynamic next-state pattern</h3>
+<p>Use <code>trialVar</code> or <code>blockVar</code> to dynamically
+choose the next state:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co">% In tS setup:</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="va">task</span>.<span class="va">trialVar</span>.<span class="va">values</span> <span class="op">=</span> {<span class="ss">&#39;stimulus&#39;</span><span class="op">,</span> <span class="ss">&#39;catch&#39;</span>}<span class="op">;</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="va">task</span>.<span class="va">trialVar</span>.<span class="va">probability</span> <span class="op">=</span> [<span class="fl">0.8</span> <span class="fl">0.2</span>]<span class="op">;</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="co">% In fixate transition:</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="op">@</span>()<span class="va">updateNextState</span>(<span class="va">me</span><span class="op">,</span> <span class="ss">&#39;trial&#39;</span>)</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="op">@</span>()<span class="va">testSearchHoldFixation</span>(<span class="va">eT</span><span class="op">,</span> <span class="va">sM</span>.<span class="va">tempNextState</span><span class="op">,</span> <span class="ss">&#39;incorrect&#39;</span>)</span></code></pre></div>
+<h1 id="skipexitstates">skipExitStates</h1>
+<p>When the task ends (all blocks complete), the state machine loops
+back from
+<code>correct</code>/<code>incorrect</code>/<code>breakfix</code> to
+<code>prefix</code>. But we don’t want the exit functions (which update
+the task) to run again. <code>skipExitStates</code> prevents this:</p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="va">sM</span>.<span class="va">skipExitStates</span> <span class="op">=</span> { <span class="op">...</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    <span class="ss">&#39;correct&#39;</span><span class="op">,</span>   <span class="ss">&#39;prefix&#39;</span><span class="op">;</span> <span class="op">...</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    <span class="ss">&#39;incorrect&#39;</span><span class="op">,</span> <span class="ss">&#39;prefix&#39;</span><span class="op">;</span> <span class="op">...</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    <span class="ss">&#39;breakfix&#39;</span><span class="op">,</span>  <span class="ss">&#39;prefix&#39;</span> <span class="op">...</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span></code></pre></div>
+<p>When transitioning from any of these states <em>to</em>
+<code>prefix</code>, the exit functions are skipped.</p>
 <hr />
+<p>see <a href="METHODS.html">METHODS</a> for more details.</p>
 <!--
 digraph{
     prefix[label="prefix\nhide(stims)"];

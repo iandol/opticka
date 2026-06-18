@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
-  <title>uihelpfunctions</title>
+  <title>User Functions for State Machine Tasks</title>
   <style>
   html {font-family: Hoefler Text, Palatino, Georgia, serif;
     color: #1a1a1a;
@@ -22,7 +22,7 @@
     font-kerning: normal;
   }
 
-  @media (max-width: 600px) {body {font-size: 0.9em;
+  @media (max-width: 800px) {body {font-size: 0.9em;
     padding: 1em;}
     h1 {font-size: 1.8em;}
   }
@@ -185,9 +185,42 @@
   </style>
 </head>
 <body>
+<nav id="TOC" role="doc-toc">
+<h2 id="toc-title">Contents</h2>
+<ul>
+<li><a href="#adding-user-functions"
+id="toc-adding-user-functions">Adding User Functions</a>
+<ul>
+<li><a href="#how-to-use-these-functions"
+id="toc-how-to-use-these-functions">How to Use these Functions?</a>
+<ul>
+<li><a href="#using-variables-properties"
+id="toc-using-variables-properties">Using Variables
+(Properties)</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#available-object-handles"
+id="toc-available-object-handles">Available Object Handles</a></li>
+<li><a href="#advanced-patterns" id="toc-advanced-patterns">Advanced
+Patterns</a>
+<ul>
+<li><a href="#reading-task-variables"
+id="toc-reading-task-variables">Reading Task Variables</a></li>
+<li><a href="#modifying-stimuli-at-runtime"
+id="toc-modifying-stimuli-at-runtime">Modifying Stimuli at
+Runtime</a></li>
+<li><a href="#staircase-integration"
+id="toc-staircase-integration">Staircase Integration</a></li>
+<li><a href="#time-logger-integration"
+id="toc-time-logger-integration">Time Logger Integration</a></li>
+<li><a href="#subclassing-userfunctions"
+id="toc-subclassing-userfunctions">Subclassing userFunctions</a></li>
+</ul></li>
+</ul>
+</nav>
 <h1 id="adding-user-functions">Adding User Functions</h1>
 <p>For behavioural tasks, <a href="uihelpstate.html">state-machine
-files</a> specify the experimental states (prefx, correct, incorrect
+files</a> specify the experimental states (prefix, correct, incorrect
 etc.) and functions that run on
 <code>enter</code>/<code>within</code>/<code>transition</code> and
 <code>exit</code> of <em>each</em> state. <em>Most functions</em> are
@@ -266,8 +299,166 @@ an issue on github to add functions to the core classes or add a new
 dedicated class.</p>
 <p><strong>IMPORTANT</strong>: please don’t store important experimental
 data in the object itself, as although <code>uF</code> will be saved
-into a MAT file, the currect userFunctions.m may not be present when
+into a MAT file, the current userFunctions.m may not be present when
 loading on a different machine. You can use the structure
 <code>tS</code> or use your own save data function / file.</p>
+<h1 id="available-object-handles">Available Object Handles</h1>
+<p>The <code>userFunctions</code> class automatically receives handles
+to all the core experiment objects. These are accessible as properties
+of <code>me</code> (the userFunctions instance):</p>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Object</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>me.s</code></td>
+<td><code>screenManager</code></td>
+<td>PTB screen management</td>
+</tr>
+<tr>
+<td><code>me.sM</code></td>
+<td><code>stateMachine</code></td>
+<td>State machine controller</td>
+</tr>
+<tr>
+<td><code>me.task</code></td>
+<td><code>taskSequence</code></td>
+<td>Trial randomisation</td>
+</tr>
+<tr>
+<td><code>me.stims</code></td>
+<td><code>metaStimulus</code></td>
+<td>Stimulus group</td>
+</tr>
+<tr>
+<td><code>me.eT</code></td>
+<td><code>eyetrackerCore</code></td>
+<td>Eye tracker</td>
+</tr>
+<tr>
+<td><code>me.io</code></td>
+<td><code>ioManager</code></td>
+<td>Digital I/O</td>
+</tr>
+<tr>
+<td><code>me.rM</code></td>
+<td><code>rewardManager</code></td>
+<td>Reward delivery</td>
+</tr>
+<tr>
+<td><code>me.bR</code></td>
+<td><code>behaviouralRecord</code></td>
+<td>Performance plot</td>
+</tr>
+<tr>
+<td><code>me.aM</code></td>
+<td><code>audioManager</code></td>
+<td>Audio playback</td>
+</tr>
+<tr>
+<td><code>me.tL</code></td>
+<td><code>timeLogger</code></td>
+<td>Timing logger</td>
+</tr>
+</tbody>
+</table>
+<h1 id="advanced-patterns">Advanced Patterns</h1>
+<h2 id="reading-task-variables">Reading Task Variables</h2>
+<p>You can read the current trial’s task variable values from within
+userFunctions:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="va">logCurrentTrial</span>(<span class="va">me</span>)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">% get the current trial index</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="va">idx</span> <span class="op">=</span> <span class="va">me</span>.<span class="va">task</span>.<span class="va">totalRuns</span><span class="op">;</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">% read the actual values for this trial</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    <span class="va">angle</span> <span class="op">=</span> <span class="va">me</span>.<span class="va">task</span>.<span class="va">outValues</span>{<span class="va">idx</span><span class="op">,</span> <span class="fl">1</span>}<span class="op">;</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">% log to the time logger</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    <span class="va">me</span>.<span class="va">tL</span>.<span class="va">addMessage</span>([]<span class="op">,</span> []<span class="op">,</span> []<span class="op">,</span> <span class="va">sprintf</span>(<span class="ss">&#39;Angle: %.1f&#39;</span><span class="op">,</span> <span class="va">angle</span>))<span class="op">;</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="kw">end</span></span></code></pre></div>
+<p>Call this in a state entry function:
+<code>@()logCurrentTrial(uF)</code>.</p>
+<h2 id="modifying-stimuli-at-runtime">Modifying Stimuli at Runtime</h2>
+<p>You can directly access individual stimulus properties via cell
+indexing:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="va">updateStimulusColour</span>(<span class="va">me</span><span class="op">,</span> <span class="va">stimIdx</span><span class="op">,</span> <span class="va">newColour</span>)</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">% change the runtime colour of a specific stimulus</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    <span class="va">me</span>.<span class="va">stims</span>{<span class="va">stimIdx</span>}.<span class="va">colourOut</span> <span class="op">=</span> <span class="va">newColour</span><span class="op">;</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="kw">end</span></span></code></pre></div>
+<p>Or use the <code>edit</code> method on <code>metaStimulus</code>:</p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="va">changeFixationSize</span>(<span class="va">me</span><span class="op">,</span> <span class="va">newSize</span>)</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    <span class="va">edit</span>(<span class="va">me</span>.<span class="va">stims</span><span class="op">,</span> <span class="fl">2</span><span class="op">,</span> <span class="ss">&#39;sizeOut&#39;</span><span class="op">,</span> <span class="va">newSize</span>)<span class="op">;</span>  <span class="co">% change stimulus 2&#39;s size</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="kw">end</span></span></code></pre></div>
+<h2 id="staircase-integration">Staircase Integration</h2>
+<p>The base <code>userFunctions</code> class includes built-in methods
+for working with Palamedes staircases:</p>
+<ul>
+<li><code>setDelayTimeWithStaircase(me, stim, duration)</code> — Updates
+a stimulus’s <code>delayTime</code> based on staircase output</li>
+<li><code>resetDelayTime(me, stim, value)</code> — Resets the delay time
+to a fixed value</li>
+</ul>
+<p>Example usage in a state file:</p>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co">% In the correct exit function, update the staircase</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="kw">if</span> <span class="op">~</span><span class="va">isempty</span>(<span class="va">task</span>.<span class="va">staircase</span>)</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">@</span>()<span class="va">setDelayTimeWithStaircase</span>(<span class="va">uF</span><span class="op">,</span> <span class="fl">1</span><span class="op">,</span> <span class="va">stims</span>{<span class="fl">1</span>}.<span class="va">delayTime</span>)</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="kw">end</span></span></code></pre></div>
+<h2 id="time-logger-integration">Time Logger Integration</h2>
+<p>You can log custom events with optional HED (Hierarchical Event
+Descriptors) tags:</p>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="va">logCustomEvent</span>(<span class="va">me</span><span class="op">,</span> <span class="va">eventName</span>)</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    <span class="va">me</span>.<span class="va">tL</span>.<span class="va">addMessage</span>([]<span class="op">,</span> []<span class="op">,</span> []<span class="op">,</span> <span class="va">eventName</span><span class="op">,</span> <span class="ss">&#39;&#39;</span><span class="op">,</span> <span class="ss">&#39;Experimental-note&#39;</span>)<span class="op">;</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="kw">end</span></span></code></pre></div>
+<p>Call in state functions:
+<code>@()logCustomEvent(uF, 'stimulus_onset')</code>.</p>
+<h2 id="subclassing-userfunctions">Subclassing userFunctions</h2>
+<p>For complex protocols, you can create a subclass of
+<code>userFunctions</code> with a different class name. The DMTS
+(Delayed Match-to-Sample) protocol demonstrates this pattern with
+<code>DMTSFunctions.m</code>:</p>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="kw">classdef</span> <span class="va">DMTSFunctions</span> <span class="op">&lt;</span> <span class="va">userFunctions</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">properties</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">matchIndex</span> <span class="op">=</span> <span class="fl">0</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">sampleIdx</span> <span class="op">=</span> <span class="fl">0</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">end</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">methods</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>        <span class="kw">function</span> <span class="va">obj</span> <span class="op">=</span> <span class="va">DMTSFunctions</span>(<span class="va">varargin</span>)</span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>            <span class="va">obj</span> <span class="op">=</span> <span class="va">obj</span><span class="op">@</span><span class="va">userFunctions</span>(<span class="va">varargin</span>{<span class="op">:</span>})<span class="op">;</span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>        <span class="kw">end</span></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>        <span class="kw">function</span> <span class="va">updateStimuliImages</span>(<span class="va">me</span>)</span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>            <span class="co">% custom logic to update stimulus images</span></span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>            <span class="co">% ...</span></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>        <span class="kw">end</span></span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>        <span class="kw">function</span> <span class="va">updateLocations</span>(<span class="va">me</span>)</span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>            <span class="co">% custom logic to update stimulus positions</span></span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>            <span class="co">% ...</span></span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a>        <span class="kw">end</span></span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a>        <span class="kw">function</span> <span class="va">updateDelayTime</span>(<span class="va">me</span>)</span>
+<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a>            <span class="co">% custom logic to set delay duration</span></span>
+<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a>            <span class="co">% ...</span></span>
+<span id="cb11-25"><a href="#cb11-25" aria-hidden="true" tabindex="-1"></a>        <span class="kw">end</span></span>
+<span id="cb11-26"><a href="#cb11-26" aria-hidden="true" tabindex="-1"></a>    <span class="kw">end</span></span>
+<span id="cb11-27"><a href="#cb11-27" aria-hidden="true" tabindex="-1"></a><span class="kw">end</span></span></code></pre></div>
+<p>Then in the state info file, call these methods:
+<code>@()updateStimuliImages(uF)</code>,
+<code>@()updateLocations(uF)</code>,
+<code>@()updateDelayTime(uF)</code>.</p>
+<p><strong>Note</strong>: When subclassing, the class name must remain
+<code>userFunctions</code> OR you must ensure <code>runExperiment</code>
+loads your custom class. The DMTS protocol achieves this by placing
+<code>DMTSFunctions.m</code> alongside the protocol files.</p>
 </body>
 </html>

@@ -1,8 +1,7 @@
 standalone: true
 verbosity: INFO
 from: markdown
-to: html5
-template: ${.}/template.html
+to: typst
 extract-media: media
 filters: 
   - ${.}/include-files.lua
@@ -12,3 +11,8 @@ toc: true
 metadata:
   lang: 'en-GB'
   toc-title: Contents
+  mainfont: 'Alegreya Sans'
+  codefont: 'Fira Code'
+  papersize: a4
+  linestretch: 1.25
+  linkcolor: #DD4444

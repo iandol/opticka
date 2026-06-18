@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
-  <title>uihelpvars</title>
+  <title>Independant Variables in Opticka</title>
   <style>
   html {font-family: Hoefler Text, Palatino, Georgia, serif;
     color: #1a1a1a;
@@ -22,7 +22,7 @@
     font-kerning: normal;
   }
 
-  @media (max-width: 600px) {body {font-size: 0.9em;
+  @media (max-width: 800px) {body {font-size: 0.9em;
     padding: 1em;}
     h1 {font-size: 1.8em;}
   }
@@ -185,6 +185,57 @@
   </style>
 </head>
 <body>
+<nav id="TOC" role="doc-toc">
+<h2 id="toc-title">Contents</h2>
+<ul>
+<li><a href="#configuring-variables"
+id="toc-configuring-variables">Configuring Variables</a>
+<ul>
+<li><a href="#nvar-structure" id="toc-nvar-structure">nVar Structure</a>
+<ul>
+<li><a href="#value-types" id="toc-value-types">Value types</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#block-and-trial-level-independent-factors"
+id="toc-block-and-trial-level-independent-factors">Block and Trial level
+independent factors</a>
+<ul>
+<li><a href="#using-trialblock-factors-in-state-files"
+id="toc-using-trialblock-factors-in-state-files">Using trial/block
+factors in state files</a></li>
+</ul></li>
+<li><a href="#staircase-procedures"
+id="toc-staircase-procedures">Staircase Procedures</a></li>
+<li><a href="#variable-modifiers" id="toc-variable-modifiers">Variable
+modifiers</a>
+<ul>
+<li><a href="#modifier-summary-table"
+id="toc-modifier-summary-table">Modifier summary table</a></li>
+</ul></li>
+<li><a href="#stimulustable-vs.-nvar"
+id="toc-stimulustable-vs.-nvar">stimulusTable vs. nVar</a>
+<ul>
+<li><a href="#nvar-task-variables" id="toc-nvar-task-variables">nVar
+(task variables)</a></li>
+<li><a href="#stimulustable-non-task-randomisation"
+id="toc-stimulustable-non-task-randomisation">stimulusTable (non-task
+randomisation)</a></li>
+</ul></li>
+<li><a href="#controltable-arrow-key-adjustment"
+id="toc-controltable-arrow-key-adjustment">controlTable (Arrow-Key
+Adjustment)</a></li>
+<li><a href="#stimulussets" id="toc-stimulussets">stimulusSets</a>
+<ul>
+<li><a href="#log-or-linear-interpolation-buttons"
+id="toc-log-or-linear-interpolation-buttons">Log or Linear interpolation
+buttons</a></li>
+<li><a href="#equidistant-points-button"
+id="toc-equidistant-points-button">Equidistant Points button</a></li>
+</ul></li>
+<li><a href="#randomisation-algorithms"
+id="toc-randomisation-algorithms">Randomisation Algorithms</a></li>
+</ul>
+</nav>
 <h1 id="configuring-variables">Configuring Variables</h1>
 <p>Opticka uses the taskSequence class to specify one or more variable
 names and values [<code>nVar</code>] that can be randomised using
@@ -195,63 +246,195 @@ randomisation values. In addition, you can add a staircase (needs
 Palamedes toolbox), to run alongside the taskSequence (see the
 <code>Saccadic Countermanding</code> core protocol for an example of
 using a staircase).</p>
-<h1 id="variable-modifiers">Variable modifiers</h1>
-<p>Variables can have modifiers, best explained by example:</p>
-<ol type="1">
-<li>Name = <code>angle</code></li>
-<li>Values = <code>[-90 0 90]</code></li>
-<li>Affects = <code>1</code></li>
-<li>Modifier = <code>2; 90</code></li>
-</ol>
-<p>In this case, angle is varied -90° 0° 90° for stimulus 1. Stimulus 2
-has the modifier 90 applied, so for example if stimulus 1 =
-<code>-90°</code> then stimulus 2 = <code>-90° + 90° = 0°</code>.</p>
-<p>Modifiers can also be string commands:</p>
-<ol type="1">
-<li><code>2; 'shift(2)'</code> - shift +2 places in the Value list. For
-example say for stimulus 1
-<code>Values = [-90 -45 0 45 90 135 180]</code> and for this trial the
-fourth value <code>45</code> is randomly selected. For stimulus 2 we
-then shift two places to fetch the sixth value <code>135</code>. Shift
-wraps from end to start (e.g. if seventh value <code>180</code> was
-selected for stimulus 1 then second value <code>-45</code> would be
-selected for stimulus 2), and you can use negative values
-(<code>-1</code> would select the third place <code>0</code> for
-example).</li>
-<li><code>2; 'invert'</code> — take the current value and invert it, so
-if the current value is <code>+10°</code> then invert will make stimulus
-2 <code>-10°</code>.</li>
-<li><code>2; 'xvar(10, 0.5)'</code> — For <code>xyPosition</code>
-variables you can add a variable x position. In this case whatever the X
-position is, <code>xvar(10)</code> will add or subtract (50%
-probability) 10°. So for example if X position is <code>0°</code> then
-the modifier could result in <code>+10°</code> or <code>-10°</code> with
-a 50% probability. Change <code>0.5</code> to change the
-probability.</li>
-<li><code>2; 'yvar(10, 0.5)'</code> — Same as <code>xvar</code> but for
-Y axis.</li>
-<li><code>2; 'xoffset(5)'</code> — For <code>xyPosition</code> add a
-fixed X position offset, so in this case add 5° to whatever value the X
-axis position is.</li>
-<li><code>2; 'xoffset(5)'</code> — For <code>xyPosition</code> add a
-fixed X position offset, so in this case add 5° for stimulus 2 to
-whatever value the X axis position is of stimulus 1.</li>
-<li><code>2; 'yoffset(5)'</code> — For <code>xyPosition</code> add a
-fixed Y position offset, so in this case add 5° for stimulus 2 to
-whatever value the Y axis position is of stimulus 1.</li>
-</ol>
+<h2 id="nvar-structure">nVar Structure</h2>
+<p>Each independent variable (<code>nVar</code>) has the following
+fields:</p>
+<table>
+<colgroup>
+<col style="width: 35%" />
+<col style="width: 65%" />
+</colgroup>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>.name</code></td>
+<td>The stimulus property name (e.g. <code>'angle'</code>,
+<code>'size'</code>, <code>'sf'</code>)</td>
+</tr>
+<tr>
+<td><code>.values</code></td>
+<td>Array of values for this variable. Can be numeric or cell arrays for
+complex types.</td>
+</tr>
+<tr>
+<td><code>.stimulus</code></td>
+<td>[optional] Index (or array of indices) of which stimulus/stimuli to
+apply this variable to</td>
+</tr>
+<tr>
+<td><code>.modifier</code></td>
+<td>[optional] modifier string applied to other stimuli (see <a
+href="uihelpvars.html">Variables</a>)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="value-types">Value types</h3>
+<p>Values can be:</p>
+<ul>
+<li><strong>Numeric arrays</strong>: <code>[-25 0 25]</code> — each
+value is one condition</li>
+<li><strong>Cell arrays</strong>: <code>{[1 0 0], [0 1 0]}</code> — for
+RGB colours, <code>{[5 0], [0 5], [-5 0]}</code> — for
+<code>xyPosition</code> values etc.</li>
+</ul>
+<p><code>randomiseTask(task)</code> will generate the randomisation
+table like so (3 angles × 2 colours per block = <strong>6</strong>
+conditions; 2 blocks = <strong>12</strong> total trials):</p>
+<table>
+<thead>
+<tr>
+<th>Angle</th>
+<th>Colour</th>
+<th style="text-align: left;">Index</th>
+<th style="text-align: left;">IdxAngle</th>
+<th>IdxColour</th>
+<th style="text-align: left;">Trial Factor</th>
+<th style="text-align: left;">Block Factor</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>-25</td>
+<td>1 0 0</td>
+<td style="text-align: left;">1</td>
+<td style="text-align: left;">1</td>
+<td>1</td>
+<td style="text-align: left;">‘none’</td>
+<td style="text-align: left;">‘none’</td>
+</tr>
+<tr>
+<td>0</td>
+<td>1 0 0</td>
+<td style="text-align: left;">3</td>
+<td style="text-align: left;">2</td>
+<td>1</td>
+<td style="text-align: left;">‘none’</td>
+<td style="text-align: left;">‘none’</td>
+</tr>
+<tr>
+<td>25</td>
+<td>0 1 0</td>
+<td style="text-align: left;">6</td>
+<td style="text-align: left;">3</td>
+<td>2</td>
+<td style="text-align: left;">‘none’</td>
+<td style="text-align: left;">‘none’</td>
+</tr>
+<tr>
+<td>25</td>
+<td>1 0 0</td>
+<td style="text-align: left;">5</td>
+<td style="text-align: left;">3</td>
+<td>1</td>
+<td style="text-align: left;">‘none’</td>
+<td style="text-align: left;">‘none’</td>
+</tr>
+<tr>
+<td>-25</td>
+<td>0 1 0</td>
+<td style="text-align: left;">2</td>
+<td style="text-align: left;">1</td>
+<td>2</td>
+<td style="text-align: left;">‘none’</td>
+<td style="text-align: left;">‘none’</td>
+</tr>
+<tr>
+<td>0</td>
+<td>0 1 0</td>
+<td style="text-align: left;">4</td>
+<td style="text-align: left;">2</td>
+<td>2</td>
+<td style="text-align: left;">‘none’</td>
+<td style="text-align: left;">‘none’</td>
+</tr>
+<tr>
+<td>-25</td>
+<td>0 1 0</td>
+<td style="text-align: left;">2</td>
+<td style="text-align: left;">1</td>
+<td>2</td>
+<td style="text-align: left;">‘none’</td>
+<td style="text-align: left;">‘none’</td>
+</tr>
+<tr>
+<td>0</td>
+<td>0 1 0</td>
+<td style="text-align: left;">4</td>
+<td style="text-align: left;">2</td>
+<td>2</td>
+<td style="text-align: left;">‘none’</td>
+<td style="text-align: left;">‘none’</td>
+</tr>
+<tr>
+<td>-25</td>
+<td>1 0 0</td>
+<td style="text-align: left;">1</td>
+<td style="text-align: left;">1</td>
+<td>1</td>
+<td style="text-align: left;">‘none’</td>
+<td style="text-align: left;">‘none’</td>
+</tr>
+<tr>
+<td>25</td>
+<td>0 1 0</td>
+<td style="text-align: left;">6</td>
+<td style="text-align: left;">3</td>
+<td>2</td>
+<td style="text-align: left;">‘none’</td>
+<td style="text-align: left;">‘none’</td>
+</tr>
+<tr>
+<td>0</td>
+<td>1 0 0</td>
+<td style="text-align: left;">3</td>
+<td style="text-align: left;">2</td>
+<td>1</td>
+<td style="text-align: left;">‘none’</td>
+<td style="text-align: left;">‘none’</td>
+</tr>
+<tr>
+<td>25</td>
+<td>1 0 0</td>
+<td style="text-align: left;">5</td>
+<td style="text-align: left;">3</td>
+<td>1</td>
+<td style="text-align: left;">‘none’</td>
+<td style="text-align: left;">‘none’</td>
+</tr>
+</tbody>
+</table>
+<p>Opticka’s task function can then use this table to assign variables
+on each trial to the defined stimuli and generate strobed words to send
+to external equipment. See core protocols like
+<code>OrientationTuning.mat</code> to get a working example of this in
+action.</p>
 <h1 id="block-and-trial-level-independent-factors">Block and Trial level
 independent factors</h1>
 <p>You can set [Block Values] and [Trial Values] in the UI and assign
 probabilities. These are assigned independently of any variables. So for
 example setting trial values: <code>{'a','b'}</code> trial
 probabilities: <code>{0.3 0.7}</code> would randomly assign either
-<code>a</code> or <code>b</code> in a 30:70 proability to each trial.
+<code>a</code> or <code>b</code> in a 30:70 probability to each trial.
 Block factors have the same assignation, but applies over the blocks. So
 for example say we have a variable with two values (-10 or +10 degrees)
 and 5 repeat blocks. The trials are randomised. Separately we assign
 <code>{'a','b'}</code> to trials and <code>{'x','y'}</code> to get an
-experiment table of 5 blocks that may look like thislike this:</p>
+experiment table of 5 blocks that may look like this:</p>
 <table>
 <thead>
 <tr>
@@ -324,6 +507,326 @@ experiment table of 5 blocks that may look like thislike this:</p>
 </tr>
 </tbody>
 </table>
+<h3 id="using-trialblock-factors-in-state-files">Using trial/block
+factors in state files</h3>
+<p>Trial and block factors can drive state machine behaviour. For
+example, to randomly interleave stimulus and catch trials:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="va">task</span>.<span class="va">trialVar</span>.<span class="va">values</span> <span class="op">=</span> {<span class="ss">&#39;stimulus&#39;</span><span class="op">,</span> <span class="ss">&#39;catch&#39;</span>}<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="va">task</span>.<span class="va">trialVar</span>.<span class="va">probability</span> <span class="op">=</span> [<span class="fl">0.8</span> <span class="fl">0.2</span>]<span class="op">;</span></span></code></pre></div>
+<p>Then use <code>@()updateNextState(me, 'trial')</code> in the
+transition function to set the next state based on the current trial’s
+factor value.</p>
+<p>Trial- and Block-factors can be used to drive state machine functions
+if you need it (<code>Saccadic_Doublestep.mat</code> is an example
+protocol).</p>
+<p>Here is a second example:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="va">task</span>.<span class="va">blockVar</span>.<span class="va">values</span><span class="op">=</span>{<span class="ss">&#39;A&#39;</span><span class="op">,</span><span class="ss">&#39;B&#39;</span>}<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="va">task</span>.<span class="va">blockVar</span>.<span class="va">probability</span> <span class="op">=</span> [<span class="fl">0.6</span> <span class="fl">0.4</span>]<span class="op">;</span></span></code></pre></div>
+<p>For each block we assign either <code>A</code> or <code>B</code> with
+a 60:40% probability. Trial-level factors are specified in the same way,
+but for each trial independently of the blocks.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="va">task</span>.<span class="va">trialVar</span>.<span class="va">values</span><span class="op">=</span>{<span class="ss">&#39;Y&#39;</span><span class="op">,</span><span class="ss">&#39;Z&#39;</span>}<span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="va">task</span>.<span class="va">trialVar</span>.<span class="va">probability</span> <span class="op">=</span> [<span class="fl">0.5</span> <span class="fl">0.5</span>]<span class="op">;</span></span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Angle</th>
+<th>Colour</th>
+<th style="text-align: left;">Index</th>
+<th style="text-align: left;">IdxAngle</th>
+<th>IdxColour</th>
+<th style="text-align: left;">Trial Factor</th>
+<th style="text-align: left;">Block Factor</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>-25</td>
+<td>1 0 0</td>
+<td style="text-align: left;">1</td>
+<td style="text-align: left;">1</td>
+<td>1</td>
+<td style="text-align: left;">Z</td>
+<td style="text-align: left;">A</td>
+</tr>
+<tr>
+<td>0</td>
+<td>1 0 0</td>
+<td style="text-align: left;">3</td>
+<td style="text-align: left;">2</td>
+<td>1</td>
+<td style="text-align: left;">Y</td>
+<td style="text-align: left;">A</td>
+</tr>
+<tr>
+<td>25</td>
+<td>0 1 0</td>
+<td style="text-align: left;">6</td>
+<td style="text-align: left;">3</td>
+<td>2</td>
+<td style="text-align: left;">Y</td>
+<td style="text-align: left;">A</td>
+</tr>
+<tr>
+<td>25</td>
+<td>1 0 0</td>
+<td style="text-align: left;">5</td>
+<td style="text-align: left;">3</td>
+<td>1</td>
+<td style="text-align: left;">Y</td>
+<td style="text-align: left;">A</td>
+</tr>
+<tr>
+<td>-25</td>
+<td>0 1 0</td>
+<td style="text-align: left;">2</td>
+<td style="text-align: left;">1</td>
+<td>2</td>
+<td style="text-align: left;">Z</td>
+<td style="text-align: left;">A</td>
+</tr>
+<tr>
+<td>0</td>
+<td>0 1 0</td>
+<td style="text-align: left;">4</td>
+<td style="text-align: left;">2</td>
+<td>2</td>
+<td style="text-align: left;">Y</td>
+<td style="text-align: left;">A</td>
+</tr>
+<tr>
+<td>-25</td>
+<td>0 1 0</td>
+<td style="text-align: left;">2</td>
+<td style="text-align: left;">1</td>
+<td>2</td>
+<td style="text-align: left;">Y</td>
+<td style="text-align: left;">B</td>
+</tr>
+<tr>
+<td>0</td>
+<td>0 1 0</td>
+<td style="text-align: left;">4</td>
+<td style="text-align: left;">2</td>
+<td>2</td>
+<td style="text-align: left;">Z</td>
+<td style="text-align: left;">B</td>
+</tr>
+<tr>
+<td>-25</td>
+<td>1 0 0</td>
+<td style="text-align: left;">1</td>
+<td style="text-align: left;">1</td>
+<td>1</td>
+<td style="text-align: left;">Z</td>
+<td style="text-align: left;">B</td>
+</tr>
+<tr>
+<td>25</td>
+<td>0 1 0</td>
+<td style="text-align: left;">6</td>
+<td style="text-align: left;">3</td>
+<td>2</td>
+<td style="text-align: left;">Y</td>
+<td style="text-align: left;">B</td>
+</tr>
+<tr>
+<td>0</td>
+<td>1 0 0</td>
+<td style="text-align: left;">3</td>
+<td style="text-align: left;">2</td>
+<td>1</td>
+<td style="text-align: left;">Y</td>
+<td style="text-align: left;">B</td>
+</tr>
+<tr>
+<td>25</td>
+<td>1 0 0</td>
+<td style="text-align: left;">5</td>
+<td style="text-align: left;">3</td>
+<td>1</td>
+<td style="text-align: left;">Y</td>
+<td style="text-align: left;">B</td>
+</tr>
+</tbody>
+</table>
+<h1 id="staircase-procedures">Staircase Procedures</h1>
+<p>Opticka can run a Palamedes staircase alongside the task sequence.
+This allows you to adaptively vary a stimulus parameter (e.g. contrast
+threshold) based on the subject’s performance. The staircase is
+configured in the task sequence and accessed via
+<code>task.staircase</code>.</p>
+<p>Example usage in a <code>userFunctions.m</code>:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="va">setDelayTimeWithStaircase</span>(<span class="va">me</span><span class="op">,</span> <span class="va">stim</span><span class="op">,</span> <span class="va">duration</span>)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">% use the staircase to adjust a delay time</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="va">me</span>.<span class="va">stims</span>{<span class="va">stim</span>}.<span class="va">delayTime</span> <span class="op">=</span> <span class="va">duration</span><span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="kw">end</span></span></code></pre></div>
+<p>See the <code>Saccadic Countermanding</code> core protocol for a full
+working example of staircase integration.</p>
+<h1 id="variable-modifiers">Variable modifiers</h1>
+<p>Variables can have modifiers, best explained by example:</p>
+<ol type="1">
+<li>Name = <code>angle</code></li>
+<li>Values = <code>[-90 0 90]</code></li>
+<li>Affects = <code>1</code></li>
+<li>Modifier = <code>2; 90</code></li>
+</ol>
+<p>In this case, angle is varied -90° 0° 90° for stimulus 1. Stimulus 2
+has the modifier 90 applied, so for example if stimulus 1 =
+<code>-90°</code> then stimulus 2 = <code>-90° + 90° = 0°</code>.</p>
+<p>Modifiers can also be string commands:</p>
+<ol type="1">
+<li><code>2; 'shift(2)'</code> - shift +2 places in the Value list. For
+example say for stimulus 1
+<code>Values = [-90 -45 0 45 90 135 180]</code> and for this trial the
+fourth value <code>45</code> is randomly selected. For stimulus 2 we
+then shift two places to fetch the sixth value <code>135</code>. Shift
+wraps from end to start (e.g. if seventh value <code>180</code> was
+selected for stimulus 1 then second value <code>-45</code> would be
+selected for stimulus 2), and you can use negative values
+(<code>-1</code> would select the third place <code>0</code> for
+example).</li>
+<li><code>2; 'invert'</code> — take the current value and invert it, so
+if the current value is <code>+10°</code> then invert will make stimulus
+2 <code>-10°</code>.</li>
+<li><code>2; 'xvar(10, 0.5)'</code> — For <code>xyPosition</code>
+variables you can add a variable x position. In this case whatever the X
+position is, <code>xvar(10)</code> will add or subtract (50%
+probability) 10°. So for example if X position is <code>0°</code> then
+the modifier could result in <code>+10°</code> or <code>-10°</code> with
+a 50% probability. Change <code>0.5</code> to change the
+probability.</li>
+<li><code>2; 'yvar(10, 0.5)'</code> — Same as <code>xvar</code> but for
+Y axis.</li>
+<li><code>2; 'xoffset(5)'</code> — For <code>xyPosition</code> add a
+fixed X position offset, so in this case add 5° to whatever value the X
+axis position is.</li>
+<li><code>2; 'yoffset(5)'</code> — For <code>xyPosition</code> add a
+fixed Y position offset, so in this case add 5° for stimulus 2 to
+whatever value the Y axis position is of stimulus 1.</li>
+</ol>
+<h3 id="modifier-summary-table">Modifier summary table</h3>
+<table>
+<colgroup>
+<col style="width: 32%" />
+<col style="width: 25%" />
+<col style="width: 41%" />
+</colgroup>
+<thead>
+<tr>
+<th>Modifier</th>
+<th>Syntax</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Numeric offset</td>
+<td><code>2; 90</code></td>
+<td>Add a fixed value</td>
+</tr>
+<tr>
+<td>Shift</td>
+<td><code>2; 'shift(N)'</code></td>
+<td>Move N places in the value list (wraps)</td>
+</tr>
+<tr>
+<td>Invert</td>
+<td><code>2; 'invert'</code></td>
+<td>Negate the current value</td>
+</tr>
+<tr>
+<td>X variable</td>
+<td><code>2; 'xvar(d, p)'</code></td>
+<td>Add/subtract <code>d</code> on X axis with probability
+<code>p</code></td>
+</tr>
+<tr>
+<td>Y variable</td>
+<td><code>2; 'yvar(d, p)'</code></td>
+<td>Add/subtract <code>d</code> on Y axis with probability
+<code>p</code></td>
+</tr>
+<tr>
+<td>X offset</td>
+<td><code>2; 'xoffset(d)'</code></td>
+<td>Add fixed <code>d</code> on X axis</td>
+</tr>
+<tr>
+<td>Y offset</td>
+<td><code>2; 'yoffset(d)'</code></td>
+<td>Add fixed <code>d</code> on Y axis</td>
+</tr>
+</tbody>
+</table>
+<h1 id="stimulustable-vs.-nvar">stimulusTable vs. nVar</h1>
+<p>There are two ways to randomise stimulus properties:</p>
+<h3 id="nvar-task-variables">nVar (task variables)</h3>
+<p>Used for <strong>independent variables</strong> that define your
+experimental conditions. These are logged in the task sequence data,
+contribute to the randomisation table, and each unique combination
+generates a trial. Use nVar when you need balanced, repeated measures of
+specific conditions.</p>
+<h3 id="stimulustable-non-task-randomisation">stimulusTable (non-task
+randomisation)</h3>
+<p>Used for properties you want to randomise <strong>without</strong>
+creating task conditions. The randomisation is not logged as a task
+variable, and does not affect the trial count. This is useful for:</p>
+<ul>
+<li>Training protocols where stimulus properties vary but aren’t
+analysed</li>
+<li>Properties that should vary randomly but are not experimental
+manipulations</li>
+<li>Reducing predictability without adding experimental conditions</li>
+</ul>
+<p>Set <code>stims.stimulusTable</code> in the state info file, then
+call <code>@()randomise(stims)</code> in the exit function (before
+<code>@()update(stims)</code>).</p>
+<p>Example from Chen et al., 2020 Science — the Saccade-to-Phosphene
+task randomises target size and colour, but these are not task
+variables:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="va">stims</span>.<span class="va">stimulusTable</span> <span class="op">=</span> { <span class="op">...</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="ss">&#39;sizeOut&#39;</span><span class="op">,</span>  {[<span class="fl">1</span>]<span class="op">,</span> [<span class="fl">2</span>]<span class="op">,</span> [<span class="fl">3</span>]<span class="op">,</span> [<span class="fl">4</span>]}<span class="op">;</span> <span class="op">...</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="ss">&#39;colourOut&#39;</span><span class="op">,</span> {[<span class="fl">1</span> <span class="fl">0</span> <span class="fl">0</span> <span class="fl">1</span>]<span class="op">,</span> [<span class="fl">0</span> <span class="fl">1</span> <span class="fl">0</span> <span class="fl">1</span>]<span class="op">,</span> [<span class="fl">0</span> <span class="fl">0</span> <span class="fl">1</span> <span class="fl">1</span>]} <span class="op">...</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="va">stims</span>.<span class="va">choice</span> <span class="op">=</span> <span class="ss">&#39;random&#39;</span><span class="op">;</span></span></code></pre></div>
+<h1 id="controltable-arrow-key-adjustment">controlTable (Arrow-Key
+Adjustment)</h1>
+<p>The <code>controlTable</code> allows live adjustment of stimulus
+properties using arrow keys during the experiment. This is useful for
+fine-tuning parameters during testing or training.</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="va">stims</span>.<span class="va">controlTable</span> <span class="op">=</span> { <span class="op">...</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="ss">&#39;sizeOut&#39;</span><span class="op">,</span>  <span class="fl">1</span><span class="op">,</span>  <span class="fl">0.5</span><span class="op">;</span> <span class="op">...</span>   <span class="co">% up/down by 0.5 degrees</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="ss">&#39;sfOut&#39;</span><span class="op">,</span>    <span class="fl">2</span><span class="op">,</span>  <span class="fl">0.1</span><span class="op">;</span> <span class="op">...</span>   <span class="co">% up/down by 0.1 c/deg</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="ss">&#39;contrastOut&#39;</span><span class="op">,</span> <span class="fl">1</span><span class="op">,</span> <span class="fl">0.1</span> <span class="op">...</span>  <span class="co">% up/down by 0.1</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="va">stims</span>.<span class="va">tableChoice</span> <span class="op">=</span> <span class="fl">1</span><span class="op">;</span>  <span class="co">% which stimulus to control</span></span></code></pre></div>
+<p>The first column is the property name, the second is the stimulus
+index, and the third is the step size. Use the <code>override</code>
+state (available in all state info files) to enter keyboard control
+mode.</p>
+<h1 id="stimulussets">stimulusSets</h1>
+<p><code>stimulusSets</code> defines pre-configured groups of stimuli
+that can be shown together using <code>showSet(stims, N)</code>:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="va">stims</span>.<span class="va">stimulusSets</span> <span class="op">=</span> { <span class="op">...</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    <span class="fl">2</span><span class="op">,</span> <span class="op">...</span>          <span class="co">% set 1: show only stimulus 2 (fixation)</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    [<span class="fl">1</span> <span class="fl">2</span>]<span class="op">,</span> <span class="op">...</span>      <span class="co">% set 2: show stimuli 1 &amp; 2</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    [<span class="fl">1</span> <span class="fl">2</span> <span class="fl">3</span>] <span class="op">...</span>     <span class="co">% set 3: show all stimuli</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="va">stims</span>.<span class="va">setChoice</span> <span class="op">=</span> <span class="fl">1</span><span class="op">;</span>  <span class="co">% default set</span></span></code></pre></div>
+<p>Then in the state file:</p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="op">@</span>()<span class="va">showSet</span>(<span class="va">stims</span><span class="op">,</span> <span class="fl">2</span>)  <span class="co">% show stimuli 1 &amp; 2</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="op">@</span>()<span class="va">showSet</span>(<span class="va">stims</span><span class="op">,</span> <span class="fl">3</span>)  <span class="co">% show all stimuli</span></span></code></pre></div>
+<p>This is particularly useful in protocols like DMTS where different
+stimulus subsets are shown at different phases of the trial.</p>
 <h2 id="log-or-linear-interpolation-buttons">Log or Linear interpolation
 buttons</h2>
 <p>You can enter 3 values, <code>start | end | steps</code>, and press
@@ -338,5 +841,45 @@ positions. For example if you specified 8 points with 12° from the
 center the tool would calculate
 <code>{[12 0], [8.49 8.49], [0 12], [-8.49 8.49], [-12 0], [-8.49 -8.49], [0 -12], [8.49 -8.49]}</code>
 for the <code>xyPosition</code> values.</p>
+<p>This is particularly useful for creating evenly-spaced target
+positions around a circle, commonly used in saccade and attention
+paradigms. The rotation parameter allows you to offset the starting
+angle from 0° (rightward).</p>
+<h1 id="randomisation-algorithms">Randomisation Algorithms</h1>
+<p>The randomisation algorithm is set via the <strong>Random
+Algorithm</strong> dropdown in the GUI. Available options include:</p>
+<table>
+<thead>
+<tr>
+<th>Algorithm</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>'twister'</code></td>
+<td>Mersenne Twister (default, recommended)</td>
+</tr>
+<tr>
+<td><code>'simdTwister'</code></td>
+<td>SIMD-oriented Fast Mersenne Twister</td>
+</tr>
+<tr>
+<td><code>'combRecursive'</code></td>
+<td>Combined Multiple Recursive</td>
+</tr>
+<tr>
+<td><code>'multCombRecursive'</code></td>
+<td>Multiplicative Combined Recursive</td>
+</tr>
+<tr>
+<td><code>'v5normal'</code></td>
+<td>Legacy MATLAB 5.0 normal generator</td>
+</tr>
+</tbody>
+</table>
+<p>The choice of algorithm affects the stream of random numbers used for
+trial randomisation. For most experiments, the default Mersenne Twister
+is sufficient.</p>
 </body>
 </html>

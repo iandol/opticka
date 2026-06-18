@@ -58,6 +58,7 @@
 %> io		= digital I/O for recording system
 %> rM		= Reward Manager (LabJack or Arduino TTL trigger to reward system/Magstim)
 %> bR		= behavioural record plot (on-screen GUI during a task run)
+%> tL		= timeLogger object, used to log timestamps for various events
 %> uF		= user functions - add your own functions to this class
 
 %=========================================================================

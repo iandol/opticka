@@ -1,22 +1,10 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="$lang$" xml:lang="$lang$"$if(dir)$ dir="$dir$"$endif$>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-GB" xml:lang="en-GB">
 <head>
   <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
-$for(author-meta)$
-  <meta name="author" content="$author-meta$" />
-$endfor$
-$if(date-meta)$
-  <meta name="dcterms.date" content="$date-meta$" />
-$endif$
-$if(keywords)$
-  <meta name="keywords" content="$for(keywords)$$keywords$$sep$, $endfor$" />
-$endif$
-$if(description-meta)$
-  <meta name="description" content="$description-meta$" />
-$endif$
-  <title>$if(title-prefix)$$title-prefix$ – $endif$$pagetitle$</title>
+  <title>Installing Opticka</title>
   <style>
   html {font-family: Hoefler Text, Palatino, Georgia, serif;
     color: #1a1a1a;
@@ -195,31 +183,110 @@ $endif$
   code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
   .display.math{display: block; text-align: center; margin: 0.5rem auto;}
   </style>
-$for(css)$
-  <link rel="stylesheet" href="$css$" />
-$endfor$
-$for(header-includes)$
-  $header-includes$
-$endfor$
-$if(math)$
-  $math$
-$endif$
 </head>
 <body>
-$for(include-before)$
-$include-before$
-$endfor$
-$if(toc)$
-<nav id="$idprefix$TOC" role="doc-toc">
-$if(toc-title)$
-<h2 id="$idprefix$toc-title">$toc-title$</h2>
-$endif$
-$table-of-contents$
+<nav id="TOC" role="doc-toc">
+<h2 id="toc-title">Contents</h2>
+<ul>
+<li><a href="#install" id="toc-install">Detailed Install
+Instructions</a>
+<ul>
+<li><a href="#requirements" id="toc-requirements">Requirements:</a></li>
+<li><a href="#using-the-git-repository"
+id="toc-using-the-git-repository">Using the Git repository</a></li>
+<li><a href="#using-the-zip-file" id="toc-using-the-zip-file">Using the
+ZIP file</a></li>
+</ul></li>
+</ul>
 </nav>
-$endif$
-$body$
-$for(include-after)$
-$include-after$
-$endfor$
+<h1 id="install">Detailed Install Instructions</h1>
+<h2 id="requirements">Requirements:</h2>
+<ul>
+<li>Latest Psychophysics Toolbox (V3.0.18+) — please ensure it is kept
+up-to-date. Also consider donating to PTB to ensure its future
+development: <a href="https://www.psychtoolbox.net/#future"
+class="uri">https://www.psychtoolbox.net/#future</a></li>
+<li>MATLAB 2021a+ (we use property validation extensively so newer
+MATLABs R2025a+ are better for this). While I would love to support
+Octave, its <code>classdef</code> support is currently incomplete…</li>
+<li>Ubuntu V24.04+ strongly recommended, but also runs under Ubuntu
+V20.04, macOS and Windows 10+</li>
+<li>Java V21 – we use Java classes for communication via <a
+href="https://github.com/zeromq/jeromq">ZMQ</a> and for 2D physics
+animations in PTB, newer MATLAB’s do not bundle Java so download
+seperately.</li>
+<li>For Alyx, we use an S3-like store and use the <a
+href="https://github.com/minio/mc">minio-cli</a> to send data from
+MATLAB to the object store.</li>
+<li><a href="https://www.sr-support.com">Eyelink developer kit</a> for
+Eyelink eyetrackers. «Class = eyelinkManager»</li>
+<li><a href="https://github.com/dcnieho/Titta">Titta Toolbox</a> for
+Tobii Pro eyetrackers. «Class = tobiiManager»</li>
+<li><a href="https://www.palamedestoolbox.org">Palamedes Toolbox</a> to
+enable staircase behavioural task control.</li>
+<li><a
+href="https://labjack.com/support/software/installers/ljm">LJM</a> for
+LabJack T4 / T7 digital I/O devices. «Class = labJackT»</li>
+<li><a
+href="https://labjack.com/support/software/installers/exodriver">Exodriver</a>
+for LabJack U3/6 devices. «Class = labJack»</li>
+<li>For Arduino Uno / Seeduino Xiao, there is <strong>no need to install
+the official Arduino toolbox</strong>, this hardware is supported using
+PTB’s IOPort built-in. «Class = arduinoManager»</li>
+</ul>
+<p>Opticka is tested and mostly used on 64bit Ubuntu 24.04 (in the lab)
+&amp; macOS 26.x (only development) under MATLAB 2026a. The older
+LabJack U3/U6 interface (<a
+href="https://github.com/iandol/opticka/blob/master/communication/labJack.m"><code>labJack.m</code></a>)
+currently only works under Linux and macOS (Labjack uses a different
+interface on Linux/macOS vs. Windows). The newer LabJack T4/T7 interface
+(<a
+href="https://github.com/iandol/opticka/blob/master/communication/labJackT.m"><code>labJackT.m</code></a>)
+does work cross-platform. Linux is <strong>by far the best OS</strong>
+according the PTB developer Mario Kleiner, and receives the majority of
+development work from him. It is <strong><em>strongly
+advised</em></strong> to use it for all real data collection. My
+experience is that Linux is <em>much more</em> robust and performs
+better than both macOS or Windows, and it is well worth the effort to
+use Linux for all PTB experimental computers (reserving macOS or Windows
+systems for development).</p>
+<h2 id="using-the-git-repository">Using the Git repository</h2>
+<p>Using <code>git</code> to install is the recommended route; it makes
+it easy to update:</p>
+<ul>
+<li>Create a parent folder to hold the code, I use <code>~/Code/</code>
+on Ubuntu and macOS and <code>C:/Code/</code> on windows.</li>
+<li><code>cd</code> to that parent folder in the terminal and run</li>
+</ul>
+<pre class="shell"><code>git clone https://github.com/iandol/opticka.git</code></pre>
+<ul>
+<li>In MATLAB, <code>cd</code> to the new <code>~/Code/opticka</code>
+folder and run <code>addOptickaToPath.m</code></li>
+</ul>
+<p>To keep opticka up-to-date in the terminal: <code>git pull</code> —
+if you want to make local changes, then please create a new local branch
+to keep the main branch clean so you can pull without issue. If you do
+have issues pulling you can either (1) reset the repo losing any local
+changes:
+<code>git fetch -v; git reset --hard origin/master; git clean -f -d; git pull</code>
+— (2) stash your changes:
+<code>git fetch -v; git stash push; git pull</code></p>
+<h2 id="using-the-zip-file">Using the ZIP file</h2>
+<p>I recommend using <code>git</code> as you can keep the code
+up-to-date by pulling from Github, but a ZIP install is a bit
+easier:</p>
+<ul>
+<li>Download the latest ZIP file: <a
+href="https://github.com/iandol/opticka/archive/refs/heads/master.zip">GitHub
+ZIP File</a></li>
+<li>Unzip the <strong>contents</strong> of the
+<code>opticka-master</code> folder in the zip to a new folder (I use
+<code>~/Code/opticka</code>). You should end up with something like
+e.g. <code>~/Code/opticka/opticka.m</code> as a path.</li>
+<li>In MATLAB, <code>cd</code> to that folder and run
+<code>addOptickaToPath.m</code>.</li>
+</ul>
+<p>To keep up-to-date you should manually keep downloading and unzipping
+the newest versions…</p>
 </body>
 </html>

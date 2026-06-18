@@ -1,3 +1,8 @@
-#!/usr/bin/env elvish
+#!/usr/bin/env zsh
 echo "Will rebuild just the UI help files..."
-each {|x| e:pandoc -d "help.yaml" -o $x".html" $x".md" } ["uihelpvars" "uihelpstims" "uihelpstate" "uihelpfunctions" "uihelptask"]
+list=("uihelpvars" "uihelpstims" "uihelpstate" "uihelpfunctions" "uihelptask" "METHODS" "INSTALL")
+for x in $list; do
+	pandoc -d "help.yaml" -o "${x}.html" "${x}.md"
+done
+# needs typst installed, and the typst binary in your path. See https://typst.app/docs/install
+[[ -x "$(command -v typst)" ]] && pandoc -d "pdf.yaml" -o "opticka-docs.pdf" "opticka-docs.md"

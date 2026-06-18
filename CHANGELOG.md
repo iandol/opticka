@@ -3,6 +3,94 @@
 > [!NOTE]
 > Changes which may affect your use of Opticka will be detailed here, starting with V2.16.x
 
+## V2.18.1
+
+> [!IMPORTANT]
+> **Major repository restructure** — Core classes have been moved into subdirectories for better organisation. Please run `addOptickaToPath` again to update your MATLAB path. If you use custom scripts that reference files by their old paths, you may need to update those references. `userFunctions` have be refactored, you should make a child class that inherits `userFunctions` as its superclass (see DMTS protocol for an example of this).
+
+### New Features
+
+* **AprilTag Stimulus** (`aprilTagStimulus`) — New stimulus class generating binary checkerboard / AprilTag-style patterns directly from MATLAB pixel arrays rather than PNG textures. Supports user-defined pattern matrices or random generation, separate colours for 0/1 values, and crisp edge filtering (`filter=0`).
+* **Mentalab EEG Integration** (`mentalabManager`) — New communication class sending strobes and triggers to Mentalab EEG recording systems directly from Opticka tasks.
+* **MinIO S3 Storage** (`minioManager`) — New S3-compatible file transfer interface using the MinIO `mc` CLI tool (alias-based authentication). Supports cross-platform install via `pixi global install minio-mc` or direct download. Provides `cp`, `ls`, `mv`, `sync` wrappers with `mc alias set`. The previous `awsManager` is deprecated.
+* **Editable Combo Box UI** (`CompactEditableComboBox`) — New custom App Designer UI widget combining text entry with dropdown list functionality. Entries persist across sessions, supports inline editing and new entry creation. Includes HTML renderer (`compactEditableComboBox.html`), event data class, and a demo script. Used in Opticka UI for saving and editing selection commands to send to Alyx database.
+* **DMTS Protocol** — Delayed Match to Sample behavioural task: subject fixates, a sample image appears, after a delay a choice array of images appears at peripheral locations. Subject must saccade to the matching image. Full state machine + functions + protocol `.mat` file.
+* **VEP Test Protocol** (`VEPTest`) — Visual Evoked Potential testing state machine with protocol file.
+* **Touch Saccade Tasks** — Touch-screen versions of saccade/antisaccade (`Saccade_AntiSaccade_touch`) and double-step (`Saccadic_DoubleStep_touch`) tasks added to `CoreProtocols/`.
+* **alyxUploader** (`tools/alyxUploader.m`) — Retroactive bulk upload tool for older ALF-format session data. Scans folder hierarchies, creates matching Alyx sessions with correct timestamps derived from filenames, and registers files with Alyx + S3/MinIO data repository.
+* **DataHash** (`data/DataHash.m`) — New utility for computing cryptographic hashes of MATLAB data structures (534 lines).
+* **Image Stretching** — `imageStimulus` now supports `crop = 'stretch'` to stretch images to fill the screen dimensions.
+* **Audio Ramp Duration** — `audioManager` beeps now allow configurable `rampDuration` for onset/offset smoothing.
+* **userFunctions Integration** — `myUserFunctions.m` as a child class template provides user-extensible methods accessible via `uF.<method>` in state machines.
+
+### Major Refactors
+
+* **Repository Restructure** — Major project reorganisation: core classes moved to `core/` (`optickaCore.m`, `runExperiment.m`, `screenManager.m`, `stateMachine.m`, `taskSequence.m`, `runOpticka.m`, `DefaultStateInfo.m`, `userFunctions.m`), data utilities to `data/` (`HEDTagger.m`, `HEDTags.m`, `behaviouralRecord.m`, `timeLogger.m`, `DataHash.m`, `getDensity.m`, `HED8.4.0_Tag.tsv`), GUI classes to `ui/` (`opticka.m`, `opticka_ui.mlapp`), and Omniplex/PLX reader to `communication/omniplex/`. `addOptickaToPath` updated accordingly.
+* **touchManager** — Extensive refactor: support for multiple simultaneous touch windows, improved xinput device enabling logic, `syncTime()` method to reset touch event timing, `updateWindow()` for proper logging of touch window changes, enhanced `touchData` plotting with 3D scatter layout, dynamic figure naming, and improved axis labelling. Better handling of Type 1 touch events and device name validation (1034 lines changed).
+* **alyxManager** — Comprehensive refactor: secure password handling via `getSecret`/`setSecret` with `setSecrets()` and `getSecrets()` methods; response caching using MATLAB `dictionary` for `hasEntry()` performance; transition to MinIO storage; QC PASS dataset support; improved login flow with automatic secret retrieval; better error handling and token refresh on 403 responses. Methods updated with `arguments()` blocks (1792 lines changed, major rewrite).
+* **timeLogger** — Refactored to use `arguments()` blocks. New explicit `HED` property in `addMessage()` for HED tag annotations. Preallocation support for timing and message arrays. More robust empty-value removal and legacy format migration. Improved `plot()` and `messageTable()` with HED columns.
+* **screenManager** — Major refactor with improved property validation, movie recording settings, compatibility updates (675 lines changed, moved to `core/`).
+* **stateMachine** — Performance refactor (#11). Table view (`showTable()`) now more robust with UI figure support. Better logging and compatibility. (273 lines changed, moved to `core/`).
+* **optickaCore** — Version updated to `2.18.1`. New `makeReport()` method using MATLAB Report Generator toolbox for generating PDF/HTML reports of experiment parameters. `getALF()` updated with `arguments()` blocks. Improved `clone()` method for deep copies.
+
+### Eyetracking
+
+* **eyelinkAnalysis** — Support for better saccade analysis toolbox integration (200 lines changed).
+* **tobiiAnalysis** — Improved gaze point calculations with proper centering on display area. Enhanced `plot()` and `plotMessages()` functions showing the event log overlay (213 lines changed).
+* **Polar↔Cartesian** — New static method for polar to cartesian coordinate conversion.
+* **Fixation Only protocol** — Updated for compatibility.
+
+### HED Tagging
+
+* Updated to HED schema V8.4 (new `data/HED8.4.0_Tag.tsv`, 1234 lines).
+* HED tags now integrated into `timeLogger.addMessage()` for per-event HED annotations.
+* `stateMachine.m` now includes a `HED` column so you can tag the states of your task.
+* More comprehensive HED logging throughout `runExperiment` task flow.
+* Old `tools/HEDTags.m` removed; replaced with `data/HEDTags.m`.
+
+### Improvements
+
+* **audioManager** — Enhanced with volume control, beep vector caching for repeated sounds, `getDeviceIndex()` and `showDevices()` methods. Better device selection, silent mode handling, and error logging (231 lines changed).
+* **imageStimulus** — Improved `ignoreProperties`, `sizeOut` calculation, file path handling, and image list clearing between trials.
+* **baseStimulus** — Circular mask optimisation: no longer remakes the mask texture for every stimulus update (105 lines changed).
+* **menuN** — Better font sizing on high DPI screens.
+* **joystickManager** — Minor updates (2 lines).
+* **nirSmartManager** — Minor improvements (4 lines).
+* **zmqConnection/jzmqConnection** — HTTP proxy URL fix, minor refinements.
+* **makeReport** — Refactored for better performance.
+* **analysisCore** — Minor fixes (14 lines).
+* **PupillaryReflex** — Minor protocol updates.
+* **Saccadic_DoubleStep** — Protocol updates (12 lines).
+
+### Bug Fixes
+
+* **touchManager** — Fixed xinput not enabling touch panel; better event handling for multiple touch windows; fixed device name validation; improved flush and event logging; fixed doNegation on last window only.
+* **audioManager** — Fixed crash on initialisation; improved device assignment and silent mode logic; better sample state validation before playback.
+* **alyxManager** — Fixed password property naming; hardened login error handling; improved re-sync logic; better connection failure handling.
+* **imageStimulus** — Fixed `updateXY()` stimulus argument validation (V2.17.13); fixed image list clearing between trials (V2.17.7).
+* **screenManager** — Fixed use of `win` not `screen` `WhiteIndex` on `open()`.
+* **stateMachine** — Fixed table view robustness.
+* **timeLogger** — More robust handling of edge cases.
+* **Windows paths** — Fixed compatibility issues.
+* **jzmqConnection** — Fixed HTTP proxy URL.
+* **tobiiAnalysis** — Fixed gaze point centering calculations.
+
+### Infrastructure
+
+* **AGENTS.md** — New comprehensive agent instructions file consolidating project conventions, architecture, and documentation for AI coding tools.
+* **Copilot Instructions** — New `.github/copilot-instructions.md` with developer guide.
+* **`.gitignore`** — Updated with build directory and additional exclusions.
+* **`addOptickaToPath.m`** — Updated for new directory structure (adds `core/`, `data/`, `ui/` subdirectories).
+* **`functionSignatures.json`** — Removed as `properties` validation is better.
+* **`README.md`** — Minor updates (5 lines).
+* **Copyright** — Updated to 2026 throughout.
+
+### Summary
+
+198 files changed, 13,803 insertions(+), 2,736 deletions(-) — 88 commits by 2 contributors.
+
+This major release focuses on repository restructuring, expanded behavioural task support (DMTS, VEP, touch tasks), new hardware integrations (Mentalab EEG, MinIO storage), comprehensive UI improvements (Editable Combo Box), and significant reliability enhancements across touch management, Alyx integration, and timing infrastructure.
+
 ## V2.17.1
 
 ### New Features

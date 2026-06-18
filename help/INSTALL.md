@@ -1,17 +1,24 @@
+---
+title: Installing Opticka
+---
+
 # Detailed Install Instructions {#install}
 
 ## Requirements:
 
 * Latest Psychophysics Toolbox (V3.0.18+) — please ensure it is kept up-to-date. Also consider donating to PTB to ensure its future development: <https://www.psychtoolbox.net/#future>
-* MATLAB 2017a+ (Opticka utilises object-oriented property validation first introduced in that version). While I would love to support Octave, its `classdef` support is currently incomplete...
-* Ubuntu V22.04+ strongly recommended, but also runs under Ubuntu V20.04, macOS and Windows 10+
+* MATLAB 2021a+ (we use property validation extensively so newer MATLABs R2025a+ are better for this). While I would love to support Octave, its `classdef` support is currently incomplete...
+* Ubuntu V24.04+ strongly recommended, but also runs under Ubuntu V20.04, macOS and Windows 10+
+* Java V21 -- we use Java classes for communication via [ZMQ](https://github.com/zeromq/jeromq) and for 2D physics animations in PTB, newer MATLAB's do not bundle Java so download seperately.
+* For Alyx, we use an S3-like store and use the [minio-cli](https://github.com/minio/mc) to send data from MATLAB to the object store.
 * [Eyelink developer kit](https://www.sr-support.com) for Eyelink eyetrackers. «Class = eyelinkManager»
 * [Titta Toolbox](https://github.com/dcnieho/Titta) for Tobii Pro eyetrackers. «Class = tobiiManager»
+* [Palamedes Toolbox](https://www.palamedestoolbox.org) to enable staircase behavioural task control.
 * [LJM](https://labjack.com/support/software/installers/ljm) for LabJack T4 / T7 digital I/O devices. «Class = labJackT»
 * [Exodriver](https://labjack.com/support/software/installers/exodriver) for LabJack U3/6 devices. «Class = labJack»
 * For Arduino Uno / Seeduino Xiao, there is **no need to install the official Arduino toolbox**, this hardware is supported using PTB's IOPort built-in. «Class = arduinoManager»
 
-Opticka is tested and mostly used on 64bit Ubuntu 20.04 (in the lab) & macOS 12.x (only development) under MATLAB 2021b. The older LabJack U3/U6 interface ([`labJack.m`](https://github.com/iandol/opticka/blob/master/communication/labJack.m)) currently only works under Linux and macOS (Labjack uses a different interface on Linux/macOS vs. Windows). The newer LabJack T4/T7 interface ([`labJackT.m`](https://github.com/iandol/opticka/blob/master/communication/labJackT.m)) does work cross-platform. Linux is **by far the best OS** according the PTB developer Mario Kleiner, and receives the majority of development work from him. It is **_strongly advised_** to use it for all real data collection. My experience is that Linux is *much more* robust and performs better than both macOS or Windows, and it is well worth the effort to use Linux for all PTB experimental computers (reserving macOS or Windows systems for development).
+Opticka is tested and mostly used on 64bit Ubuntu 24.04 (in the lab) & macOS 26.x (only development) under MATLAB 2026a. The older LabJack U3/U6 interface ([`labJack.m`](https://github.com/iandol/opticka/blob/master/communication/labJack.m)) currently only works under Linux and macOS (Labjack uses a different interface on Linux/macOS vs. Windows). The newer LabJack T4/T7 interface ([`labJackT.m`](https://github.com/iandol/opticka/blob/master/communication/labJackT.m)) does work cross-platform. Linux is **by far the best OS** according the PTB developer Mario Kleiner, and receives the majority of development work from him. It is **_strongly advised_** to use it for all real data collection. My experience is that Linux is *much more* robust and performs better than both macOS or Windows, and it is well worth the effort to use Linux for all PTB experimental computers (reserving macOS or Windows systems for development).
 
 ## Using the Git repository
 

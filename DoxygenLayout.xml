@@ -6,6 +6,8 @@
     <tab type="pages" visible="yes" title="" intro="Examples / Documentation">
       <tab type="user" url="optickaBehaviourTest.html" title="Opticka State Machine Test Output"/>
       <tab type="user" url="optickaTest.html" title="Opticka MOC Test Output"/>
+      <tab type="user" url="INSTALL.html" title="Opticka: Installation"/>
+      <tab type="user" url="METHODS.html" title="Opticka: Methods Reference"/>
       <tab type="user" url="uihelpstate.html" title="Opticka UI help: State-machine"/>
       <tab type="user" url="uihelpfunctions.html" title="Opticka UI help: User Functions"/>
       <tab type="user" url="uihelptask.html" title="Opticka UI help: Task"/>

@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
-  <title>uihelptask</title>
+  <title>Opticka General Overview</title>
   <style>
   html {font-family: Hoefler Text, Palatino, Georgia, serif;
     color: #1a1a1a;
@@ -22,7 +22,7 @@
     font-kerning: normal;
   }
 
-  @media (max-width: 600px) {body {font-size: 0.9em;
+  @media (max-width: 800px) {body {font-size: 0.9em;
     padding: 1em;}
     h1 {font-size: 1.8em;}
   }
@@ -185,8 +185,7 @@
   </style>
 </head>
 <body>
-<h1 id="optickas-two-experiment-modes">Opticka’s Two Experiment
-Modes</h1>
+<h1 id="optickamodes">Opticka’s Two Experiment Modes</h1>
 <ol type="1">
 <li><strong>Behavioural Task</strong> – a behavioural task uses a
 <code>stateMachine</code> to construct a series of experiment states and
@@ -202,6 +201,48 @@ task where <strong>no</strong> behavioural control is required. It uses
 of stimuli and the variables that will drive unique trials repeated over
 blocks.</li>
 </ol>
+<h2 id="comparison">Comparison</h2>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 47%" />
+<col style="width: 27%" />
+</colgroup>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Behavioural Task</th>
+<th>MOC Task</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>State machine</td>
+<td>Yes (<code>stateMachine</code> + <code>StateInfo.m</code>)</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Eyetracker/touch</td>
+<td>Supported</td>
+<td>Not used</td>
+</tr>
+<tr>
+<td>Trial flow</td>
+<td>Transition-driven (fixation, response)</td>
+<td>Timer-driven</td>
+</tr>
+<tr>
+<td>Feedback states</td>
+<td>Correct / incorrect / breakfix</td>
+<td>None</td>
+</tr>
+<tr>
+<td>Data saving</td>
+<td>Per-trial with response codes</td>
+<td>Per-trial stimulus data only</td>
+</tr>
+</tbody>
+</table>
 <h2 id="basic-settings-see-below-for-more-details">Basic Settings (see
 below for more details):</h2>
 <ul>
@@ -215,19 +256,19 @@ for.</li>
 <li><strong>REAL Time</strong>: We can use two timing methods, when REAL
 Time=ON then we use the PTB method <code>GetSecs</code> or the VBL to
 measure time stamps and task time is based on these real time values.
-When when REAL Time=OFF then we calculate how many frames a time
-interval should contain and use ticks to measure time as each frame is
-shown. REAL Time is essential for real experiments, ticks are more
-useful for debugging where you can stop and step through carefully.</li>
+When REAL Time=OFF then we calculate how many frames a time interval
+should contain and use ticks to measure time as each frame is shown.
+REAL Time is essential for real experiments, ticks are more useful for
+debugging where you can stop and step through carefully.</li>
 </ul>
 <h1 id="task-parameters">Task Parameters</h1>
 <p>Opticka uses the <code>taskSequence</code> class to build the
-stimulus randomisation. This class takes a series of <strong>independent
-variables</strong> with values and builds the randomisation into
-repeated blocks. The GUI does this using the <kbd>Ind. Variable
-List</kbd> editor, but the underlying code looks like this
-(<code>nBlocks</code> is <strong>Task Options &gt; Repeat
-Blocks</strong> in the GUI):</p>
+stimulus randomisation (<a href="uihelpvars.md">see here</a>). This
+class takes a series of <strong>independent variables</strong> with
+values and builds the randomisation into repeated blocks. The GUI does
+this using the <kbd>Ind. Variable List</kbd> editor, but the underlying
+code looks like this (<code>nBlocks</code> is <strong>Task Options &gt;
+Repeat Blocks</strong> in the GUI):</p>
 <div class="sourceCode" id="cb1"><pre
 class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">% task sequence with 2 blocks</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="va">task</span> <span class="op">=</span> <span class="va">taskSequence</span>(<span class="ss">&#39;nBlocks&#39;</span><span class="op">,</span> <span class="fl">2</span>)<span class="op">;</span></span>
@@ -244,279 +285,9 @@ class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb1-1"><a hr
 <span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="va">randomiseTask</span>(<span class="va">task</span>)<span class="op">;</span></span></code></pre></div>
 <p>Independent variables can be any stimulus parameter
-(<code>size</code>,<code>angle</code>,<code>xPosition</code> etc.) that
-can be assigned to that stimulus. There are some magic variables like
-<code>xyPosition</code> that allows you to pass both the X and Y
+(<code>size</code>, <code>angle</code>, <code>xPosition</code> etc.)
+that can be assigned to that stimulus. There are some magic variables
+like <code>xyPosition</code> that allows you to pass both the X and Y
 position in a single variable value.</p>
-<p><code>randomiseTask(task)</code> will generate the randomisation
-table like so (3 angles x 2 colours per block = <strong>6</strong>
-conditions; 2 block = <strong>12</strong> total trials):</p>
-<table>
-<thead>
-<tr>
-<th>Angle</th>
-<th>Colour</th>
-<th style="text-align: left;">Index</th>
-<th style="text-align: left;">IdxAngle</th>
-<th>IdxColour</th>
-<th style="text-align: left;">Trial Factor</th>
-<th style="text-align: left;">Block Factor</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>-25</td>
-<td>1 0 0</td>
-<td style="text-align: left;">1</td>
-<td style="text-align: left;">1</td>
-<td>1</td>
-<td style="text-align: left;">‘none’</td>
-<td style="text-align: left;">‘none’</td>
-</tr>
-<tr>
-<td>0</td>
-<td>1 0 0</td>
-<td style="text-align: left;">3</td>
-<td style="text-align: left;">2</td>
-<td>1</td>
-<td style="text-align: left;">‘none’</td>
-<td style="text-align: left;">‘none’</td>
-</tr>
-<tr>
-<td>25</td>
-<td>0 1 0</td>
-<td style="text-align: left;">6</td>
-<td style="text-align: left;">3</td>
-<td>2</td>
-<td style="text-align: left;">‘none’</td>
-<td style="text-align: left;">‘none’</td>
-</tr>
-<tr>
-<td>25</td>
-<td>1 0 0</td>
-<td style="text-align: left;">5</td>
-<td style="text-align: left;">3</td>
-<td>1</td>
-<td style="text-align: left;">‘none’</td>
-<td style="text-align: left;">‘none’</td>
-</tr>
-<tr>
-<td>-25</td>
-<td>0 1 0</td>
-<td style="text-align: left;">2</td>
-<td style="text-align: left;">1</td>
-<td>2</td>
-<td style="text-align: left;">‘none’</td>
-<td style="text-align: left;">‘none’</td>
-</tr>
-<tr>
-<td>0</td>
-<td>0 1 0</td>
-<td style="text-align: left;">4</td>
-<td style="text-align: left;">2</td>
-<td>2</td>
-<td style="text-align: left;">‘none’</td>
-<td style="text-align: left;">‘none’</td>
-</tr>
-<tr>
-<td>-25</td>
-<td>0 1 0</td>
-<td style="text-align: left;">2</td>
-<td style="text-align: left;">1</td>
-<td>2</td>
-<td style="text-align: left;">‘none’</td>
-<td style="text-align: left;">‘none’</td>
-</tr>
-<tr>
-<td>0</td>
-<td>0 1 0</td>
-<td style="text-align: left;">4</td>
-<td style="text-align: left;">2</td>
-<td>2</td>
-<td style="text-align: left;">‘none’</td>
-<td style="text-align: left;">‘none’</td>
-</tr>
-<tr>
-<td>-25</td>
-<td>1 0 0</td>
-<td style="text-align: left;">1</td>
-<td style="text-align: left;">1</td>
-<td>1</td>
-<td style="text-align: left;">‘none’</td>
-<td style="text-align: left;">‘none’</td>
-</tr>
-<tr>
-<td>25</td>
-<td>0 1 0</td>
-<td style="text-align: left;">6</td>
-<td style="text-align: left;">3</td>
-<td>2</td>
-<td style="text-align: left;">‘none’</td>
-<td style="text-align: left;">‘none’</td>
-</tr>
-<tr>
-<td>0</td>
-<td>1 0 0</td>
-<td style="text-align: left;">3</td>
-<td style="text-align: left;">2</td>
-<td>1</td>
-<td style="text-align: left;">‘none’</td>
-<td style="text-align: left;">‘none’</td>
-</tr>
-<tr>
-<td>25</td>
-<td>1 0 0</td>
-<td style="text-align: left;">5</td>
-<td style="text-align: left;">3</td>
-<td>1</td>
-<td style="text-align: left;">‘none’</td>
-<td style="text-align: left;">‘none’</td>
-</tr>
-</tbody>
-</table>
-<p>Opticka’s task function can then use this table to assign variables
-on each trial to the defined stimuli and generate strobed words to send
-to external equipment. See core protocols like
-<code>OrientationTuning.mat</code> to get a working example of this in
-action.</p>
-<h2 id="block-level-and-trial-level-factors">Block-Level and Trial-Level
-Factors</h2>
-<p>In addition, you can specify <em>independent</em> block and trial
-factors. For example if we set</p>
-<div class="sourceCode" id="cb2"><pre
-class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="va">task</span>.<span class="va">blockVar</span>.<span class="va">values</span><span class="op">=</span>{<span class="ss">&#39;A&#39;</span><span class="op">,</span><span class="ss">&#39;B&#39;</span>}<span class="op">;</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="va">task</span>.<span class="va">blockVar</span>.<span class="va">probability</span> <span class="op">=</span> [<span class="fl">0.6</span> <span class="fl">0.4</span>]<span class="op">;</span></span></code></pre></div>
-<p>Then for each block we assign either <code>A</code> or <code>B</code>
-with a 60:40% probability. Trial-level factors are specified in the same
-way, but for each trial independently of the blocks.</p>
-<div class="sourceCode" id="cb3"><pre
-class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="va">task</span>.<span class="va">trialVar</span>.<span class="va">values</span><span class="op">=</span>{<span class="ss">&#39;Y&#39;</span><span class="op">,</span><span class="ss">&#39;Z&#39;</span>}<span class="op">;</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="va">task</span>.<span class="va">trialVar</span>.<span class="va">probability</span> <span class="op">=</span> [<span class="fl">0.5</span> <span class="fl">0.5</span>]<span class="op">;</span></span></code></pre></div>
-<table>
-<thead>
-<tr>
-<th>Angle</th>
-<th>Colour</th>
-<th style="text-align: left;">Index</th>
-<th style="text-align: left;">IdxAngle</th>
-<th>IdxColour</th>
-<th style="text-align: left;">Trial Factor</th>
-<th style="text-align: left;">Block Factor</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>-25</td>
-<td>1 0 0</td>
-<td style="text-align: left;">1</td>
-<td style="text-align: left;">1</td>
-<td>1</td>
-<td style="text-align: left;">Z</td>
-<td style="text-align: left;">A</td>
-</tr>
-<tr>
-<td>0</td>
-<td>1 0 0</td>
-<td style="text-align: left;">3</td>
-<td style="text-align: left;">2</td>
-<td>1</td>
-<td style="text-align: left;">Y</td>
-<td style="text-align: left;">A</td>
-</tr>
-<tr>
-<td>25</td>
-<td>0 1 0</td>
-<td style="text-align: left;">6</td>
-<td style="text-align: left;">3</td>
-<td>2</td>
-<td style="text-align: left;">Y</td>
-<td style="text-align: left;">A</td>
-</tr>
-<tr>
-<td>25</td>
-<td>1 0 0</td>
-<td style="text-align: left;">5</td>
-<td style="text-align: left;">3</td>
-<td>1</td>
-<td style="text-align: left;">Y</td>
-<td style="text-align: left;">A</td>
-</tr>
-<tr>
-<td>-25</td>
-<td>0 1 0</td>
-<td style="text-align: left;">2</td>
-<td style="text-align: left;">1</td>
-<td>2</td>
-<td style="text-align: left;">Z</td>
-<td style="text-align: left;">A</td>
-</tr>
-<tr>
-<td>0</td>
-<td>0 1 0</td>
-<td style="text-align: left;">4</td>
-<td style="text-align: left;">2</td>
-<td>2</td>
-<td style="text-align: left;">Y</td>
-<td style="text-align: left;">A</td>
-</tr>
-<tr>
-<td>-25</td>
-<td>0 1 0</td>
-<td style="text-align: left;">2</td>
-<td style="text-align: left;">1</td>
-<td>2</td>
-<td style="text-align: left;">Y</td>
-<td style="text-align: left;">B</td>
-</tr>
-<tr>
-<td>0</td>
-<td>0 1 0</td>
-<td style="text-align: left;">4</td>
-<td style="text-align: left;">2</td>
-<td>2</td>
-<td style="text-align: left;">Z</td>
-<td style="text-align: left;">B</td>
-</tr>
-<tr>
-<td>-25</td>
-<td>1 0 0</td>
-<td style="text-align: left;">1</td>
-<td style="text-align: left;">1</td>
-<td>1</td>
-<td style="text-align: left;">Z</td>
-<td style="text-align: left;">B</td>
-</tr>
-<tr>
-<td>25</td>
-<td>0 1 0</td>
-<td style="text-align: left;">6</td>
-<td style="text-align: left;">3</td>
-<td>2</td>
-<td style="text-align: left;">Y</td>
-<td style="text-align: left;">B</td>
-</tr>
-<tr>
-<td>0</td>
-<td>1 0 0</td>
-<td style="text-align: left;">3</td>
-<td style="text-align: left;">2</td>
-<td>1</td>
-<td style="text-align: left;">Y</td>
-<td style="text-align: left;">B</td>
-</tr>
-<tr>
-<td>25</td>
-<td>1 0 0</td>
-<td style="text-align: left;">5</td>
-<td style="text-align: left;">3</td>
-<td>1</td>
-<td style="text-align: left;">Y</td>
-<td style="text-align: left;">B</td>
-</tr>
-</tbody>
-</table>
-<p>Trial- and Block-factors can be used to drive state machine functions
-if you need it (<code>Saccadic_Doublestep.mat</code> is an example
-protocol).</p>
 </body>
 </html>

@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
-  <title>uihelpstims</title>
+  <title>Opticka Stimuli</title>
   <style>
   html {font-family: Hoefler Text, Palatino, Georgia, serif;
     color: #1a1a1a;
@@ -22,7 +22,7 @@
     font-kerning: normal;
   }
 
-  @media (max-width: 600px) {body {font-size: 0.9em;
+  @media (max-width: 800px) {body {font-size: 0.9em;
     padding: 1em;}
     h1 {font-size: 1.8em;}
   }
@@ -185,12 +185,44 @@
   </style>
 </head>
 <body>
+<nav id="TOC" role="doc-toc">
+<h2 id="toc-title">Contents</h2>
+<ul>
+<li><a href="#configuring-stimuli"
+id="toc-configuring-stimuli">Configuring Stimuli</a></li>
+<li><a href="#adding-editing-stimuli"
+id="toc-adding-editing-stimuli">Adding &amp; Editing Stimuli</a></li>
+<li><a href="#previewing-stimuli" id="toc-previewing-stimuli">Previewing
+Stimuli</a></li>
+<li><a href="#common-base-properties"
+id="toc-common-base-properties">Common Base Properties</a>
+<ul>
+<li><a href="#the-out-dynamic-property-system"
+id="toc-the-out-dynamic-property-system">The <code>*Out</code> Dynamic
+Property System</a></li>
+<li><a href="#the-xyposition-magic-variable"
+id="toc-the-xyposition-magic-variable">The <code>xyPosition</code> Magic
+Variable</a></li>
+</ul></li>
+<li><a href="#stimulus-types" id="toc-stimulus-types">Stimulus Types</a>
+<ul>
+<li><a href="#grating-family-properties"
+id="toc-grating-family-properties">Grating Family Properties</a></li>
+<li><a href="#dots-stimulus-properties"
+id="toc-dots-stimulus-properties">Dots Stimulus Properties</a></li>
+</ul></li>
+<li><a href="#accessing-individual-stimuli"
+id="toc-accessing-individual-stimuli">Accessing Individual
+Stimuli</a></li>
+</ul>
+</nav>
 <h1 id="configuring-stimuli">Configuring Stimuli</h1>
 <p>Opticka uses many different stimulus classes that are collected
-together using a metaStimulus class. The order of the stimulus in the
-list defines the z-index at which it is drawn (higher number gets drawn
-on top of lower number). Stimuli collected into a metaStimulus can then
-be controlled as a single object. In this code for example:</p>
+together using a <code>metaStimulus</code> class. The order of the
+stimulus in the list defines the z-index at which it is drawn (higher
+number gets drawn on top of lower number). Stimuli collected into a
+<code>metaStimulus</code> can then be controlled as a single object. In
+this code for example:</p>
 <div class="sourceCode" id="cb1"><pre
 class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="va">d</span> <span class="op">=</span> <span class="va">dotsStimulus</span>(<span class="ss">&#39;XPosition&#39;</span><span class="op">,</span> <span class="fl">5</span><span class="op">,</span> <span class="ss">&#39;mask&#39;</span><span class="op">,</span> <span class="va">true</span>)<span class="op">;</span> <span class="co">%coherent dots</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="va">f</span> <span class="op">=</span> <span class="va">fixationCrossStimulus</span>(<span class="ss">&#39;alpha&#39;</span><span class="op">,</span> <span class="fl">0.5</span>)<span class="op">;</span> <span class="co">%fixation cross</span></span>
@@ -227,10 +259,408 @@ stimuli are drawn) use the <kbd>↑</kbd> and <kbd>↓</kbd> icons.</p>
 how it will look.</li>
 <li><kbd>▷⚡️</kbd> Benchmark run a single stimulus. See command window
 for FPS.</li>
-<li><kbd>▶︎</kbd> Rull all stimuli in an onscreen window to preview how
+<li><kbd>▶︎</kbd> Run all stimuli in an onscreen window to preview how
 they will look.</li>
 <li><kbd>▶︎⚡️</kbd> Benchmark all stimuli. See command window for
 FPS.</li>
 </ul>
+<h1 id="common-base-properties">Common Base Properties</h1>
+<p>All stimulus classes inherit from <code>baseStimulus</code>, which
+provides a shared set of properties. These can all be used as task
+variables (<code>nVar</code> names):</p>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>xPosition</code></td>
+<td>0</td>
+<td>X position in visual degrees</td>
+</tr>
+<tr>
+<td><code>yPosition</code></td>
+<td>0</td>
+<td>Y position in visual degrees</td>
+</tr>
+<tr>
+<td><code>size</code></td>
+<td>4</td>
+<td>Size in visual degrees</td>
+</tr>
+<tr>
+<td><code>colour</code></td>
+<td>[1 1 1 1]</td>
+<td>RGB(A) colour, 0–1 range</td>
+</tr>
+<tr>
+<td><code>alpha</code></td>
+<td>1</td>
+<td>Opacity, 0–1</td>
+</tr>
+<tr>
+<td><code>angle</code></td>
+<td>0</td>
+<td>Orientation in degrees (0–360)</td>
+</tr>
+<tr>
+<td><code>speed</code></td>
+<td>0</td>
+<td>Speed in degrees/second</td>
+</tr>
+<tr>
+<td><code>startPosition</code></td>
+<td>0</td>
+<td>Pre-offset for moving stimuli (degrees)</td>
+</tr>
+<tr>
+<td><code>delayTime</code></td>
+<td>0</td>
+<td>Delay before display relative to onset (seconds)</td>
+</tr>
+<tr>
+<td><code>offTime</code></td>
+<td>Inf</td>
+<td>Time to turn off relative to onset (seconds)</td>
+</tr>
+<tr>
+<td><code>isVisible</code></td>
+<td>true</td>
+<td>Whether to draw</td>
+</tr>
+</tbody>
+</table>
+<h3 id="the-out-dynamic-property-system">The <code>*Out</code> Dynamic
+Property System</h3>
+<p>During <code>setup()</code>, each public property
+(e.g. <code>size</code>) is cloned into a transient dynamic property
+(<code>sizeOut</code>). The <code>*Out</code> version holds the
+<strong>runtime</strong>, pixel-converted value. When task variables are
+applied, they write to the <code>*Out</code> properties. On
+<code>reset()</code>, these dynamic properties are removed.</p>
+<p>This means:</p>
+<ul>
+<li>In the GUI and state info files, you set <code>size</code>,
+<code>angle</code>, etc. — these are the <em>design-time</em>
+values</li>
+<li>At runtime, <code>sizeOut</code>, <code>angleOut</code>, etc. hold
+the <em>actual</em> values being used (which may differ due to task
+variable changes)</li>
+<li>When using <code>edit(stims, N, property, value)</code> during a
+task, use the <code>*Out</code> version:
+<code>edit(stims, 3, 'sizeOut', 2)</code></li>
+</ul>
+<h3 id="the-xyposition-magic-variable">The <code>xyPosition</code> Magic
+Variable</h3>
+<p>When defining task variables, you can use the special name
+<code>xyPosition</code> which allows you to pass both X and Y positions
+in a single variable value. The value should be a cell array of
+<code>[x, y]</code> pairs:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="va">task</span>.<span class="va">nVar</span>(<span class="fl">1</span>).<span class="va">name</span> <span class="op">=</span> <span class="ss">&#39;xyPosition&#39;</span><span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="va">task</span>.<span class="va">nVar</span>(<span class="fl">1</span>).<span class="va">values</span> <span class="op">=</span> {[<span class="fl">5</span> <span class="fl">0</span>]<span class="op">,</span> [<span class="fl">0</span> <span class="fl">5</span>]<span class="op">,</span> [<span class="op">-</span><span class="fl">5</span> <span class="fl">0</span>]<span class="op">,</span> [<span class="fl">0</span> <span class="op">-</span><span class="fl">5</span>]}<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="va">task</span>.<span class="va">nVar</span>(<span class="fl">1</span>).<span class="va">stimulus</span> <span class="op">=</span> <span class="fl">1</span><span class="op">;</span></span></code></pre></div>
+<p>This sets both <code>xPositionOut</code> and
+<code>yPositionOut</code> from a single variable. You can also use the
+<a href="uihelpvars.html">Equidistant Points button</a> to generate
+these values automatically.</p>
+<h1 id="stimulus-types">Stimulus Types</h1>
+<p>Opticka provides the following stimulus classes. Each has unique
+properties beyond the common base properties listed above. Key
+distinguishing properties are listed for each type.</p>
+<table>
+<colgroup>
+<col style="width: 31%" />
+<col style="width: 11%" />
+<col style="width: 25%" />
+<col style="width: 31%" />
+</colgroup>
+<thead>
+<tr>
+<th>Stimulus Class</th>
+<th>Type</th>
+<th>Description</th>
+<th>Key Properties</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>gratingStimulus</code></td>
+<td>sinusoid / square</td>
+<td>Drifting sinusoidal or square-wave grating (procedural shader)</td>
+<td><code>sf</code>, <code>tf</code>, <code>phase</code>,
+<code>contrast</code>, <code>mask</code>, <code>sigma</code></td>
+</tr>
+<tr>
+<td><code>gaborStimulus</code></td>
+<td>procedural</td>
+<td>Gabor patch with Gaussian envelope (procedural shader)</td>
+<td><code>sf</code>, <code>tf</code>, <code>phase</code>,
+<code>contrast</code>, <code>spatialConstant</code></td>
+</tr>
+<tr>
+<td><code>colourGratingStimulus</code></td>
+<td>sinusoid / square</td>
+<td>Two-colour grating (procedural shader)</td>
+<td><code>sf</code>, <code>tf</code>, <code>contrast</code>,
+<code>colour2</code>, <code>baseColour</code>,
+<code>visibleRate</code></td>
+</tr>
+<tr>
+<td><code>checkerboardStimulus</code></td>
+<td>checkerboard</td>
+<td>Checkerboard pattern (GLSL shader)</td>
+<td><code>sf</code>, <code>tf</code>, <code>contrast</code>,
+<code>colour2</code>, <code>baseColour</code></td>
+</tr>
+<tr>
+<td><code>polarGratingStimulus</code></td>
+<td>radial / circular / spiral</td>
+<td>Polar (radial/circular/spiral) grating</td>
+<td><code>sf</code>, <code>tf</code>, <code>contrast</code>,
+<code>colour2</code>, <code>spiralFactor</code>, <code>arcValue</code>,
+<code>centerMask</code></td>
+</tr>
+<tr>
+<td><code>polarBoardStimulus</code></td>
+<td>checkerboard</td>
+<td>Polar checkerboard (procedural shader)</td>
+<td><code>sf</code>, <code>sf2</code>, <code>tf</code>,
+<code>contrast</code>, <code>arcValue</code>,
+<code>centerMask</code></td>
+</tr>
+<tr>
+<td><code>imageStimulus</code></td>
+<td>picture</td>
+<td>Display images (single or directory)</td>
+<td><code>filePath</code>, <code>selection</code>,
+<code>contrast</code>, <code>crop</code>, <code>circularMask</code></td>
+</tr>
+<tr>
+<td><code>movieStimulus</code></td>
+<td>movie</td>
+<td>Play video files (PTB OpenMovie)</td>
+<td><code>filePath</code>, <code>selection</code>,
+<code>loopStrategy</code>, <code>mask</code>,
+<code>circularMask</code></td>
+</tr>
+<tr>
+<td><code>dotsStimulus</code></td>
+<td>simple</td>
+<td>Variable-coherence random dot kinetogram</td>
+<td><code>coherence</code>, <code>density</code>, <code>dotSize</code>,
+<code>colourType</code>, <code>kill</code>, <code>mask</code></td>
+</tr>
+<tr>
+<td><code>ndotsStimulus</code></td>
+<td>simple</td>
+<td>Alternative limited-lifetime coherence dots</td>
+<td><code>coherence</code>, <code>density</code>,
+<code>directionWeights</code>, <code>drunkenWalk</code>,
+<code>interleaving</code></td>
+</tr>
+<tr>
+<td><code>barStimulus</code></td>
+<td>solid / checkerboard / random</td>
+<td>Drifting bar stimulus (for RF mapping)</td>
+<td><code>barWidth</code>, <code>barHeight</code>,
+<code>contrast</code>, <code>sf</code>, <code>visibleRate</code></td>
+</tr>
+<tr>
+<td><code>spotStimulus</code></td>
+<td>simple / flash</td>
+<td>Simple disc/spot (gluDisk)</td>
+<td><code>contrast</code>, <code>flashColour</code>,
+<code>flashTime</code></td>
+</tr>
+<tr>
+<td><code>discStimulus</code></td>
+<td>simple / flash</td>
+<td>Procedural smoothed disc with edge smoothing</td>
+<td><code>contrast</code>, <code>sigma</code>,
+<code>smoothMethod</code>, <code>flashTime</code></td>
+</tr>
+<tr>
+<td><code>fixationCrossStimulus</code></td>
+<td>simple / pulse / flash</td>
+<td>Fixation cross with optional background disk</td>
+<td><code>colour2</code>, <code>lineWidth</code>, <code>showDisk</code>,
+<code>pulseFrequency</code>, <code>pulseRange</code></td>
+</tr>
+<tr>
+<td><code>dotlineStimulus</code></td>
+<td>circle / square</td>
+<td>Lines made of dots</td>
+<td><code>itemSize</code>, <code>itemDistance</code>,
+<code>phase</code>, <code>direction</code>, <code>colour2</code></td>
+</tr>
+<tr>
+<td><code>logGaborStimulus</code></td>
+<td>image / logGabor</td>
+<td>Log-Gabor filtered noise or image</td>
+<td><code>sf</code>, <code>sfSigma</code>, <code>angleSigma</code>,
+<code>seed</code>, <code>contrast</code></td>
+</tr>
+<tr>
+<td><code>revcorStimulus</code></td>
+<td>trinary / binary</td>
+<td>Reverse correlation (white noise) stimulus</td>
+<td><code>pixelScale</code>, <code>frameTime</code>,
+<code>trialLength</code></td>
+</tr>
+<tr>
+<td><code>targetInducerStimulus</code></td>
+<td>sinusoid / square</td>
+<td>Gabor-like target with flanking inducer gratings</td>
+<td><code>sf</code>, <code>tf</code>, <code>inducerHeight</code>,
+<code>inducerContrast</code>, <code>phaseOffset</code></td>
+</tr>
+<tr>
+<td><code>apparentMotionStimulus</code></td>
+<td>solid / random</td>
+<td>Apparent motion stimulus (bar flashes)</td>
+<td><code>barWidth</code>, <code>nBars</code>, <code>barSpacing</code>,
+<code>timing</code>, <code>direction</code></td>
+</tr>
+<tr>
+<td><code>aprilTagStimulus</code></td>
+<td>aprilTag</td>
+<td>Binary checkerboard / AprilTag-style stimulus</td>
+<td><code>rows</code>, <code>columns</code>, <code>patternMatrix</code>,
+<code>randomisePattern</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="grating-family-properties">Grating Family Properties</h3>
+<p>The grating stimuli (<code>gratingStimulus</code>,
+<code>gaborStimulus</code>, <code>colourGratingStimulus</code>,
+<code>checkerboardStimulus</code>, <code>polarGratingStimulus</code>,
+<code>polarBoardStimulus</code>) share these common properties:</p>
+<table>
+<colgroup>
+<col style="width: 31%" />
+<col style="width: 28%" />
+<col style="width: 40%" />
+</colgroup>
+<thead>
+<tr>
+<th>Property</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>sf</code></td>
+<td>1</td>
+<td>Spatial frequency (cycles/degree)</td>
+</tr>
+<tr>
+<td><code>tf</code></td>
+<td>1</td>
+<td>Temporal frequency (Hz)</td>
+</tr>
+<tr>
+<td><code>phase</code></td>
+<td>0</td>
+<td>Grating phase</td>
+</tr>
+<tr>
+<td><code>contrast</code></td>
+<td>0.5</td>
+<td>Contrast, 0–1</td>
+</tr>
+<tr>
+<td><code>direction</code></td>
+<td>0</td>
+<td>Object motion direction (degrees)</td>
+</tr>
+<tr>
+<td><code>reverseDirection</code> / <code>driftDirection</code></td>
+<td>false</td>
+<td>Reverse drift direction</td>
+</tr>
+<tr>
+<td><code>phaseReverseTime</code></td>
+<td>0</td>
+<td>Phase reversal interval (seconds); 0 = no reversal</td>
+</tr>
+<tr>
+<td><code>phaseOfReverse</code></td>
+<td>180</td>
+<td>Phase offset for reversal</td>
+</tr>
+<tr>
+<td><code>rotateTexture</code></td>
+<td>true</td>
+<td>Rotate texture vs. patch</td>
+</tr>
+<tr>
+<td><code>correctPhase</code></td>
+<td>false</td>
+<td>Phase relative to centre</td>
+</tr>
+</tbody>
+</table>
+<h3 id="dots-stimulus-properties">Dots Stimulus Properties</h3>
+<table>
+<colgroup>
+<col style="width: 31%" />
+<col style="width: 28%" />
+<col style="width: 40%" />
+</colgroup>
+<thead>
+<tr>
+<th>Property</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>coherence</code></td>
+<td>0.5</td>
+<td>Motion coherence, 0–1</td>
+</tr>
+<tr>
+<td><code>density</code></td>
+<td>100</td>
+<td>Dots per degree²</td>
+</tr>
+<tr>
+<td><code>dotSize</code></td>
+<td>0.05</td>
+<td>Dot width (degrees)</td>
+</tr>
+<tr>
+<td><code>kill</code></td>
+<td>0</td>
+<td>Limited-lifetime kill fraction</td>
+</tr>
+<tr>
+<td><code>colourType</code></td>
+<td>‘randomBW’</td>
+<td>Dot colouring mode: <code>simple</code>, <code>random</code>,
+<code>randomN</code>, <code>randomBW</code>, <code>randomNBW</code>,
+<code>binary</code></td>
+</tr>
+</tbody>
+</table>
+<h1 id="accessing-individual-stimuli">Accessing Individual Stimuli</h1>
+<p>Use cell indexing on the <code>metaStimulus</code> object to access
+individual stimulus objects directly:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="va">stims</span>{<span class="fl">1</span>}          <span class="co">% first stimulus object</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="va">stims</span>{<span class="fl">2</span>}.<span class="va">angleOut</span> <span class="co">% runtime angle of second stimulus</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="va">stims</span>{<span class="fl">3</span>}.<span class="va">filePath</span> <span class="co">% image path of third stimulus</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="va">stims</span>.<span class="va">n</span>           <span class="co">% number of stimuli in the group</span></span></code></pre></div>
+<p>You can call methods on individual stimuli too:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode matlab"><code class="sourceCode matlab"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="va">stims</span>{<span class="fl">1</span>}.<span class="va">resetTicks</span>()          <span class="co">% reset frame counters</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="va">stims</span>{<span class="fl">3</span>}.<span class="va">randomiseSelection</span>    <span class="co">% randomise image selection for imageStimulus</span></span></code></pre></div>
 </body>
 </html>
