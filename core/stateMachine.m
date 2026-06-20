@@ -706,18 +706,45 @@ classdef stateMachine < optickaCore
 		% ===================================================================
 		function exitCurrentState(me)
 			if me.fnTimers; tx=tic; end
-			
-			if ~me.currentState.skipExitFcn 
-				for jj = 1:length(me.currentState.exitFcn)
-					feval(me.currentState.exitFcn{jj});
-				end
-			end
-
+			me.runExitFcns(me.currentState);
 			if me.fnTimers 
 				me.log.fevalExit(me.thisN) = toc(tx)*1000;
 				txs = tic;
 			end
-			
+			me.writeLogForCurrent();
+			if me.fnTimers
+				me.log.fevalStore(me.thisN)	= toc(txs)*1000;
+			end
+			me.tempNextState = '';
+			if me.verbose
+				me.logOutput(['EXIT: ' me.currentState.name ...
+					' @ ' num2str(me.log.tnow(me.log.n)-me.log.startTime,'%.2f') ...
+					's | state time: ' num2str(me.log.tnow(me.log.n)-me.log.entryTime(me.log.n),'%.2f'), ...
+					's | ' num2str(me.log.tick(me.log.n)) '/' num2str(me.totalTicks) ...
+					' ticks'],''); 
+			end
+		end
+		
+		% ===================================================================
+		%> @brief run a state's exitFcn cell (honours skipExitFcn)
+		%> @param state struct with exitFcn and skipExitFcn fields
+		%> @return
+		% ===================================================================
+		function runExitFcns(me, state)
+			if ~state.skipExitFcn 
+				for jj = 1:length(state.exitFcn)
+					feval(state.exitFcn{jj});
+				end
+			end
+		end
+		
+		% ===================================================================
+		%> @brief write the log entry (and externalLog message) for the
+		%> current leaf state. Reads me.currentState / me.currentIndex /
+		%> me.thisN / timing fields. Does not run any state functions.
+		%> @return
+		% ===================================================================
+		function writeLogForCurrent(me)
 			me.log.n					= me.thisN;
 			me.log.index(me.thisN)		= me.currentIndex;
 			me.log.tnow(me.thisN)		= me.currentTime;
@@ -727,11 +754,6 @@ classdef stateMachine < optickaCore
 			me.log.entryTime(me.thisN)	= me.currentEntryTime;
 			me.log.nextTimeOut(me.thisN)= me.nextTimeOut;
 			me.log.nextTickOut(me.thisN)= me.nextTickOut;
-
-			if me.fnTimers
-				me.log.fevalStore(me.thisN)	= toc(txs)*1000;
-			end
-
 			if me.useExternalLog
 				me.externalLog.addMessage(me.log.n, me.log.entryTime(me.thisN), ...
 					me.log.tnow(me.thisN), ...
@@ -741,16 +763,6 @@ classdef stateMachine < optickaCore
 						me.log.tnow(me.thisN) - me.log.entryTime(me.thisN)), ...
 					me.clockFcnName, ...
 					"Event-stream, Time-block-state"+num2str(me.log.n));
-			end
-			
-			me.tempNextState = '';
-			
-			if me.verbose
-				me.logOutput(['EXIT: ' me.currentState.name ...
-					' @ ' num2str(me.log.tnow(me.log.n)-me.log.startTime,'%.2f') ...
-					's | state time: ' num2str(me.log.tnow(me.log.n)-me.log.entryTime(me.log.n),'%.2f'), ...
-					's | ' num2str(me.log.tick(me.log.n)) '/' num2str(me.totalTicks) ...
-					' ticks'],''); 
 			end
 		end
 		
@@ -765,25 +777,8 @@ classdef stateMachine < optickaCore
 			if me.thisN == 1; me.log.startTime = me.startTime; end
 			if me.nStates >= thisIndex
 				if me.fnTimers; tt = tic; end	%time our enter state functions
-				me.currentEntryTime = me.clockFcn();
-				me.currentState = me.stateList(me.currentIndex);
-				me.currentTick = 0;
-				me.currentUUID = dec2hex(me.thisN);
-				
-				if length(me.currentState.time) == 2
-					me.currentState.time = randi([me.currentState.time(1)*1e3, me.currentState.time(2)*1e3]) / 1e3;
-				end
-				me.nextTimeOut = me.currentEntryTime + me.currentState.time;
-				me.nextTickOut = floor(me.currentState.time / me.timeDelta);
-				
-				% run our entry functions
-				for jj = 1:length(me.currentState.entryFcn)
-					feval(me.currentState.entryFcn{jj});
-				end
-				%run our within state functions
-				for jj = 1:length(me.currentState.withinFcn)
-					feval(me.currentState.withinFcn{jj});
-				end
+				me.enterLeafTiming(thisIndex);
+				me.runEntryFcns(me.currentState);
 				if me.fnTimers; me.log.fevalEnter(me.thisN) = toc(tt)*1000; end
 				
 				if me.verbose
@@ -795,6 +790,43 @@ classdef stateMachine < optickaCore
 				if me.verbose; me.logOutput('enterStateAtIndex method', 'newIndex is greater than stateList length'); end
 				me.isFinishing = true;
 				finish(me);
+			end
+		end
+		
+		% ===================================================================
+		%> @brief set timing/identity fields for entering a leaf state at
+		%> @a thisIndex. Sets me.currentIndex, me.currentState (from
+		%> me.stateList), me.currentEntryTime, me.currentTick,
+		%> me.currentUUID, me.nextTimeOut and me.nextTickOut. Resolves a
+		%> two-element time as a uniform random range. Does not run any
+		%> state functions.
+		%> @param thisIndex index into me.stateList
+		%> @return
+		% ===================================================================
+		function enterLeafTiming(me, thisIndex)
+			me.currentIndex = thisIndex;
+			me.currentEntryTime = me.clockFcn();
+			me.currentState = me.stateList(me.currentIndex);
+			me.currentTick = 0;
+			me.currentUUID = dec2hex(me.thisN);
+			if length(me.currentState.time) == 2
+				me.currentState.time = randi([me.currentState.time(1)*1e3, me.currentState.time(2)*1e3]) / 1e3;
+			end
+			me.nextTimeOut = me.currentEntryTime + me.currentState.time;
+			me.nextTickOut = floor(me.currentState.time / me.timeDelta);
+		end
+		
+		% ===================================================================
+		%> @brief run a state's entryFcn then withinFcn cell arrays
+		%> @param state struct with entryFcn and withinFcn fields
+		%> @return
+		% ===================================================================
+		function runEntryFcns(me, state)
+			for jj = 1:length(state.entryFcn)
+				feval(state.entryFcn{jj});
+			end
+			for jj = 1:length(state.withinFcn)
+				feval(state.withinFcn{jj});
 			end
 		end
 

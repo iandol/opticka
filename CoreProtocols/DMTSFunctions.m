@@ -34,6 +34,13 @@ classdef DMTSFunctions < userFunctions
 			updateDelayTime(me);
 		end
 
+		% ===================================================================
+		% After the task finishes
+		function shutdown(me)
+		% ===================================================================
+			fprintf("===>>> DMTS Task ended: %s", me.comment);
+		end
+
 		%% ADD YOUR FUNCTIONS BELOW ↓
 
 		% ===================================================================

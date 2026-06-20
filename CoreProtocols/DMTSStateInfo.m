@@ -144,7 +144,7 @@ stims.stimulusSets			= { 7, [1 7], [2 3 4 5 6] };
 % to pause the task. The screen is blank, eye tracking is stopped, and a
 % message is displayed to the subject and operator. The task will only
 % resume when the operator presses the 'p' key, which triggers a transition
-% back to the 'prefixation' state.
+% back to the 'prefix' state.
 pauseEntryFn = {
 	@()hide(stims);
 	@()drawBackground(s); %blank the subject display
@@ -163,8 +163,8 @@ pauseExitFn = {
 	@()startRecording(eT, true); % start eyetracker recording
 };
 
-%====================================================PREFIXATION
-%--------------------prefixation entry 
+%====================================================prefix
+%--------------------prefix entry 
 % This is the state we enter at the start of each trial. We set up the
 % parameters for the trial, send a message to the eyetracker with the trial
 % info, and prepare the fixation target for the subject to look at. We also
@@ -181,13 +181,13 @@ pfEntryFn = {
 	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add uuid of current state
 };
 
-%--------------------prefixation within
+%--------------------prefix within
 pfWithinFn = {
 	@()trackerDrawFixation(eT);
 	@()trackerDrawEyePosition(eT);
 };
 
-%--------------------exit prefixation
+%--------------------exit prefix
 pfExitFn = {
 	@()logRun(me,'PREFIX');
 	@()trackerDrawStatus(eT,'Starting trial...', stims.stimulusPositions);
@@ -448,27 +448,27 @@ gridFn = {
 % this table defines the states and relationships and function sets
 %==================================================================
 stateInfoTmp = {
-'name'		'next'		'time'			'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn';
+'name'		'next'		'time'			'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn'	'HED';
 %---------------------------------------------------------------------------------------------
-'pause'		'prefixation'	inf			pauseEntryFn	{}				{}				pauseExitFn;
+'pause'		'prefix'	inf				pauseEntryFn	{}				{}				pauseExitFn	'Experiment-control, Pause';
 %---------------------------------------------------------------------------------------------
-'prefixation'	'fixation'	0.5			pfEntryFn		pfWithinFn		{}				pfExitFn;
-'fixation'		'breakfix'	10			fixEntryFn		fixWithinFn		initFixFn		fixExitFn;
-'sample'		'breakfix'	tS.sampleTime	sampleEntryFn	sampleWithinFn	sampleFixFn	sampleExitFn;
-'delay'			'breakfix'	tS.delayTime	delayEntryFn	delayWithinFn	delayFixFn	delayExitFn;
-'choice'		'incorrect'	tS.choiceTime	choiceEntryFn	choiceWithinFn	choiceFixFn	choiceExitFn;
-'correct'		'prefixation'	0.1		correctEntryFn	correctWithinFn	{}			correctExitFn;
-'incorrect'		'timeout'	0.1			incEntryFn		incWithinFn		{}				incExitFn;
-'breakfix'		'timeout'	0.1			breakEntryFn	breakWithinFn	{}				breakExitFn;
-'timeout'		'prefixation' tS.timeOut	{}			{}				{}				{};
+'prefix'	'fixation'	0.5				pfEntryFn		pfWithinFn		{}				pfExitFn	'Experiment-control';
+'fixation'	'breakfix'	10				fixEntryFn		fixWithinFn		initFixFn		fixExitFn	'Experiment-structure, Agent-action, Move-eyes';
+'sample'	'breakfix'	tS.sampleTime	sampleEntryFn	sampleWithinFn	sampleFixFn		sampleExitFn 'Sensory-event,Experimental-stimulus';
+'delay'		'breakfix'	tS.delayTime	delayEntryFn	delayWithinFn	delayFixFn		delayExitFn	'Experiment-control, Delay';
+'choice'	'incorrect'	tS.choiceTime	choiceEntryFn	choiceWithinFn	choiceFixFn		choiceExitFn 'Experiment-structure, Sensory-event, Experimental-stimulus, Agent-action, Move-eyes';
+'correct'	'prefix'	0.1				correctEntryFn	correctWithinFn	{}				correctExitFn 'Experiment-control, Correct-action';
+'incorrect'	'timeout'	0.1				incEntryFn		incWithinFn		{}				incExitFn	'Experiment-control, Incorrect-action';
+'breakfix'	'timeout'	0.1				breakEntryFn	breakWithinFn	{}				breakExitFn	'Experiment-control, Inappropriate-action';
+'timeout'	'prefix'	tS.timeOut		{}				{}				{}				{}			'Experiment-control, Delay';
 %---------------------------------------------------------------------------------------------
-'calibrate'	'pause'		0.5		calibrateFn		{}				{}				{};
-'offset'	'pause'		0.5		offsetFn		{}				{}				{};
-'drift'		'pause'		0.5		driftFn			{}				{}				{};
+'calibrate'	'pause'		0.5				calibrateFn		{}				{}				{}			'Experiment-control';
+'offset'	'pause'		0.5				offsetFn		{}				{}				{}			'Experiment-control';
+'drift'		'pause'		0.5				driftFn			{}				{}				{}			'Experiment-control';
 %---------------------------------------------------------------------------------------------
-'flash'		'pause'		0.5		{}				flashFn			{}				{};
-'override'	'pause'		0.5		{}				overrideFn		{}				{};
-'showgrid'	'pause'		1		{}				gridFn			{}				{};
+'flash'		'pause'		0.5				{}				flashFn			{}				{}			'Experiment-control';
+'override'	'pause'		0.5				{}				overrideFn		{}				{}			'Experiment-control';
+'showgrid'	'pause'		1				{}				gridFn			{}				{}			'Experiment-control';
 };
 %----------------------State Machine Table-------------------------
 %==================================================================

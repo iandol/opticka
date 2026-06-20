@@ -83,6 +83,24 @@ Each object can be run independently or managed via `runExperiment` to coordinat
   - In a state file, these manager objects are expected to exist:
     `me` (runExperiment), `tS` (struct), `s` (screenManager), `sM` (stateMachine),
     `task` (taskSequence), `stims` (metaStimulus), `eT`, `io`, `rM`, `bR`, `uF`.
+- **Hierarchical state machines (HSM)**
+  - Two HSM subclasses of `stateMachine` exist: `stateMachineHSM` (Option 1:
+    struct array + a `parent` field) and `stateMachineTree` (Option 2: a tree of
+    `stateNode` handles with order-independent parent resolution).
+  - Both are drop-in replacements: flat StateInfo files run unchanged. HSM
+    features activate when a `parent` column is present in the state table
+    (empty parent = root, a name = child of that state; nesting is N-level).
+  - Semantics: active config is a stack `[root..leaf]`; WITHIN runs all
+    ancestors root→leaf each tick; TRANSITION evaluates leaf→root (first
+    non-empty return wins); external transitions exit/enter to the LCA;
+    `local:<name>` keeps the firing state active.
+  - Select the class via `runExperiment.stateMachineClass` (one of
+    `'stateMachine'`, `'stateMachineHSM'`, `'stateMachineTree'`) before
+    `runTask`. See `CoreProtocols/HSMTestStateInfo.m` for an example and
+    `tests/hsmCompareTest.m` (behavioural equivalence) and
+    `tests/hsmBenchmarkTest.m` (timing-precision comparison of within-state
+    overshoot, inter-state delay, and function-eval timers) for the
+    verification suites.
 - **User extensibility for tasks**
   - To add custom per-task functions, copy `userFunctions.m` alongside a protocol
     but keep the class name `userFunctions`; reference methods within state files

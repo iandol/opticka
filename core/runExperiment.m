@@ -56,6 +56,11 @@ classdef runExperiment < optickaCore
 		screen screenManager
 		%> filename for a stateMachine state info file
 		stateInfoFile char			= ''
+		%> which state machine class to instantiate: 'stateMachine' (flat,
+		%> default), 'stateMachineHSM' (Option 1: struct + parent field) or
+		%> 'stateMachineTree' (Option 2: node tree). When an HSM class is
+		%> selected, StateInfo files may use a `parent` column to nest states.
+		stateMachineClass char		= 'stateMachine'
 		%> user functions file that can be passed to the state machine
 		userFunctionsFile char		= ''
 		%> what strobe device to use
@@ -205,7 +210,7 @@ classdef runExperiment < optickaCore
 			'logFrames','logStateTimers','sessionData',...
 			'stateInfoFile','userFunctionFile','dummyMode','stimuli','task',...
 			'screen','visualDebug','debug','verbose','screenSettings','benchmark',...
-			'comments','arduinoPort','photoDiode'}
+			'comments','arduinoPort','photoDiode','stateMachineClass'}
 	end
 	
 	%=======================================================================
@@ -671,7 +676,8 @@ classdef runExperiment < optickaCore
 			tS.tmpFile					= '';
 	
 			%------initialise time logs for this run
-			me.taskLog = []; clear timeLogger;
+			me.taskLog = []; 
+			clear timeLogger;
 			me.taskLog					= timeLogger();
 			me.taskLog.name				= me.name;
 			tL							= me.taskLog; %short handle to log
@@ -741,13 +747,14 @@ classdef runExperiment < optickaCore
 				uF.tL = tL; uF.verbose = me.verbose;
 				try uF.tM = tM; end
 
-				%================================initialise the state machine
-				me.stateMachine		= [];
-				clear stateMachine; % this seems to improve performance with logging!!!
-				me.stateMachine		= stateMachine('verbose', me.verbose,...
-										'realTime', task.realTime, 'name', me.name, ...
-										'externalLog', me.taskLog);
-				sM					= me.stateMachine;
+			%================================initialise the state machine
+			me.stateMachine		= [];
+			clear stateMachine; % this seems to improve performance with logging!!!
+			smClass = str2func(me.stateMachineClass);
+			me.stateMachine		= smClass('verbose', me.verbose,...
+									'realTime', task.realTime, 'name', me.name, ...
+									'externalLog', me.taskLog);
+			sM					= me.stateMachine;
 				if task.realTime;	sM.timeDelta = 0; else; sM.timeDelta=s.screenVals.ifi; end
 				sM.fnTimers			= me.logStateTimers; %record fn evaluations?
 				if isempty(me.stateInfoFile) || ~exist(me.stateInfoFile,'file') || contains(me.stateInfoFile, ['opticka' filesep 'DefaultStateInfo.m'])
@@ -1156,15 +1163,23 @@ classdef runExperiment < optickaCore
 				disp(me.comment);
 				bR.comment = me.comment; eT.comment = me.comment; sM.comment = me.comment; io.comment = me.comment; tL.comment = me.comment; tS.comment = me.comment;
 				
+				%=================================USER FUNCTIONS SHUTDOWN
+				try uF.shutdown(); end
+
 				%================================CLOSE OBJECTS
 				try close(s); end %screen
 				try close(io); end % I/O system
-				try close(eT); end % eyetracker, should save the data for us we've already given it our name and folder
+				try close(eT); end % eyetracker, this will save the eye data for us we've already given it our name and folder
 				try close(tM); end % touch manager
 				try close(aM); end % audio manager
 				try close(rM); end % reward manager
 				try close(dC); end % data connection
+				if isfield(tS,'eO')
+					close(tS.eO)
+					tS.eO=[];
+				end
 				
+				%================================OUTPUT FINAL VALUES
 				WaitSecs(0.25);
 				try plotPerformance(bR); end
 				fprintf('\n\n===≣≣≣≣⊱ Total ticks: %g | stateMachine ticks: %g\n', tS.totalTicks, sM.totalTicks);
@@ -1173,17 +1188,13 @@ classdef runExperiment < optickaCore
 					tL.screenLog.afterDisplay-tL.screenLog.beforeDisplay, ...
 					tL.screenLog.trackerEndOffset-tL.screenLog.trackerStartOffset);
 		
-				if isfield(tS,'eO')
-					close(tS.eO)
-					tS.eO=[];
-				end
-				
+				%================================CLEANUP LOGS
 				try removeEmptyValues(tL); end
 				me.tS = tS; %store our tS structure for backup
 				
-				%================================
+				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%================================SAVE the DATA
-				%================================
+				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				if tS.saveData
 					if ~exist(me.paths.ALFPath,'dir'); mkdir(me.paths.ALFPath); end
 					sname = fullfile(me.paths.ALFPath, append('opticka.raw.', me.name, '.mat'));
@@ -1211,21 +1222,17 @@ classdef runExperiment < optickaCore
 					end
 				end
 				%================================
-				%================================SAVE the DATA
-				%================================
 				
-				%================================
+				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%================================END ALYX SESSION
-				%================================
+				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				endAlyxSession(me, 'PASS', tS.saveData)
-				%================================
-				%================================END ALYX SESSION
 				%================================
 				
 				%================================disable diary logging 
 				if me.diaryMode; diary off; end
 				
-				%================================final cleanup
+				%================================FINAL CLEANUP
 				me.stateInfo = [];
 				try
 					if isa(me.stateMachine,'stateMachine'); me.stateMachine.reset; end
@@ -2173,6 +2180,7 @@ classdef runExperiment < optickaCore
 
 			switch lower(me.eyetracker.device)
 				case 'tobii'
+					if ~exist('Titta.m','file'); error("You MUST install Titta Toolbox for Tobii use..."); end
 					eT			= tobiiManager();
 					if ~isempty(me.eyetracker.tobiiSettings); eT.addArgs(me.eyetracker.tobiiSettings); end
 					eT.saveFile	= [me.paths.savedData filesep me.name '.mat'];

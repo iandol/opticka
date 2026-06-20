@@ -73,6 +73,9 @@ classdef userFunctions < handle %#ok<*MCFIL>
 		%> variables or stimuli here that you want to use in the task. You
 		%> can also call other functions from here to set things up.
 		initialSetup(me)
+
+		%> run after the task loop ends
+		shutdown(me)
 		
 	end
 

@@ -124,6 +124,7 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 		%> @param sM2 - a second screenManager used during calibration
 		% ===================================================================
 		function success = initialise(me,sM,sM2)
+			if ~exist('Titta.m','file'); error("You MUST install Titta Toolbox for Tobii use..."); end
 			success = false;
 			if me.isOff; me.isConnected = false; return; end
 
