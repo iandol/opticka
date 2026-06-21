@@ -531,16 +531,16 @@ classdef stateMachine < optickaCore
 			me.verbose = true; %let's be chatty for the demo
 			me.fnTimers = true; %let's time our function evaluations for fun
 			fprintf('\n===>>> StateMachine Demo: time delta = %.3g | Real time mode = %i\n\n',me.timeDelta,me.realTime);
-			beginFcn = { @()fprintf('Hi'); @()fprintf('\t\tbegin state: Entering!\n') };
-			next1Fcn = { @()fprintf('Hi'); @()fprintf('\t\tnext1 state: Entering!\n') };
-			next2Fcn = { @()fprintf('Hi'); @()fprintf('\t\tnext2 state: Entering!\n') };
-			next3Fcn = { @()fprintf('Hi'); @()fprintf('\t\tnext3 state: Entering!\n') };
-			endFcn = { @()fprintf('Hi'); @()fprintf('\t\t\t\tend state: See you!\n') };
-			transitFcn = { @()fprintf('Hi'); @()fprintf('\t\t\t\ttransit state: Wait for it!\n') };
-			surpriseFcn = { @()fprintf('Hi'); @()fprintf('\t\t\t\tsurprise state: SURPRISE!!!\n') };
-			withinFcn = {}; %don't run anything within the state
+			beginFcn = { @()fprintf('===> Hi'); @()fprintf('\t\tbegin state: Entering!\n') };
+			next1Fcn = { @()fprintf('===> Hi'); @()fprintf('\t\tnext1 state: Entering!\n') };
+			next2Fcn = { @()fprintf('===> Hi'); @()fprintf('\t\tnext2 state: Entering!\n') };
+			next3Fcn = { @()fprintf('===> Hi'); @()fprintf('\t\tnext3 state: Entering!\n') };
+			transitFcn = { @()fprintf('===> Hi'); @()fprintf('\t\t\t\ttransit state: Wait for it!\n') };
+			endFcn = { @()fprintf('===> Hi'); @()fprintf('\t\t\t\tend state: See you!\n') };
+			surpriseFcn = { @()fprintf('===> Hi'); @()fprintf('\t\t\t\tsurprise state: SURPRISE!!!\n') };
+			withinFcn = { @()fprintf('') }; % no-op within state
 			transitionFcn = { @()sprintf('surprise') }; %returns a valid state name and thus triggers a transition
-			exitFcn = { @()fprintf('<<---exit state--->>\n') };
+			exitFcn = { @()fprintf('<<---exit state--->>\n\n') };
 			statesInfo = {
 				'name'		'next'		'time'	'entryFcn'	'withinFcn'	'transitionFcn'	'exitFcn'	'HED';
 				%--------------------------------------------------------------------------------------------------------
@@ -627,6 +627,7 @@ classdef stateMachine < optickaCore
 		%> @return
 		% ===================================================================
 		function showLog(me)
+			if ~desktop("inuse"); return; end
 			if ~isempty(me.log)
 				stateMachine.plotLogs(me.log, me.fullName);
 			else
@@ -658,7 +659,7 @@ classdef stateMachine < optickaCore
 				end
 			end
 			tblOut = cell2table(tblD(2:end,:),'VariableNames',tblD(1,:));
-			if plot
+			if plot && desktop("inuse")
 				f = uifigure;
 				t = uitable('Parent',f,'Position',[0 0 1 1],'Units','normalized');
 				t.Data = tblOut;
@@ -934,7 +935,6 @@ classdef stateMachine < optickaCore
 					s.DataTipTemplate.DataTipRows(end+1)=r;
 				end
 				legend('Enter time','Exit time','Location','southeast');
-				%axis([-inf inf 0.97 1.02]);
 				title('State Enter/Exit Times from State Machine Start');
 				ylabel('Time (seconds)');
 				try 
@@ -943,6 +943,7 @@ classdef stateMachine < optickaCore
 				end
 				try set(gca,'XTickLabelRotation',30); end
 				box on; grid on; axis tight;
+				axis([0.9 logN+0.1 -inf inf]);
 				if isfield(log,'fevalEnter') && ~isnan(log.fevalEnter(1))
 					ax2 = nexttile;
 					s = plot(log.fevalEnter,'ko','MarkerSize',10, 'MarkerFaceColor', [1 1 1]);
@@ -970,9 +971,10 @@ classdef stateMachine < optickaCore
 					end
 					try set(gca,'XTickLabelRotation',30); end
 					legend('Enter feval','Exit feval', 'Store');
-					title('Time the enter and exit state function evals ran');
+					title('Time the enter, exit and log-save state function evaluations');
 					ylabel('Time (milliseconds)');
 					box on; grid on; axis tight;
+					axis([0.9 logN+0.1 -inf inf]);
 					linkaxes([ax1 ax2],'x');
 				end
 			end

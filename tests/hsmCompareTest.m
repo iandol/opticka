@@ -71,7 +71,7 @@ function hsmCompareTest
 			 it('exit hold') < it('exit fixate') && ...
 			 it('exit fixate') < it('exit trial') && ...
 			 it('exit trial') < it('enter reward') && ...
-			 isequal(string(sm.log.name(1:sm.log.n)'), ["hold";"reward"]);
+			 isequal(string(sm.log.name(1:sm.log.n)'), ["trial";"fixate";"hold";"reward"]);
 		ck(sprintf('%s: 3-level nesting entry/exit/within chains', classes{ci}), ok);
 	end
 
@@ -123,29 +123,38 @@ function hsmCompareTest
 	% 100k ticks on a 3-level stack vs flat, measure per-tick cost.
 	benchStates = {
 		'name' 'next' 'time' 'parent' 'entryFcn' 'withinFcn' 'transitionFcn' 'exitFcn' 'HED';
-		'p'    ''     1e9    ''       {}         { @()[] }   {}              {}        'X';
-		'q'    ''     1e9    'p'      {}         { @()[] }   {}              {}        'X';
-		'r'    ''     1e9    'q'      {}         { @()[] }   {}              {}        'X';
+		'p'    ''     1e-4    ''       {}         { @()[] }   {}              {}        'X';
+		'q'    ''     1e-4    'p'      {}         { @()[] }   {}              {}        'X';
+		'r'    's'    1e-4    'q'      {}         { @()[] }   {}              {}        'X';
+		's'    'p'    1e-4    ''       {}         { @()[] }   {}              {}        'X';
 		};
-	N = 1e5;
+	benchStatesFlat = {
+		'name' 'next' 'time' 'entryFcn' 'withinFcn' 'transitionFcn' 'exitFcn' 'HED';
+		'p'    'q'     1e-4   {}         { @()[] }   {}              {}        'X';
+		'q'    'r'     1e-4   {}         { @()[] }   {}              {}        'X';
+		'r'    's'     1e-4   {}         { @()[] }   {}              {}        'X';
+		's'    'p'     1e-4   {}         { @()[] }   {}              {}        'X';
+		};
+	N = 1e4;
 	for ci = 1:length(classes)
 		sm = feval(classes{ci}, 'realTime', false, 'timeDelta', 1e-4, ...
-			'waitFcn', @()( [] ), 'verbose', false, 'fnTimers', false);
+			'verbose', false, 'fnTimers', false);
 		if ismember(classes{ci}, {'stateMachineHSM','stateMachineTree'})
 			addStates(sm, benchStates);
 		else
 			% flat: single state, equivalent within cost
-			addStates(sm, {'name' 'next' 'time' 'entryFcn' 'withinFcn' 'transitionFcn' 'exitFcn' 'HED'; ...
-				'r' '' 1e9 {} { @()[] } {} {} 'X'});
+			addStates(sm, benchStatesFlat);
 		end
 		start(sm);
 		t0 = tic;
-		for t = 1:N; update(sm); end
+		for t = 1:N
+			update(sm); 
+		end
 		elapsed = toc(t0);
 		usPerTick = elapsed / N * 1e6;
 		depth = 1; if ismember(classes{ci}, {'stateMachineHSM','stateMachineTree'}); depth = 3; end
-		fprintf('  %-22s depth=%d  %8.0f ticks in %6.3f s  ->  %.3f us/tick\n', ...
-			classes{ci}, depth, N, elapsed, usPerTick);
+		fprintf('  %-22s states=%d depth=%d  %8.0f ticks in %6.3f s  ->  %.3f us/tick\n', ...
+			classes{ci}, sm.log.n, depth, N, elapsed, usPerTick);
 	end
 
 	%---------------------------------------------------------------------

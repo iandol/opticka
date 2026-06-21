@@ -52,6 +52,12 @@ classdef stateMachineTree < stateMachine
 		rootNodes cell = {}
 		%> active stack of stateNode handles, root -> leaf
 		currentStackNodes cell = {}
+		%> log row number (thisN) for each position on the current stack.
+		%> Used to update parent log entries on exit.
+		stackLogN double = []
+		%> me.totalTicks at entry time for each position on the current
+		%> stack. Used to compute per-state tick count at exit.
+		stackEntryTicks double = []
 	end
 
 	methods %------------------PUBLIC METHODS
@@ -179,6 +185,8 @@ classdef stateMachineTree < stateMachine
 			me.nameMap = containers.Map('KeyType','char','ValueType','any');
 			me.rootNodes = {};
 			me.currentStackNodes = {};
+			me.stackLogN = [];
+			me.stackEntryTicks = [];
 		end
 
 		% ===================================================================
@@ -190,36 +198,45 @@ classdef stateMachineTree < stateMachine
 			me.verbose = true;
 			me.fnTimers = true;
 			fprintf('\n===>>> stateMachineTree Demo (3-level nesting, node tree)\n\n');
-			trialEntry  = { @()fprintf('\ttrial: enter\n') };
-			trialExit   = { @()fprintf('\ttrial: exit\n') };
-			trialWithin = { @()fprintf('.') };
-			fixEntry    = { @()fprintf('\t\tfixate: enter\n') };
-			fixExit     = { @()fprintf('\t\tfixate: exit\n') };
-			holdEntry   = { @()fprintf('\t\t\thold: enter\n') };
-			holdExit    = { @()fprintf('\t\t\thold: exit\n') };
-			trialTrans  = { @()sprintf('') };
-			holdNext    = 'reward';
+			% a parent "trial" with child "fixate" which has grandchild "hold"
+			startEntry  = { @()fprintf('\tstart (root): enter\n') };
+			startExit   = { @()fprintf('\tstart (root): exit\n') };
+			trialEntry  = { @()fprintf('\ttrial (root): enter\n') };
+			trialExit   = { @()fprintf('\ttrial (root): exit\n') };
+			trialWithin = { @()fprintf('') };
+			pfixEntry   = { @()fprintf('\t\tprefix (leaf): enter\n') };
+			pfixExit    = { @()fprintf('\t\tprefix (leaf): exit\n') };
+			fixEntry    = { @()fprintf('\t\tfixate (leaf): enter\n') };
+			fixExit     = { @()fprintf('\t\tfixate (leaf): exit\n') };
+			holdEntry   = { @()fprintf('\t\t\thold (leaf2): enter\n') };
+			holdExit    = { @()fprintf('\t\t\thold (leaf2): exit\n') };
+			% parent-level transition: abort the whole trial subtree
+			trialTrans  = { @()sprintf('') }; % no abort in this demo
+			% leaf transition: when hold time done, go to feedback (outside trial)
+			fbEntry    = { @()fprintf('\feedback: enter\n') };
+			fbExit     = { @()fprintf('\feedback: exit\n') };
 			rewEntry    = { @()fprintf('\treward: enter\n') };
 			rewExit     = { @()fprintf('\treward: exit\n') };
-			% note: child 'hold' listed BEFORE parent 'fixate' (order-independent)
 			statesInfo = {
-				'name'    'next'  'time' 'parent' 'entryFcn'   'withinFcn'   'transitionFcn' 'exitFcn'  'HED';
-				'hold'    holdNext 0.3   'fixate' holdEntry    {}            {}              holdExit   'Experiment_control';
-				'fixate'  ''      5      'trial'  fixEntry     {}            {}              fixExit    'Experiment_control';
-				'trial'   ''      10     ''       trialEntry   trialWithin   trialTrans      trialExit  'Experiment_control';
-				'reward'  ''      0.3    ''       rewEntry     {}            {}              rewExit    'Experiment_control';
-				};
+				'name'    'next'     'time' 'parent'   'entryFcn'   'withinFcn'   'transitionFcn' 'exitFcn'  'HED';
+				'start'   'trial'    0.25   ''         startEntry   {}            {}              startExit  'Experiment_control';
+				'trial'   ''         10     ''         trialEntry   trialWithin   trialTrans      trialExit  'Experiment_control';
+				'prefix'  'fixate'   1      'trial'    pfixEntry    {}            {}              pfixExit   'Experiment_control';
+				'fixate'  ''         1      'trial'    fixEntry     {}            {}              fixExit    'Experiment_control';
+				'hold'    'feedback' 1      'fixate'   holdEntry    {}            {}              holdExit   'Experiment_control';
+				'feedback' ''        1      ''         fbEntry      {}            {}              fbExit     'Experiment_control';
+				'reward'   ''        1      'feedback' rewEntry     {}            {}              rewExit    'Experiment_control';
+			};
 			addStates(me, statesInfo);
-			disp('>--------------------------------------------------')
-			disp(' HSM demo state table (child listed before parent!):  ')
+			disp('>---------------------------------------------------')
+			disp(' HSM demo state table (child listed before parent!):')
 			disp(statesInfo)
-			disp('>--------------------------------------------------')
-			me.waitFcn(0.3);
-			me.timeDelta = 1e-4; me.realTime = false; me.waitFcn = @()( []);
+			disp('>---------------------------------------------------')
+			me.waitFcn(0.5);
 			run(me);
-			me.waitFcn(0.3);
+			me.waitFcn(0.5);
 			showLog(me);
-			disp('>--------------------------------------------------')
+			disp('>---------------------------------------------------')
 			reset(me);
 			me.verbose = oldVerbose;
 			me.fnTimers = oldTimers;
@@ -280,6 +297,7 @@ classdef stateMachineTree < stateMachine
 				if ~transitioned
 					for k = 1:length(stack)
 						node = stack{k};
+						if isempty(node.withinFcn); continue; end
 						for jj = 1:length(node.withinFcn)
 							feval(node.withinFcn{jj});
 						end
@@ -356,11 +374,9 @@ classdef stateMachineTree < stateMachine
 
 		% ===================================================================
 		%> @brief run exitFcn for nodes from leaf up to (not incl) the LCA,
-		%> then write a single log row for the exiting leaf.
+		%> then update each state's log entry with exit time/tick/timers.
 		% ===================================================================
 		function exitChainToLCA(me, srcStack, lcaNode, nextName)
-			if me.fnTimers; tx = tic; end
-			% find LCA position in srcStack (handles lcaNode == [])
 			lcaPos = 0;
 			if ~isempty(lcaNode)
 				for k = 1:length(srcStack)
@@ -369,6 +385,7 @@ classdef stateMachineTree < stateMachine
 			end
 			for k = length(srcStack):-1:(lcaPos+1)
 				node = srcStack{k};
+				logN = me.stackLogN(k);
 				skip = false;
 				if ~isempty(me.skipExitStates)
 					for i = 1:size(me.skipExitStates,1)
@@ -377,57 +394,107 @@ classdef stateMachineTree < stateMachine
 						end
 					end
 				end
+				if me.fnTimers; tx = tic; end
 				if ~skip && ~node.skipExitFcn
 					for jj = 1:length(node.exitFcn)
 						feval(node.exitFcn{jj});
 					end
 				end
-				node.skipExitFcn = false; % reset after use
-			end
-			if me.fnTimers
-				me.log.fevalExit(me.thisN) = toc(tx)*1000;
-				txs = tic;
-			end
-			me.writeLogForCurrent();
-			if me.fnTimers
-				me.log.fevalStore(me.thisN) = toc(txs)*1000;
+				if me.fnTimers
+					me.log.fevalExit(logN) = toc(tx)*1000;
+					txs = tic;
+				end
+				% update this state's log entry with exit info
+				me.log.tnow(logN) = me.currentTime;
+				me.log.tick(logN) = me.totalTicks - me.stackEntryTicks(k);
+				if k == length(srcStack)  % leaf
+					me.log.nextTimeOut(logN) = me.nextTimeOut;
+					me.log.nextTickOut(logN) = me.nextTickOut;
+				end
+				if me.fnTimers
+					me.log.fevalStore(logN) = toc(txs)*1000;
+				end
+				if me.useExternalLog
+					me.externalLog.addMessage(logN, me.log.entryTime(logN), ...
+						me.currentTime, ...
+						sprintf("State #%i Details: %s %s %g %g %.3f", logN, ...
+							node.name, me.log.uuid{logN}, ...
+							me.currentTime, me.log.entryTime(logN),...
+							me.currentTime - me.log.entryTime(logN)), ...
+						me.clockFcnName, ...
+						"Event-stream, Time-block-state"+num2str(logN));
+				end
+				node.skipExitFcn = false;
+				if me.verbose
+					me.logOutput(['EXIT: ' node.name ...
+						' @ ' num2str(me.log.tnow(logN)-me.log.startTime,'%.2f') ...
+						's | state time: ' num2str(me.log.tnow(logN)-me.log.entryTime(logN),'%.2f') ...
+						's | ' num2str(me.log.tick(logN)) '/' num2str(me.totalTicks) ...
+						' ticks'],'');
+				end
 			end
 			me.tempNextState = '';
-			if me.verbose
-				me.logOutput(['EXIT: ' me.currentState.name ...
-					' @ ' num2str(me.log.tnow(me.log.n)-me.log.startTime,'%.2f') ...
-					's | state time: ' num2str(me.log.tnow(me.log.n)-me.log.entryTime(me.log.n),'%.2f') ...
-					's | ' num2str(me.log.tick(me.log.n)) '/' num2str(me.totalTicks) ...
-					' ticks'],'');
-			end
 		end
 
 		% ===================================================================
 		%> @brief run entryFcn (+ withinFcn once) for nodes from the LCA
-		%> boundary down to the leaf, set timing on the leaf, install the
-		%> new active stack. Increments thisN.
+		%> boundary down to the leaf, create a log entry per node, and
+		%> install the new active stack. Increments thisN per node.
 		% ===================================================================
 		function enterChainFromLCA(me, dstStack, lcaNode, dstLeaf)
-			me.thisN = me.thisN + 1;
-			if me.thisN == 1; me.log.startTime = me.startTime; end
-			if me.fnTimers; tt = tic; end
 			lcaPos = 0;
 			if ~isempty(lcaNode)
 				for k = 1:length(dstStack)
 					if dstStack{k} == lcaNode; lcaPos = k; break; end
 				end
 			end
-			me.enterLeafTiming(dstLeaf.index);
-			for k = (lcaPos+1):length(dstStack)
-				me.runEntryFcnsNode(dstStack{k});
+			nStack = length(dstStack);
+			stackLogN = NaN(1, nStack);
+			stackEntryTicks = NaN(1, nStack);
+			% preserve mapping for states above the LCA (still active)
+			if lcaPos > 0 && ~isempty(me.stackLogN) && length(me.stackLogN) >= lcaPos
+				stackLogN(1:lcaPos) = me.stackLogN(1:lcaPos);
+				stackEntryTicks(1:lcaPos) = me.stackEntryTicks(1:lcaPos);
+			end
+			for k = (lcaPos+1):nStack
+				me.thisN = me.thisN + 1;
+				if me.thisN == 1; me.log.startTime = me.startTime; end
+				node = dstStack{k};
+				% set identity and timing for this state
+				me.currentIndex = node.index;
+				me.currentState = me.stateList(node.index);
+				me.currentEntryTime = me.clockFcn();
+				me.currentTick = 0;
+				me.currentUUID = dec2hex(me.thisN);
+				if k == nStack  % leaf: set timeout
+					t = node.time;
+					if length(t) == 2
+						t = randi([t(1)*1e3, t(2)*1e3]) / 1e3;
+					end
+					me.nextTimeOut = me.currentEntryTime + t;
+					me.nextTickOut = floor(t / me.timeDelta);
+				end
+				% run this node's entry+within fcn (timed individually)
+				if me.fnTimers; tt = tic; end
+				me.runEntryFcnsNode(node);
+				if me.fnTimers; me.log.fevalEnter(me.thisN) = toc(tt)*1000; end
+				% write initial log entry for THIS state
+				me.log.n = me.thisN;
+				me.log.index(me.thisN) = node.index;
+				me.log.name{me.thisN} = node.name;
+				me.log.uuid{me.thisN} = me.currentUUID;
+				me.log.entryTime(me.thisN) = me.currentEntryTime;
+				stackLogN(k) = me.thisN;
+				stackEntryTicks(k) = me.totalTicks;
+				if me.verbose
+					me.logOutput(['ENTER: ' node.name ...
+						' @ ' num2str(me.currentEntryTime-me.startTime, ...
+						'%.2f') 's - ' num2str(me.totalTicks) ' ticks'],'');
+				end
 			end
 			me.currentStackNodes = dstStack;
-			if me.fnTimers; me.log.fevalEnter(me.thisN) = toc(tt)*1000; end
-			if me.verbose
-				me.logOutput(['ENTER: ' me.currentState.name ...
-					' @ ' num2str(me.currentEntryTime-me.startTime, ...
-					'%.2f') 's - ' num2str(me.totalTicks) ' ticks'],'');
-			end
+			me.stackLogN = stackLogN;
+			me.stackEntryTicks = stackEntryTicks;
 		end
 
 		% ===================================================================

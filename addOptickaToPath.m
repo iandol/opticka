@@ -18,11 +18,14 @@ opaths			= genpath(opath);
 opaths			= strsplit(opaths,pathsep);
 sep 			= regexptranslate('escape',filesep);
 pathExceptions	= [".git" "adio" "arduino" "photodiode" "+uix" ...
-	"+zmq" "+uiextras" "legacy" "html" "doc" ".vscode"];
+	"+zmq" "+uiextras" "tests" "images" "resources" ...
+	"media" "legacy" "html" "doc" ".vscode"];
 qAdd 			= contains(opaths,pathExceptions); % true where regexp _didn't_ match
 addpath(opaths{~qAdd}); 
 
 % Define the parent folder and the string array of optional project folder names
+% If they exist in the same folder that opticka is stored, add them to
+% path.
 parentFolder = fileparts(opath); % Adjust this to your actual parent folder
 folderNames = ["Palamedes" "CageLab-Code" "matlab-jzmq", "matmoteGO", "PTBSimia"]; % Example folder names
 
@@ -37,7 +40,7 @@ for i = 1:length(folderNames)
         addpath(folderPath);
         fprintf('Additionally added to path: %s\n', folderPath);
     else
-        fprintf('Folder does not exist: %s\n', folderPath);
+        fprintf('Optional folder does not exist: %s\n', folderPath);
     end
 end
 

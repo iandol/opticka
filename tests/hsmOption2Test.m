@@ -81,7 +81,7 @@ function hsmOption2Test
 	assert(it('exit fixate') < it('exit trial'), 'exit: fixate before trial');
 	assert(it('exit trial') < it('enter reward'), 'enter reward after exit chain');
 	assert(any(strcmp(trace,'exit reward')), 'exit reward at finish');
-	assert(isequal(string(names2), ["hold";"reward"]), 'hsm log names');
+	assert(isequal(string(names2), ["trial";"fixate";"hold";"reward"]), 'hsm log names');
 	fprintf('PASS: 3-level nesting (order-independent)\n');
 
 	fprintf('\n===== TEST 3: parent transitionFcn fires while child active =====\n');

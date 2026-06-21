@@ -23,6 +23,7 @@ function hsmBenchmarkTest
 	%
 	% Run: matlab -batch "addOptickaToPath; addpath('tests'); hsmBenchmarkTest"
 	addOptickaToPath;
+	clear stateMachine stateMachineHSM stateMachineTree
 	classes = {'stateMachine','stateMachineHSM','stateMachineTree'};
 	N = 50;                                  %> number of A->B->C cycles
 	stateTime = 0.02;                        %> 20 ms per state
@@ -49,15 +50,14 @@ function hsmBenchmarkTest
 		cEntryFcn = { @()workFcn(), @()incrCycle() };
 		cTrans = { @()checkCycle(N, 'end') };
 		states = {
-			'name' 'next' 'time' 'entryFcn' 'withinFcn' 'transitionFcn' 'exitFcn' 'HED';
-			'A'   'B'   stateTime entryFcn {}          {}        exitFcn  'X';
-			'B'   'C'   stateTime entryFcn {}          {}        exitFcn  'X';
-			'C'   'A'   stateTime cEntryFcn {}         cTrans    exitFcn  'X';
-			'end' ''    stateTime entryFcn {}          {}        exitFcn  'X';
+			'name' 'next' 'time'     'entryFcn' 'withinFcn' 'transitionFcn' 'exitFcn' 'HED';
+			'A'    'B'     stateTime entryFcn   {}          {}              exitFcn  'X';
+			'B'    'C'     stateTime entryFcn   {}          {}              exitFcn  'X';
+			'C'    'A'     stateTime cEntryFcn  {}          cTrans          exitFcn  'X';
+			'end'  ''      stateTime entryFcn   {}          {}              exitFcn  'X';
 			};
 		sm = feval(cls, 'realTime', true, 'timeDelta', 0, ...
-			'clockFcn', @GetSecs, 'waitFcn', @()( [] ), ...
-			'verbose', false, 'fnTimers', true, 'name', cls);
+			'clockFcn', @GetSecs, 'verbose', false, 'fnTimers', true, 'name', cls);
 		addStates(sm, states);
 		t0 = tic;
 		run(sm);
@@ -78,17 +78,16 @@ function hsmBenchmarkTest
 		cEntryFcn = { @()workFcn(), @()incrCycle() };
 		cTrans = { @()checkCycle(N, 'end') };
 		nestStates = {
-			'name' 'next' 'time' 'parent' 'entryFcn' 'withinFcn' 'transitionFcn' 'exitFcn' 'HED';
-			'root' ''     1e6   ''       {}         {}          {}          {}        'X';
-			'mid'  ''     1e6   'root'   {}         {}          {}          {}        'X';
-			'A'    'B'    stateTime 'mid' entryFcn  {}          {}          exitFcn   'X';
-			'B'    'C'    stateTime 'mid' entryFcn  {}          {}          exitFcn   'X';
-			'C'    'A'    stateTime 'mid' cEntryFcn {}          cTrans      exitFcn   'X';
-			'end'   ''    stateTime ''     entryFcn  {}          {}          exitFcn   'X';
+			'name' 'next' 'time'    'parent' 'entryFcn' 'withinFcn' 'transitionFcn' 'exitFcn' 'HED';
+			'root' ''     1e6       ''       {}        {}          {}          {}        'X';
+			'mid'  ''     1e6       'root'   {}        {}          {}          {}        'X';
+			'A'    'B'    stateTime 'mid'    entryFcn  {}          {}          exitFcn   'X';
+			'B'    'C'    stateTime 'mid'    entryFcn  {}          {}          exitFcn   'X';
+			'C'    'A'    stateTime 'mid'    cEntryFcn {}          cTrans      exitFcn   'X';
+			'end'   ''    stateTime ''       entryFcn  {}          {}          exitFcn   'X';
 			};
 		sm = feval(cls, 'realTime', true, 'timeDelta', 0, ...
-			'clockFcn', @GetSecs, 'waitFcn', @()( [] ), ...
-			'verbose', false, 'fnTimers', true, 'name', [cls '-nested']);
+			'clockFcn', @GetSecs, 'verbose', false, 'fnTimers', true, 'name', [cls '-nested']);
 		addStates(sm, nestStates);
 		t0 = tic;
 		run(sm);
@@ -234,8 +233,8 @@ function assertChecks(results, classes)
 	for ci = 2:length(classes)
 		k = [classes{ci} '_nested'];
 		r = results.(k);
-		assert(r.gapMean - flat.gapMean < 20e-3, ...
-			'%s nested inter-state gap > 20ms worse than flat', classes{ci});
-		fprintf('  [OK] %s (nested, depth 3): gap within 20ms of flat\n', classes{ci});
+		assert(r.gapMean - flat.gapMean < 1e-3, ...
+			'%s nested inter-state gap > 1ms worse than flat', classes{ci});
+		fprintf('  [OK] %s (nested, depth 3): gap within 1ms of flat\n', classes{ci});
 	end
 end

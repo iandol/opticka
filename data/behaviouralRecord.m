@@ -89,6 +89,7 @@ classdef behaviouralRecord < optickaCore
 		% ===================================================================
 		function plotPerformance(me)
 			if isempty(me.response); warning('No data available'); return; end
+			if ~desktop("inuse"); fprintf("No desktop, skipping plot...\n"); return; end
 			op = me.plotOnly;
 			me.plotOnly = true;
 			if isempty(me.h) || ~(isfield(me.h,'root') && isgraphics(me.h.root))
@@ -106,6 +107,7 @@ classdef behaviouralRecord < optickaCore
 		% ===================================================================
 		function createPlot(me, eL)
 			if me.silentMode; return; end
+			if ~desktop("inuse"); fprintf("No desktop, skipping plot...\n"); return; end
 			if ~me.plotOnly
 				me.date = datetime('now');
 			end
@@ -282,6 +284,7 @@ classdef behaviouralRecord < optickaCore
 		function plot(me, drawNow)
 			if me.silentMode; return; end
 			if isempty(me.response); warning('No data available'); return; end
+			if ~desktop("inuse"); fprintf("No desktop, skipping plot...\n"); return; end
 			if ~me.isOpen || ~isfield(me.h,'root'); me.createPlot; me.plotOnly = true; end
 			if ~exist('drawNow','var'); drawNow = true; end
 			hitn = length( me.response(me.response > 0) );
