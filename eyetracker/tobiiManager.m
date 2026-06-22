@@ -150,7 +150,7 @@ classdef tobiiManager < eyetrackerCore & eyetrackerSmooth
 					'disableSyncTests',true,'backgroundColour',me.screen.backgroundColour,...
 					'screen', oscreen, 'specialFlags', kPsychGUIWindow);
 				[w,h]			= Screen('WindowSize',me.operatorScreen.screen);
-				me.operatorScreen.windowed	= [0 0 round(w/1.2) round(h/1.2)];
+				me.operatorScreen.windowed	= [0 0 round(w/1.5) round(h/1.5)];
 			end
 			me.secondScreen		= true;
 			if ismac; me.operatorScreen.useRetina = true; end

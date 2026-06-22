@@ -357,7 +357,7 @@ classdef screenManager < optickaCore
 		end
 
 		% ===================================================================OPEN
-		function sv = open(me, debug, timeLog, forceScreen)
+		function [sv, timeLog] = open(me, debug, timeLog, forceScreen)
 		%> @fn open
 		%> @brief open a screen with object defined settings
 		%>
@@ -369,7 +369,7 @@ classdef screenManager < optickaCore
 			arguments (Input)
 				me
 				debug logical = []
-				timeLog struct = []
+				timeLog = []
 				forceScreen double {mustBeInteger} = []
 			end
 			if me.isOpen; fprintf('===>>> screenManager.open(): Screen already open!'); return; end
@@ -379,7 +379,7 @@ classdef screenManager < optickaCore
 				return;
 			end
 			if isempty(debug); debug = me.debug; end
-			if isempty(timeLog); timeLog = timeLogger(); end
+			if isempty(timeLog); timeLog = struct('screenLog',[]); end
 
 			sv = me.screenVals;
 
@@ -1676,19 +1676,32 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		%> @brief draw Rect specified in degrees
 		%>
-		%> @param rect [left, top, right, bottom] in degrees
+		%> @param rect [left, top, right, bottom] in degrees -- for
+		%> multiple rects use 4xN (row per rect)
 		%> @param colour RGB[A]
-		%> @return
 		% ===================================================================
-		function drawRect(me,rect,colour)
+		function drawRect(me, rect, colour)
 			arguments
 				me
-				rect (1,4) double {mustBeReal}
+				rect double {mustBeReal}
 				colour double = [1 1 0]'
 			end
-			x = me.xCenter + ([rect(1) rect(3)] * me.ppd_);
-			y = me.yCenter + ([rect(2) rect(4)] * me.ppd_);
-			Screen('FillRect', me.win, colour, [x(1) y(1) x(2) y(2)]);
+			% convert from degrees to pixels
+			if isrow(rect) 
+				x = me.xCenter + ([rect(1) rect(3)] * me.ppd_);
+				y = me.yCenter + ([rect(2) rect(4)] * me.ppd_);
+				rectout = [x(1) y(1) x(2) y(2)];
+			elseif size(rect,1)==4 && size(rect,2) > 1
+				rectout = zeros(size(rect));
+				for ii = 1:size(rect,2)
+					x = me.xCenter + ([rect(1,ii) rect(3,ii)] * me.ppd_);
+					y = me.yCenter + ([rect(2,ii) rect(4,ii)] * me.ppd_);
+					rectout(:,ii) = [x(1) y(1) x(2) y(2)]';
+				end
+			else
+				return
+			end
+			Screen('FillRect', me.win, colour, rectout);
 		end
 
 		% ===================================================================
@@ -1697,7 +1710,7 @@ classdef screenManager < optickaCore
 		%> @param xy x is row1 and y is row2
 		%> @return
 		% ===================================================================
-		function drawDots(me,xy,size,colour,center)
+		function drawDots(me, xy, size, colour, center)
 			arguments
 				me
 				xy double

@@ -79,27 +79,25 @@ classdef DMTSFunctions < userFunctions
 			idx = find(contains({me.task.nVar.name},'xyPos','IgnoreCase',true));
 			xys = cell2mat(me.task.nVar(idx).values);
 			xs = xys(1:2:length(xys)); % just the x positions
-			ys = xys(2:2:length(xys)); % just the y positions
 
 			% get the current trial xy for the target
 			xy = me.task.outValues{me.task.totalRuns, idx}; % randomised trial value for XY position for target
 			% update target location (this is already done by updateVariables() so may not strictly be needed here)
-			updateXY(me.stims{2}, xy(1),xy(2));
-			fprintf("--->>> Stim 2 %.2fx %.2fy\n",xy(1),xy(2));
+			updateXY(me.stims{2}, xy(1), xy(2), true);
 
 			% get the x positions that are NOT the target, and assign those to the distractors
 			xlist = setxor(xs,xy(1)); % get the x positions that are NOT the target
-			[x, xlist] = me.pickAndRemove(xlist); updateXY(me.stims{3}, x, xy(2)); fprintf("--->>> Stim 3 %.2fx %.2fy\n",x,xy(2));
-			[x, xlist] = me.pickAndRemove(xlist); updateXY(me.stims{4}, x, xy(2)); fprintf("--->>> Stim 4 %.2fx %.2fy\n",x,xy(2));
-			[x, xlist] = me.pickAndRemove(xlist); updateXY(me.stims{5}, x, xy(2)); fprintf("--->>> Stim 5 %.2fx %.2fy\n",x,xy(2));
-			[x, xlist] = me.pickAndRemove(xlist); updateXY(me.stims{6}, x, xy(2)); fprintf("--->>> Stim 6 %.2fx %.2fy\n",x,xy(2));
+			[x, xlist] = me.pickAndRemove(xlist); updateXY(me.stims{3}, x, xy(2), true);
+			[x, xlist] = me.pickAndRemove(xlist); updateXY(me.stims{4}, x, xy(2), true);
+			[x, xlist] = me.pickAndRemove(xlist); updateXY(me.stims{5}, x, xy(2), true);
+			[x, ~]     = me.pickAndRemove(xlist); updateXY(me.stims{6}, x, xy(2), true);
 		end
 
 		% ===================================================================
 		% update the delay time for the next trial based on the trial condition
 		function updateDelayTime(me)
 		% ===================================================================
-			idx = find(contains({me.task.nVar.name},'Delay','IgnoreCase',true));
+			idx = contains({me.task.nVar.name},'Delay','IgnoreCase',true);
 			tS.delayFixTime = me.task.outValues{me.task.totalRuns, idx}; % randomised trial value for XY position for target
 			t = sprintf('delayTime: %0.2f', tS.delayFixTime);
 			addMessage(me.tL, [], [], [], t, [], 'Experimental-note, Delay'); % HED message to store timing parameters in timeLogger

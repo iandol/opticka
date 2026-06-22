@@ -1,4 +1,3 @@
-% DEPRECATED -- use stateMachineTree
 % ========================================================================
 %> @class stateMachineHSM
 %> @brief hierarchical state machine (HSM) with parent/child nesting.
@@ -41,7 +40,7 @@
 %> >> demoHSM(sm);
 %> ~~~~~~~~~~~~~~~~~~~~~~
 %>
-%> Copyright ©2014-2026 Ian Max Mandolin — released: LGPL3, see LICENCE.md
+%> Copyright ©2014-2026 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 classdef stateMachineHSM < stateMachine
 

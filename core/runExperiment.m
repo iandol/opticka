@@ -56,10 +56,11 @@ classdef runExperiment < optickaCore
 		screen screenManager
 		%> filename for a stateMachine state info file
 		stateInfoFile char			= ''
-		%> which state machine class to instantiate: 'stateMachine' (flat,
-		%> default), 'stateMachineHSM' (Option 1: struct + parent field) or
-		%> 'stateMachineTree' (Option 2: node tree). When an HSM class is
-		%> selected, StateInfo files may use a `parent` column to nest states.
+		%> which state machine class to instantiate: finite state machine
+		%> FSM 'stateMachine' (flat, default), or hierarchical state machine HSM 
+		%> 'stateMachineTree' . When an HSM class is selected, StateInfo files 
+		%> should use a `parent` column to nest states. If there are no parents 
+		%> then the FSM and HSM work identically.
 		stateMachineClass char		= 'stateMachine'
 		%> user functions file that can be passed to the state machine
 		userFunctionsFile char		= ''
@@ -658,6 +659,7 @@ classdef runExperiment < optickaCore
 			tS							= struct();
 			tS.runName					= me.name;  %==name of this run
 			tS.name						= 'generic';%==name of this protocol
+			tS.stateMachineClass		= me.stateMachineClass; % default to class setting
 			tS.useTask					= false;	%==use taskSequence (randomised variable task object)
 			tS.includeErrors			= false;	%==do error trials count to move taskSequence forward
 			tS.keyExclusionPattern		= ["fixate","stimulus"]; %==which states skip keyboard check
@@ -747,54 +749,72 @@ classdef runExperiment < optickaCore
 				uF.tL = tL; uF.verbose = me.verbose;
 				try uF.tM = tM; end
 
-			%================================initialise the state machine
-			me.stateMachine		= [];
-			clear stateMachine; % this seems to improve performance with logging!!!
-			smClass = str2func(me.stateMachineClass);
-			me.stateMachine		= smClass('verbose', me.verbose,...
-									'realTime', task.realTime, 'name', me.name, ...
-									'externalLog', me.taskLog);
-			sM					= me.stateMachine;
-				if task.realTime;	sM.timeDelta = 0; else; sM.timeDelta=s.screenVals.ifi; end
-				sM.fnTimers			= me.logStateTimers; %record fn evaluations?
+				%================================initialise the state machine
+				me.stateMachine		= [];
+				clear stateMachine stateMachineTree; % this seems to improve performance with logging!!!
+				
 				if isempty(me.stateInfoFile) || ~exist(me.stateInfoFile,'file') || contains(me.stateInfoFile, ['opticka' filesep 'DefaultStateInfo.m'])
 					me.stateInfoFile		= [me.paths.root filesep 'DefaultStateInfo.m'];
 					me.paths.stateInfoFile	= me.stateInfoFile; 
 				end
 				if ~exist(me.stateInfoFile,'file')
 					errordlg('runExperiment.runTask(): Please specify a valid State Machine file!!!')
-				else
-					stateInfoTmp = [];
-					me.stateInfoFile	= regexprep(me.stateInfoFile,'\s+','\\ ');
-					disp(['===≣≣≣≣⊱ Loading State File: ' me.stateInfoFile]);
-					clear(me.stateInfoFile);
-					statetext = readlines(me.stateInfoFile,"EmptyLineRule","skip");
-					sM.raw = statetext;
-					if ~isdeployed
-						run(me.stateInfoFile);
-					else
-						runDeployed(me.stateInfoFile);
-					end
-					if isempty(stateInfoTmp)
-						errordlg('runExperiment.runTask(): State File loading failed!!!');
-					end
-					me.stateInfo		= stateInfoTmp;
-					didFind=false;
-					for jj = 1:length(stateInfoTmp(:))
-						stemp = stateInfoTmp{jj};
-						if ~iscell(stemp); continue; end
-						for kk = 1:length(stemp)
-							if contains(char(stemp{kk}),regexpPattern('\(eT\s*?,')) && eT.isOff
-								warning('The State Machine contains eyeTracker functions BUT you have the eyetracker turned OFF!')
-								didFind=true;break
-							end
-						end
-						if didFind; break; end
-					end
-					addStates(sM, me.stateInfo);
-					me.paths.stateInfoFile = me.stateInfoFile;
-					clear stateInfoTmp
 				end
+				
+				% read it and check if we specify which type of state machine to use
+				stateInfoTmp = [];
+				me.stateInfoFile = regexprep(me.stateInfoFile,'\s+','\\ ');
+				disp(['===≣≣≣≣⊱ Loading State File: ' me.stateInfoFile]);
+				clear(me.stateInfoFile);
+				statetext = readlines(me.stateInfoFile,"EmptyLineRule","skip");
+				smSpec = contains(statetext,"tS.stateMachineClass");
+				if any(smSpec)
+					smLine = statetext(smSpec==true);
+					match = regexp(smLine(1),"=\s?['""](?<sm>\w+)","names");
+					if matches(match.sm,["stateMachine" "stateMachineTree"])
+						me.stateMachineClass = match.sm;
+					end
+				end
+				clear smSpec smLine match
+
+				% make a new state machine object
+				smClass = str2func(me.stateMachineClass);
+				me.stateMachine		= smClass('verbose', me.verbose,...
+					'realTime', task.realTime, 'name', me.name, ...
+					'externalLog', me.taskLog);
+				sM					= me.stateMachine;
+				sM.raw = statetext; clear statetext;
+
+				% run the state info file, building the task spec
+				if ~isdeployed
+					run(me.stateInfoFile);
+				else
+					runDeployed(me.stateInfoFile);
+				end
+				if isempty(stateInfoTmp)
+					errordlg('runExperiment.runTask(): State File loading failed!!!');
+				end
+				me.stateInfo		= stateInfoTmp;
+				didFind=false;
+				for jj = 1:length(stateInfoTmp(:))
+					stemp = stateInfoTmp{jj};
+					if ~iscell(stemp); continue; end
+					for kk = 1:length(stemp)
+						if eT.isOff && contains(char(stemp{kk}),regexpPattern('\(eT\s*?,'))
+							warning('The State Machine contains eyeTracker functions BUT you have the eyetracker turned OFF!')
+							didFind=true;break
+						end
+					end
+					if didFind; break; end
+				end
+				
+				if task.realTime;	sM.timeDelta = 0; else; sM.timeDelta=s.screenVals.ifi; end
+				sM.fnTimers			= me.logStateTimers; %record fn evaluations?
+
+				addStates(sM, me.stateInfo);
+				me.paths.stateInfoFile = me.stateInfoFile;
+				clear stateInfoTmp
+				
 				uF.sM = sM;
 				me.lastXPosition		= tS.fixX;
 				me.lastYPosition		= tS.fixY;
@@ -806,7 +826,7 @@ classdef runExperiment < optickaCore
 					if tS.saveData;			eT.recordData = true; end %===save Eyetracker data?		
 				end
 				if isfield(tS,'rewardTime'); bR.rewardTime = tS.rewardTime; end
-
+	
 				%------initialise save location and enable diary logging if requested
 				[tS.ALFPath, tS.sessionID, tS.dateID, me.name] = me.getALF(me.sessionData.subjectName ,me.sessionData.labName, true);
 				if ~tS.saveData; me.name = [tS.dateID '_' me.sessionData.subjectName]; end
@@ -814,7 +834,7 @@ classdef runExperiment < optickaCore
 					diary off
 					diary([me.paths.ALFPath filesep '_matlab_diary.' me.name '.log']);
 				end
-
+	
 				%================================initialise save file and ALYX
 				if me.sessionData.useAlyx
 					initialiseAlyxSession(me);
@@ -838,25 +858,25 @@ classdef runExperiment < optickaCore
 				fprintf('\n\n\n≣≣≣≣>>> START BEHAVIOURAL TASK: %s <<<≣≣≣≣\n',me.name);
 				fprintf('\tInitial Path: %s\n',me.paths.ALFPath);
 				fprintf('\tInitial Comments: %s\n\n\n',me.comment);
-
+	
 				%================================get pre-run comments for this data collection
 				prompt = '\bf CHECK Recording system! \it Initial Comment for this Task Run?';
 				updateComments(me,prompt);
 				bR.comment = me.comment; eT.comment = me.comment; sM.comment = me.comment; io.comment = me.comment; tL.comment = me.comment; tS.comment = me.comment;
-
+	
 				%===========================set up our behavioural plot
 				if tS.showBehaviourPlot
 					fprintf('≣≣≣≣⊱ Creating Behavioural Record Plot Window...\n');
 					createPlot(bR, eT); 
 					WaitSecs(0.01); drawnow; WaitSecs(0.01); drawnow;
 				end
-
+	
 				%================================raise priority
 				fprintf('≣≣≣≣⊱ Increasing Priority...\n');
 				op = Screen('Preference', 'Verbosity',4);
 				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
 				Screen('Preference', 'Verbosity',op);
-
+	
 				%============================================================WARMUP
 				% lets draw ~1 seconds worth of the stimuli we will be using
 				% covered by a blank. This primes the GPU, eyetracker, IO
@@ -896,14 +916,14 @@ classdef runExperiment < optickaCore
 					if eT.secondScreen; trackerFlip(eT, 0, true); end 
 				end
 				resetStrobe(io); flip(s); flip(s); % reset the strobe system
-
+	
 				%=============================Preemptive save in case of crash or error: SAVES IN /TMP
 				rE = me;
 				tS.tmpFile = fullfile(tempdir, append('TEMP', me.name, '.mat'));
 				fprintf('\n≣≣≣≣ Save initial state in case of crash: %s ...\n',tS.tmpFile);
 				save(tS.tmpFile,'rE','tS');
 				fprintf('\t ... Saved!\n');
-
+	
 				%=============================Ensure we open the reward manager
 				if matches(me.reward.device,'arduino') && isa(rM,'arduinoManager') && ~rM.isOpen
 					fprintf('≣≣≣≣⊱ Opening Arduino for sending reward TTLs\n');
@@ -1489,7 +1509,7 @@ classdef runExperiment < optickaCore
 			try me.computer=Screen('computer'); end
 			try 
 				if isMATLABReleaseOlderThan('R2022a')
-					me.computer.gpu = opengl('data'); 
+					me.computer.gpu = opengl('data'); %#ok<OPGLD>
 				else
 					me.computer.gpu = rendererinfo; 
 				end
@@ -1825,7 +1845,7 @@ classdef runExperiment < optickaCore
 			if me.isRunning
 				if ~exist('tag','var'); tag = '#'; end
 				if ~exist('HED','var'); HED = 'Experimental-note'; end
-				t = sprintf('≣≣≣≣⊱ %s : %s', tag, infoText(me));
+				t = sprintf('⟿⟿⊱ %s : %s', tag, infoText(me));
 				fprintf('%s\n',t);
 				me.behaviouralRecord.info = t;
 				if me.isRunTask
@@ -2739,13 +2759,15 @@ classdef runExperiment < optickaCore
 			end
 			for i = 1:me.stimuli.n
 				if isa(me.stimuli{i},'imageStimulus') || isa(me.stimuli{i},'movieStimulus')
-					t = [t sprintf(' | %i = %s',i,me.stimuli{i}.currentFile)];
+					cf = split(me.stimuli{i}.currentFile,filesep);
+					cf = join(cf(end-1:end),filesep);
+					t = [t sprintf(' | %i=%s', i, char(cf))];
 				end
 			end
 			if ~isempty(me.variableInfo)
 				t = append(t, ' | ', me.variableInfo);
 			end
-			t = WrapString(t, 100);
+			%t = WrapString(t, 100);
 		end
 		
 		% ===================================================================

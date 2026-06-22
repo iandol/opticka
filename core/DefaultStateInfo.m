@@ -70,6 +70,7 @@
 % functionality, not just the state machine. Other switches like
 % includeErrors are referenced in this state machine file to change which
 % functions are added to the state machine states…
+tS.stateMachineClass		= 'stateMachine'; %==use a finite (stateMachine) or hierarchical (stateMachineTree) state machine
 tS.name						= 'Default Protocol'; %==name of this protocol
 tS.saveData					= true;		%==save behavioural and eye movement data?
 tS.showBehaviourPlot		= true;		%==open the behaviourPlot figure? Can cause more memory use…

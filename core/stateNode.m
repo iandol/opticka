@@ -51,6 +51,14 @@ classdef stateNode < handle
 		HED char = 'Experiment_control'
 	end
 
+	properties (SetAccess = public, GetAccess = public, Hidden = true)
+		%> cached ancestor stack [root .. self], built lazily on first
+		%> access and invalidated when parent changes (addChild). Since
+		%> the tree structure only changes during addStates (build time),
+		%> the cache is valid for all runtime transition calls.
+		cachedAncestors cell = {}
+	end
+
 	methods
 
 		% ===================================================================
@@ -82,10 +90,12 @@ classdef stateNode < handle
 
 		% ===================================================================
 		%> @brief attach a child node to this node (sets child.parent)
+		%> Invalidates the child's cached ancestor stack.
 		% ===================================================================
 		function addChild(obj, child)
 			child.parent = obj;
 			obj.children{end+1} = child;
+			child.cachedAncestors = {};
 		end
 
 		% ===================================================================
@@ -123,15 +133,21 @@ classdef stateNode < handle
 
 		% ===================================================================
 		%> @brief return the ancestor stack [root .. obj] as a cell array
-		%> of stateNode handles
+		%> of stateNode handles. Uses a lazy cache (cachedAncestors) that
+		%> is invalidated when the parent changes via addChild.
 		% ===================================================================
 		function stack = ancestors(obj)
+			if ~isempty(obj.cachedAncestors)
+				stack = obj.cachedAncestors;
+				return;
+			end
 			stack = {obj};
 			p = obj.parent;
 			while ~isempty(p)
 				stack = [{p}, stack];
 				p = p.parent;
 			end
+			obj.cachedAncestors = stack;
 		end
 
 		% ===================================================================

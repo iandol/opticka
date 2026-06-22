@@ -29,11 +29,12 @@
 % functionality, not just the state machine. Other switches like
 % includeErrors are referenced in this state machine file to change with
 % functions are added to the state machine states…
-tS.useTask					= true;		%==use taskSequence (randomises stimulus variables)
+tS.stateMachineClass		= 'stateMachineTree'; % use finite state machine
+tS.useTask					= true;		%==use taskSequence (randomises visual stimulus variables)
 tS.rewardTime				= 250;		%==TTL time in milliseconds
 tS.rewardPin				= 2;		%==Output pin, 2 by default with Arduino.
-tS.keyExclusionPattern		= []; %==which states to skip keyboard checking
-tS.enableTrainingKeys		= true;	%==enable keys useful during task training, but not for data recording
+tS.keyExclusionPattern		= [];		%==which states to skip keyboard checking
+tS.enableTrainingKeys		= true;		%==enable keys useful during task training, but not for data recording
 tS.recordEyePosition		= false;	%==record local copy of eye position, **in addition** to the eyetracker?
 tS.askForComments			= false;	%==UI requestor asks for comments before/after run
 tS.saveData					= true;		%==save behavioural and eye movement data?
@@ -174,6 +175,7 @@ psEntryFn = {
 	@()trackerMessage(eT,'V_RT MESSAGE END_FIX END_RT'); % Eyelink-specific commands, ignored by other eyetrackers
 	@()trackerMessage(eT,sprintf('TRIALID %i',getTaskIndex(me))); %Eyetracker start trial marker
 	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
+	@()trackerClearScreen(eT);
 	@()trackerDrawStatus(eT,'Start...', stims.stimulusPositions);
 	@()logRun(me,'PREFIX'); % log current trial info to command window AND timeLogger
 };
@@ -185,6 +187,8 @@ prestimulusFn = {
 
 %---------------------exiting prestimulus state
 psExitFn = {
+	@()trackerDrawFixation(eT);
+	@()trackerDrawStatus(eT,'Showing Stimuli...', stims.stimulusPositions);
 	@()show(stims); % make sure we prepare to show the stimulus set
 };
 

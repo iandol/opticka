@@ -290,8 +290,9 @@ classdef opticka < optickaCore
 		%> @fn getScreenVals
 		%>
 		%> Gets the settings from the UI and updates our runExperiment
-		%> object.
+		%> object. 
 		% ===================================================================
+			
 			rM = optickaCore.initialiseGlobals();
 
 			if isempty(me.r)
@@ -447,11 +448,14 @@ classdef opticka < optickaCore
 				me.r.eyetracker.device = 'eyelink';
 			elseif me.ui.OKuseTobii.Checked == true
 				me.r.eyetracker.device = 'tobii';
-
 			else
 				me.r.eyetracker.device = '';
 			end
-			
+
+			if isprop(me.r, 'stateMachineClass') && isfield (me.ui,'OKStateType')
+				me.r.stateMachineClass = me.ui.OKStateType.Value;
+			end
+
 		end
 		
 		% ===================================================================
@@ -539,6 +543,7 @@ classdef opticka < optickaCore
 						eT = iRecManager;
 						tsM = stateMachine;
 						tM = touchManager;
+						tL = timeLogger;
 						run(met.r.stateInfoFile)
 						if exist('stateInfoTmp','var')
 							addStates(tsM, stateInfoTmp);
@@ -553,7 +558,7 @@ classdef opticka < optickaCore
 							
 							met.ui.OKStateFcnView.Value = {''};
 						end
-						clear me stims eT tsM tM
+						clear me stims eT tsM tM tL
 					catch ME
 						getReport(ME)
 						met.ui.OKStateTable.ColumnName = {'STATE','Next','time','entry','within','transition','exit'}; %#ok<*USENS>

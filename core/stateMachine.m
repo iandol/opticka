@@ -157,10 +157,12 @@ classdef stateMachine < optickaCore
 								"timeDelta", "skipExitStates", "tempNextState", "fnTimers", "externalLog"]
 		logFields	string		= ["n","startTime","index","tnow","name","uuid",...
 								"tick","entryTime","nextTimeOut", "nextTickOut",...
-								"tempNextState","fevalEnter","fevalExit","fevalStore"]
+								"tempNextState","fevalEnter","fevalExit","fevalStore",...
+								"parent"]
 		logValues	cell		= {[],[],[],[],"","",...
 								[],[],[],[],...
-								"",[],[],[]}
+								"",[],[],[],... 
+								""}
 	end
 	
 	%=======================================================================
@@ -479,7 +481,7 @@ classdef stateMachine < optickaCore
 		function printCurrentTick(me)
 			fprintf('%i:%i', me.currentTick, me.totalTicks)
 		end
-		
+		q
 		% ===================================================================
 		%> @brief UUID function to return current UUID via a method
 		%>
@@ -544,7 +546,7 @@ classdef stateMachine < optickaCore
 			statesInfo = {
 				'name'		'next'		'time'	'entryFcn'	'withinFcn'	'transitionFcn'	'exitFcn'	'HED';
 				%--------------------------------------------------------------------------------------------------------
-				'begin'		'next1'		[2 4]	beginFcn	withinFcn	{}				exitFcn		'Experiment_control';
+				'begin'		'next1'		0.5		beginFcn	withinFcn	{}				exitFcn		'Experiment_control';
 				'next1'		'next2'		0.05	next1Fcn	withinFcn	{}				exitFcn		'Experiment_control';
 				'next2'		'next3'		0.1		next2Fcn	withinFcn	{}				exitFcn		'Experiment_control';
 				'next3'		'transit'	0.2		next3Fcn	withinFcn	{}				exitFcn		'Experiment_control';
@@ -592,6 +594,7 @@ classdef stateMachine < optickaCore
 			exitFcn = { @()fprintf('...exit\n') };
 			statesInfo = {
 				'name'		'next'		'time'	'entryFcn'	'withinFcn'	'transitionFcn'	'exitFcn'	'HED';
+				%--------------------------------------------------------------------------------------------------------
 				'begin'		'middle'	0.1		beginFcn	withinFcn	{}				exitFcn		'Experiment_control';
 				'middle'	'end'		0.1		middleFcn	withinFcn	transitionFcn	exitFcn		'Experiment_control';
 				'end'		''			0.1		endFcn		withinFcn	{}				exitFcn		'Experiment_control';
@@ -706,15 +709,15 @@ classdef stateMachine < optickaCore
 		%> @return
 		% ===================================================================
 		function exitCurrentState(me)
-			if me.fnTimers; tx=tic; end
+			if me.fnTimers; t0=tic; end
 			me.runExitFcns(me.currentState);
 			if me.fnTimers 
-				me.log.fevalExit(me.thisN) = toc(tx)*1000;
-				txs = tic;
+				me.log.fevalExit(me.thisN) = toc(t0)*1000;
+				t0 = tic;
 			end
 			me.writeLogForCurrent();
 			if me.fnTimers
-				me.log.fevalStore(me.thisN)	= toc(txs)*1000;
+				me.log.fevalStore(me.thisN)	= toc(t0)*1000;
 			end
 			me.tempNextState = '';
 			if me.verbose
@@ -755,6 +758,7 @@ classdef stateMachine < optickaCore
 			me.log.entryTime(me.thisN)	= me.currentEntryTime;
 			me.log.nextTimeOut(me.thisN)= me.nextTimeOut;
 			me.log.nextTickOut(me.thisN)= me.nextTickOut;
+			me.log.parent{me.thisN}		= '';
 			if me.useExternalLog
 				me.externalLog.addMessage(me.log.n, me.log.entryTime(me.thisN), ...
 					me.log.tnow(me.thisN), ...
@@ -777,10 +781,10 @@ classdef stateMachine < optickaCore
 			me.thisN = me.thisN + 1;
 			if me.thisN == 1; me.log.startTime = me.startTime; end
 			if me.nStates >= thisIndex
-				if me.fnTimers; tt = tic; end	%time our enter state functions
+				if me.fnTimers; t0 = tic; end	%time our enter state functions
 				me.enterLeafTiming(thisIndex);
 				me.runEntryFcns(me.currentState);
-				if me.fnTimers; me.log.fevalEnter(me.thisN) = toc(tt)*1000; end
+				if me.fnTimers; me.log.fevalEnter(me.thisN) = toc(t0)*1000; end
 				
 				if me.verbose
 					me.logOutput(['ENTER: ' me.currentState.name ...
@@ -944,6 +948,54 @@ classdef stateMachine < optickaCore
 				try set(gca,'XTickLabelRotation',30); end
 				box on; grid on; axis tight;
 				axis([0.9 logN+0.1 -inf inf]);
+				%> draw parent hierarchy as background patches
+				if isfield(log,'parent') && logN > 0
+					if ~iscell(log.parent); pData = cellstr(log.parent); else; pData = log.parent; end
+					bars = {};
+					curAnc = {};
+					curSt = [];
+					for ii = 1:logN
+						p = pData{ii};
+						if isstring(p); p = char(p); end
+						parts = regexp(p,':','split');
+						if isempty(p) || (numel(p)==1 && p==''); parts = {}; end
+						nP = length(parts);
+						pD = length(curAnc);
+						for d = 1:max(pD,nP)
+							if d <= nP; aPath = strjoin(parts(1:d),':'); else; aPath = ''; end
+							if d <= pD && ~isempty(curAnc{d}); cP = curAnc{d}; else; cP = ''; end
+							if ~isempty(aPath) && isempty(cP)
+								curAnc{d} = aPath; curSt(d) = ii;
+							elseif isempty(aPath) && ~isempty(cP)
+								bars{end+1} = {d, cP, curSt(d), ii-1};
+								curAnc{d} = ''; curSt(d) = NaN;
+							elseif ~isempty(aPath) && ~isempty(cP) && ~strcmp(aPath,cP)
+								bars{end+1} = {d, cP, curSt(d), ii-1};
+								curAnc{d} = aPath; curSt(d) = ii;
+							end
+						end
+						if nP < pD; curAnc = curAnc(1:nP); curSt = curSt(1:nP); end
+					end
+					for d = 1:length(curAnc)
+						if ~isempty(curAnc{d}); bars{end+1} = {d, curAnc{d}, curSt(d), logN}; end
+					end
+					if ~isempty(bars)
+						mD = max(cellfun(@(b)b{1},bars));
+						dC = lines(mD);
+						yR = [ 0.1 0.2 ];
+						hold(ax1,'on');
+						for i = 1:length(bars)
+							if bars{i}{4} >= bars{i}{3}
+								yR = yR + 0.1;
+								p=patch(ax1, [bars{i}{3}-1 bars{i}{4}+0.25 bars{i}{4}+0.25 bars{i}{3}-1],...
+									[yR(1) yR(1) yR(2) yR(2)], dC(bars{i}{1},:),...
+									'FaceAlpha',0.12,'EdgeColor','none','HitTest','off','PickableParts','none');
+								p.Annotation.LegendInformation.IconDisplayStyle = "off";
+							end
+						end
+						hold(ax1,'off');
+					end
+				end
 				if isfield(log,'fevalEnter') && ~isnan(log.fevalEnter(1))
 					ax2 = nexttile;
 					s = plot(log.fevalEnter,'ko','MarkerSize',10, 'MarkerFaceColor', [1 1 1]);
@@ -977,6 +1029,8 @@ classdef stateMachine < optickaCore
 					axis([0.9 logN+0.1 -inf inf]);
 					linkaxes([ax1 ax2],'x');
 				end
+			catch ME
+				getReport(ME)
 			end
 		end
 		

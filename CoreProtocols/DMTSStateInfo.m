@@ -31,6 +31,7 @@
 
 %==================================================================
 %----------------------General Settings----------------------------
+tS.stateMachineClass		= 'stateMachineTree'; % use hierarchical state machine
 tS.name						= 'Delayed Match to Sample'; %==name of this protocol
 tS.useTask					= true;		%==use taskSequence (randomises stimulus variables)
 tS.rewardTime				= 300;		%==TTL time in milliseconds
@@ -60,7 +61,7 @@ addMessage(tL, 0, [], [], sprintf('sampleTime: %0.2f, delayTime: %s, choiceTime:
 %==================================================================
 %-----------------Debug logging to command window------------------
 % uncomment each line to get specific verbose logging
-%sM.verbose					= true;		%==print out stateMachine info for debugging
+sM.verbose					= true;		%==print out stateMachine info for debugging
 %stims.verbose				= true;		%==print out metaStimulus info for debugging
 %io.verbose					= true;		%==print out io commands for debugging
 eT.verbose					= true;		%==print out eyelink commands for debugging
@@ -101,7 +102,7 @@ tS.targetFixTime			= 0.25;
 % radius of the target fixation window in degrees
 tS.targetRadius				= 5;
 % radius of exclusion zones around distractor stimuli (empty = no exclusion)
-tS.exclusionRadius			= 5;
+tS.exclusionRadius			= 2;
 
 % Initialise eyetracker with X, Y, FixInitTime, FixTime, Radius, StrictFix
 updateFixationValues(eT, tS.fixX, tS.fixY, tS.firstFixInit, ...
@@ -150,7 +151,7 @@ pauseEntryFn = {
 	@()drawBackground(s); %blank the subject display
 	@()drawTextNow(s,'PAUSED, press [p] to resume...');
 	@()disp('PAUSED, press [p] to resume...');
-	@()trackerDrawStatus(eT,'PAUSED, press [P] to resume...');
+	@()trackerDrawStatus(eT,'PAUSED, press [P] to resume...', [], 0, false);
 	@()trackerMessage(eT,'TRIAL_RESULT -100'); %store message in EDF
 	@()setOffline(eT); % set eyelink offline [tobii ignores this]
 	@()stopRecording(eT, true); %stop recording eye position data
@@ -177,19 +178,20 @@ pfEntryFn = {
 	@()resetAll(eT); %reset all fixation counters and history for a new trial
 	@()updateFixationValues(eT,tS.fixX,tS.fixY,tS.firstFixInit, ...
 		tS.firstFixTime,tS.firstFixRadius,tS.strict); %reset fixation window
+	@()trackerClearScreen(eT);
 	@()trackerTrialStart(eT, getTaskIndex(me));
 	@()trackerMessage(eT,['UUID ' UUID(sM)]); %add uuid of current state
+	@()trackerClearScreen(eT);
 };
 
 %--------------------prefix within
 pfWithinFn = {
-	@()trackerDrawFixation(eT);
 	@()trackerDrawEyePosition(eT);
 };
 
 %--------------------exit prefix
 pfExitFn = {
-	@()logRun(me,'PREFIX');
+	@()trackerDrawFixation(eT);
 	@()trackerDrawStatus(eT,'Starting trial...', stims.stimulusPositions);
 };
 
@@ -203,7 +205,7 @@ pfExitFn = {
 % fixation window) for a certain amount of time before we break the trial.
 fixEntryFn = {
 	@()showSet(stims, 1); % show fixation cross (stims{1})
-	@()trackerMessage(eT,'MSG:Start Fixation');
+	@()trackerMessage(eT,'MSG:Fixation ON');
 };
 
 %--------------------fixation within
@@ -219,22 +221,22 @@ initFixFn = {
 };
 
 %--------------------exit fixation phase
-fixExitFn = {};
+fixExitFn = { 
+	@()updateFixationValues(eT, [], [], [], tS.sampleFixTime); %reset fix timer 
+	@()trackerMessage(eT,'MSG:Fixation OFF');
+};
 
 %====================================================SAMPLE
 %--------------------sample entry
 sampleEntryFn = {
 	@()showSet(stims, 2); % show fixation cross + sample image only
-	@()updateFixationValues(eT,[],[],[],tS.sampleFixTime); %reset fix timer
 	@()trackerMessage(eT,'MSG:Sample ON');
-	@()logRun(me,'MSG:Sample ON');
 };
 
 %--------------------sample within
 sampleWithinFn = {
 	@()draw(stims);
 	@()animate(stims);
-	@()trackerDrawFixation(eT);
 	@()trackerDrawEyePosition(eT);
 };
 
@@ -246,15 +248,14 @@ sampleFixFn = {
 %--------------------exit sample
 sampleExitFn = {
 	@()showSet(stims, 1); % hide sample image, keep fixation cross
+	@()updateFixationValues(eT,[],[],[],tS.delayFixTime); %reset fix timer
 	@()trackerMessage(eT,'MSG:Sample OFF');
 };
 
 %====================================================DELAY
 %--------------------delay entry
 delayEntryFn = {
-	@()updateFixationValues(eT,[],[],[],tS.delayFixTime); %reset fix timer
 	@()trackerMessage(eT,'MSG:Delay ON');
-	@()logRun(me,'MSG:Delay ON');
 };
 
 %--------------------delay within
@@ -271,23 +272,23 @@ delayFixFn = {
 %--------------------exit delay
 delayExitFn = {
 	@()showSet(stims, 3); % hide fixation cross and sample for choice phase
+	% update fixation target to the target stimulus position
+	@()updateFixationTarget(me, true, tS.targetFixInit, ...
+	tS.targetFixTime, tS.targetRadius, tS.strict);
+	% create exclusion zones around distractor stimuli
+	@()updateExclusionZones(me, true, tS.exclusionRadius);
+	@()trackerDrawExclusion(eT);
+	@()trackerDrawFixation(eT);
 };
 
 %====================================================CHOICE
 %--------------------choice entry
 choiceEntryFn = {
-	% update fixation target to the target stimulus position
-	@()updateFixationTarget(me, true, tS.targetFixInit, ...
-		tS.targetFixTime, tS.targetRadius, tS.strict);
-	% create exclusion zones around distractor stimuli
-	@()updateExclusionZones(me, true, tS.exclusionRadius);
-	% show the choice array (target + distractors, stimuli 3..7)
 	% send a sync time message
 	@()doSyncTime(me);
 	% send strobe with stimulus value
 	@()doStrobe(me,true);
 	@()trackerMessage(eT,'MSG:Choice ON');
-	@()logRun(me,'MSG:Choice ON');
 };
 
 %--------------------choice within
@@ -295,7 +296,6 @@ choiceWithinFn = {
 	@()draw(stims);
 	@()animate(stims);
 	@()trackerDrawEyePosition(eT);
-	@()trackerDrawStimuli(eT, stims.stimulusPositions);
 };
 
 %--------------------test subject finds target or enters exclusion zone
@@ -308,7 +308,6 @@ choiceExitFn = {
 	@()setStrobeValue(me, me.strobe.stimOFFValue);
 	@()doStrobe(me,true);
 	@()trackerMessage(eT,'MSG:Choice OFF');
-	@()logRun(me,'MSG:Choice OFF');
 };
 
 %====================================================CORRECT
@@ -320,7 +319,7 @@ correctEntryFn = {
 	@()needEyeSample(me,false); % stop eye sampling until next trial
 	@()giveReward(rM); % send a reward
 	@()beep(aM, tS.correctSound); % correct beep
-	@()logRun(me,'CORRECT'); %fprintf current trial info
+	@()logRun(me,'MSG:CORRECT'); %fprintf current trial info
 };
 
 %--------------------correct within
@@ -349,7 +348,7 @@ incEntryFn = {
 	@()needEyeSample(me,false);
 	@()hide(stims);
 	@()beep(aM, tS.errorSound);
-	@()logRun(me,'MSG:Incorrect'); %fprintf current trial info
+	@()logRun(me,'MSG:INCORRECT'); %fprintf current trial info
 };
 
 %--------------------incorrect within
@@ -377,7 +376,7 @@ breakEntryFn = {
 	@()needEyeSample(me,false);
 	@()hide(stims);
 	@()beep(aM, tS.errorSound);
-	@()logRun(me,'MSG:Breakfix'); %fprintf current trial info
+	@()logRun(me,'MSG:BREAKFIX'); %fprintf current trial info
 };
 
 %--------------------breakfix within
@@ -394,6 +393,15 @@ breakExitFn = {
 	@()resetAll(eT); % reset exclusion zones
 	@()plot(bR, 1);
 	@()checkTaskEnded(me);
+};
+
+%====================================================TIMEOUT
+toEntryFn = {
+	@()trackerDrawText(eT,"TIMEOUT");
+};
+
+toFn = {
+	@()drawBackground(s,[1 0 0]);
 };
 
 %========================================================
@@ -448,27 +456,27 @@ gridFn = {
 % this table defines the states and relationships and function sets
 %==================================================================
 stateInfoTmp = {
-'name'		'next'		'time'			'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn'	'HED';
-%---------------------------------------------------------------------------------------------
-'pause'		'prefix'	inf				pauseEntryFn	{}				{}				pauseExitFn	'Experiment-control, Pause';
-%---------------------------------------------------------------------------------------------
-'prefix'	'fixation'	0.5				pfEntryFn		pfWithinFn		{}				pfExitFn	'Experiment-control';
-'fixation'	'breakfix'	10				fixEntryFn		fixWithinFn		initFixFn		fixExitFn	'Experiment-structure, Agent-action, Move-eyes';
-'sample'	'breakfix'	tS.sampleTime	sampleEntryFn	sampleWithinFn	sampleFixFn		sampleExitFn 'Sensory-event,Experimental-stimulus';
-'delay'		'breakfix'	tS.delayTime	delayEntryFn	delayWithinFn	delayFixFn		delayExitFn	'Experiment-control, Delay';
-'choice'	'incorrect'	tS.choiceTime	choiceEntryFn	choiceWithinFn	choiceFixFn		choiceExitFn 'Experiment-structure, Sensory-event, Experimental-stimulus, Agent-action, Move-eyes';
-'correct'	'prefix'	0.1				correctEntryFn	correctWithinFn	{}				correctExitFn 'Experiment-control, Correct-action';
-'incorrect'	'timeout'	0.1				incEntryFn		incWithinFn		{}				incExitFn	'Experiment-control, Incorrect-action';
-'breakfix'	'timeout'	0.1				breakEntryFn	breakWithinFn	{}				breakExitFn	'Experiment-control, Inappropriate-action';
-'timeout'	'prefix'	tS.timeOut		{}				{}				{}				{}			'Experiment-control, Delay';
-%---------------------------------------------------------------------------------------------
-'calibrate'	'pause'		0.5				calibrateFn		{}				{}				{}			'Experiment-control';
-'offset'	'pause'		0.5				offsetFn		{}				{}				{}			'Experiment-control';
-'drift'		'pause'		0.5				driftFn			{}				{}				{}			'Experiment-control';
-%---------------------------------------------------------------------------------------------
-'flash'		'pause'		0.5				{}				flashFn			{}				{}			'Experiment-control';
-'override'	'pause'		0.5				{}				overrideFn		{}				{}			'Experiment-control';
-'showgrid'	'pause'		1				{}				gridFn			{}				{}			'Experiment-control';
+'name'		'next'		'time'		'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn'	'HED';
+%-----------------------------------------------------------------------------------------------------
+'pause'		'prefix'	inf			pauseEntryFn	{}				{}				pauseExitFn		'Experiment-control, Pause';
+%-----------------------------------------------------------------------------------------------------
+'prefix'	'fixation'	0.5			pfEntryFn		pfWithinFn		{}				pfExitFn		'Experiment-control';
+'fixation'	'breakfix'	10			fixEntryFn		fixWithinFn		initFixFn		fixExitFn		'Experiment-structure, Agent-action, Move-eyes';
+'sample'	'breakfix'	10			sampleEntryFn	sampleWithinFn	sampleFixFn		sampleExitFn	'Sensory-event,Experimental-stimulus';
+'delay'		'breakfix'	10			delayEntryFn	delayWithinFn	delayFixFn		delayExitFn		'Experiment-control, Delay';
+'choice'	'incorrect'	10			choiceEntryFn	choiceWithinFn	choiceFixFn		choiceExitFn	'Experiment-structure, Sensory-event, Experimental-stimulus, Agent-action, Move-eyes';
+'correct'	'prefix'	0.1			correctEntryFn	correctWithinFn	{}				correctExitFn	'Experiment-control, Correct-action';
+'incorrect'	'timeout'	0.1			incEntryFn		incWithinFn		{}				incExitFn		'Experiment-control, Incorrect-action';
+'breakfix'	'timeout'	0.1			breakEntryFn	breakWithinFn	{}				breakExitFn		'Experiment-control, Inappropriate-action';
+'timeout'	'prefix'	tS.timeOut	toEntryFn		{}				{}				{}				'Experiment-control, Delay';
+%-----------------------------------------------------------------------------------------------------
+'calibrate'	'pause'		0.5			calibrateFn		{}				{}				{}				'Experiment-control';
+'offset'	'pause'		0.5			offsetFn		{}				{}				{}				'Experiment-control';
+'drift'		'pause'		0.5			driftFn			{}				{}				{}				'Experiment-control';
+%-----------------------------------------------------------------------------------------------------
+'flash'		'pause'		0.5			{}				flashFn			{}				{}				'Experiment-control';
+'override'	'pause'		0.5			{}				overrideFn		{}				{}				'Experiment-control';
+'showgrid'	'pause'		1			{}				gridFn			{}				{}				'Experiment-control';
 };
 %----------------------State Machine Table-------------------------
 %==================================================================

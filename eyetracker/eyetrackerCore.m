@@ -320,7 +320,8 @@ classdef eyetrackerCore < optickaCore
 			me.isInitFail			= false;
 			me.flipTick				= 0;
 			if me.verbose
-				fprintf('-+-+-> EyeTracker:RESET Fixation: fix length=%i fix total=%i fix #%i\n',me.fixLength,me.fixTotal,me.fixN);
+				fprintf('-+-+-> EyeTracker:RESET Fixation: length=%i total=%i N=#%i clear-history=%i\n',...
+					me.fixLength, me.fixTotal, me.fixN, removeHistory);
 			end
 		end
 		
@@ -461,7 +462,7 @@ classdef eyetrackerCore < optickaCore
 		
 		
 		% ===================================================================
-		function updateFixationValues(me,x,y,inittime,fixtime,radius,strict)
+		function updateFixationValues(me, x, y, inittime, fixtime, radius, strict)
 		%> @fn updateFixationValues(me,x,y,inittime,fixtime,radius,strict)
 		%>
 		%> Sinlge method to update the fixation parameters. See property
@@ -476,14 +477,14 @@ classdef eyetrackerCore < optickaCore
 		%> @param strict allow or disallow re-entering the fixation window
 		% ===================================================================
 			resetFixation(me);
-			if nargin > 1 && ~isempty(x)
+			if nargin > 1 && ~isempty(x) && (isnumeric(x) && ~isnan(x))
 				if isinf(x)
 					me.fixation.X = me.screen.screenXOffset;
 				else
 					me.fixation.X = x;
 				end
 			end
-			if nargin > 2 && ~isempty(y)
+			if nargin > 2 && ~isempty(y) && (isnumeric(y) && ~isnan(y))
 				if isinf(y)
 					me.fixation.Y = me.screen.screenYOffset;
 				else
@@ -505,7 +506,7 @@ classdef eyetrackerCore < optickaCore
 					me.fixation.initTime = inittime;
 				end
 			end
-			if nargin > 4 && ~isempty(fixtime)
+			if nargin > 4 && ~isempty(fixtime) && (isnumeric(fixtime) && ~isnan(fixtime))
 				if length(fixtime) == 2
 					me.fixation.time = randi(fixtime.*1000)/1000;
 				elseif isscalar(fixtime)
@@ -1036,16 +1037,19 @@ classdef eyetrackerCore < optickaCore
 		end
 
 		% ===================================================================
-		%> @brief draw the fixation box on the tracker display
+		%> @brief draw the fiqxation box on the tracker display
 		%>
 		% ===================================================================
 		function trackerDrawExclusion(me)
 			if isempty(me.exclusionZone) || me.isOff || ~me.isConnected || ~me.operatorScreen.isOpen; return; end
+			ez = me.exclusionZone;
+			% exclusion zone is [-x +x -y +y] 1 row per zone.
+			% PTB rect is [l t r b], one row per rect.
+			rects = zeros(4,size(ez,1));
 			for i = 1:size(me.exclusionZone,1)
-				drawRect(me.operatorScreen, [me.exclusionZone(1), ...
-					me.exclusionZone(3), me.exclusionZone(2), ...
-					me.exclusionZone(4)],[0.7 0.6 0.6 0.5]);
+				rects(:,i) = [ez(i,1) ez(i,3) ez(i,2) ez(i,4)]';
 			end
+			drawRect(me.operatorScreen, rects, [0.7 0.6 0.6 0.5]);
 		end
 		
 		
@@ -1118,7 +1122,7 @@ classdef eyetrackerCore < optickaCore
 		%>
 		% ===================================================================
 		function evt = getEvent(me)
-			
+			evt = [];
 		end
 
 		% ===================================================================

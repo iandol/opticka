@@ -58,6 +58,14 @@ classdef stateMachineTree < stateMachine
 		%> me.totalTicks at entry time for each position on the current
 		%> stack. Used to compute per-state tick count at exit.
 		stackEntryTicks double = []
+		%> cached withinFcn cell arrays for the active stack (root -> leaf).
+		%> Populated in enterChainFromLCA, used in update() to avoid
+		%> per-tick handle property access.
+		stackWithinFcns cell = {}
+		%> cached transitionFcn cell arrays for the active stack (root -> leaf)
+		stackTransFcns cell = {}
+		%> cached active stack length (avoids length() calls per tick)
+		stackLen double = 0
 	end
 
 	methods %------------------PUBLIC METHODS
@@ -187,6 +195,9 @@ classdef stateMachineTree < stateMachine
 			me.currentStackNodes = {};
 			me.stackLogN = [];
 			me.stackEntryTicks = [];
+			me.stackWithinFcns = {};
+			me.stackTransFcns = {};
+			me.stackLen = 0;
 		end
 
 		% ===================================================================
@@ -203,7 +214,7 @@ classdef stateMachineTree < stateMachine
 			startExit   = { @()fprintf('\tstart (root): exit\n') };
 			trialEntry  = { @()fprintf('\ttrial (root): enter\n') };
 			trialExit   = { @()fprintf('\ttrial (root): exit\n') };
-			trialWithin = { @()fprintf('') };
+			trialWithin = { @()fprintf('') }; % just a bit of (useless) work to eval
 			pfixEntry   = { @()fprintf('\t\tprefix (leaf): enter\n') };
 			pfixExit    = { @()fprintf('\t\tprefix (leaf): exit\n') };
 			fixEntry    = { @()fprintf('\t\tfixate (leaf): enter\n') };
@@ -211,14 +222,15 @@ classdef stateMachineTree < stateMachine
 			holdEntry   = { @()fprintf('\t\t\thold (leaf2): enter\n') };
 			holdExit    = { @()fprintf('\t\t\thold (leaf2): exit\n') };
 			% parent-level transition: abort the whole trial subtree
-			trialTrans  = { @()sprintf('') }; % no abort in this demo
+			trialTrans  = { @()sprintf('') }; % no transition in this demo
 			% leaf transition: when hold time done, go to feedback (outside trial)
-			fbEntry    = { @()fprintf('\feedback: enter\n') };
-			fbExit     = { @()fprintf('\feedback: exit\n') };
+			fbEntry    = { @()fprintf('\tfeedback: enter\n') };
+			fbExit     = { @()fprintf('\tfeedback: exit\n') };
 			rewEntry    = { @()fprintf('\treward: enter\n') };
 			rewExit     = { @()fprintf('\treward: exit\n') };
 			statesInfo = {
 				'name'    'next'     'time' 'parent'   'entryFcn'   'withinFcn'   'transitionFcn' 'exitFcn'  'HED';
+				%--------------------------------------------------------------------------------------------------------
 				'start'   'trial'    0.25   ''         startEntry   {}            {}              startExit  'Experiment_control';
 				'trial'   ''         10     ''         trialEntry   trialWithin   trialTrans      trialExit  'Experiment_control';
 				'prefix'  'fixate'   1      'trial'    pfixEntry    {}            {}              pfixExit   'Experiment_control';
@@ -247,6 +259,9 @@ classdef stateMachineTree < stateMachine
 		% ===================================================================
 		%> @brief update the state machine, HSM-aware within/transition
 		%> (node-based). Must be public to match the superclass.
+		%> Uses cached function handles (stackWithinFcns/stackTransFcns)
+		%> to avoid per-tick handle property access. Includes a fast-path
+		%> for flat mode (stackLen == 1) that mirrors the base class.
 		% ===================================================================
 		function update(me)
 			if ~me.isRunning; return; end
@@ -270,11 +285,10 @@ classdef stateMachineTree < stateMachine
 					finish(me);
 				end
 			else
-				stack = me.currentStackNodes;
-				transitioned = false;
-				for k = length(stack):-1:1
-					node = stack{k};
-					tcn = node.transitionFcn;
+				% --- fast path: flat mode (single-node stack) ---
+				n = me.stackLen;
+				if n == 1
+					tcn = me.stackTransFcns{1};
 					if ~isempty(tcn)
 						tname = strtok(tcn{1}());
 						if ~isempty(tname)
@@ -282,24 +296,54 @@ classdef stateMachineTree < stateMachine
 							if isLocal; tname = strtrim(tname(7:end)); end
 							if ~isempty(tname) && isStateName(me, tname)
 								if isLocal
-									me.transitionToStateWithName(['local:' tname], node);
+									me.transitionToStateWithName(['local:' tname], me.currentStackNodes{1});
 								else
-									me.transitionToStateWithName(tname, node);
+									me.transitionToStateWithName(tname, me.currentStackNodes{1});
+								end
+								return
+							elseif strcmp(tname, 'tempNextState') && ~isempty(me.tempNextState) && isStateName(me, me.tempNextState)
+								me.transitionToStateWithName(me.tempNextState, me.currentStackNodes{1});
+								return
+							end
+						end
+					end
+					wcn = me.stackWithinFcns{1};
+					if ~isempty(wcn)
+						for jj = 1:length(wcn)
+							feval(wcn{jj});
+						end
+					end
+					return
+				end
+				% --- hierarchical path: depth > 1 ---
+				transitioned = false;
+				for k = n:-1:1
+					tcn = me.stackTransFcns{k};
+					if ~isempty(tcn)
+						tname = strtok(tcn{1}());
+						if ~isempty(tname)
+							isLocal = startsWith(tname, 'local:');
+							if isLocal; tname = strtrim(tname(7:end)); end
+							if ~isempty(tname) && isStateName(me, tname)
+								if isLocal
+									me.transitionToStateWithName(['local:' tname], me.currentStackNodes{k});
+								else
+									me.transitionToStateWithName(tname, me.currentStackNodes{k});
 								end
 								transitioned = true; break
 							elseif strcmp(tname, 'tempNextState') && ~isempty(me.tempNextState) && isStateName(me, me.tempNextState)
-								me.transitionToStateWithName(me.tempNextState, node);
+								me.transitionToStateWithName(me.tempNextState, me.currentStackNodes{k});
 								transitioned = true; break
 							end
 						end
 					end
 				end
 				if ~transitioned
-					for k = 1:length(stack)
-						node = stack{k};
-						if isempty(node.withinFcn); continue; end
-						for jj = 1:length(node.withinFcn)
-							feval(node.withinFcn{jj});
+					for k = 1:n
+						wcn = me.stackWithinFcns{k};
+						if isempty(wcn); continue; end
+						for jj = 1:length(wcn)
+							feval(wcn{jj});
 						end
 					end
 				end
@@ -370,6 +414,9 @@ classdef stateMachineTree < stateMachine
 			srcStack = me.currentStackNodes{end}.ancestors;
 			me.exitChainToLCA(srcStack, [], '');
 			me.currentStackNodes = {};
+			me.stackLen = 0;
+			me.stackWithinFcns = {};
+			me.stackTransFcns = {};
 		end
 
 		% ===================================================================
@@ -394,15 +441,15 @@ classdef stateMachineTree < stateMachine
 						end
 					end
 				end
-				if me.fnTimers; tx = tic; end
+				if me.fnTimers; t0 = tic; end
 				if ~skip && ~node.skipExitFcn
 					for jj = 1:length(node.exitFcn)
 						feval(node.exitFcn{jj});
 					end
 				end
 				if me.fnTimers
-					me.log.fevalExit(logN) = toc(tx)*1000;
-					txs = tic;
+					me.log.fevalExit(logN) = toc(t0)*1000;
+					t0 = tic;
 				end
 				% update this state's log entry with exit info
 				me.log.tnow(logN) = me.currentTime;
@@ -412,7 +459,7 @@ classdef stateMachineTree < stateMachine
 					me.log.nextTickOut(logN) = me.nextTickOut;
 				end
 				if me.fnTimers
-					me.log.fevalStore(logN) = toc(txs)*1000;
+					me.log.fevalStore(logN) = toc(t0)*1000;
 				end
 				if me.useExternalLog
 					me.externalLog.addMessage(logN, me.log.entryTime(logN), ...
@@ -475,15 +522,22 @@ classdef stateMachineTree < stateMachine
 					me.nextTickOut = floor(t / me.timeDelta);
 				end
 				% run this node's entry+within fcn (timed individually)
-				if me.fnTimers; tt = tic; end
+				if me.fnTimers; t0 = tic; end
 				me.runEntryFcnsNode(node);
-				if me.fnTimers; me.log.fevalEnter(me.thisN) = toc(tt)*1000; end
+				if me.fnTimers; me.log.fevalEnter(me.thisN) = toc(t0)*1000; end
 				% write initial log entry for THIS state
 				me.log.n = me.thisN;
 				me.log.index(me.thisN) = node.index;
 				me.log.name{me.thisN} = node.name;
 				me.log.uuid{me.thisN} = me.currentUUID;
 				me.log.entryTime(me.thisN) = me.currentEntryTime;
+				ancs = node.ancestors();
+				if length(ancs) > 1
+					me.log.parent{me.thisN} = strjoin(cellfun(@(n)n.name, ancs(1:end-1), ...
+						'UniformOutput', false), ':');
+				else
+					me.log.parent{me.thisN} = '';
+				end
 				stackLogN(k) = me.thisN;
 				stackEntryTicks(k) = me.totalTicks;
 				if me.verbose
@@ -495,6 +549,16 @@ classdef stateMachineTree < stateMachine
 			me.currentStackNodes = dstStack;
 			me.stackLogN = stackLogN;
 			me.stackEntryTicks = stackEntryTicks;
+			% cache function handles for the update() hot path
+			nStack = length(dstStack);
+			me.stackLen = nStack;
+			me.stackWithinFcns = cell(1, nStack);
+			me.stackTransFcns = cell(1, nStack);
+			for k = 1:nStack
+				nd = dstStack{k};
+				me.stackWithinFcns{k} = nd.withinFcn;
+				me.stackTransFcns{k} = nd.transitionFcn;
+			end
 		end
 
 		% ===================================================================
