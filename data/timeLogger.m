@@ -373,12 +373,12 @@ classdef timeLogger < optickaCore
 		%> The returned table contains onset, exit, relative time, duration,
 		%> frame tick, stimulus state, free text message, time type, and HED tag.
 		%>
-		%> @return tbl Message log as a MATLAB table.
+		%> @return tbl Message log as a MATLAB timetable (or [] if no messages)
 		% ===================================================================
 		function tbl = messageTable(me)
 			removeEmptyValues(me);
 			tbl = [];
-			if isempty(me.messages); return; end
+			if isempty(me.messages) || isempty(me.messages.time); return; end
 			if isfield(me.messages,'type'); addType=true; else; addType=false; end
 			msgs = cell(length(me.messages.time)+1,9);
 			msgs{1,1} = toDateTime(me.startTime); msgs{1,2} = NaT; msgs{1,3} = 0;

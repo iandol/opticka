@@ -1,0 +1,51 @@
+name: MATLAB Tests
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'core/**'
+      - 'tests/**'
+      - 'setupCI.m'
+      - '.github/workflows/matlab-tests.yml'
+  pull_request:
+    branches: [master]
+    paths:
+      - 'core/**'
+      - 'tests/**'
+      - 'setupCI.m'
+      - '.github/workflows/matlab-tests.yml'
+  workflow_dispatch: {}
+
+jobs:
+  test:
+    name: Run MATLAB Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y xvfb
+
+      - name: Start virtual display server
+        run: |
+          Xvfb :99 -screen 0 1024x768x24 &
+          echo "DISPLAY=:99" >> $GITHUB_ENV
+
+      - name: Clone Psychtoolbox dependency
+        run: |
+          git clone --depth 1 https://gitee.com/CogPlatform/Psychtoolbox.git /tmp/PTB
+
+      - name: Set up MATLAB
+        uses: matlab-actions/setup-matlab@v3
+        with:
+          release: latest
+          cache: true
+
+      - name: Run tests
+        uses: matlab-actions/run-command@v3
+        with:
+          command: setupCI; runOptickaTests;

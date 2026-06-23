@@ -81,8 +81,8 @@ classdef touchManager < optickaCore
 
 	properties (SetAccess=private, GetAccess=public)
 		% general touch info, latest x and y position
-		x					= []
-		y					= []
+		x					= NaN
+		y					= NaN
 		%> Accumulated X position in degrees since last flush
 		xAll				= []
 		%> Accumulated Y position in degrees since last flush
