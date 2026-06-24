@@ -37,7 +37,7 @@ jobs:
 
       - name: Clone Psychtoolbox dependency
         run: |
-          git clone --depth 1 https://gitee.com/CogPlatform/Psychtoolbox.git /tmp/PTB
+          git clone --depth 1 https://gitee.com/CogPlatform/Psychtoolbox.git /tmp/PTB/Psychtoolbox
 
       - name: Set up MATLAB
         uses: matlab-actions/setup-matlab@v3
