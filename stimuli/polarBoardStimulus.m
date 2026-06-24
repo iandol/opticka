@@ -31,31 +31,31 @@ classdef polarBoardStimulus < baseStimulus
 		%> sine option with a different shader = 'sine'
 		type char 				= ''
 		%> second colour of a colour grating stimulus
-		colour2(1,:) double		= [0 0 0 1]
+		colour2 (1,:) double		= [0 0 0 1]
 		%> base colour from which colour and colour2 are blended via contrast value
 		%> if empty [default], uses the background colour from screenManager
-		baseColour(1,:) double		= []
+		baseColour (1,:) double		= []
 		%> arc segment start angle and width in degrees (0 disable)
-		arcValue(1,2) double	= [0 0]
+		arcValue (1,2) double	= [0 0]
 		%> shoud arc be symmetrical
 		arcSymmetry logical		= false
 		%> do we mask (size in degrees) the centre part?
-		centerMask(1,1) double	= 0
+		centerMask (1,1) double	= 0
 		%> "spatial frequency" of the circular grating at ~5deg
 		%> sf is pretty relative as it changes from the center
-		sf(1,1) double			= 1
+		sf (1,1) double			= 1
 		%> temporal frequency of the grating
-		tf(1,1) double			= 1
+		tf (1,1) double			= 1
 		%> "spatial frequency" of the radial grating (number of spokes)
-		sf2(1,1) double			= 20
+		sf2 (1,1) double			= 20
 		%> only used for type='sine'
-		sigma(1,1) double		= -1
+		sigma (1,1) double		= -1
 		%> rotate the grating patch (false) or the grating texture within the patch (default = true)?
 		rotateTexture logical	= true
 		%> phase of grating
-		phase(1,1) double		= 0
+		phase (1,1) double		= 0
 		%> contrast of grating (technically the contrast from the baseColour)
-		contrast(1,1) double	= 0.5
+		contrast (1,1) double	= 0.5
 		%> use a circular mask for the grating (default = true).
 		mask logical			= true
 		%> direction of the drift; default = false means drift left>right when angle is 0deg.
@@ -69,9 +69,9 @@ classdef polarBoardStimulus < baseStimulus
 		%> occur blend
 		correctBaseColour logical = false
 		%> Reverse phase of grating X times per second? Useful with a static grating for linearity testing
-		phaseReverseTime(1,1) double = 0
+		phaseReverseTime (1,1) double = 0
 		%> What phase to use for reverse?
-		phaseOfReverse(1,1) double	= 180
+		phaseOfReverse (1,1) double	= 180
         %> turn stimulus on/off at X hz, [] diables this
         visibleRate             = []
 	end
@@ -98,11 +98,11 @@ classdef polarBoardStimulus < baseStimulus
 		sfCache
 		sf2Cache
 		%> allowed properties passed to object upon construction
-		allowedProperties = {'type','colour2', 'sf', 'tf', 'angle', 'direction', 'phase', 'rotateTexture' ... 
-			'contrast', 'mask', 'reverseDirection', 'speed', 'startPosition', 'aspectRatio' ... 
-			'sigma', 'correctPhase', 'phaseReverseTime', 'phaseOfReverse','visibleRate'}
+		allowedProperties = {'type' 'colour2' 'sf' 'sf2' 'tf' 'angle' 'direction' 'phase' 'rotateTexture' ... 
+			'contrast' 'mask' 'reverseDirection' 'speed' 'startPosition' 'aspectRatio' ... 
+			'sigma' 'correctPhase' 'phaseReverseTime' 'phaseOfReverse' 'visibleRate'}
 		%> properties to not create transient copies of during setup phase
-		ignoreProperties = {'type', 'scale', 'phaseIncrement', 'correctPhase', 'contrastMult', 'mask', 'typeList'}
+		ignoreProperties = {'type' 'scale' 'phaseIncrement' 'correctPhase' 'contrastMult' 'mask' 'typeList'}
 		%> how many frames between phase reverses
 		phaseCounter			= 0
 		%> mask value (radius for the procedural shader)

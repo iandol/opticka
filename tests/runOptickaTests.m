@@ -67,7 +67,7 @@ function runOptickaTests(varargin)
 	if verbose
 		runner = matlab.unittest.TestRunner.withTextOutput;
 	else
-		runner = matlab.unittest.TestRunner.withTextOutput;
+		runner = matlab.unittest.TestRunner.withDefaultPlugins;
 	end
 	results = runner.run(suite);
 	nFailed = sum([results.Failed]);

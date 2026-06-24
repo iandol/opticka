@@ -246,6 +246,7 @@ classdef audioManager < optickaCore
 		%>
 		% ===================================================================
 		function run(me)
+			if me.silentMode; return; end
 			setup(me)
 			play(me);
 			waitUntilStopped(me);
@@ -274,7 +275,6 @@ classdef audioManager < optickaCore
 				me.beepHandle = NaN;
 				me.beepCache = configureDictionary("string","cell");
 				me.isSetup = false; me.isOpen = false; me.isSample = false;
-				me.silentMode = false;
 			catch ME
 				try PsychPortAudio('Close'); end
 				me.aHandle = [];

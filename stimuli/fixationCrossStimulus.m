@@ -9,11 +9,11 @@
 classdef fixationCrossStimulus < baseStimulus
 	
 	properties %--------------------PUBLIC PROPERTIES----------%
+		%> second colour, used for the cross
+		colour2 = [0 0 0 1]
 		%> alpha for cross colour, can be controlled independently of alpha for
 		%> disc
 		alpha2 = 1
-		%> second colour, used for the cross
-		colour2 = [0 0 0 1]
 		%> width of the cross lines in degrees
 		lineWidth = 0.1
 		%> show background disk
@@ -68,8 +68,8 @@ classdef fixationCrossStimulus < baseStimulus
 		currentColour				= [1 1 1]
 		colourOutTemp				= [1 1 1]
 		colour2OutTemp				= [1 1 1]
-		allowedProperties = {'showDisk', 'type', 'flashTime', 'flashOn', ...
-			'flashColour', 'colour2', 'alpha2', 'lineWidth'}
+		allowedProperties = {'showDisk' 'type' 'flashTime' 'flashOn' ...
+			'flashColour' 'colour2', 'alpha2' 'lineWidth' 'pulseFrequency' 'pulseRange'}
 		ignoreProperties  = {'flashSwitch','flashOn'}
 	end
 	

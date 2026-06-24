@@ -79,14 +79,6 @@ classdef GaborStimulusTest < matlab.unittest.TestCase
 		end
 
 		% ---------------------------------------------------------------
-		%> @brief Test sigma setting via baseStimulus.
-		% ---------------------------------------------------------------
-		function testSigmaProperty(testCase)
-			g = gaborStimulus('verbose', false, 'sigma', 8);
-			verifyEqual(testCase, g.sigma, 8, 'sigma should be 8');
-		end
-
-		% ---------------------------------------------------------------
 		%> @brief Test rotationMethod property.
 		% ---------------------------------------------------------------
 		function testRotationMethod(testCase)

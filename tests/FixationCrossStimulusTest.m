@@ -64,10 +64,10 @@ classdef FixationCrossStimulusTest < matlab.unittest.TestCase
 			verifyEqual(testCase, f.flashTime, [0.1 0.2], 'flashTime should be [0.1 0.2]');
 			verifyFalse(testCase, f.flashOn, 'flashOn should be false');
 			verifyEqual(testCase, f.lineWidth, 0.3, 'lineWidth should be 0.3');
-			verifyEqual(testCase, f.alpha2, 0.5, 'alpha2 should be 0.5');
 			verifyFalse(testCase, f.showDisk, 'showDisk should be false');
 			verifyEqual(testCase, f.colour2(1:3), [1 0 0], 'colour2 RGB should be set');
 			verifyEqual(testCase, f.colour2(4), 0.8, 'colour2 alpha should be 0.8');
+			verifyEqual(testCase, f.alpha2, 0.8, 'alpha2 should be 0.8 overridden by colour2');
 		end
 
 		% ---------------------------------------------------------------

@@ -155,7 +155,7 @@ classdef AudioManagerTest < matlab.unittest.TestCase
 		% ===================================================================
 		function testSetupWithPTB(testCase)
 			% Skip if GetSecs is not available (CI without PTB)
-			assumeFalse(testCase, isempty(getenv('GITHUB_ACTIONS')), ...
+			assumeFalse(testCase, ~isempty(getenv('GITHUB_ACTIONS')), ...
 				'Skipping PTB audio test in CI');
 			am = audioManager('verbose', false);
 			am.setup;
@@ -166,11 +166,11 @@ classdef AudioManagerTest < matlab.unittest.TestCase
 		%> @brief Test beep produces sound — requires PTB audio.
 		% ===================================================================
 		function testBeepWithPTB(testCase)
-			assumeFalse(testCase, isempty(getenv('GITHUB_ACTIONS')), ...
+			assumeFalse(testCase, ~isempty(getenv('GITHUB_ACTIONS')), ...
 				'Skipping PTB beep test in CI');
 			am = audioManager('verbose', false);
 			am.setup;
-			am.beep(440, 0.1, 0.5);
+			am.beep(1000, 0.5, 0.5);
 			verifyTrue(testCase, am.isSetup, 'should be set up');
 		end
 	end

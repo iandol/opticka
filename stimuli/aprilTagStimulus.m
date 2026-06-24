@@ -73,10 +73,12 @@ classdef aprilTagStimulus < baseStimulus
 			'specialFlags','direction','cellSize'}
 		%> properties to not create transient copies of during setup phase
 		ignoreProperties = {'type','binaryMatrix','matrix','width','height',...
-			'widthD','heightD','scale'}
+			'widthD','heightD','scale','tag36_11','tag36_20','tag36_24',...
+			'tag36_46','tag36_52','tag36_65'};
 	end
 
 	properties (Constant = true)
+		% some sample april tags
 		tag36_11 = [1 1 1 1 1 1 1 1 1 1; 1 0 0 0 0 0 0 0 0 1; 1 0 0 0 1 1 1 1 0 1; 1 0 1 1 1 1 1 1 0 1; 1 0 1 0 0 1 0 1 0 1; 1 0 1 0 0 0 1 0 0 1; 1 0 1 1 0 0 1 1 0 1; 1 0 0 1 0 1 0 1 0 1; 1 0 0 0 0 0 0 0 0 1; 1 1 1 1 1 1 1 1 1 1]
 		tag36_20 = [1 1 1 1 1 1 1 1 1 1; 1 0 0 0 0 0 0 0 0 1; 1 0 1 0 0 0 0 0 0 1; 1 0 0 1 1 1 0 1 0 1; 1 0 1 0 1 0 0 1 0 1; 1 0 0 0 1 0 0 1 0 1; 1 0 0 1 0 0 1 0 0 1; 1 0 1 0 1 1 1 1 0 1; 1 0 0 0 0 0 0 0 0 1; 1 1 1 1 1 1 1 1 1 1]
 		tag36_34 = [1 1 1 1 1 1 1 1 1 1; 1 0 0 0 0 0 0 0 0 1; 1 0 0 1 1 0 0 1 0 1; 1 0 0 0 1 1 0 0 0 1; 1 0 0 1 0 0 0 1 0 1; 1 0 1 1 1 1 1 1 0 1; 1 0 1 0 1 0 0 1 0 1; 1 0 1 0 0 1 0 1 0 1; 1 0 0 0 0 0 0 0 0 1; 1 1 1 1 1 1 1 1 1 1]

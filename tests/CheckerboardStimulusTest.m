@@ -72,7 +72,7 @@ classdef CheckerboardStimulusTest < matlab.unittest.TestCase
 			verifyFalse(testCase, c.mask, 'mask');
 			verifyFalse(testCase, c.rotateTexture, 'rotateTexture');
 			verifyEqual(testCase, c.colour2(1:3), [1 0 0], 'colour2 RGB');
-			verifyEqual(testCase, c.colour2(4), 0.8, 'colour2 alpha');
+			verifyEqual(testCase, c.colour2(4), 1, 'colour2 alpha');
 			verifyTrue(testCase, c.reverseDirection, 'reverseDirection');
 			verifyEqual(testCase, c.direction, 45, 'direction');
 			verifyEqual(testCase, c.aspectRatio, 1.5, 'aspectRatio');

@@ -2142,7 +2142,7 @@ classdef screenManager < optickaCore
 	%% =======================================================================
 
 		% ===================================================================
-		function out = equidistantPoints(n,distance,phase)
+		function out = equidistantPoints(n, distance, phase, range)
 		%> @fn rectToPos
 		%>
 		%> @param n number of points
@@ -2150,20 +2150,21 @@ classdef screenManager < optickaCore
 		%> @return array of X,Y positions
 		% ===================================================================
 			arguments(Input)
-				n (1,1) {mustBePositive, mustBeInteger}
-				distance (1,1) {mustBeNonNegative}
+				n (1,1) {mustBePositive, mustBeInteger} = 5
+				distance (1,1) {mustBePositive} = 10
 				phase (1,1) {mustBeNumeric} = 0
+				range (1,1) {mustBePositive} = 360
 			end
 			arguments(Output)
 				out double
 			end
-			th = linspace(0,360,n+1);
+			th = linspace(0,range,n+1);
 			th = th(1:end-1) + phase;
 			out = zeros(2,length(th));
 			for i = 1:length(th)
 				[out(1,i),out(2,i)] = pol2cart(deg2rad(th(i)),distance);
 			end
-			out = round(out,4);
+			out = round(out,35);
 		end
 
 		% ===================================================================

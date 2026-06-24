@@ -108,7 +108,7 @@ classdef stateNode < handle
 			if isempty(obj.next) && ~isempty(parentNode.next)
 				obj.next = parentNode.next;
 			end
-			if isempty(obj.HED) && ~isempty(parentNode.HED)
+			if ~isempty(parentNode.HED)
 				obj.HED = parentNode.HED;
 			end
 		end

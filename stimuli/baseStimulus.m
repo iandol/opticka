@@ -264,7 +264,9 @@ classdef baseStimulus < optickaCore & dynamicprops
 			me.alpha = value;
 			if ~me.isInSetColour
 				me.colour = me.colour(1:3); %force colour to be regenerated
-				if ~isempty(findprop(me,'colour2')) && ~isempty(me.colour2)
+				% make sure our two colours have the same alpha, except for
+				% fixation cross
+				if ~isa(me,'fixationCrossStimulus') && ~isempty(findprop(me,'colour2')) && ~isempty(me.colour2)
 					me.colour2 = [me.colour2(1:3) me.alpha];
 				end
 				if ~isempty(findprop(me,'baseColour')) && ~isempty(me.baseColour)
@@ -948,12 +950,13 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%>
 		%> When stimuli are run, their properties are copied, so e.g. angle
 		%> is copied to angleOut and this is used during the task. This
-		%> method checks if the copy is available and returns that, otherwise
-		%> return the original.
+		%> method checks if the copied property is available and returns
+		%> that, otherwise return the original.
 		%>
 		%> @param name of property
 		%> @param range of property to return
 		%> @return value of property
+		%> @return nameOut name of property returned
 		% ===================================================================
 		function [value, nameOut] = getP(me, name, range)
 			arguments(Input)
@@ -985,12 +988,11 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%>
 		%> When stimuli are run, their properties are copied, so e.g. angle
 		%> is copied to angleOut and this is used during the task. This
-		%> method checks if the copy is available and returns that, otherwise
-		%> return the original.
+		%> method checks if the copied property is available and sets that,
+		%> otherwise sets the original.
 		%>
 		%> @param name of property
-		%> @param range of property to return
-		%> @return value of property
+		%> @param value to set
 		% ===================================================================
 		function setP(me, name, value)
 			arguments(Input)

@@ -203,9 +203,9 @@ classdef eyetrackerCore < optickaCore
 		fixN double				= 0
 		fixSelection			= []
 		%> allowed properties passed to object upon construction
-		allowedPropertiesBase	= {'useOperatorScreen','fixation', 'exclusionZone', 'fixInit', ...
-			'offset', 'sampleRate', 'ignoreBlinks', 'saveData',...
-			'recordData', 'verbose', 'isDummy'}
+		allowedPropertiesBase	= { 'useOperatorScreen' 'fixation' 'exclusionZone' 'fixInit' ...
+			'offset' 'sampleRate' 'ignoreBlinks' 'saveFile' 'subjectName' ...
+			'recordData' 'verbose' 'isDummy' }
 	end
 
 	%> ALL Children must implement these methods!
@@ -566,7 +566,10 @@ classdef eyetrackerCore < optickaCore
 				return; % we previously matched either rule, now cannot pass fixation until a reset.
 			end
 
-			if isempty(me.currentSample) || ~me.currentSample.valid; return; end
+			if isempty(me.currentSample) || ~me.currentSample.valid 
+				fprintf("-+-+>>>Eyetracker: no valid sample to test!\n");
+				return;
+			end
 
 			if me.fixInitStartTime == 0
 				me.fixInitStartTime = me.currentSample.time;
@@ -595,7 +598,7 @@ classdef eyetrackerCore < optickaCore
 				end
 			end
 			
-			% ---- test for fix initiation start window
+			% ---- test for fix initiation start window (so subject cannot fixate away too quickly)
 			if ~isempty(me.fixInit.X) && me.fixTotal <= me.fixInit.time
 				r = sqrt((x - me.fixInit.X).^2 + (y - me.fixInit.Y).^2);
 				window = find(r < me.fixInit.radius);
@@ -697,7 +700,7 @@ classdef eyetrackerCore < optickaCore
 		%>   zone was entered or the yesString or noString.
 		% ===================================================================
 		function [out, window, exclusion, initfail] = testSearchHoldFixation(me, yesString, noString)
-			[fix, fixtime, searching, window, exclusion, initfail] = me.isFixated();
+			[fix, fixtime, searching, window, exclusion, initfail] = isFixated(me);
 			if me.ignoreBlinks && me.isBlink
 				out = 'blinking';
 				return

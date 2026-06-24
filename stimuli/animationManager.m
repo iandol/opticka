@@ -110,7 +110,8 @@ classdef animationManager < optickaCore
 		screenBounds	= []
 		%> types of bodies in dyn4j
 		massType		= struct('NORMAL',[],'INFINITE',[],'FIXED_ANGULAR_VELOCITY',[],'FIXED_LINEAR_VELOCITY',[])
-		
+		%> did we setup the manager with a PTB scren etc.?
+		isSetup logical		= false
 	end
 	
 	properties (Access = protected)
@@ -125,7 +126,8 @@ classdef animationManager < optickaCore
 			'stimulus',[],'shape','Circle','radius',2,'density',1,'angle',0,'theta',0,...
 			'friction',0.2,'elasticity',0.75,'position',[0 0],'updatedPosition',[],'velocity',[0 0])
 		%> what properties are allowed to be passed on construction
-		allowedProperties = ["type","bodies","rigidParams","brownianParams","timeDelta","verbose"]
+		allowedProperties = ["type","bodies","rigidParams","brownianParams",...
+			"timeDelta","verbose","boundsCheck","timeToEnd"]
 	end
 	
 	%=======================================================================
@@ -145,12 +147,16 @@ classdef animationManager < optickaCore
 			args = optickaCore.addDefaults(varargin,struct('name','animationManager'));
 			me=me@optickaCore(args); %superclass constructor
 			me.parseArgs(args,me.allowedProperties);
-			% dyn4j jar -- see https://dyn4j.org/pages/getting-started
-			javaaddpath([me.paths.whereami '/stimuli/lib/dyn4j-5.0.2.jar'],'-begin');
-			me.massType.NORMAL = javaMethod('valueOf', 'org.dyn4j.geometry.MassType', 'NORMAL');
-    		me.massType.INFINITE = javaMethod('valueOf', 'org.dyn4j.geometry.MassType', 'INFINITE');
-			me.massType.FIXED_ANGULAR_VELOCITY = javaMethod('valueOf', 'org.dyn4j.geometry.MassType', 'FIXED_ANGULAR_VELOCITY');
-			me.massType.FIXED_LINEAR_VELOCITY = javaMethod('valueOf', 'org.dyn4j.geometry.MassType', 'FIXED_LINEAR_VELOCITY');
+			try
+				% dyn4j jar -- see https://dyn4j.org/pages/getting-started
+				javaaddpath([me.paths.whereami '/stimuli/lib/dyn4j-5.0.2.jar'],'-begin');
+				me.massType.NORMAL = javaMethod('valueOf', 'org.dyn4j.geometry.MassType', 'NORMAL');
+    			me.massType.INFINITE = javaMethod('valueOf', 'org.dyn4j.geometry.MassType', 'INFINITE');
+				me.massType.FIXED_ANGULAR_VELOCITY = javaMethod('valueOf', 'org.dyn4j.geometry.MassType', 'FIXED_ANGULAR_VELOCITY');
+				me.massType.FIXED_LINEAR_VELOCITY = javaMethod('valueOf', 'org.dyn4j.geometry.MassType', 'FIXED_LINEAR_VELOCITY');
+			catch
+				error("Could not load dyn4j Java package, ensure Java is installed and Opticka is properly added to path.")
+			end
 		end
 
 		% ===================================================================
@@ -496,16 +502,23 @@ classdef animationManager < optickaCore
 		%> @brief 
 		%>
 		% ===================================================================
-		function setup(me,screen,useBounds)
-			if ~exist('screen','var') || isempty(screen); screen = screenManager; end
+		function setup(me, screen, useBounds)
+			if ~exist('screen','var') || ~isa(screen,'screenManager')
+				if ~isa(me.screen,'screenManager')
+					me.screen = screenManager;
+				end
+			else
+				me.screen = screen;
+			end
 			if ~exist('useBounds','var') || isempty(useBounds); useBounds = false; end
-			me.screen = screen;
+			
 			me.useBounds = useBounds;
 			me.ppd = me.screen.ppd;
 			if isempty(me.timeDelta)
 				me.timeDelta = me.screen.screenVals.ifi;
 			end
 			setupWorld(me);
+			me.isSetup = true;
 		end
 
 		% ===================================================================
@@ -605,6 +618,7 @@ classdef animationManager < optickaCore
 			me.dX			= [];
 			me.dY			= [];
 			me.screenBounds	= [];
+			me.isSetup		= false;
 		end
 
 		% ===================================================================
@@ -910,6 +924,8 @@ classdef animationManager < optickaCore
 		% ===================================================================
 		function rigidStep(me, tick, updatePositions)
 			if exist('tick','var') && iscell(tick) && ~isempty(tick)
+				% this was passed as varargin so it ends up wrapped in a
+				% cell, unwrap it
 				if length(tick)==2; updatePositions = tick{2}; end
 				tick = tick{1};
 			end

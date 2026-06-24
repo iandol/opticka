@@ -242,6 +242,7 @@ classdef AprilTagStimulusTest < matlab.unittest.TestCase
 			open(sM);
 			cleanup = onCleanup(@() close(sM));
 			at = aprilTagStimulus('verbose', false);
+			at.patternMatrix = at.tag36_11;
 			setup(at, sM);
 			verifyTrue(testCase, at.isSetup, 'should be setup');
 			verifyTrue(testCase, ~isempty(at.texture), 'texture should be created');

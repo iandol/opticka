@@ -54,8 +54,6 @@ for i = 1:length(folderNames)
 			addpath(folderPath);
 			fprintf('Additionally added to path: %s\n', folderPath);
 		end
-	else
-		fprintf('Optional folder does not exist: %s\n', folderPath);
 	end
 end
 

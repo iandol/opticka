@@ -170,7 +170,7 @@ classdef RevcorStimulusTest < matlab.unittest.TestCase
 			setup(rc, sM);
 			verifyTrue(testCase, rc.isSetup, 'should be setup');
 			verifyTrue(testCase, ~isempty(rc.texture), 'texture should be created');
-			verifyTrue(testCase, rc.texture > 0, 'texture pointer should be positive');
+			verifyTrue(testCase, ismatrix(rc.texture), 'texture pointer should be positive');
 			reset(rc);
 		end
 

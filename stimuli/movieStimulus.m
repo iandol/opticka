@@ -570,6 +570,7 @@ classdef movieStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function checkfilePath(me)
+			me.filePaths = {};
 			me.filePath = regexprep(me.filePath, '^~\/', [getenv('HOME') filesep]);
 			if isempty(me.filePath) || (me.selection==0 &&	exist(me.filePath,'file') ~= 2 && exist(me.filePath,'file') ~= 7)%use our default
 				p = mfilename('fullpath');
@@ -594,6 +595,7 @@ classdef movieStimulus < baseStimulus
 				me.filePaths{1} = me.filePath;
 			end
 			me.currentFile = me.filePaths{me.selection};
+			me.nVideos = length(me.filePaths);
 		end
 
 		% ===================================================================

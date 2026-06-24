@@ -48,7 +48,7 @@ classdef revcorStimulus < baseStimulus
 	
 	properties (Access = protected)
 		allowedProperties = {'type', 'size', 'angle', 'pixelScale', ...
-			'interpMethod'}
+			'interpMethod' 'frameTime' 'trialLength' 'interpolation'}
 		ignoreProperties = {'interpMethod', 'matrix', 'matrix2', 'phaseCounter', ...
 			'pixelScale','trialLength','trialTick','interpMethod','frameTime','frameLog'}
 		nFrames

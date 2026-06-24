@@ -193,7 +193,7 @@ classdef NDotsStimulusTest < matlab.unittest.TestCase
 			d = ndotsStimulus('verbose', false);
 			setup(d, sM);
 			verifyTrue(testCase, d.isSetup, 'should be setup');
-			verifyTrue(testCase, ~isempty(d.xy), 'xy should be populated');
+			verifyTrue(testCase, ~isempty(d.pixelXY), 'pixelXY should be populated');
 			reset(d);
 		end
 

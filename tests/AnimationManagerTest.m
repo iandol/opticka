@@ -147,8 +147,12 @@ classdef AnimationManagerTest < matlab.unittest.TestCase
 			d2 = discStimulus('verbose', false, 'name', 'second');
 			addBody(am, d1);
 			addBody(am, d2);
+			body = getBody(am, 1, 'struct');
+			verifyEqual(testCase, body.name, 'first', 'body 1 name should be "first"');
+			body = getBody(am, 1, 'native');
+			verifyEqual(testCase, class(body), 'org.dyn4j.dynamics.Body', 'body 1 native should be "dyn4j" object');
 			body = getBody(am, 1);
-			verifyEqual(testCase, body.name, 'first', 'body 1 should be "first"');
+			verifyEqual(testCase, class(body), 'org.dyn4j.dynamics.Body', 'body 1 default should be "dyn4j" object');
 		end
 
 		function testGetBodyNotFound(testCase)
@@ -198,7 +202,7 @@ classdef AnimationManagerTest < matlab.unittest.TestCase
 			setup(d, sM);
 			addBody(am, d);
 			setup(am, sM);
-			verifyTrue(testCase, ~isempty(am.screen), 'screen should be set');
+			verifyTrue(testCase, ~isempty(am.isSetup), 'screen should be set');
 			verifyEqual(testCase, am.ppd, sM.ppd, 'ppd should match screen');
 			reset(d);
 		end
@@ -210,13 +214,15 @@ classdef AnimationManagerTest < matlab.unittest.TestCase
 			sM.disableSyncTests = true; sM.visualDebug = true; sM.bitDepth = '8bit';
 			open(sM); cleanup = onCleanup(@() close(sM));
 			d = discStimulus('verbose', false, 'size', 4, 'name', 'ball', ...
-				'speed', 10, 'angle', 45);
+				'speed', 20, 'angle', 45);
 			setup(d, sM);
 			addBody(am, d);
 			setup(am, sM);
+			draw(d);flip(sM);
 			step(am, 1, true);
+			draw(d);flip(sM);
 			verifyEqual(testCase, am.tick, 1, 'tick should be 1 after one step');
-			verifyEqual(testCase, am.timeStep, 1, 'timeStep should be 1');
+			verifyEqual(testCase, am.timeStep, 0, 'timeStep (tick-1*timeDelta) should be 0');
 			reset(d);
 		end
 

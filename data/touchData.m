@@ -40,7 +40,7 @@ classdef touchData < optickaCore
 
 		function update(me, result, resultValue, phase, trials, rt, stimulus, ...
 				info, xAll, yAll, tAll, value, store)
-			if ~exist('result','var'); return; end
+			if ~exist('result','var'); warning("touchData update: result not present"); return; end
 			if me.nData == 0
 				if isempty(me.data); me.data = me.dataTemplate; end
 				me.data(1).date = datetime('now');

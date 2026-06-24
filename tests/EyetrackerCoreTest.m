@@ -219,10 +219,10 @@ classdef EyetrackerCoreTest < matlab.unittest.TestCase
 			eT.fixInit.X = 3;
 			eT.fixInit.Y = 4;
 			eT.resetAll;
+			verifyEqual(testCase, eT.fixInitStartTime, 0, 'start time is zero');
 			verifyEmpty(testCase, eT.exclusionZone, 'exclusionZone should be empty');
 			verifyEmpty(testCase, eT.fixInit.X, 'fixInit X should be empty');
 			verifyEqual(testCase, eT.fixTotal, 0, 'fixTotal should be 0');
-			verifyEqual(testCase, eT.flipTick, 0, 'flipTick should be 0');
 		end
 
 		% ---------------------------------------------------------------
@@ -363,8 +363,7 @@ classdef EyetrackerCoreTest < matlab.unittest.TestCase
 			open(sM);
 			cleanup = onCleanup(@() close(sM));
 			eT = eyelinkManager('verbose', false, 'isDummy', true);
-			eT.screen = sM;
-			eT.win = sM.win;
+			eT.initialise(sM);
 		end
 
 		% ---------------------------------------------------------------
@@ -398,13 +397,13 @@ classdef EyetrackerCoreTest < matlab.unittest.TestCase
 			[sM, eT, cleanup] = createDummySetup(testCase);
 			system(sprintf('%s mousemove --screen %d %d %d', testCase.xdotoolPath, sM.screen, 400, 300));
 			% Right-click (button 3) simulates blink in dummy mode
-			system('%s mousedown 3');
+			system(sprintf('%s mousedown 3', testCase.xdotoolPath));
 			WaitSecs(0.1);
-			sample = eT.getMouseSample;
+			sample = eT.getSample;
+			system(sprintf('%s mouseup 3', testCase.xdotoolPath));
 			verifyTrue(testCase, eT.isBlink, 'should detect blink when right button pressed');
 			verifyTrue(testCase, ~sample.valid, 'sample should be invalid during blink');
 			verifyEqual(testCase, eT.x, NaN, 'x should be NaN during blink');
-			system('%s mouseup 3');
 			WaitSecs(0.05);
 		end
 
@@ -418,17 +417,14 @@ classdef EyetrackerCoreTest < matlab.unittest.TestCase
 				'xdotool must be available for mouse automation');
 			[sM, eT, cleanup] = createDummySetup(testCase);
 			system(sprintf('%s mousemove --screen %d %d %d', testCase.xdotoolPath, sM.screen, 400, 300));
-			% Left button down = valid sample (not blink)
-			system(sprintf('%s mousedown 1', testCase.xdotoolPath));
 			WaitSecs(0.1);
-			sample = eT.getMouseSample;
+			sample = eT.getSample;
 			verifyFalse(testCase, eT.isBlink, 'should not blink with left button');
 			verifyTrue(testCase, sample.valid, 'sample should be valid');
 			verifyTrue(testCase, ~isnan(eT.x), 'x should not be NaN');
 			verifyTrue(testCase, ~isnan(eT.y), 'y should not be NaN');
 			verifyTrue(testCase, ~isempty(eT.xAll), 'xAll should have data');
 			verifyTrue(testCase, ~isempty(eT.yAll), 'yAll should have data');
-			system(sprintf('%s mouseup 1', testCase.xdotoolPath));
 			WaitSecs(0.05);
 		end
 
@@ -455,18 +451,20 @@ classdef EyetrackerCoreTest < matlab.unittest.TestCase
 				'xdotool must be available for mouse automation');
 			[sM, eT, cleanup] = createDummySetup(testCase);
 			% Set fixation window at center (0,0 deg) with radius 5 deg
-			eT.updateFixationValues(0, 0, 1, 0.01, 5, true);
+			eT.updateFixationValues(0, 0, 0.1, 0.1, 10, true);
 			eT.resetFixation;
 			% Move mouse to center of window
 			system(sprintf('%s mousemove --screen %d %d %d', testCase.xdotoolPath, sM.screen, ...
 				sM.screenVals.width/2, sM.screenVals.height/2));
-			system(sprintf('%s mousedown 1', testCase.xdotoolPath));
 			WaitSecs(0.1);
-			eT.getMouseSample;
-			[fixated, ~, searching, ~, ~, ~, ~] = eT.isFixated;
+			eT.getSample;
+			fixated = eT.isFixated;
+			WaitSecs(0.5);
+			eT.getSample;
+			[fixated, fixtime, searching] = eT.isFixated;
 			verifyTrue(testCase, fixated, 'should be fixated when in window');
+			verifyTrue(testCase, fixtime, 'should be fixated longer than the fix time');
 			verifyFalse(testCase, searching, 'should not be searching when fixated');
-			system(sprintf('%s mouseup 1', testCase.xdotoolPath));
 			WaitSecs(0.05);
 		end
 
@@ -483,7 +481,7 @@ classdef EyetrackerCoreTest < matlab.unittest.TestCase
 			eT.updateFixationValues(0, 0, 1, 0.01, 0.5, true);
 			eT.resetFixation;
 			% Move mouse to corner (far from center)
-			system(sprintf('xdotool mousemove --screen %d %d %d', sM.screen, 10, 10));
+			system(sprintf('%s mousemove --screen %d %d %d', testCase.xdotoolPath, sM.screen, 10, 10));
 			system(sprintf('%s mousedown 1', testCase.xdotoolPath));
 			WaitSecs(0.1);
 			eT.getMouseSample;
@@ -503,16 +501,17 @@ classdef EyetrackerCoreTest < matlab.unittest.TestCase
 			assumeTrue(testCase, exist(testCase.xdotoolPath) == 2 || ~isempty(which('xdotool')), ...
 				'xdotool must be available for mouse automation');
 			[sM, eT, cleanup] = createDummySetup(testCase);
-			eT.updateFixationValues(0, 0, 0.5, 0.5, 0.5, true);
+			eT.updateFixationValues(0, 0, 0.25, 0.25, 0.25, true);
 			eT.resetFixation;
 			% Move mouse to corner
-			system(sprintf('xdotool mousemove --screen %d %d %d', sM.screen, 10, 10));
-			system(sprintf('%s mousedown 1', testCase.xdotoolPath));
+			system(sprintf('%s mousemove --screen %d %d %d', testCase.xdotoolPath, sM.screen, 10, 10));
+			eT.getSample;
 			WaitSecs(0.1);
-			eT.getMouseSample;
+			result = eT.testSearchHoldFixation('yes', 'no'); 
+			WaitSecs(1);
+			eT.getSample;
 			result = eT.testSearchHoldFixation('yes', 'no');
 			verifyEqual(testCase, result, 'no', 'should return no when outside window');
-			system(sprintf('%s mouseup 1', testCase.xdotoolPath));
 			WaitSecs(0.05);
 		end
 
@@ -526,18 +525,16 @@ classdef EyetrackerCoreTest < matlab.unittest.TestCase
 				'xdotool must be available for mouse automation');
 			[sM, eT, cleanup] = createDummySetup(testCase);
 			% Set an exclusion zone at center [-2 2 -2 2] deg
-			eT.exclusionZone = [-2 2 -2 2];
+			eT.exclusionZone = [-5 5 -5 5];
 			eT.resetFixation;
 			% Move mouse to center (inside exclusion zone)
-			system(sprintf('xdotool mousemove --screen %d %d %d', sM.screen, ...
+			system(sprintf('%s mousemove --screen %d %d %d', testCase.xdotoolPath, sM.screen, ...
 				sM.screenVals.width/2, sM.screenVals.height/2));
-			system(sprintf('%s mousedown 1', testCase.xdotoolPath));
 			WaitSecs(0.1);
-			eT.getMouseSample;
+			eT.getSample;
 			[~, ~, ~, ~, exclusion, ~, ~] = eT.isFixated;
 			verifyTrue(testCase, exclusion, 'should detect exclusion zone');
 			verifyTrue(testCase, eT.isExclusion, 'isExclusion should be true');
-			system(sprintf('%s mouseup 1', testCase.xdotoolPath));
 			WaitSecs(0.05);
 		end
 
@@ -550,7 +547,7 @@ classdef EyetrackerCoreTest < matlab.unittest.TestCase
 			assumeTrue(testCase, exist(testCase.xdotoolPath) == 2 || ~isempty(which('xdotool')), ...
 				'xdotool must be available for mouse automation');
 			[sM, eT, cleanup] = createDummySetup(testCase);
-			system(sprintf('xdotool mousemove --screen %d %d %d', sM.screen, 400, 300));
+			system(sprintf('%s mousemove --screen %d %d %d', testCase.xdotoolPath, sM.screen, 400, 300));
 			system(sprintf('%s mousedown 1', testCase.xdotoolPath));
 			WaitSecs(0.1);
 			eT.getMouseSample;
@@ -573,11 +570,11 @@ classdef EyetrackerCoreTest < matlab.unittest.TestCase
 			[sM, eT, cleanup] = createDummySetup(testCase);
 			eT.resetFixation(true);
 			% Get multiple samples at different positions
-			system(sprintf('xdotool mousemove --screen %d %d %d', sM.screen, 300, 200));
+			system(sprintf('%s mousemove --screen %d %d %d', testCase.xdotoolPath, sM.screen, 300, 200));
 			system(sprintf('%s mousedown 1', testCase.xdotoolPath));
 			WaitSecs(0.05);
 			eT.getMouseSample;
-			system(sprintf('xdotool mousemove --screen %d %d %d', sM.screen, 400, 300));
+			system(sprintf('%s mousemove --screen %d %d %d', testCase.xdotoolPath, sM.screen, 400, 300));
 			WaitSecs(0.05);
 			eT.getMouseSample;
 			verifyEqual(testCase, length(eT.xAll), 2, 'should have 2 samples in xAll');
