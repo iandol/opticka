@@ -2142,7 +2142,7 @@ classdef screenManager < optickaCore
 	%% =======================================================================
 
 		% ===================================================================
-		function out = equidistantPoints(n, distance, phase, range)
+		function points = equidistantPoints(n, distance, phase, range, center)
 		%> @fn rectToPos
 		%>
 		%> @param n number of points
@@ -2154,17 +2154,34 @@ classdef screenManager < optickaCore
 				distance (1,1) {mustBePositive} = 10
 				phase (1,1) {mustBeNumeric} = 0
 				range (1,1) {mustBePositive} = 360
+				center = [0 0];
 			end
 			arguments(Output)
-				out double
+				points double
 			end
-			th = linspace(0,range,n+1);
-			th = th(1:end-1) + phase;
-			out = zeros(2,length(th));
-			for i = 1:length(th)
-				[out(1,i),out(2,i)] = pol2cart(deg2rad(th(i)),distance);
+
+			% Handle edge case: zero or negative number of points
+			if n <= 0; points = zeros(2, 0); return;end
+
+			% Convert degrees to radians
+			prad = deg2rad(phase);
+			rrad = deg2rad(range);
+
+			% Calculate the angles.
+			% Using range/n ensures that when S=360, the N points are uniformly 
+			% distributed across the full circumference (0, 120, 240 for N=3, 
+			% rather than 0, 180, 360 which would overlap).
+			if range == 360
+				theta = prad + (0:n-1) * (rrad / n);
+			else
+				theta = linspace(prad, prad + rrad, n);
 			end
-			out = round(out,35);
+			% Compute Cartesian coordinates relative to the center
+			x = center(1) + distance * cos(theta);
+			y = center(2) + distance * sin(theta);
+
+			% Combine into a 2xN matrix (each column is a point)
+			points = round([x; y],3);
 		end
 
 		% ===================================================================

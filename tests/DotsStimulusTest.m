@@ -67,9 +67,8 @@ classdef DotsStimulusTest < matlab.unittest.TestCase
 		% ---------------------------------------------------------------
 		function testNDotsSmallDensity(testCase)
 			d = dotsStimulus('verbose', false, 'density', 10);
-			% nDots = pi * (size/2)^2 * density
-			expectedNDots = pi * ((4/2)^2) * 10;
-			verifyEqual(testCase, d.nDots, round(expectedNDots), 'nDots');
+			expectedNDots = round(10 * 4^2);
+			verifyEqual(testCase, d.nDots, expectedNDots, 'nDots');
 		end
 
 		% ---------------------------------------------------------------
@@ -77,8 +76,8 @@ classdef DotsStimulusTest < matlab.unittest.TestCase
 		% ---------------------------------------------------------------
 		function testNDotsCustomSize(testCase)
 			d = dotsStimulus('verbose', false, 'density', 50, 'size', 6);
-			expectedNDots = pi * ((6/2)^2) * 50;
-			verifyEqual(testCase, d.nDots, round(expectedNDots), 'nDots with custom size');
+			expectedNDots = round(50 * 6^2);
+			verifyEqual(testCase, d.nDots, expectedNDots, 'nDots with custom size');
 		end
 
 		% ---------------------------------------------------------------

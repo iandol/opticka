@@ -165,7 +165,7 @@ classdef taskSequence < optickaCore & dynamicprops
 		%> blockVar template and default values
 		trialTemplate struct = struct('values',{{'none'}},'probability',1,'comment','trial level factor')
 		%> Set up the task structures needed
-		tProp cell = {'totalRuns',1,'thisBlock',1,'thisRun',1,'isBlank',false,...
+		tProp cell = {'totalRuns',1,'completedRuns',0,'thisBlock',1,'thisRun',1,'isBlank',false,...
 			'isTimeNow',1,'ibTimeNow',1,'response', [], 'responseInfo',{},'tick',0,'blankTick',0,...
 			'switched',false,'strobeThisFrame',false,'doUpdate',false,'startTime',0,'switchTime',0,...
 			'switchTick',0,'timeNow',0,'runTimeList', [], 'stimIsDrifting', [], 'stimIsMoving',[],...
@@ -487,6 +487,7 @@ classdef taskSequence < optickaCore & dynamicprops
 			
 			if me.totalRuns < me.nRuns
 				me.totalRuns = me.totalRuns + 1;
+				if isprop(me,'completedRuns'); me.completedRuns = me.completedRuns + 1; end
 				[me.thisBlock, me.thisRun] = findRun(me);
 				randomiseTimes(me);
 			elseif me.totalRuns >= me.nRuns
@@ -552,13 +553,13 @@ classdef taskSequence < optickaCore & dynamicprops
 		%> @brief this steps back one run
 		%>
 		% ===================================================================
-			if me.taskInitialised
-				me.response(me.totalRuns) = [];
-				me.responseInfo{me.totalRuns} = [];
-				me.runTimeList(me.totalRuns) = [];
+			if me.taskInitialised && me.totalRuns > 1
+				me.response(me.totalRuns-1) = [];
+				me.responseInfo{me.totalRuns-1} = [];
+				me.runTimeList(me.totalRuns-1) = [];
 				me.totalRuns = me.totalRuns - 1;
 				[me.thisBlock, me.thisRun] = findRun(me);
-				fprintf('===!!! REWIND Run to %i:',me.totalRuns);
+				fprintf('===!!! taskSequence: REWIND Run to %i:\2', me.totalRuns);
 			end
 		end
 		
@@ -711,6 +712,7 @@ classdef taskSequence < optickaCore & dynamicprops
 		%> on the values in nVar.
 		%>
 		% ===================================================================
+			if me.nVars == 0; minTrials = 0; return; end
 			me.nLevels = zeros(me.nVars, 1);
 			for f = 1:me.nVars_
 				me.nLevels(f) = length(me.nVar(f).values);
@@ -742,6 +744,7 @@ classdef taskSequence < optickaCore & dynamicprops
 		%>
 		%> Gives us an approximate number of frames this task may take
 		% ===================================================================
+			if me.nVars == 0; nFrames = 0; return; end
 			nSecs = (me.nRuns * me.trialTime) + (me.minTrials-1 * me.isTime) + (me.nBlocks-1 * me.ibTime);
 			nFrames = ceil(nSecs) * ceil(me.fps); %be a bit generous in defining how many frames the task will take
 		end
@@ -1017,19 +1020,22 @@ classdef taskSequence < optickaCore & dynamicprops
 		%> @brief validate blockVar and trialVar
 		%>
 		% ===================================================================
-		me.blockTemplate = struct('values',{{'none'}},'probability',[1],'comment','block level factor');
+			me.blockTemplate = struct('values',{{'none'}},'probability',[1],'comment','block level factor');
 			me.trialTemplate = struct('values',{{'none'}},'probability',[1],'comment','trial level factor');
-			if ~isfield(me.blockVar,'values'); me.blockVar = me.blockTemplate; end
+			
+			if ~isfield(me.blockVar,'values') || ~isscalar(me.blockVar); me.blockVar = me.blockTemplate; end
 			if ~isfield(me.blockVar,'probability') || length(me.blockVar.values) ~= length(me.blockVar.probability)
 				me.blockVar.probability = repmat((1/length(me.blockVar.values)),1,length(me.blockVar.values));
 				warning('---! TaskSequence.blockVar not properly formatted — it should be a structure with ''values'' and ''probabilitiy'' of the same length! N values = %i, probability = %.2f',length(me.blockVar.values),me.blockVar.probability)
 			end
-			if ~isfield(me.trialVar,'values'); me.trialVar = me.trialTemplate; end
+
+			if ~isfield(me.trialVar,'values')|| ~isscalar(me.trialVar); me.trialVar = me.trialTemplate; end
 			if ~isfield(me.trialVar,'probability') || length(me.trialVar.values)~=length(me.trialVar.probability)
 				me.trialVar.probability = repmat((1/length(me.trialVar.values)),1,length(me.trialVar.values));
 				warning('---! TaskSequence.trialVar not properly formatted — it should be a structure with ''values'' and ''probabilitiy'' of the same length! N values = %i, probability = %.2f',length(me.trialVar.values),me.trialVar.probability)
 				me.trialVar = me.trialTemplate;
 			end
+
 		end
 	end
 	

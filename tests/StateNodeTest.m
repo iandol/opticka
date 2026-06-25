@@ -407,7 +407,8 @@ classdef StateNodeTest < matlab.unittest.TestCase
 			% F's ancestors should be [root, A, C, F]
 			stack = f.ancestors;
 			verifyEqual(testCase, length(stack), 4, 'F should have 4 ancestors');
-			verifyEqual(testCase, {stack{:}.name}, {'root', 'A', 'C', 'F'}, ...
+			verifyEqual(testCase, cellfun(@(n) n.name, stack, 'UniformOutput', false), ...
+				{'root', 'A', 'C', 'F'}, ...
 				'F ancestor names should be root, A, C, F');
 
 			% LCA of F and E should be root

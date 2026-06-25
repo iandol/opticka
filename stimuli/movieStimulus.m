@@ -249,8 +249,8 @@ classdef movieStimulus < baseStimulus
 			end
 			me.texture = []; me.buffertex = [];
 			resetTicks(me);
-			if ~matches(me.currentFile,me.filePaths{me.selectionOut})
-				me.currentFile = me.filePaths{me.selectionOut};
+			if ~matches(me.currentFile,me.filePaths{getP(me, 'selection')})
+				me.currentFile = me.filePaths{getP(me, 'selection')};
 				loadMovie(me);
 			end
 			if me.sizeOut > 0

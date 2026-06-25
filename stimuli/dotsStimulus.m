@@ -10,7 +10,7 @@ classdef dotsStimulus < baseStimulus
 	properties %--------------------PUBLIC PROPERTIES----------%
 		%> dot type, only simple supported at present
 		type				= 'simple'
-		%> dots per degree
+		%> dots per degree (not deg^2), nDots will be density*size^2
 		density				= 100
 		%> how to colour the dots: simple, random, randomN, randomBW, randomNBW, binary
 		colourType			= 'randomBW'
@@ -307,7 +307,7 @@ classdef dotsStimulus < baseStimulus
 		
 		% ===================================================================
 		%> @brief nDots is dependant property, this get method also caches
-		%> the value in me.nDots_ fo speed
+		%> the value in me.nDots_
 		%>
 		% ===================================================================
 		function value = get.nDots(me)

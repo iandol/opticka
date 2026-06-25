@@ -33,7 +33,7 @@ function setupCI()
 	% error — addOptickaToPath ignores savepath's return value.
 	% All path changes persist for the duration of this MATLAB session,
 	% which is all we need for running tests.
-	addOptickaToPath(true);
+	addOptickaToPath();
 
 	% --- Step 3: Add the tests directory ---
 	% addOptickaToPath explicitly excludes tests/ from the path.

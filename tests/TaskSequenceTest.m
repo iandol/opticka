@@ -33,8 +33,7 @@ classdef TaskSequenceTest < matlab.unittest.TestCase
 	methods (TestMethodSetup)
 		function createTask(testCase)
 			%> Create a fresh taskSequence with a known seed.
-			testCase.ts = taskSequence('nBlocks', 2, 'randomSeed', 42, ...
-				'verbose', false);
+			testCase.ts = taskSequence('nBlocks', 2, 'randomSeed', 42, 'verbose', false);
 		end
 	end
 
@@ -139,7 +138,8 @@ classdef TaskSequenceTest < matlab.unittest.TestCase
 			ts.nBlocks = 10;
 			ts.nVar(1) = struct('name', 'contrast', 'values', [0.1 0.5], ...
 				'stimulus', [1], 'offsetstimulus', [], 'offsetvalue', []);
-			ts.blockVar = struct('values', {'A', 'B'}, 'probability', [0.6 0.4]);
+			blockVar.values = {'A','B'}; blockVar.probability = [0.6 0.4];
+			ts.blockVar = blockVar;
 			ts.randomiseTask;
 
 			verifyEqual(testCase, length(ts.outBlock), 10, 'outBlock should have 10 entries');
@@ -154,7 +154,8 @@ classdef TaskSequenceTest < matlab.unittest.TestCase
 			ts = testCase.ts;
 			ts.nVar(1) = struct('name', 'contrast', 'values', [0.1 0.5], ...
 				'stimulus', [1], 'offsetstimulus', [], 'offsetvalue', []);
-			ts.trialVar = struct('values', {'YES', 'NO'}, 'probability', [0.5 0.5]);
+			trialVar.values = {'YES', 'NO'}; trialVar.probability = [0.5 0.5];
+			ts.trialVar = trialVar;
 			ts.randomiseTask;
 
 			verifyEqual(testCase, length(ts.outTrial), ts.nRuns, ...

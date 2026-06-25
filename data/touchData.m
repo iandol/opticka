@@ -60,7 +60,7 @@ classdef touchData < optickaCore
 			if exist('xAll','var') && ~isempty(xAll); me.data.xAll{n} = xAll; end
 			if exist('yAll','var') && ~isempty(yAll); me.data.yAll{n} = yAll; end
 			if exist('yAll','var') && ~isempty(tAll); me.data.tAll{n} = tAll; end
-			if exist('value','var') && ~isempty(value); me.data.value(n) = value; end
+			if exist('value','var') && ~isempty(value); me.data.value(n) = value; end %comes from hldValue
 			if exist('store','var') && ~isempty(store); me.data.store{n} = store; end
 			me.nData = n;
 		end

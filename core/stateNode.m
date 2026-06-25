@@ -49,6 +49,9 @@ classdef stateNode < handle
 		skipExitFcn logical = false
 		%> HED tag metadata
 		HED char = 'Experiment_control'
+		%> default HED value — inheritFrom treats HED equal to this as
+		%> "unset" and inherits from the parent.
+		HEDDefault char = 'Experiment_control'
 	end
 
 	properties (SetAccess = public, GetAccess = public, Hidden = true)
@@ -108,7 +111,8 @@ classdef stateNode < handle
 			if isempty(obj.next) && ~isempty(parentNode.next)
 				obj.next = parentNode.next;
 			end
-			if ~isempty(parentNode.HED)
+			if (isempty(obj.HED) || strcmp(obj.HED, obj.HEDDefault)) ...
+					&& ~isempty(parentNode.HED)
 				obj.HED = parentNode.HED;
 			end
 		end
