@@ -43,7 +43,7 @@ jobs:
 
       - name: Download Psychtoolbox dependency (V3.0.21 as the last version useable with CI)
         run: |
-          curl -o /tmp/ptb.zip https://github.com/Psychtoolbox-3/Psychtoolbox-3/releases/download/3.0.21.0/3.0.21.0.zip && unzip -o -d /tmp/PTB /tmp/ptb.zip
+          curl -L -o /tmp/ptb.zip https://github.com/Psychtoolbox-3/Psychtoolbox-3/releases/download/3.0.21.0/3.0.21.0.zip && unzip -o -d /tmp/PTB /tmp/ptb.zip
 
       - name: Set up MATLAB
         uses: matlab-actions/setup-matlab@v3
