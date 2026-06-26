@@ -32,15 +32,18 @@ jobs:
           sudo apt-get install -y libglut-dev
           sudo apt-get install -y libglu1-mesa-dev
           sudo apt-get install -y libx11-dev
+          sudo apt-get install -y libdc1394-dev
+          sudo apt-get install -y libraw1394-dev
+          sudo apt-get install -y curl
 
       - name: Start virtual display server
         run: |
           Xvfb :99 -screen 0 1024x768x24 &
           echo "DISPLAY=:99" >> $GITHUB_ENV
 
-      - name: Clone Psychtoolbox dependency
+      - name: Download Psychtoolbox dependency (V3.0.21 as the last version useable with CI)
         run: |
-          git clone --depth 1 https://gitee.com/CogPlatform/Psychtoolbox.git /tmp/PTB/Psychtoolbox
+          curl -o /tmp/ptb.zip https://github.com/Psychtoolbox-3/Psychtoolbox-3/releases/download/3.0.21.0/3.0.21.0.zip && unzip -o -d /tmp/PTB /tmp/ptb.zip
 
       - name: Set up MATLAB
         uses: matlab-actions/setup-matlab@v3

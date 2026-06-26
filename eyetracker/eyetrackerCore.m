@@ -995,7 +995,7 @@ classdef eyetrackerCore < optickaCore
 		%> @brief draw the stimuli boxes on the tracker display
 		%>
 		% ===================================================================
-		function trackerDrawStimuli(me, ts, dontClear)
+		function trackerDrawStimuli(me, ts, dontClear, ~)
 			if me.isOff || ~me.isConnected || ~me.operatorScreen.isOpen; return; end
 			if exist('ts','var') && isstruct(ts) && isfield(ts,'x')
 				me.stimulusPositions = ts;

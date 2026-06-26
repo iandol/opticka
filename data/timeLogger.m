@@ -127,7 +127,7 @@ classdef timeLogger < optickaCore
 		%> @brief Plot timing summaries and, when present, the message log.
 		% ===================================================================
 		function plot(me)
-			if ~desktop("inuse"); fprintf("No desktop, skiiping plot...\n"); return; end
+			if ~desktop("-inuse"); fprintf("No desktop, skiiping plot...\n"); return; end
 			printRunLog(me);
 			if ~isempty(me.messages); plotMessages(me);end
 		end
@@ -212,7 +212,7 @@ classdef timeLogger < optickaCore
 		%> @return h Figure handle or empty when no timing data is available.
 		% ===================================================================
 		function h = printRunLog(me)
-			if ~desktop("inuse"); fprintf("No desktop, skiiping plot...\n"); return; end
+			if ~desktop("-inuse"); fprintf("No desktop, skiiping plot...\n"); return; end
 			h = [];
 			removeEmptyValues(me)
 			if isempty(me.t.vbl) || max(me.t.vbl) == 0 || length(me.t.vbl) <= 5
@@ -332,7 +332,7 @@ classdef timeLogger < optickaCore
 		%> @return h Struct of UI handles, or empty when there are no messages.
 		% ===================================================================
 		function h = plotMessages(me)
-			if ~desktop("inuse"); fprintf("No desktop, skiiping plot...\n"); return; end
+			if ~desktop("-inuse"); fprintf("No desktop, skiiping plot...\n"); return; end
 			msgs = messageTable(me);
 			if isempty(msgs); h = []; return; end
 

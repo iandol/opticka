@@ -10,7 +10,9 @@ classdef DMTSFunctions < userFunctions
 		comment string = "DMTS task functions"
 		imageResources string = "~/Code/TaskResources/fractals"
 		pfix string = ["A" "B" "C" "D" "E" "F" "G" "H" "I" "J" "K" "L"];
-		ps string = ""
+		ps string = "" % folders
+		positions % the target + distractor positions
+		delayTime = 2 % the delayTime sent to trial
 	end
 
 	%% ==================================================================
@@ -21,8 +23,13 @@ classdef DMTSFunctions < userFunctions
 		% Class constructor (should be same name as class)
 		function me = DMTSFunctions()
 		% ===================================================================
+			me = me@userFunctions(); %we call the superclass constructor first
 			fprintf("===>>> Custom User Functions for DMTS Task Initialised...\n")
+			% check the folder is valid
 			DMTSFunctions.checkFilePath(me.imageResources);
+			% Get 5 equidistant points from fixation
+			me.positions = screenManager.equidistantPoints(5, 10, 0, 180, [0 0]);
+			tS.DMTSpositions = me.positions; % save a copy of these values
 		end
 
 		% ===================================================================
@@ -76,21 +83,21 @@ classdef DMTSFunctions < userFunctions
 		function updateLocations(me)
 		% ===================================================================
 		 	% get all possible x positions
-			idx = find(contains({me.task.nVar.name},'xyPos','IgnoreCase',true));
-			xys = cell2mat(me.task.nVar(idx).values);
-			xs = xys(1:2:length(xys)); % just the x positions
+			idx = contains({me.task.nVar.name},'abstractPosition','IgnoreCase',true);
+			list = me.task.nVar(idx).values;
+			pos = me.positions;
 
-			% get the current trial xy for the target
-			xy = me.task.outValues{me.task.totalRuns, idx}; % randomised trial value for XY position for target
+			% get the current trial index for the target
+			thisIdx = me.task.outValues{me.task.totalRuns, idx}; % randomised trial value for XY position for target
 			% update target location (this is already done by updateVariables() so may not strictly be needed here)
-			updateXY(me.stims{2}, xy(1), xy(2), true);
+			updateXY(me.stims{2}, pos(1,thisIdx), pos(2,thisIdx), true);
 
 			% get the x positions that are NOT the target, and assign those to the distractors
-			xlist = setxor(xs,xy(1)); % get the x positions that are NOT the target
-			[x, xlist] = me.pickAndRemove(xlist); updateXY(me.stims{3}, x, xy(2), true);
-			[x, xlist] = me.pickAndRemove(xlist); updateXY(me.stims{4}, x, xy(2), true);
-			[x, xlist] = me.pickAndRemove(xlist); updateXY(me.stims{5}, x, xy(2), true);
-			[x, ~]     = me.pickAndRemove(xlist); updateXY(me.stims{6}, x, xy(2), true);
+			list = setxor(list,thisIdx); % get the x positions that are NOT the target
+			[thisIdx, list] = me.pickAndRemove(list); updateXY(me.stims{3}, pos(1,thisIdx), pos(2,thisIdx), true);
+			[thisIdx, list] = me.pickAndRemove(list); updateXY(me.stims{4}, pos(1,thisIdx), pos(2,thisIdx), true);
+			[thisIdx, list] = me.pickAndRemove(list); updateXY(me.stims{5}, pos(1,thisIdx), pos(2,thisIdx), true);
+			[thisIdx, ~]    = me.pickAndRemove(list); updateXY(me.stims{6}, pos(1,thisIdx), pos(2,thisIdx), true);
 		end
 
 		% ===================================================================
@@ -98,8 +105,16 @@ classdef DMTSFunctions < userFunctions
 		function updateDelayTime(me)
 		% ===================================================================
 			idx = contains({me.task.nVar.name},'Delay','IgnoreCase',true);
-			tS.delayFixTime = me.task.outValues{me.task.totalRuns, idx}; % randomised trial value for XY position for target
-			t = sprintf('delayTime: %0.2f', tS.delayFixTime);
+			me.delayTime = me.task.outValues{me.task.totalRuns, idx}; % randomised trial value for XY position for target
+			tS.delayFixTime = me.delayTime;
+		end
+
+		% ===================================================================
+		% method to get the current delay time
+		function delayTime = getDelayTime(me)
+		% ===================================================================
+			delayTime = me.delayTime;
+			t = sprintf('delayTime: %0.2f', me.delayTime);
 			addMessage(me.tL, [], [], [], t, [], 'Experimental-note, Delay'); % HED message to store timing parameters in timeLogger
 			disp(t);
 		end

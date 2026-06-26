@@ -248,7 +248,7 @@ sampleFixFn = {
 %--------------------exit sample
 sampleExitFn = {
 	@()showSet(stims, 1); % hide sample image, keep fixation cross
-	@()updateFixationValues(eT,[],[],[],tS.delayFixTime); %reset fix timer
+	@()updateFixationValues(eT,[],[],[], getDelayTime(uF)); %reset fix timer
 	@()trackerMessage(eT,'MSG:Sample OFF');
 };
 

@@ -1,10 +1,10 @@
 function setupCI()
 	%> setupCI — Configure the MATLAB path for CI without PTB's interactive
-	%> SetupPsychtoolbox (which fails on CI due to savepath permissions).
+	%> SetupPsychtoolbox (which fails on CI).
 	%>
 	%> This script is the CI equivalent of:
 	%>   1. Cloning/installing Psychtoolbox
-	%>   2. Running SetupPsychtoolbox(1) — but without the savepath failure
+	%>   2. Running SetupPsychtoolbox(1)
 	%>   3. Running addOptickaToPath(true) — but safe-guarded against savepath
 	%>
 	%> Usage in GitHub Actions:
@@ -12,12 +12,18 @@ function setupCI()
 	%>     command: setupCI; runOptickaTests;
 	%>
 	%> PREREQUISITES (done before this in the workflow YAML):
-	%>   - PTB cloned to /tmp/PTB
+	%>   - PTB cloned to /tmp/PTB/Psychtoolbox
 	%>   - Xvfb running on :99
 	%>
 	%> Copyright (c) 2026 Ian Max Andolina — LGPL3, see LICENCE.md
 
 	% --- Step 1: Add Psychtoolbox to the path ---
+	% The Psychtoolbox root is hard-coded to /tmp/PTB/Psychtoolbox, which is
+	% where the workflow YAML clones it. While normally we would run
+	% SetupPsychToolbox(1) to add PTB to the path, the non-interactive mode
+	% still asks the user questions, and probably won't work in CI. We
+	% therefore just do a "minimal" addpath(genpath()) of the PTB root,
+	% which is sufficient for running tests.
 	ptbRoot = '/tmp/PTB/Psychtoolbox';
 	if ~isfolder(ptbRoot)
 		error('setupCI:PTBNotFound', ...

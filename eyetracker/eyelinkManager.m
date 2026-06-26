@@ -548,18 +548,18 @@ classdef eyelinkManager < eyetrackerCore
 		end
 
 		% ===================================================================
-		function trackerDrawStatus(me, comment, ts, dontClear)
+		function trackerDrawStatus(me, comment, stimPos, dontClear, ~)
 		%> @brief draw general status
 		%>
 		% ===================================================================
 			if ~me.isConnected || me.isOff; return; end
 			if ~exist('comment','var'); comment=''; end
-			if ~exist('ts','var'); ts = []; end
+			if ~exist('stimPos','var'); stimPos = []; end
 			if ~exist('dontClear','var'); dontClear = false; end
 			if dontClear == false; trackerClearScreen(me); end
 			trackerDrawFixation(me);
 			if ~isempty(me.exclusionZone);trackerDrawExclusion(me);end
-			if ~isempty(ts);trackerDrawStimuli(me, ts);end
+			if ~isempty(stimPos);trackerDrawStimuli(me, stimPos);end
 			if ~isempty(comment);trackerDrawText(me, comment);end
 		end
 		
@@ -940,14 +940,14 @@ classdef eyelinkManager < eyetrackerCore
 	
 		% === NOOPS
 		function trackerDrawEyePosition(~, varargin)
-			
 		end
 		function trackerDrawEyePositions(~, varargin)
-			
 		end
 		function trackerFlip(~, varargin)
-			
 		end
+		function trackerDrawCross(~, varargin)
+		end
+		
 
 		% ===================================================================
 		function evt = getEvent(me)
@@ -967,6 +967,7 @@ classdef eyelinkManager < eyetrackerCore
 		
 		% ===================================================================
 		function edfMessage(me, message)
+		% DEPRECATED, use trackerMessage instead
 		%> @brief send message to store in EDF data, USE trackerMessage
 		%>
 		%>

@@ -630,7 +630,7 @@ classdef stateMachine < optickaCore
 		%> @return
 		% ===================================================================
 		function showLog(me)
-			if ~desktop("inuse"); return; end
+			if ~desktop("-inuse"); return; end
 			if ~isempty(me.log)
 				stateMachine.plotLogs(me.log, me.fullName);
 			else
@@ -662,7 +662,7 @@ classdef stateMachine < optickaCore
 				end
 			end
 			tblOut = cell2table(tblD(2:end,:),'VariableNames',tblD(1,:));
-			if plot && desktop("inuse")
+			if plot && desktop("-inuse")
 				f = uifigure;
 				t = uitable('Parent',f,'Position',[0 0 1 1],'Units','normalized');
 				t.Data = tblOut;
