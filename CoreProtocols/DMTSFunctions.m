@@ -131,7 +131,7 @@ classdef DMTSFunctions < userFunctions
 		function checkFilePath(fp)
 		% ===================================================================
 			if ~isfolder(fp)
-				error(['The file path for your stimuli is not valid: ' fp]);
+				error('The file path for your stimuli is not valid: %s', fp);
 			end
 		end
 

@@ -400,9 +400,13 @@ classdef screenManager < optickaCore
 						end
 					end
 				end
+
 				%1=beamposition,kernel fallback | 2=beamposition crossvalidate with kernel
 				%Screen('Preference', 'VBLTimestampingMode', me.timestampingMode);
-
+				
+				if me.debug == true %we yoke these together but they can then be overridden
+					me.visualDebug	= true;
+				end
 				
 				%% === set Screen debug preferences
 				if (~islogical(me.windowed) && isnumeric(me.windowed)) || (isscalar(me.windowed) && me.windowed ~= 0)
@@ -1516,7 +1520,7 @@ classdef screenManager < optickaCore
 		%>
 		%> @param text text to draw
 		% ===================================================================
-		function vbl = drawTextNow(me, text, x, y, wrapat)
+		function flipTime = drawTextNow(me, text, x, y, wrapat)
 			% drawTextNow(me,text,x,y,wrapat)
 			arguments
 				me
@@ -1525,7 +1529,8 @@ classdef screenManager < optickaCore
 				y double		= NaN
 				wrapat double	= NaN
 			end
-			if strlength(string(text)) == 0; return; end
+			flipTime = 0;
+			if strlength(text) == 0; return; end
 			if isempty(x) || any(isnan(x)); x = (-me.xCenter / me.ppd_) + 0.25; end
 			if isempty(y) || any(isnan(y)); y = (-me.yCenter / me.ppd_) + 0.25; end
 			text = char(string(text));
@@ -1534,7 +1539,7 @@ classdef screenManager < optickaCore
 			else
 				me.drawTextWrapped(text, wrapat, x, y);
 			end
-			vbl = flip(me,[],[],2);
+			[~,~,flipTime] = flip(me,[],[],2); %in fact we return flipTime not vbl as dontsync = 2
 		end
 
 		% ===================================================================
@@ -2248,10 +2253,10 @@ classdef screenManager < optickaCore
 		%> @return
 		% ===================================================================
 			arguments(Input)
-				rect (1,4) double {mustBeReal, mustBeNonNegative}
+				rect (1,4) double {mustBeReal, mustBeNonnegative}
 			end
 			arguments(Output)
-				out structure
+				out struct
 			end
 			[out.X,out.Y] = RectCenter(rect);
 			out.radius = [RectWidth(rect) RectHeight(rect)] / 2;

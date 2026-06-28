@@ -76,27 +76,27 @@ classdef apparentMotionStimulus < baseStimulus
 		%> parsed.
 		%> @return instance of opticka class.
 		% ===================================================================
-		function obj = apparentMotionStimulus(varargin) 
+		function me = apparentMotionStimulus(varargin) 
 			%Initialise for superclass, stops a noargs error
 			if nargin == 0;varargin.family = 'apparentMotion';end
 			
-			obj = obj@baseStimulus(varargin); %we call the superclass constructor first
-			obj.size = 0;
-			obj.colour = [1 1 1];
-			obj.speed = 0;
-			obj.startPosition = 0;
+			me = me@baseStimulus(varargin); %we call the superclass constructor first
+			me.size = 0;
+			me.colour = [1 1 1];
+			me.speed = 0;
+			me.startPosition = 0;
 			
 			if nargin>0
-				obj.parseArgs(varargin, obj.allowedProperties);
+				me.parseArgs(varargin, me.allowedProperties);
 			end
 			
-			if obj.size > 0
-				obj.barHeight = obj.size;
-				obj.barWidth = obj.size;
+			if me.size > 0
+				me.barHeight = me.size;
+				me.barWidth = me.size;
 			end
 			
-			obj.ignoreProperties = ['^(' obj.ignorePropertiesBase '|' obj.ignoreProperties ')$'];
-			obj.salutation('constructor','apparentMotion Stimulus initialisation complete');
+			me.ignoreProperties = ['^(' me.ignorePropertiesBase '|' me.ignoreProperties ')$'];
+			me.salutation('constructor','apparentMotion Stimulus initialisation complete');
 		end
 		
 		% ===================================================================
@@ -105,13 +105,13 @@ classdef apparentMotionStimulus < baseStimulus
 		%> @param sM screenManager object for reference
 		%> @return stimulus structure.
 		% ===================================================================
-		function setup(obj,sM)
+		function setup(me,sM)
 			
-			reset(obj);
-			obj.inSetup = true;
+			reset(me);
+			me.inSetup = true;
 			
-			obj.sM = sM;
-			obj.ppd=sM.ppd;
+			me.sM = sM;
+			me.ppd=sM.ppd;
 			
 			fn = sort(properties(me));
 			for j=1:length(fn)
@@ -120,33 +120,33 @@ classdef apparentMotionStimulus < baseStimulus
 					if strcmp(fn{j},'xPosition');p.SetMethod = @set_xPositionOut;end
 					if strcmp(fn{j},'yPosition');p.SetMethod = @set_yPositionOut;end
 					if strcmp(fn{j},'size');p.SetMethod = @set_sizeOut;end
-					obj.([fn{j} 'Out']) = obj.(fn{j}); %copy our property value to our tempory copy
+					me.([fn{j} 'Out']) = me.(fn{j}); %copy our property value to our tempory copy
 				end
 			end
 			
-			if isempty(obj.findprop('doDots'));p=obj.addprop('doDots');p.Transient = true;end
-			if isempty(obj.findprop('doMotion'));p=obj.addprop('doMotion');p.Transient = true;end
-			if isempty(obj.findprop('doDrift'));p=obj.addprop('doDrift');p.Transient = true;end
-			if isempty(obj.findprop('doFlash'));p=obj.addprop('doFlash');p.Transient = true;end
-			obj.doDots = false;
-			obj.doMotion = false;
-			obj.doDrift = false;
-			obj.doFlash = false;
+			if isempty(me.findprop('doDots'));p=me.addprop('doDots');p.Transient = true;end
+			if isempty(me.findprop('doMotion'));p=me.addprop('doMotion');p.Transient = true;end
+			if isempty(me.findprop('doDrift'));p=me.addprop('doDrift');p.Transient = true;end
+			if isempty(me.findprop('doFlash'));p=me.addprop('doFlash');p.Transient = true;end
+			me.doDots = false;
+			me.doMotion = false;
+			me.doDrift = false;
+			me.doFlash = false;
 			
-			constructMatrix(obj) %make our matrix
-			obj.texture=Screen('MakeTexture',obj.sM.win,obj.matrix,1,[],2);
-			if obj.speed>0 %we need to say this needs animating
-				obj.doMotion=true;
+			constructMatrix(me) %make our matrix
+			me.texture=Screen('MakeTexture',me.sM.win,me.matrix,1,[],2);
+			if me.speed>0 %we need to say this needs animating
+				me.doMotion=true;
 			else
-				obj.doMotion=false;
+				me.doMotion=false;
 			end
 			
-			obj.inSetup = false;
-			makeTiming(obj);
-			obj.isVisible = true;
-			obj.nextTick = obj.frameTimes(1);
-			computePosition(obj);
-			setRect(obj);
+			me.inSetup = false;
+			makeTiming(me);
+			me.isVisible = true;
+			me.nextTick = me.frameTimes(1);
+			computePosition(me);
+			setRect(me);
 			
 		end
 		
@@ -156,15 +156,15 @@ classdef apparentMotionStimulus < baseStimulus
 		%> @param in runExperiment object for reference
 		%> @return stimulus structure.
 		% ===================================================================
-		function update(obj)
-			resetTicks(obj);
-			obj.stage = 1;
-			obj.nextTick = obj.frameTimes(1);
-			obj.firstDraw = false;
-			constructMatrix(obj) %make our matrix
-			obj.texture=Screen('MakeTexture',obj.sM.win,obj.matrix,1,[],2);
-			computePosition(obj);
-			obj.setRect();
+		function update(me)
+			resetTicks(me);
+			me.stage = 1;
+			me.nextTick = me.frameTimes(1);
+			me.firstDraw = false;
+			constructMatrix(me) %make our matrix
+			me.texture=Screen('MakeTexture',me.sM.win,me.matrix,1,[],2);
+			computePosition(me);
+			me.setRect();
 		end
 		
 		% ===================================================================
@@ -173,11 +173,11 @@ classdef apparentMotionStimulus < baseStimulus
 		%> @param rE runExperiment object for reference
 		%> @return stimulus structure.
 		% ===================================================================
-		function draw(obj)
-			if obj.isVisible && obj.tick >= obj.delayTicks && obj.tick < obj.offTicks
-				Screen('DrawTexture',obj.sM.win, obj.texture,[ ], obj.mvRect, obj.angleOut, [], [], obj.modulateColourOut);
+		function draw(me)
+			if me.isVisible && me.tick >= me.delayTicks && me.tick < me.offTicks
+				Screen('DrawTexture',me.sM.win, me.texture,[ ], me.mvRect, me.angleOut, [], [], me.modulateColourOut);
 			end
-			obj.tick = obj.tick + 1;
+			me.tick = me.tick + 1;
 		end
 		
 		% ===================================================================
@@ -186,28 +186,28 @@ classdef apparentMotionStimulus < baseStimulus
 		%> @param rE runExperiment object for reference
 		%> @return stimulus structure.
 		% ===================================================================
-		function animate(obj)
-			if obj.tick < obj.delayTicks; obj.isVisible = false; end
-			if obj.tick < obj.offTicks
-				if obj.tick > obj.nextTick && obj.stage <= obj.nBars*2
-					obj.stage = obj.stage+1;
-					if rem(obj.stage,2)==0
-						obj.nextTick = obj.nextTick + obj.frameTimes(2);
-						if obj.tick >= obj.delayTicks;obj.isVisible = false;end
+		function animate(me)
+			if me.tick < me.delayTicks; me.isVisible = false; end
+			if me.tick < me.offTicks
+				if me.tick > me.nextTick && me.stage <= me.nBars*2
+					me.stage = me.stage+1;
+					if rem(me.stage,2)==0
+						me.nextTick = me.nextTick + me.frameTimes(2);
+						if me.tick >= me.delayTicks;me.isVisible = false;end
 					else
-						obj.nextTick = obj.nextTick + obj.frameTimes(1);
-						if ceil(obj.stage/2) <= length(obj.mvRects)
-							obj.mvRect = obj.mvRects{ceil(obj.stage/2)};
-							if obj.tick >= obj.delayTicks;obj.isVisible = true;end
+						me.nextTick = me.nextTick + me.frameTimes(1);
+						if ceil(me.stage/2) <= length(me.mvRects)
+							me.mvRect = me.mvRects{ceil(me.stage/2)};
+							if me.tick >= me.delayTicks;me.isVisible = true;end
 						else
-							if obj.tick >= obj.delayTicks;obj.isVisible = false;end
+							if me.tick >= me.delayTicks;me.isVisible = false;end
 						end
 						
 					end
-					%fprintf('TICK=%i STAGE: %i NEXTTICK: %i VISIBLE: %i\n',obj.tick,obj.stage,obj.nextTick,obj.isVisible)
+					%fprintf('TICK=%i STAGE: %i NEXTTICK: %i VISIBLE: %i\n',me.tick,me.stage,me.nextTick,me.isVisible)
 				end
-				if obj.doMotion == 1
-					obj.mvRect=OffsetRect(obj.mvRect,obj.dX_,obj.dY_);
+				if me.doMotion == 1
+					me.mvRect=OffsetRect(me.mvRect,me.dX_,me.dY_);
 				end
 			end
 		end
@@ -218,16 +218,16 @@ classdef apparentMotionStimulus < baseStimulus
 		%> @param rE runExperiment object for reference
 		%> @return
 		% ===================================================================
-		function reset(obj)
-			obj.texture=[];
-			obj.stage = 1;
-			obj.nextTick = 0;
-			obj.frameTimes = [];
-			obj.mvRect = [];
-			obj.mvRects = [];
-			obj.dstRect = [];
-			removeTmpProperties(obj);
-			resetTicks(obj);
+		function reset(me)
+			me.texture=[];
+			me.stage = 1;
+			me.nextTick = 0;
+			me.frameTimes = [];
+			me.mvRect = [];
+			me.mvRects = [];
+			me.dstRect = [];
+			removeTmpProperties(me);
+			resetTicks(me);
 		end
 		
 		% ===================================================================
@@ -236,45 +236,45 @@ classdef apparentMotionStimulus < baseStimulus
 		%> @param ppd use the passed pixels per degree to make a RGBA matrix of
 		%> the correct dimensions
 		% ===================================================================
-		function constructMatrix(obj)
-			obj.matrix=[]; %reset the matrix			
+		function constructMatrix(me)
+			me.matrix=[]; %reset the matrix			
 			try
-				if isempty(obj.findprop('barWidthOut'));
-					bwpixels = round(obj.barWidth*obj.ppd);
+				if isempty(me.findprop('barWidthOut'));
+					bwpixels = round(me.barWidth*me.ppd);
 				else
-					bwpixels = round(obj.barWidthOut*obj.ppd);
+					bwpixels = round(me.barWidthOut*me.ppd);
 				end
-				if isempty(obj.findprop('barLengthOut'));
-					blpixels = round(obj.barHeight*obj.ppd);
+				if isempty(me.findprop('barLengthOut'));
+					blpixels = round(me.barHeight*me.ppd);
 				else
-					blpixels = round(obj.barLengthOut*obj.ppd);
+					blpixels = round(me.barLengthOut*me.ppd);
 				end
 				if rem(bwpixels,2);bwpixels=bwpixels+1;end
 				if rem(blpixels,2);blpixels=blpixels+1;end
-				bwscale = round(bwpixels/obj.scale)+1;
-				blscale = round(blpixels/obj.scale)+1;
+				bwscale = round(bwpixels/me.scale)+1;
+				blscale = round(blpixels/me.scale)+1;
 
 				tmat = ones(blscale,bwscale,4); %allocate the size correctly
 				rmat=ones(blscale,bwscale);
-				switch obj.type
+				switch me.type
 					case 'random'
 						rmat=rand(blscale,bwscale);
 						for i=1:3
 							tmat(:,:,i)=tmat(:,:,i).*rmat;
 						end
-						tmat(:,:,4)=ones(blscale,bwscale)*obj.alpha;
+						tmat(:,:,4)=ones(blscale,bwscale)*me.alpha;
 					case 'randomColour'
 						for i=1:3
 							rmat=rand(blscale,bwscale);
 							tmat(:,:,i)=tmat(:,:,i).*rmat;
 						end
-						tmat(:,:,4)=ones(blscale,bwscale)*obj.alpha;
+						tmat(:,:,4)=ones(blscale,bwscale)*me.alpha;
 					case 'randomN'
 						rmat=randn(blscale,bwscale);
 						for i=1:3
 							tmat(:,:,i)=tmat(:,:,i).*rmat;
 						end
-						tmat(:,:,4)=ones(blscale,bwscale)*obj.alpha;
+						tmat(:,:,4)=ones(blscale,bwscale)*me.alpha;
 					case 'randomBW'
 						rmat=rand(blscale,bwscale);
 						rmat(rmat < 0.5) = 0;
@@ -282,41 +282,41 @@ classdef apparentMotionStimulus < baseStimulus
 						for i=1:3
 							tmat(:,:,i)=tmat(:,:,i).*rmat;
 						end
-						tmat(:,:,4)=ones(blscale,bwscale)*obj.alpha;
+						tmat(:,:,4)=ones(blscale,bwscale)*me.alpha;
 					otherwise
-						tmat(:,:,1)=ones(blscale,bwscale) * (obj.colour(1) * obj.contrastOut);
-						tmat(:,:,2)=ones(blscale,bwscale) * (obj.colour(2) * obj.contrastOut);
-						tmat(:,:,3)=ones(blscale,bwscale) * (obj.colour(3) * obj.contrastOut);
-						tmat(:,:,4)=ones(blscale,bwscale)*obj.alpha;
+						tmat(:,:,1)=ones(blscale,bwscale) * (me.colour(1) * me.contrastOut);
+						tmat(:,:,2)=ones(blscale,bwscale) * (me.colour(2) * me.contrastOut);
+						tmat(:,:,3)=ones(blscale,bwscale) * (me.colour(3) * me.contrastOut);
+						tmat(:,:,4)=ones(blscale,bwscale)*me.alpha;
 				end
-				aw=0:obj.scale:bwpixels;
-				al=0:obj.scale:blpixels;
+				aw=0:me.scale:bwpixels;
+				al=0:me.scale:blpixels;
 				[a,b]=meshgrid(aw,al);
 				[A,B]=meshgrid(0:bwpixels,0:blpixels);
 				for i=1:4
-					outmat(:,:,i) = interp2(a,b,tmat(:,:,i),A,B,obj.interpMethod);
+					outmat(:,:,i) = interp2(a,b,tmat(:,:,i),A,B,me.interpMethod);
 				end
-				obj.matrix = outmat(1:blpixels,1:bwpixels,:);
-				obj.rmatrix = rmat;
+				me.matrix = outmat(1:blpixels,1:bwpixels,:);
+				me.rmatrix = rmat;
 			catch %#ok<CTCH>
-				if isempty(obj.findprop('barWidthOut'));
-					bwpixels = round(obj.barWidth*obj.ppd);
+				if isempty(me.findprop('barWidthOut'));
+					bwpixels = round(me.barWidth*me.ppd);
 				else
-					bwpixels = round(obj.barWidthOut*obj.ppd);
+					bwpixels = round(me.barWidthOut*me.ppd);
 				end
-				if isempty(obj.findprop('barLengthOut'));
-					blpixels = round(obj.barHeight*obj.ppd);
+				if isempty(me.findprop('barLengthOut'));
+					blpixels = round(me.barHeight*me.ppd);
 				else
-					blpixels = round(obj.barLengthOut*obj.ppd);
+					blpixels = round(me.barLengthOut*me.ppd);
 				end
 				tmat = ones(blpixels,bwpixels,4); %allocate the size correctly
-				tmat(:,:,1)=ones(blpixels,bwpixels)*obj.colour(1);
-				tmat(:,:,2)=ones(blpixels,bwpixels)*obj.colour(2);
-				tmat(:,:,3)=ones(blpixels,bwpixels)*obj.colour(3);
-				tmat(:,:,4)=ones(blpixels,bwpixels)*obj.colour(4);
+				tmat(:,:,1)=ones(blpixels,bwpixels)*me.colour(1);
+				tmat(:,:,2)=ones(blpixels,bwpixels)*me.colour(2);
+				tmat(:,:,3)=ones(blpixels,bwpixels)*me.colour(3);
+				tmat(:,:,4)=ones(blpixels,bwpixels)*me.colour(4);
 				rmat=ones(blpixels,bwpixels);
-				obj.matrix=tmat;
-				obj.rmatrix=rmat;
+				me.matrix=tmat;
+				me.rmatrix=rmat;
 			end
 		end
 		
@@ -327,11 +327,11 @@ classdef apparentMotionStimulus < baseStimulus
 		%> @param length of bar
 		%> @return
 		% ===================================================================
-		function set.barHeight(obj,value)
+		function set.barHeight(me,value)
 			if ~(value > 0)
 				value = 0.25;
 			end
-			obj.barHeight = value;
+			me.barHeight = value;
 		end
 		
 		% ===================================================================
@@ -340,11 +340,11 @@ classdef apparentMotionStimulus < baseStimulus
 		%> @param width of bar in degrees
 		%> @return
 		% ===================================================================
-		function set.barWidth(obj,value)
+		function set.barWidth(me,value)
 			if ~(value > 0)
 				value = 0.05;
 			end
-			obj.barWidth = value;
+			me.barWidth = value;
 		end
 		
 	end %---END PUBLIC METHODS---%
@@ -359,20 +359,20 @@ classdef apparentMotionStimulus < baseStimulus
 		%> values, you should call computePosition() first to get xOut and
 		%> yOut
 		% ===================================================================
-		function setRect(obj)
-			if ~isempty(obj.texture)
-				obj.dstRect=Screen('Rect',obj.texture);
-				pos = 0:obj.barSpacing:obj.barSpacing*(obj.nBars-1);
-				pos = pos - ((obj.barSpacing*obj.nBars)/2-(obj.barSpacing/2));
-				pos = pos * obj.ppd;
-				pos = pos + obj.xOut;
-				if strcmpi(obj.directionOut,'left')
+		function setRect(me)
+			if ~isempty(me.texture)
+				me.dstRect=Screen('Rect',me.texture);
+				pos = 0:me.barSpacing:me.barSpacing*(me.nBars-1);
+				pos = pos - ((me.barSpacing*me.nBars)/2-(me.barSpacing/2));
+				pos = pos * me.ppd;
+				pos = pos + me.xOut;
+				if strcmpi(me.directionOut,'left')
 					pos = fliplr(pos);
 				end
-				for i = 1:obj.nBars;
-					obj.mvRects{i} = CenterRectOnPointd(obj.dstRect, pos(i), obj.yFinal);
+				for i = 1:me.nBars;
+					me.mvRects{i} = CenterRectOnPointd(me.dstRect, pos(i), me.yFinal);
 				end
-				obj.mvRect=obj.mvRects{1};
+				me.mvRect=me.mvRects{1};
 			end
 		end
 		
@@ -380,19 +380,19 @@ classdef apparentMotionStimulus < baseStimulus
 		%> @brief sizeOut Set method
 		%>
 		% ===================================================================
-		function makeTiming(obj)
-			obj.frameTimes = round(obj.timing/obj.sM.screenVals.ifi);
+		function makeTiming(me)
+			me.frameTimes = round(me.timing/me.sM.screenVals.ifi);
 		end
 
 		% ===================================================================
 		%> @brief sizeOut Set method
 		%>
 		% ===================================================================
-		function set_sizeOut(obj,value)
-			obj.sizeOut = (value*obj.ppd);
-			if ~obj.inSetup
-				obj.barLengthOut = obj.sizeOut;
-				obj.barWidthOut = obj.sizeOut;
+		function set_sizeOut(me,value)
+			me.sizeOut = (value*me.ppd);
+			if ~me.inSetup
+				me.barLengthOut = me.sizeOut;
+				me.barWidthOut = me.sizeOut;
 			end
 		end
 	

@@ -444,7 +444,9 @@ classdef imageStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function checkfilePath(me)
-			try me.filePath = regexprep(me.filePath,'^\~',getenv('HOME')); end
+
+			me.filePath = makeRelativePath(me, me.filePath);
+
 			if isempty(me.filePath) || (me.selection==0 && exist(me.filePath,'file') ~= 2 && exist(me.filePath,'file') ~= 7)%use our default
 				p = mfilename('fullpath');
 				p = fileparts(p);
@@ -553,6 +555,16 @@ classdef imageStimulus < baseStimulus
 					end
 				end
 				if me.selection < 1 || me.selection > me.nImages; me.selection = 1; end
+			end
+		end
+
+		function tpath = makeRelativePath(~, tpath)
+			% lets try to replace a home path with ~
+			if ~isempty(tpath)
+				p = regexpi(tpath,"^(?<home>\/(home|Users)\/[^\/]+/)(?<rest>.+)",'names');
+				if ~isempty(p) && isfield(p.rest)
+					tpath = "~" + filesep + p.rest;
+				end
 			end
 		end
 

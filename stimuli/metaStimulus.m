@@ -657,7 +657,7 @@ classdef metaStimulus < optickaCore
 				warning on
 			catch ME
 				warning on
-				try getReport(ME); end
+				try getReport(ME), end
 				try Priority(0); end
 				if exist('s','var') && isa(s,'screenManager')
 					try close(s); end

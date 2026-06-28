@@ -1170,9 +1170,11 @@ classdef opticka < optickaCore
 						if ~isa(me.r.stimuli{i},'baseStimulus')
 							rm = [rm i];
 						end
+						if isa(me.r.stimuli{i},'imageStimulus') || isa(me.r.stimuli{i},'movieStimulus')
+							try checkfilePath(me.r.stimuli{i}), end
+						end
 					end
 					if ~isempty(rm); me.r.stimuli(rm) = []; end
-					me.r.stimuli.stimulusSets = tmp.r.stimuli.stimulusSets;
 					fprintf('\t…metaStimulus object loaded\n');
 				elseif iscell(tmp.r.stimuli)
 					me.r.stimuli = metaStimulus();
