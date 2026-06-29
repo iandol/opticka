@@ -313,6 +313,8 @@ classdef optickaCore < handle
 				end
 			end
 
+			tt = tic; 
+
 			switch class(me)
 
 				case 'opticka'
@@ -335,7 +337,7 @@ classdef optickaCore < handle
 					append(sec, MATLABVariable('Variable', me, 'MaxCols', 2, 'DepthLimit', 0, 'ObjectLimit', 1));
 					append(ch,sec);
 					append(rpt,ch);
-					if isa(me.task,'taskSequence') && ~isempty(me.task)
+					if isa(me.task,'taskSequence') && ~isempty(me.task) %#ok<*MCNPN>
 						me.task.makeReport(rpt);
 					end
 					if isa(me.behaviouralRecord,'behaviouralRecord') && ~isempty(me.behaviouralRecord)
@@ -417,7 +419,7 @@ classdef optickaCore < handle
 							img = Image(tmpf);
 							img.Style = {ScaleToFit};
 							append(sec,img);
-							try delete tmpf; end
+							try delete tmpf; end %#ok<*TRYNC>
 						end
 						try close(me.h.root); end
 						try me.clearHandles; end
@@ -485,7 +487,6 @@ classdef optickaCore < handle
 				close(rpt);
 				rptview(rpt);
 				fprintf('=== makeReport: finished report @%.2f secs\n',toc(tt));
-				tt = [];
 				warning on
 			end
 		
@@ -876,7 +877,7 @@ classdef optickaCore < handle
 		%> @return args as a structure
 		% ===================================================================
 			if isstruct(args); return; end
-			while iscell(args) && length(args) == 1
+			while iscell(args) && isscalar(args)
 				args = args{1};
 			end
 			if iscell(args)
@@ -920,7 +921,7 @@ classdef optickaCore < handle
 		% ===================================================================
 		function result = hasKey(in, key)
 		%> @fn hasKey
-		%> @brief check if a struct / object has a propery / field
+		%> @brief check if a struct / object has a property / field
 		%>
 		%> @param value name
 		% ===================================================================

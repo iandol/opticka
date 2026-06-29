@@ -599,7 +599,7 @@ classdef metaStimulus < optickaCore
 				t = me.getTypes;
 				if ~matches('movie', t); draw(me); end
 				flip(s);
-				update(me);
+				resetTicks(me); %update(me);
 				if benchmark
 					WaitSecs('YieldSecs',0.25);
 				else

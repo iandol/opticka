@@ -44,6 +44,7 @@ function runOptickaTests(varargin)
 %>   EyetrackerCoreTest          - eyetrackerCore/eyelinkManager dummy mode tests
 %>   ScreenManagerTest           - screenManager properties, conversion & PTB tests
 %>   RunExperimentTest           - runExperiment construction, config & state-machine tests
+%>   OptickaGUITest              - opticka GUI, protocol loading & runTask integration test
 %>
 	%> Tests tagged 'hardware' require PTB/audio hardware and are
 	%> excluded from CI (GitHub Actions). Run locally with:

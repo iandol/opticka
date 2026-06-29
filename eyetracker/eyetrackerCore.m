@@ -130,6 +130,8 @@ classdef eyetrackerCore < optickaCore
 		isOff					= false
 		%> lots of logging if debug = true
 		debug					= false
+		%> mock is used when running tests, it tries to not block a run with calibration etc.
+		mock					= false
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -506,7 +508,7 @@ classdef eyetrackerCore < optickaCore
 					me.fixation.initTime = inittime;
 				end
 			end
-			if nargin > 4 && ~isempty(fixtime) && (isnumeric(fixtime) && ~isnan(fixtime))
+			if nargin > 4 && ~isempty(fixtime) && isnumeric(fixtime) && ~any(isnan(fixtime))
 				if length(fixtime) == 2
 					me.fixation.time = randi(fixtime.*1000)/1000;
 				elseif isscalar(fixtime)

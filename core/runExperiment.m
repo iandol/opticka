@@ -147,6 +147,8 @@ classdef runExperiment < optickaCore
 		lastYExclusion				= []
 		lastSize					= 1
 		lastIndex					= 0
+		%> when mock = true then we bypass pause or other things that can block a testcase
+		mock						= false
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -1494,15 +1496,15 @@ classdef runExperiment < optickaCore
 			me.strobeDevice = ioManager();
 			
 			if ~isdeployed && isempty(me.stateInfoFile)
-				if exist([me.paths.root filesep 'DefaultStateInfo.m'],'file')
-					me.stateInfoFile = [me.paths.root filesep 'DefaultStateInfo.m'];
+				if exist(fullfile(me.paths.root, 'core', 'DefaultStateInfo.m'),'file')
+					me.stateInfoFile = fullfile(me.paths.root, 'core', 'DefaultStateInfo.m');
 					me.paths.stateInfoFile = me.stateInfoFile;
 				end
 			end
 
 			if ~isdeployed && isempty(me.userFunctionsFile)
-				if exist([me.paths.root filesep 'userFunctions.m'],'file')
-					me.userFunctionsFile = [me.paths.root filesep 'userFunctions.m'];
+				if exist(fullfile(me.paths.root, 'CoreProtocols', 'myUserFunctions.m'),'file')
+					me.userFunctionsFile = fullfile(me.paths.root, 'CoreProtocols', 'myUserFunctions.m');
 				end
 			end
 				
@@ -1536,7 +1538,7 @@ classdef runExperiment < optickaCore
 		%> Check if stateMachine has finished, set me.stopTask true
 		%>
 		% ===================================================================
-			if me.stateMachine.isRunning && me.task.taskFinished
+			if ~isempty(me.stateMachine) && me.stateMachine.isRunning && me.task.taskFinished
 				me.stopTask = true;
 			end
 		end
@@ -1592,6 +1594,7 @@ classdef runExperiment < optickaCore
 		%> @param varargin the rest of the parameters normally passed to 
 		%> eyeTracker.updateFixationValues: inittime,fixtime,radius,strict
 		% ===================================================================
+			if isempty(me.eyeTracker); return; end
 			if ~exist('useStimuli','var');	useStimuli = false; end
 			if isnumeric(useStimuli); setProp(me.stimuli,'fixationChoice',useStimuli); useStimuli=true; end
 			if useStimuli 
@@ -1612,6 +1615,7 @@ classdef runExperiment < optickaCore
 		%> @param useStimuli use the metaStimulus parameters
 		%> @param radius of the exclusion zone
 		% ===================================================================
+			if isempty(me.eyeTracker); return; end
 			if ~exist('useStimuli','var');	useStimuli = false; end
 			if useStimuli 
 				[me.lastXExclusion,me.lastYExclusion] = getExclusionPositions(me.stimuli);
@@ -1751,6 +1755,7 @@ classdef runExperiment < optickaCore
 		%> @TODO check method speed for other devices. 
 		% ===================================================================
 			if value == -Inf; value = me.strobe.stimOFFValue; end
+			if isempty(me.strobe.device); return; end
 			if strcmpi(me.strobe.device,'labjackt')
 				setStrobeValue(me.strobeDevice, value); %faster?
 			else
@@ -1821,10 +1826,10 @@ classdef runExperiment < optickaCore
 		%> @param the index to a particular trial
 		%> @return the unique variable number
 		% ===================================================================
-			if ~exist('index','var') || isempty(index)
+			if (~exist('index','var') || isempty(index)) && isprop(me.task,'totalRuns')
 				index = me.task.totalRuns;
 			end
-			if index > 0 && ~isempty(me.task.outIndex) && length(me.task.outIndex) >= index
+			if exist('index','var') && index > 0 && ~isempty(me.task.outIndex) && length(me.task.outIndex) >= index
 				if me.task.nVars == 0
 					trial = 1;
 				else
@@ -2222,6 +2227,7 @@ classdef runExperiment < optickaCore
 					eT.isDummy	= true;
 			end
 			me.eyeTracker		= eT;
+			if me.mock; eT.mock = true; end % make sure the eyetracker test-case mock is enabled too
 			eT.verbose			= me.verbose;
 			if ~isempty(me.eyetracker.device)
 				eT.isDummy		= me.eyetracker.dummy;
@@ -2811,6 +2817,7 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 			if ~exist('prompt','var')||isempty(prompt);prompt="\bf Please add Comments:";end
 			if ~exist('tS','var'); tS.askForComments=me.askForComments;end
+			if me.mock; return; end
 			if ischar(me.comment) || iscell(me.comment)
 				comment = strip(string(me.comment));
 			else
@@ -2837,6 +2844,9 @@ classdef runExperiment < optickaCore
 			persistent curtoggle
 			if ~exist('trainingSet','var'); trainingSet = true; end
 			[pressed, name, ~] = optickaCore.getKeys(me.keyboardDevice);
+			if me.mock % always exit pause mode if mock testing
+				if strcmpi(me.stateMachine.currentState.name, 'pause'); name = 'p'; pressed = true; end
+			end
 			if ~pressed; return; end
 			if iscell(name); name = name{end}; end
 			switch name

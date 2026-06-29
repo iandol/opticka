@@ -334,6 +334,7 @@ classdef iRecManager < eyetrackerCore & eyetrackerSmooth
 							end
 							flip(s);
 							[pressed,~,keys, shift] = optickaCore.getKeys();
+							if me.mock; pressed = true; keys(quit) = 1; WaitSecs(0.1); end
 							if pressed
 								if keys(quit) && shift
 									error('You have force exited out of the calibration!!!');
