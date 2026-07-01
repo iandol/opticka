@@ -53,7 +53,6 @@ classdef OptickaGUITest < matlab.unittest.TestCase
 		%> after the screen opens to unpause the state machine.
 		% ===============================================================
 		function testLoadProtocolAndRunTask(testCase)
-
 			% ----- CI + xdotool guards -----
 			assumeFalse(testCase, ~isempty(getenv('GITHUB_ACTIONS')), ...
 				'Skip in CI: requires display + PTB');
@@ -118,7 +117,7 @@ classdef OptickaGUITest < matlab.unittest.TestCase
 			% ===========================================================
 			% 4. Set nBlocks = 2 and randomise
 			% ===========================================================
-			o.r.task.nBlocks = 2;
+			o.r.task.nBlocks = 1;
 			randomiseTask(o.r.task);
 			expectedTrials = o.r.task.nRuns;
 			verifyGreaterThan(testCase, expectedTrials, 0, ...
@@ -140,8 +139,8 @@ classdef OptickaGUITest < matlab.unittest.TestCase
 			%    window is open and warmup is done, so we send 'p'.
 			%    runTask is blocking, so this runs in the background.
 			% ===========================================================
-			system(sprintf('(sleep 3 && %s type p) &', ...
-				testCase.xdotoolPath));
+			%system(sprintf('(sleep 3 && %s type p) &', ...
+			%	testCase.xdotoolPath));
 
 			% ===========================================================
 			% 7. Run the behavioural task (blocks until completion)

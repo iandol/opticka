@@ -355,6 +355,8 @@ classdef EyetrackerCoreTest < matlab.unittest.TestCase
 		%> dummy mode, return both with cleanup.
 		% ---------------------------------------------------------------
 		function [sM, eT, cleanup] = createDummySetup(testCase)
+			assumeFalse(testCase, ~isempty(getenv('GITHUB_ACTIONS')), ...
+				'Skipping PTB eyetracker test in CI');
 			sM = screenManager;
 			sM.windowed = [0 0 800 600];
 			sM.disableSyncTests = true;
@@ -370,8 +372,6 @@ classdef EyetrackerCoreTest < matlab.unittest.TestCase
 		%> @brief Test dummy mode getMouseSample acquires position.
 		% ---------------------------------------------------------------
 		function testGetMouseSample(testCase)
-			assumeFalse(testCase, ~isempty(getenv('GITHUB_ACTIONS')), ...
-				'Skipping PTB eyetracker test in CI');
 			assumeTrue(testCase, exist('GetMouse') == 2 || ~isempty(which('GetMouse')), ...
 				'PTB GetMouse must be available');
 			[sM, eT, cleanup] = createDummySetup(testCase);
@@ -390,8 +390,6 @@ classdef EyetrackerCoreTest < matlab.unittest.TestCase
 		%> @brief Test getMouseSample detects mouse button (blink).
 		% ---------------------------------------------------------------
 		function testGetMouseSampleBlink(testCase)
-			assumeFalse(testCase, ~isempty(getenv('GITHUB_ACTIONS')), ...
-				'Skipping PTB eyetracker test in CI');
 			assumeTrue(testCase, exist(testCase.xdotoolPath) == 2 || ~isempty(which('xdotool')), ...
 				'xdotool must be available for mouse automation');
 			[sM, eT, cleanup] = createDummySetup(testCase);

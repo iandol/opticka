@@ -710,7 +710,6 @@ classdef runExperiment < optickaCore
 				me.lastIndex			= 0;
 				me.isRunning			= true;
 				me.isRunTask			= true;
-				isRunning				= true;
 				
 				%================================open the PTB screen and setup stimuli
 				me.screenVals			= s.open(me.debug, tL);
@@ -736,13 +735,13 @@ classdef runExperiment < optickaCore
 				end
 
 				run(me.userFunctionsFile);
-				uF = ans;
+				uF = ans; %#ok<NOANS>
 				sc = superclasses(uF);
 
 				if ~isobject(uF) || ~isa(uF,'userFunctions') || ~any(matches(sc,'userFunctions'))
 					warning('The user functions file must return an object / child of the userFunctions class!');
 					run(fullfile(me.paths.root, 'CoreProtocols', 'myUserFunctions.m'));
-					uF = ans;
+					uF = ans; %#ok<NOANS>
 				end
 				
 				me.userFunctions = uF;
@@ -1337,7 +1336,7 @@ classdef runExperiment < optickaCore
 			elseif strcmpi(test,'reward'); do = 2;
 			elseif strcmpi(test,'audio'); do = 3;
 			elseif strcmpi(test,'eyetracker'); do = 4;
-			else do = 5;
+			else, do = 5;
 			end
 
 			s = screenManager('verbosityLevel',1,'verbose',false);
@@ -2777,7 +2776,7 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
-		function tS = saveEyeInfo(me,sM,eT,tS)
+		function tS = saveEyeInfo(me, sM, eT, tS)
 		%> @fn saveEyeInfo
 		%> @brief save this trial eye info
 		%>

@@ -276,6 +276,8 @@ classdef TouchManagerTest < matlab.unittest.TestCase
 		%> dummy mode, return both with cleanup.
 		% ---------------------------------------------------------------
 		function [sM, tM, cleanup] = createDummySetup(testCase)
+			assumeFalse(testCase, ~isempty(getenv('GITHUB_ACTIONS')), ...
+				'Skipping PTB touch test in CI');
 			sM = screenManager;
 			sM.windowed = [0 0 800 600];
 			sM.disableSyncTests = true;
