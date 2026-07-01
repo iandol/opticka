@@ -562,7 +562,7 @@ classdef imageStimulus < baseStimulus
 			% lets try to replace a home path with ~
 			if ~isempty(tpath)
 				p = regexpi(tpath,"^(?<home>\/(home|Users)\/[^\/]+/)(?<rest>.+)",'names');
-				if ~isempty(p) && isfield(p.rest)
+				if ~isempty(p) && isstruct(p) && isfield(p,'rest')
 					tpath = "~" + filesep + p.rest;
 				end
 			end
