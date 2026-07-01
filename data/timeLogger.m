@@ -191,6 +191,14 @@ classdef timeLogger < optickaCore
 			end
 
 			if isempty(exitTime); exitTime = NaN; end
+
+			if isempty(timeType) || ismissing(timeType)
+				timeType = "unknown";
+			end
+
+			if isempty(HED) || ismissing(HED)
+				HED = "Experimental-note";
+			end
 			
 			N = me.messageN + 1; me.messageN = N;
 			me.messages(1).time(N) = startTime;

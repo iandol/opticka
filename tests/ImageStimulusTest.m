@@ -95,6 +95,7 @@ classdef ImageStimulusTest < matlab.unittest.TestCase
 		function testCustomFilePath(testCase)
 			stimDir = fileparts(which('imageStimulus'));
 			testImage = fullfile(stimDir, 'moon.png');
+			testImage = regexprep(testImage,getenv("HOME"),"~");
 			im = imageStimulus('verbose', false, 'filePath', testImage);
 			verifyEqual(testCase, im.filePath, testImage, 'filePath should be set');
 			verifyEqual(testCase, im.filePaths{1}, testImage, ...

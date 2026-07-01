@@ -113,6 +113,16 @@ classdef TimeLoggerTest < matlab.unittest.TestCase
 		end
 
 		% ===================================================================
+		%> @brief Test addMessage with empty values.
+		% ===================================================================
+		function testAddMessageEmptyArray(testCase)
+			tl = testCase.tl;
+			tl.preAllocate(100, 50);
+			tl.addMessage([], [], [], "message", [], []);
+			verifyEqual(testCase, tl.messageN, 1, 'empty [] should be filled in');
+		end
+
+		% ===================================================================
 		%> @brief Test addMessage strips newlines and tabs from text.
 		% ===================================================================
 		function testAddMessageStripsNewlines(testCase)
