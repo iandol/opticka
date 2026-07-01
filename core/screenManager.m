@@ -268,7 +268,7 @@ classdef screenManager < optickaCore
 			end
 
 			me.font.FontName = me.monoFont;
-
+			
 			prepareScreen(me);
 		end
 
@@ -281,6 +281,9 @@ classdef screenManager < optickaCore
 		%> @return screenVals structure of screen values
 		% ===================================================================
 			if me.isPTB == false; warning('No PTB!!!'); return; end
+			
+			PsychDefaultSetup(2);
+			
 			me.maxScreen		= max(Screen('Screens'));
 
 			%by default choose the (largest number) screen

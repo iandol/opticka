@@ -23,7 +23,6 @@ classdef OptickaGUITest < matlab.unittest.TestCase
 
 	methods (TestClassSetup)
 		function setupPath(testCase)
-			addOptickaToPath;
 			[ret, out] = system('which xdotool 2>/dev/null');
 			if ret == 0 && ~isempty(strip(out))
 				testCase.xdotoolPath = strip(out);
@@ -31,14 +30,12 @@ classdef OptickaGUITest < matlab.unittest.TestCase
 		end
 	end
 
-	methods (TestMethodTeardown)
-		function closeWindows(testCase)
-			cd(testCase.origDir);
-			sca;
-			close all force;
-			try ListenChar(0); catch; end
-			try ShowCursor; catch; end
+	methods(Test, TestTags = {'CI'})
+
+		function testUIAlone(testCase)
+			testCase.origDir = pwd;
 		end
+
 	end
 
 	% ===================================================================
@@ -160,6 +157,9 @@ classdef OptickaGUITest < matlab.unittest.TestCase
 				'behaviouralRecord should exist');
 			verifyTrue(testCase, ~isempty(o.r.task.outValues), ...
 				'task output values should exist');
+
+			o.ui.quit();
+
 		end
 	end
 end

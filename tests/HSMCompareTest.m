@@ -25,10 +25,7 @@ classdef HSMCompareTest < matlab.unittest.TestCase
 	end
 
 	methods (TestClassSetup)
-		function setupPath(testCase)
-			%> Add Opticka to MATLAB path once for all tests.
-			addOptickaToPath;
-		end
+		
 	end
 
 	methods (TestMethodSetup)
@@ -38,7 +35,7 @@ classdef HSMCompareTest < matlab.unittest.TestCase
 		end
 	end
 
-	methods (Test)
+	methods (Test, TestTags = {'CI'})
 		% ===================================================================
 		%> @brief Part A: flat-mode log equivalence — all three classes
 		%> must produce identical logs when no parent column is present.

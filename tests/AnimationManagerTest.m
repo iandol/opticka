@@ -45,7 +45,7 @@ classdef AnimationManagerTest < matlab.unittest.TestCase
 	% ===================================================================
 	% CI-SAFE TESTS
 	% ===================================================================
-	methods (Test)
+	methods (Test, TestTags = {'CI'})
 		function testConstructionDefaults(testCase)
 			am = makeAM(testCase);
 			verifyEqual(testCase, am.type, 'rigid', 'default type should be rigid');

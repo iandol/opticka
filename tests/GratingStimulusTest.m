@@ -24,7 +24,7 @@ classdef GratingStimulusTest < matlab.unittest.TestCase
 	% ===================================================================
 	% CI-SAFE TESTS
 	% ===================================================================
-	methods (Test)
+	methods (Test, TestTags = {'CI'})
 		function testConstructionDefaults(testCase)
 			g = gratingStimulus('verbose', false);
 			verifyEqual(testCase, g.type, 'sinusoid', 'default type should be sinusoid');

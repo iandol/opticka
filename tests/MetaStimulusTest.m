@@ -25,7 +25,7 @@ classdef MetaStimulusTest < matlab.unittest.TestCase
 	% ===================================================================
 	% CI-SAFE TESTS
 	% ===================================================================
-	methods (Test)
+	methods (Test, TestTags = {'CI'})
 		function testConstructionDefaults(testCase)
 			ms = metaStimulus('verbose', false);
 			verifyEmpty(testCase, ms.stimuli, 'default stimuli should be empty');

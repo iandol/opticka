@@ -149,9 +149,10 @@ myExp = runExperiment('stimuli', myStims,... %stimulus objects
 	'logStateTimers',true);
 myExp.eyetracker.device = 'irec'; % iRecHS2 eyetracker
 myExp.eyetracker.dummy = true; % dummy mode, so mouse replaces eye position
-myexp.sessionData.subjectName = 'Simulcra';
-myexp.sessionData.researcherName = 'Automated-Test';
-myexp.comment = "This is a test run";
+myExp.sessionData.subjectName = 'Simulcra';
+myExp.sessionData.researcherName = 'Automated-Test';
+myExp.comment = "This is a test run";
+myExp.mock = true; % this automates keyboard entry for automated testing, not used for experiments...
 
 %% Run the full behavioural task
 % 

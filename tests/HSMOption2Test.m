@@ -20,10 +20,7 @@ classdef HSMOption2Test < matlab.unittest.TestCase
 	end
 
 	methods (TestClassSetup)
-		function setupPath(testCase)
-			%> Add Opticka to MATLAB path once for all tests.
-			addOptickaToPath;
-		end
+		
 	end
 
 	methods (TestMethodSetup)
@@ -33,7 +30,7 @@ classdef HSMOption2Test < matlab.unittest.TestCase
 		end
 	end
 
-	methods (Test)
+	methods (Test, TestTags = {'CI'})
 		% ===================================================================
 		%> @brief Test 1: flat mode (no parent column) produces identical
 		%> results to the base stateMachine.

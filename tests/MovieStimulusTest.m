@@ -17,16 +17,13 @@
 classdef MovieStimulusTest < matlab.unittest.TestCase
 
 	methods (TestClassSetup)
-		function setupPath(testCase)
-			%> Add Opticka to MATLAB path once for all tests.
-			addOptickaToPath;
-		end
+		
 	end
 
 	% ===================================================================
 	% CI-SAFE TESTS (no PTB window required)
 	% ===================================================================
-	methods (Test)
+	methods (Test, TestTags = {'CI'})
 		% ---------------------------------------------------------------
 		%> @brief Test construction with defaults.
 		% ---------------------------------------------------------------

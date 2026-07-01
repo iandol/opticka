@@ -23,7 +23,7 @@ classdef DiscStimulusTest < matlab.unittest.TestCase
 	% ===================================================================
 	% CI-SAFE TESTS
 	% ===================================================================
-	methods (Test)
+	methods (Test, TestTags = {'CI'})
 		function testConstructionDefaults(testCase)
 			d = discStimulus('verbose', false);
 			verifyEqual(testCase, d.type, 'simple', 'default type should be simple');

@@ -146,9 +146,9 @@ myStims{12}=movieStimulus('speed', 1, 'xPosition', -7, 'yPosition', -10,...
 % experimental protocols, see stateMachine() for more details.
 myTask = taskSequence(); %new taskSequence object instance
 myTask.nBlocks		= 2; %number of blocks
-myTask.trialTime	= 1; %time of stimulus display: 2 seconds
+myTask.trialTime	= 1; %time of stimulus display: 1 seconds
 myTask.isTime		= 0.25; %inter-trial time: 0.25 seconds
-myTask.ibTime		= 0.5; %inter-block time: 1 second
+myTask.ibTime		= 0.3; %inter-block time: 0.5 second
 myTask.realTime		= true; %we use real time for switching trials, false uses a tick timer updated every flip
 
 %% Variable 1
@@ -220,6 +220,7 @@ myExp = runExperiment('stimuli', myStims,... %stimulus objects
 % run our method of constants (MOC) experiment; 
 % to exit early, press [q] during the interstimulus period.
 opts.askForComments = false;
+myExp.mock = true; % allows this demo to run without any interaction.
 runMOC(myExp, opts);
 
 %% Visual Trial List

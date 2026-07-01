@@ -24,10 +24,7 @@ classdef TaskSequenceTest < matlab.unittest.TestCase
 	end
 
 	methods (TestClassSetup)
-		function setupPath(testCase)
-			%> Add Opticka to MATLAB path once for all tests.
-			addOptickaToPath;
-		end
+		
 	end
 
 	methods (TestMethodSetup)
@@ -37,7 +34,7 @@ classdef TaskSequenceTest < matlab.unittest.TestCase
 		end
 	end
 
-	methods (Test)
+	methods (Test, TestTags = {'CI'})
 		% ===================================================================
 		%> @brief Test default construction and dependent properties.
 		% ===================================================================

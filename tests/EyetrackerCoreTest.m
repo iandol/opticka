@@ -36,7 +36,7 @@ classdef EyetrackerCoreTest < matlab.unittest.TestCase
 	% ===================================================================
 	% CI-SAFE TESTS (no PTB window required)
 	% ===================================================================
-	methods (Test)
+	methods (Test, TestTags = {'CI'})
 		% ---------------------------------------------------------------
 		%> @brief Test construction of eyelinkManager with defaults.
 		% ---------------------------------------------------------------

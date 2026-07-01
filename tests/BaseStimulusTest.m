@@ -26,7 +26,7 @@ classdef BaseStimulusTest < matlab.unittest.TestCase
 	% ===================================================================
 	% CI-SAFE TESTS
 	% ===================================================================
-	methods (Test)
+	methods (Test, TestTags = {'CI'})
 		% --- colour set method ---
 		function testColourSetSingleValue(testCase)
 			d = discStimulus('verbose', false);

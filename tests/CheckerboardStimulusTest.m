@@ -24,7 +24,7 @@ classdef CheckerboardStimulusTest < matlab.unittest.TestCase
 	% ===================================================================
 	% CI-SAFE TESTS
 	% ===================================================================
-	methods (Test)
+	methods (Test, TestTags = {'CI'})
 		% ---------------------------------------------------------------
 		%> @brief Test construction with defaults.
 		% ---------------------------------------------------------------

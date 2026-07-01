@@ -35,10 +35,7 @@ classdef HSMBenchmarkTest < matlab.unittest.TestCase
 	end
 
 	methods (TestClassSetup)
-		function setupPath(testCase)
-			%> Add Opticka to MATLAB path once for all tests.
-			addOptickaToPath;
-		end
+		
 	end
 
 	methods (TestMethodSetup)
@@ -49,7 +46,7 @@ classdef HSMBenchmarkTest < matlab.unittest.TestCase
 		end
 	end
 
-	methods (Test)
+	methods (Test, TestTags = {'CI'})
 		% ===================================================================
 		%> @brief Run the full timing benchmark across all three classes
 		%> and verify that HSM variants are within acceptable timing

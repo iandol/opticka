@@ -36,7 +36,7 @@ classdef TouchManagerTest < matlab.unittest.TestCase
 	% ===================================================================
 	% CI-SAFE TESTS (no PTB window required)
 	% ===================================================================
-	methods (Test)
+	methods (Test, TestTags = {'CI'})
 		% ---------------------------------------------------------------
 		%> @brief Test construction with defaults.
 		% ---------------------------------------------------------------

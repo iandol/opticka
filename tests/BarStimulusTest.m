@@ -24,7 +24,7 @@ classdef BarStimulusTest < matlab.unittest.TestCase
 	% ===================================================================
 	% CI-SAFE TESTS
 	% ===================================================================
-	methods (Test)
+	methods (Test, TestTags = {'CI'})
 		function testConstructionDefaults(testCase)
 			b = barStimulus('verbose', false);
 			verifyEqual(testCase, b.type, 'solid', 'default type should be solid');

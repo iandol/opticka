@@ -25,7 +25,7 @@ classdef ScreenManagerTest < matlab.unittest.TestCase
 	% ===================================================================
 	% CI-SAFE TESTS
 	% ===================================================================
-	methods (Test)
+	methods (Test, TestTags = {'CI'})
 
 		% --- construction defaults ---
 		function testConstructionDefaults(testCase)
