@@ -22,9 +22,6 @@ classdef taskSequence < optickaCore & dynamicprops
 %> ts.showLog;
 %> ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 %>
-%> @todo integrate carryoverCounterbalance() as an alternative to block
-%>  randomisation...
-%> 
 %> Copyright ©2014-2022 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
 
@@ -1042,6 +1039,83 @@ classdef taskSequence < optickaCore & dynamicprops
 	%=======================================================================
 	methods (Static) %------------------STATIC METHODS
 	%=======================================================================
+
+
+		% ===================================================================
+		function condSequence = carryoverCounterbalance(numConds, cbOrder, reps, omitSelfAdjacencies)
+		%> @fn carryoverCounterbalance
+		%> @brief Generate a serial-order counterbalanced condition sequence.
+		%>
+		%> Uses the Brooks/Kandel Euler-circuit method. For academic use cite:
+		%> Brooks, J.L. (2012). Counterbalancing for serial order carryover
+		%> effects in experimental condition orders. Psychological Methods.
+		%>
+		%> @param numConds number of unique conditions.
+		%> @param cbOrder order/depth of counterbalancing.
+		%> @param reps number of repetitions per carryover relationship.
+		%> @param omitSelfAdjacencies omit repeated adjacent conditions.
+		%> @return counterbalanced condition sequence.
+		% ===================================================================
+			if reps < 1
+				error('ERROR: reps parameter must be > 0');
+			end
+			if cbOrder < 1
+				error('ERROR: cbOrder parameter must be > 0');
+			end
+			if numConds < 1
+				error('ERROR: numConds parameter must be > 0');
+			end
+			if omitSelfAdjacencies < 0 || omitSelfAdjacencies > 1
+				error('ERROR: omitSelfAdjacencies parameter must be 0 or 1');
+			end
+
+			if cbOrder == 1
+				adjacencyMatrix = ones(numConds, numConds) * reps;
+				nTuples = 1:numConds;
+				if omitSelfAdjacencies
+					adjacencyMatrix = adjacencyMatrix - adjacencyMatrix .* eye(size(adjacencyMatrix));
+				end
+			else
+				nTuples = taskSequence.nTuplesBrooks(numConds, cbOrder);
+				if omitSelfAdjacencies
+					nTuples = taskSequence.removeSelfAdjacenciesBrooks(nTuples);
+				end
+				adjacencyMatrix = zeros(size(nTuples, 1), size(nTuples, 1));
+				for tMinus1 = 1:size(adjacencyMatrix, 1)
+					for t = 1:size(adjacencyMatrix, 2)
+						if all(nTuples(tMinus1, 2:size(nTuples, 2)) == nTuples(t, 1:size(nTuples, 2) - 1))
+							adjacencyMatrix(tMinus1, t) = 1;
+						end
+					end
+				end
+				adjacencyMatrix = adjacencyMatrix * reps;
+			end
+
+			nodeSequence = taskSequence.eulerPathKandel(adjacencyMatrix);
+			if cbOrder == 1
+				condSequence = nodeSequence;
+			else
+				condSequence = nTuples(nodeSequence(1), :);
+				for i = 2:length(nodeSequence)
+					condSequence = [condSequence nTuples(nodeSequence(i), size(nTuples, 2))]; %#ok<AGROW>
+				end
+			end
+		end
+
+		% ===================================================================
+		function outputMatrix = assessCounterbalancing(conditionOrder)
+		%> @fn assessCounterbalancing
+		%> @brief Count first-order carryover transitions in a sequence.
+		%>
+		%> @param conditionOrder ordered integer condition sequence.
+		%> @return square matrix where A(i,j) is count of i preceding j.
+		% ===================================================================
+			outputMatrix = zeros(length(unique(conditionOrder)), length(unique(conditionOrder)));
+			for i = 2:length(conditionOrder)
+				outputMatrix(conditionOrder(i - 1), conditionOrder(i)) = ...
+					outputMatrix(conditionOrder(i - 1), conditionOrder(i)) + 1;
+			end
+		end
 		
 		% ===================================================================
 		function out=cellStruct(in)
@@ -1094,6 +1168,135 @@ classdef taskSequence < optickaCore & dynamicprops
 % 			lobj.isLoading = false;
 % 		end
 		
+	end
+
+
+	%=======================================================================
+	methods (Static, Access = private) %------PRIVATE STATIC METHODS
+	%=======================================================================
+
+		% ===================================================================
+		function seq = eulerPathKandel(adjacencyMatrix)
+		%> @fn eulerPathKandel
+		%> @brief Find an Euler circuit through an adjacency matrix graph.
+		% ===================================================================
+			if size(adjacencyMatrix, 1) == 1
+				adjacencyMatrix = ones(adjacencyMatrix, adjacencyMatrix);
+			end
+			if size(adjacencyMatrix, 1) ~= size(adjacencyMatrix, 2)
+				error('ERROR: Adjacency matrix is not square');
+			end
+			if length(size(adjacencyMatrix)) > 2
+				error('ERROR: Adjacency matrix should have only 2 dimensions');
+			end
+			for i = 1:size(adjacencyMatrix, 1)
+				if sum(adjacencyMatrix(:, i)) ~= sum(adjacencyMatrix(i, :))
+					error('ERROR: non_Eulerian graph specfied. In-degree must equal out-degree at every vertex');
+				end
+			end
+			for i = 1:size(adjacencyMatrix, 1)
+				if sum(adjacencyMatrix(:, i)) == 0 && sum(adjacencyMatrix(i, :)) == 0
+					error('ERROR: Disconnected graph...at least one vertex has no edges.');
+				end
+			end
+			if min(min(adjacencyMatrix)) < 0
+				error('ERROR: Adjacency matrix contains value < 0');
+			end
+
+			arb = taskSequence.arborescenceKandel(adjacencyMatrix);
+			remainingEdges = adjacencyMatrix - arb;
+			outEdgesOrder = cell(size(adjacencyMatrix, 1), 1);
+
+			for o = 1:size(adjacencyMatrix, 1)
+				for i = 1:size(adjacencyMatrix, 2)
+					for r = 1:remainingEdges(o, i)
+						outEdgesOrder{o} = [outEdgesOrder{o} i]; %#ok<AGROW>
+					end
+				end
+				outEdgesOrder{o} = outEdgesOrder{o}(randperm(length(outEdgesOrder{o})));
+				if sum(arb(o, :)) > 0
+					outEdgesOrder{o} = [outEdgesOrder{o} find(arb(o, :) == 1)]; %#ok<FNDSB>
+				end
+			end
+
+			seq = find(sum(arb, 2) == 0);
+			while sum(cellfun('length', outEdgesOrder)) > 0
+				seq = [seq outEdgesOrder{seq(end)}(1)]; %#ok<AGROW>
+				if length(outEdgesOrder{seq(end - 1)}) > 1
+					outEdgesOrder{seq(end - 1)} = outEdgesOrder{seq(end - 1)}(2:end);
+				else
+					outEdgesOrder{seq(end - 1)} = [];
+				end
+			end
+		end
+
+		% ===================================================================
+		function arb = arborescenceKandel(adjacencyMatrix)
+		%> @fn arborescenceKandel
+		%> @brief Uniformly draw an arborescence by backward random walk.
+		% ===================================================================
+			if size(adjacencyMatrix, 1) ~= size(adjacencyMatrix, 2)
+				error('ERROR: Adjacency matrix is not square');
+			end
+			if length(size(adjacencyMatrix)) > 2
+				error('ERROR: Adjacency matrix should have only 2 dimensions');
+			end
+			for i = 1:size(adjacencyMatrix, 1)
+				if sum(adjacencyMatrix(:, i)) == 0 && sum(adjacencyMatrix(i, :)) == 0
+					error('ERROR: At least one vertex is disconnected (i.e. has no edges)');
+				end
+			end
+			if min(min(adjacencyMatrix)) < 0
+				error('ERROR: Adjacency matrix contains value < 0');
+			end
+
+			arb = zeros(size(adjacencyMatrix));
+			adjacencyMatrix = sign(adjacencyMatrix);
+			currentNode = randi(size(adjacencyMatrix, 1));
+			nodesVisited = currentNode;
+
+			while length(unique(nodesVisited)) < size(adjacencyMatrix, 1)
+				availableSourceNodes = find(adjacencyMatrix(:, currentNode) > 0);
+				selectedSource = availableSourceNodes(randi(length(availableSourceNodes)));
+				if sum(nodesVisited == selectedSource) == 0
+					arb(selectedSource, currentNode) = 1;
+				end
+				nodesVisited = [nodesVisited selectedSource]; %#ok<AGROW>
+				currentNode = selectedSource;
+			end
+		end
+
+		% ===================================================================
+		function result = nTuplesBrooks(numItems, n)
+		%> @fn nTuplesBrooks
+		%> @brief Create all possible n-tuples of length n.
+		% ===================================================================
+			result = zeros(numItems ^ n, n);
+			for v = 1:numItems ^ n
+				for i = 1:n
+					result(v, i) = mod(ceil(v / numItems ^ (i - 1)), numItems) + 1;
+				end
+			end
+		end
+
+		% ===================================================================
+		function result = removeSelfAdjacenciesBrooks(nTuplesList)
+		%> @fn removeSelfAdjacenciesBrooks
+		%> @brief Remove n-tuples that contain adjacent repeated values.
+		% ===================================================================
+			result = [];
+			for i = 1:size(nTuplesList, 1)
+				containsAdjacency = false;
+				for n = 1:size(nTuplesList, 2) - 1
+					if nTuplesList(i, n) == nTuplesList(i, n + 1)
+						containsAdjacency = true;
+					end
+				end
+				if ~containsAdjacency
+					result(end + 1, :) = nTuplesList(i, :); %#ok<AGROW>
+				end
+			end
+		end
 	end
 	
 end

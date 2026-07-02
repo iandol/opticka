@@ -1,5 +1,5 @@
-function setupCI()
-	%> setupCI — Configure the MATLAB path for CI without PTB's interactive
+function setupOptickaCI()
+	%> setupOptickaCI — Configure the MATLAB path for CI without PTB's interactive
 	%> SetupPsychtoolbox (which fails on CI).
 	%>
 	%> This script is the CI equivalent of:
@@ -8,12 +8,11 @@ function setupCI()
 	%>   3. Running addOptickaToPath(true) — but safe-guarded against savepath
 	%>
 	%> Usage in GitHub Actions:
-	%>   matlab-actions/run-command@v3
-	%>     command: setupCI; runOptickaTests;
+	%>   bash tests/runOptickaTestsXvfb.sh "setupOptickaCI; runOptickaTests;"
 	%>
 	%> PREREQUISITES (done before this in the workflow YAML):
 	%>   - PTB cloned to /tmp/PTB/Psychtoolbox
-	%>   - Xvfb running on :99
+	%>   - MATLAB launched with a valid X11 DISPLAY, e.g. xvfb-run in CI
 	%>
 	%> Copyright (c) 2026 Ian Max Andolina — LGPL3, see LICENCE.md
 
@@ -21,16 +20,28 @@ function setupCI()
 	% The Psychtoolbox root is hard-coded to /tmp/PTB/Psychtoolbox, which is
 	% where the workflow YAML clones it. While normally we would run
 	% SetupPsychToolbox(1) to add PTB to the path, the non-interactive mode
-	% still asks the user questions, and probably won't work in CI. We
+	% still asks the user questions, thus probably won't work in CI. We
 	% therefore just do a "minimal" addpath(genpath()) of the PTB root,
 	% which is sufficient for running tests.
 	ptbRoot = '/tmp/PTB/Psychtoolbox';
 	if ~isfolder(ptbRoot)
-		error('setupCI:PTBNotFound', ...
+		error('setupOptickaCI:PTBNotFound', ...
 			'Psychtoolbox not found at %s. Clone it first in the workflow.', ptbRoot);
 	end
 	addpath(genpath(ptbRoot));
-	fprintf('setupCI: Added PTB from %s to MATLAB path.\n', ptbRoot);
+	fprintf('setupOptickaCI: Added PTB from %s to MATLAB path.\n', ptbRoot);
+
+	% --- Step 1b: Verify that PTB can see an X11 display on Linux ---
+	% MATLAB startup files and PTB's Screen function can run before tests are
+	% selected. In headless CI/SSH sessions, launch MATLAB through xvfb-run so
+	% DISPLAY is valid before startup.m or setupOptickaCI executes.
+	if isunix && isempty(getenv('DISPLAY'))
+		error('setupOptickaCI:NoDisplay', ...
+			['No X11 DISPLAY is set. Run MATLAB under Xvfb, e.g. ', ...
+			'xvfb-run -a -s "-screen 0 1024x768x24" matlab -batch ', ...
+			'"setupOptickaCI; runOptickaTests;"']);
+	end
+	fprintf('setupOptickaCI: DISPLAY=%s\n', getenv('DISPLAY'));
 
 	% --- Step 2: Add Opticka to the path ---
 	% addOptickaToPath is in the repo root (pwd on CI).
@@ -51,13 +62,13 @@ function setupCI()
 
 	% --- Step 4: Verify critical PTB functions are available ---
 	if exist('GetSecs', 'file') ~= 3  % 3 = MEX-file
-		warning('setupCI:GetSecsNotMEX', ...
+		warning('setupOptickaCI:GetSecsNotMEX', ...
 			'GetSecs is not a MEX file — timing precision will be reduced.');
 	end
 	if exist('WaitSecs', 'file') ~= 3
-		warning('setupCI:WaitSecsNotMEX', ...
+		warning('setupOptickaCI:WaitSecsNotMEX', ...
 			'WaitSecs is not a MEX file — wait precision will be reduced.');
 	end
 
-	fprintf('setupCI: Path configuration complete.\n');
+	fprintf('setupOptickaCI: Path configuration complete.\n');
 end

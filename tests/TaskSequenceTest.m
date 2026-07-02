@@ -345,5 +345,64 @@ classdef TaskSequenceTest < matlab.unittest.TestCase
 			out = taskSequence.cellStruct(input);
 			verifyEqual(testCase, out, [1 2; 3 4], 'cellStruct 2D');
 		end
+
+
+		% ===================================================================
+		%> @brief Test carryover counterbalancing class method.
+		% ===================================================================
+		function testCarryoverCounterbalance(testCase)
+			oldRng = rng;
+			cleanup = onCleanup(@() rng(oldRng)); %#ok<NASGU>
+			rng(99, 'twister');
+
+			seq = taskSequence.carryoverCounterbalance(3, 1, 2, 0);
+			matrix = taskSequence.assessCounterbalancing(seq);
+
+			verifyEqual(testCase, length(seq), 19, ...
+				'3 conditions, first order, 2 reps should produce 18 transitions');
+			verifyEqual(testCase, matrix, ones(3) * 2, ...
+				'each first-order transition should occur twice');
+		end
+
+		% ===================================================================
+		%> @brief Test omitted self-adjacencies in carryover sequences.
+		% ===================================================================
+		function testCarryoverCounterbalanceOmitSelfAdjacencies(testCase)
+			oldRng = rng;
+			cleanup = onCleanup(@() rng(oldRng)); %#ok<NASGU>
+			rng(101, 'twister');
+
+			seq = taskSequence.carryoverCounterbalance(4, 1, 1, 1);
+			matrix = taskSequence.assessCounterbalancing(seq);
+
+			verifyEqual(testCase, length(seq), 13, ...
+				'4 conditions with self-adjacencies omitted should produce 12 transitions');
+			verifyEqual(testCase, diag(matrix), zeros(4, 1), ...
+				'self-adjacency counts should be zero');
+			verifyEqual(testCase, matrix + eye(4), ones(4), ...
+				'each non-self first-order transition should occur once');
+			verifyFalse(testCase, any(diff(seq) == 0), ...
+				'sequence should not contain adjacent repeated conditions');
+		end
+
+		% ===================================================================
+		%> @brief Test backwards compatible counterbalancing tool wrappers.
+		% ===================================================================
+		function testCounterbalancingToolWrappers(testCase)
+			oldRng = rng;
+			cleanup = onCleanup(@() rng(oldRng)); %#ok<NASGU>
+
+			rng(123, 'twister');
+			classSeq = taskSequence.carryoverCounterbalance(3, 1, 1, 0);
+			rng(123, 'twister');
+			toolSeq = carryoverCounterbalance(3, 1, 1, 0);
+
+			verifyEqual(testCase, toolSeq, classSeq, ...
+				'legacy carryoverCounterbalance should delegate to taskSequence');
+			verifyEqual(testCase, assessCounterbalancing(toolSeq), ...
+				taskSequence.assessCounterbalancing(classSeq), ...
+				'legacy assessCounterbalancing should delegate to taskSequence');
+		end
+
 	end
 end

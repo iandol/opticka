@@ -29,17 +29,13 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y xvfb
+          sudo apt-get install -y xauth
           sudo apt-get install -y libglut-dev
           sudo apt-get install -y libglu1-mesa-dev
           sudo apt-get install -y libx11-dev
           sudo apt-get install -y libdc1394-dev
           sudo apt-get install -y libraw1394-dev
           sudo apt-get install -y curl
-
-      - name: Start virtual display server
-        run: |
-          Xvfb :99 -screen 0 1024x768x24 &
-          echo "DISPLAY=:99" >> $GITHUB_ENV
 
       - name: Download Psychtoolbox dependency (V3.0.21 as the last version useable with CI)
         run: |
@@ -51,7 +47,6 @@ jobs:
           release: latest
           cache: true
 
-      - name: Run tests
-        uses: matlab-actions/run-command@v3
-        with:
-          command: setupCI; runOptickaTests;
+      - name: Run tests under virtual display
+        run: |
+          bash tests/runOptickaTestsXvfb.sh "setupCI; runOptickaTests;"

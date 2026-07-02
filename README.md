@@ -1,9 +1,9 @@
 # Opticka: Behavioural Experiment Manager
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.592253.svg)](https://doi.org/10.5281/zenodo.592253)   ![GitHub Release](https://img.shields.io/github/v/release/iandol/opticka)  [![Tests](https://github.com/iandol/opticka/actions/workflows/matlab-tests.yml/badge.svg)](https://github.com/iandol/opticka/actions/workflows/matlab-tests.yml) [![GitHub Commits Since](https://img.shields.io/github/commits-since/iandol/opticka/latest)](https://github.com/iandol/opticka/commits/main)  ![GitHub last commit](https://img.shields.io/github/last-commit/iandol/opticka)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.592253.svg)](https://doi.org/10.5281/zenodo.592253)  [![Tests](https://github.com/iandol/opticka/actions/workflows/matlab-tests.yml/badge.svg)](https://github.com/iandol/opticka/actions/workflows/matlab-tests.yml)  ![GitHub Release](https://img.shields.io/github/v/release/iandol/opticka)  [![GitHub Commits Since](https://img.shields.io/github/commits-since/iandol/opticka/latest)](https://github.com/iandol/opticka/commits/main)  ![GitHub last commit](https://img.shields.io/github/last-commit/iandol/opticka)
  [![DeepWiki Docs](https://img.shields.io/badge/DeepWiki%20Docs-007ACC?logo=docsify&logoColor=ffffff)](https://deepwiki.com/iandol/opticka)    [![Open in Visual Studio Code](https://img.shields.io/badge/Open%20in%20Visual%20Studio%20Code-007ACC?logo=visual%20studio%20code&logoColor=ffffff)](https://vscode.dev/github/iandol/opticka)    [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://gitHub.com/iandol/opticka/graphs/commit-activity)    [![GPLv3 license](https://img.shields.io/badge/License-GPLv3-blue.svg)](http://perso.crans.org/besson/LICENSE.html)
 
-Opticka is an object-oriented framework with optional GUI for the [Psychophysics toolbox (PTB)](http://psychtoolbox.org/), allowing full experimental presentation of complex visual or other stimuli. It is designed to work on Linux, macOS or Windows. It interfaces via strobed words and/or ethernet for recording neurophysiological and behavioural data. Full behavioural task control is available by use of a [Finite State-Machine](http://iandol.github.io/OptickaDocs/classstate_machine.html#details) controller, in addition to simple method of constants (MOC) experiments. Opticka uses the TCP interface for Eyelink, Tobii Pro and iRecHS2 eyetrackers affording better control, reliability and data recording over depending on analog voltage output (we don't need a DAQ card for eye data). The base classes can be used _without_ the need to run the GUI (see [`optickatest.m`](http://iandol.github.io/OptickaDocs/optickatest.html) for an example), and plug-n-play stimuli provide a unified interface (`setup`, `animate`, `draw`, `update`, `reset`) to integrate into other PTB routines. Opticka's methods take care of all the background geometry and normalisation, meaning stimuli are much easier to use than “raw” PTB commands alone. Analysis routines are also present, eye data can be parsed into trials for any supported eyetracker, and for taking e.g. Plexon files (`.PL2` or `.PLX`), Eyelink files (`.EDF`), and behavioural responses and parsing them into a consistent structure, interfacing directly with [Fieldtrip](http://fieldtrip.fcdonders.nl/start) for further spike, LFP, and spike-LFP analysis. Opticka is more modular and affords much better stimulus control (most stimuli are optimised OpenGL with advanced control thanks to PTB) than e.g. [MonkeyLogic](http://www.brown.edu/Research/monkeylogic/).  
+Opticka is an object-oriented framework with optional GUI for the [Psychophysics toolbox (PTB)](http://psychtoolbox.org/), allowing full experimental presentation of complex visual or other stimuli. It is designed to work on Linux, macOS or Windows. It interfaces via strobed words and/or ethernet for recording neurophysiological and behavioural data. Full behavioural task control is available by use of a Finite or Hierarchical [State-Machine](http://iandol.github.io/OptickaDocs/classstate_machine.html#details), in addition to simple method of constants (MOC) experiments. Opticka uses the TCP interface for Eyelink, Tobii Pro and iRecHS2 eyetrackers affording better control, reliability and data recording over depending on analog voltage output (we don't require a NI DAQ device). The base classes are independent so can be used _without_ the GUI (see [`optickaBehaviourTest.m`](http://iandol.github.io/OptickaDocs/optickabehaviourtest.html) for an example), and plug-n-play stimuli provide a unified interface (`setup`, `animate`, `draw`, `update`, `reset`) to integrate into other PTB routines. Opticka's methods take care of all the background geometry and normalisation (visual degrees to pixels), meaning stimuli are much easier to use than “raw” PTB commands alone. Analysis routines are also present, eye data can be parsed into trials for any supported eyetracker, and for taking e.g. Plexon files (`.PL2` or `.PLX`), Eyelink files (`.EDF`), and behavioural responses and parsing them into a consistent structure, interfacing directly with [Fieldtrip](http://fieldtrip.fcdonders.nl/start) for further spike, LFP, and spike-LFP analysis. Opticka is more modular and affords much better stimulus control (most stimuli are optimised OpenGL with advanced control thanks to PTB) than e.g. [MonkeyLogic](http://www.brown.edu/Research/monkeylogic/).  
 
 ## Sample hardware setup
 
@@ -23,12 +23,22 @@ o = opticka; %==run the GUI, returns an object 'o' for introspection from the co
 
 ## State machine control
 
-For more complex behavioural tasks, a state machine is used. You can still edit visual stimuli and task variables in the GUI, and then edit a `StateInfo.m` file that specifies states (like `paused`, `prefixation`, `stimulus`, `correct`, `breakfix` etc.) to be run and for each state which methods/functions are executed (cell arrays of functions that run on `ENTER`, `WITHIN` & `EXIT` of states). States can switch (`TRANSITION`) based on logic, for example a particular saccade or fixation or button responses to transition to a `correct` state… See an [example StateInfo.m file here](https://github.com/iandol/opticka/blob/master/DefaultStateInfo.m); and you can test a minimal generic state machine run using:
+For behavioural tasks, a finite or hierarchical state machine is used. A `StateInfo.m` file specifies the states in your experiment (like `paused`, `prefixation`, `stimulus`, `correct`, `breakfix` etc.) to be run and for each state which methods/functions are executed (cell arrays of functions that run on `ENTER`, `WITHIN` & `EXIT` of states). States can switch (`TRANSITION`) based on logic, for example a particular saccade or fixation or button responses to transition to a `correct` state… See an [example StateInfo.m file here](https://github.com/iandol/opticka/blob/master/DefaultStateInfo.m); and you can test a minimal generic state machine run using:
 
 ```matlab
-sM = stateMachine;
+sM = stateMachine; % finite state machine
 demo(sM);
+sMT = stateMachineTree; % hierarchical state machine
+demoHSM(sM);
 ```
+
+## Standardised Metadate Pipeline
+
+Sharing experimental data (over time within a lab, and between labs) becomes more and more important. Because of this we have integrated two existing open source standardisation projects to support standardisation:
+* International Brain Lab -- Alyx database for experiment metadata. While developed for cognitive neuroscience tasks in mice, Alyx provides more than enough flexibility (custom JSON fields) to use for any cognitive neuroscience subjects. We built an alyxManager so each experiment session adds a database record with data saved using the [ONE protocol file naming conventions](https://int-brain-lab.github.io/ONE/alf_intro.html) to support their standardised analysis pipeline. This is great for labs as data is now easily searchable using a simple HTML API, so `sessions?date_range=2025-01-01,2025-12-31&subject=janedoe` gets all sessions from subject janedoe in 2025. 
+* [Hierarchical Event Descriptors](https://www.hedtags.org) -- the other major problem is every lab gives their experimental events and experiment metadata different names/numbers/labels. You may know what strobed-word 42 means for your task when you write it, but how will you share this or will a new student who comes to the lab a couple of years later know what it means if some lab notebook gets lost!? HED tags, developed by EEGLAB and BIDs standards, enable a universal set of descriptors for any aspect of your experiment (task description, event markers, data storage). Opticka creates a TSV event table with HED tags by default, and you use an `addMessage()` function to add additional time locked messages as needed.
+
+For electrophysiology data we recommend using [Neurodata Without Borders](https://nwb.org) to complete this pipeline in terms of flexibility...
 
 ## Hardware currently supported
 
@@ -60,20 +70,21 @@ See [**Detailed instructions**](help/INSTALL.md) for full install details…
 
 
 ## Features
-* Values are always specified in eye-relevant co-ordinates (degrees etc.) that are internally calculated based on screen geometry/distance.
+
+* Values are always specified in eye-relevant co-ordinates (degrees etc.) that are internally calculated based on screen geometry/distance. You just specify subject distance and pixels per centimeter value of your display.
 * No limit on the number of independent variables, and variables can be linked to multiple stimuli.
 * A state machine logic can run behavioural tasks driven by e.g. eye position or behavioural response. State machines can flexibly run tasks and chains of states define your experimental loop.
-* Number of heterogeneous stimuli displayed simultaneously only limited by the GPU / computer power. Us of GPU procedural textures wherever possible ensure fast and efficient stimuli.
-* Display lists are used, so one can easily change drawing order (i.e. what stimulus draws over other stimuli), by changing its order in the list.
+* Number of heterogeneous stimuli displayed simultaneously only limited by the GPU / computer power. Use of GPU procedural textures wherever possible ensure fast and efficient stimuli.
+* Display lists are used, so one can easily change drawing order (i.e. what stimulus draws over other stimuli), by changing its order in the list. Sets of stimuli can be turned on/off as the task progresses quickly. All stimuli can be edited with a single command.
 * **Object-Oriented**, allowing stimulus classes to be easily added and code to [auto-document its relationships](http://iandol.github.io/OptickaDocs/inherits.html) using DOxygen.
 * The set of stimuli and variables can be saved into protocol files, to easily run successive protocols quickly.
 * Fairly comprehensive control of the PTB interface to the drawing hardware, like blending mode, bit depth, windowing, verbosity.
-* Colour is defined in floating point format, takes advantage of higher bit depths in newer graphics cards when available. The buffer can be defined from 8-32bits, use full alpha blending within that space and enable a >8bit output using pseudogrey bitstealing techniques. Supports both Display++ and VPixx display modes.
-* Sub-pixel precision (1/256th pixel) for movement and positioning.
+* Colour is always defined in floating point format, takes advantage of higher bit depths in newer graphics cards when available. The buffer can be defined from 8-32bits, use full alpha blending within that space and enable a >8bit output using pseudogrey bitstealing techniques. Supports both Display++ and VPixx PTB display modes.
+* Sub-pixel precision (1/256th pixel) for movement and positioning (thanks to PTB).
 * TTL output to data acquisition and other devices. Currently uses DataPixx, Display++ or LabJack to interface to the Electrophysiology systems using strobed words.
-* Can communicate with other machines on the network during display using TCP/UDP (used e.g. to control a Plexon online display, so one can see PSTHs for each stimulus variable shown in real time).
+* Can communicate with other machines on the network during display using ZeroMQ or TCP/UDP (used e.g. to control a Plexon online display, so one can see PSTHs for each stimulus variable shown in real time).
 * Each stimulus has its own relative X & Y position, and the screen centre can be arbitrarily moved via the GUI. This allows quick setup over particular parts of visual space, i.e. relative to a receptive field without needing to edit lots of other values.
-* Can record stimuli to video files.
+* Can record stimuli to video files for paper submissions.
 * Manages monitor calibration using SpectroCalII or ColorCalII from CRG or an i1Pro from ViewPixx. Calibration sets can be loaded, saved and plotted locally via the GUI.
 * **Gratings** (**all** using procedural textures for high performance):
 	* Per-frame update of properties for arbitrary numbers of grating patches.
@@ -91,14 +102,18 @@ See [**Detailed instructions**](help/INSTALL.md) for full install details…
 
 ## Eye tracker control
 
-Opticka supports both Eyelink and Tobii Pro eyetrackers. It does this by developing a unified API, so the *same commands* are used to manage either eyetracker, meaning you don't need to change code. The API offers a lot of useful features for behavioural control:
+Opticka supports Eyelink, Tobii Pro (using Titta toolbox), and iRec eyetrackers. It does this by developing a unified API, so the *same commands* are used to manage any eyetracker, meaning you don't need to change code. The API offers a lot of useful features for behavioural control:
 
 * **Fixation windows** — one or more screen positions can become targets for which the eye must enter and then remain for a period of time. Windows can be circular or rectangular, and the methods can be 'strict' or not (defining whether quick exit/entries are punished or not, important for training etc.) A single method controls the whole procedure, so for example `value = testSearchHoldFixation('correct','fail')` runs a timer to allow a subject to search for (timer = `initTime`), enter and then maintain (timer = `time`). If the method matches then the first string 'correct' is returned, but if the subject breaks fixation or fails to search then the second string 'fail' is returned. Your code can then simply check this string. There are several variants of these methods depending on your requirements.
 * **Exclusion windows** — one or more screen positions can be used to "break" the trial if the eye enters their position. So for example if a subject saccades to the wrong side of the screen, the exclusion is triggered.
 * **Initiation timers** — some subjects try to cheat by guessing a saccadic target. The will therefore initiate a fixation sooner than could be expected. The initiation timer provides a timer (100ms by default), whereby a subject cannot leave a window position on the screen.
 * **Calibration** — We enable maximum control over calibration for both eyelink (using a custom callback to enable rewards and allowing manual calibration mode for example) and Tobii (using the excellent [Titta toolbox](https://github.com/dcnieho/Titta)). Calibrations can be performed during a task run. 
-* **Data markers** — Eyelink EDF file recording uses a specific set of recommended message markers to define trials and other data. We use the same markers for both eyelink and Tobii recording data, simplifying the subsequent analaysis.
+* **Data markers** — Eyelink EDF file recording uses a specific set of recommended message markers to define trials and other data. We use the same markers for eyelink, Tobii and iRec recording data, simplifying the subsequent analaysis.
 * **Drift correction** — Offer a manual single-point drift correction mode for both eye trackers, callable during any task.
+
+## Touch screen support
+
+We use a similar paradigm from the eyetracker for our touch screen manager, so we can set multiple touch (fixation) windows, exclusion zones, and our touch windows have entry/hold/release timers just as for eyetracking. 
 
 ### Licence
 Opticka is licenced under the LGPL3 open source licence.

@@ -42,3 +42,31 @@ I recommend using `git` as you can keep the code up-to-date by pulling from Gith
 * In MATLAB, `cd` to that folder and run `addOptickaToPath.m`.
 
 To keep up-to-date you should manually keep downloading and unzipping the newest versions...
+
+## Headless SSH testing with Xvfb
+
+PTB's `Screen` function needs an X11 display even for many non-interactive
+startup and test paths. When MATLAB is launched over SSH without X11
+forwarding or a local display, calls such as `Screen('Preference', ...)` can
+fail before tests start. On Linux, run MATLAB under `xvfb-run` to provide a
+virtual X server:
+
+```shell
+xvfb-run -a -s "-screen 0 1024x768x24" matlab -batch "addOptickaToPath; cd(optickaRoot); addpath('tests'); runOptickaTests"
+```
+
+For a single test file:
+
+```shell
+xvfb-run -a -s "-screen 0 1024x768x24" matlab -batch "addOptickaToPath; cd(optickaRoot); addpath('tests'); results = runtests('tests/TaskSequenceTest.m'); assertSuccess(results)"
+```
+
+The repository also includes a convenience wrapper:
+
+```shell
+tests/runOptickaTestsXvfb.sh
+tests/runOptickaTestsXvfb.sh "addOptickaToPath; cd(optickaRoot); addpath('tests'); results = runtests('tests/TaskSequenceTest.m'); assertSuccess(results)"
+```
+
+GitHub Actions uses the same principle by starting `Xvfb` and exporting
+`DISPLAY=:99` before MATLAB runs.
