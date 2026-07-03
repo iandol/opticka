@@ -266,5 +266,49 @@ classdef minioManager < handle
 			end
 		end
 
+		% ===================================================================
+		function [exists, info] = statObject(me, bucket, key)
+		%> @brief check if an object exists and return its metadata
+		%>
+		%> Uses `mc stat --json` to query the remote object. If the
+		%> object exists the JSON output is parsed into a struct
+		%> containing fields: name, size, etag, lastModified, type,
+		%> contentType, and metadata.
+		%>
+		%> @param  bucket  bucket name
+		%> @param  key     object key (path within the bucket)
+		%> @return exists  logical true if the object is present
+		%> @return info    struct with remote object metadata,
+		%>                 empty struct if the object does not exist
+
+			exists = false;
+			info   = struct();
+
+			if ~exist('bucket','var') || isempty(bucket); return; end
+			if ~exist('key','var') || isempty(key); return; end
+
+			cmdin = ['mc stat --json ' me.ALIAS '/' bucket '/' key];
+			[r, out] = system(cmdin);
+
+			if logical(r)
+				% non-zero exit — object does not exist (or other error)
+				return;
+			end
+
+			try
+				info = jsondecode(out);
+				if isfield(info, 'status') && strcmp(info.status, 'success')
+					exists = true;
+				else
+					% status field absent or not 'success' — treat as absent
+					info = struct();
+				end
+			catch
+				% JSON parse failed — object likely doesn't exist
+				info = struct();
+				exists = false;
+			end
+		end
+
 	end
 end

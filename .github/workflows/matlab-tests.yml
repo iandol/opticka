@@ -47,6 +47,12 @@ jobs:
           release: latest
           cache: true
 
-      - name: Run tests under virtual display
+      - name: Start virtual display
         run: |
-          bash tests/runOptickaTestsXvfb.sh "setupCI; runOptickaTests;"
+          Xvfb :99 -screen 0 1024x768x24 > /tmp/xvfb.log 2>&1 &
+          echo "DISPLAY=:99" >> "$GITHUB_ENV"
+
+      - name: Run tests under virtual display
+        uses: matlab-actions/run-command@v3
+        with:
+          command: setupOptickaCI; runOptickaTests;

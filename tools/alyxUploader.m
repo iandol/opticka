@@ -8,14 +8,14 @@ classdef alyxUploader < handle
 %> the Alyx database.
 %>
 %> The session start_time stored in Alyx is derived from the timestamp
-%> embedded in the filenames (e.g. opticka.raw.2026-04-23-10-20-03_001_Subject.mat),
+%> embedded in the files themselves (e.g. opticka.raw.2026-04-23-10-20-03_001_Subject.mat),
 %> so historical sessions are registered with their original date/time.
 %>
 %> If the files are readable, we try to parse the metadata from the files,
 %> currently this must be managed for each task/tool. The defaults come
-%> from this class if no extra metadata than the filename is present.
+%> from this classes properties if no extra metadata than the filename is present.
 %>
-%> Expected folder structure (ALF convention):
+%> Required folder structure (ALF convention):
 %>   <root>/<lab>/subjects/<subject>/<YYYY-MM-DD>/<NNN>/[files...]
 %>
 %> https://int-brain-lab.github.io/ONE/alf_intro.html
@@ -33,6 +33,8 @@ classdef alyxUploader < handle
 
 	%--------------------PUBLIC PROPERTIES----------%
 	properties
+		%> internal alyxManager instance
+		alyx alyxManager
 		%> root of the ALF tree to scan
 		rootPath char				= ''
 		%> Alyx base URL
@@ -51,6 +53,8 @@ classdef alyxUploader < handle
 		dryRun logical				= false
 		%> more logging
 		verbose logical				= false
+		%> diary file to save the upload log to
+		diaryFile					= '~/OptickaFiles/alyxUploader.log'
 	end
 
 	%--------------------DEPENDENT PROPERTIES----------%
@@ -60,8 +64,6 @@ classdef alyxUploader < handle
 	end
 
 	properties (SetAccess = protected, GetAccess = public)
-		%> internal alyxManager instance
-		alyx alyxManager
 		%> internal minioManager instance (created on demand)
 		store
 	end
@@ -88,11 +90,14 @@ classdef alyxUploader < handle
 					me.(varargin{ii}) = varargin{ii+1};
 				end
 			end
-			me.alyx = alyxManager;
+
+			if isempty(me.alyx)
+				me.alyx = alyxManager;
+			end
 		end
 
 		% ===================================================================
-		function run(me, dryRun, subFolder)
+		function [report, diaryFile] = run(me, dryRun, subFolder)
 		%> @brief Scan rootPath and process every session folder found.
 		%>
 		%> @param varargin optional name-value pairs:
@@ -104,7 +109,16 @@ classdef alyxUploader < handle
 				dryRun logical = false
 				subFolder char = ''
 			end
-			
+
+			report = {};
+
+			% open the diary file
+			if isempty(me.diaryFile)
+				me.diaryFile = fullfile(me.alyx.paths.parent, "alyxUploader.log");
+			end
+			diary(me.diaryFile);
+			report{end+1} = sprintf('≣≣≣≣⊱ alyxUploader: diary file: %s', me.diaryFile);
+
 			me.dryRun = dryRun;
 			scanRoot = me.rootPath;
 			if ~isempty(subFolder)
@@ -122,15 +136,19 @@ classdef alyxUploader < handle
 			% Find all session folders (leaf directories under date/NNN)
 			sessions = discoverSessions(me, scanRoot);
 			if isempty(sessions)
-				fprintf('\n≣≣≣≣⊱ alyxUploader: no session folders found under %s\n', scanRoot);
+				report{end+1} = sprintf('≣≣≣≣⊱ alyxUploader: no session folders found under %s', scanRoot);
+				disp(report{end});
 				return;
 			end
 
-			fprintf('\n≣≣≣≣⊱ alyxUploader: found %d session folder(s) to process\n', numel(sessions));
+			report{end+1} = sprintf('≣≣≣≣⊱ alyxUploader: found %d session folder(s) to process', numel(sessions));
+			disp(report{end});
 
 			for ii = 1:numel(sessions)
 				try
-					me.processSession(sessions(ii));
+					t = me.processSession(sessions(ii));
+					report = [report t]; 
+					cellfun(@(ln)disp(ln),t);
 				catch ERR
 					getReport(ERR)
 					warning('alyxUploader:sessionError', ...
@@ -138,7 +156,10 @@ classdef alyxUploader < handle
 				end
 			end
 
-			fprintf('\n≣≣≣≣⊱ alyxUploader: finished.\n\n');
+			fprintf('≣≣≣≣⊱ alyxUploader: finished.');
+
+			diary off
+			diaryFile = me.diaryFile;
 		end
 
 		% ===================================================================
@@ -163,9 +184,14 @@ classdef alyxUploader < handle
 
 			for e1 = entries'
 				% ---- Layout A: <lab>/subjects/<subject>/<date>/<NNN>
-				subjectsDir = fullfile(e1.folder, e1.name, 'subjects');
-				if exist(subjectsDir,'dir') == 7
+				if matches(e1.name,'subjects')
+					subjectsDir = fullfile(e1.folder, e1.name);
+					[~,lab] = fileparts(e1.folder);
+				else
+					subjectsDir = fullfile(e1.folder, e1.name, 'subjects');
 					lab = e1.name;
+				end
+				if exist(subjectsDir,'dir') == 7
 					subEntries = dir(subjectsDir);
 					subEntries = subEntries([subEntries.isdir] & ~startsWith({subEntries.name},'.'));
 					for e2 = subEntries'
@@ -193,7 +219,7 @@ classdef alyxUploader < handle
 		end
 
 		% ===================================================================
-		function processSession(me, s)
+		function log = processSession(me, s)
 		%> @brief Create Alyx session, upload & register files for one session.
 		%>
 		%> The Alyx session start_time is taken from the timestamp embedded in
@@ -203,10 +229,10 @@ classdef alyxUploader < handle
 		%>
 		%> @param s struct from discoverSessions
 		% ===================================================================
-			fprintf('\n――――――――――――――――――――――――――――――――――――――――\n');
-			fprintf('≣≣≣≣⊱ Subject: %s  Date: %s  #: %s  Lab: %s\n', ...
+			log = {'----------'};
+			log{end+1} = sprintf('≣≣≣≣⊱ Subject: %s  Date: %s  #: %s  Lab: %s', ...
 				s.subject, s.date, s.sessionID, s.lab);
-			fprintf('  Path: %s\n', s.alfPath);
+			log{end+1} = sprintf('  Path: %s', s.alfPath);
 
 			%% === Build sessionData struct mimicking runExperiment.sessionData
 			session = struct();
@@ -230,15 +256,15 @@ classdef alyxUploader < handle
 			sFiles = dir(paths.ALFPath);
 			sFiles = sFiles(~[sFiles.isdir]);
 			if isempty(sFiles)
-				fprintf('  ↳ No files found in %s, skipping.\n', paths.ALFPath);
+				log{end+1} = printf('  ↳ No files found in %s, skipping.', paths.ALFPath);
 				return;
 			end
 			files = arrayfun(@(f) fullfile(f.folder, f.name), sFiles, 'UniformOutput', false);
-			fprintf('  ↳ %d file(s) found.\n', numel(files));
+			log{end+1} = sprintf('  ↳ %d file(s) found.\n', numel(files));
 
 			%% === Extract start_time from filename timestamps -------------------
 			startTime = me.extractStartTime(sFiles, s.date);
-			fprintf('  ↳ Session start_time: %s\n', char(startTime, 'yyyy-MM-dd''T''HH:mm:ss'));
+			log{end+1} = sprintf('  ↳ Session start_time: %s', char(startTime, 'yyyy-MM-dd''T''HH:mm:ss'));
 
 			%% === check if a mat file is present and it contains session data
 			% if so we prefer this session info
@@ -272,29 +298,39 @@ classdef alyxUploader < handle
 					me.alyx.sessionURL = alyxSession(1).url;
 				else
 					[url, alyxSession] = me.createAlyxSession(paths, session, json, startTime);
-					me.alyx.updateNarrative("UPLOAD by alyxUploader");
 					if isempty(url); error("Could not create a new session!"); end
+					me.alyx.sessionURL = url;
+					me.alyx.updateNarrative("UPLOAD by alyxUploader");
 				end
+				log{end+1} = me.alyx.sessionURL;
 			else
-				fprintf('  [DryRun] Would create Alyx session with start_time %s.\n', ...
+				log{end+1} = sprintf('  [DryRun] Would create Alyx session with start_time %s.', ...
 					char(startTime, 'yyyy-MM-dd''T''HH:mm:ss'));
 			end
 
 			% Register files with Alyx
 			if ~me.dryRun
-				uuids = cell(1, numel(files)); setQC = false; filenames = [];
+				uuids = cell(1, numel(files)); setQC = false; 
+				doUpload = false; filenames = [];
 				try
 					[datasets, filenames] = me.alyx.registerALFFiles(paths, session);
-					fprintf('≣≣≣≣⊱ Added Files to ALYX Session: %s\n', me.alyx.sessionURL);
-					try arrayfun(@(ss)disp([ss.name ' - bytes: ' num2str(ss.file_size)]),datasets); end
-					
-					%% get the ALYX dataset UUID for each file registered
-					if length(datasets) == length(filenames)
-						for ii = 1:length(filenames)
-							if contains(filenames{ii},datasets(ii).name)
-								uuids{ii} = datasets(ii).id;
-							else
-								uuids{ii} = '';
+					if isempty(datasets)
+						log{end+1} = sprintf('≣≣≣≣⊱ WARNING Files Failed to Connect: %s', me.alyx.sessionURL);
+						doUpload = false;
+					else
+						log{end+1} = sprintf('≣≣≣≣⊱ Added Files to ALYX Session: %s', me.alyx.sessionURL);
+						try 
+							arrayfun(@(ss)disp([ss.name ' - bytes: ' num2str(ss.file_size)]),datasets); 
+						end
+						
+						%% get the ALYX dataset UUID for each file registered
+						if length(datasets) == length(filenames)
+							for ii = 1:length(filenames)
+								if contains(filenames{ii},datasets(ii).name)
+									uuids{ii} = datasets(ii).id;
+								else
+									uuids{ii} = '';
+								end
 							end
 						end
 					end
@@ -304,16 +340,19 @@ classdef alyxUploader < handle
 						'registerALFFiles failed: %s', ERR.message);
 				end
 			else
-				fprintf('  [DryRun] Would register %d file(s) with Alyx.\n', numel(files));
+				log{end+1} = sprintf('  [DryRun] Would register %d file(s) with Alyx.', numel(files));
+				log{end+1} = sprintf ("  %s",string(files));
 			end
 
 			% Upload to S3
-			if ~me.dryRun && ~isempty(filenames)
+			if ~me.dryRun && doUpload ~isempty(datasets)
 				me.uploadToS3(filenames, uuids, paths, session);
 				setQC = true;
-			else
-				fprintf('  [DryRun] Would upload %d file(s) to S3 bucket "%s".\n', ...
-					numel(filenames), lower(session.labName));
+			elseif me.dryRun
+				log{end+1} = sprintf('  [DryRun] Would upload %d file(s) to S3 bucket "%s".', ...
+					numel(files), lower(session.labName));
+				log{end+1} = sprintf ("  %s",string(files));
+				setQC = false;
 			end
 
 			%% if the upload was successful, set the dataset QC to PASS in ALYX
@@ -325,14 +364,14 @@ classdef alyxUploader < handle
 						me.alyx.postData("datasets/"+string(uuids{ii}), qc, 'PATCH');
 					end
 				end
-				fprintf('≣≣≣≣⊱ Set ALYX QC to PASS for session: %s\n', me.alyx.sessionURL);
+				log{end+1} = sprintf('≣≣≣≣⊱ Set ALYX QC to PASS for session: %s', me.alyx.sessionURL);
 			end
 
 			% Close the Alyx session with the original end_time
 			% Use folder date at end-of-day as a reasonable end_time when not known
 			if ~me.dryRun && ~isempty(me.alyx.sessionURL)
 				me.alyx.closeSession('Uploaded via alyxUploader', 'PASS');
-				fprintf('  ↳ Alyx session closed.\n');
+				log{end+1} = sprintf('  ↳ Alyx session closed.');
 			end
 		end
 
@@ -504,6 +543,22 @@ classdef alyxUploader < handle
 					else
 						key = fullfile(paths.ALFKeyShort, [fn ext]);
 					end
+
+					%% === check if the remote file already exists on S3 ----------
+					[exists, info] = me.store.statObject(bucket, key);
+					if exists && isfield(info, 'size') && ~isempty(info.size)
+						localInfo = dir(filenames{ii});
+						if ~isempty(localInfo) && localInfo(1).bytes == info.size
+							fprintf('  ↳ Skipping %s (already on S3, same size %d bytes)\n', ...
+								key, localInfo(1).bytes);
+							success(ii) = true;  % already present — considered OK
+							continue;
+						else
+							fprintf('  ↳ File %s exists remotely (remote %d, local %d bytes); re-uploading.\n', ...
+								key, info.size, localInfo(1).bytes);
+						end
+					end
+
 					success(ii) = me.store.copyFiles(filenames{ii}, bucket, key);
 				end
 				fprintf('  ↳ Uploaded %d file(s) to s3://%s/%s\n', ...
