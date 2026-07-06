@@ -1,10 +1,12 @@
 % ========================================================================
 classdef alyxManager < optickaCore
-%> @class alyxManager @brief manage connection to an Alyx database
+%> @class alyxManager @brief manage communication with an Alyx database
+%>
+%> https://alyx.readthedocs.io/en/latest/
 %>
 %> This class provides methods to connect to an Alyx database, login/logout,
 %> upload data, and other management tasks. It is based on the Alyx REST API
-%> and code modified from IBL.
+%> and older MATLAB code modified from IBL.
 %>
 %> Copyright ©2014-2026 Ian Max Andolina — released: LGPL3, see LICENCE.md
 % ========================================================================
@@ -102,7 +104,8 @@ classdef alyxManager < optickaCore
 		%> This method allows the user to set the password, AWS ID, and AWS
 		%> key for the AlyxManager instance. If any of these values are not
 		%> provided, the method attempts to retrieve them from a secure
-		%> storage.
+		%> storage (MATLAB secrets management). Set these manually: 
+		%> setSecret('AlyxPassword'); setSecret('AWS_ID'); setSecret('AWS_KEY');
 		%>
 		%> @param password (char) The password for the Alyx database. If not
 		%> provided, it will be retrieved from secure storage.
@@ -301,7 +304,7 @@ classdef alyxManager < optickaCore
 			%     sessions = me.getData('sessions?type=Base')
 			%     sessions = me.getData('sessions', 'type', 'Base')
 			%
-			% See also ALYX, MAKEENDPOINT, REGISTERFILE
+			%
 			data = [];
 			statusCode = 0;
 			if ~me.loggedIn || ~exist('endpoint','var'); return; end
@@ -369,7 +372,6 @@ classdef alyxManager < optickaCore
 			%> Example:
 			%>   subjects = me.postData('subjects', myStructData, 'post')
 			%>
-			%> @see ALYX, JSONPOST, FLUSHQUEUE, REGISTERFILE, GETDATA
 			arguments
 				me alyxManager
 				endpoint char
@@ -413,7 +415,38 @@ classdef alyxManager < optickaCore
 		% ===================================================================
 		function [sessions, eids] = getSessions(me, ref, varargin)
 		% ===================================================================
-			%> @brief Return sessions and eids for a given search query
+			%> @brief Return session records matched by an Alyx query
+			%>
+			%> This method searches Alyx sessions using either a direct session
+			%> reference string, or named query parameters. It returns a cell array
+			%> of session structs and, optionally, the extracted session EIDs
+			%> parsed from each session URL.
+			%>
+			%> The search accepts:
+			%>   - subject: subject nickname or ID
+			%>   - users: user(s) who created the session
+			%>   - lab: lab name
+			%>   - date_range: two dates as a comma-separated string or numeric
+			%>     date vector [start end]
+			%>   - dataset_types: comma-separated dataset type(s)
+			%>   - number: session number within the subject/date
+			%>
+			%> If `ref` contains an ALF-style reference string like
+			%> `2023-07-12_001_MyMouse`, the method resolves it to the matching
+			%> Alyx session by subject/date/number. If `ref` is a query name, the
+			%> method treats it as the first parameter name and shifts the rest of
+			%> the inputs accordingly.
+			%>
+			%> @param ref char|string|cell optional session reference or first
+			%>   query parameter name. If omitted, the method uses only named
+			%>   query parameters from `varargin`.
+			%> @param varargin name-value pairs for query fields listed above.
+			%> @return sessions cell array of session structs from Alyx.
+			%> @return eids cell array of session IDs parsed from the session URLs.
+			%>
+			%> @example
+			%>   [sessions, eids] = me.getSessions('subject', 'MyMouse', 'date_range', '2024-01-01,2024-01-31');
+			%>   [sessions, eids] = me.getSessions({'2024-01-15_001_MyMouse'});
 			arguments(Input)
 				me alyxManager
 				ref = {}
@@ -509,7 +542,6 @@ classdef alyxManager < optickaCore
 			%> @param sortByUser logical sort user's animals first (default true)
 			%> @return subjects cell array of subject names
 			%>
-			%> @see ALYX
 			arguments
 				me alyxManager
 				stock logical = false
@@ -555,7 +587,25 @@ classdef alyxManager < optickaCore
 
 		function narrative = updateNarrative(me, comments, endpoint, subject)
 		% ===================================================================
-			%> @brief Update an Alyx session or subject narrative
+			%> @brief Update the narrative field for an Alyx session record
+			%>
+			%> This method retrieves a session record from Alyx, appends new
+			%> narrative text to the existing `narrative` field, and sends a
+			%> PATCH request to update the record. If no endpoint is provided, it
+			%> uses `me.sessionURL` as the target session endpoint.
+			%>
+			%> The method accepts either direct narrative text or, when `comments`
+			%> is empty, prompts the user with a dialog to enter narrative text.
+			%> If the `subject` argument is provided, the method currently issues a
+			%> warning and does not perform a subject narrative update.
+			%>
+			%> @param comments char|string Narrative text to append to the session.
+			%> @param endpoint char URL or Alyx endpoint path of the session record.
+			%> @param subject char Placeholder for subject narrative updates.
+			%> @return narrative char The updated narrative string returned by Alyx.
+			%>
+			%> @example
+			%>   narrative = me.updateNarrative('Experiment notes added', me.sessionURL);
 			arguments
 				me alyxManager
 				comments {mustBeText} = ''
@@ -632,7 +682,6 @@ classdef alyxManager < optickaCore
 			%> Example:
 			%>   [url, session] = createSession(me, '/path/to/alf', 1, sessionStruct)
 			%>
-			%> @see ALYX
 			arguments (Input)
 				me alyxManager
 				path char
@@ -735,7 +784,6 @@ classdef alyxManager < optickaCore
 			%> @param QC char quality control status (default 'NOT_SET')
 			%> @return session struct the updated session record
 			%>
-			%> @see ALYX, UPDATENARRATIVE
 			arguments
 				me alyxManager
 				narrative char = ''
@@ -768,121 +816,6 @@ classdef alyxManager < optickaCore
 		end
 
 		% ===================================================================
-		function registerALF(me, alfDir, sessionURL)
-		% ===================================================================
-			%> @brief Register files contained within alfDir to Alyx
-			%>
-			%> Files are only registered if their filenames match a datasetType's
-			%> alf_filename field. Must also provide an alyx session URL.
-			%>
-			%> @param alfDir char directory containing ALF files
-			%> @param sessionURL char Alyx URL of the session (uses me.sessionURL)
-			%>
-			%> @see ALYX, REGISTERFILES, POSTDATA, HTTP.JSONGET
-			arguments
-				me alyxManager
-				alfDir char
-				sessionURL char = ''
-			end
-			if isempty(sessionURL)
-				if isempty(me.sessionURL)
-					error('No session URL set')
-				else
-					sessionURL = me.sessionURL;
-				end
-			end
-
-			assert(exist('dirPlus','file') == 2,...
-			'Function ''dirPlus'' not found, make sure alyx helpers folder is added to path')
-
-			%%INPUT VALIDATION
-			% Validate alfDir path
-			assert(~contains(alfDir,'/'), 'Do not use forward slashes in the path');
-			assert(exist(alfDir,'dir') == 7 , 'alfDir %s does not exist', alfDir);
-
-			% Validate alyxInstance, creating one if not supplied
-			if ~me.loggedIn; me = me.login; end
-
-			%%Validate that the files within alfDir match a datasetType.
-			%1) Get all datasetTypes from the database, and list the filename patterns
-			datasetTypes = me.getData('dataset-types');
-			datasetTypes = [datasetTypes{:}];
-			datasetTypes_filemasks = {datasetTypes.filename_pattern};
-			datasetTypes_filemasks(cellfun(@isempty,datasetTypes_filemasks)) = {''}; %Ensures all entries are character arrays
-
-			%2) Get all the files contained within the alfDir, which match a
-			%datasetType in the Alyx database
-			function v = validateFcn(fileObj)
-				match = regexp(fileObj.name, regexptranslate('wildcard',datasetTypes_filemasks));
-				v = ~isempty([match{:}]);
-			end
-			alfFiles = dirPlus(alfDir, 'ValidateFileFcn', @validateFcn, 'Struct', true);
-			assert(~isempty(alfFiles), 'No files within %s matched a datasetType', alfDir);
-
-			%% Define a hierarchy of alfFiles based on the ALF naming scheme: parent.child.*
-			alfFileParts = cellfun(@(name) strsplit(name,'.'), {alfFiles.name}, 'uni', 0);
-			alfFileParts = cat(1, alfFileParts{:});
-
-			%Create parent datasets, which contain no filerecords themselves
-			[parentTypes, ~, parentID] = unique(alfFileParts(:,1));
-			parentURLs = cell(size(parentTypes));
-			fprintf('Creating parent datasets... ');
-			for parent = 1:length(parentTypes)
-				d = struct('created_by', me.User,...
-						'dataset_type', parentTypes{parent},...
-						'session', sessionURL,...
-						'data_format', 'notData');
-				w = me.postData('datasets',d);
-				parentURLs{parent} = w.url;
-			end
-
-			%Now go through each file, creating a dataset and filerecord for that file
-			for file = 1:length(alfFiles)
-				fullPath = fullfile(alfFiles(file).folder, alfFiles(file).name);
-				fileFormat = alfFileParts{file,3};
-				parentDataset = parentURLs{parentID(file)};
-
-				datasetTypes_filemasks(contains(datasetTypes_filemasks,'*.*')) = []; % Remove parant datasets from search
-				matchIdx = regexp(alfFiles(file).name, regexptranslate('wildcard', datasetTypes_filemasks));
-				matchIdx = find(~cellfun(@isempty, matchIdx));
-				assert(isscalar(matchIdx), 'Insufficient/Too many matches of datasetType for file %s', alfFiles(file).name);
-				datasetType = datasetTypes(matchIdx).name;
-
-				me.registerFile(fullPath, fileFormat, sessionURL, datasetType, parentDataset);
-
-				fprintf('Registered file %s as datasetType %s\n', alfFiles(file).name, datasetType);
-			end
-
-			%% Alyx-dev
-			return
-			try %#ok<UNRCH>
-				%Get datarepositories and their base paths
-				repo_paths = cellfun(@(r) r.name, me.getData('data-repository'), 'uni', 0);
-
-				%Identify which repository the filePath is in
-				which_repo = cellfun( @(rp) contains(alfDir, rp), repo_paths);
-				assert(sum(which_repo) == 1, 'Input filePath\n%s\ndoes not contain the a repository path\n', alfDir);
-
-				%Define the relative path of the file within the repo
-				dnsId = regexp(alfDir, ['(?<=' repo_paths{which_repo} '.*)\\?'], 'once')+1;
-				relativePath = alfDir(dnsId:end);
-
-				me.BaseURL = 'https://alyx-dev.cortexlab.net';
-				%   subject = regexpi(relativePath, '(?<=Subjects\\)[A-Z_0-9]+', 'match');
-
-				%   D.subject = subject{1};
-				D.filenames = {alfFiles.name};
-				D.path = alfDir;
-				%   D.exists_in = repo_paths{which_repo};
-
-				me.postData('register-file', D);
-			catch ex
-				warning(ex.identifier, '%s', ex.message)
-			end
-			me.BaseURL = 'https://alyx.cortexlab.net';
-		end
-
-		% ===================================================================
 		function [fullpath, filename, fileID, records] = expFilePath(me, varargin)
 		% ===================================================================
 			%> @brief Full path for file pertaining to designated experiment
@@ -892,14 +825,34 @@ classdef alyxManager < optickaCore
 			%> this CAN NOT be used to determine where a file should be saved to.
 			%> This function only returns existing file records from Alyx.
 			%>
-			%> @param varargin can be (ref, type[, user, reposlocation]) or
-			%>   (subject, date, seq, type[, user, reposlocation])
+			%> @param varargin Arguments describing the experiment and dataset type.
+			%>   Accepted forms:
+			%>     1) (ref, type)
+			%>        - ref: ALF-style experiment reference string
+			%>          `YYYY-MM-DD_NNN_Subject`
+			%>        - type: Alyx dataset type name
+			%>
+			%>     2) (ref, type, user)
+			%>        - user: dataset creator / Alyx `created_by` filter
+			%>
+			%>     3) (ref, type, user, reposlocation)
+			%>        - reposlocation: Alyx repository location name
+			%>
+			%>     4) (subject, date, seq, type)
+			%>        - subject: subject nickname string
+			%>        - date: MATLAB date string or datetime
+			%>        - seq: experiment sequence number
+			%>        - type: Alyx dataset type name
+			%>
+			%>     5) (subject, date, seq, type, user)
+			%>     6) (subject, date, seq, type, user, reposlocation)
+			%>
 			%> @return fullpath char[] full file paths
 			%> @return filename char[] file names
 			%> @return fileID char[] file UUIDs
 			%> @return records struct[] complete records from Alyx
 			%>
-			%> @see ALYX
+
 			% Validate input
 			assert(nargin > 2, 'Error: Not enough arguments supplied.')
 
@@ -1023,15 +976,25 @@ classdef alyxManager < optickaCore
 		% ===================================================================
 		function [datasets, success] = registerFile(me, rFiles)
 		% ===================================================================
-			%REGISTERFILE Registers filepath(s) to Alyx. data is a struct
-			%that follows https://openalyx.internationalbrainlab.org/docs/#register-file
-			%
-			% name = alyx repository
-			% filenames = 1+ file names as a cell array
-			% path = subject/date/number
-			% created_by = user
-			% hashes = SHA1 hashes
-			% bytes = bytes
+			%> @brief Register file(s) with Alyx using the `register-file` endpoint
+			%>
+			%> This method posts a `register-file` payload to Alyx for one or more
+			%> files. The input struct must follow the Alyx `register-file` schema,
+			%> including repository name, path, filenames, SHA1 hashes, and file
+			%> sizes.
+			%>
+			%> @param rFiles struct Payload for Alyx `register-file` request.
+			%>   Expected fields include:
+			%>     - name: repository name in Alyx
+			%>     - path: subject/date/number path
+			%>     - filenames: cell array of filenames
+			%>     - hashes: SHA1 hashes for each file
+			%>     - bytes: file sizes in bytes
+			%>     - created_by: user uploading the files
+			%> @return datasets struct Alyx response for the registered file records.
+			%> @return success logical True when registration succeeds (HTTP 201).
+			%>
+			%> @see https://openalyx.internationalbrainlab.org/docs/#register-file
 
 			arguments(Input)
 				me
@@ -1055,11 +1018,21 @@ classdef alyxManager < optickaCore
 
 		% ===================================================================
 		function [datasets, filenames] = registerALFFiles(me, paths, session)
-		%> @fn registerALFFiles
+		% ===================================================================
+		%> @brief Register all files in an ALF path with Alyx
 		%>
-		%> registers all files in an ALF path to Alyx
+		%> This method collects every file from `paths.ALFPath`, validates each
+		%> filename against the Alyx `dataset-types` filename patterns, and
+		%> registers the files using `registerFile()`.
 		%>
-		%> @param
+		%> @param paths struct Contains `ALFPath` and `ALFKeyShort` for the
+		%>   current ALF session.
+		%> @param session struct Contains Alyx session metadata such as
+		%>   `dataBucket`, `labName`, and `researcherName`.
+		%> @return datasets struct Alyx response for the registered files.
+		%> @return filenames cell Full path names of registered files.
+		%>
+		%> @see registerFile
 		% ===================================================================
 			arguments(Input)
 				me
@@ -1073,6 +1046,37 @@ classdef alyxManager < optickaCore
 
 			sFiles = dir(paths.ALFPath);
 			sFiles = sFiles(~[sFiles(:).isdir]);
+
+			% Validate that each ALF file matches an Alyx dataset-type filename pattern.
+			datasetTypes = me.getData('dataset-types');
+			if isempty(datasetTypes)
+				error('Alyx:registerALFFiles:NoDatasetTypes', ...
+					'Unable to retrieve Alyx dataset types for filename validation');
+			end
+			datasetPatterns = {datasetTypes.filename_pattern};
+			datasetPatterns(cellfun(@isempty, datasetPatterns)) = {''};
+			invalidFiles = string.empty;
+			validMask = true(1, numel(sFiles));
+			for ii = 1:numel(sFiles)
+				name = sFiles(ii).name;
+				matchIdx = regexp(name, regexptranslate('wildcard', datasetPatterns));
+				if all(cellfun(@isempty, matchIdx))
+					invalidFiles(end+1) = string(name); %#ok<AGROW>
+					validMask(ii) = false;
+				end
+			end
+			if ~isempty(invalidFiles)
+				warning('Alyx:registerALFFiles:InvalidFilename', ...
+					'The following files were skipped because they did not match any Alyx dataset-type filename patterns:\n%s', ...
+					strjoin(invalidFiles, '\n'));
+				sFiles = sFiles(validMask);
+			end
+			if isempty(sFiles)
+				datasets = struct.empty;
+				filenames = {};
+				return;
+			end
+
 			for ii = 1:length(sFiles)
 				filenames{ii} = fullfile(sFiles(ii).folder, sFiles(ii).name);
 				bytes(ii) = sFiles(ii).bytes;
@@ -1094,7 +1098,7 @@ classdef alyxManager < optickaCore
 		% ===================================================================
 		function initDatabase(me)
 		% ===================================================================
-			% add datasets types and species to the database
+			% opticka.raw*.mat dataset type is used to store the raw data from the opticka system for a single session
 			[r, s] = getData(me,'dataset-types/opticka.raw');
 			if s ~= 200
 				d = struct;
@@ -1107,7 +1111,20 @@ classdef alyxManager < optickaCore
 					warning("Couldn't create opticka.raw dataset type");
 				end
 			end
-			% add datasets types and species to the database
+			% _matlab_diary dataset type is used to store the MATLAB diary for a single session
+			[r, s] = getData(me,'dataset-types/_matlab_diary');
+			if s ~= 200
+				d = struct;
+				d.name = '_matlab_diary';
+				d.created_by = me.user;
+				d.description = "Recording the output from MATLAB's command window using Diary function";
+				d.filename_pattern = "_matlab_diary.*.mat";
+				[r, s] = me.postData('dataset-types', d, 'post');
+				if isempty(r)
+					warning("Couldn't create _matlab_diary dataset type");
+				end
+			end
+			% opticka.details dataset type is used to store JSON of experiment details
 			[r, s] = getData(me,'dataset-types/opticka.details');
 			if s ~= 200
 				d = struct;
@@ -1117,10 +1134,10 @@ classdef alyxManager < optickaCore
 				d.filename_pattern = "opticka.details.*.json";
 				[r, s] = me.postData('dataset-types', d, 'post');
 				if isempty(r)
-					warning("Couldn't create events.table dataset type");
+					warning("Couldn't create opticka.details dataset type");
 				end
 			end
-			% add datasets types and species to the database
+			% events.table dataset type is used to store TSV event tables with HED tag mapping
 			[r, s] = getData(me,'dataset-types/events.table');
 			if s ~= 200
 				d = struct;
@@ -1133,6 +1150,7 @@ classdef alyxManager < optickaCore
 					warning("Couldn't create events.table dataset type");
 				end
 			end
+			% eyetracking.raw.tobii dataset type is used to store the raw data from the Tobii eyetracker for a single session
 			[r, s] = getData(me,'dataset-types/eyetracking.raw.tobii');
 			if s ~= 200
 				d = struct;
@@ -1145,6 +1163,7 @@ classdef alyxManager < optickaCore
 					warning("Couldn't create eyetracking.raw.tobii*.mat dataset type");
 				end
 			end
+			% eyetracking.raw.irec dataset type is used to store the raw data from the iRec eyetracker for a single session
 			[r, s] = getData(me,'dataset-types/eyetracking.raw.irec');
 			if s ~= 200
 				d = struct;
@@ -1157,6 +1176,7 @@ classdef alyxManager < optickaCore
 					warning("Couldn't create eyetracking.raw.irec dataset type");
 				end
 			end
+			% 
 			[r, s] = getData(me,'dataset-types/eyetracking.raw.eyelink');
 			if s ~= 200
 				d = struct;
@@ -1248,7 +1268,7 @@ classdef alyxManager < optickaCore
 		end
 
 		% ===================================================================
-		% SECRETUI Function to securely handle password input for the alyxManager
+		% SECRETUI Function to securely handle password input
 		%
 		% Input Arguments:
 		%     me    - Instance of alyxManager
@@ -1499,6 +1519,121 @@ classdef alyxManager < optickaCore
 		function delete(me)
 			if me.verbose; fprintf('≣≣≣≣⊱ Delete: %s\n',me.fullName); end
 		end
+
+		% ===================================================================
+		function registerALF(me, alfDir, sessionURL)
+		% ===================================================================
+			%> @brief DEPRECATED!!! Register files contained within alfDir to Alyx
+			%>
+			%> Files are only registered if their filenames match a datasetType's
+			%> alf_filename field. Must also provide an alyx session URL.
+			%>
+			%> @param alfDir char directory containing ALF files
+			%> @param sessionURL char Alyx URL of the session (uses me.sessionURL)
+			%>
+			arguments
+				me alyxManager
+				alfDir char
+				sessionURL char = ''
+			end
+			if isempty(sessionURL)
+				if isempty(me.sessionURL)
+					error('No session URL set')
+				else
+					sessionURL = me.sessionURL;
+				end
+			end
+
+			assert(exist('dirPlus','file') == 2,...
+			'Function ''dirPlus'' not found, make sure alyx helpers folder is added to path')
+
+			%%INPUT VALIDATION
+			% Validate alfDir path
+			assert(~contains(alfDir,'/'), 'Do not use forward slashes in the path');
+			assert(exist(alfDir,'dir') == 7 , 'alfDir %s does not exist', alfDir);
+
+			% Validate alyxInstance, creating one if not supplied
+			if ~me.loggedIn; me = me.login; end
+
+			%%Validate that the files within alfDir match a datasetType.
+			%1) Get all datasetTypes from the database, and list the filename patterns
+			datasetTypes = me.getData('dataset-types');
+			datasetTypes = [datasetTypes{:}];
+			datasetTypes_filemasks = {datasetTypes.filename_pattern};
+			datasetTypes_filemasks(cellfun(@isempty,datasetTypes_filemasks)) = {''}; %Ensures all entries are character arrays
+
+			%2) Get all the files contained within the alfDir, which match a
+			%datasetType in the Alyx database
+			function v = validateFcn(fileObj)
+				match = regexp(fileObj.name, regexptranslate('wildcard',datasetTypes_filemasks));
+				v = ~isempty([match{:}]);
+			end
+			alfFiles = dirPlus(alfDir, 'ValidateFileFcn', @validateFcn, 'Struct', true);
+			assert(~isempty(alfFiles), 'No files within %s matched a datasetType', alfDir);
+
+			%% Define a hierarchy of alfFiles based on the ALF naming scheme: parent.child.*
+			alfFileParts = cellfun(@(name) strsplit(name,'.'), {alfFiles.name}, 'uni', 0);
+			alfFileParts = cat(1, alfFileParts{:});
+
+			%Create parent datasets, which contain no filerecords themselves
+			[parentTypes, ~, parentID] = unique(alfFileParts(:,1));
+			parentURLs = cell(size(parentTypes));
+			fprintf('Creating parent datasets... ');
+			for parent = 1:length(parentTypes)
+				d = struct('created_by', me.User,...
+						'dataset_type', parentTypes{parent},...
+						'session', sessionURL,...
+						'data_format', 'notData');
+				w = me.postData('datasets',d);
+				parentURLs{parent} = w.url;
+			end
+
+			%Now go through each file, creating a dataset and filerecord for that file
+			for file = 1:length(alfFiles)
+				fullPath = fullfile(alfFiles(file).folder, alfFiles(file).name);
+				fileFormat = alfFileParts{file,3};
+				parentDataset = parentURLs{parentID(file)};
+
+				datasetTypes_filemasks(contains(datasetTypes_filemasks,'*.*')) = []; % Remove parant datasets from search
+				matchIdx = regexp(alfFiles(file).name, regexptranslate('wildcard', datasetTypes_filemasks));
+				matchIdx = find(~cellfun(@isempty, matchIdx));
+				assert(isscalar(matchIdx), 'Insufficient/Too many matches of datasetType for file %s', alfFiles(file).name);
+				datasetType = datasetTypes(matchIdx).name;
+
+				me.registerFile(fullPath, fileFormat, sessionURL, datasetType, parentDataset);
+
+				fprintf('Registered file %s as datasetType %s\n', alfFiles(file).name, datasetType);
+			end
+
+			%% Alyx-dev
+			return
+			try %#ok<UNRCH>
+				%Get datarepositories and their base paths
+				repo_paths = cellfun(@(r) r.name, me.getData('data-repository'), 'uni', 0);
+
+				%Identify which repository the filePath is in
+				which_repo = cellfun( @(rp) contains(alfDir, rp), repo_paths);
+				assert(sum(which_repo) == 1, 'Input filePath\n%s\ndoes not contain the a repository path\n', alfDir);
+
+				%Define the relative path of the file within the repo
+				dnsId = regexp(alfDir, ['(?<=' repo_paths{which_repo} '.*)\\?'], 'once')+1;
+				relativePath = alfDir(dnsId:end);
+
+				me.BaseURL = 'https://alyx-dev.cortexlab.net';
+				%   subject = regexpi(relativePath, '(?<=Subjects\\)[A-Z_0-9]+', 'match');
+
+				%   D.subject = subject{1};
+				D.filenames = {alfFiles.name};
+				D.path = alfDir;
+				%   D.exists_in = repo_paths{which_repo};
+
+				me.postData('register-file', D);
+			catch ex
+				warning(ex.identifier, '%s', ex.message)
+			end
+			me.BaseURL = 'https://alyx.cortexlab.net';
+		end
+
 
 	%=======================================================================
 	end %---END PRIVATE METHODS---%

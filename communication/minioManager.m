@@ -228,7 +228,7 @@ classdef minioManager < handle
 			if ~success
 				warning('!!! Problem getting file: %s - %s', cmdin, out);
 			else
-				fprintf('--->>> minioManager: Get File: %s\n',cmdin)
+				fprintf('--->>> minioManager: Get File: %s\n',key)
 				disp(out)
 			end
 		end

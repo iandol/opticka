@@ -151,16 +151,31 @@ classdef alyxUploader < handle
 					cellfun(@(ln)disp(ln),t);
 				catch ERR
 					getReport(ERR)
-					warning('alyxUploader:sessionError', ...
-						'Error processing %s:\n  %s', sessions(ii).alfPath, ERR.message);
+					report{end+1} = sprintf('Error processing %s:     %s', sessions(ii).alfPath, ERR.message);
+					warning('alyxUploader:sessionError', report{end});
 				end
 			end
 
-			fprintf('≣≣≣≣⊱ alyxUploader: finished.');
+			fprintf('≣≣≣≣⊱ alyxUploader: finished.\n');
 
 			diary off
 			diaryFile = me.diaryFile;
 		end
+
+		% ===================================================================
+		function bool = get.loggedIn(me)
+		%> @brief Dependent property — true when alyx is logged in
+		% ===================================================================
+			bool = ~isempty(me.alyx) && isa(me.alyx,'alyxManager') && me.alyx.loggedIn;
+		end
+
+	%=======================================================================
+	end %---END PUBLIC METHODS---%
+	%=======================================================================
+
+	%=======================================================================
+	methods (Access = private)
+	%=======================================================================
 
 		% ===================================================================
 		function sessions = discoverSessions(me, root)
@@ -229,7 +244,7 @@ classdef alyxUploader < handle
 		%>
 		%> @param s struct from discoverSessions
 		% ===================================================================
-			log = {'----------'};
+			log = {'=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-='};
 			log{end+1} = sprintf('≣≣≣≣⊱ Subject: %s  Date: %s  #: %s  Lab: %s', ...
 				s.subject, s.date, s.sessionID, s.lab);
 			log{end+1} = sprintf('  Path: %s', s.alfPath);
@@ -255,6 +270,7 @@ classdef alyxUploader < handle
 			%% === Collect files now — we need them to extract the timestamp
 			sFiles = dir(paths.ALFPath);
 			sFiles = sFiles(~[sFiles.isdir]);
+			sFiles = me.normalizeDiaryLogFiles(sFiles);
 			if isempty(sFiles)
 				log{end+1} = printf('  ↳ No files found in %s, skipping.', paths.ALFPath);
 				return;
@@ -268,7 +284,7 @@ classdef alyxUploader < handle
 
 			%% === check if a mat file is present and it contains session data
 			% if so we prefer this session info
-			[tmpSession,json] = getSessionDetails(me, files);
+			[tmpSession, json] = getSessionDetails(me, files);
 			if ~isempty(tmpSession)
 				try session.researcherName = tmpSession.researcherName; end
 				try session.location = tmpSession.location; end %#ok<*TRYNC>
@@ -289,55 +305,65 @@ classdef alyxUploader < handle
 			% Check if this session already exists in Alyx (using the real date)
 			% Use only the date part for the date_range query
 			dayDate = char(startTime, 'yyyy-MM-dd');
+			alyxSession = [];
 			if ~me.dryRun
 				request = sprintf('sessions?date_range=%s,%s&subject=%s&number=%s', ...
 					dayDate, dayDate, s.subject, s.sessionID);
 				[alyxSession, sc] = me.alyx.getData(request);
 				if sc == 200 && ~isempty(alyxSession)
-					fprintf('  ↳ Session already in Alyx (id=%s), skipping creation.\n', alyxSession(1).id);
+					log{end+1} = sprintf('  ↳ Session already in Alyx (id=%s), skipping creation.', alyxSession(1).id);
 					me.alyx.sessionURL = alyxSession(1).url;
+					alyxSession = alyxSession(1);
+					if ~isempty(json); 
+						t = updateJSON(me, alyxSession, json); 
+						if ~isempty(t); log{end+1} = t; end
+					end
 				else
 					[url, alyxSession] = me.createAlyxSession(paths, session, json, startTime);
 					if isempty(url); error("Could not create a new session!"); end
 					me.alyx.sessionURL = url;
-					me.alyx.updateNarrative("UPLOAD by alyxUploader");
+					me.alyx.updateNarrative("Session created by by alyxUploader");
 				end
-				log{end+1} = me.alyx.sessionURL;
+				log{end+1} = [' <a href="' char(me.alyx.sessionURL) '">' char(me.alyx.sessionURL) '</a> '];
 			else
 				log{end+1} = sprintf('  [DryRun] Would create Alyx session with start_time %s.', ...
 					char(startTime, 'yyyy-MM-dd''T''HH:mm:ss'));
 			end
-
+			doClose = false;
 			% Register files with Alyx
 			if ~me.dryRun
-				uuids = cell(1, numel(files)); setQC = false; 
-				doUpload = false; filenames = [];
+				setQC = false;
+				filenames = {};
+				uuids = {};
+				datasets = struct.empty;
 				try
-					[datasets, filenames] = me.alyx.registerALFFiles(paths, session);
-					if isempty(datasets)
-						log{end+1} = sprintf('≣≣≣≣⊱ WARNING Files Failed to Connect: %s', me.alyx.sessionURL);
-						doUpload = false;
+					localFiles = me.buildLocalFileRecords(sFiles);
+					existingDatasets = me.getExistingDatasets(alyxSession, s);
+					[filesToRegister, matchedFiles] = me.findMissingDatasets(localFiles, existingDatasets);
+					if ~isempty(matchedFiles)
+						log{end+1} = sprintf('  ↳ %d dataset(s) already present in Alyx; skipping.', ...
+							numel(matchedFiles));
+					end
+					if isempty(filesToRegister)
+						log{end+1} = sprintf('  ↳ All %d local file(s) are already registered in Alyx.', ...
+							numel(localFiles));
 					else
-						log{end+1} = sprintf('≣≣≣≣⊱ Added Files to ALYX Session: %s', me.alyx.sessionURL);
+						[datasets, filenames, uuids] = me.registerDatasets(paths, session, filesToRegister);
+					end
+					if ~isempty(filesToRegister) && isempty(datasets)
+						log{end+1} = sprintf('≣≣≣≣⊱ WARNING Files Failed to Connect: %s', me.alyx.sessionURL);
+					elseif ~isempty(datasets)
+						doClose = true;
+						log{end+1} = sprintf('≣≣≣≣⊱ Added %d File(s) to ALYX Session: %s', ...
+							numel(filenames), me.alyx.sessionURL);
 						try 
 							arrayfun(@(ss)disp([ss.name ' - bytes: ' num2str(ss.file_size)]),datasets); 
-						end
-						
-						%% get the ALYX dataset UUID for each file registered
-						if length(datasets) == length(filenames)
-							for ii = 1:length(filenames)
-								if contains(filenames{ii},datasets(ii).name)
-									uuids{ii} = datasets(ii).id;
-								else
-									uuids{ii} = '';
-								end
-							end
 						end
 					end
 				catch ERR
 					getReport(ERR)
-					warning('alyxUploader:registerFail', ...
-						'registerALFFiles failed: %s', ERR.message);
+					log{end+1} = sprintf('registering missing datasets failed: %s', ERR.message);
+					warning('alyxUploader:registerFail', log{end});
 				end
 			else
 				log{end+1} = sprintf('  [DryRun] Would register %d file(s) with Alyx.', numel(files));
@@ -345,9 +371,9 @@ classdef alyxUploader < handle
 			end
 
 			% Upload to S3
-			if ~me.dryRun && doUpload ~isempty(datasets)
-				me.uploadToS3(filenames, uuids, paths, session);
-				setQC = true;
+			if ~me.dryRun && ~isempty(datasets) && ~isempty(filenames)
+				uploaded = me.uploadToS3(filenames, uuids, paths, session);
+				setQC = ~isempty(uploaded) && all(uploaded);
 			elseif me.dryRun
 				log{end+1} = sprintf('  [DryRun] Would upload %d file(s) to S3 bucket "%s".', ...
 					numel(files), lower(session.labName));
@@ -369,26 +395,34 @@ classdef alyxUploader < handle
 
 			% Close the Alyx session with the original end_time
 			% Use folder date at end-of-day as a reasonable end_time when not known
-			if ~me.dryRun && ~isempty(me.alyx.sessionURL)
+			if ~me.dryRun && ~isempty(me.alyx.sessionURL) && doClose
 				me.alyx.closeSession('Uploaded via alyxUploader', 'PASS');
 				log{end+1} = sprintf('  ↳ Alyx session closed.');
 			end
 		end
 
-		% ===================================================================
-		function bool = get.loggedIn(me)
-		%> @brief Dependent property — true when alyx is logged in
-		% ===================================================================
-			bool = ~isempty(me.alyx) && isa(me.alyx,'alyxManager') && me.alyx.loggedIn;
+		function log = updateJSON(me, session, json)
+			endpoint = ['sessions/', session.id];
+			details = me.alyx.getData(endpoint);
+			tmp = [];
+			log = '';
+			if ~isempty(details)
+				tmp.json = json;
+				tmpjson = jsondecode(json);
+				if isfield(tmpjson,'totalTrials')
+					tmp.n_trials = tmpjson.totalTrials;
+				end
+				if isfield(tmpjson,'totalCorrect')
+					tmp.n_correct_trials = tmpjson.totalCorrect;
+				end
+				try
+					if ~isempty(tmp)
+						me.alyx.postData(endpoint,tmp,'patch');
+						log = '  ↳ Patched the JSON and trial numbers if valid';
+					end
+				end
+			end
 		end
-
-	%=======================================================================
-	end %---END PUBLIC METHODS---%
-	%=======================================================================
-
-	%=======================================================================
-	methods (Access = private)
-	%=======================================================================
 
 		% ===================================================================
 		function startTime = extractStartTime(me, sFiles, folderDate)
@@ -433,6 +467,46 @@ classdef alyxUploader < handle
 				startTime = datetime(folderDate, 'InputFormat', 'yyyy-MM-dd');
 				warning('alyxUploader:noTimestamp', ...
 					'No timestamp found in filenames; using folder date %s at 00:00:00', folderDate);
+			end
+		end
+
+		% ===================================================================
+		function sFiles = normalizeDiaryLogFiles(~, sFiles)
+		%> @brief Ensure MATLAB diary files use the .log suffix.
+		%>
+		%> Files starting with "_matlab_diary" must end in ".log" before
+		%> Alyx dataset registration and S3 upload. Existing names are kept
+		%> intact apart from replacing the current extension with ".log". A
+		%> numeric suffix is added only if needed to avoid overwriting a file.
+		% ===================================================================
+			for ii = 1:numel(sFiles)
+				oldName = sFiles(ii).name;
+				if ~startsWith(oldName, '_matlab_diary') || endsWith(oldName, '.log')
+					continue;
+				end
+
+				folder = sFiles(ii).folder;
+				[~, baseName] = fileparts(oldName);
+				newName = [baseName '.log'];
+				newPath = fullfile(folder, newName);
+				counter = 2;
+				while exist(newPath, 'file') == 2
+					newName = sprintf('%s_%d.log', baseName, counter);
+					newPath = fullfile(folder, newName);
+					counter = counter + 1;
+				end
+
+				oldPath = fullfile(folder, oldName);
+				[success, message] = movefile(oldPath, newPath);
+				if ~success
+					error('alyxUploader:diaryRenameFail', ...
+						'Could not rename diary file "%s" to "%s": %s', ...
+						oldPath, newPath, message);
+				end
+
+				fprintf('  ↳ Renamed MATLAB diary file: %s -> %s\n', ...
+					oldName, newName);
+				sFiles(ii) = dir(newPath);
 			end
 		end
 
@@ -499,7 +573,266 @@ classdef alyxUploader < handle
 		end
 
 		% ===================================================================
-		function success = uploadToS3(me, filenames, uuids, paths, session)
+		function records = buildLocalFileRecords(~, sFiles)
+		%> @brief Build local file metadata used to compare/register datasets.
+		% ===================================================================
+			records = struct('fullPath',{},'name',{},'bytes',{},'hash',{});
+			for ii = 1:numel(sFiles)
+				records(ii).fullPath = fullfile(sFiles(ii).folder, sFiles(ii).name);
+				records(ii).name = sFiles(ii).name;
+				records(ii).bytes = sFiles(ii).bytes;
+				records(ii).hash = '';
+				try
+					records(ii).hash = DataHash(records(ii).fullPath, 'file', 'sha1');
+				catch ERR
+					warning('alyxUploader:hashFail', ...
+						'Could not SHA1 hash %s: %s', records(ii).fullPath, ERR.message);
+				end
+			end
+		end
+
+		% ===================================================================
+		function datasets = getExistingDatasets(me, alyxSession, s)
+		%> @brief Read existing Alyx datasets for the selected session.
+		% ===================================================================
+			datasets = struct.empty;
+			sessionID = '';
+			sessionURL = me.alyx.sessionURL;
+			if isstruct(alyxSession) && ~isempty(alyxSession)
+				if isfield(alyxSession, 'id'); sessionID = char(string(alyxSession.id)); end
+				if isfield(alyxSession, 'url'); sessionURL = char(string(alyxSession.url)); end
+			end
+
+			endpoints = {};
+			if ~isempty(sessionID)
+				endpoints{end+1} = sprintf('datasets?session=%s', sessionID);
+			end
+			if ~isempty(sessionURL)
+				endpoints{end+1} = sprintf('datasets?session=%s', sessionURL);
+			end
+			endpoints{end+1} = sprintf('datasets?subject=%s&experiment_number=%s', ...
+				s.subject, s.sessionID);
+
+			for ii = 1:numel(endpoints)
+				[candidate, sc] = me.alyx.getData(endpoints{ii});
+				if sc ~= 200 || isempty(candidate); continue; end
+				candidate = me.normalizeStructArray(candidate);
+				candidate = me.filterDatasetsBySession(candidate, sessionID, sessionURL);
+				if ~isempty(candidate)
+					datasets = candidate;
+					return;
+				end
+			end
+		end
+
+		% ===================================================================
+		function [missingFiles, matchedFiles] = findMissingDatasets(me, localFiles, datasets)
+		%> @brief Return local files not confirmed in Alyx by name and bytes/hash.
+		% ===================================================================
+			isMatched = false(1, numel(localFiles));
+			for ii = 1:numel(localFiles)
+				for jj = 1:numel(datasets)
+					if me.datasetMatchesLocalFile(datasets(jj), localFiles(ii))
+						isMatched(ii) = true;
+						break;
+					end
+				end
+			end
+			matchedFiles = localFiles(isMatched);
+			missingFiles = localFiles(~isMatched);
+		end
+
+		% ===================================================================
+		function matched = datasetMatchesLocalFile(me, dataset, localFile)
+		%> @brief True when Alyx has same filename and same byte count or hash.
+		% ===================================================================
+			matched = false;
+			names = me.datasetNames(dataset);
+			if ~any(strcmp(localFile.name, names)); return; end
+
+			[bytes, hashes] = me.datasetSignatures(dataset);
+			bytesMatch = ~isempty(bytes) && any(double(bytes) == double(localFile.bytes));
+			hashMatch = ~isempty(localFile.hash) && any(strcmpi(localFile.hash, hashes));
+			matched = bytesMatch || hashMatch;
+		end
+
+		% ===================================================================
+		function [datasets, filenames, uuids] = registerDatasets(me, paths, session, filesToRegister)
+		%> @brief Register only missing local files with Alyx.
+		% ===================================================================
+			datasets = struct.empty;
+			filenames = {filesToRegister.fullPath};
+			uuids = cell(1, numel(filesToRegister));
+			if isempty(filesToRegister); return; end
+
+			rf = struct('name', session.dataBucket);
+			rf.path = paths.ALFKeyShort;
+			rf.filenames = filenames;
+			rf.hashes = {filesToRegister.hash};
+			rf.filesizes = int32([filesToRegister.bytes]);
+			rf.labs = session.labName;
+			try rf.created_by = session.researcherName; end
+
+			[datasets, success] = me.alyx.registerFile(rf);
+			if ~success || isempty(datasets)
+				datasets = struct.empty;
+				return;
+			end
+			datasets = me.normalizeStructArray(datasets);
+			uuids = me.matchDatasetUUIDs(datasets, filesToRegister);
+		end
+
+		% ===================================================================
+		function uuids = matchDatasetUUIDs(me, datasets, localFiles)
+		%> @brief Match registered Alyx dataset UUIDs back to local file order.
+		% ===================================================================
+			uuids = cell(1, numel(localFiles));
+			for ii = 1:numel(localFiles)
+				uuids{ii} = '';
+				for jj = 1:numel(datasets)
+					if any(strcmp(localFiles(ii).name, me.datasetNames(datasets(jj)))) && ...
+						isfield(datasets(jj), 'id')
+						uuids{ii} = char(string(datasets(jj).id));
+						break;
+					end
+				end
+			end
+		end
+
+		% ===================================================================
+		function datasets = filterDatasetsBySession(me, datasets, sessionID, sessionURL)
+		%> @brief Keep only datasets whose session field matches the target.
+		% ===================================================================
+			if isempty(datasets) || (isempty(sessionID) && isempty(sessionURL)); return; end
+			keep = true(1, numel(datasets));
+			for ii = 1:numel(datasets)
+				value = me.getFieldValue(datasets(ii), {'session', 'session_id', 'eid'});
+				if isempty(value); continue; end
+				value = char(string(value));
+				keep(ii) = false;
+				if ~isempty(sessionID)
+					keep(ii) = keep(ii) || strcmp(value, sessionID) || contains(value, sessionID);
+				end
+				if ~isempty(sessionURL)
+					keep(ii) = keep(ii) || strcmp(value, sessionURL) || contains(value, sessionURL);
+				end
+			end
+			datasets = datasets(keep);
+		end
+
+		% ===================================================================
+		function names = datasetNames(me, dataset)
+		%> @brief Collect possible dataset filenames from an Alyx dataset record.
+		% ===================================================================
+			names = {};
+			value = me.getFieldValue(dataset, {'name', 'filename'});
+			names = me.appendBasename(names, value);
+
+			fileRecords = me.getFieldValue(dataset, {'file_records', 'fileRecords'});
+			fileRecords = me.normalizeStructArray(fileRecords);
+			for ii = 1:numel(fileRecords)
+				value = me.getFieldValue(fileRecords(ii), ...
+					{'name', 'filename', 'relative_path', 'data_url'});
+				names = me.appendBasename(names, value);
+			end
+			names = unique(names(~cellfun(@isempty, names)));
+		end
+
+		% ===================================================================
+		function [bytes, hashes] = datasetSignatures(me, dataset)
+		%> @brief Collect byte counts and hashes from dataset/file_records fields.
+		% ===================================================================
+			bytes = [];
+			hashes = {};
+			[bytes, hashes] = me.appendSignature(bytes, hashes, dataset);
+
+			fileRecords = me.getFieldValue(dataset, {'file_records', 'fileRecords'});
+			fileRecords = me.normalizeStructArray(fileRecords);
+			for ii = 1:numel(fileRecords)
+				[bytes, hashes] = me.appendSignature(bytes, hashes, fileRecords(ii));
+			end
+			hashes = unique(hashes(~cellfun(@isempty, hashes)));
+		end
+
+		% ===================================================================
+		function [bytes, hashes] = appendSignature(me, bytes, hashes, record)
+		%> @brief Add known size/hash fields from one Alyx record.
+		% ===================================================================
+			byteValue = me.getFieldValue(record, ...
+				{'file_size', 'filesize', 'fileSize', 'size', 'bytes'});
+			if ~isempty(byteValue)
+				if isnumeric(byteValue)
+					bytes(end+1) = double(byteValue(1));
+				else
+					bytes(end+1) = str2double(char(string(byteValue)));
+				end
+			end
+
+			hashValue = me.getFieldValue(record, ...
+				{'hash', 'hash_sha1', 'sha1', 'file_hash', 'fileHash'});
+			if ~isempty(hashValue)
+				hashes{end+1} = char(string(hashValue));
+			end
+		end
+
+		% ===================================================================
+		function records = normalizeStructArray(~, records)
+		%> @brief Convert Alyx cell/struct responses to a struct array.
+		% ===================================================================
+			if isempty(records)
+				records = struct.empty;
+			elseif iscell(records)
+				records = [records{:}];
+			elseif ~isstruct(records)
+				records = struct.empty;
+			end
+		end
+
+		% ===================================================================
+		function value = getFieldValue(~, record, names)
+		%> @brief Return the first non-empty value for a list of field names.
+		% ===================================================================
+			value = [];
+			if ~isstruct(record); return; end
+			for ii = 1:numel(names)
+				fieldName = names{ii};
+				if isfield(record, fieldName) && ~isempty(record.(fieldName))
+					value = record.(fieldName);
+					return;
+				end
+			end
+		end
+
+		% ===================================================================
+		function names = appendBasename(~, names, value)
+		%> @brief Append basename(s) from a char/string/cell value.
+		% ===================================================================
+			if isempty(value); return; end
+			if iscell(value)
+				values = value;
+			elseif isstring(value)
+				values = cellstr(value);
+			elseif ischar(value)
+				values = {value};
+			else
+				return;
+			end
+
+			newNames = cell(1, numel(values));
+			nNew = 0;
+			for ii = 1:numel(values)
+				if isempty(values{ii}); continue; end
+				[~, name, ext] = fileparts(char(string(values{ii})));
+				if isempty(name) && isempty(ext); continue; end
+				nNew = nNew + 1;
+				newNames{nNew} = [name ext];
+			end
+			names = [names, newNames(1:nNew)];
+		end
+
+
+		% ===================================================================
+		function [success, log] = uploadToS3(me, filenames, uuids, paths, session, log)
 		%> @brief Upload files to S3 / MinIO via minioManager
 		% ===================================================================
 			arguments(Input)
@@ -508,10 +841,13 @@ classdef alyxUploader < handle
 				uuids cell
 				paths struct
 				session struct
+				log cell
 			end
 
+			success = false(1, numel(filenames));
 			if isempty(me.dataRepo)
-				fprintf('  ↳ dataRepo not set, skipping S3 upload.\n');
+				log{end+1} = sprintf('  ↳ dataRepo not set, skipping S3 upload.');
+				disp(log{end});
 				return;
 			end
 
@@ -529,8 +865,8 @@ classdef alyxUploader < handle
 
 				bucket = lower(session.labName);
 				if isempty(bucket)
-					warning('alyxUploader:noBucket', ...
-						'labName is empty; cannot determine S3 bucket name. Skipping upload.');
+					log{end+1} = 'labName is empty; cannot determine S3 bucket name. Skipping upload.';
+					warning('alyxUploader:noBucket', log{end});
 					return;
 				end
 				me.store.checkBucket(bucket);
@@ -549,22 +885,25 @@ classdef alyxUploader < handle
 					if exists && isfield(info, 'size') && ~isempty(info.size)
 						localInfo = dir(filenames{ii});
 						if ~isempty(localInfo) && localInfo(1).bytes == info.size
-							fprintf('  ↳ Skipping %s (already on S3, same size %d bytes)\n', ...
+							log{end+1} = sprintf('  ↳ Skipping %s (already on S3, same size %d bytes)', ...
 								key, localInfo(1).bytes);
+							disp(log{end});
 							success(ii) = true;  % already present — considered OK
 							continue;
 						else
-							fprintf('  ↳ File %s exists remotely (remote %d, local %d bytes); re-uploading.\n', ...
+							log{end+1} = sprintf('  ↳ File %s exists remotely (remote %d, local %d bytes); re-uploading.', ...
 								key, info.size, localInfo(1).bytes);
+							disp(log{end});
 						end
 					end
-
 					success(ii) = me.store.copyFiles(filenames{ii}, bucket, key);
 				end
-				fprintf('  ↳ Uploaded %d file(s) to s3://%s/%s\n', ...
+				log{end+1} = sprintf('  ↳ Uploaded %d file(s) to s3://%s/%s\n', ...
 					numel(filenames), bucket, paths.ALFKeyShort);
+				disp(log{end});
 			catch ERR
-				warning('alyxUploader:s3Fail', 'S3 upload failed: %s', ERR.message);
+				log{end+1} = sprintf('S3 upload failed: %s', ERR.message);
+				warning('alyxUploader:s3Fail', log{end});
 			end
 		end
 
@@ -591,7 +930,13 @@ classdef alyxUploader < handle
 						if isfield(ml.in,'session')
 							session = ml.in.session;
 						end
-						if isstruct(ml.in)
+						if isfield(ml,'dt') && isa(ml.dt,"touchData")
+							if isfield(ml,'in') && isstruct(ml.in)
+								ml.in.totalCorrect = sum(ml.dt.data.result==1);
+								ml.in.totalTrials = length(ml.dt.data.result);
+							end
+						end
+						if isfield(ml,'in') && isstruct(ml.in)
 							json = jsonencode(ml.in);
 						end
 					end
