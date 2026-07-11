@@ -81,9 +81,9 @@ classdef alyxManager < optickaCore
 			me=me@optickaCore(varargin); %superclass constructor
 			me.parseArgs(varargin, me.allowedProperties); %parse input args
 
-			flushQueue(me,true); %flush any existing queue in the queueDir
+			cleanQueue(me); %flush any existing queue files in the queueDir
 			setSecrets(me); %set secrets from secure storage if present
-			me.cache = configureDictionary("string","cell");
+			me.cache = configureDictionary("string","cell"); % set up the cache for hasEntry()
 		end
 
 		% ===================================================================
@@ -95,6 +95,13 @@ classdef alyxManager < optickaCore
 			else
 				result = true;
 			end
+		end
+
+		% ===================================================================
+		function cleanQueue(me)
+		%> @brief Clean out (drop) the alyxManager queue directory
+		% ===================================================================
+			flushQueue(me,true);
 		end
 
 		% ===================================================================
@@ -354,7 +361,7 @@ classdef alyxManager < optickaCore
 		end
 
 		% ===================================================================
-		function [data, statusCode] = postData(me, endpoint, data, requestMethod)
+		function [dataOut, statusCode] = postData(me, endpoint, dataIn, requestMethod, useQueue)
 		% ===================================================================
 			%> @brief Post any new data to an Alyx/REST endpoint
 			%>
@@ -375,40 +382,51 @@ classdef alyxManager < optickaCore
 			arguments
 				me alyxManager
 				endpoint char
-				data struct
+				dataIn struct
 				requestMethod char = 'post'
+				useQueue logical = true
 			end
+
+			if ~me.loggedIn; return; end
 			assert(any(strcmpi(requestMethod, {'post', 'put', 'patch', 'delete'})),...
 			'%s not a valid HTTP request method', requestMethod)
 
-			% Create the JSON command
-			jsonData = jsonencode(data);
+			if ~useQueue % Send directly to Alyx,we do not use the queue
+				endpoint = me.makeEndpoint(endpoint); % Ensure absolute URL
+				options = me.webOptions;
+				options.RequestMethod = lower(requestMethod);
+				dataIn = jsonencode(dataIn);
+				dataOut = webwrite(endpoint, dataIn, options);
+				if ~isempty(dataOut)
+					if endsWith(endpoint,'auth-token')
+						statusCode = 200;
+					else
+						statusCode = 201;
+					end
+				else
+					dataOut = []; statusCode = 500;
+				end
+			else % use the queue to send the data, which will be flushed later
+				% Create the JSON command
+				jsonData = jsonencode(dataIn);
+				% If local Alyx queue directory doesn't exist, create one
+				if isempty(me.queueDir) || ~exist(me.queueDir, 'dir')
+					me.queueDir = me.paths.parent;
+				end
+				% Make a filename for the current command
+				queueFilename = append(datestr(now, 'yyyy-mm-dd-HH-MM-SS-FFF'), '.', lower(requestMethod));
+				queueFullfile = fullfile(me.queueDir, queueFilename);
+				% Save the endpoint and json locally
+				fid = fopen(queueFullfile, 'w');
+				fprintf(fid, '%s\n%s', endpoint, jsonData);
+				fclose(fid);
+				% Flush the queue
+				if me.loggedIn
+					[dataOut, statusCode] = me.flushQueue();
+					% Return only relevent data
+					if numel(statusCode) > 1; statusCode = statusCode(end); end
+				end
 
-			% If local Alyx queue directory doesn't exist, create one
-			if isempty(me.queueDir) || ~exist(me.queueDir, 'dir')
-				me.queueDir = me.paths.parent;
-			end
-			% Make a filename for the current command
-			queueFilename = append(datestr(now, 'yyyy-mm-dd-HH-MM-SS-FFF'), '.', lower(requestMethod));
-			queueFullfile = fullfile(me.queueDir, queueFilename);
-
-			% Save the endpoint and json locally
-			fid = fopen(queueFullfile, 'w');
-			fprintf(fid, '%s\n%s', endpoint, jsonData);
-			fclose(fid);
-
-			% Flush the queue
-			if me.loggedIn
-				[data, statusCode] = me.flushQueue();
-				% Return only relevent data
-				if numel(statusCode) > 1; statusCode = statusCode(end); end
-				%if floor(statusCode/100) == 2 && ~isempty(data)
-				%	data = data(end);
-				%end
-			else
-				statusCode = 000;
-				data = [];
-				warning('Alyx:flushQueue:NotConnected','Not connected to Alyx - saved in queue');
 			end
 		end
 
@@ -760,6 +778,7 @@ classdef alyxManager < optickaCore
 
 			try
 				[newSession, statusCode] = me.postData('sessions', d, 'post');
+				if ~exist('newSession','var') || isempty(newSession); error("postData to Alyx returned an empty session"); end
 				url = newSession.url;
 				me.sessionURL = url;
 			catch ME
@@ -974,7 +993,7 @@ classdef alyxManager < optickaCore
 		end
 
 		% ===================================================================
-		function [datasets, success] = registerFile(me, rFiles)
+	function [datasets, success] = registerFile(me, rFiles, useQueue)
 		% ===================================================================
 			%> @brief Register file(s) with Alyx using the `register-file` endpoint
 			%>
@@ -989,7 +1008,7 @@ classdef alyxManager < optickaCore
 			%>     - path: subject/date/number path
 			%>     - filenames: cell array of filenames
 			%>     - hashes: SHA1 hashes for each file
-			%>     - bytes: file sizes in bytes
+			%>     - bytes: file sizes in int32 bytes
 			%>     - created_by: user uploading the files
 			%> @return datasets struct Alyx response for the registered file records.
 			%> @return success logical True when registration succeeds (HTTP 201).
@@ -999,13 +1018,14 @@ classdef alyxManager < optickaCore
 			arguments(Input)
 				me
 				rFiles struct
+				useQueue logical = true
 			end
 
 			success = false;
 
 			if isempty(fieldnames(rFiles)); warning('alyxManager.register file incorrect input'); end
 
-			[datasets, statusCode] = me.postData('register-file', rFiles);
+			[datasets, statusCode] = me.postData('register-file', rFiles, 'post', useQueue);
 
 			if statusCode ~= 201
 				warning('HTTP Error %i -- No file registering', statusCode)
@@ -1017,7 +1037,7 @@ classdef alyxManager < optickaCore
 		end
 
 		% ===================================================================
-		function [datasets, filenames] = registerALFFiles(me, paths, session)
+		function [datasets, filenames, success] = registerALFFiles(me, paths, session)
 		% ===================================================================
 		%> @brief Register all files in an ALF path with Alyx
 		%>
@@ -1042,6 +1062,7 @@ classdef alyxManager < optickaCore
 			arguments(Output)
 				datasets struct
 				filenames cell
+				success logical
 			end
 
 			sFiles = dir(paths.ALFPath);
@@ -1091,13 +1112,14 @@ classdef alyxManager < optickaCore
 			rf.labs = session.labName;
 			try rf.created_by = session.researcherName; end
 
-			datasets = registerFile(me, rf);
+			[datasets, success] = registerFile(me, rf);
 
 		end
 
 		% ===================================================================
 		function initDatabase(me)
 		% ===================================================================
+
 			% opticka.raw*.mat dataset type is used to store the raw data from the opticka system for a single session
 			[r, s] = getData(me,'dataset-types/opticka.raw');
 			if s ~= 200
@@ -1111,6 +1133,19 @@ classdef alyxManager < optickaCore
 					warning("Couldn't create opticka.raw dataset type");
 				end
 			end
+			% opticka.raw*.mat dataset type is used to store the raw data from the opticka system for a single session
+			[r, s] = getData(me,'dataset-types/matlab.raw');
+			if s ~= 200
+				d = struct;
+				d.name = 'matlab.raw';
+				d.created_by = me.user;
+				d.description = "MATLAB raw mat file for single session";
+				d.filename_pattern = "matlab.raw.*.mat";
+				[r, s] = me.postData('dataset-types', d, 'post');
+				if isempty(r)
+					warning("Couldn't create matlab.raw dataset type");
+				end
+			end
 			% _matlab_diary dataset type is used to store the MATLAB diary for a single session
 			[r, s] = getData(me,'dataset-types/_matlab_diary');
 			if s ~= 200
@@ -1118,7 +1153,7 @@ classdef alyxManager < optickaCore
 				d.name = '_matlab_diary';
 				d.created_by = me.user;
 				d.description = "Recording the output from MATLAB's command window using Diary function";
-				d.filename_pattern = "_matlab_diary.*.mat";
+				d.filename_pattern = "_matlab_diary.*.log";
 				[r, s] = me.postData('dataset-types', d, 'post');
 				if isempty(r)
 					warning("Couldn't create _matlab_diary dataset type");
@@ -1321,6 +1356,7 @@ classdef alyxManager < optickaCore
 			% See also ALYX, LOGIN
 			[statusCode, responseBody] = me.jsonPost('auth-token',...
 			['{"username":"', username, '","password":"', password, '"}']);
+
 			if statusCode == 200
 				me.token = responseBody.token;
 				me.user = username;
@@ -1328,7 +1364,23 @@ classdef alyxManager < optickaCore
 				% Add the token to the authorization header field
 				me.webOptions.HeaderFields = {'Authorization', ['Token ' me.token]};
 				% Flush the local queue on successful login
-				me.flushQueue();
+				me.flushQueue(true);
+			elseif statusCode == 403
+				j = ['{"username":"', username, '","password":"', password, '"}'];
+				cmd = ['LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu curl -X POST ' me.makeEndpoint('auth-token') ' -H "Content-Type: application/json" -d ''' j ''' ' ];
+				[r,tc] = system(cmd); %can we fix using curl directly?
+				if r == 0
+					tc = jsondecode(tc);
+					if isfield(tc,'token')
+						me.token = tc.token;
+						me.user = username;
+						me.assignedUser = me.user;
+						me.webOptions.HeaderFields = {'Authorization', ['Token ' me.token]};
+						me.flushQueue(true);
+						statusCode = 200;
+					end
+				end
+
 			elseif statusCode == 000
 				me.assignedUser = '';
 				me.token = '';
@@ -1519,121 +1571,6 @@ classdef alyxManager < optickaCore
 		function delete(me)
 			if me.verbose; fprintf('≣≣≣≣⊱ Delete: %s\n',me.fullName); end
 		end
-
-		% ===================================================================
-		function registerALF(me, alfDir, sessionURL)
-		% ===================================================================
-			%> @brief DEPRECATED!!! Register files contained within alfDir to Alyx
-			%>
-			%> Files are only registered if their filenames match a datasetType's
-			%> alf_filename field. Must also provide an alyx session URL.
-			%>
-			%> @param alfDir char directory containing ALF files
-			%> @param sessionURL char Alyx URL of the session (uses me.sessionURL)
-			%>
-			arguments
-				me alyxManager
-				alfDir char
-				sessionURL char = ''
-			end
-			if isempty(sessionURL)
-				if isempty(me.sessionURL)
-					error('No session URL set')
-				else
-					sessionURL = me.sessionURL;
-				end
-			end
-
-			assert(exist('dirPlus','file') == 2,...
-			'Function ''dirPlus'' not found, make sure alyx helpers folder is added to path')
-
-			%%INPUT VALIDATION
-			% Validate alfDir path
-			assert(~contains(alfDir,'/'), 'Do not use forward slashes in the path');
-			assert(exist(alfDir,'dir') == 7 , 'alfDir %s does not exist', alfDir);
-
-			% Validate alyxInstance, creating one if not supplied
-			if ~me.loggedIn; me = me.login; end
-
-			%%Validate that the files within alfDir match a datasetType.
-			%1) Get all datasetTypes from the database, and list the filename patterns
-			datasetTypes = me.getData('dataset-types');
-			datasetTypes = [datasetTypes{:}];
-			datasetTypes_filemasks = {datasetTypes.filename_pattern};
-			datasetTypes_filemasks(cellfun(@isempty,datasetTypes_filemasks)) = {''}; %Ensures all entries are character arrays
-
-			%2) Get all the files contained within the alfDir, which match a
-			%datasetType in the Alyx database
-			function v = validateFcn(fileObj)
-				match = regexp(fileObj.name, regexptranslate('wildcard',datasetTypes_filemasks));
-				v = ~isempty([match{:}]);
-			end
-			alfFiles = dirPlus(alfDir, 'ValidateFileFcn', @validateFcn, 'Struct', true);
-			assert(~isempty(alfFiles), 'No files within %s matched a datasetType', alfDir);
-
-			%% Define a hierarchy of alfFiles based on the ALF naming scheme: parent.child.*
-			alfFileParts = cellfun(@(name) strsplit(name,'.'), {alfFiles.name}, 'uni', 0);
-			alfFileParts = cat(1, alfFileParts{:});
-
-			%Create parent datasets, which contain no filerecords themselves
-			[parentTypes, ~, parentID] = unique(alfFileParts(:,1));
-			parentURLs = cell(size(parentTypes));
-			fprintf('Creating parent datasets... ');
-			for parent = 1:length(parentTypes)
-				d = struct('created_by', me.User,...
-						'dataset_type', parentTypes{parent},...
-						'session', sessionURL,...
-						'data_format', 'notData');
-				w = me.postData('datasets',d);
-				parentURLs{parent} = w.url;
-			end
-
-			%Now go through each file, creating a dataset and filerecord for that file
-			for file = 1:length(alfFiles)
-				fullPath = fullfile(alfFiles(file).folder, alfFiles(file).name);
-				fileFormat = alfFileParts{file,3};
-				parentDataset = parentURLs{parentID(file)};
-
-				datasetTypes_filemasks(contains(datasetTypes_filemasks,'*.*')) = []; % Remove parant datasets from search
-				matchIdx = regexp(alfFiles(file).name, regexptranslate('wildcard', datasetTypes_filemasks));
-				matchIdx = find(~cellfun(@isempty, matchIdx));
-				assert(isscalar(matchIdx), 'Insufficient/Too many matches of datasetType for file %s', alfFiles(file).name);
-				datasetType = datasetTypes(matchIdx).name;
-
-				me.registerFile(fullPath, fileFormat, sessionURL, datasetType, parentDataset);
-
-				fprintf('Registered file %s as datasetType %s\n', alfFiles(file).name, datasetType);
-			end
-
-			%% Alyx-dev
-			return
-			try %#ok<UNRCH>
-				%Get datarepositories and their base paths
-				repo_paths = cellfun(@(r) r.name, me.getData('data-repository'), 'uni', 0);
-
-				%Identify which repository the filePath is in
-				which_repo = cellfun( @(rp) contains(alfDir, rp), repo_paths);
-				assert(sum(which_repo) == 1, 'Input filePath\n%s\ndoes not contain the a repository path\n', alfDir);
-
-				%Define the relative path of the file within the repo
-				dnsId = regexp(alfDir, ['(?<=' repo_paths{which_repo} '.*)\\?'], 'once')+1;
-				relativePath = alfDir(dnsId:end);
-
-				me.BaseURL = 'https://alyx-dev.cortexlab.net';
-				%   subject = regexpi(relativePath, '(?<=Subjects\\)[A-Z_0-9]+', 'match');
-
-				%   D.subject = subject{1};
-				D.filenames = {alfFiles.name};
-				D.path = alfDir;
-				%   D.exists_in = repo_paths{which_repo};
-
-				me.postData('register-file', D);
-			catch ex
-				warning(ex.identifier, '%s', ex.message)
-			end
-			me.BaseURL = 'https://alyx.cortexlab.net';
-		end
-
 
 	%=======================================================================
 	end %---END PRIVATE METHODS---%

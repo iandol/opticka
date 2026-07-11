@@ -73,6 +73,8 @@ classdef alyxUploader < handle
 		%> regex to extract timestamp from opticka filenames
 		%> matches: 2026-04-23-10-20-03  (yyyy-MM-dd-HH-mm-ss)
 		tsPattern = '(\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2})'
+		%> cache of remote name lists keyed by type, mirroring alyxManager.cache
+		cache dictionary
 	end
 
 	%=======================================================================
@@ -94,6 +96,8 @@ classdef alyxUploader < handle
 			if isempty(me.alyx)
 				me.alyx = alyxManager;
 			end
+
+			me.cache = configureDictionary("string","cell");
 		end
 
 		% ===================================================================
@@ -111,6 +115,7 @@ classdef alyxUploader < handle
 			end
 
 			report = {};
+
 
 			% open the diary file
 			if isempty(me.diaryFile)
@@ -131,6 +136,7 @@ classdef alyxUploader < handle
 			% Login to Alyx
 			if ~me.dryRun
 				ensureLogin(me);
+				me.alyx.cleanQueue;
 			end
 
 			% Find all session folders (leaf directories under date/NNN)
@@ -295,11 +301,11 @@ classdef alyxUploader < handle
 			end
 
 			%% === Validate subject / user / lab exist in Alyx before proceeding
-			if ~me.dryRun
+			%if ~me.dryRun
 				session = validateSession(me, session); 
 				if ~isfield(session,'project'); session.project = 'Unknown'; end
 				if ~isfield(session,'researcherName'); session.researcherName = 'Unknown'; end
-			end
+			%end
 
 			%% ============================================================CREATE SESSION
 			% Check if this session already exists in Alyx (using the real date)
@@ -314,15 +320,16 @@ classdef alyxUploader < handle
 					log{end+1} = sprintf('  ↳ Session already in Alyx (id=%s), skipping creation.', alyxSession(1).id);
 					me.alyx.sessionURL = alyxSession(1).url;
 					alyxSession = alyxSession(1);
-					if ~isempty(json); 
+					if ~isempty(json)
 						t = updateJSON(me, alyxSession, json); 
 						if ~isempty(t); log{end+1} = t; end
 					end
 				else
 					[url, alyxSession] = me.createAlyxSession(paths, session, json, startTime);
-					if isempty(url); error("Could not create a new session!"); end
+					if ~exist('url','var') || isempty(url); error("Could not create a new session!"); end
+					log{end+1} = '  ↳ Session created...';
 					me.alyx.sessionURL = url;
-					me.alyx.updateNarrative("Session created by by alyxUploader");
+					me.alyx.updateNarrative("Session created by alyxUploader");
 				end
 				log{end+1} = [' <a href="' char(me.alyx.sessionURL) '">' char(me.alyx.sessionURL) '</a> '];
 			else
@@ -330,6 +337,8 @@ classdef alyxUploader < handle
 					char(startTime, 'yyyy-MM-dd''T''HH:mm:ss'));
 			end
 			doClose = false;
+
+			%% =========================================================================
 			% Register files with Alyx
 			if ~me.dryRun
 				setQC = false;
@@ -338,7 +347,7 @@ classdef alyxUploader < handle
 				datasets = struct.empty;
 				try
 					localFiles = me.buildLocalFileRecords(sFiles);
-					existingDatasets = me.getExistingDatasets(alyxSession, s);
+					existingDatasets = me.getExistingDatasets(alyxSession);
 					[filesToRegister, matchedFiles] = me.findMissingDatasets(localFiles, existingDatasets);
 					if ~isempty(matchedFiles)
 						log{end+1} = sprintf('  ↳ %d dataset(s) already present in Alyx; skipping.', ...
@@ -347,11 +356,17 @@ classdef alyxUploader < handle
 					if isempty(filesToRegister)
 						log{end+1} = sprintf('  ↳ All %d local file(s) are already registered in Alyx.', ...
 							numel(localFiles));
+						setQC = true;
 					else
+						log{end+1} = sprintf('  ↳ %d local file(s) will be registered.', ...
+							numel(filesToRegister));
+						if ~isempty(filesToRegister) && ~isempty(existingDatasets)
+							filesToRegister = avoidNameCollisions(me, filesToRegister, existingDatasets);
+						end
 						[datasets, filenames, uuids] = me.registerDatasets(paths, session, filesToRegister);
 					end
 					if ~isempty(filesToRegister) && isempty(datasets)
-						log{end+1} = sprintf('≣≣≣≣⊱ WARNING Files Failed to Connect: %s', me.alyx.sessionURL);
+						log{end+1} = sprintf('≣≣≣≣⊱ WARNING Files Failed to Send, could be the same named file already exists: %s', me.alyx.sessionURL);
 					elseif ~isempty(datasets)
 						doClose = true;
 						log{end+1} = sprintf('≣≣≣≣⊱ Added %d File(s) to ALYX Session: %s', ...
@@ -370,20 +385,21 @@ classdef alyxUploader < handle
 				log{end+1} = sprintf ("  %s",string(files));
 			end
 
+			%% =========================================================================
 			% Upload to S3
 			if ~me.dryRun && ~isempty(datasets) && ~isempty(filenames)
-				uploaded = me.uploadToS3(filenames, uuids, paths, session);
+				[uploaded, log] = uploadToS3(me, filenames, uuids, paths, session, log);
 				setQC = ~isempty(uploaded) && all(uploaded);
 			elseif me.dryRun
-				log{end+1} = sprintf('  [DryRun] Would upload %d file(s) to S3 bucket "%s".', ...
+				log{end+1} = sprintf('  [DryRun] Would upload the %d file(s) to S3 bucket "%s".', ...
 					numel(files), lower(session.labName));
-				log{end+1} = sprintf ("  %s",string(files));
 				setQC = false;
 			end
 
-			%% if the upload was successful, set the dataset QC to PASS in ALYX
+			%% =========================================================================
+			% if the upload was successful, set the dataset QC to PASS in ALYX
 			if setQC
-				qc = struct("qc", "PASS");
+				qc = struct("qc", "PASS", "default", true);
 				%% set the dataset QC to PASS if upload successful
 				for ii = 1:length(uuids)
 					if ~isempty(uuids{ii})
@@ -401,7 +417,25 @@ classdef alyxUploader < handle
 			end
 		end
 
+		% ===================================================================
+		function new = avoidNameCollisions(~, new, old)
+		% ===================================================================
+			if isempty(new) || isempty(old); return; end
+			for ii = 1:length(new)
+				if matches(new(ii).name,{old.name})
+					[p,f,e] = fileparts(new(ii).fullPath);
+					newName = [f 'A' e];
+					newPath = fullfile(p, newName);
+					movefile(new(ii).fullPath,newPath);
+					new(ii).fullPath = newPath;
+					new(ii).name = newName;
+				end
+			end
+		end
+
+		% ===================================================================
 		function log = updateJSON(me, session, json)
+		% ===================================================================
 			endpoint = ['sessions/', session.id];
 			details = me.alyx.getData(endpoint);
 			tmp = [];
@@ -417,8 +451,10 @@ classdef alyxUploader < handle
 				end
 				try
 					if ~isempty(tmp)
-						me.alyx.postData(endpoint,tmp,'patch');
-						log = '  ↳ Patched the JSON and trial numbers if valid';
+						[d, status] = me.alyx.postData(endpoint,tmp,'patch');
+						if status == 201
+							log = '  ↳ Patched the JSON and trial numbers if valid';
+						end
 					end
 				end
 			end
@@ -592,7 +628,7 @@ classdef alyxUploader < handle
 		end
 
 		% ===================================================================
-		function datasets = getExistingDatasets(me, alyxSession, s)
+		function [datasets, status] = getExistingDatasets(me, alyxSession)
 		%> @brief Read existing Alyx datasets for the selected session.
 		% ===================================================================
 			datasets = struct.empty;
@@ -602,27 +638,18 @@ classdef alyxUploader < handle
 				if isfield(alyxSession, 'id'); sessionID = char(string(alyxSession.id)); end
 				if isfield(alyxSession, 'url'); sessionURL = char(string(alyxSession.url)); end
 			end
-
-			endpoints = {};
+			endpoint = '';
 			if ~isempty(sessionID)
-				endpoints{end+1} = sprintf('datasets?session=%s', sessionID);
+				endpoint = sprintf('datasets?session=%s', sessionID);
+			elseif ~isempty(sessionURL)
+				sessionURL = split(sessionURL,"/");
+				sessionURL = sessionURL(end);
+				endpoint = sprintf('datasets?session=%s', sessionURL);
 			end
-			if ~isempty(sessionURL)
-				endpoints{end+1} = sprintf('datasets?session=%s', sessionURL);
-			end
-			endpoints{end+1} = sprintf('datasets?subject=%s&experiment_number=%s', ...
-				s.subject, s.sessionID);
-
-			for ii = 1:numel(endpoints)
-				[candidate, sc] = me.alyx.getData(endpoints{ii});
-				if sc ~= 200 || isempty(candidate); continue; end
-				candidate = me.normalizeStructArray(candidate);
-				candidate = me.filterDatasetsBySession(candidate, sessionID, sessionURL);
-				if ~isempty(candidate)
-					datasets = candidate;
-					return;
-				end
-			end
+			[candidate, status] = me.alyx.getData(endpoint);
+			if status ~= 200 || isempty(candidate); return; end
+			candidate = me.normalizeStructArray(candidate);
+			datasets = candidate;
 		end
 
 		% ===================================================================
@@ -672,8 +699,9 @@ classdef alyxUploader < handle
 			rf.filesizes = int32([filesToRegister.bytes]);
 			rf.labs = session.labName;
 			try rf.created_by = session.researcherName; end
-
-			[datasets, success] = me.alyx.registerFile(rf);
+			
+			%[datasets,files,success] = me.alyx.registerALFFiles(paths,session);
+			[datasets, success] = me.alyx.registerFile(rf,false);
 			if ~success || isempty(datasets)
 				datasets = struct.empty;
 				return;
@@ -697,27 +725,6 @@ classdef alyxUploader < handle
 					end
 				end
 			end
-		end
-
-		% ===================================================================
-		function datasets = filterDatasetsBySession(me, datasets, sessionID, sessionURL)
-		%> @brief Keep only datasets whose session field matches the target.
-		% ===================================================================
-			if isempty(datasets) || (isempty(sessionID) && isempty(sessionURL)); return; end
-			keep = true(1, numel(datasets));
-			for ii = 1:numel(datasets)
-				value = me.getFieldValue(datasets(ii), {'session', 'session_id', 'eid'});
-				if isempty(value); continue; end
-				value = char(string(value));
-				keep(ii) = false;
-				if ~isempty(sessionID)
-					keep(ii) = keep(ii) || strcmp(value, sessionID) || contains(value, sessionID);
-				end
-				if ~isempty(sessionURL)
-					keep(ii) = keep(ii) || strcmp(value, sessionURL) || contains(value, sessionURL);
-				end
-			end
-			datasets = datasets(keep);
 		end
 
 		% ===================================================================
@@ -952,6 +959,20 @@ classdef alyxUploader < handle
 						session.taskProtocol = ml.tS.runName;
 						json = jsonencode(ml.tS);
 					end
+				elseif isfield(ml,'allGamesData') && isstruct(ml.allGamesData)
+					nGames = length(fieldnames(ml.allGamesData))/2;
+					if isfield(ml,'opts')
+						json = ml.opts;
+						if isfield(json,'session'); session = json.session; end
+						json.nGames = nGames;
+						json.sourceFile = files{ii};
+						try json.tL = []; end
+						try json.aM = []; end
+					else
+						json.nGames = nGames;
+						json.sourceFile = files{ii};
+					end
+					json = jsonencode(json);
 				end
 				clear ml;
 			end
@@ -959,7 +980,8 @@ classdef alyxUploader < handle
 
 		% ===================================================================
 		function session = validateSession(me, session)
-		%> @brief check entries exists in alyx database
+		%> @brief Check entries exist in Alyx database; if only the
+		%> case differs from a remote name, replace rather than drop.
 		% ===================================================================
 			toCheck = dictionary("subjectName", "subjects",...
 				"labName",			"labs",...
@@ -970,10 +992,59 @@ classdef alyxUploader < handle
 				"project",			"projects");
 			myKeys = keys(toCheck)';
 			for key = myKeys
-				if isfield(session, key) && ~me.alyx.hasEntry(toCheck(key), session.(key))
+				if ~isfield(session, key); continue; end
+				[remoteNames, found] = me.getRemoteNames(toCheck(key));
+				if ~found
 					session = rmfield(session, key);
+					continue;
+				end
+				remoteNames = string(remoteNames);
+				localVal = string(session.(key));
+				ci = matches(remoteNames, localVal, 'IgnoreCase', true);
+				if ~any(ci)
+					session = rmfield(session, key);
+					continue;
+				end
+				if ~matches(remoteNames, localVal, 'IgnoreCase', false)
+					session.(key) = char(remoteNames(find(ci, 1)));
 				end
 			end
+		end
+
+		% ===================================================================
+		function [names, success] = getRemoteNames(me, type)
+		%> @brief Fetch all valid names for a given Alyx type (e.g. 'subjects').
+		%>
+		%> Returns the list of canonical names as a string array. Results are
+		%> cached per type, mirroring the cache strategy in alyxManager.hasEntry.
+		% ===================================================================
+			typeKey = string(type);
+			if numEntries(me.cache) > 0 && isKey(me.cache, typeKey)
+				rt = lookup(me.cache, typeKey);
+				while isscalar(rt); rt = rt{1}; end
+				names = string(rt);
+				success = true;
+				return;
+			end
+
+			[data, status] = me.alyx.getData(type);
+			success = status == 200 && isstruct(data) && ~isempty(data);
+			names = string.empty;
+			if ~success; return; end
+			switch type
+				case {'subjects'}
+					names = string({data(:).nickname});
+				case {'tags','tasks','procedures','labs','locations','brain-regions','projects','data-repository','dataset-types'}
+					names = string({data(:).name});
+				case {'users'}
+					names = string({data(:).username});
+				case {'sessions'}
+					names = string({data(:).id});
+				otherwise
+					success = false;
+					return;
+			end
+			me.cache = insert(me.cache, typeKey, {cellstr(names)});
 		end
 
 		% ===================================================================

@@ -9,7 +9,7 @@ classdef timeLogger < optickaCore
 	
 	properties
 		% which timer to use, GetSecs from PTB is preferred
-		timer function_handle	= @GetSecs
+		timer					= @GetSecs
 		% which experiment state names are considered stimulus presentation
 		stimStateNames cell		= {'stimulus','onestep','twostep'}
 		% for logging PTB Flip values

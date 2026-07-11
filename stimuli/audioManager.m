@@ -18,9 +18,8 @@ classdef audioManager < optickaCore
 		chainSnd			= false 
 		verbose				= false
 	end
-	
+
 	properties (SetAccess = private, GetAccess = public)
-		aHandle
 		devices
 		status
 		isBuffered logical	= false
@@ -29,14 +28,19 @@ classdef audioManager < optickaCore
 		isOpen logical		= false
 		isSample logical	= false
 	end
-	
-	properties (SetAccess = private, GetAccess = private)
+
+	properties (Access = private, Transient = true)
+		aHandle
 		beepHandle			= NaN
 		sampleHandle		= NaN
 		handles				= []
+		beepCache dictionary
+	end
+
+	
+	properties (SetAccess = private, GetAccess = private)
 		isFiles logical		= false
 		%> cache generated beep vectors by sample rate, frequency and duration
-		beepCache dictionary
 		allowedProperties = {'numChannels', 'frequency', 'lowLatency', ...
 			'device', 'volumeLevel', 'fileName', 'silentMode', 'verbose'}
 	end 
@@ -363,6 +367,16 @@ classdef audioManager < optickaCore
 		end
 		
 	end %---END PUBLIC METHODS---%
+
+	methods (Static)
+		function me = loadobj(me)
+			if ~isstruct(me)
+				me.aHandle = [];
+				me.sampleHandle = [];
+				me.beepCache = configureDictionary("string","cell");
+			end
+		end
+	end
 	
 	%=======================================================================
 	methods ( Access = protected ) %-------PROTECTED METHODS-----%

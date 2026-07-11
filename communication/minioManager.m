@@ -10,9 +10,12 @@ classdef minioManager < handle
 %> `mc alias set` to register an endpoint alias, and subsequent commands
 %> use the alias name to address buckets and objects.
 %>
+%> You must ensure the `mc` command from minio comes first in the path,
+%> beware as midnight-commander also provides an `mc` command...
+%>
 %> @section install Installation
 %>
-%> Install the mc CLI cross-platform:
+%> Install the mc CLI:
 %> @code
 %> curl https://dl.min.io/client/mc/release/linux-amd64/mc -o ~/bin/mc && chmod +x ~/bin/mc
 %> @endcode
@@ -26,11 +29,12 @@ classdef minioManager < handle
 %>
 %> Secrets can be kept locally using setSecret('MINIO_ID') and
 %> setSecret('MINIO_KEY'), then passed with getSecret.
+%>
 %> @code
 %> m = minioManager(getSecret("MINIO_ID"), getSecret("MINIO_KEY"), "http://1.1.1.1:9000")
 %> m.list()
 %> m.checkBucket("mybucket")
-%> m.get("mybucket","path/to/file.mat")
+%> m.get("mybucket","path/to/file.mat") % saves to current working dir
 %> m.copyFiles("localfile.mat","mybucket","remote/path/file.mat")
 %> @endcode
 %>
@@ -40,11 +44,13 @@ classdef minioManager < handle
 	%--------------------PUBLIC PROPERTIES----------%
 	properties
 		%> the S3 endpoint URL
-		ENDPOINT char
+		endpoint char
 		%> alias name for mc commands
-		ALIAS char = 'minio-local'
+		alias char = 'minio-local'
 		%> local dir
-		LOCAL char = './'
+		local char = './'
+		% default bucket
+		bucket
 	end
 
 	%--------------------TRANSIENT HIDDEN PROPERTIES----------%
@@ -76,9 +82,9 @@ classdef minioManager < handle
 
 			me.ACCESS_KEY = id;
 			me.SECRET_KEY  = key;
-			me.ENDPOINT    = url;
+			me.endpoint    = url;
 			if nargin >= 4 && ~isempty(alias)
-				me.ALIAS = alias;
+				me.alias = alias;
 			end
 			setupAlias(me);
 		end
@@ -86,7 +92,7 @@ classdef minioManager < handle
 		% ===================================================================
 		function delete(me)
 		%> @brief clean up mc alias on object deletion
-			cmdin = ['mc alias remove ' me.ALIAS ' 2>/dev/null'];
+			cmdin = ['mc alias remove ' me.alias ' 2>/dev/null'];
 			system(cmdin);
 		end
 
@@ -100,7 +106,7 @@ classdef minioManager < handle
 
 			id  = strrep(me.ACCESS_KEY, '''', '''''');
 			key = strrep(me.SECRET_KEY,  '''', '''''');
-			cmdin = ['mc alias set ' me.ALIAS ' ' me.ENDPOINT ' ''' id ''' ''' key ''''];
+			cmdin = ['mc alias set ' me.alias ' ' me.endpoint ' ''' id ''' ''' key ''''];
 			[r, out] = system(cmdin);
 			if logical(r)
 				warning('--->>> minioManager: problem setting alias: %s',out);
@@ -114,13 +120,13 @@ classdef minioManager < handle
 		%> @param  none
 		%> @return out character vector of bucket listing
 
-			cmdin = ['mc ls ' me.ALIAS];
+			cmdin = ['mc ls ' me.alias];
 			[~, out] = system(cmdin);
 			out = strtrim(out);
 		end
 
 		% ===================================================================
-		function checkBucket(me, bucket)
+		function result = checkBucket(me, bucket)
 		%> @brief check bucket exists and create it if missing
 		%>
 		%> Lists buckets, and if the named bucket is not found,
@@ -128,13 +134,17 @@ classdef minioManager < handle
 		%>
 		%> @param bucket name of the bucket to check
 
+			result = false;
 			buckets = list(me);
 			if contains(buckets,'[ERROR]')
 				buckets = '';
 				warning('Couldn''t get buckets list, problem with mc!!!');
 			end
 			if ~isempty(buckets) && ~contains(buckets,lower(bucket))
-				createBucket(me, lower(bucket));
+				s = createBucket(me, lower(bucket));
+				if s; result = true; end
+			else
+				result = true;
 			end
 		end
 
@@ -146,7 +156,7 @@ classdef minioManager < handle
 		%> @return success logical true if bucket was created
 
 			if nargin < 2; error('--->>> minioManager: you must enter a bucket name'); end
-			cmdin = ['mc mb ' me.ALIAS '/' bucket];
+			cmdin = ['mc mb ' me.alias '/' bucket];
 			[r, out] = system(cmdin);
 			success = ~logical(r);
 			if ~success
@@ -175,9 +185,9 @@ classdef minioManager < handle
 				error('--->>> minioManager: you must enter a regex pattern');
 			end
 			if ~exist('target','var')||isempty(target)
-				tgt = me.ALIAS;
+				tgt = me.alias;
 			else
-				tgt = [me.ALIAS '/' target];
+				tgt = [me.alias '/' target];
 			end
 
 			p = strrep(pattern, '''', '''''');
@@ -222,7 +232,9 @@ classdef minioManager < handle
 			if ~exist('bucket','var') || isempty(bucket); return; end
 			if ~exist('key','var') || isempty(key); return; end
 
-			cmdin = ['mc cp ' me.ALIAS '/' bucket '/' key ' ' me.LOCAL];
+			key = cleanKey(me,key,bucket);
+
+			cmdin = ['mc cp ' me.alias '/' bucket '/' key ' ' me.local];
 			[r, out] = system(cmdin);
 			success = ~logical(r);
 			if ~success
@@ -250,12 +262,14 @@ classdef minioManager < handle
 			if ~exist('bucket','var') || isempty(bucket); return; end
 			if ~exist('key','var') || isempty(key); return; end
 
+			key = cleanKey(me,key,bucket);
+
 			if exist(file) == 7
 				rec = '--recursive ';
 			else
 				rec = '';
 			end
-			cmdin = ['mc cp --quiet ' rec '''' file ''' ' me.ALIAS '/' bucket '/' key];
+			cmdin = ['mc cp --quiet ' rec '''' file ''' ' me.alias '/' bucket '/' key];
 			[r, out] = system(cmdin);
 			success = ~logical(r);
 			if ~success
@@ -287,7 +301,9 @@ classdef minioManager < handle
 			if ~exist('bucket','var') || isempty(bucket); return; end
 			if ~exist('key','var') || isempty(key); return; end
 
-			cmdin = ['mc stat --json ' me.ALIAS '/' bucket '/' key];
+			key = cleanKey(me,key,bucket);
+
+			cmdin = ['mc stat --json ' me.alias '/' bucket '/' key];
 			[r, out] = system(cmdin);
 
 			if logical(r)
@@ -310,5 +326,14 @@ classdef minioManager < handle
 			end
 		end
 
+	end
+
+	methods (Access = private)
+		function key = cleanKey(me, key, bucket)
+			key = char(key);
+			if key(1) == '/'; key = key(2:end); end
+			key = regexprep(key,['^' char(me.alias) '/'],'');
+			key = regexprep(key,['^' char(bucket) '/'],'');
+		end
 	end
 end
