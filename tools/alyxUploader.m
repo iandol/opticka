@@ -114,16 +114,15 @@ classdef alyxUploader < handle
 				subFolder char = ''
 			end
 
-			report = {};
-
-
 			% open the diary file
 			if isempty(me.diaryFile)
 				me.diaryFile = fullfile(me.alyx.paths.parent, "alyxUploader.log");
 			end
 			diary(me.diaryFile);
+			report{1} = '≣≣≣≣ ≣≣≣≣ ≣≣≣≣ ≣≣≣≣ ≣≣≣≣ ≣≣≣≣ ≣≣≣≣ ≣≣≣≣ ≣≣≣≣';
+			report{2} = report{1};
 			report{end+1} = sprintf('≣≣≣≣⊱ alyxUploader: diary file: %s', me.diaryFile);
-
+			
 			me.dryRun = dryRun;
 			scanRoot = me.rootPath;
 			if ~isempty(subFolder)
@@ -148,7 +147,8 @@ classdef alyxUploader < handle
 			end
 
 			report{end+1} = sprintf('≣≣≣≣⊱ alyxUploader: found %d session folder(s) to process', numel(sessions));
-			disp(report{end});
+			fprintf("\n\n\n");
+			cellfun(@(ln)disp(ln),report);
 
 			for ii = 1:numel(sessions)
 				try
@@ -263,6 +263,9 @@ classdef alyxUploader < handle
 			if ~isempty(me.location); session.location = me.location; end
 			session.dataBucket     = lower(session.labName);
 			session.dataRepo       = me.dataRepo;
+			if isempty(session.labName)
+				log{end+1} = sprintf('  ↳ No lab name in the ALF path, we need to get this from the MAT file otherwise upload will fail');
+			end
 
 			%% === Build paths struct mimicking runExperiment.paths
 			paths = struct();
@@ -301,12 +304,12 @@ classdef alyxUploader < handle
 			end
 
 			%% === Validate subject / user / lab exist in Alyx before proceeding
-			%if ~me.dryRun
-				session = validateSession(me, session); 
+			if ~me.dryRun
+				session = validateSession(me, session);
+				if ~isfield(session,'labName'); session.labName = 'Unknown'; end
 				if ~isfield(session,'project'); session.project = 'Unknown'; end
 				if ~isfield(session,'researcherName'); session.researcherName = 'Unknown'; end
-			%end
-
+			end
 			%% ============================================================CREATE SESSION
 			% Check if this session already exists in Alyx (using the real date)
 			% Use only the date part for the date_range query
@@ -691,6 +694,9 @@ classdef alyxUploader < handle
 			filenames = {filesToRegister.fullPath};
 			uuids = cell(1, numel(filesToRegister));
 			if isempty(filesToRegister); return; end
+
+			if isempty(session.labName); session.labName = me.labName; end
+			if isempty(session.dataBucket); session.dataBucket = lower(me.labName); end
 
 			rf = struct('name', session.dataBucket);
 			rf.path = paths.ALFKeyShort;

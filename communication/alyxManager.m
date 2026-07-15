@@ -1236,6 +1236,7 @@ classdef alyxManager < optickaCore
 		function set.queueDir(me, qDir)
 		% ===================================================================
 			%SET.QUEUEDIR Ensure directory exists
+			if ~exist(qDir, 'dir') || isempty(qDir); return; end
 			if ~exist(qDir, 'dir'); mkdir(qDir); end
 			me.queueDir = qDir;
 		end
