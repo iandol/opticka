@@ -185,6 +185,7 @@ classdef alyxManager < optickaCore
 				me.token = [];
 				me.sessionURL = '';
 				me.webOptions.HeaderFields = []; % Remove token from header field
+				me.cache = configureDictionary("string","cell"); % set up the cache for hasEntry()
 				if ~me.loggedIn
 					fprintf('\n≣≣≣≣⊱ alyxManager: user <<%s>> logged OUT of <<%s>> successfully...\n\n', me.user, me.baseURL);
 				end
@@ -227,7 +228,7 @@ classdef alyxManager < optickaCore
 			end
 
 			try
-				me.getToken(me.user, me.password);
+				getToken(me, me.user, me.password);
 				fprintf('\n≣≣≣≣⊱ alyxManager: user <<%s>> logged in to <<%s>> successfully...\n\n', me.user, me.baseURL);
 				success = me.loggedIn;
 				me.sessionURL = '';
@@ -235,8 +236,8 @@ classdef alyxManager < optickaCore
 				flushQueue(me, true);
   			catch ex
     			if strcmp(ex.identifier, 'Alyx:Login:FailedToConnect')
-
-					warning('Alyx:LoginFail:FailedToConnect', 'Failed To Connect.')
+					success = false;
+					warning('Alyx:LoginFail:FailedToConnect', 'Failed To Connect, check your IP and Port!!!')
 					return
 				elseif contains(ex.message, 'credentials')||strcmpi(ex.message, 'Bad Request')
 					warning('Alyx:LoginFail:BadCredentials', 'Unable to log in with provided credentials. Will reset password')
@@ -1008,7 +1009,7 @@ classdef alyxManager < optickaCore
 			%>     - path: subject/date/number path
 			%>     - filenames: cell array of filenames
 			%>     - hashes: SHA1 hashes for each file
-			%>     - bytes: file sizes in int32 bytes
+			%>     - filesizes: file sizes in int32 bytes
 			%>     - created_by: user uploading the files
 			%> @return datasets struct Alyx response for the registered file records.
 			%> @return success logical True when registration succeeds (HTTP 201).
@@ -1024,6 +1025,11 @@ classdef alyxManager < optickaCore
 			success = false;
 
 			if isempty(fieldnames(rFiles)); warning('alyxManager.register file incorrect input'); end
+
+			% filenames hashes and bytes must be cell arrays
+			if ~iscell(rFiles.filenames); rFiles.filenames = {rFiles.filenames}; end
+			if ~iscell(rFiles.hashes); rFiles.hashes = {rFiles.hashes}; end
+			if isscalar(rFiles.filesizes) && ~iscell(rFiles.filesizes); rFiles.filesizes = {rFiles.filesizes}; end
 
 			[datasets, statusCode] = me.postData('register-file', rFiles, 'post', useQueue);
 
@@ -1346,7 +1352,7 @@ classdef alyxManager < optickaCore
 	%=======================================================================
 
 		% ===================================================================
-		function [me, statusCode] = getToken(me, username, password)
+		function statusCode = getToken(me, username, password)
 			%GETTOKEN Acquire an authentication token for Alyx
 			%   Makes a request for an authentication token to an Alyx instance;
 			%   returns the token and status code.
@@ -1367,6 +1373,7 @@ classdef alyxManager < optickaCore
 				% Flush the local queue on successful login
 				me.flushQueue(true);
 			elseif statusCode == 403
+				% lets tr a direct curl request
 				j = ['{"username":"', username, '","password":"', password, '"}'];
 				cmd = ['LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu curl -X POST ' me.makeEndpoint('auth-token') ' -H "Content-Type: application/json" -d ''' j ''' ' ];
 				[r,tc] = system(cmd); %can we fix using curl directly?
@@ -1379,13 +1386,16 @@ classdef alyxManager < optickaCore
 						me.webOptions.HeaderFields = {'Authorization', ['Token ' me.token]};
 						me.flushQueue(true);
 						statusCode = 200;
+					else
+						me.assignedUser = '';
+						me.token = '';
+						error('Alyx:Login:FailedToConnect', responseBody);
 					end
 				end
-
 			elseif statusCode == 000
 				me.assignedUser = '';
 				me.token = '';
-				error('Alyx:Login:FailedToConnect', responseBody)
+				error('Alyx:Login:FailedToConnect', responseBody);
 			elseif statusCode == 400 && isempty(password)
 				me.assignedUser = '';
 				me.token = '';

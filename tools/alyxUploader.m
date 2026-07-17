@@ -159,6 +159,7 @@ classdef alyxUploader < handle
 					getReport(ERR)
 					report{end+1} = sprintf('Error processing %s:     %s', sessions(ii).alfPath, ERR.message);
 					warning('alyxUploader:sessionError', report{end});
+					disp(sessions(ii));
 				end
 			end
 
@@ -306,10 +307,12 @@ classdef alyxUploader < handle
 			%% === Validate subject / user / lab exist in Alyx before proceeding
 			if ~me.dryRun
 				session = validateSession(me, session);
+				if ~isfield(session,'subjectName'); error("alyxUploader: Subject name is missing in the database!!!"); end
 				if ~isfield(session,'labName'); session.labName = 'Unknown'; end
 				if ~isfield(session,'project'); session.project = 'Unknown'; end
 				if ~isfield(session,'researcherName'); session.researcherName = 'Unknown'; end
 			end
+
 			%% ============================================================CREATE SESSION
 			% Check if this session already exists in Alyx (using the real date)
 			% Use only the date part for the date_range query
@@ -319,7 +322,7 @@ classdef alyxUploader < handle
 				request = sprintf('sessions?date_range=%s,%s&subject=%s&number=%s', ...
 					dayDate, dayDate, s.subject, s.sessionID);
 				[alyxSession, sc] = me.alyx.getData(request);
-				if sc == 200 && ~isempty(alyxSession)
+				if ~isempty(sc) && sc == 200 && ~isempty(alyxSession)
 					log{end+1} = sprintf('  ↳ Session already in Alyx (id=%s), skipping creation.', alyxSession(1).id);
 					me.alyx.sessionURL = alyxSession(1).url;
 					alyxSession = alyxSession(1);
@@ -344,7 +347,7 @@ classdef alyxUploader < handle
 			%% =========================================================================
 			% Register files with Alyx
 			if ~me.dryRun
-				setQC = false;
+				setFileQC = false;
 				filenames = {};
 				uuids = {};
 				datasets = struct.empty;
@@ -359,7 +362,6 @@ classdef alyxUploader < handle
 					if isempty(filesToRegister)
 						log{end+1} = sprintf('  ↳ All %d local file(s) are already registered in Alyx.', ...
 							numel(localFiles));
-						setQC = true;
 					else
 						log{end+1} = sprintf('  ↳ %d local file(s) will be registered.', ...
 							numel(filesToRegister));
@@ -392,16 +394,16 @@ classdef alyxUploader < handle
 			% Upload to S3
 			if ~me.dryRun && ~isempty(datasets) && ~isempty(filenames)
 				[uploaded, log] = uploadToS3(me, filenames, uuids, paths, session, log);
-				setQC = ~isempty(uploaded) && all(uploaded);
+				setFileQC = ~isempty(uploaded) && all(uploaded);
 			elseif me.dryRun
 				log{end+1} = sprintf('  [DryRun] Would upload the %d file(s) to S3 bucket "%s".', ...
 					numel(files), lower(session.labName));
-				setQC = false;
+				setFileQC = false;
 			end
 
 			%% =========================================================================
 			% if the upload was successful, set the dataset QC to PASS in ALYX
-			if setQC
+			if setFileQC
 				qc = struct("qc", "PASS", "default", true);
 				%% set the dataset QC to PASS if upload successful
 				for ii = 1:length(uuids)
@@ -412,12 +414,27 @@ classdef alyxUploader < handle
 				log{end+1} = sprintf('≣≣≣≣⊱ Set ALYX QC to PASS for session: %s', me.alyx.sessionURL);
 			end
 
+			%% =========================================================================
+			% if there is only a _matlab.diary file, set QC to fail as no
+			% other files were registered
+			QC = "PASS";
+			if exist('filesToRegister', 'var') && exist('matchedFiles','var')
+				if length(filesToRegister)+length(matchedFiles) == 1 %only one file is present
+					try
+						fnames = [strjoin({filesToRegister.name}) strjoin({matchedFiles.name})];
+						if contains(fnames,'_matlab_diary.'); QC = "FAIL"; end
+					end
+				end
+			end
+
+			%% =========================================================================
 			% Close the Alyx session with the original end_time
 			% Use folder date at end-of-day as a reasonable end_time when not known
-			if ~me.dryRun && ~isempty(me.alyx.sessionURL) && doClose
-				me.alyx.closeSession('Uploaded via alyxUploader', 'PASS');
-				log{end+1} = sprintf('  ↳ Alyx session closed.');
+			if ~me.dryRun && (matches(QC,"FAIL") || (~isempty(me.alyx.sessionURL) && doClose))
+				me.alyx.closeSession('Uploaded via alyxUploader', QC);
+				log{end+1} = sprintf('  ↳ Alyx session closed with QC = %s.', QC);
 			end
+
 		end
 
 		% ===================================================================
@@ -556,10 +573,13 @@ classdef alyxUploader < handle
 			if isempty(me.alyx) || ~isa(me.alyx,'alyxManager')
 				me.alyx = alyxManager('baseURL', me.alyxURL, 'user', me.user, 'verbose', me.verbose);
 			end
+			if me.alyx.loggedIn
+				me.alyx.logout();
+			end
 			if ~me.alyx.loggedIn
 				me.alyx.login();
 				assert(me.alyx.loggedIn, 'alyxUploader:loginFail', ...
-					'Could not log in to Alyx at %s', me.alyxURL);
+					'Could not log in to Alyx at %s, check IP and port!', me.alyxURL);
 			end
 		end
 
@@ -664,6 +684,9 @@ classdef alyxUploader < handle
 				for jj = 1:numel(datasets)
 					if me.datasetMatchesLocalFile(datasets(jj), localFiles(ii))
 						isMatched(ii) = true;
+						localFiles(ii).url = datasets(jj).url;
+						[~,localFiles(ii).url] = fileparts(datasets(jj).url);
+						localFiles(ii).idx = jj;
 						break;
 					end
 				end
