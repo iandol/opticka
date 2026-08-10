@@ -29,8 +29,11 @@ classdef audioManager < optickaCore
 		isSample logical	= false
 	end
 
-	properties (Access = private, Transient = true)
+	properties (SetAccess = private, GetAccess = public, Transient = true)
 		aHandle
+	end
+
+	properties (Access = private, Transient = true)
 		beepHandle			= NaN
 		sampleHandle		= NaN
 		handles				= []

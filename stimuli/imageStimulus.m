@@ -106,7 +106,7 @@ classdef imageStimulus < baseStimulus
 			'randomiseSelection','precision','filter','crop','specialFlags',...
 			'direction','circularMask'}
 		%>properties to not create transient copies of during setup phase
-		ignoreProperties = {'type', 'scale', 'crop', 'filePath','nImages','chosenImages',...
+		ignoreProperties = {'type', 'scale', 'crop', 'precision', 'filePath','nImages','chosenImages',...
 			'randomiseSelection','circularMask','currentFile','filePaths','selection'}
 	end
 
@@ -219,12 +219,12 @@ classdef imageStimulus < baseStimulus
 
 			if ~isempty(in) && ischar(in)
 				% assume a file path
-				[me.matrix, ~, ialpha] = imread(in);
+				[me.matrix, map, ialpha] = imread(in);
 				me.currentFile = in;
 			elseif ~isempty(in) && isnumeric(in) && max(size(in))==1 && ~isempty(me.filePaths) && in <= length(me.filePaths)
 				% assume an index to filePaths
 				me.currentFile = me.filePaths{in};
-				[me.matrix, ~, ialpha] = imread(me.currentFile);
+				[me.matrix, map, ialpha] = imread(me.currentFile);
 			elseif ~isempty(in) && isnumeric(in) && size(in,3)==3
 				% assume a raw matrix
 				me.matrix = in;
@@ -237,15 +237,16 @@ classdef imageStimulus < baseStimulus
 				end
 				if exist(me.filePaths{im},'file')
 					me.currentFile = me.filePaths{im};
-					[me.matrix, ~, ialpha] = imread(me.currentFile);
-					if isinteger(me.matrix) && isfloat(ialpha)
-						ialpha = uint8(ialpha .* 255);
-					end
+					[me.matrix, map, ialpha] = imread(me.currentFile);
 				end
 			else
 				if me.sizeOut <= 0; sz = 2; else; sz = me.sizeOut; end
 				me.matrix = uint8(ones(sz*me.ppd,sz*me.ppd,3)*255); %white texture
 				me.currentFile = '';
+			end
+
+			if ~isempty(map) % this was an indexed image
+				me.matrix = ind2rgb(me.matrix,map);
 			end
 
 			if me.precision > 0
@@ -323,7 +324,7 @@ classdef imageStimulus < baseStimulus
 				if isfloat(me.matrix)
 					me.matrix(:,:,4) = double(ialpha);
 				else
-					me.matrix(:,:,4) = ialpha;
+					me.matrix(:,:,4) = uint8(ialpha);
 				end
 			end
 

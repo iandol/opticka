@@ -388,7 +388,10 @@ classdef alyxManager < optickaCore
 				useQueue logical = true
 			end
 
-			if ~me.loggedIn; return; end
+			if ~me.loggedIn && ~useQueue
+				dataOut = []; statusCode = 0;
+				return;
+			end
 			assert(any(strcmpi(requestMethod, {'post', 'put', 'patch', 'delete'})),...
 			'%s not a valid HTTP request method', requestMethod)
 
@@ -426,6 +429,8 @@ classdef alyxManager < optickaCore
 					[dataOut, statusCode] = me.flushQueue();
 					% Return only relevent data
 					if numel(statusCode) > 1; statusCode = statusCode(end); end
+				else
+					dataOut = []; statusCode = 0;
 				end
 
 			end
@@ -1241,8 +1246,8 @@ classdef alyxManager < optickaCore
 		% ===================================================================
 		function set.queueDir(me, qDir)
 		% ===================================================================
-			%SET.QUEUEDIR Ensure directory exists
-			if ~exist(qDir, 'dir') || isempty(qDir); return; end
+			%> Set queueDir, creating the directory if necessary
+			if isempty(qDir); return; end
 			if ~exist(qDir, 'dir'); mkdir(qDir); end
 			me.queueDir = qDir;
 		end
