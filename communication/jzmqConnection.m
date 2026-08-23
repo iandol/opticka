@@ -45,8 +45,11 @@ classdef jzmqConnection < optickaCore
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		allowedProperties = {'type','protocol','port','address', 'alwaysPoll',...
-			'verbose','readTimeOut','writeTimeOut','frameSize','cleanup'};
+		allowedProperties = {'type','transport','protocol','port','address', ...
+			'alwaysPoll','verbose','readTimeOut','writeTimeOut','frameSize', ...
+			'cleanup'};
+		%> did we create the context ourselves (and so should destroy it)?
+		contextOwned = false;
 	end
 	
 	methods
@@ -93,10 +96,10 @@ classdef jzmqConnection < optickaCore
 			
 			if ~isempty(context) && isa(context, 'jzmq.ZContext')
 				me.context = context;
+				me.contextOwned = false;
 			elseif isempty(me.context)
 				me.context = jzmq.ZContext();
-			else
-				me.context.close;
+				me.contextOwned = true;
 			end
 
 			me.socket = me.context.createSocket(me.type);
@@ -107,7 +110,7 @@ classdef jzmqConnection < optickaCore
 				me.socket.pointer.setReceiveTimeOut(me.readTimeOut);
 			end
 			if me.writeTimeOut ~= -1
-				me.socket.pointer.setSendTimeOut(me.readTimeOut);
+				me.socket.pointer.setSendTimeOut(me.writeTimeOut);
 			end
 			me.socket.pointer.setLinger(1000);
 			switch string(me.type)
@@ -267,9 +270,12 @@ classdef jzmqConnection < optickaCore
 				me.set('ReceiveTimeOut', 0);
 				N = 1000;
 				while N > 0
-					status = 0;
-					if verifyEvent('in'); [~, status] = receive(me); end
-					if status == -1; N = 0; end
+					N = N - 1;
+					%> NOTE: call verifyEvent/poll through the object — a
+					%> bare function-style call cannot resolve private
+					%> methods and used to abort this loop silently.
+					if ~me.poll("in", 0); break; end
+					me.receive();
 				end
 			catch ME
 				if me.verbose; fprintf('Flush error: %s %s', ME.identifier, ME.message); end
@@ -397,9 +403,12 @@ classdef jzmqConnection < optickaCore
 			try me.poller.close(); me.poller = []; end %#ok<*TRYNC>
 
 			if ~keepContext
+				if me.contextOwned && ~isempty(me.context)
+					try delete(me.context); end
+				end
 				me.context = [];
 			end
-	
+
 			me.isOpen = false;
 		end
 		function delete(me)
@@ -562,14 +571,15 @@ classdef jzmqConnection < optickaCore
 				end
 			end
 			if isempty(frames); return; end
+			if ~iscell(frames)
+				%> receiveMultipart returns a plain array for single-part
+				%> messages; normalise so both decode paths can index it.
+				frames = {frames};
+			end
 
 			if useJSON
 				try
-					if iscell(frames)
-						str = native2unicode([frames{1:end}], 'UTF-8');
-					else
-						str = native2unicode(frames, 'UTF-8');
-					end
+					str = native2unicode([frames{1:end}], 'UTF-8');
 					src = jsondecode(str);
 					if isstruct(src)
 						command = src.command;
@@ -594,10 +604,11 @@ classdef jzmqConnection < optickaCore
 				end
 				command = char(command);
 				if length(frames) > 1
-					data = frames{2:end};
-					if iscell(data)
-						data = [data{:}];
-					end
+					%> NOTE: use parentheses so we keep a cell of all
+					%> remaining frames; brace indexing would silently
+					%> assign only the first one.
+					dataFrames = frames(2:end);
+					data = [dataFrames{:}];
 					% Deserialize the object if it's not empty
 					if ~isempty(data)
 						try
@@ -679,6 +690,7 @@ classdef jzmqConnection < optickaCore
 			a = 2;
 			while me.socket.hasReceiveMore()
 				data{a} = me.socket.recv();
+				a = a + 1;
 			end
 			if iscell(data) && isscalar(data)
 				data = data{:};
@@ -704,7 +716,7 @@ classdef jzmqConnection < optickaCore
 				return;
 			end
 			if isempty(me.messages)
-				me.messages(1) = msg;
+				me.messages = msg;
 			else
 				me.messages(end+1) = msg;
 			end

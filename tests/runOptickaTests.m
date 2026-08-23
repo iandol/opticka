@@ -41,8 +41,10 @@ function runOptickaTests(varargin)
 	%>   PolarBoardStimulusTest      - polarBoardStimulus polar checkerboard tests
 	%>   RevcorStimulusTest          - revcorStimulus reverse-correlation noise tests
 	%>   DotlineStimulusTest         - dotlineStimulus dot-line texture tests
-	%>   EyetrackerCoreTest          - eyetrackerCore/eyelinkManager dummy mode tests
-	%>   ScreenManagerTest           - screenManager properties, conversion & PTB tests
+%>   EyetrackerCoreTest          - eyetrackerCore/eyelinkManager dummy mode tests
+%>   JzmqConnectionTest          - jzmqConnection ØMQ protocol/socket tests
+%>   JzmqCrossProcessTest        - jzmqConnection cross-process IPC tests (local only)
+%>   ScreenManagerTest           - screenManager properties, conversion & PTB tests
 	%>   RunExperimentTest           - runExperiment construction, config & state-machine tests
 	%>   OptickaGUITest              - opticka GUI, protocol loading & runTask integration test
 	%>
