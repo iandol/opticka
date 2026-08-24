@@ -213,13 +213,28 @@ function port = newPort()
 end
 
 function waitForFile(testCase, path, timeoutSec)
-	%> Poll for a handshake file, failing after timeoutSec seconds.
+	%> Poll for a handshake file, failing after timeoutSec seconds with
+	%> the server log tail in the message to aid diagnosis.
 	t = tic;
 	while ~exist(path, 'file') && toc(t) < timeoutSec
 		pause(0.25);
 	end
-	assertTrue(testCase, exist(path, 'file') == 2, ...
-		sprintf('timed out after %gs waiting for %s', timeoutSec, path));
+	if exist(path, 'file') ~= 2
+		details = '';
+		logFile = fullfile(testCase.tmpDir, 'server.log');
+		if exist(logFile, 'file')
+			try
+				details = fileread(logFile);
+				if numel(details) > 2000
+					details = details(end - 1999:end);
+				end
+			catch
+			end
+		end
+		error('JzmqCrossProcessTest:timeout', ...
+			'timed out after %gs waiting for %s\n--- server.log tail ---\n%s', ...
+			timeoutSec, path, details);
+	end
 end
 
 function writeQuit(tmpDir, name)

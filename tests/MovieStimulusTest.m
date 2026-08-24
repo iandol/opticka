@@ -260,6 +260,7 @@ classdef MovieStimulusTest < matlab.unittest.TestCase
 			mv = movieStimulus('verbose', false);
 			setup(mv, sM);
 			draw(mv);
+			flip(sM);
 			verifyEqual(testCase, mv.drawTick, 1, 'drawTick should be 1 after one draw');
 			reset(mv);
 		end
@@ -280,6 +281,7 @@ classdef MovieStimulusTest < matlab.unittest.TestCase
 			mv = movieStimulus('verbose', false);
 			setup(mv, sM);
 			animate(mv);
+			flip(sM);
 			verifyEqual(testCase, mv.tick, 0, 'tick should be 0 (draw not called)');
 			reset(mv);
 		end
@@ -310,8 +312,13 @@ classdef MovieStimulusTest < matlab.unittest.TestCase
 		function testRunMethod(testCase)
 			assumeFalse(testCase, ~isempty(getenv('GITHUB_ACTIONS')), ...
 				'Skipping PTB run test in CI');
+			sM = screenManager;
+			sM.windowed = [0 0 800 600];
+			sM.disableSyncTests = true;
+			sM.visualDebug = true;
+			sM.bitDepth = '8bit';
 			mv = movieStimulus('verbose', false);
-			run(mv, false, 1);
+			run(mv, false, 1, sM);
 			verifyTrue(testCase, true, 'run() completed without error');
 		end
 
@@ -371,8 +378,10 @@ classdef MovieStimulusTest < matlab.unittest.TestCase
 			mv = movieStimulus('verbose', false);
 			setup(mv, sM);
 			draw(mv);
+			flip(sM);
 			animate(mv);
 			draw(mv);
+			flip(sM);
 			verifyEqual(testCase, mv.drawTick, 2, 'drawTick should be 2 after two draws');
 			reset(mv);
 		end
@@ -392,6 +401,8 @@ classdef MovieStimulusTest < matlab.unittest.TestCase
 			cleanup = onCleanup(@() close(sM));
 			mv = movieStimulus('verbose', false, 'circularMask', true);
 			setup(mv, sM);
+			draw(mv);
+			flip(sM);
 			verifyTrue(testCase, mv.isSetup, 'should be setup with circular mask');
 			reset(mv);
 		end

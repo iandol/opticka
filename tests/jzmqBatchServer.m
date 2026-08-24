@@ -25,7 +25,22 @@ function jzmqBatchServer(cfg)
 	results.repEcho = {};
 	results.pushReceived = {};
 	results.pubCount = 0;
+	results.error = '';
 
+	% Wrap everything so that even a crashed phase still produces
+	% results.mat + done, letting the client report the cause.
+	try
+		results = runPhases(cfg, results);
+	catch ME
+		results.error = sprintf('%s: %s', ME.identifier, ME.message);
+	end
+
+	save(fullfile(cfg.tmpDir, 'results.mat'), 'results', '-v7');
+	touchFile(fullfile(cfg.tmpDir, 'done'));
+end
+
+function results = runPhases(cfg, results)
+	%> The three sequential server phases (REP/PULL/PUB).
 	% --- Phase 1: REP echo -------------------------------------------------
 	rep = jzmqConnection('type', 'REP', 'port', cfg.repPort, ...
 		'readTimeOut', 500, 'writeTimeOut', 2000);
@@ -38,8 +53,10 @@ function jzmqBatchServer(cfg)
 		[cmd, data] = rep.receiveCommand(true);
 		if ~isempty(cmd)
 			n = numel(results.repEcho);
+			%> NOTE: wrap data in an extra cell — struct() would
+			%> otherwise replicate the struct across a cell-array value.
 			results.repEcho{n + 1} = struct('command', char(cmd), ...
-				'data', data);
+				'data', {data});
 		end
 		pause(0.02);
 	end
@@ -59,7 +76,7 @@ function jzmqBatchServer(cfg)
 			if ~isempty(cmd)
 				n = numel(results.pushReceived);
 				results.pushReceived{n + 1} = struct('command', ...
-					char(cmd), 'data', data);
+					char(cmd), 'data', {data});
 			end
 		end
 	end
@@ -79,9 +96,6 @@ function jzmqBatchServer(cfg)
 		pause(0.2);
 	end
 	pub.close(false);
-
-	save(fullfile(cfg.tmpDir, 'results.mat'), 'results', '-v7');
-	touchFile(fullfile(cfg.tmpDir, 'done'));
 end
 
 function touchFile(path)
