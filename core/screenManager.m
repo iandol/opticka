@@ -44,6 +44,7 @@ classdef screenManager < optickaCore
 		%> experimental presentation due to poor timing…
 		windowed							= false
 		%> stereo mode
+		%> 1 meansStereo output via OpenGL native quad-buffered stereo 2: Left view compressed into top half, right view into bottom half of window for frame-doubling stereo. 3 means left view compressed into bottom half, right view compressed into to half for frame-doubling stereo. 4 and 5 allow split screen stereo display where the left view is shown in left half, the right view is shown in the right half of the display, e.g., for mirrorscope/haploscope setups, or dual-display stereo devices. A value of 5 does the opposite (cross-fusion), exchanges left and right eye view. Values of 6,7,8 and 9 enable Anaglyph stereo rendering of types left=Red, right=Green, vice versa and left=Red, right=Blue and vice versa. A value of 10 enables multi-window stereo: Open one window for left eye view, one for right eye view, treat both of them as one single stereo window. A value of 11 enables our own frame-sequential stereo mode for driving shutter glasses and similar devices on display hardware and operating systems which do not support frame-sequential stereo natively (like mode 1). A value of 12 enables stereo processing within separate streams of the imaging pipeline, followed by some custom display method for the end results of that separate stream processing. This is usually used for stereo output to special display devices like Virtual reality head sets, instead of output to a normal onscreen window or display monitor. See StereoDemo.m for examples of usage of the different stereo modes. See ImagingStereoDemo.m for more advanced usage on modern hardware.
 		stereoMode(1,1) double				= 0
 		%> enable debug for poorer temporal fidelity but no sync testing
 		%> etc.
@@ -447,13 +448,11 @@ classdef screenManager < optickaCore
 					error('---> screenManager: tried to use HDR but it is not supported!\n');
 				end
 
-				%% === check stereomode is anaglyph
-				if ismember(me.stereoMode, 6:9)
+				%% === check stereomode is valid
+				if ismember(me.stereoMode, 1:12)
 					stereo = me.stereoMode;
-				elseif me.stereoMode > 0
-					warning('Only Anaglyph stereo supported at present...')
-					stereo = 0;
 				else
+					warning('Invalid stereo mode given, reset to 0...')
 					stereo = 0;
 				end
 
@@ -597,10 +596,10 @@ classdef screenManager < optickaCore
 				end
 
 				%% === ANAGLYPH VALUES
-				if stereo > 0 && ~isempty(me.anaglyphLeft) && ~isempty(me.anaglyphRight)
+				if ismember(stereo, [6 7 8 9]) && ~isempty(me.anaglyphLeft) && ~isempty(me.anaglyphRight)
 					SetAnaglyphStereoParameters('LeftGains', me.win,  me.anaglyphLeft);
 					SetAnaglyphStereoParameters('RightGains', me.win, me.anaglyphRight);
-				elseif stereo > 0
+				elseif ismember(stereo, [6 7 8 9]) 
 					switch stereo
 						case 6
 							SetAnaglyphStereoParameters('LeftGains', me.win,  [1.0 0.0 0.0]);
@@ -810,6 +809,9 @@ classdef screenManager < optickaCore
 				if me.stereoMode > 0
 					stim.mask = false;
 					stim.type='simple';
+					switchChannel(me,0);
+					drawBackground(me,[0 0 0]);
+					switchChannel(me,1);
 					drawBackground(me,[0 0 0]);
 					flip(me);
 					WaitSecs(0.5);

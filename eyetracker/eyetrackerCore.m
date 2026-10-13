@@ -1042,7 +1042,7 @@ classdef eyetrackerCore < optickaCore
 		end
 
 		% ===================================================================
-		%> @brief draw the fiqxation box on the tracker display
+		%> @brief draw the fixation box on the tracker display
 		%>
 		% ===================================================================
 		function trackerDrawExclusion(me)
