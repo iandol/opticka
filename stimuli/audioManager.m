@@ -37,7 +37,7 @@ classdef audioManager < optickaCore
 		beepHandle			= NaN
 		sampleHandle		= NaN
 		handles				= []
-		beepCache dictionary
+		beepCache
 	end
 
 	

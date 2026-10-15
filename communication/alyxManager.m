@@ -46,7 +46,7 @@ classdef alyxManager < optickaCore
 	%--------------------TRANSIENT PROTECTED PROPERTIES----------%
 	properties (Access = protected, Transient = true)
 		token char		= ''
-		cache dictionary
+		cache
 	end
 
 	%--------------------PRIVATE PROPERTIES----------%

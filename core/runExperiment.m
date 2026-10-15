@@ -1383,9 +1383,10 @@ classdef runExperiment < optickaCore
 					try
 						if isfield(me.reward,'port') && ~isempty(me.reward.port); rM.port = me.reward.port; end
 						if isfield(me.reward,'board') && ~isempty(me.reward.board); rM.board = me.reward.board; end
-						if rM.isOpen
+						if rM.isOpen || rM.silentMode
 							try rM.close; rM.reset(true); end
 						end
+						rM.silentMode = false;
 						rM.open;
 						oldv = rM.verbose;
 						rM.verbose = true;
