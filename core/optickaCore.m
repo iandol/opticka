@@ -47,7 +47,7 @@ classdef optickaCore < handle
 	%--------------------VISIBLE PROPERTIES-----------%
 	properties (SetAccess = protected, GetAccess = public)
 		%> version number
-		optickaVersion char		= '2.18.12'
+		optickaVersion char		= '2.18.13'
 		%> clock() dateStamp set on construction
 		dateStamp = []
 		%> universal ID

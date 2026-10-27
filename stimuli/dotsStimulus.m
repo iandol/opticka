@@ -168,6 +168,10 @@ classdef dotsStimulus < baseStimulus
 			computePosition(me);
 			setRect(me);
 			updateDots(me);
+			if me.doAnimator
+				me.animator.setup(me.sM);
+				me.syncAnimator();
+			end
 
 			function set_xPositionOut(me, value)
 				me.xPositionOut = value * me.ppd;
@@ -202,6 +206,7 @@ classdef dotsStimulus < baseStimulus
 		%>  for example)
 		% ===================================================================
 		function update(me)
+			me.rewindAnimator();
 			resetTicks(me);
 			computePosition(me);
 			setRect(me);
@@ -261,6 +266,12 @@ classdef dotsStimulus < baseStimulus
 % 					end
 % 					me.maskRect=CenterRectOnPointd(me.maskRect,me.xFinal,me.yFinal);
 % 				end
+				if me.doAnimator
+					me.applyAnimator();
+					if me.mask
+						me.maskRect = CenterRectOnPointd(me.maskRect,me.xFinal,me.yFinal);
+					end
+				end
 				me.xy = me.xy + me.dxdy; %increment position
 				sz = me.sizeOut + me.maskSmoothing-(me.dotSizeOut*1.5);
 				fix = find(me.xy > sz/2); %cull positive

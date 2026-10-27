@@ -233,6 +233,11 @@ classdef targetInducerStimulus < baseStimulus
 			
 			obj.inSetup = false;
 			obj.setRect();
+			obj.isSetup = true;
+			if obj.doAnimator
+				obj.animator.setup(obj.sM);
+				obj.syncAnimator();
+			end
 
 			function set_sfOut(obj,value)
 				if obj.sfRecurse == false
@@ -272,6 +277,7 @@ classdef targetInducerStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function update(obj)
+			obj.rewindAnimator();
 			resetTicks(obj);
 			if obj.correctPhase
 				ps=obj.calculatePhase;
@@ -315,7 +321,9 @@ classdef targetInducerStimulus < baseStimulus
 					obj.mvRect = CenterRectOnPointd(obj.mvRect, obj.mouseX, obj.mouseY);
 				end
 			end
-			if obj.doMotion == true
+				if obj.doAnimator
+					obj.applyAnimator();
+				elseif obj.doMotion == true
 				obj.mvRect=OffsetRect(obj.mvRect,obj.dX_,obj.dY_);
 			end
 			if obj.doDrift == true

@@ -182,7 +182,7 @@ classdef logGaborStimulus < baseStimulus
 			me.inSetup = false; me.isSetup = true;
 			computePosition(me);
 			setRect(me);
-			if me.doAnimator; setup(me.animator,me); end
+			if me.doAnimator; me.animator.setup(me.sM); me.syncAnimator(); end
 
 			function set_xPositionOut(me, value)
 				me.xPositionOut = value * me.ppd;
@@ -206,6 +206,7 @@ classdef logGaborStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function update(me)
+			me.rewindAnimator();
 			if me.sizeOut > 0
 				%me.scale = me.sizeOut / (me.width / me.ppd);
 			end
@@ -268,10 +269,10 @@ classdef logGaborStimulus < baseStimulus
 						me.mvRect = CenterRectOnPointd(me.mvRect, me.mouseX, me.mouseY);
 					end
 				end
-				if me.doMotion && me.doAnimator
-					me.mvRect=OffsetRect(me.mvRect,me.dX_,me.dY_);
-					me.maskRect=OffsetRect(me.maskRect,me.dX_,me.dY_);
-				elseif me.doMotion && ~me.doAnimator
+				if me.doAnimator
+					me.applyAnimator();
+					me.maskRect = CenterRectOnPointd(me.maskRect, me.xFinal, me.yFinal);
+				elseif me.doMotion
 					me.mvRect=OffsetRect(me.mvRect,me.dX_,me.dY_);
 					me.maskRect=OffsetRect(me.maskRect,me.dX_,me.dY_);
 				end

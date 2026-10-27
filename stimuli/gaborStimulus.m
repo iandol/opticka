@@ -213,6 +213,10 @@ classdef gaborStimulus < baseStimulus
 			notify(me,'changeScale');
 			computePosition(me);
 			setRect(me);
+			if me.doAnimator
+				me.animator.setup(me.sM);
+				me.syncAnimator();
+			end
 
 			function set_xPositionOut(me, value)
 				me.xPositionOut = value * me.ppd;
@@ -248,6 +252,7 @@ classdef gaborStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function update(me)
+			me.rewindAnimator();
 			resetTicks(me);
 			if me.correctPhase
 				ps=me.calculatePhase;
@@ -287,7 +292,9 @@ classdef gaborStimulus < baseStimulus
 						me.mvRect = CenterRectOnPointd(me.mvRect, me.mouseX, me.mouseY);
 					end
 				end
-				if me.doMotion == true
+				if me.doAnimator
+					me.applyAnimator();
+				elseif me.doMotion == true
 					me.mvRect=OffsetRect(me.mvRect,me.dX_,me.dY_);
 				end
 				if me.doDrift == true

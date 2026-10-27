@@ -191,7 +191,8 @@ classdef imageStimulus < baseStimulus
 			
 			computePosition(me);
 			if me.doAnimator
-				setup(me.animator, me);
+				me.animator.setup(me.sM);
+				me.syncAnimator();
 			end
 			setRect(me);
 
@@ -343,6 +344,7 @@ classdef imageStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function update(me)
+			me.rewindAnimator();
 			me.currentFile = [];
 			me.filePaths = {};
 			checkfilePath(me);
@@ -401,9 +403,7 @@ classdef imageStimulus < baseStimulus
 					end
 				end
 				if me.doAnimator
-					animate(me.animator);
-					me.updateXY(me.animator.x, me.animator.y, true);
-					me.angleOut = -rad2deg(me.animator.angle);
+					me.applyAnimator();
 				elseif me.doMotion == 1
 					me.mvRect=OffsetRect(me.mvRect,me.dX_,me.dY_);
 				end

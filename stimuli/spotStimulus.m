@@ -124,7 +124,7 @@ classdef spotStimulus < baseStimulus
 			computeColour(me);
 			computePosition(me);
 			setAnimationDelta(me);
-			if me.doAnimator;setup(me.animator, me);end
+			if me.doAnimator;me.animator.setup(me.sM);me.syncAnimator();end
 
 			function set_xPositionOut(me, value)
 				me.xPositionOut = value * me.ppd;
@@ -198,6 +198,7 @@ classdef spotStimulus < baseStimulus
 		%> @return
 		% ===================================================================
 		function update(me)
+			me.rewindAnimator();
 			resetTicks(me);
 			me.isInCompute = false;
 			me.inSetup = false;
@@ -243,7 +244,9 @@ classdef spotStimulus < baseStimulus
 						me.yFinal = me.mouseY;
 					end
 				end
-				if me.doMotion == true
+				if me.doAnimator
+					me.applyAnimator();
+				elseif me.doMotion == true
 					me.xFinal = me.xFinal + me.dX_;
 					me.yFinal = me.yFinal + me.dY_;
 				end

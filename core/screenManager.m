@@ -452,7 +452,7 @@ classdef screenManager < optickaCore
 				if ismember(me.stereoMode, 1:12)
 					stereo = me.stereoMode;
 				else
-					warning('Invalid stereo mode given, reset to 0...')
+					fprintf('---> screenManager: no stereo mode is being used...');
 					stereo = 0;
 				end
 

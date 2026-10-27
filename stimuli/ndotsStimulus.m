@@ -215,6 +215,12 @@ classdef ndotsStimulus < baseStimulus
 			me.inSetup = false; me.isSetup = true;
 			initialiseDots(me);
 			computeNextFrame(me);
+			if me.doAnimator
+				me.animator.setup(me.sM);
+				me.syncAnimator();
+				me.pixelOrigin(1) = me.sM.xCenter + me.xPositionOut - me.pixelScale/2;
+				me.pixelOrigin(2) = me.sM.yCenter - me.yPositionOut - me.pixelScale/2;
+			end
 
 			function set_xPositionOut(me, value)
 				me.xPositionOut = value * me.ppd;
@@ -241,6 +247,7 @@ classdef ndotsStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function update(me)
+			me.rewindAnimator();
 			computePosition(me);
 			initialiseDots(me);
 			computeNextFrame(me);
@@ -284,6 +291,11 @@ classdef ndotsStimulus < baseStimulus
 		% ===================================================================
 		function animate(me)
 			if me.isVisible == true && me.tick > me.delayTicks
+				if me.doAnimator
+					me.applyAnimator();
+					me.pixelOrigin(1) = me.sM.xCenter + me.xPositionOut - me.pixelScale/2;
+					me.pixelOrigin(2) = me.sM.yCenter - me.yPositionOut - me.pixelScale/2;
+				end
 				computeNextFrame(me);
 			end
 		end

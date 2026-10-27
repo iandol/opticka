@@ -275,6 +275,10 @@ classdef colourGratingStimulus < baseStimulus
 			me.inSetup = false; me.isSetup = true;
 			computePosition(me);
 			setRect(me);
+			if me.doAnimator
+				me.animator.setup(me.sM);
+				me.syncAnimator();
+			end
 
 			function set_cOut(me, value)
 				len=length(value);
@@ -335,6 +339,7 @@ classdef colourGratingStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function update(me)
+			me.rewindAnimator();
 			resetTicks(me);
 			if me.correctPhase
 				ps=me.calculatePhase;
@@ -396,7 +401,9 @@ classdef colourGratingStimulus < baseStimulus
 						me.mvRect = CenterRectOnPointd(me.mvRect, me.mouseX, me.mouseY);
 					end
 				end
-				if me.doMotion
+				if me.doAnimator
+					me.applyAnimator();
+				elseif me.doMotion
 					me.mvRect=OffsetRect(me.mvRect,me.dX_,me.dY_);
 				end
 				if me.doDrift

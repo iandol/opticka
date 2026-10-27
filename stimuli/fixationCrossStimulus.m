@@ -148,6 +148,11 @@ classdef fixationCrossStimulus < baseStimulus
 			
 			me.inSetup = false; me.isSetup = true;			
 			computePosition(me);
+			if me.doAnimator
+				me.animator.setup(me.sM);
+				me.syncAnimator();
+			end
+
 
 			function set_xPositionOut(me, value)
 				me.xPositionOut = value * me.ppd;
@@ -230,6 +235,7 @@ classdef fixationCrossStimulus < baseStimulus
 		%> @return
 		% ===================================================================
 		function update(me)
+			me.rewindAnimator();
 			resetTicks(me);
 			me.colourOutTemp = [];
 			me.inSetup = false;
@@ -280,7 +286,9 @@ classdef fixationCrossStimulus < baseStimulus
 						me.yFinal = me.mouseY;
 					end
 				end
-				if me.doMotion == true
+				if me.doAnimator
+					me.applyAnimator();
+				elseif me.doMotion == true
 					me.xFinal = me.xFinal + me.dX_;
 					me.yFinal = me.yFinal + me.dY_;
 				end

@@ -160,7 +160,7 @@ classdef discStimulus < baseStimulus
 			me.inSetup = false; me.isSetup = true;
 			computePosition(me);
 			setRect(me);
-			if me.doAnimator;setup(me.animator, me);end
+			if me.doAnimator;me.animator.setup(me.sM);me.syncAnimator();end
 
 			% a super annoying bug in matlab: if set methods are
 			% standard protected or private, they trigger recursions.
@@ -265,7 +265,7 @@ classdef discStimulus < baseStimulus
 			setRect(me);
 			if strcmpi(me.type,'flash'); me.doFlash = true; end
 			if me.doFlash; me.setupFlash; end
-			if me.doAnimator; me.animator.reset(); end
+			me.rewindAnimator();
 		end
 		
 		% ===================================================================
@@ -311,9 +311,9 @@ classdef discStimulus < baseStimulus
 					end
 					return
 				end
-				if me.doMotion && me.doAnimator
-					me.mvRect = update(me.animator);
-				elseif me.doMotion && ~me.doAnimator	
+				if me.doAnimator
+					me.applyAnimator();
+				elseif me.doMotion
 					me.mvRect=OffsetRect(me.mvRect,me.dX_,me.dY_);
 				end
 				if me.doFlash == true

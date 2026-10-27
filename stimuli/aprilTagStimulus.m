@@ -154,6 +154,10 @@ classdef aprilTagStimulus < baseStimulus
 			me.isSetup = true;
 			computePosition(me);
 			setRect(me);
+			if me.doAnimator
+				me.animator.setup(me.sM);
+				me.syncAnimator();
+			end
 
 			function set_xPositionOut(me, value)
 				me.xPositionOut = value * me.ppd;
@@ -172,6 +176,7 @@ classdef aprilTagStimulus < baseStimulus
 		%> @brief Update this stimulus object for display.
 		% ===================================================================
 		function update(me)
+			me.rewindAnimator();
 			resetTicks(me);
 			computePosition(me);
 			setRect(me);
@@ -202,6 +207,9 @@ classdef aprilTagStimulus < baseStimulus
 					if me.mouseValid
 						me.mvRect = CenterRectOnPointd(me.mvRect, me.mouseX, me.mouseY);
 					end
+				end
+				if me.doAnimator
+					me.applyAnimator();
 				elseif me.doMotion == 1
 					me.mvRect = OffsetRect(me.mvRect, me.dX_, me.dY_);
 				end

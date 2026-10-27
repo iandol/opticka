@@ -147,6 +147,11 @@ classdef apparentMotionStimulus < baseStimulus
 			me.nextTick = me.frameTimes(1);
 			computePosition(me);
 			setRect(me);
+			me.isSetup = true;
+			if me.doAnimator
+				me.animator.setup(me.sM);
+				me.syncAnimator();
+			end
 			
 		end
 		
@@ -157,6 +162,7 @@ classdef apparentMotionStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function update(me)
+			me.rewindAnimator();
 			resetTicks(me);
 			me.stage = 1;
 			me.nextTick = me.frameTimes(1);
@@ -187,6 +193,12 @@ classdef apparentMotionStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function animate(me)
+			if me.doAnimator
+				if me.isVisible && me.tick >= me.delayTicks
+					me.applyAnimator();
+				end
+				return
+			end
 			if me.tick < me.delayTicks; me.isVisible = false; end
 			if me.tick < me.offTicks
 				if me.tick > me.nextTick && me.stage <= me.nBars*2

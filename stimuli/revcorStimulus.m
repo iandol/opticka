@@ -123,6 +123,10 @@ classdef revcorStimulus < baseStimulus
 			me.inSetup = false; me.isSetup = true;
 			computePosition(me);
 			setRect(me);
+			if me.doAnimator
+				me.animator.setup(me.sM);
+				me.syncAnimator();
+			end
 
 			function set_xPositionOut(me, value)
 				me.xPositionOut = value * me.ppd;
@@ -169,6 +173,7 @@ classdef revcorStimulus < baseStimulus
 		%> 
 		% ===================================================================
 		function update(me)
+			me.rewindAnimator();
 			closeTextures(me);
 			saveFrames(me);
 			resetTicks(me);
@@ -192,7 +197,9 @@ classdef revcorStimulus < baseStimulus
 					end
 				else
 				end
-				if me.doMotion == 1
+				if me.doAnimator
+					me.applyAnimator();
+				elseif me.doMotion == 1
 					me.mvRect=OffsetRect(me.mvRect,me.dX_,me.dY_);
 				end
 			end

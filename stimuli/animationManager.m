@@ -28,8 +28,27 @@
 %> end
 %> ```
 %>
-%> @TODO build the code for the different types of motion paths apart from rigid
-%> body 2D physics. These could be static methods.
+%> When `type` is 'lissajous' no physics is used: a lissajousPath is
+%> generated at the display frame rate by setup(), then animate()/step()
+%> advances one frame and updates x, y (degrees) and, when orientToPath is
+%> true, angle. Attach the manager to a stimulus *before* stimulus setup,
+%> which then sets the manager up with its screenManager:
+%>
+%> ```matlab
+%> s = screenManager; open(s);
+%> im = imageStimulus('filePath','moon.png','size',2);
+%> a = animationManager('type','lissajous');
+%> a.lissajous.a = 3; a.lissajous.b = 4; a.lissajous.delta = pi/4;
+%> a.lissajous.size = 12; a.lissajous.speed = 8;
+%> im.animator = a;
+%> setup(im, s);        %> generates the path at the screen frame rate
+%> for i = 1:a.nFrames
+%> 	draw(im); flip(s); animate(im);   %> animate pulls the next X/Y
+%> end
+%> ```
+%>
+%> @TODO build the remaining motion path types apart from rigid and
+%> lissajous. These could be static methods.
 %>
 %> Contributions: Heting Zhang
 %> Copyright ©2014-2025 Ian Max Andolina — released: LGPL3, see LICENCE.md
@@ -37,10 +56,10 @@
 classdef animationManager < optickaCore
 
 	properties
-		%> type of animation path, rigid | linear | sinusoidal | brownian | circular
-		%> only rigid supported so far
+		%> type of animation path: rigid | lissajous | linear | sinusoidal |
+		%> brownian | circular; rigid and lissajous are implemented
 		type char ...
-			{mustBeMember(type,{'rigid','linear','sinusoidal','brownian','circular'})} ...
+			{mustBeMember(type,{'rigid','lissajous','linear','sinusoidal','brownian','circular'})} ...
 			= 'rigid'
 		%> bodyList
 		bodies = struct([])
@@ -57,11 +76,20 @@ classdef animationManager < optickaCore
 		%> what happens at edge of screen [bounce | wrap | none]
 		boundsCheck char ...
 			{mustBeMember(boundsCheck,{'bounce','wrap','none'})} = 'bounce'
+		%> lissajous path generator used when type = 'lissajous'; set its
+		%> a, b, delta, size, speed, totalTime, xPosition and yPosition then
+		%> setup() generates one frame per display refresh at the screen fps
+		lissajous lissajousPath = lissajousPath.empty()
+		%> orient stimuli to the path tangent each frame, stimuli copy the
+		%> resulting angle to their angleOut; false keeps stimuli upright
+		orientToPath logical = false
 	end
 
 	properties (Dependent = true, SetAccess = protected, GetAccess = public)
 		nBodies
 		nObstacles
+		%> number of frames in a lissajous path, 0 for other types
+		nFrames
 	end
 
 	properties (Hidden = true)
@@ -127,7 +155,7 @@ classdef animationManager < optickaCore
 			'friction',0.2,'elasticity',0.75,'position',[0 0],'updatedPosition',[],'velocity',[0 0])
 		%> what properties are allowed to be passed on construction
 		allowedProperties = ["type","bodies","rigidParams","brownianParams",...
-			"timeDelta","verbose","boundsCheck","timeToEnd"]
+			"timeDelta","verbose","boundsCheck","timeToEnd","lissajous","orientToPath"]
 	end
 	
 	%=======================================================================
@@ -147,9 +175,12 @@ classdef animationManager < optickaCore
 			args = optickaCore.addDefaults(varargin,struct('name','animationManager'));
 			me=me@optickaCore(args); %superclass constructor
 			me.parseArgs(args,me.allowedProperties);
+			if isempty(me.lissajous)
+				me.lissajous = lissajousPath('verbose',false);
+			end
 			try
 				% dyn4j jar -- see https://dyn4j.org/pages/getting-started
-				javaaddpath([me.paths.whereami '/stimuli/lib/dyn4j-5.0.2.jar'],'-begin');
+				javaaddpath([me.paths.whereami '/stimuli/lib/dyn4j-6.0.0.jar'],'-begin');
 				me.massType.NORMAL = javaMethod('valueOf', 'org.dyn4j.geometry.MassType', 'NORMAL');
     			me.massType.INFINITE = javaMethod('valueOf', 'org.dyn4j.geometry.MassType', 'INFINITE');
 				me.massType.FIXED_ANGULAR_VELOCITY = javaMethod('valueOf', 'org.dyn4j.geometry.MassType', 'FIXED_ANGULAR_VELOCITY');
@@ -503,22 +534,62 @@ classdef animationManager < optickaCore
 		%>
 		% ===================================================================
 		function setup(me, screen, useBounds)
-			if ~exist('screen','var') || ~isa(screen,'screenManager')
-				if ~isa(me.screen,'screenManager')
-					me.screen = screenManager;
+			if ~exist('useBounds','var') || isempty(useBounds); useBounds = false; end
+			me.useBounds = useBounds;
+
+			%> resolve the screen: a screenManager, a struct of screen
+			%> values (fps/ifi/ppd, for offline use) or a stored manager
+			thisScreen = [];
+			if exist('screen','var') && ~isempty(screen) && ...
+					(isa(screen,'screenManager') || isstruct(screen))
+				thisScreen = screen;
+			elseif isscalar(me.screen) && isa(me.screen,'screenManager')
+				thisScreen = me.screen;
+			end
+
+			if isa(thisScreen,'screenManager')
+				me.screen = thisScreen;
+				me.ppd = thisScreen.ppd;
+				if isempty(me.timeDelta)
+					me.timeDelta = thisScreen.screenVals.ifi;
+				end
+			elseif isstruct(thisScreen)
+				if isfield(thisScreen,'ppd') && ~isempty(thisScreen.ppd)
+					me.ppd = thisScreen.ppd;
+				end
+				if isempty(me.timeDelta)
+					if isfield(thisScreen,'ifi') && ~isempty(thisScreen.ifi)
+						me.timeDelta = thisScreen.ifi;
+					elseif isfield(thisScreen,'fps') && ~isempty(thisScreen.fps)
+						me.timeDelta = 1 / thisScreen.fps;
+					end
+				end
+			end
+			if isempty(me.timeDelta); me.timeDelta = 1/60; end
+
+			if matches(me.type,'lissajous')
+				me.reset; %> clear any previous world and path
+				if isempty(me.lissajous)
+					me.lissajous = lissajousPath('verbose',false);
+				end
+				if isempty(thisScreen)
+					thisScreen = struct('fps',1/me.timeDelta,'ppd',me.ppd);
+				end
+				me.lissajous.setup(thisScreen);
+				me.x = me.lissajous.x(1);
+				me.y = me.lissajous.y(1);
+				me.isSetup = true;
+				if me.verbose
+					fprintf(['≣≣≣≣⊱ Lissajous %g:%g δ=%0.3f path: %i frames ' ...
+						'@ %gHz (%.3fs, %0.2f° arc)\n'],...
+						me.lissajous.a,me.lissajous.b,me.lissajous.delta,...
+						me.lissajous.nFrames,me.lissajous.fps,...
+						me.lissajous.duration,me.lissajous.arcLength);
 				end
 			else
-				me.screen = screen;
+				setupWorld(me);
+				me.isSetup = true;
 			end
-			if ~exist('useBounds','var') || isempty(useBounds); useBounds = false; end
-			
-			me.useBounds = useBounds;
-			me.ppd = me.screen.ppd;
-			if isempty(me.timeDelta)
-				me.timeDelta = me.screen.screenVals.ifi;
-			end
-			setupWorld(me);
-			me.isSetup = true;
 		end
 
 		% ===================================================================
@@ -566,6 +637,44 @@ classdef animationManager < optickaCore
 			switch me.type
 				case 'rigid'
 					rigidStep(me,varargin);
+				case 'lissajous'
+					stepLissajous(me,varargin);
+			end
+		end
+
+		% ===================================================================
+		%> @brief animate advances the animation by one frame
+		%>
+		%> Stimuli call animate(me.animator) from their own animate() method
+		%> then copy animator.x / animator.y (degrees) to their position. For
+		%> 'lissajous' this advances one path frame; for 'rigid' it steps the
+		%> physics world by one timeDelta.
+		% ===================================================================
+		function animate(me)
+			me.step();
+		end
+
+		% ===================================================================
+		%> @brief rewind returns a lissajous animation to its first frame
+		%>
+		%> Keeps the generated path so a trial can be repeated cheaply
+		%> without calling setup() again. No effect on other types.
+		% ===================================================================
+		function rewind(me)
+			if ~isempty(me.lissajous)
+				me.lissajous.rewind();
+			end
+			me.tick = 0;
+			me.timeStep = 0;
+			me.angle = 0;
+			%> expose the first position so syncAnimator() can place the
+			%> stimulus on the path start straight after a rewind
+			if me.isSetup && ~isempty(me.lissajous) && me.lissajous.nFrames > 0
+				me.x = me.lissajous.x(1);
+				me.y = me.lissajous.y(1);
+			else
+				me.x = [];
+				me.y = [];
 			end
 		end
 
@@ -618,6 +727,9 @@ classdef animationManager < optickaCore
 			me.dX			= [];
 			me.dY			= [];
 			me.screenBounds	= [];
+			if ~isempty(me.lissajous)
+				me.lissajous.reset();
+			end
 			me.isSetup		= false;
 		end
 
@@ -678,6 +790,17 @@ classdef animationManager < optickaCore
 				if ~matches(me.bodies(jj).type, {'normal','sensor'})
 					value = value + 1;
 				end
+			end
+		end
+
+		% ===================================================================
+		%> @brief number of frames in a lissajous path
+		% ===================================================================
+		function value = get.nFrames(me)
+			if matches(me.type,'lissajous') && ~isempty(me.lissajous)
+				value = me.lissajous.nFrames;
+			else
+				value = 0;
 			end
 		end
 
@@ -839,6 +962,45 @@ classdef animationManager < optickaCore
 		end
 
 		% ===================================================================
+		%> @brief demoLissajous animate an image along a lissajous path
+		%>
+		%> Opens a screen, attaches an animationManager of type 'lissajous'
+		%> to an imageStimulus, then animates it through the stimulus
+		%> animate() method. Press ESC to stop.
+		% ===================================================================
+		function demoLissajous()
+			s = screenManager;
+			if max(Screen('Screens')) == 0
+				PsychDebugWindowConfiguration([],0.6);
+			end
+			open(s);
+			img = imageStimulus('filePath','moon.png','size',2);
+			img.animator = animationManager('type','lissajous');
+			img.animator.lissajous.a = 3;
+			img.animator.lissajous.b = 4;
+			img.animator.lissajous.delta = pi/4;
+			img.animator.lissajous.size = 12;
+			img.animator.lissajous.speed = 8;
+			setup(img,s); %> stimulus setup generates the path at screen fps
+
+			RestrictKeysForKbCheck(KbName('ESCAPE'));
+			Priority(1);
+			for i = 1:img.animator.nFrames
+				draw(img);
+				drawText(s,sprintf('Lissajous %g:%g  frame %i/%i',...
+					img.animator.lissajous.a,img.animator.lissajous.b,...
+					img.animator.tick,img.animator.nFrames));
+				flip(s);
+				animate(img);
+				[isKey,~,keyCode] = KbCheck(-1);
+				if isKey && keyCode(KbName('ESCAPE')); break; end
+			end
+			Priority(0);
+			reset(img);
+			close(s);
+		end
+
+		% ===================================================================
 		%> @brief degrees2radians
 		%>
 		% ===================================================================
@@ -919,6 +1081,36 @@ classdef animationManager < optickaCore
 		end
 
 		% ===================================================================
+		%> @brief stepLissajous advances a lissajous path by n frames
+		%>
+		%> Updates x and y (degrees), tick and timeStep. The path loops
+		%> automatically at the end of the curve and the angle is set to the
+		%> tangent direction when orientToPath is true.
+		% ===================================================================
+		function stepLissajous(me, args)
+			if ~me.isSetup || isempty(me.lissajous) || me.lissajous.nFrames < 1
+				error('animationManager:notSetup',...
+					'You need to setup() animationManager BEFORE you can animate() or step()');
+			end
+			n = 1;
+			if ~isempty(args) && isnumeric(args{1}) && ~isempty(args{1})
+				n = max(1,round(args{1}));
+			end
+			for i = 1:n
+				[x,y] = me.lissajous.step();
+			end
+			me.tick = me.lissajous.tick;
+			me.timeStep = (me.tick - 1) * me.timeDelta;
+			me.x = x;
+			me.y = y;
+			if me.orientToPath
+				me.angle = deg2rad(me.lissajous.direction(me.lissajous.tick));
+			else
+				me.angle = 0;
+			end
+		end
+
+		% ===================================================================
 		%> @brief 
 		%>
 		% ===================================================================
@@ -954,7 +1146,8 @@ classdef animationManager < optickaCore
 			me.world = javaObject('org.dyn4j.world.World');
 			me.world.setGravity(me.rigidParams.gravity(1),me.rigidParams.gravity(2));
 
-			if me.useBounds && ~isempty(me.screen.screenVals.rectInDegrees)
+			if me.useBounds && isscalar(me.screen) && ...
+					~isempty(me.screen.screenVals.rectInDegrees)
 				me.screenBounds = me.screen.screenVals.rectInDegrees;
 				if me.rigidParams.screenBounds
 					bnds = javaObject('org.dyn4j.collision.AxisAlignedBounds', Rectwidth(me.screen.screenVals.rectInDegrees), RectHeight(me.screen.screenVals.rectInDegrees));

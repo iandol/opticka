@@ -88,6 +88,11 @@ classdef exampleStimulus < baseStimulus
 			
 			me.inSetup = false; me.isSetup = true;
 			computePosition(me); %used for non-rect type stimuli
+			if me.doAnimator
+				me.animator.setup(me.sM);
+				me.syncAnimator();
+			end
+
 
 			function set_xPositionOut(me, value)
 				me.xPositionOut = value * me.ppd;
@@ -112,6 +117,7 @@ classdef exampleStimulus < baseStimulus
 
 		% ===================================================================
 		function update(me)
+			me.rewindAnimator();
 			resetTicks(me);
 			computePosition(me);
 		end
@@ -126,7 +132,9 @@ classdef exampleStimulus < baseStimulus
 						me.yFinal = me.mouseY;
 					end
 				end
-				if me.doMotion == true
+				if me.doAnimator
+					me.applyAnimator();
+				elseif me.doMotion == true
 					me.xFinal = me.xFinal + me.dX_;
 					me.yFinal = me.yFinal + me.dY_;
 				end

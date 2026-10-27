@@ -186,6 +186,10 @@ classdef barStimulus < baseStimulus
 			me.inSetup = false; me.isSetup = true;
 			computePosition(me);
 			setRect(me);
+			if me.doAnimator
+				me.animator.setup(me.sM);
+				me.syncAnimator();
+			end
 
 			if me.verbose; fprintf('--->>> barStimulus setup took %.3f ms\n',toc(tt)*1e3); end
 
@@ -261,6 +265,7 @@ classdef barStimulus < baseStimulus
 		%> 
 		% ===================================================================
 		function update(me)
+			me.rewindAnimator();
 			resetTicks(me);
 			me.tempTime = 0;
 			if me.sizeOut > 0; me.barHeightOut = me.sizeOut; me.barWidthOut = me.sizeOut; end
@@ -299,7 +304,9 @@ classdef barStimulus < baseStimulus
 					me.isVisible = ~me.isVisible;
 					me.visibleTick = 0;
 				end
-				if me.doMotion == 1
+				if me.doAnimator
+					me.applyAnimator();
+				elseif me.doMotion == 1
 					me.mvRect=OffsetRect(me.mvRect,me.dX_,me.dY_);
 				end
 				if me.verbose && me.tempTime == 0; me.tempTime = GetSecs; end

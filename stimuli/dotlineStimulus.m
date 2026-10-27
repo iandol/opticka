@@ -183,7 +183,8 @@ classdef dotlineStimulus < baseStimulus
 
 			computePosition(me);
 			if me.doAnimator
-				setup(me.animator, me);
+				me.animator.setup(me.sM);
+				me.syncAnimator();
 			end
 			setRect(me);
 			me.pRect = me.mvRect;
@@ -267,6 +268,7 @@ classdef dotlineStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function update(me)
+			me.rewindAnimator();
 			if me.forceOrthogonal
 				me.angleOut = me.directionOut + 90;
 			end
@@ -308,9 +310,7 @@ classdef dotlineStimulus < baseStimulus
 					end
 				end
 				if me.doAnimator
-					animate(me.animator);
-					me.updateXY(me.animator.x, me.animator.y, true);
-					me.angleOut = -rad2deg(me.animator.angle);
+					me.applyAnimator();
 					me.pRect = me.mvRect;
 				elseif me.doMotion == 1
 					me.mvRect=OffsetRect(me.mvRect,me.dX_,me.dY_);

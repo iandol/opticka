@@ -268,6 +268,10 @@ classdef polarBoardStimulus < baseStimulus
 			me.inSetup = false; me.isSetup = true;
 			computePosition(me);
 			setRect(me);
+			if me.doAnimator
+				me.animator.setup(me.sM);
+				me.syncAnimator();
+			end
 
 			if me.centerMask > 0
 				sz = round(me.centerMask * me.ppd);
@@ -336,6 +340,7 @@ classdef polarBoardStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function update(me)
+			me.rewindAnimator();
 
 			resetTicks(me);
 			me.isVisible = true;
@@ -430,7 +435,9 @@ classdef polarBoardStimulus < baseStimulus
 						me.mvRect = CenterRectOnPointd(me.mvRect, me.mouseX, me.mouseY);
 					end
 				end
-				if me.doMotion
+				if me.doAnimator
+					me.applyAnimator();
+				elseif me.doMotion
 					me.mvRect=OffsetRect(me.mvRect,me.dX_,me.dY_);
 				end
 				if me.doDrift

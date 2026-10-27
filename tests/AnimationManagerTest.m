@@ -40,6 +40,51 @@ classdef AnimationManagerTest < matlab.unittest.TestCase
 					sprintf('Java/dyn4j not available: %s', ME.message));
 			end
 		end
+
+		% ===================================================================
+		%> @brief makeLissajous a 1:1 circle path animation, setup at 60Hz
+		% ===================================================================
+		function am = makeLissajous(testCase, varargin)
+			am = makeAM(testCase, 'type', 'lissajous', varargin{:});
+			am.lissajous.a = 1;
+			am.lissajous.b = 1;
+			am.lissajous.delta = pi/2;
+			am.lissajous.size = 10;
+			am.lissajous.speed = 10;
+			setup(am, struct('fps', 60, 'ppd', 40));
+		end
+
+		% ===================================================================
+		%> @brief makeStubScreen construct (do not open) a screenManager
+		% ===================================================================
+		function sM = makeStubScreen(testCase)
+			try
+				sM = screenManager('verbose', false);
+			catch ME
+				assumeTrue(testCase, false, ...
+					sprintf('screenManager unavailable: %s', ME.message));
+			end
+		end
+
+		% ===================================================================
+		%> @brief makeStubImage imageStimulus primed for animate() without
+		%> opening a window (no texture, runtime properties added manually)
+		% ===================================================================
+		function img = makeStubImage(~, sM, am)
+			img = imageStimulus('filePath', 'moon.png', 'size', 2, ...
+				'verbose', false);
+			setP(img, 'ppd', sM.ppd);
+			setP(img, 'sM', sM);
+			setP(img, 'isSetup', true);
+			img.addprop('angleOut');
+			p = img.addprop('xPositionOut');
+			p.SetMethod = @setXOutPixels;
+			p = img.addprop('yPositionOut');
+			p.SetMethod = @setYOutPixels;
+			img.addprop('doAnimator');
+			img.doAnimator = true;
+			img.animator = am;
+		end
 	end
 
 	% ===================================================================
@@ -189,9 +234,239 @@ classdef AnimationManagerTest < matlab.unittest.TestCase
 	end
 
 	% ===================================================================
+	% LISSAJOUS PATH ANIMATION
+	% ===================================================================
+	methods (Test, TestTags = {'CI'})
+		function testLissajousTypeDefaults(testCase)
+			am = makeAM(testCase, 'type', 'lissajous');
+			verifyEqual(testCase, am.type, 'lissajous', 'type should be lissajous');
+			verifyTrue(testCase, isa(am.lissajous, 'lissajousPath'), ...
+				'a lissajousPath object should be created');
+			verifyFalse(testCase, am.orientToPath, 'orientation off by default');
+			verifyEmpty(testCase, am.x, 'x empty before setup');
+			verifyEqual(testCase, am.nFrames, 0, 'no frames before setup');
+		end
+
+		function testLissajousTypeValidated(testCase)
+			%> construction goes through parseArgs, which warns instead of
+			%> throwing on an invalid value, so test the setter directly
+			am = makeAM(testCase);
+			threw = false;
+			try
+				am.type = 'lissajous2';
+			catch ME
+				threw = true;
+				verifyEqual(testCase, ME.identifier, ...
+					'MATLAB:validators:mustBeMember', 'validator error');
+			end
+			verifyTrue(testCase, threw, 'invalid type assignment rejected');
+			verifyEqual(testCase, am.type, 'rigid', 'type unchanged');
+		end
+
+		function testLissajousSetupHeadless(testCase)
+			am = makeLissajous(testCase);
+			verifyTrue(testCase, am.isSetup, 'setup true');
+			verifyEqual(testCase, am.timeDelta, 1/60, 'AbsTol', 1e-12, ...
+				'timeDelta from fps');
+			verifyEqual(testCase, am.ppd, 40, 'ppd from screen struct');
+			%> 10° circle at 10°/s, 60Hz = one full curve in 188 frames
+			verifyEqual(testCase, am.nFrames, 188, 'frame count for one curve');
+			verifyEqual(testCase, am.nFrames, am.lissajous.nFrames, ...
+				'nFrames proxies the path');
+			verifyEqual(testCase, am.x, am.lissajous.x(1), 'x at first frame');
+			verifyEqual(testCase, am.y, am.lissajous.y(1), 'y at first frame');
+			verifyEqual(testCase, am.tick, 0, 'tick starts at 0');
+		end
+
+		function testLissajousAnimateAdvances(testCase)
+			am = makeLissajous(testCase);
+			animate(am);
+			verifyEqual(testCase, am.tick, 1, 'first animate is frame 1');
+			verifyEqual(testCase, am.x, am.lissajous.x(1), 'x frame 1');
+			verifyEqual(testCase, am.y, am.lissajous.y(1), 'y frame 1');
+			verifyEqual(testCase, am.timeStep, 0, 'timeStep frame 1');
+			animate(am);
+			verifyEqual(testCase, am.tick, 2, 'second frame');
+			verifyEqual(testCase, am.x, am.lissajous.x(2), 'x frame 2');
+			verifyEqual(testCase, am.timeStep, am.timeDelta, 'AbsTol', 1e-12, ...
+				'timeStep advances by timeDelta');
+		end
+
+		function testLissajousLoopsAndWraps(testCase)
+			am = makeLissajous(testCase);
+			for i = 1:am.nFrames
+				animate(am);
+			end
+			verifyEqual(testCase, am.tick, am.nFrames, 'reached last frame');
+			animate(am);
+			verifyEqual(testCase, am.tick, 1, 'wraps to frame 1');
+			verifyEqual(testCase, am.x, am.lissajous.x(1), 'wrapped position');
+		end
+
+		function testLissajousTracksCircle(testCase)
+			am = makeLissajous(testCase);
+			x = nan(1, am.nFrames);
+			y = nan(1, am.nFrames);
+			for i = 1:am.nFrames
+				animate(am);
+				x(i) = am.x;
+				y(i) = am.y;
+			end
+			verifyEqual(testCase, x, am.lissajous.x, 'all X positions match path');
+			verifyEqual(testCase, y, am.lissajous.y, 'all Y positions match path');
+			r = hypot(x, y);
+			verifyLessThan(testCase, max(abs(r - 5)), 1e-3, ...
+				'animated positions lie on the circle');
+		end
+
+		function testLissajousOrientation(testCase)
+			am = makeLissajous(testCase, 'orientToPath', true);
+			animate(am);
+			verifyEqual(testCase, am.angle, ...
+				deg2rad(am.lissajous.direction(am.tick)), 'AbsTol', 1e-12, ...
+				'angle follows the path tangent');
+			am2 = makeLissajous(testCase);
+			animate(am2);
+			verifyEqual(testCase, am2.angle, 0, 'upright by default');
+		end
+
+		function testLissajousStepMultiple(testCase)
+			am = makeLissajous(testCase);
+			step(am, 5);
+			verifyEqual(testCase, am.tick, 5, 'advanced 5 frames');
+			verifyEqual(testCase, am.x, am.lissajous.x(5), 'position frame 5');
+		end
+
+		function testLissajousRewindKeepsPath(testCase)
+			am = makeLissajous(testCase);
+			for i = 1:10; animate(am); end
+			am.rewind();
+			verifyEqual(testCase, am.tick, 0, 'tick reset');
+			verifyTrue(testCase, am.isSetup, 'still setup');
+			verifyEqual(testCase, am.nFrames, 188, 'path retained');
+			verifyEqual(testCase, am.x, am.lissajous.x(1), 'x back at path start');
+			verifyEqual(testCase, am.y, am.lissajous.y(1), 'y back at path start');
+		end
+
+		function testLissajousResetClearsPath(testCase)
+			am = makeLissajous(testCase);
+			animate(am);
+			reset(am);
+			verifyFalse(testCase, am.isSetup, 'not setup after reset');
+			verifyEqual(testCase, am.nFrames, 0, 'path cleared');
+			verifyEmpty(testCase, am.x, 'x cleared');
+		end
+
+		function testLissajousAnimateBeforeSetupErrors(testCase)
+			am = makeAM(testCase, 'type', 'lissajous');
+			verifyError(testCase, @() animate(am), ...
+				'animationManager:notSetup', 'animate before setup errors');
+		end
+
+		function testImageStimulusAnimatorDrivesXY(testCase)
+			%> Exercise imageStimulus.animate -> applyAnimator ->
+			%> updateXY without a PTB window: attach a constructed
+			%> screenManager and mark the stimulus setup.
+			sM = testCase.makeStubScreen();
+			am = makeLissajous(testCase);
+			img = testCase.makeStubImage(sM, am);
+			verifyTrue(testCase, img.animator == am, 'animator attached');
+			img.angleOut = 30;
+			img.syncAnimator();
+			verifyEqual(testCase, img.xFinalD, am.x, 'AbsTol', 1e-12, ...
+				'syncAnimator lands on the path start');
+			for i = 1:10
+				img.animate();
+				verifyEqual(testCase, img.xFinalD, am.x, 'AbsTol', 1e-12, ...
+					'stimulus X driven by the animator');
+				verifyEqual(testCase, img.yFinalD, am.y, 'AbsTol', 1e-12, ...
+					'stimulus Y driven by the animator');
+			end
+			verifyEqual(testCase, am.tick, 10, 'animator advanced with stimulus');
+			verifyEqual(testCase, img.angleOut, 30, ...
+				'angleOut untouched when the animator does not orient');
+			img.rewindAnimator();
+			verifyEqual(testCase, am.tick, 0, 'rewindAnimator rewinds the path');
+			verifyEqual(testCase, img.xFinalD, am.x, 'AbsTol', 1e-12, ...
+				'position returned to the path start');
+		end
+
+		function testImageStimulusOrientation(testCase)
+			sM = testCase.makeStubScreen();
+			am = makeLissajous(testCase, 'orientToPath', true);
+			img = testCase.makeStubImage(sM, am);
+			img.animate();
+			verifyEqual(testCase, img.angleOut, -rad2deg(am.angle), ...
+				'AbsTol', 1e-12, 'stimulus rotates to the path tangent');
+		end
+
+		function testStimulusUpdateRewindsAnimator(testCase)
+			%> exampleStimulus.update() is just rewind + computePosition, so
+			%> it can run headlessly and exercises the real update() path.
+			sM = testCase.makeStubScreen();
+			am = makeLissajous(testCase);
+			stim = exampleStimulus('verbose', false);
+			setP(stim, 'ppd', sM.ppd);
+			setP(stim, 'sM', sM);
+			setP(stim, 'isSetup', true);
+			stim.addprop('angleOut');
+			p = stim.addprop('xPositionOut');
+			p.SetMethod = @setXOutPixels;
+			p = stim.addprop('yPositionOut');
+			p.SetMethod = @setYOutPixels;
+			stim.addprop('doAnimator');
+			stim.addprop('doMotion');
+			stim.doMotion = false;
+			stim.doAnimator = true;
+			stim.animator = am;
+			for i = 1:5
+				stim.animate();
+			end
+			verifyEqual(testCase, am.tick, 5, 'animator advanced 5 frames');
+			stim.update();
+			verifyEqual(testCase, am.tick, 0, 'update() rewinds the animator');
+			verifyEqual(testCase, stim.xFinalD, am.x, 'AbsTol', 1e-12, ...
+				'update() moves the stimulus back to the path start');
+		end
+	end
+
+	% ===================================================================
 	% HARDWARE TESTS
 	% ===================================================================
 	methods (Test, TestTags = {'hardware'})
+		function testImageStimulusFollowsLissajous(testCase)
+			assumeFalse(testCase, ~isempty(getenv('GITHUB_ACTIONS')), 'Skip in CI');
+			am = makeAM(testCase, 'type', 'lissajous');
+			am.lissajous.a = 1; am.lissajous.b = 1;
+			am.lissajous.delta = pi/2;
+			am.lissajous.size = 8; am.lissajous.speed = 6;
+			am.lissajous.xPosition = 1; am.lissajous.yPosition = -2;
+			sM = screenManager; sM.windowed = [0 0 800 600];
+			sM.disableSyncTests = true; sM.visualDebug = true; sM.bitDepth = '8bit';
+			open(sM); cleanup = onCleanup(@() close(sM));
+			img = imageStimulus('filePath', 'moon.png', 'size', 2, ...
+				'verbose', false);
+			img.animator = am; %> attach before setup
+			setup(img, sM);    %> stimulus setup also sets up the animator
+			verifyTrue(testCase, am.isSetup, 'animator setup by stimulus setup');
+			verifyTrue(testCase, img.doAnimator, 'stimulus uses the animator');
+			verifyEqual(testCase, img.xFinalD, am.x, 'AbsTol', 1e-9, ...
+				'stimulus starts on the path after setup');
+			verifyEqual(testCase, am.timeDelta, sM.screenVals.ifi, ...
+				'AbsTol', 1e-6, 'animator timeDelta from screen');
+			verifyEqual(testCase, am.nFrames, am.lissajous.nFrames, ...
+				'path generated at the screen frame rate');
+			for i = 1:12
+				draw(img); flip(sM); animate(img);
+				verifyEqual(testCase, img.xFinalD, am.x, 'AbsTol', 1e-9, ...
+					'stimulus X follows the path');
+				verifyEqual(testCase, img.yFinalD, am.y, 'AbsTol', 1e-9, ...
+					'stimulus Y follows the path');
+			end
+			verifyEqual(testCase, am.tick, 12, 'animator advanced with stimulus');
+			reset(img); reset(am);
+		end
+
 		function testSetupWithScreen(testCase)
 			assumeFalse(testCase, ~isempty(getenv('GITHUB_ACTIONS')), 'Skip in CI');
 			am = makeAM(testCase, 'timeDelta', 0.016);
@@ -246,4 +521,20 @@ classdef AnimationManagerTest < matlab.unittest.TestCase
 			reset(d);
 		end
 	end
+end
+
+% ========================================================================
+%> @brief setXOutPixels mimics the degrees->pixels setter installed on
+%> xPositionOut by every stimulus setup()
+% ========================================================================
+function setXOutPixels(obj,value)
+	obj.xPositionOut = value * obj.ppd;
+end
+
+% ========================================================================
+%> @brief setYOutPixels mimics the degrees->pixels setter installed on
+%> yPositionOut by every stimulus setup()
+% ========================================================================
+function setYOutPixels(obj,value)
+	obj.yPositionOut = value * obj.ppd;
 end

@@ -224,6 +224,10 @@ classdef movieStimulus < baseStimulus
 			loadMovie(me);
 			computePosition(me)
 			setRect(me);
+			if me.doAnimator
+				me.animator.setup(me.sM);
+				me.syncAnimator();
+			end
 			makeMaskShader(me);
 
 			function set_xPositionOut(me, value)
@@ -239,6 +243,7 @@ classdef movieStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function update(me)
+			me.rewindAnimator();
 			try Screen('PlayMovie', me.movie, 0); end
 			Screen('SetMovieTimeIndex', me.movie, 0); %reset movie time
 			if ~isempty(me.texture) && me.texture > 0 && Screen(me.texture,'WindowKind') == -1
@@ -399,7 +404,9 @@ classdef movieStimulus < baseStimulus
 					end
 					return
 				end
-				if me.doMotion == 1
+				if me.doAnimator
+					me.applyAnimator();
+				elseif me.doMotion == 1
 					me.mvRect=OffsetRect(me.mvRect,me.dX_,me.dY_);
 				end
 			end
