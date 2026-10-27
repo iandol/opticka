@@ -10,7 +10,8 @@
 %>
 %> Run with:
 %>   >> runtests('tests/RevcorStimulusTest.m')
-%>   >> runtests('tests/RevcorStimulusTest.m', '-ExcludeTag', 'hardware')
+%>   >> addpath('tests')
+%>   >> runOptickaTests('RevcorStimulusTest', 'excludeTag', 'hardware')
 %>
 %> Copyright (c) 2026 Ian Max Andolina — LGPL3, see LICENCE.md
 % ========================================================================

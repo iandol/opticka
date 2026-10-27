@@ -17,7 +17,8 @@
 %>
 %> Run with:
 %>   >> runtests('tests/AudioManagerTest.m')
-%>   >> runtests('tests/AudioManagerTest.m', '-ExcludeTag', 'hardware')
+%>   >> addpath('tests')
+%>   >> runOptickaTests('AudioManagerTest', 'excludeTag', 'hardware')
 %>
 %> Copyright (c) 2026 Ian Max Andolina — LGPL3, see LICENCE.md
 % ========================================================================

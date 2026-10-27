@@ -8,7 +8,8 @@
 %>
 %> Run with:
 %>   >> runtests('tests/SpotStimulusTest.m')
-%>   >> runtests('tests/SpotStimulusTest.m', '-ExcludeTag', 'hardware')
+%>   >> addpath('tests')
+%>   >> runOptickaTests('SpotStimulusTest', 'excludeTag', 'hardware')
 %>
 %> Copyright (c) 2026 Ian Max Andolina — LGPL3, see LICENCE.md
 % ========================================================================

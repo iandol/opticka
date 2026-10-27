@@ -8,7 +8,8 @@
 %>
 %> Run with:
 %>   >> runtests('tests/DiscStimulusTest.m')
-%>   >> runtests('tests/DiscStimulusTest.m', '-ExcludeTag', 'hardware')
+%>   >> addpath('tests')
+%>   >> runOptickaTests('DiscStimulusTest', 'excludeTag', 'hardware')
 %>
 %> Copyright (c) 2026 Ian Max Andolina — LGPL3, see LICENCE.md
 % ========================================================================

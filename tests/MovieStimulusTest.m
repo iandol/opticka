@@ -10,7 +10,8 @@
 %>
 %> Run with:
 %>   >> runtests('tests/MovieStimulusTest.m')
-%>   >> runtests('tests/MovieStimulusTest.m', '-ExcludeTag', 'hardware')
+%>   >> addpath('tests')
+%>   >> runOptickaTests('MovieStimulusTest', 'excludeTag', 'hardware')
 %>
 %> Copyright (c) 2026 Ian Max Andolina — LGPL3, see LICENCE.md
 % ========================================================================

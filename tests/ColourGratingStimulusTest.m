@@ -9,7 +9,8 @@
 %>
 %> Run with:
 %>   >> runtests('tests/ColourGratingStimulusTest.m')
-%>   >> runtests('tests/ColourGratingStimulusTest.m', '-ExcludeTag', 'hardware')
+%>   >> addpath('tests')
+%>   >> runOptickaTests('ColourGratingStimulusTest', 'excludeTag', 'hardware')
 %>
 %> Copyright (c) 2026 Ian Max Andolina — LGPL3, see LICENCE.md
 % ========================================================================

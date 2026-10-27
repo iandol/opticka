@@ -9,13 +9,15 @@
 %> and a stimulus object.
 %>
 %> Note: animationManager requires the dyn4j Java library (bundled in
-%> stimuli/lib/dyn4j-5.0.2.jar). The constructor calls javaaddpath, so
-%> Java must be available. CI-safe tests will be skipped (assumed) if
-%> Java is not available.
+%> stimuli/lib/dyn4j-6.0.0.jar). The constructor calls javaaddpath (only
+%> when the jar is not already on the class path), so Java must be
+%> available. CI-safe tests will be skipped (assumed) if Java is not
+%> available.
 %>
 %> Run with:
 %>   >> runtests('tests/AnimationManagerTest.m')
-%>   >> runtests('tests/AnimationManagerTest.m', '-ExcludeTag', 'hardware')
+%>   >> addpath('tests')
+%>   >> runOptickaTests('AnimationManagerTest', 'excludeTag', 'hardware')
 %>
 %> Copyright (c) 2026 Ian Max Andolina — LGPL3, see LICENCE.md
 % ========================================================================
@@ -141,6 +143,16 @@ classdef AnimationManagerTest < matlab.unittest.TestCase
 				'FIXED_ANGULAR_VELOCITY should be set');
 			verifyTrue(testCase, ~isempty(am.massType.FIXED_LINEAR_VELOCITY), ...
 				'FIXED_LINEAR_VELOCITY should be set');
+		end
+
+		%> @brief a second animationManager must not re-add the dyn4j jar;
+		%> doing so made MATLAB try to `clear java` and warn while the
+		%> first manager's MassType objects were alive.
+		function testRepeatedConstructionWarningFree(testCase)
+			first = makeAM(testCase);
+			verifyTrue(testCase, ~isempty(first.massType.NORMAL), 'first NORMAL set');
+			second = testCase.verifyWarningFree(@() makeAM(testCase));
+			verifyTrue(testCase, ~isempty(second.massType.NORMAL), 'second NORMAL set');
 		end
 
 		function testAddBody(testCase)

@@ -9,7 +9,8 @@
 %>
 %> Run with:
 %>   >> runtests('tests/AlyxManagerTest.m')
-%>   >> runtests('tests/AlyxManagerTest.m', '-ExcludeTag', 'live')
+%>   >> addpath('tests')
+%>   >> runOptickaTests('AlyxManagerTest', 'excludeTag', 'live')
 % ========================================================================
 classdef AlyxManagerTest < matlab.unittest.TestCase
 

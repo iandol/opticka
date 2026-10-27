@@ -9,7 +9,8 @@
 %>
 %> Run with:
 %>   >> runtests('tests/LogGaborStimulusTest.m')
-%>   >> runtests('tests/LogGaborStimulusTest.m', '-ExcludeTag', 'hardware')
+%>   >> addpath('tests')
+%>   >> runOptickaTests('LogGaborStimulusTest', 'excludeTag', 'hardware')
 %>
 %> Copyright (c) 2026 Ian Max Andolina — LGPL3, see LICENCE.md
 % ========================================================================

@@ -9,7 +9,8 @@
 %>
 %> Run with:
 %>   >> runtests('tests/PolarGratingStimulusTest.m')
-%>   >> runtests('tests/PolarGratingStimulusTest.m', '-ExcludeTag', 'hardware')
+%>   >> addpath('tests')
+%>   >> runOptickaTests('PolarGratingStimulusTest', 'excludeTag', 'hardware')
 %>
 %> Copyright (c) 2026 Ian Max Andolina — LGPL3, see LICENCE.md
 % ========================================================================

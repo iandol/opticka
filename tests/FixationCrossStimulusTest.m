@@ -9,7 +9,8 @@
 %>
 %> Run with:
 %>   >> runtests('tests/FixationCrossStimulusTest.m')
-%>   >> runtests('tests/FixationCrossStimulusTest.m', '-ExcludeTag', 'hardware')
+%>   >> addpath('tests')
+%>   >> runOptickaTests('FixationCrossStimulusTest', 'excludeTag', 'hardware')
 %>
 %> Copyright (c) 2026 Ian Max Andolina — LGPL3, see LICENCE.md
 % ========================================================================

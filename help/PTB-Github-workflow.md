@@ -152,9 +152,11 @@ with a real display. Assumptions also express intent better than external
 filtering: the person writing the test declares its requirements right where
 the requirement exists.
 
-If you prefer explicit control, `runtests(...,'-ExcludeTag','hardware')`
-works too — but then every entry point must remember to pass it. The
-self-skipping gate travels with the test.
+If you prefer explicit control, our runner filters by tag:
+`runOptickaTests('excludeTag','hardware')` (the legacy
+`runtests(...,'-ExcludeTag','hardware')` flags are rejected by recent MATLAB
+releases). Explicit filtering works too — but then every entry point must
+remember to pass it. The self-skipping gate travels with the test.
 
 ## Technique 4: assert on maths and state, never on photons
 

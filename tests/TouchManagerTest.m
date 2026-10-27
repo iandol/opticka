@@ -11,7 +11,8 @@
 %>
 %> Run with:
 %>   >> runtests('tests/TouchManagerTest.m')
-%>   >> runtests('tests/TouchManagerTest.m', '-ExcludeTag', 'hardware')
+%>   >> addpath('tests')
+%>   >> runOptickaTests('TouchManagerTest', 'excludeTag', 'hardware')
 %>
 %> Copyright (c) 2026 Ian Max Andolina — LGPL3, see LICENCE.md
 % ========================================================================

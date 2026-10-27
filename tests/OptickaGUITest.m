@@ -8,7 +8,8 @@
 %>
 %> Run with:
 %>   >> runtests('tests/OptickaGUITest.m')
-%>   >> runtests('tests/OptickaGUITest.m', '-IncludeTag', 'hardware')
+%>   >> addpath('tests')
+%>   >> runOptickaTests('OptickaGUITest', 'includeTag', 'hardware')
 %>
 %> Copyright (c) 2026 Ian Max Andolina — LGPL3, see LICENCE.md
 % ========================================================================

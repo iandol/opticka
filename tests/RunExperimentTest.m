@@ -8,7 +8,8 @@
 %>
 %> Run with:
 %>   >> runtests('tests/RunExperimentTest.m')
-%>   >> runtests('tests/RunExperimentTest.m', '-ExcludeTag', 'hardware')
+%>   >> addpath('tests')
+%>   >> runOptickaTests('RunExperimentTest', 'excludeTag', 'hardware')
 %>
 %> Copyright (c) 2026 Ian Max Andolina — LGPL3, see LICENCE.md
 % ========================================================================

@@ -9,7 +9,8 @@
 %>
 %> Run with:
 %>   >> runtests('tests/BarStimulusTest.m')
-%>   >> runtests('tests/BarStimulusTest.m', '-ExcludeTag', 'hardware')
+%>   >> addpath('tests')
+%>   >> runOptickaTests('BarStimulusTest', 'excludeTag', 'hardware')
 %>
 %> Copyright (c) 2026 Ian Max Andolina — LGPL3, see LICENCE.md
 % ========================================================================

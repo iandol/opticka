@@ -9,7 +9,8 @@
 %>
 %> Run with:
 %>   >> runtests('tests/CheckerboardStimulusTest.m')
-%>   >> runtests('tests/CheckerboardStimulusTest.m', '-ExcludeTag', 'hardware')
+%>   >> addpath('tests')
+%>   >> runOptickaTests('CheckerboardStimulusTest', 'excludeTag', 'hardware')
 %>
 %> Copyright (c) 2026 Ian Max Andolina — LGPL3, see LICENCE.md
 % ========================================================================

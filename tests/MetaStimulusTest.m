@@ -10,7 +10,8 @@
 %>
 %> Run with:
 %>   >> runtests('tests/MetaStimulusTest.m')
-%>   >> runtests('tests/MetaStimulusTest.m', '-ExcludeTag', 'hardware')
+%>   >> addpath('tests')
+%>   >> runOptickaTests('MetaStimulusTest', 'excludeTag', 'hardware')
 %>
 %> Copyright (c) 2026 Ian Max Andolina — LGPL3, see LICENCE.md
 % ========================================================================

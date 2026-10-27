@@ -180,7 +180,15 @@ classdef animationManager < optickaCore
 			end
 			try
 				% dyn4j jar -- see https://dyn4j.org/pages/getting-started
-				javaaddpath([me.paths.whereami '/stimuli/lib/dyn4j-6.0.0.jar'],'-begin');
+				% only add the jar when it is not already on the class path
+				% (static or dynamic): re-adding an existing jar makes
+				% MATLAB try to `clear java`, which warns ("Objects of
+				% org/dyn4j/geometry/MassType class exist - not clearing
+				% java") whenever another animationManager is alive.
+				if ~any(contains(javaclasspath('-all'), 'dyn4j'))
+					javaaddpath(fullfile(me.paths.whereami, 'stimuli', ...
+						'lib', 'dyn4j-6.0.0.jar'), '-begin');
+				end
 				me.massType.NORMAL = javaMethod('valueOf', 'org.dyn4j.geometry.MassType', 'NORMAL');
     			me.massType.INFINITE = javaMethod('valueOf', 'org.dyn4j.geometry.MassType', 'INFINITE');
 				me.massType.FIXED_ANGULAR_VELOCITY = javaMethod('valueOf', 'org.dyn4j.geometry.MassType', 'FIXED_ANGULAR_VELOCITY');

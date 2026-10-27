@@ -11,7 +11,8 @@
 %>
 %> Run with:
 %>   >> runtests('tests/LissajousPathTest.m')
-%>   >> runtests('tests/LissajousPathTest.m', '-ExcludeTag', 'hardware')
+%>   >> addpath('tests')
+%>   >> runOptickaTests('LissajousPathTest', 'excludeTag', 'hardware')
 %>
 %> Copyright (c) 2026 Ian Max Andolina — LGPL3, see LICENCE.md
 % ========================================================================

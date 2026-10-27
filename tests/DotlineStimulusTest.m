@@ -10,7 +10,8 @@
 %>
 %> Run with:
 %>   >> runtests('tests/DotlineStimulusTest.m')
-%>   >> runtests('tests/DotlineStimulusTest.m', '-ExcludeTag', 'hardware')
+%>   >> addpath('tests')
+%>   >> runOptickaTests('DotlineStimulusTest', 'excludeTag', 'hardware')
 %>
 %> Copyright (c) 2026 Ian Max Andolina — LGPL3, see LICENCE.md
 % ========================================================================
