@@ -395,6 +395,12 @@ classdef LissajousPathTest < matlab.unittest.TestCase
 		function testAnimateStimulusAlongPath(testCase)
 			assumeFalse(testCase,isempty(getenv('DISPLAY')), ...
 				'no X display available');
+			%> CI cannot open a PTB window: Screen.mexa64 segfaults inside
+			%> Mesa's libGLX under Xvfb (direct GLX jumps to a NULL function
+			%> pointer, indirect GLX fails context creation). See
+			%> help/PTB-Github-workflow.md.
+			assumeFalse(testCase,~isempty(getenv('GITHUB_ACTIONS')), ...
+				'Skip in CI - no usable GLX context under Xvfb');
 			s = screenManager('windowed',true,'disableSyncTests',true, ...
 				'verbose',false);
 			try
@@ -426,6 +432,10 @@ classdef LissajousPathTest < matlab.unittest.TestCase
 		function testOrientStimulusToTangent(testCase)
 			assumeFalse(testCase,isempty(getenv('DISPLAY')), ...
 				'no X display available');
+			%> see testAnimateStimulusAlongPath: window creation crashes
+			%> under Xvfb, so never run this in CI
+			assumeFalse(testCase,~isempty(getenv('GITHUB_ACTIONS')), ...
+				'Skip in CI - no usable GLX context under Xvfb');
 			s = screenManager('windowed',true,'disableSyncTests',true, ...
 				'verbose',false);
 			try

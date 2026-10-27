@@ -135,11 +135,24 @@ to MATLAB's installed `pathdef.m`, so any `addpath` helper that calls
 `savepath` warns. Don't "fix" this by fighting permissions; accept the
 warning — path changes persist for the session, which is all a CI job needs.
 
-## Technique 3: gate hardware tests with assumptions, not filters
+## Technique 3: gate hardware tests with assumptions, and exclude the tag
 
-Here's a subtlety that cost us some confusion: our local runner
-(`runOptickaTests`) uses `TestSuite.fromFolder` and **does not filter by
-tag**. So how do hardware tests stay out of CI? They skip themselves:
+Two layers, because a hardware test that touches the display does not merely
+fail in CI — it takes the whole job down (see "Pitfall #5" below).
+
+**Layer 1 — the CI job excludes the tag.** The workflow runs:
+
+```yaml
+command: setupOptickaCI; runOptickaTests('excludeTag', 'hardware');
+```
+
+`runOptickaTests` filters `suite.Tags` itself (the legacy
+`runtests(...,'-ExcludeTag','hardware')` flags are rejected by recent MATLAB
+releases). Hardware tests are never collected, so no entry point can
+accidentally run one.
+
+**Layer 2 — each hardware test skips itself.** Belt and braces, because
+people also run single files with plain `runtests`:
 
 ```matlab
 assumeFalse(testCase, ~isempty(getenv('GITHUB_ACTIONS')), 'Skip in CI');
@@ -152,11 +165,32 @@ with a real display. Assumptions also express intent better than external
 filtering: the person writing the test declares its requirements right where
 the requirement exists.
 
-If you prefer explicit control, our runner filters by tag:
-`runOptickaTests('excludeTag','hardware')` (the legacy
-`runtests(...,'-ExcludeTag','hardware')` flags are rejected by recent MATLAB
-releases). Explicit filtering works too — but then every entry point must
-remember to pass it. The self-skipping gate travels with the test.
+**Pitfall #5 — opening a PTB window under Xvfb segfaults MATLAB.** Xvfb is
+enough for `Screen('Preference', ...)` at startup, but not for a window:
+
+```
+Segmentation violation
+Current Thread: 'PTB mainthread'
+RIP = 0000000000000000
+[1] libGLX_mesa.so.0+00158029
+[2] Screen.mexa64+00126380
+```
+
+`Screen('OpenWindow')` jumps through a NULL function pointer inside Mesa's
+libGLX and kills the process — an uncaught assumption cannot save the job,
+because nothing after the crash runs. It is not a missing library and not the
+MATLAB release: on the same Xvfb display `glxinfo` reports GLX 1.4 with the
+llvmpipe renderer, and the crash reproduces with PTB 3.0.21 and 3.0.22, under
+R2026b, with `LIBGL_ALWAYS_SOFTWARE=1`, `GALLIUM_DRIVER=llvmpipe`, and
+MATLAB `-softwareopengl`. Forcing indirect GLX (`LIBGL_ALWAYS_INDIRECT=1`)
+avoids the crash but context creation fails cleanly
+(`glXCreateContext() failed`), so no window either.
+
+Consequence: window tests cannot run on a hosted runner, full stop. Tag them
+`hardware`, keep the `GITHUB_ACTIONS` assumption in every one of them, and
+run them on a rig. A new window test without that assumption reddens CI with
+a segfault whose stack trace points at PTB, not at the test — which is how the
+`LissajousPathTest` window tests broke the suite for three commits.
 
 ## Technique 4: assert on maths and state, never on photons
 

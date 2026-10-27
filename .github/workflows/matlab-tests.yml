@@ -62,7 +62,11 @@ jobs:
           Xvfb :99 -screen 0 1024x768x24 > /tmp/xvfb.log 2>&1 &
           echo "DISPLAY=:99" >> "$GITHUB_ENV"
 
+      # Hardware-tagged tests are excluded explicitly: they self-skip under
+      # GitHub Actions anyway, and a single unguarded window test takes the
+      # whole job down because Screen.mexa64 segfaults inside Mesa's libGLX
+      # on Xvfb (see help/PTB-Github-workflow.md).
       - name: Run tests under virtual display
         uses: matlab-actions/run-command@v3
         with:
-          command: setupOptickaCI; runOptickaTests;
+          command: setupOptickaCI; runOptickaTests('excludeTag', 'hardware');
