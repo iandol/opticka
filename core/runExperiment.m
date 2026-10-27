@@ -1381,8 +1381,8 @@ classdef runExperiment < optickaCore
 					warning('You did not select a reward device in the menu');
 				else
 					try
-						if isfield(me.reward,'port') && ~isempty(me.reward.port); rM.port = me.reward.port; end
-						if isfield(me.reward,'board') && ~isempty(me.reward.board); rM.board = me.reward.board; end
+						if isfield(me.reward,'port'); rM.port = me.reward.port; end
+						if isfield(me.reward,'board'); rM.board = me.reward.board; end
 						if rM.isOpen || rM.silentMode
 							try rM.close; rM.reset(true); end
 						end

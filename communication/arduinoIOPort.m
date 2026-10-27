@@ -74,7 +74,7 @@ classdef arduinoIOPort < handle
 
 			% define IOPort serial object
 			oldv = IOPort('Verbosity',0);
-			if strcmp(port,'/dev/ttyS0');error('Cannot use /dev/ttyS0!!!');return;end
+			if strcmp(port,'/dev/ttyS0'); error('Cannot use /dev/ttyS0!!!'); return; end
 			[a.conn, err] = IOPort('OpenSerialPort', port, a.params);
 			IOPort('Verbosity',oldv);
 			if a.conn == -1
@@ -553,7 +553,7 @@ classdef arduinoIOPort < handle
 		end  % flush
 		
 		%===================================================flush
-		function ports = checkPorts(a, port);
+		function ports = checkPorts(a, port)
 			if IsOctave
 				if ~isempty(pkg('list','instrument-control')) && ~verLessThan('instrument-control','0.7')
 					try pkg('load', 'instrument-control'); end

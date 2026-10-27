@@ -104,11 +104,22 @@ classdef arduinoManager < optickaCore & rewardManager
 				me.isOpen=false; 
 				return; 
 			end
+
+			close(me); 
+			checkPorts(me);
+			
+			fprintf("--->arduinoManager: initial port: %s | initial board: %s\n",me.port,me.board);
+
+
 			if isempty(me.port)
-				warning('--->arduinoManager: Better specify the port to use; will try to select one from available ports!');
-				me.port = char(me.ports(end));
+				warning('--->arduinoManager: Better specify the port to use; will try to select one from available ports! We choose the standard ttyACM0 if present or the last port in the list of ports...');
+				li = contains(me.ports,"ttyACM0");
+				if any(li)
+					me.port = me.ports(li);
+				else
+					me.port = char(me.ports(end));
+				end
 			end
-			close(me); checkPorts(me);
 			try
 				if IsWin && ~isempty(regexp(me.port, '^/dev/', 'once'))
 					warning('--->arduinoManager: Linux/macOS port specified but running on windows!')
