@@ -3,6 +3,53 @@
 > [!NOTE]
 > Changes which may affect your use of Opticka will be detailed here, starting with V2.16.x
 
+## Unreleased
+
+### Dependencies
+
+* **dyn4j 6.0.0** — `animationManager` now ships dyn4j **6.0.0** (was 5.0.2) in
+  `stimuli/lib/` and verifies at construction that this is the version Java
+  actually loaded. A different dyn4j jar already on the class path (a stale
+  5.0.2 left by another checkout or an earlier session) used to win the class
+  lookup silently; it now raises `animationManager:dyn4jVersion` with
+  instructions instead of failing later inside the physics loop.
+  `animationManager.dyn4jVersion` reports the required version,
+  `animationManager.loadedDyn4jVersion()` the version Java loaded. The 5.0.2
+  API used by Opticka is unchanged in 6.0.0 (`BinarySearchTree` became an
+  interface backed by `AVLTree`, and `Link` was redesigned; neither is used
+  here), and a 3-body collision scene stepped for 180 frames with both jars
+  produces bit-identical trajectories.
+
+### Bug Fixes
+
+* **animationManager** — `rigidParams.screenBounds` threw
+  `Undefined function 'Rectwidth'` because the `AxisAlignedBounds` size was
+  built from two non-existent helpers; the bounds are now derived from the
+  screen rectangle in degrees. `screenBounds` can also be set directly (e.g.
+  for headless use) and is no longer cleared by `reset()`.
+* **animationManager.rmBody** — removing a body only dropped it from
+  `animationManager.bodies`, leaving the dyn4j body alive in the world: it kept
+  simulating and colliding after "removal". Bodies are now removed from the
+  world too, and the last body can be removed by index (the bounds check used
+  `<` instead of `<=`).
+* **animationManager.setSensorState** — clearing a sensor
+  (`setSensorState(name, false)`) did not stick for bodies created as
+  `'sensor'`, because `updateMassType` re-applied the flag; the requested
+  state is now set last.
+* **animationManager** — the "RigidBody World … created" banner is only
+  printed when `verbose` is true.
+
+### Tests
+
+* New CI-safe `AnimationManagerTest` cases exercise the dyn4j engine without a
+  PTB window (`step(am, 1, false)`): gravity integration, constant velocity,
+  collision detection, `editBody`, `rmBody`, world bounds, shape mapping and
+  sensor fixtures, plus assertions that the bundled jar matches
+  `animationManager.dyn4jVersion`. Previously the physics paths were only
+  covered by `hardware`-tagged tests that CI skips, so a broken jar could pass
+  CI unnoticed.
+* CI now also runs when `stimuli/**` changes.
+
 ## V2.18.1
 
 > [!IMPORTANT]
