@@ -69,6 +69,26 @@ classdef AnimationManagerTest < matlab.unittest.TestCase
 		end
 
 		% ===================================================================
+		%> @brief makeRigidWorld a world with one 2 degree ball at the origin
+		%>
+		%> No PTB window is needed: step(am, 1, false) advances the physics
+		%> without touching the stimuli, so the engine itself can be tested
+		%> in CI.
+		% ===================================================================
+		function [am, ball] = makeRigidWorld(testCase, gravity)
+			if ~exist('gravity', 'var') || isempty(gravity)
+				gravity = [0 0];
+			end
+			am = makeAM(testCase, 'timeDelta', 1/60);
+			am.rigidParams.gravity = gravity;
+			ball = discStimulus('verbose', false, 'name', 'ball', 'size', 72);
+			ball.xPosition = 0;
+			ball.yPosition = 0;
+			addBody(am, ball, 'Circle', 'normal', 1, 0.2, 0.5);
+			setup(am, struct('fps', 60, 'ppd', 36));
+		end
+
+		% ===================================================================
 		%> @brief makeStubImage imageStimulus primed for animate() without
 		%> opening a window (no texture, runtime properties added manually)
 		% ===================================================================
@@ -439,6 +459,157 @@ classdef AnimationManagerTest < matlab.unittest.TestCase
 			verifyEqual(testCase, am.tick, 0, 'update() rewinds the animator');
 			verifyEqual(testCase, stim.xFinalD, am.x, 'AbsTol', 1e-12, ...
 				'update() moves the stimulus back to the path start');
+		end
+	end
+
+	% ===================================================================
+	% DYN4J DYNAMICS ENGINE — CI-safe, no PTB window required
+	% ===================================================================
+	methods (Test, TestTags = {'CI'})
+		function testDyn4jVersionMatchesBundle(testCase)
+			makeAM(testCase); %> construction loads the bundled jar
+			verifyEqual(testCase, animationManager.loadedDyn4jVersion(), ...
+				animationManager.dyn4jVersion, ...
+				'the dyn4j version Java loaded must be the bundled one');
+		end
+
+		function testDyn4jJarMatchesVersion(testCase)
+			dir = fullfile(fileparts(which('animationManager')), 'lib');
+			jar = fullfile(dir, sprintf('dyn4j-%s.jar', ...
+				animationManager.dyn4jVersion));
+			verifyEqual(testCase, exist(jar, 'file'), 2, ...
+				sprintf('bundled dyn4j jar should exist: %s', jar));
+		end
+
+		function testStepAppliesGravity(testCase)
+			am = makeRigidWorld(testCase, [0 -9.8]);
+			c = getBody(am, 'ball').getWorldCenter();
+			p0 = [c.x c.y];
+			n = 10;
+			for i = 1:n
+				step(am, 1, false); %> physics only, no stimulus updates
+			end
+			c = getBody(am, 'ball').getWorldCenter();
+			p1 = [c.x c.y];
+			verifyEqual(testCase, p1(1), p0(1), 'AbsTol', 1e-9, ...
+				'no motion along X');
+			verifyLessThan(testCase, p1(2), p0(2), ...
+				'gravity pulls the body along -Y in dyn4j coordinates');
+			%> semi-implicit Euler: dy = g*dt^2*n*(n+1)/2
+			dt = am.timeDelta;
+			verifyEqual(testCase, p0(2)-p1(2), 9.8*dt^2*n*(n+1)/2, ...
+				'RelTol', 0.05, 'free fall distance over 10 steps');
+		end
+
+		function testStepAppliesVelocity(testCase)
+			am = makeRigidWorld(testCase, [0 0]);
+			am.editBody('ball', [], [], 10, 0); %> 10 degrees/s along +X
+			c = getBody(am, 'ball').getWorldCenter();
+			p0 = [c.x c.y];
+			n = 10;
+			for i = 1:n
+				step(am, 1, false);
+			end
+			c = getBody(am, 'ball').getWorldCenter();
+			p1 = [c.x c.y];
+			verifyEqual(testCase, p1(2), p0(2), 'AbsTol', 1e-9, ...
+				'no motion along Y');
+			verifyEqual(testCase, p1(1)-p0(1), 10*n*am.timeDelta, ...
+				'RelTol', 0.05, 'distance travelled with a 10 degree/s velocity');
+		end
+
+		function testCollisionDetected(testCase)
+			am = makeAM(testCase, 'timeDelta', 1/60);
+			am.rigidParams.gravity = [0 0];
+			ball = discStimulus('verbose', false, 'name', 'ball', 'size', 72);
+			ball.xPosition = 0; ball.yPosition = 0;
+			addBody(am, ball, 'Circle', 'normal', 1, 0.2, 0.5);
+			wall = barStimulus('verbose', false, 'name', 'wall', ...
+				'barWidth', 4, 'barHeight', 4);
+			wall.xPosition = 1; wall.yPosition = 0; %> overlaps the ball
+			addBody(am, wall, 'Rectangle', 'infinite');
+			setup(am, struct('fps', 60, 'ppd', 36));
+			step(am, 1, false);
+			[hit, other] = isCollision(am, 'ball');
+			verifyTrue(testCase, hit, 'overlapping bodies generate a contact');
+			verifyEqual(testCase, class(other), 'org.dyn4j.dynamics.Body', ...
+				'the colliding body is returned');
+			verifyEqual(testCase, getBodyName(am, other.hashCode), "wall", ...
+				'the wall is the other body');
+		end
+
+		function testEditBodyMovesAndSetsVelocity(testCase)
+			am = makeRigidWorld(testCase, [0 0]);
+			am.editBody('ball', 3, -2); %> opticka Y is negated for dyn4j
+			c = getBody(am, 'ball').getWorldCenter();
+			p = [c.x c.y];
+			verifyEqual(testCase, p, [3 2], 'AbsTol', 1e-9, ...
+				'body translated (dyn4j +Y is opticka -Y)');
+			am.editBody('ball', [], [], 4, 0);
+			v = getBody(am, 'ball').getLinearVelocity();
+			verifyEqual(testCase, [v.x v.y], [4 0], 'AbsTol', 1e-9, ...
+				'linear velocity set');
+		end
+
+		function testRmBodyKeepsWorldSteppable(testCase)
+			am = makeRigidWorld(testCase, [0 0]);
+			wall = barStimulus('verbose', false, 'name', 'wall', ...
+				'barWidth', 2, 'barHeight', 2);
+			addBody(am, wall, 'Rectangle', 'infinite');
+			setup(am, struct('fps', 60, 'ppd', 36));
+			verifyEqual(testCase, am.nBodies, 2, 'two bodies before removal');
+			rmBody(am, 'wall');
+			verifyEqual(testCase, am.nBodies, 1, 'wall removed');
+			verifyEmpty(testCase, getBody(am, 'wall'), 'wall no longer found');
+			step(am, 1, false); %> the world must still be usable
+			verifyEqual(testCase, am.tick, 1, 'world still steps');
+		end
+
+		function testWorldBounds(testCase)
+			am = makeAM(testCase, 'timeDelta', 1/60);
+			am.rigidParams.screenBounds = true;
+			am.screenBounds = [-11 -8 11 8]; %> a 22 x 16 degree screen
+			ball = discStimulus('verbose', false, 'name', 'ball', 'size', 72);
+			addBody(am, ball, 'Circle', 'normal');
+			setup(am, struct('fps', 60, 'ppd', 36));
+			bnds = am.world.getBounds();
+			verifyEqual(testCase, bnds.getWidth(), 22, 'AbsTol', 1e-9, ...
+				'bounds width from the screen rect');
+			verifyEqual(testCase, bnds.getHeight(), 16, 'AbsTol', 1e-9, ...
+				'bounds height from the screen rect');
+		end
+
+		function testShapesMapToDyn4j(testCase)
+			am = makeAM(testCase);
+			d = discStimulus('verbose', false, 'name', 'c', 'size', 72);
+			circle = addBody(am, d, 'Circle');
+			r = barStimulus('verbose', false, 'name', 'r', ...
+				'barWidth', 2, 'barHeight', 4);
+			rect = addBody(am, r, 'Rectangle');
+			s = barStimulus('verbose', false, 'name', 's', ...
+				'barWidth', 4, 'barHeight', 0.2);
+			seg = addBody(am, s, 'Segment');
+			verifyEqual(testCase, class(circle.body.getFixture(0).getShape()), ...
+				'org.dyn4j.geometry.Circle', 'circle maps to Circle');
+			verifyEqual(testCase, class(rect.body.getFixture(0).getShape()), ...
+				'org.dyn4j.geometry.Rectangle', 'rectangle maps to Rectangle');
+			verifyEqual(testCase, class(seg.body.getFixture(0).getShape()), ...
+				'org.dyn4j.geometry.Segment', 'segment maps to Segment');
+		end
+
+		function testSensorBody(testCase)
+			am = makeAM(testCase);
+			d = discStimulus('verbose', false, 'name', 'sensor', 'size', 72);
+			body = addBody(am, d, 'Circle', 'sensor');
+			verifyTrue(testCase, body.body.getFixture(0).isSensor(), ...
+				'sensor fixture is a sensor');
+			verifyEqual(testCase, body.type, 'sensor', 'body type is sensor');
+			verifyEqual(testCase, ...
+				char(body.body.getMass().getType().name()), 'INFINITE', ...
+				'sensors are immovable');
+			setSensorState(am, 'sensor', false);
+			verifyFalse(testCase, am.getFixture('sensor').isSensor(), ...
+				'sensor state can be cleared');
 		end
 	end
 

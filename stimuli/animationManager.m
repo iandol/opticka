@@ -83,6 +83,11 @@ classdef animationManager < optickaCore
 		%> orient stimuli to the path tangent each frame, stimuli copy the
 		%> resulting angle to their angleOut; false keeps stimuli upright
 		orientToPath logical = false
+		%> screen rectangle in degrees [left top right bottom] used for the
+		%> world bounds when rigidParams.screenBounds is true; setup()
+		%> fills this from a screenManager, set it directly for headless
+		%> or offline use
+		screenBounds = []
 	end
 
 	properties (Dependent = true, SetAccess = protected, GetAccess = public)
@@ -135,7 +140,6 @@ classdef animationManager < optickaCore
 		hitRightWall	= false
 		%> world for rigidbody simulation
 		world = []
-		screenBounds	= []
 		%> types of bodies in dyn4j
 		massType		= struct('NORMAL',[],'INFINITE',[],'FIXED_ANGULAR_VELOCITY',[],'FIXED_LINEAR_VELOCITY',[])
 		%> did we setup the manager with a PTB scren etc.?
@@ -155,7 +159,15 @@ classdef animationManager < optickaCore
 			'friction',0.2,'elasticity',0.75,'position',[0 0],'updatedPosition',[],'velocity',[0 0])
 		%> what properties are allowed to be passed on construction
 		allowedProperties = ["type","bodies","rigidParams","brownianParams",...
-			"timeDelta","verbose","boundsCheck","timeToEnd","lissajous","orientToPath"]
+			"timeDelta","verbose","boundsCheck","timeToEnd","lissajous",...
+			"orientToPath","screenBounds"]
+	end
+
+	properties (Constant = true)
+		%> dyn4j version bundled in stimuli/lib and required at runtime;
+		%> bump this (and the jar) together when upgrading dyn4j, the
+		%> constructor verifies the version Java actually loaded
+		dyn4jVersion char = '6.0.0'
 	end
 	
 	%=======================================================================
@@ -180,21 +192,26 @@ classdef animationManager < optickaCore
 			end
 			try
 				% dyn4j jar -- see https://dyn4j.org/pages/getting-started
-				% only add the jar when it is not already on the class path
-				% (static or dynamic): re-adding an existing jar makes
-				% MATLAB try to `clear java`, which warns ("Objects of
-				% org/dyn4j/geometry/MassType class exist - not clearing
-				% java") whenever another animationManager is alive.
-				if ~any(contains(javaclasspath('-all'), 'dyn4j'))
-					javaaddpath(fullfile(me.paths.whereami, 'stimuli', ...
-						'lib', 'dyn4j-6.0.0.jar'), '-begin');
-				end
+				% Only add the jar when the required version is not already
+				% on the class path (static or dynamic): re-adding an
+				% existing jar makes MATLAB try to `clear java`, which warns
+				% ("Objects of org/dyn4j/geometry/MassType class exist - not
+				% clearing java") whenever another animationManager is
+				% alive. Any *other* dyn4j already on the path silently wins
+				% the class lookup, so loadDyn4j checks the version Java
+				% actually reports before we use it.
+				animationManager.loadDyn4j(me.paths.whereami, me.dyn4jVersion);
 				me.massType.NORMAL = javaMethod('valueOf', 'org.dyn4j.geometry.MassType', 'NORMAL');
     			me.massType.INFINITE = javaMethod('valueOf', 'org.dyn4j.geometry.MassType', 'INFINITE');
 				me.massType.FIXED_ANGULAR_VELOCITY = javaMethod('valueOf', 'org.dyn4j.geometry.MassType', 'FIXED_ANGULAR_VELOCITY');
 				me.massType.FIXED_LINEAR_VELOCITY = javaMethod('valueOf', 'org.dyn4j.geometry.MassType', 'FIXED_LINEAR_VELOCITY');
-			catch
-				error("Could not load dyn4j Java package, ensure Java is installed and Opticka is properly added to path.")
+			catch ME
+				if strcmp(ME.identifier,'animationManager:dyn4jVersion')
+					rethrow(ME)
+				end
+				error('animationManager:dyn4jLoad', ...
+					'Could not load dyn4j %s: %s\nEnsure Java is installed and Opticka is properly added to path.', ...
+					me.dyn4jVersion, ME.message)
 			end
 		end
 
@@ -734,7 +751,6 @@ classdef animationManager < optickaCore
 			me.y			= [];
 			me.dX			= [];
 			me.dY			= [];
-			me.screenBounds	= [];
 			if ~isempty(me.lissajous)
 				me.lissajous.reset();
 			end
@@ -760,12 +776,14 @@ classdef animationManager < optickaCore
 		function setSensorState(me, name, state)
 			[body, ~, idx] = me.getBody(name);
 			fixture = me.getFixture(name,0);
-			fixture.setSensor(state);
 			if state == true
 				body.setMass(me.massType.INFINITE);
 			else
 				updateMassType(me, me.bodies(idx));
 			end
+			%> set the flag last: updateMassType re-applies the sensor
+			%> state for bodies whose stored type is 'sensor'
+			fixture.setSensor(state);
 		end
 
 		% ===================================================================
@@ -825,6 +843,27 @@ classdef animationManager < optickaCore
 		% ===================================================================
 		function v = vector2(x, y)
 			v = javaObject('org.dyn4j.geometry.Vector2', x, y);
+		end
+
+		% ===================================================================
+		%> @brief loadedDyn4jVersion reports the dyn4j version Java loaded
+		%>
+		%> The class path, not Opticka, decides which dyn4j classes are
+		%> used: a stale jar (say 5.0.2 left over from another checkout)
+		%> added before the bundled one wins the class lookup. The
+		%> constructor verifies this against the `dyn4jVersion` constant,
+		%> this accessor makes the same check available for diagnostics.
+		%>
+		%> @return version string, e.g. '6.0.0', or '' when dyn4j is not
+		%> on the Java class path at all
+		% ===================================================================
+		function version = loadedDyn4jVersion()
+			version = '';
+			try
+				version = char(javaMethod('getVersion', 'org.dyn4j.Version'));
+			catch
+				version = '';
+			end
 		end
 
 		% ===================================================================
@@ -1062,6 +1101,52 @@ classdef animationManager < optickaCore
 	end % END STATIC METHODS
 
 	%=======================================================================
+	methods ( Static, Access = protected ) % PROTECTED STATIC METHODS
+	%=======================================================================
+
+		% ===================================================================
+		%> @brief loadDyn4j make sure the required dyn4j version is loaded
+		%>
+		%> Adds the jar bundled in stimuli/lib when Java is not already
+		%> running the required version, then verifies the version Java
+		%> reports. Errors with animationManager:dyn4jVersion when the
+		%> required version cannot be loaded, which normally means an older
+		%> dyn4j jar was added earlier in this MATLAB session (a JVM cannot
+		%> unload classes).
+		%>
+		%> @param whereami Opticka root folder (me.paths.whereami)
+		%> @param required dyn4j version the class expects
+		% ===================================================================
+		function loadDyn4j(whereami, required)
+			if strcmp(animationManager.loadedDyn4jVersion(), required)
+				return
+			end
+			jarFile = fullfile(whereami, 'stimuli', 'lib', ...
+				sprintf('dyn4j-%s.jar', required));
+			if ~exist(jarFile, 'file')
+				error('animationManager:dyn4jJarMissing', ...
+					'The bundled dyn4j jar was not found: %s', jarFile);
+			end
+			javaaddpath(jarFile, '-begin');
+			loaded = animationManager.loadedDyn4jVersion();
+			if ~strcmp(loaded, required)
+				if isempty(loaded)
+					loaded = 'no dyn4j';
+				else
+					loaded = ['dyn4j ' loaded];
+				end
+				error('animationManager:dyn4jVersion', ...
+					['animationManager requires dyn4j %s but %s is on the ' ...
+					'Java class path. Restart MATLAB (the JVM cannot ' ...
+					'unload classes), remove the other dyn4j jar from ' ...
+					'javaclasspath, then construct animationManager again.'], ...
+					required, loaded);
+			end
+		end
+
+	end % END PROTECTED STATIC METHODS
+
+	%=======================================================================
 	methods ( Access = protected ) % PRIVATE METHODS
 	%=======================================================================
 
@@ -1154,13 +1239,19 @@ classdef animationManager < optickaCore
 			me.world = javaObject('org.dyn4j.world.World');
 			me.world.setGravity(me.rigidParams.gravity(1),me.rigidParams.gravity(2));
 
+			%> remember the screen rectangle in degrees so the world bounds
+			%> can be related to the PTB dimensions
 			if me.useBounds && isscalar(me.screen) && ...
 					~isempty(me.screen.screenVals.rectInDegrees)
 				me.screenBounds = me.screen.screenVals.rectInDegrees;
-				if me.rigidParams.screenBounds
-					bnds = javaObject('org.dyn4j.collision.AxisAlignedBounds', Rectwidth(me.screen.screenVals.rectInDegrees), RectHeight(me.screen.screenVals.rectInDegrees));
-					me.world.setBounds(bnds);
-				end
+			end
+			%> AxisAlignedBounds is centred on the origin and wants the
+			%> width/height, not the PTB rect: r = [left top right bottom]
+			if me.rigidParams.screenBounds && ~isempty(me.screenBounds)
+				r = me.screenBounds;
+				bnds = javaObject('org.dyn4j.collision.AxisAlignedBounds', ...
+					r(3)-r(1), r(4)-r(2));
+				me.world.setBounds(bnds);
 			end
 			settings = me.world.getSettings();
 			settings.setAtRestDetectionEnabled(true);
@@ -1170,13 +1261,15 @@ classdef animationManager < optickaCore
 			settings.setMinimumAtRestTime(0.2); %def = 0.5
 
 			setupBodies(me);
-			fprintf('≣≣≣≣⊱ RigidBody World with %.3fs step time created!\n',settings.getStepFrequency);
-			fprintf('\t Adding bodies: ');
+			if me.verbose
+				fprintf('≣≣≣≣⊱ RigidBody World with %.3fs step time created!\n',settings.getStepFrequency);
+				fprintf('	 Adding bodies: ');
+			end
 			for i = 1:me.nBodies
-				fprintf('%s  ',me.bodies(i).name);
+				if me.verbose; fprintf('%s  ',me.bodies(i).name); end
 				me.world.addBody(me.bodies(i).body);
 			end
-			fprintf('\n');
+			if me.verbose; fprintf('\n'); end
 			makeTrackIndex(me);
 		end
 
