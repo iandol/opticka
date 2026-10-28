@@ -206,7 +206,11 @@ classdef animationManager < optickaCore
 				me.massType.FIXED_ANGULAR_VELOCITY = javaMethod('valueOf', 'org.dyn4j.geometry.MassType', 'FIXED_ANGULAR_VELOCITY');
 				me.massType.FIXED_LINEAR_VELOCITY = javaMethod('valueOf', 'org.dyn4j.geometry.MassType', 'FIXED_LINEAR_VELOCITY');
 			catch ME
-				if strcmp(ME.identifier,'animationManager:dyn4jVersion')
+				%> a wrong or missing jar is a packaging error: rethrow so
+				%> tests and users see it instead of an "environment
+				%> unavailable" message
+				if any(strcmp(ME.identifier, {'animationManager:dyn4jVersion', ...
+						'animationManager:dyn4jJarMissing'}))
 					rethrow(ME)
 				end
 				error('animationManager:dyn4jLoad', ...
@@ -446,9 +450,17 @@ classdef animationManager < optickaCore
 				end
 			elseif isnumeric(id)
 				for j = 1:length(id)
-					if id(j) > 0 && id(j) < me.nBodies
+					if id(j) > 0 && id(j) <= me.nBodies
 						rmIdx = [rmIdx id(j)];
 					end
+				end
+			end
+			if isempty(rmIdx); return; end
+			%> drop the bodies from the physics world as well: removing
+			%> only our record leaves them colliding in the simulation
+			if isa(me.world,'org.dyn4j.world.World')
+				for j = rmIdx
+					me.world.removeBody(me.bodies(j).body);
 				end
 			end
 			me.bodies(rmIdx) = [];

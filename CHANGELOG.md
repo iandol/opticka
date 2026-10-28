@@ -27,6 +27,11 @@
   built from two non-existent helpers; the bounds are now derived from the
   screen rectangle in degrees. `screenBounds` can also be set directly (e.g.
   for headless use) and is no longer cleared by `reset()`.
+* **animationManager.rmBody** — removing a body only dropped it from
+  `animationManager.bodies`, leaving the dyn4j body alive in the world: it kept
+  simulating and colliding after "removal". Bodies are now removed from the
+  world too, and the last body can be removed by index (the bounds check used
+  `<` instead of `<=`).
 * **animationManager.setSensorState** — clearing a sensor
   (`setSensorState(name, false)`) did not stick for bodies created as
   `'sensor'`, because `updateMassType` re-applied the flag; the requested

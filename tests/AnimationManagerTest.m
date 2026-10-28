@@ -38,6 +38,13 @@ classdef AnimationManagerTest < matlab.unittest.TestCase
 			try
 				am = animationManager(varargin{:}, 'verbose', false);
 			catch ME
+				%> only an unavailable JVM may skip a test; a wrong or
+				%> missing dyn4j jar is the regression these tests exist
+				%> to catch, so let it fail
+				if any(strcmp(ME.identifier, {'animationManager:dyn4jVersion', ...
+						'animationManager:dyn4jJarMissing'}))
+					rethrow(ME)
+				end
 				assumeTrue(testCase, false, ...
 					sprintf('Java/dyn4j not available: %s', ME.message));
 			end
@@ -467,9 +474,12 @@ classdef AnimationManagerTest < matlab.unittest.TestCase
 	% ===================================================================
 	methods (Test, TestTags = {'CI'})
 		function testDyn4jVersionMatchesBundle(testCase)
-			makeAM(testCase); %> construction loads the bundled jar
+			assumeTrue(testCase, usejava('jvm'), 'Java is not available');
+			%> construct directly, not via makeAM: a version mismatch must
+			%> fail here rather than be filtered as an assumption
+			am = animationManager('verbose', false);
 			verifyEqual(testCase, animationManager.loadedDyn4jVersion(), ...
-				animationManager.dyn4jVersion, ...
+				am.dyn4jVersion, ...
 				'the dyn4j version Java loaded must be the bundled one');
 		end
 
@@ -551,18 +561,40 @@ classdef AnimationManagerTest < matlab.unittest.TestCase
 				'linear velocity set');
 		end
 
-		function testRmBodyKeepsWorldSteppable(testCase)
-			am = makeRigidWorld(testCase, [0 0]);
+		function testRmBodyRemovesFromWorld(testCase)
+			am = makeAM(testCase, 'timeDelta', 1/60);
+			am.rigidParams.gravity = [0 0];
+			ball = discStimulus('verbose', false, 'name', 'ball', 'size', 72);
+			ball.xPosition = 0; ball.yPosition = 0;
+			addBody(am, ball, 'Circle', 'normal', 1, 0.2, 0.5);
 			wall = barStimulus('verbose', false, 'name', 'wall', ...
-				'barWidth', 2, 'barHeight', 2);
+				'barWidth', 4, 'barHeight', 4);
+			wall.xPosition = 1; wall.yPosition = 0; %> overlapping the ball
 			addBody(am, wall, 'Rectangle', 'infinite');
 			setup(am, struct('fps', 60, 'ppd', 36));
-			verifyEqual(testCase, am.nBodies, 2, 'two bodies before removal');
+			wallBody = am.bodies(2).body; %> keep the dyn4j handle
+			step(am, 1, false);
+			verifyEqual(testCase, am.world.getBodyCount(), 2, ...
+				'both bodies are in the physics world');
+			verifyTrue(testCase, am.isCollision('ball'), ...
+				'the ball contacts the wall before removal');
 			rmBody(am, 'wall');
-			verifyEqual(testCase, am.nBodies, 1, 'wall removed');
+			verifyEqual(testCase, am.nBodies, 1, 'wall removed from the list');
 			verifyEmpty(testCase, getBody(am, 'wall'), 'wall no longer found');
-			step(am, 1, false); %> the world must still be usable
-			verifyEqual(testCase, am.tick, 1, 'world still steps');
+			verifyEqual(testCase, am.world.getBodyCount(), 1, ...
+				'wall removed from the physics world');
+			verifyFalse(testCase, am.world.containsBody(wallBody), ...
+				'the dyn4j body itself is gone');
+			n0 = am.tick;
+			step(am, 1, false);
+			verifyFalse(testCase, am.isCollision('ball'), ...
+				'the removed wall no longer collides');
+			verifyEqual(testCase, am.tick, n0+1, 'world still steps');
+			%> the last body must be removable by index as well
+			rmBody(am, am.nBodies);
+			verifyEqual(testCase, am.nBodies, 0, 'last body removed by index');
+			verifyEqual(testCase, am.world.getBodyCount(), 0, ...
+				'world is empty');
 		end
 
 		function testWorldBounds(testCase)
