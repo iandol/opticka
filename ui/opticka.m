@@ -544,6 +544,7 @@ classdef opticka < optickaCore
 						tsM = stateMachine;
 						tM = touchManager;
 						tL = timeLogger;
+						s = screenManager;
 						run(met.r.stateInfoFile)
 						if exist('stateInfoTmp','var')
 							addStates(tsM, stateInfoTmp);
@@ -558,7 +559,7 @@ classdef opticka < optickaCore
 							
 							met.ui.OKStateFcnView.Value = {''};
 						end
-						clear me stims eT tsM tM tL
+						clear me stims eT tsM tM tL s
 					catch ME
 						getReport(ME)
 						met.ui.OKStateTable.ColumnName = {'STATE','Next','time','entry','within','transition','exit'}; %#ok<*USENS>

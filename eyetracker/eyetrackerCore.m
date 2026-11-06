@@ -464,6 +464,28 @@ classdef eyetrackerCore < optickaCore
 		
 		
 		% ===================================================================
+		%> @fn moveFixationWindow(me,x,y)
+		%> @brief Move the current fixation window without resetting timers
+		%>
+		%> updateFixationValues() calls resetFixation(), so it cannot be used
+		%> to follow a moving target each frame: it would restart the
+		%> fixation hold time on every update. This method only changes the
+		%> window centre, preserving fixStartTime, fixLength and fixBuffer.
+		%> Use it for moving-window tasks such as smooth pursuit.
+		%>
+		%> @param x X position in degrees
+		%> @param y Y position in degrees
+		% ===================================================================
+		function moveFixationWindow(me,x,y)
+			if nargin > 1 && ~isempty(x); me.fixation.X = x; end
+			if nargin > 2 && ~isempty(y); me.fixation.Y = y; end
+			if me.verbose
+				fprintf('-+-+-> EyeTracker:moveFixationWindow: X=%g | Y=%g | R=%s\n', ...
+					me.fixation.X, me.fixation.Y, num2str(me.fixation.radius,'%.2f '));
+			end
+		end
+
+		% ===================================================================
 		function updateFixationValues(me, x, y, inittime, fixtime, radius, strict)
 		%> @fn updateFixationValues(me,x,y,inittime,fixtime,radius,strict)
 		%>
