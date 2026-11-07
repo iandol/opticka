@@ -48,10 +48,31 @@ jobs:
           sudo apt-get install -y libdc1394-dev
           sudo apt-get install -y libraw1394-dev
           sudo apt-get install -y curl
+          sudo apt-get install -y patchelf
 
       - name: Download Psychtoolbox dependency (V3.0.21 as the last version useable with CI)
         run: |
           curl -L -o /tmp/ptb.zip https://github.com/Psychtoolbox-3/Psychtoolbox-3/releases/download/3.0.21.0/3.0.21.0.zip && unzip -o -d /tmp/PTB /tmp/ptb.zip
+
+      # PTB 3.0.21's prebuilt mex files request an executable stack
+      # (PT_GNU_STACK = RWE, 16 of the 19 shipped mex files). The ubuntu-24.04
+      # image tolerated that, but ubuntu-latest migrated to ubuntu-26.04 in
+      # October 2026, whose loader refuses such objects with
+      #   "cannot enable executable stack as shared object requires: Invalid argument"
+      # Every mex (Screen, GetSecs, WaitSecs, PsychHID, ...) then fails as
+      # "Invalid MEX-file" and most of the suite errors out. Clearing the execute
+      # bit on that single program header lets them load again: no code, symbols,
+      # sections or relocations are touched, and none of these binaries actually
+      # execute code from the stack - the flag is a toolchain artifact.
+      - name: Clear executable-stack flag on PTB mex files
+        run: |
+          find /tmp/PTB -name '*.mexa64' -print0 | xargs -0 -r patchelf --clear-execstack
+          # Fail loudly if any mex still requests an executable stack:
+          if find /tmp/PTB -name '*.mexa64' -print0 | xargs -0 -r readelf -lW 2>/dev/null | grep -q 'GNU_STACK.*RWE'; then
+            echo "::error::some PTB mex files still request an executable stack"
+            exit 1
+          fi
+          echo "All PTB mex files now request a non-executable stack."
 
       - name: Set up MATLAB
         uses: matlab-actions/setup-matlab@v3
