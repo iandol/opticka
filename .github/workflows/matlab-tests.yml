@@ -174,13 +174,12 @@ jobs:
           Xvfb :99 -screen 0 1024x768x24 > /tmp/xvfb.log 2>&1 &
           echo "DISPLAY=:99" >> "$GITHUB_ENV"
 
-      # The hardware tests self-skip when GITHUB_ACTIONS is set, so clear it for
-      # this step only. runScreenHardwareTests() asserts that none were skipped,
-      # so if that mechanism ever stops working the job fails instead of going
-      # green with zero tests actually executed.
+      # The hardware tests self-skip when GITHUB_ACTIONS is set
+      # (assumeFalse(..., ~isempty(getenv('GITHUB_ACTIONS')))), and the runner
+      # forces that variable - a step-level `env: GITHUB_ACTIONS: ""` does NOT
+      # win, the tests still see it and all report Incomplete. Remove it from
+      # the MATLAB process environment instead. runScreenHardwareTests() fails
+      # if anything ends up skipped, so this cannot silently regress.
       - name: Run ScreenManagerTest hardware suite
-        uses: matlab-actions/run-command@v3
-        env:
-          GITHUB_ACTIONS: ""
-        with:
-          command: addpath('ci'); runScreenHardwareTests
+        run: |
+          env -u GITHUB_ACTIONS matlab -batch "addpath('ci'); runScreenHardwareTests"
