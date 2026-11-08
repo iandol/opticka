@@ -51,8 +51,17 @@ jobs:
           sudo apt-get install -y patchelf
 
       - name: Download Psychtoolbox dependency (V3.0.21 as the last version useable with CI)
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          curl -L -o /tmp/ptb.zip https://github.com/Psychtoolbox-3/Psychtoolbox-3/releases/download/3.0.21.0/3.0.21.0.zip && unzip -o -d /tmp/PTB /tmp/ptb.zip
+          # Use the authenticated release API rather than the raw
+          # releases/download URL: that endpoint intermittently answers with a
+          # 92-byte nginx "504 Gateway Time-out" page, which unzip then reports
+          # as "End-of-central-directory signature not found" - a misleading
+          # error for what is really an upstream HTTP failure.
+          gh release download 3.0.21.0 --repo Psychtoolbox-3/Psychtoolbox-3 \
+            --pattern 3.0.21.0.zip --dir /tmp --clobber
+          unzip -o -d /tmp/PTB /tmp/3.0.21.0.zip
 
       # PTB 3.0.21's prebuilt mex files request an executable stack
       # (PT_GNU_STACK = RWE, 16 of the 19 shipped mex files). The ubuntu-24.04
@@ -127,8 +136,17 @@ jobs:
           sudo apt-get install -y patchelf
 
       - name: Download Psychtoolbox dependency (V3.0.21 as the last version useable with CI)
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          curl -L -o /tmp/ptb.zip https://github.com/Psychtoolbox-3/Psychtoolbox-3/releases/download/3.0.21.0/3.0.21.0.zip && unzip -o -d /tmp/PTB /tmp/ptb.zip
+          # Use the authenticated release API rather than the raw
+          # releases/download URL: that endpoint intermittently answers with a
+          # 92-byte nginx "504 Gateway Time-out" page, which unzip then reports
+          # as "End-of-central-directory signature not found" - a misleading
+          # error for what is really an upstream HTTP failure.
+          gh release download 3.0.21.0 --repo Psychtoolbox-3/Psychtoolbox-3 \
+            --pattern 3.0.21.0.zip --dir /tmp --clobber
+          unzip -o -d /tmp/PTB /tmp/3.0.21.0.zip
 
       # Same loader fix as the unit-test job: PTB 3.0.21's mex files request an
       # executable stack, which the ubuntu-26.04 image refuses to load.
