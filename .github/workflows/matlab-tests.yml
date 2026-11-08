@@ -74,6 +74,16 @@ jobs:
           fi
           echo "All PTB mex files now request a non-executable stack."
 
+      # Stock PTB Screen segfaults on Mesa's software rasterizer (llvmpipe,
+      # which is what Xvfb provides): PsychOSSetVBLSyncLevel() queries
+      # GLX_SWAP_INTERVAL_EXT with glXQueryDrawable(), and llvmpipe leaves that
+      # GLX dispatch slot NULL, so the call jumps to address 0. See ci/ptb/README.md
+      # for provenance and rebuild instructions.
+      - name: Install patched Screen.mexa64 (Xvfb/llvmpipe GLX fix)
+        run: |
+          cp ci/ptb/Screen.mexa64 /tmp/PTB/Psychtoolbox/PsychBasic/Screen.mexa64
+          (cd ci/ptb && sha256sum -c Screen.mexa64.sha256)
+
       - name: Set up MATLAB
         uses: matlab-actions/setup-matlab@v3
         with:
@@ -93,3 +103,66 @@ jobs:
         uses: matlab-actions/run-command@v3
         with:
           command: setupOptickaCI; runOptickaTests('excludeTag', 'hardware');
+
+  # Separate job so a window-opening failure cannot take down the unit suite, and
+  # so the hardware tests can run against the patched Screen.mexa64.
+  screen-hardware:
+    name: Screen hardware tests (Xvfb, patched Screen)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y xvfb
+          sudo apt-get install -y xauth
+          sudo apt-get install -y libglut-dev
+          sudo apt-get install -y libglu1-mesa-dev
+          sudo apt-get install -y libx11-dev
+          sudo apt-get install -y libdc1394-dev
+          sudo apt-get install -y libraw1394-dev
+          sudo apt-get install -y curl
+          sudo apt-get install -y patchelf
+
+      - name: Download Psychtoolbox dependency (V3.0.21 as the last version useable with CI)
+        run: |
+          curl -L -o /tmp/ptb.zip https://github.com/Psychtoolbox-3/Psychtoolbox-3/releases/download/3.0.21.0/3.0.21.0.zip && unzip -o -d /tmp/PTB /tmp/ptb.zip
+
+      # Same loader fix as the unit-test job: PTB 3.0.21's mex files request an
+      # executable stack, which the ubuntu-26.04 image refuses to load.
+      - name: Clear executable-stack flag on PTB mex files
+        run: |
+          find /tmp/PTB -name '*.mexa64' -print0 | xargs -0 -r patchelf --clear-execstack
+          if find /tmp/PTB -name '*.mexa64' -print0 | xargs -0 -r readelf -lW 2>/dev/null | grep -q 'GNU_STACK.*RWE'; then
+            echo "::error::some PTB mex files still request an executable stack"
+            exit 1
+          fi
+
+      - name: Install patched Screen.mexa64 (Xvfb/llvmpipe GLX fix)
+        run: |
+          cp ci/ptb/Screen.mexa64 /tmp/PTB/Psychtoolbox/PsychBasic/Screen.mexa64
+          (cd ci/ptb && sha256sum -c Screen.mexa64.sha256)
+
+      - name: Set up MATLAB
+        uses: matlab-actions/setup-matlab@v3
+        with:
+          release: latest
+          cache: true
+
+      - name: Start virtual display
+        run: |
+          Xvfb :99 -screen 0 1024x768x24 > /tmp/xvfb.log 2>&1 &
+          echo "DISPLAY=:99" >> "$GITHUB_ENV"
+
+      # The hardware tests self-skip when GITHUB_ACTIONS is set, so clear it for
+      # this step only. runScreenHardwareTests() asserts that none were skipped,
+      # so if that mechanism ever stops working the job fails instead of going
+      # green with zero tests actually executed.
+      - name: Run ScreenManagerTest hardware suite
+        uses: matlab-actions/run-command@v3
+        env:
+          GITHUB_ACTIONS: ""
+        with:
+          command: addpath('ci'); runScreenHardwareTests
