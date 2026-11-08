@@ -15,6 +15,13 @@ function runScreenHardwareTests()
 %> Usage (in the workflow):
 %>   matlab -batch "addpath('ci'); runScreenHardwareTests"
 
+	% The GitHub runner forces GITHUB_ACTIONS into the environment and a
+	% step-level `env:` override does NOT win - MATLAB still sees it, every
+	% hardware test self-skips, and the suite reports 36 Incomplete. setenv()
+	% changes the value this MATLAB process sees, which is what getenv() inside
+	% the tests reads, so clear it here before the suite runs.
+	setenv('GITHUB_ACTIONS', '');
+
 	root = fileparts(fileparts(mfilename('fullpath'))); %> ci/ -> repository root
 	addpath(root);
 	setupOptickaCI();

@@ -175,11 +175,12 @@ jobs:
           echo "DISPLAY=:99" >> "$GITHUB_ENV"
 
       # The hardware tests self-skip when GITHUB_ACTIONS is set
-      # (assumeFalse(..., ~isempty(getenv('GITHUB_ACTIONS')))), and the runner
-      # forces that variable - a step-level `env: GITHUB_ACTIONS: ""` does NOT
-      # win, the tests still see it and all report Incomplete. Remove it from
-      # the MATLAB process environment instead. runScreenHardwareTests() fails
-      # if anything ends up skipped, so this cannot silently regress.
+      # (assumeFalse(..., ~isempty(getenv('GITHUB_ACTIONS')))). The runner forces
+      # that variable and a step-level `env: GITHUB_ACTIONS: ""` does not win, so
+      # runScreenHardwareTests clears it with setenv() before running the suite.
+      # MATLAB must be launched through matlab-actions/run-command: a bare
+      # `matlab -batch` in a run: step cannot check out a licence on the runner.
       - name: Run ScreenManagerTest hardware suite
-        run: |
-          env -u GITHUB_ACTIONS matlab -batch "addpath('ci'); runScreenHardwareTests"
+        uses: matlab-actions/run-command@v3
+        with:
+          command: addpath('ci'); runScreenHardwareTests
