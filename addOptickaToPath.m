@@ -26,7 +26,7 @@ sep 			= regexptranslate('escape',filesep);
 pathExceptions	= ["/.git" "/.github" "/.vscode" ...
 	"/adio" "/arduino" "photodiode" "/+uix" ...
 	"/+zmq" "/+uiextras" "/tests" "/images" "/resources" ...
-	"/media" "/legacy" "/html" "/doc"];
+	"/media" "/legacy" "/html" "/doc" "ci/"];
 qAdd 			= contains(opaths,pathExceptions); % true where exceptions match
 addpath(opaths{~qAdd}); 
 
@@ -61,3 +61,4 @@ end
 savepath;
 
 fprintf('--->>> Added opticka to the MATLAB path in %.1f ms...\n',toc(tt)*1000);
+

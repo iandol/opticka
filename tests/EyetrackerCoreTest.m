@@ -5,7 +5,7 @@
 %> Tests the fixation-window logic, exclusion zones, fixInit, offset,
 %> reset methods, and dummy-mode (mouse) sample acquisition using
 %> eyelinkManager as the concrete subclass. CI-safe tests run without
-%> PTB; hardware-tagged tests exercise getMouseSample / isFixated /
+%> PTB; hardware-tagged tests exercise getSample / isFixated /
 %> testSearchHoldFixation with a real PTB window and xdotool mouse
 %> automation to simulate gaze position.
 %>
@@ -360,8 +360,6 @@ classdef EyetrackerCoreTest < matlab.unittest.TestCase
 				'Skipping PTB eyetracker test in CI');
 			sM = screenManager;
 			sM.disableSyncTests = true;
-			sM.visualDebug = true;
-			sM.bitDepth = '8bit';
 			open(sM);
 			cleanup = onCleanup(@() close(sM));
 			eT = eyelinkManager('verbose', false, 'isDummy', true);
@@ -369,9 +367,9 @@ classdef EyetrackerCoreTest < matlab.unittest.TestCase
 		end
 
 		% ---------------------------------------------------------------
-		%> @brief Test dummy mode getMouseSample acquires position.
+		%> @brief Test dummy mode getSample acquires position.
 		% ---------------------------------------------------------------
-		function testGetMouseSample(testCase)
+		function testGetSample(testCase)
 			assumeTrue(testCase, exist('GetMouse') == 2 || ~isempty(which('GetMouse')), ...
 				'PTB GetMouse must be available');
 			[sM, eT, cleanup] = createDummySetup(testCase);
@@ -379,7 +377,7 @@ classdef EyetrackerCoreTest < matlab.unittest.TestCase
 			system(sprintf('%s mousemove --screen %d %d %d', ...
 				testCase.xdotoolPath, sM.screen, sM.screenVals.xCenter, sM.screenVals.yCenter));
 			WaitSecs(0.1);
-			sample = eT.getMouseSample;
+			sample = eT.getSample;
 			verifyTrue(testCase, ~isempty(sample), 'sample should not be empty');
 			verifyTrue(testCase, ~isnan(sample.time), 'sample time should not be NaN');
 			% gx, gy are raw pixel coordinates from GetMouse
@@ -388,9 +386,9 @@ classdef EyetrackerCoreTest < matlab.unittest.TestCase
 		end
 
 		% ---------------------------------------------------------------
-		%> @brief Test getMouseSample detects mouse button (blink).
+		%> @brief Test getSample detects mouse button (blink).
 		% ---------------------------------------------------------------
-		function testGetMouseSampleBlink(testCase)
+		function testGetSampleBlink(testCase)
 			assumeTrue(testCase, exist(testCase.xdotoolPath) == 2 || ~isempty(which('xdotool')), ...
 				'xdotool must be available for mouse automation');
 			[sM, eT, cleanup] = createDummySetup(testCase);
@@ -408,9 +406,9 @@ classdef EyetrackerCoreTest < matlab.unittest.TestCase
 		end
 
 		% ---------------------------------------------------------------
-		%> @brief Test getMouseSample with left button (valid sample).
+		%> @brief Test getSample with left button (valid sample).
 		% ---------------------------------------------------------------
-		function testGetMouseSampleValid(testCase)
+		function testGetSampleValid(testCase)
 			assumeFalse(testCase, ~isempty(getenv('GITHUB_ACTIONS')), ...
 				'Skipping PTB eyetracker test in CI');
 			assumeTrue(testCase, exist(testCase.xdotoolPath) == 2 || ~isempty(which('xdotool')), ...
@@ -485,13 +483,11 @@ classdef EyetrackerCoreTest < matlab.unittest.TestCase
 			% Move mouse to corner (far from center)
 			system(sprintf('%s mousemove --screen %d %d %d', ...
 				testCase.xdotoolPath, sM.screen, 5,5));
-			system(sprintf('%s mousedown 1', testCase.xdotoolPath));
 			WaitSecs(0.1);
-			eT.getMouseSample;
+			eT.getSample;
 			[fixated, ~, searching, ~, ~, ~, ~] = eT.isFixated;
 			verifyFalse(testCase, fixated, 'should not be fixated outside window');
 			verifyTrue(testCase, searching, 'should be searching outside window');
-			system(sprintf('%s mouseup 1', testCase.xdotoolPath));
 			WaitSecs(0.05);
 		end
 
@@ -556,7 +552,7 @@ classdef EyetrackerCoreTest < matlab.unittest.TestCase
 				testCase.xdotoolPath, sM.screen, sM.screenVals.xCenter, sM.screenVals.yCenter));
 			system(sprintf('%s mousedown 1', testCase.xdotoolPath));
 			WaitSecs(0.1);
-			eT.getMouseSample;
+			eT.getSample;
 			verifyTrue(testCase, ~isempty(eT.xAll), 'xAll should have data');
 			eT.resetFixationHistory;
 			verifyEmpty(testCase, eT.xAll, 'xAll should be empty after reset');
@@ -580,11 +576,11 @@ classdef EyetrackerCoreTest < matlab.unittest.TestCase
 				testCase.xdotoolPath, sM.screen, sM.screenVals.xCenter, sM.screenVals.yCenter));
 			system(sprintf('%s mousedown 1', testCase.xdotoolPath));
 			WaitSecs(0.05);
-			eT.getMouseSample;
+			eT.getSample;
 			system(sprintf('%s mousemove --screen %d %d %d', ...
 				testCase.xdotoolPath, sM.screen, sM.screenVals.xCenter+50, sM.screenVals.yCenter+50));
 			WaitSecs(0.05);
-			eT.getMouseSample;
+			eT.getSample;
 			verifyEqual(testCase, length(eT.xAll), 2, 'should have 2 samples in xAll');
 			verifyEqual(testCase, length(eT.yAll), 2, 'should have 2 samples in yAll');
 			verifyEqual(testCase, length(eT.pupilAll), 2, 'should have 2 pupil samples');

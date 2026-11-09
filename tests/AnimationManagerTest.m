@@ -727,10 +727,12 @@ classdef AnimationManagerTest < matlab.unittest.TestCase
 			setup(d, sM);
 			addBody(am, d);
 			setup(am, sM);
-			for i = 1:5
+			for i = 1:10
+				draw(d);
 				step(am, 1, true);
+				flip(sM);
 			end
-			verifyEqual(testCase, am.tick, 5, 'tick should be 5 after 5 steps');
+			verifyEqual(testCase, am.tick, 10, 'tick should be 10 after 10 steps');
 			verifyTrue(testCase, ~isempty(am.x), 'x should have a value after steps');
 			verifyTrue(testCase, ~isempty(am.y), 'y should have a value after steps');
 			reset(d);
