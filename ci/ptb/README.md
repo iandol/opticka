@@ -1,7 +1,7 @@
 # ci/ptb — patched `Screen.mexa64` for CI
 
-`Screen.mexa64` here is a locally built Psychtoolbox (PTB) Screen MEX file, used
-only by the `screen-hardware` GitHub Actions job. It exists for one reason.
+`Screen.mexa64` here is a locally built Psychtoolbox (PTB) Screen MEX file used
+by CI in both jobs. It exists for one reason.
 
 ## Why a custom binary
 
@@ -68,9 +68,12 @@ report `GNU_STACK ... RW` — MATLAB's mex linker already passes `-z noexecstack
 ## How CI uses it
 
 Both jobs unpack PTB 3.0.21 into `/tmp/PTB`, clear the executable-stack flag on
-its MEX files (see the workflow comments), then the `screen-hardware` job copies
-this binary over `PsychBasic/Screen.mexa64` and verifies the checksum before
-running `ci/runScreenHardwareTests`.
+its MEX files (see the workflow comments), copy this binary over
+`PsychBasic/Screen.mexa64`, and verify the checked-in copy against
+`Screen.mexa64.sha256`, so exactly one `Screen` binary is in play across the
+workflow. The `screen-hardware` job is the one that depends on the fix: it runs
+`ci/runScreenHardwareTests` against this binary, while the unit-test job
+excludes the `hardware` tag and never opens a window.
 
 ## When to delete this directory
 
