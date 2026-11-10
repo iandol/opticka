@@ -1763,8 +1763,9 @@ classdef screenManager < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function drawScreenCenter(me)
-			Screen('gluDisk',me.win,[1 0 1 1],me.xCenter,me.yCenter,3);
+		function drawScreenCenter(me, size)
+			if ~exist('size','var'); size = 3; end
+			Screen('gluDisk',me.win, [1 1 1 1], me.xCenter, me.yCenter, size);
 		end
 
 		% ===================================================================
@@ -2440,6 +2441,15 @@ classdef screenManager < optickaCore
 			end
 			[sv.screenWidth, sv.screenHeight] = Screen('WindowSize',swin);
 			if me.useRetina
+				sv.width = sv.screenWidth;
+				sv.height = sv.screenHeight;
+				me.winRect = Screen('Rect',swin);
+			elseif me.stereoMode > 0 && ~isempty(me.win)
+				%in any stereo mode PTB reports the PER-EYE rect (e.g. half the
+				%window width for split-screen stereo). The user supplied
+				%windowed rect is the full physical window, so trusting it here
+				%would put the origin at the wrong place and clip dichoptic
+				%stimuli. Always take the rect PTB gives us for the eye viewport.
 				sv.width = sv.screenWidth;
 				sv.height = sv.screenHeight;
 				me.winRect = Screen('Rect',swin);
