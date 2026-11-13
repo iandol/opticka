@@ -35,7 +35,7 @@ classdef optickaCore < handle
 	%--------------------ABSTRACT PROPERTIES----------%
 	properties (Abstract = true)
 		%> verbose logging, subclasses must assign this. This is normally logical true/false
-		verbose
+		verbose (1,1) logical
 	end
 
 	%--------------------HIDDEN PROPERTIES------------%
@@ -47,7 +47,7 @@ classdef optickaCore < handle
 	%--------------------VISIBLE PROPERTIES-----------%
 	properties (SetAccess = protected, GetAccess = public)
 		%> version number
-		optickaVersion char		= '2.18.14'
+		optickaVersion char		= '2.18.15'
 		%> clock() dateStamp set on construction
 		dateStamp = []
 		%> universal ID

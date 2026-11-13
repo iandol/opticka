@@ -155,6 +155,7 @@ classdef arduinoManager < optickaCore & rewardManager
 				if failToOpen
 					me.isOpen = false; me.silentMode = true;
 					uiwait(warndlg('--->arduinoManager: IOport couldn''t open the port, going into silent mode!','arduinoManager','modal'));
+					warning("--->arduinoManager: IOPort failed to open port. If port seems valid, also check ~/.Psychtoolbox for any Display++ config files that can take over the arduino port...");
 					return
 				else
 					me.deviceID = me.port;

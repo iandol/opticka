@@ -32,33 +32,41 @@ classdef screenManager < optickaCore
 		%> measure this value accurately for each monitor you will use.
 		%> Examples: MBP 1440x900 is 33.2x20.6cm so 44px/cm; Flexscan is
 		%> 32px/cm @1280 26px/cm @ 1024; Display++ is 27px/cm @1920x1080
-		pixelsPerCm(1,1) double				= 36
+		pixelsPerCm (1,1) double			= 36
 		%> distance in centimeters of subject from Display
 		%> rad2ang(2 * atan( size / (2 * distance) ) ) = Xdeg
 		%> when size == 1cm & distance == 57.3cm; X == 1deg
-		distance(1,1) double				= 57.3
+		distance (1,1) double				= 57.3
 		%> windowed: when FALSE use fullscreen; set to TRUE and it is
-		%> windowed 800x600pixels or you can add in a window width and
+		%> windowed 800x600pixels or you can add a window width and
 		%> height i.e. [800 600] to specify windowed size. Remember that
 		%> windowed presentation should *never* be used for real
 		%> experimental presentation due to poor timing…
 		windowed							= false
-		%> stereo mode
-		%> 1 meansStereo output via OpenGL native quad-buffered stereo 2: Left view compressed into top half, right view into bottom half of window for frame-doubling stereo. 3 means left view compressed into bottom half, right view compressed into to half for frame-doubling stereo. 4 and 5 allow split screen stereo display where the left view is shown in left half, the right view is shown in the right half of the display, e.g., for mirrorscope/haploscope setups, or dual-display stereo devices. A value of 5 does the opposite (cross-fusion), exchanges left and right eye view. Values of 6,7,8 and 9 enable Anaglyph stereo rendering of types left=Red, right=Green, vice versa and left=Red, right=Blue and vice versa. A value of 10 enables multi-window stereo: Open one window for left eye view, one for right eye view, treat both of them as one single stereo window. A value of 11 enables our own frame-sequential stereo mode for driving shutter glasses and similar devices on display hardware and operating systems which do not support frame-sequential stereo natively (like mode 1). A value of 12 enables stereo processing within separate streams of the imaging pipeline, followed by some custom display method for the end results of that separate stream processing. This is usually used for stereo output to special display devices like Virtual reality head sets, instead of output to a normal onscreen window or display monitor. See StereoDemo.m for examples of usage of the different stereo modes. See ImagingStereoDemo.m for more advanced usage on modern hardware.
-		stereoMode(1,1) double				= 0
+		%> === Stereo Mode
+		%> 1: Stereo output via OpenGL native quad-buffered stereo 
+		%> 2/3: Left view compressed into top.bottom half, right view into bottom/ytop half of window for frame-doubling stereo. 
+		%> 4/5: Split screen stereo where left view is shown in left/right half, the right view is shown in the right/left half of the display, e.g., for mirrorscope/haploscope setups, or dual-display stereo devices. 
+		%> 6/7/8/9: Anaglyph stereo rendering of types left=Red, right=Green, vice versa and left=Red, right=Blue and vice versa. 
+		%> 10: multi-window stereo; Open one window for left eye view, one for right eye view, treat both of them as one single stereo window. 
+		%> 11: frame-sequential stereo mode for driving shutter glasses and similar devices on display hardware and operating systems which do not support frame-sequential stereo natively (like mode 1).
+		%> 12: stereo processing within separate streams of the imaging pipeline, followed by some custom display method for the end results of that separate stream processing. This is usually used for stereo output to special display devices like Virtual reality head sets, instead of output to a normal onscreen window or display monitor. 
+		%> See ImagingStereoDemo.m for sample usage on modern hardware.
+		stereoMode (1,1) double {mustBeInteger, mustBeInRange(stereoMode,0,12)} = 0
 		%> enable debug for poorer temporal fidelity but no sync testing
 		%> etc.
-		debug(1,1) logical					= false
+		debug (1,1) logical					= false
 		%> shows some info text and position grid during stimulus
 		%> presentation if true
-		visualDebug(1,1) logical			= false
+		visualDebug (1,1) logical			= false
 		%> normally should be left at 1 (1 is added to this number so
 		%> doublebuffering is enabled)
-		doubleBuffer(1,1) uint8				= 1
+		doubleBuffer (1,1) uint8			= 1
 		%> Mirror the content to a second window. In this case we need a
 		%> screen 0 and screen 1 and the main output to screen 1. We will get
 		%> an overlay window for this too we can draw to.
-		mirrorDisplay(1,1) logical			= false
+		mirrorDisplay (1,1) logical			= false
+		%> === Float PRecision
 		%> float precision and bitDepth of framebuffer/output: '8bit' is
 		%> best for old GPUs, but choose 'FloatingPoint32BitIfPossible' for
 		%> newer GPUs. Native high bitdepths (assumes FloatingPoint32Bit
@@ -81,13 +89,13 @@ classdef screenManager < optickaCore
 			'DataPixxM16';'DataPixxC48'})}	= '8Bit'
 		%> timestamping mode 1=beamposition,kernel fallback | 2=beamposition
 		%> crossvalidate with kernel
-		timestampingMode double				= 1
+		timestampingMode double {mustBeInteger}	= 1
 		%> multisampling sent to the graphics card, try values 0[disabled], 4, 8
 		%> and 16 -- useful for textures to minimise aliasing, but this does
 		%> provide extra work for the GPU
-		antiAlias(1,1) double 				= 0
+		antiAlias (1,1) double 				= 0
 		%> background RGBA of display during stimulus presentation
-		backgroundColour(1,:) double		= [0.5 0.5 0.5 1.0]
+		backgroundColour (1,:) double		= [0.5 0.5 0.5 1.0]
 		%> use OpenGL blending mode
 		blend logical						= true
 		%> OpenGL blending source mode
@@ -102,15 +110,15 @@ classdef screenManager < optickaCore
 		'GL_ONE_MINUS_DST_ALPHA'; 'GL_SRC_ALPHA_SATURATE' })} = 'GL_ONE_MINUS_SRC_ALPHA'
 		%> shunt center by X degrees (coordinates are in degrees from centre of
 		%> monitor)
-		screenXOffset(1,1) double			= 0
+		screenXOffset (1,1) double			= 0
 		%> shunt center by Y degrees (coordinates are in degrees from centre of
 		%> monitor)
-		screenYOffset(1,1) double			= 0
+		screenYOffset (1,1) double			= 0
 		%> gamma correction info saved as a calibrateLuminance object
 		gammaTable calibrateLuminance
 		%> settings for movie output
 		%> type 1 = video file, 2 = mat array, 3 = single pictures
-		movieSettings						= struct('record',false,'type',1,'loop',inf,...
+		movieSettings struct				= struct('record',false,'type',1,'loop',inf,...
 											'size', [], 'fps', [], 'quality',0.7,...
 											'channels',3,'keyframe',5,'nFrames', inf,...
 											'prefix','Movie','codec','x264enc')
@@ -118,7 +126,7 @@ classdef screenManager < optickaCore
 		%> and the like
 		screenVals struct					= struct('ifi',1/60,'fps',60,...
 											'winRect',[0 0 1920 1080])
-		%> verbose output?
+		%> verbose output? (abstract inherited)
 		verbose								= false
 		%> level of PTB verbosity, set to 10 for full PTB logging
 		verbosityLevel double				= 3
